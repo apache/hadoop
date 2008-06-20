@@ -307,7 +307,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10DA0">Source Code</a>
+<a href="#Source+Code-N10DD5">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -1723,25 +1723,20 @@ document.write("Last Published: " + document.lastModified);
         <span class="codefrag">${HADOOP_LOG_DIR}/userlogs</span>
 </p>
 <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
-        as a rudimentary software distribution mechanism for use in the map 
-        and/or reduce tasks. It can be used to distribute both jars and 
-        native libraries. The 
-        <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addArchiveToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)">
-        DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
-        <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addFileToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)">
-        DistributedCache.addFileToClassPath(Path, Configuration)</a> api can 
-        be used to cache files/jars and also add them to the <em>classpath</em> 
-        of child-jvm. Similarly the facility provided by the 
-        <span class="codefrag">DistributedCache</span> where-in it symlinks the cached files into
-        the working directory of the task can be used to distribute native 
-        libraries and load them. The underlying detail is that child-jvm always 
-        has its <em>current working directory</em> added to the
+        to distribute both jars and native libraries for use in the map 
+        and/or reduce tasks. The child-jvm always has its 
+        <em>current working directory</em> added to the
         <span class="codefrag">java.library.path</span> and <span class="codefrag">LD_LIBRARY_PATH</span>. 
-        And hence the cached libraries can be 
-        loaded via <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
-        System.loadLibrary</a> or <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
-        System.load</a>.</p>
-<a name="N109F3"></a><a name="Job+Submission+and+Monitoring"></a>
+        And hence the cached libraries can be loaded via 
+        <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
+        System.loadLibrary</a> or 
+        <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
+        System.load</a>. More details on how to load shared libraries through 
+        distributed cache are documented at 
+        <a href="native_libraries.html#Loading+native+libraries+through+DistributedCache">
+        native_libraries.html</a>
+</p>
+<a name="N109E8"></a><a name="Job+Submission+and+Monitoring"></a>
 <h3 class="h4">Job Submission and Monitoring</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/JobClient.html">
@@ -1802,7 +1797,7 @@ document.write("Last Published: " + document.lastModified);
 <p>Normally the user creates the application, describes various facets 
         of the job via <span class="codefrag">JobConf</span>, and then uses the 
         <span class="codefrag">JobClient</span> to submit the job and monitor its progress.</p>
-<a name="N10A53"></a><a name="Job+Control"></a>
+<a name="N10A48"></a><a name="Job+Control"></a>
 <h4>Job Control</h4>
 <p>Users may need to chain map-reduce jobs to accomplish complex
           tasks which cannot be done via a single map-reduce job. This is fairly
@@ -1838,7 +1833,7 @@ document.write("Last Published: " + document.lastModified);
             </li>
           
 </ul>
-<a name="N10A7D"></a><a name="Job+Input"></a>
+<a name="N10A72"></a><a name="Job+Input"></a>
 <h3 class="h4">Job Input</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/InputFormat.html">
@@ -1886,7 +1881,7 @@ document.write("Last Published: " + document.lastModified);
         appropriate <span class="codefrag">CompressionCodec</span>. However, it must be noted that
         compressed files with the above extensions cannot be <em>split</em> and 
         each compressed file is processed in its entirety by a single mapper.</p>
-<a name="N10AE7"></a><a name="InputSplit"></a>
+<a name="N10ADC"></a><a name="InputSplit"></a>
 <h4>InputSplit</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/InputSplit.html">
@@ -1900,7 +1895,7 @@ document.write("Last Published: " + document.lastModified);
           FileSplit</a> is the default <span class="codefrag">InputSplit</span>. It sets 
           <span class="codefrag">map.input.file</span> to the path of the input file for the
           logical split.</p>
-<a name="N10B0C"></a><a name="RecordReader"></a>
+<a name="N10B01"></a><a name="RecordReader"></a>
 <h4>RecordReader</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/RecordReader.html">
@@ -1912,7 +1907,7 @@ document.write("Last Published: " + document.lastModified);
           for processing. <span class="codefrag">RecordReader</span> thus assumes the 
           responsibility of processing record boundaries and presents the tasks 
           with keys and values.</p>
-<a name="N10B2F"></a><a name="Job+Output"></a>
+<a name="N10B24"></a><a name="Job+Output"></a>
 <h3 class="h4">Job Output</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/OutputFormat.html">
@@ -1937,7 +1932,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">TextOutputFormat</span> is the default 
         <span class="codefrag">OutputFormat</span>.</p>
-<a name="N10B58"></a><a name="Task+Side-Effect+Files"></a>
+<a name="N10B4D"></a><a name="Task+Side-Effect+Files"></a>
 <h4>Task Side-Effect Files</h4>
 <p>In some applications, component tasks need to create and/or write to
           side-files, which differ from the actual job-output files.</p>
@@ -1976,7 +1971,7 @@ document.write("Last Published: " + document.lastModified);
 <p>The entire discussion holds true for maps of jobs with 
            reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
            goes directly to HDFS.</p>
-<a name="N10BA0"></a><a name="RecordWriter"></a>
+<a name="N10B95"></a><a name="RecordWriter"></a>
 <h4>RecordWriter</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/RecordWriter.html">
@@ -1984,9 +1979,9 @@ document.write("Last Published: " + document.lastModified);
           pairs to an output file.</p>
 <p>RecordWriter implementations write the job outputs to the 
           <span class="codefrag">FileSystem</span>.</p>
-<a name="N10BB7"></a><a name="Other+Useful+Features"></a>
+<a name="N10BAC"></a><a name="Other+Useful+Features"></a>
 <h3 class="h4">Other Useful Features</h3>
-<a name="N10BBD"></a><a name="Counters"></a>
+<a name="N10BB2"></a><a name="Counters"></a>
 <h4>Counters</h4>
 <p>
 <span class="codefrag">Counters</span> represent global counters, defined either by 
@@ -2003,7 +1998,7 @@ document.write("Last Published: " + document.lastModified);
           in the <span class="codefrag">map</span> and/or 
           <span class="codefrag">reduce</span> methods. These counters are then globally 
           aggregated by the framework.</p>
-<a name="N10BEC"></a><a name="DistributedCache"></a>
+<a name="N10BE1"></a><a name="DistributedCache"></a>
 <h4>DistributedCache</h4>
 <p>
 <a href="api/org/apache/hadoop/filecache/DistributedCache.html">
@@ -2030,14 +2025,51 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">DistributedCache</span> can be used to distribute simple, 
           read-only data/text files and more complex types such as archives and
           jars. Archives (zip, tar, tgz and tar.gz files) are 
-          <em>un-archived</em> at the slave nodes.
-          Optionally users can also direct the <span class="codefrag">DistributedCache</span> to 
-          <em>symlink</em> the cached file(s) into the <span class="codefrag">current working 
+          <em>un-archived</em> at the slave nodes. Files 
+          have <em>execution permissions</em> set. </p>
+<p>The files/archives can be distributed by setting the property
+          <span class="codefrag">mapred.cache.{files|archives}</span>. If more than one 
+          file/archive has to be distributed, they can be added as comma
+          separated paths. The properties can also be set by APIs 
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addCacheFile(java.net.URI,%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.addCacheFile(URI,conf)</a>/ 
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addCacheArchive(java.net.URI,%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.addCacheArchive(URI,conf)</a> and
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#setCacheFiles(java.net.URI[],%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.setCacheFiles(URIs,conf)</a>/
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#setCacheArchives(java.net.URI[],%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.setCacheArchives(URIs,conf)</a> 
+          where URI is of the form
+          <span class="codefrag">hdfs://host:port/absolute-path#link-name</span>.
+          In Streaming, the files can be distributed through command line
+          option <span class="codefrag">-cacheFile/-cacheArchive</span>.</p>
+<p>Optionally users can also direct the <span class="codefrag">DistributedCache</span>
+          to <em>symlink</em> the cached file(s) into the <span class="codefrag">current working 
           directory</span> of the task via the 
           <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
-          DistributedCache.createSymlink(Configuration)</a> api. Files 
-          have <em>execution permissions</em> set.</p>
-<a name="N10C2A"></a><a name="Tool"></a>
+          DistributedCache.createSymlink(Configuration)</a> api. Or by setting
+          the configuration property <span class="codefrag">mapred.create.symlink</span>
+          as <span class="codefrag">yes</span>. The DistributedCache will use the 
+          <span class="codefrag">fragment</span> of the URI as the name of the symlink. 
+          For example, the URI 
+          <span class="codefrag">hdfs://namenode:port/lib.so.1#lib.so</span>
+          will have the symlink name as <span class="codefrag">lib.so</span> in task's cwd
+          for the file <span class="codefrag">lib.so.1</span> in distributed cache.</p>
+<p>The <span class="codefrag">DistributedCache</span> can also be used as a 
+          rudimentary software distribution mechanism for use in the
+          map and/or reduce tasks. It can be used to distribute both
+          jars and native libraries. The 
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addArchiveToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addFileToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.addFileToClassPath(Path, Configuration)</a> api 
+          can be used to cache files/jars and also add them to the 
+          <em>classpath</em> of child-jvm. The same can be done by setting
+          the configuration properties 
+          <span class="codefrag">mapred.job.classpath.{files|archives}</span>. Similarly the
+          cached files that are symlinked into the working directory of the
+          task can be used to distribute native libraries and load them.</p>
+<a name="N10C64"></a><a name="Tool"></a>
 <h4>Tool</h4>
 <p>The <a href="api/org/apache/hadoop/util/Tool.html">Tool</a> 
           interface supports the handling of generic Hadoop command-line options.
@@ -2077,7 +2109,7 @@ document.write("Last Published: " + document.lastModified);
             </span>
           
 </p>
-<a name="N10C5C"></a><a name="IsolationRunner"></a>
+<a name="N10C96"></a><a name="IsolationRunner"></a>
 <h4>IsolationRunner</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/IsolationRunner.html">
@@ -2101,7 +2133,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">IsolationRunner</span> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
-<a name="N10C8F"></a><a name="Profiling"></a>
+<a name="N10CC9"></a><a name="Profiling"></a>
 <h4>Profiling</h4>
 <p>Profiling is a utility to get a representative (2 or 3) sample
           of built-in java profiler for a sample of maps and reduces. </p>
@@ -2134,7 +2166,7 @@ document.write("Last Published: " + document.lastModified);
           <span class="codefrag">-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</span>
           
 </p>
-<a name="N10CC3"></a><a name="Debugging"></a>
+<a name="N10CFD"></a><a name="Debugging"></a>
 <h4>Debugging</h4>
 <p>Map/Reduce framework provides a facility to run user-provided 
           scripts for debugging. When map/reduce task fails, user can run 
@@ -2145,30 +2177,14 @@ document.write("Last Published: " + document.lastModified);
 <p> In the following sections we discuss how to submit debug script
           along with the job. For submitting debug script, first it has to
           distributed. Then the script has to supplied in Configuration. </p>
-<a name="N10CCF"></a><a name="How+to+distribute+script+file%3A"></a>
+<a name="N10D09"></a><a name="How+to+distribute+script+file%3A"></a>
 <h5> How to distribute script file: </h5>
 <p>
-          To distribute  the debug script file, first copy the file to the dfs.
-          The file can be distributed by setting the property 
-          "mapred.cache.files" with value "path"#"script-name". 
-          If more than one file has to be distributed, the files can be added
-          as comma separated paths. This property can also be set by APIs
-          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addCacheFile(java.net.URI,%20org.apache.hadoop.conf.Configuration)">
-          DistributedCache.addCacheFile(URI,conf) </a> and
-          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#setCacheFiles(java.net.URI[],%20org.apache.hadoop.conf.Configuration)">
-          DistributedCache.setCacheFiles(URIs,conf) </a> where URI is of 
-          the form "hdfs://host:port/'absolutepath'#'script-name'". 
-          For Streaming, the file can be added through 
-          command line option -cacheFile.
-          </p>
-<p>
-          The files has to be symlinked in the current working directory of 
-          of the task. To create symlink for the file, the property 
-          "mapred.create.symlink" is set to "yes". This can also be set by
-          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
-          DistributedCache.createSymLink(Configuration) </a> api.
-          </p>
-<a name="N10CE8"></a><a name="How+to+submit+script%3A"></a>
+          The user has to use 
+          <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
+          mechanism to <em>distribute</em> and <em>symlink</em> the
+          debug script file.</p>
+<a name="N10D1D"></a><a name="How+to+submit+script%3A"></a>
 <h5> How to submit script: </h5>
 <p> A quick way to submit debug script is to set values for the 
           properties "mapred.map.task.debug.script" and 
@@ -2192,17 +2208,17 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">$script $stdout $stderr $syslog $jobconf $program </span>  
           
 </p>
-<a name="N10D0A"></a><a name="Default+Behavior%3A"></a>
+<a name="N10D3F"></a><a name="Default+Behavior%3A"></a>
 <h5> Default Behavior: </h5>
 <p> For pipes, a default script is run to process core dumps under
           gdb, prints stack trace and gives info about running threads. </p>
-<a name="N10D15"></a><a name="JobControl"></a>
+<a name="N10D4A"></a><a name="JobControl"></a>
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
           JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
           and their dependencies.</p>
-<a name="N10D22"></a><a name="Data+Compression"></a>
+<a name="N10D57"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
 <p>Hadoop Map-Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
@@ -2216,7 +2232,7 @@ document.write("Last Published: " + document.lastModified);
           codecs for reasons of both performance (zlib) and non-availability of
           Java libraries (lzo). More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
-<a name="N10D42"></a><a name="Intermediate+Outputs"></a>
+<a name="N10D77"></a><a name="Intermediate+Outputs"></a>
 <h5>Intermediate Outputs</h5>
 <p>Applications can control compression of intermediate map-outputs
             via the 
@@ -2225,7 +2241,7 @@ document.write("Last Published: " + document.lastModified);
             <span class="codefrag">CompressionCodec</span> to be used via the
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressorClass(java.lang.Class)">
             JobConf.setMapOutputCompressorClass(Class)</a> api.</p>
-<a name="N10D57"></a><a name="Job+Outputs"></a>
+<a name="N10D8C"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/FileOutputFormat.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -2245,7 +2261,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10D86"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10DBB"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -2255,7 +2271,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10DA0"></a><a name="Source+Code-N10DA0"></a>
+<a name="N10DD5"></a><a name="Source+Code-N10DD5"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3465,7 +3481,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N11502"></a><a name="Sample+Runs"></a>
+<a name="N11537"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -3633,7 +3649,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N115D6"></a><a name="Highlights"></a>
+<a name="N1160B"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:

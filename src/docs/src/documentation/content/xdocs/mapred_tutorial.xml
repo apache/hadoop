@@ -1182,24 +1182,18 @@
         <code>${HADOOP_LOG_DIR}/userlogs</code></p>
         
         <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
-        as a rudimentary software distribution mechanism for use in the map 
-        and/or reduce tasks. It can be used to distribute both jars and 
-        native libraries. The 
-        <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addarchivetoclasspath">
-        DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
-        <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addfiletoclasspath">
-        DistributedCache.addFileToClassPath(Path, Configuration)</a> api can 
-        be used to cache files/jars and also add them to the <em>classpath</em> 
-        of child-jvm. Similarly the facility provided by the 
-        <code>DistributedCache</code> where-in it symlinks the cached files into
-        the working directory of the task can be used to distribute native 
-        libraries and load them. The underlying detail is that child-jvm always 
-        has its <em>current working directory</em> added to the
+        to distribute both jars and native libraries for use in the map 
+        and/or reduce tasks. The child-jvm always has its 
+        <em>current working directory</em> added to the
         <code>java.library.path</code> and <code>LD_LIBRARY_PATH</code>. 
-        And hence the cached libraries can be 
-        loaded via <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
-        System.loadLibrary</a> or <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
-        System.load</a>.</p>
+        And hence the cached libraries can be loaded via 
+        <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
+        System.loadLibrary</a> or 
+        <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
+        System.load</a>. More details on how to load shared libraries through 
+        distributed cache are documented at 
+        <a href="native_libraries.html#Loading+native+libraries+through+DistributedCache">
+        native_libraries.html</a></p>
       </section>
       
       <section>
@@ -1507,13 +1501,54 @@
           <p><code>DistributedCache</code> can be used to distribute simple, 
           read-only data/text files and more complex types such as archives and
           jars. Archives (zip, tar, tgz and tar.gz files) are 
-          <em>un-archived</em> at the slave nodes.
-          Optionally users can also direct the <code>DistributedCache</code> to 
-          <em>symlink</em> the cached file(s) into the <code>current working 
+          <em>un-archived</em> at the slave nodes. Files 
+          have <em>execution permissions</em> set. </p>
+          
+          <p>The files/archives can be distributed by setting the property
+          <code>mapred.cache.{files|archives}</code>. If more than one 
+          file/archive has to be distributed, they can be added as comma
+          separated paths. The properties can also be set by APIs 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachefile">
+          DistributedCache.addCacheFile(URI,conf)</a>/ 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachearchive">
+          DistributedCache.addCacheArchive(URI,conf)</a> and
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachefiles">
+          DistributedCache.setCacheFiles(URIs,conf)</a>/
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachearchives">
+          DistributedCache.setCacheArchives(URIs,conf)</a> 
+          where URI is of the form
+          <code>hdfs://host:port/absolute-path#link-name</code>.
+          In Streaming, the files can be distributed through command line
+          option <code>-cacheFile/-cacheArchive</code>.</p>
+          
+          <p>Optionally users can also direct the <code>DistributedCache</code>
+          to <em>symlink</em> the cached file(s) into the <code>current working 
           directory</code> of the task via the 
           <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
-          DistributedCache.createSymlink(Configuration)</a> api. Files 
-          have <em>execution permissions</em> set.</p>
+          DistributedCache.createSymlink(Configuration)</a> api. Or by setting
+          the configuration property <code>mapred.create.symlink</code>
+          as <code>yes</code>. The DistributedCache will use the 
+          <code>fragment</code> of the URI as the name of the symlink. 
+          For example, the URI 
+          <code>hdfs://namenode:port/lib.so.1#lib.so</code>
+          will have the symlink name as <code>lib.so</code> in task's cwd
+          for the file <code>lib.so.1</code> in distributed cache.</p>
+         
+          <p>The <code>DistributedCache</code> can also be used as a 
+          rudimentary software distribution mechanism for use in the
+          map and/or reduce tasks. It can be used to distribute both
+          jars and native libraries. The 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addarchivetoclasspath">
+          DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addfiletoclasspath">
+          DistributedCache.addFileToClassPath(Path, Configuration)</a> api 
+          can be used to cache files/jars and also add them to the 
+          <em>classpath</em> of child-jvm. The same can be done by setting
+          the configuration properties 
+          <code>mapred.job.classpath.{files|archives}</code>. Similarly the
+          cached files that are symlinked into the working directory of the
+          task can be used to distribute native libraries and load them.</p>
+          
         </section>
         
         <section>
@@ -1628,27 +1663,10 @@
           <section>
           <title> How to distribute script file: </title>
           <p>
-          To distribute  the debug script file, first copy the file to the dfs.
-          The file can be distributed by setting the property 
-          "mapred.cache.files" with value "path"#"script-name". 
-          If more than one file has to be distributed, the files can be added
-          as comma separated paths. This property can also be set by APIs
-          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachefile">
-          DistributedCache.addCacheFile(URI,conf) </a> and
-          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachefiles">
-          DistributedCache.setCacheFiles(URIs,conf) </a> where URI is of 
-          the form "hdfs://host:port/'absolutepath'#'script-name'". 
-          For Streaming, the file can be added through 
-          command line option -cacheFile.
-          </p>
-          
-          <p>
-          The files has to be symlinked in the current working directory of 
-          of the task. To create symlink for the file, the property 
-          "mapred.create.symlink" is set to "yes". This can also be set by
-          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
-          DistributedCache.createSymLink(Configuration) </a> api.
-          </p>
+          The user has to use 
+          <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
+          mechanism to <em>distribute</em> and <em>symlink</em> the
+          debug script file.</p>
           </section>
           <section>
           <title> How to submit script: </title>

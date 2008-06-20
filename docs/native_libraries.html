@@ -207,6 +207,9 @@ document.write("Last Published: " + document.lastModified);
 </li>
 </ul>
 </li>
+<li>
+<a href="#Loading+native+libraries+through+DistributedCache"> Loading native libraries through DistributedCache </a>
+</li>
 </ul>
 </div>
   
@@ -399,6 +402,41 @@ document.write("Last Published: " + document.lastModified);
           </li>
         
 </ul>
+</div>
+    
+<a name="N1011E"></a><a name="Loading+native+libraries+through+DistributedCache"></a>
+<h2 class="h3"> Loading native libraries through DistributedCache </h2>
+<div class="section">
+<p>User can load native shared libraries through  
+      <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
+      for <em>distributing</em> and <em>symlinking</em> the library files</p>
+<p>Here is an example, describing how to distribute the library and
+      load it from map/reduce task. </p>
+<ol>
+      
+<li> First copy the library to the HDFS. <br>
+      
+<span class="codefrag">bin/hadoop fs -copyFromLocal mylib.so.1 /libraries/mylib.so.1</span>
+      
+</li>
+      
+<li> The job launching program should contain the following: <br>
+      
+<span class="codefrag"> DistributedCache.createSymlink(conf); </span> 
+<br>
+      
+<span class="codefrag"> DistributedCache.addCacheFile("hdfs://host:port/libraries/mylib.so.1#mylib.so", conf);
+      </span>
+      
+</li>
+      
+<li> The map/reduce task can contain: <br>
+      
+<span class="codefrag"> System.loadLibrary("mylib.so"); </span>
+      
+</li>
+      
+</ol>
 </div>
   
 </div>
