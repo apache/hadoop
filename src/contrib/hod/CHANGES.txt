@@ -37,6 +37,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3464. Implemented a mechanism to transfer HOD errors that occur on
     compute nodes to the submit node running the HOD client, so users have good
     feedback on why an allocation failed. (Vinod Kumar Vavilapalli via mukund)
+
+    HADOOP-3505. Updated HOD documentation with changes made for Hadoop
+    0.18. (Vinod Kumar Vavilapalli via yhemanth)
  
   BUG FIXES
 

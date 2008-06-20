@@ -161,6 +161,22 @@
                        as many paths are specified as there are disks available
                        to ensure all disks are being utilized. The restrictions
                        and notes for the temp-dir variable apply here too.</li>
+          <li>max-master-failures: It defines how many times a hadoop master
+                       daemon can fail to launch, beyond which HOD will fail
+                       the cluster allocation altogether. In HOD clusters,
+                       sometimes there might be a single or few "bad" nodes due
+                       to issues like missing java, missing/incorrect version
+                       of Hadoop etc. When this configuration variable is set
+                       to a positive integer, the RingMaster returns an error
+                       to the client only when the number of times a hadoop
+                       master (JobTracker or NameNode) fails to start on these
+                       bad nodes because of above issues, exceeds the specified
+                       value. If the number is not exceeded, the next HodRing
+                       which requests for a command to launch is given the same
+                       hadoop master again. This way, HOD tries its best for a
+                       successful allocation even in the presence of a few bad
+                       nodes in the cluster.
+                       </li>
         </ul>
       </section>
       

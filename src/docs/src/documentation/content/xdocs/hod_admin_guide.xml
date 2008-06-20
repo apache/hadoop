@@ -315,10 +315,13 @@ it.</p>
     </section>
     <section>
       <title>checklimits.sh - Tool to update torque comment field reflecting resource limits</title>
-      <p>checklimits is a HOD tool specific to torque/maui environment. It
+      <p>checklimits is a HOD tool specific to Torque/Maui environment
+      (<a href="ext:hod/maui">Maui Cluster Scheduler</a> is an open source job
+      scheduler for clusters and supercomputers, from clusterresources). The
+      checklimits.sh script
       updates torque comment field when newly submitted job(s) violate/cross
-      over user limits set up in maui scheduler. It uses qstat, does one pass
-      over torque job list to find out queued or unfinished jobs, runs maui
+      over user limits set up in Maui scheduler. It uses qstat, does one pass
+      over torque job list to find out queued or unfinished jobs, runs Maui
       tool checkjob on each job to see if user limits are violated and then
       runs torque's qalter utility to update job attribute 'comment'. Currently
       it updates the comment as <em>User-limits exceeded. Requested:([0-9]*)
@@ -330,7 +333,9 @@ it.</p>
         <p>checklimits.sh is available under hod_install_location/support
         folder. This is a shell script and can be run directly as <em>sh
         checklimits.sh </em>or as <em>./checklimits.sh</em> after enabling
-        execute permissions. In order for this tool to be able to update
+        execute permissions. Torque and Maui binaries should be available
+        on the machine where the tool is run and should be in the path
+        of the shell script process. In order for this tool to be able to update
         comment field of jobs from different users, it has to be run with
         torque administrative privileges. This tool has to be run repeatedly
         after specific intervals of time to frequently update jobs violating
