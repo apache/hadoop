@@ -36,13 +36,17 @@ public class TestTextOutputFormat extends TestCase {
     }
   }
 
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
+  private static Path workDir = 
+    new Path(new Path(
+                      new Path(System.getProperty("test.build.data", "."), 
+                               "data"), 
+                      MRConstants.TEMP_DIR_NAME), 
              "TestTextOutputFormat");
 
   @SuppressWarnings("unchecked")
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
+    FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
     if (!fs.mkdirs(workDir)) {
@@ -94,6 +98,7 @@ public class TestTextOutputFormat extends TestCase {
     JobConf job = new JobConf();
     String separator = "\u0001";
     job.set("mapred.textoutputformat.separator", separator);
+    FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
     if (!fs.mkdirs(workDir)) {

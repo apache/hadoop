@@ -195,5 +195,40 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
     return name == null ? null: new Path(name);
   }
 
+  /**
+   * Helper function to create the task's temporary output directory and 
+   * return the path to the task's output file.
+   * 
+   * @param conf job-configuration
+   * @param name temporary task-output filename
+   * @return path to the task's temporary output file
+   * @throws IOException
+   */
+  protected static Path getTaskOutputPath(JobConf conf, String name) 
+  throws IOException {
+    // ${mapred.job.dir}
+    Path outputPath = getOutputPath(conf);
+    if (outputPath == null) {
+      throw new IOException("Undefined job output-path");
+    }
+
+    // ${mapred.out.dir}/_temporary
+    Path jobTmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
+    FileSystem fs = jobTmpDir.getFileSystem(conf);
+    if (!fs.exists(jobTmpDir)) {
+      throw new IOException("The temporary job-output directory " + 
+          jobTmpDir.toString() + " doesn't exist!"); 
+    }
+
+    // ${mapred.out.dir}/_temporary/_${taskid}
+    Path taskTmpDir = getWorkOutputPath(conf);
+    if (!fs.mkdirs(taskTmpDir)) {
+      throw new IOException("Mkdirs failed to create " 
+          + taskTmpDir.toString());
+    }
+    
+    // ${mapred.out.dir}/_temporary/_${taskid}/${name}
+    return new Path(taskTmpDir, name);
+  } 
 }
 
