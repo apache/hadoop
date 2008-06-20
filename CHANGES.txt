@@ -312,6 +312,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3593. Updates the mapred tutorial. (ddas)
 
+    HADOOP-3547. Documents the way in which native libraries can be distributed
+    via the DistributedCache. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
