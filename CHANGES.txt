@@ -102,6 +102,10 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3512. Separate out the tools into a tools jar. (omalley)
 
+    HADOOP-3598. Ensure that temporary task-output directories are not created
+    if they are not necessary e.g. for Maps with no side-effect files.
+    (acmurthy)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

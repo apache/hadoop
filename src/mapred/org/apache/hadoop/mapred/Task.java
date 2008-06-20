@@ -493,6 +493,9 @@ abstract class Task implements Writable, Configurable {
                       > 0) {
                 shouldBePromoted = true;
               }
+            } else {
+              LOG.info(getTaskID() + ": No outputs to promote from " + 
+                       taskOutputPath);
             }
           }
         } catch (IOException ioe) {

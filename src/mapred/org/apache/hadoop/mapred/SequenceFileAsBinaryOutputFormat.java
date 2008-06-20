@@ -130,13 +130,10 @@ public class SequenceFileAsBinaryOutputFormat
              getRecordWriter(FileSystem ignored, JobConf job,
                              String name, Progressable progress)
     throws IOException {
-
-    Path outputPath = getWorkOutputPath(job);
-    FileSystem fs = outputPath.getFileSystem(job);
-    if (!fs.exists(outputPath)) {
-      throw new IOException("Output directory doesnt exist");
-    }
-    Path file = new Path(outputPath, name);
+    // get the path of the temporary output file 
+    Path file = FileOutputFormat.getTaskOutputPath(job, name);
+    
+    FileSystem fs = file.getFileSystem(job);
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
     if (getCompressOutput(job)) {

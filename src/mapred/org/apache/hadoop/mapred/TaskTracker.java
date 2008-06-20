@@ -1458,22 +1458,6 @@ public class TaskTracker
       localJobConf.set("mapred.task.id", task.getTaskID().toString());
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
 
-      // create _taskid directory in output path temporary directory.
-      Path outputPath = FileOutputFormat.getOutputPath(localJobConf);
-      if (outputPath != null) {
-        Path jobTmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
-        FileSystem fs = jobTmpDir.getFileSystem(localJobConf);
-        if (fs.exists(jobTmpDir)) {
-          Path taskTmpDir = new Path(jobTmpDir, "_" + task.getTaskID());
-          if (!fs.mkdirs(taskTmpDir)) {
-            throw new IOException("Mkdirs failed to create " 
-                                 + taskTmpDir.toString());
-          }
-        } else {
-          throw new IOException("The directory " + jobTmpDir.toString()
-                                 + " doesnt exist "); 
-        }
-      }
       task.localizeConfiguration(localJobConf);
       
       List<String[]> staticResolutions = NetUtils.getAllStaticResolutions();

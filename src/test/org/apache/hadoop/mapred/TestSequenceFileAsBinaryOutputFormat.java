@@ -38,7 +38,11 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
   public void testBinary() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    
+    Path dir = 
+      new Path(new Path(new Path(System.getProperty("test.build.data",".")), 
+                        MRConstants.TEMP_DIR_NAME),
+               "mapred");
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
     long seed = r.nextLong();
@@ -49,6 +53,7 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
       fail("Failed to create output directory");
     }
 
+    FileOutputFormat.setOutputPath(job, dir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, dir);
 
     SequenceFileAsBinaryOutputFormat.setSequenceFileOutputKeyClass(job, 

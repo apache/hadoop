@@ -39,7 +39,10 @@ public class TestMultipleTextOutputFormat extends TestCase {
   }
 
   private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"), 
+    new Path(new Path(
+                      new Path(System.getProperty("test.build.data", "."), 
+                               "data"), 
+                      MRConstants.TEMP_DIR_NAME), 
              "TestMultipleTextOutputFormat");
 
   private static void writeData(RecordWriter<Text, Text> rw) throws IOException {
@@ -81,6 +84,7 @@ public class TestMultipleTextOutputFormat extends TestCase {
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
+    FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
     if (!fs.mkdirs(workDir)) {
