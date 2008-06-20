@@ -1055,6 +1055,7 @@ class JobInProgress {
     }
 
     Node node = jobtracker.getNode(tts.getHost());
+    Node nodeParentAtMaxLevel = null;
     
     // For scheduling a map task, we have two caches and a list (optional)
     //  I)   one for non-running task
@@ -1111,6 +1112,8 @@ class JobInProgress {
         }
         key = key.getParent();
       }
+      // get the node parent at max level
+      nodeParentAtMaxLevel = JobTracker.getParentNode(node, maxLevel - 1);
     }
 
     //2. Search breadth-wise across parents at max level for non-running 
@@ -1119,8 +1122,6 @@ class JobInProgress {
     //     - node information for the tracker is missing (tracker's topology
     //       info not obtained yet)
 
-    // get the node parent at max level
-    Node nodeParentAtMaxLevel = JobTracker.getParentNode(node, maxLevel - 1);
     // collection of node at max level in the cache structure
     Collection<Node> nodesAtMaxLevel = jobtracker.getNodesAtMaxLevel();
     
