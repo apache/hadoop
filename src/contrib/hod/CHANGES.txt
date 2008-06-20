@@ -23,6 +23,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3184. Modified HOD to handle master failures on bad nodes by trying 
     to bring them up on another node in the ring. (Hemanth Yamijala via ddas)
 
+    HADOOP-3610. Modified HOD to create cluster directory if one does not
+    exist when using the script option. (Vinod Kumar Vavilapalli via yhemanth)
 
   NEW FEATURES
 

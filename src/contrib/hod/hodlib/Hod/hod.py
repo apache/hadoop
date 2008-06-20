@@ -608,10 +608,11 @@ class hodRunner:
                          script + " : Not an executable.")
 
     if not os.path.exists(clusterDir):
-      errorFlag = True
-      errorMsgs.append( \
-                  "Invalid cluster directory (--hod.clusterdir or -d) : " + \
-                  clusterDir + " : No such directory")
+      try:
+        os.makedirs(clusterDir)
+      except OSError, err:
+        errorFlag = True
+        errorMsgs.append("Could not create cluster directory. %s" % (str(err)))
     elif not os.path.isdir(clusterDir):
       errorFlag = True
       errorMsgs.append( \
