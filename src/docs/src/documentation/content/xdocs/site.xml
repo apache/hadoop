@@ -104,7 +104,9 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <addarchivetoclasspath href="#addArchiveToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
                 <addfiletoclasspath href="#addFileToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
                 <addcachefile href="#addCacheFile(java.net.URI,%20org.apache.hadoop.conf.Configuration)" />
+                <addcachearchive href="#addCacheArchive(java.net.URI,%20org.apache.hadoop.conf.Configuration)" />
                 <setcachefiles href="#setCacheFiles(java.net.URI[],%20org.apache.hadoop.conf.Configuration)" />
+                <setcachearchives href="#setCacheArchives(java.net.URI[],%20org.apache.hadoop.conf.Configuration)" />
                 <createsymlink href="#createSymlink(org.apache.hadoop.conf.Configuration)" />
               </distributedcache>  
             </filecache>

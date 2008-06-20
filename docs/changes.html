@@ -209,7 +209,7 @@ framework.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(41)
+</a>&nbsp;&nbsp;&nbsp;(42)
     <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -295,6 +295,8 @@ hadoop daemons and Map-Reduce tasks.<br />(Amareshwari Sriramadasu via ddas)</li
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3535">HADOOP-3535</a>. Fix documentation and name of IOUtils.close to
 reflect that it should only be used in cleanup contexts.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3593">HADOOP-3593</a>. Updates the mapred tutorial.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3547">HADOOP-3547</a>. Documents the way in which native libraries can be distributed
+via the DistributedCache.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -320,7 +322,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(91)
+</a>&nbsp;&nbsp;&nbsp;(98)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -501,6 +503,21 @@ Upgrade Manager. Fixed.<br />(dhruba)</li>
 combiner to be run once and only once on each record.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3533">HADOOP-3533</a>. Add deprecated methods to provide API compatibility
 between 0.18 and 0.17. Remove the deprecated methods in trunk.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3580">HADOOP-3580</a>. Fixes a problem to do with specifying a har as an input to
+a job.<br />(Mahadev Konar via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3333">HADOOP-3333</a>. Don't assign a task to a tasktracker that it failed to
+execute earlier (used to happen in the case of lost tasktrackers where
+the tasktracker would reinitialize and bind to a different port).<br />(Jothi Padmanabhan and Arun Murthy via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3534">HADOOP-3534</a>. Log IOExceptions that happen in closing the name
+system when the NameNode shuts down. (Tsz Wo (Nicholas) Sze via omalley)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3546">HADOOP-3546</a>. TaskTracker re-initialization gets stuck in cleaning up.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3569">HADOOP-3569</a>. KFS input stream read() now correctly reads 1 byte
+instead of 4.<br />(Sriram Rao via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3599">HADOOP-3599</a>. Fix JobConf::setCombineOnceOnly to modify the instance rather
+than a parameter.<br />(Owen O'Malley via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3590">HADOOP-3590</a>. Null pointer exception in JobTracker when the task tracker is
+not yet resolved.<br />(Amar Ramesh Kamat via ddas)</li>
     </ol>
   </li>
 </ul>
@@ -524,7 +541,7 @@ input keys and values will be reused.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(8)
+</a>&nbsp;&nbsp;&nbsp;(10)
     <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2159">HADOOP-2159</a> Namenode stuck in safemode. The counter blockSafe should
 not be decremented for invalid blocks.<br />(hairong)</li>
@@ -543,6 +560,10 @@ value lengths are incorrectly calculated.<br />(cdouglas)</li>
 in the reduce.<br />(Spyros Blanas via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1979">HADOOP-1979</a>. Speed up fsck by adding a buffered stream.<br />(Lohit
 Vijaya Renu via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3576">HADOOP-3576</a>. Fix NullPointerException when renaming a directory
+to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3320">HADOOP-3320</a>. Fix NullPointerException in NetworkTopology.getDistance().<br />(hairong)</li>
     </ol>
   </li>
 </ul>
