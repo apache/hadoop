@@ -428,7 +428,7 @@ class MapTask extends Task {
           // serialize key bytes into buffer
         int keystart = bufindex;
         keySerializer.serialize(key);
-        if (bufindex < keystart || bufindex == bufvoid) {
+        if (bufindex < keystart) {
           // wrapped the key; reset required
           bb.reset();
           keystart = 0;
@@ -437,16 +437,21 @@ class MapTask extends Task {
         int valstart = bufindex;
         valSerializer.serialize(value);
         int valend = bb.markRecord();
-        mapOutputByteCounter.increment(valend > keystart
-                ? valend - keystart
-                        : (bufvoid - keystart) + valend);
+        mapOutputByteCounter.increment(valend >= keystart
+            ? valend - keystart
+            : (bufvoid - keystart) + valend);
+
+        if (keystart == bufindex) {
+          // if emitted records make no writes, it's possible to wrap
+          // accounting space without notice
+          bb.write(new byte[0], 0, 0);
+        }
 
         int partition = partitioner.getPartition(key, value, partitions);
         if (partition < 0 || partition >= partitions) {
           throw new IOException("Illegal partition for " + key + " (" +
               partition + ")");
         }
-
         mapOutputRecordCounter.increment(1);
 
         // update accounting info
@@ -457,7 +462,7 @@ class MapTask extends Task {
         kvindices[ind + VALSTART] = valstart;
         kvindex = (kvindex + 1) % kvoffsets.length;
       } catch (MapBufferTooSmallException e) {
-        LOG.debug("Record too large for in-memory buffer: " + e.getMessage());
+        LOG.info("Record too large for in-memory buffer: " + e.getMessage());
         spillSingleRecord(key, value);
         mapOutputRecordCounter.increment(1);
         return;
@@ -585,7 +590,8 @@ class MapTask extends Task {
             }
 
             // sufficient accounting space?
-            kvfull = (kvindex + 1) % kvoffsets.length == kvstart;
+            final int kvnext = (kvindex + 1) % kvoffsets.length;
+            kvfull = kvnext == kvstart;
             // sufficient buffer space?
             if (bufstart <= bufend && bufend <= bufindex) {
               buffull = bufindex + len > bufvoid;
@@ -601,18 +607,18 @@ class MapTask extends Task {
               // spill thread not running
               if (kvend != kvindex) {
                 // we have records we can spill
-                final boolean kvsoftlimit = (kvindex > kvend)
-                  ? kvindex - kvend > softRecordLimit
-                  : kvend - kvindex < kvoffsets.length - softRecordLimit;
+                final boolean kvsoftlimit = (kvnext > kvend)
+                  ? kvnext - kvend > softRecordLimit
+                  : kvend - kvnext <= kvoffsets.length - softRecordLimit;
                 final boolean bufsoftlimit = (bufindex > bufend)
                   ? bufindex - bufend > softBufferLimit
                   : bufend - bufindex < bufvoid - softBufferLimit;
                 if (kvsoftlimit || bufsoftlimit || (buffull && !wrap)) {
                   LOG.info("Spilling map output: buffer full = " + bufsoftlimit+
                            " and record full = " + kvsoftlimit);
-                  LOG.info("bufindex = " + bufindex + "; bufend = " + bufend +
+                  LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
                            "; bufvoid = " + bufvoid);
-                  LOG.info("kvindex = " + kvindex + "; kvend = " + kvend +
+                  LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
                            "; length = " + kvoffsets.length);
                   kvend = kvindex;
                   bufend = bufmark;
@@ -682,6 +688,10 @@ class MapTask extends Task {
             ).initCause(sortSpillException);
       }
       if (kvend != kvindex) {
+        LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+                 "; bufvoid = " + bufvoid);
+        LOG.info("kvstart = " + kvstart + "; kvend = " + kvindex +
+                 "; length = " + kvoffsets.length);
         kvend = kvindex;
         bufend = bufmark;
         sortAndSpill();
@@ -717,7 +727,7 @@ class MapTask extends Task {
     private void sortAndSpill() throws IOException {
       //approximate the length of the output file to be the length of the
       //buffer + header lengths for the partitions
-      long size = (bufend > bufstart
+      long size = (bufend >= bufstart
           ? bufend - bufstart
           : (bufvoid - bufend) + bufstart) +
                   partitions * APPROX_HEADER_LENGTH;
@@ -730,7 +740,8 @@ class MapTask extends Task {
         out = localFs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-                             getTaskID(), numSpills, partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+                             getTaskID(), numSpills,
+                             partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
         indexOut = localFs.create(indexFilename);
         final int endPosition = (kvend > kvstart)
           ? kvend
@@ -746,7 +757,6 @@ class MapTask extends Task {
             if (null == combinerClass) {
               // spill directly
               DataInputBuffer key = new DataInputBuffer();
-              long recordNo = 0;
               while (spindex < endPosition &&
                   kvindices[kvoffsets[spindex % kvoffsets.length]
                             + PARTITION] == i) {
@@ -757,7 +767,6 @@ class MapTask extends Task {
                            kvindices[kvoff + KEYSTART]));
                 writer.append(key, value);
                 ++spindex;
-                ++recordNo;
               }
             } else {
               int spstart = spindex;
@@ -767,11 +776,7 @@ class MapTask extends Task {
                 ++spindex;
               }
               // Note: we would like to avoid the combiner if we've fewer
-              // than some threshold of records for a partition, but we left
-              // our records uncompressed for the combiner. We accept the trip
-              // through the combiner to effect the compression for now;
-              // to remedy this would require us to observe the compression
-              // strategy here as we do in collect
+              // than some threshold of records for a partition
               if (spstart != spindex) {
                 combineCollector.setWriter(writer);
                 RawKeyValueIterator kvIter =
@@ -790,8 +795,8 @@ class MapTask extends Task {
             if (null != writer) writer.close();
           }
         }
-        ++numSpills;
         LOG.info("Finished spill " + numSpills);
+        ++numSpills;
       } finally {
         if (out != null) out.close();
         if (indexOut != null) indexOut.close();
@@ -817,7 +822,8 @@ class MapTask extends Task {
         out = localFs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-                             getTaskID(), numSpills, partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+                             getTaskID(), numSpills,
+                             partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
         indexOut = localFs.create(indexFilename);
         // we don't run the combiner for a single record
         for (int i = 0; i < partitions; ++i) {
@@ -874,8 +880,8 @@ class MapTask extends Task {
      * deserialized value bytes. Should only be called during a spill.
      */
     private void getVBytesForOffset(int kvoff, InMemValBytes vbytes) {
-      final int nextindex = ((kvoff/ACCTSIZE) == 
-                             ((kvend - 1 + kvoffsets.length) % kvoffsets.length))
+      final int nextindex = (kvoff / ACCTSIZE ==
+                            (kvend - 1 + kvoffsets.length) % kvoffsets.length)
         ? bufend
         : kvindices[(kvoff + ACCTSIZE + KEYSTART) % kvindices.length];
       int vallen = (nextindex >= kvindices[kvoff + VALSTART])
