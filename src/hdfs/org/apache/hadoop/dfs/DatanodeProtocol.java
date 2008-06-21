@@ -33,7 +33,7 @@ interface DatanodeProtocol extends VersionedProtocol {
   /**
    * 16: Block parameter added to nextGenerationStamp().
    */
-  public static final long versionID = 15L;
+  public static final long versionID = 16L;
   
   // error code
   final static int NOTIFY = 0;

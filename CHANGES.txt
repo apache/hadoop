@@ -652,6 +652,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3603. Fix MapOutputCollector to spill when io.sort.spill.percent is
     1.0 and to detect spills when emitted records write no data. (cdouglas)
 
+    HADOOP-3615. Set DatanodeProtocol.versionID to the correct value.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
