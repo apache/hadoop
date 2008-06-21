@@ -649,6 +649,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3590. Null pointer exception in JobTracker when the task tracker is 
     not yet resolved. (Amar Ramesh Kamat via ddas)
 
+    HADOOP-3603. Fix MapOutputCollector to spill when io.sort.spill.percent is
+    1.0 and to detect spills when emitted records write no data. (cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
