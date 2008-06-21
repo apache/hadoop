@@ -82,6 +82,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <torque-mailing-list href="http://www.clusterresources.com/pages/resources/mailing-lists.php" />
       <torque-basic-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.2_basic_configuration" />
       <torque-advanced-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.3_advanced_configuration" />
+      <maui href="http://www.clusterresources.com/pages/products/maui-cluster-scheduler.php"/>
       <python href="http://www.python.org" />
       <twisted-python href="http://twistedmatrix.com/trac/" />
     </hod>

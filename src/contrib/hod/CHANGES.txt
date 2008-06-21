@@ -26,6 +26,9 @@ Release 0.18.0 - Unreleased
     compute nodes to the submit node running the HOD client, so users have good
     feedback on why an allocation failed. (Vinod Kumar Vavilapalli via mukund)
  
+    HADOOP-3505. Updated HOD documentation with changes made for Hadoop
+    0.18. (Vinod Kumar Vavilapalli via yhemanth)
+
   BUG FIXES
 
     HADOOP-2961. Avoids unnecessary checks for some configuration parameters

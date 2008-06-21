@@ -28,7 +28,7 @@
   <section><title>A typical HOD session</title><anchor id="HOD_Session"></anchor>
   <p>A typical session of HOD will involve at least three steps: allocate, run hadoop jobs, deallocate. In order to do this, perform the following steps.</p>
   <p><strong> Create a Cluster Directory </strong></p><anchor id="Create_a_Cluster_Directory"></anchor>
-  <p>The <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Create this directory and pass it to the <code>hod</code> operations as stated below. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the cluster directory as the Hadoop --config option. </p>
+  <p>The <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Pass this directory to the <code>hod</code> operations as stated below. If the cluster directory passed doesn't already exist, HOD will automatically try to create it and use it. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the cluster directory as the Hadoop --config option. </p>
   <p><strong> Operation <em>allocate</em></strong></p><anchor id="Operation_allocate"></anchor>
   <p>The <em>allocate</em> operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax. Note that it requires a cluster_dir ( -d, --hod.clusterdir) and the number of nodes (-n, --hod.nodecount) needed to be allocated:</p>
     <table>
@@ -92,7 +92,7 @@
   <p>This will be a regular shell script that will typically contain hadoop commands, such as:</p>
   <table><tr><td><code>$ hadoop jar jar_file options</code></td>
   </tr></table>
-  <p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. The users however need to create a cluster directory just like when using the allocate operation.</p>
+  <p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. The users however need to specify a cluster directory just like when using the allocate operation.</p>
   <p><strong> Running the script </strong></p><anchor id="Running_the_script"></anchor>
   <p>The syntax for the <em>script operation</em> as is as follows. Note that it requires a cluster directory ( -d, --hod.clusterdir), number of nodes (-n, --hod.nodecount) and a script file (-s, --hod.script):</p>
     <table>
@@ -151,6 +151,7 @@
   <ul>
     <li> For better distribution performance it is recommended that the Hadoop tarball contain only the libraries and binaries, and not the source or documentation.</li>
     <li> When you want to run jobs against a cluster allocated using the tarball, you must use a compatible version of hadoop to submit your jobs. The best would be to untar and use the version that is present in the tarball itself.</li>
+    <li> You need to make sure that there are no Hadoop configuration files, hadoop-env.sh and hadoop-site.xml, present in the conf directory of the tarred distribution. The presence of these files with incorrect values could make the cluster allocation to fail.</li>
   </ul>
   </section>
   <section><title> Using an external HDFS </title><anchor id="Using_an_external_HDFS"></anchor>
@@ -332,7 +333,7 @@
   <p><em>-c config_file</em><br />
     Provides the configuration file to use. Can be used with all other options of HOD. Alternatively, the <code>HOD_CONF_DIR</code> environment variable can be defined to specify a directory that contains a file named <code>hodrc</code>, alleviating the need to specify the configuration file in each HOD command.</p>
   <p><em>-d cluster_dir</em><br />
-        This is required for most of the hod operations. As described <a href="#Create_a_Cluster_Directory">here</a>, the <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Create this directory and pass it to the <code>hod</code> operations as an argument to -d or --hod.clusterdir. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the clusterdirectory as the Hadoop --config option.</p>
+        This is required for most of the hod operations. As described <a href="#Create_a_Cluster_Directory">here</a>, the <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Pass it to the <code>hod</code> operations as an argument to -d or --hod.clusterdir. If it doesn't already exist, HOD will automatically try to create it and use it. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the clusterdirectory as the Hadoop --config option.</p>
   <p><em>-n number_of_nodes</em><br />
   This is required for the hod 'allocation' operation and for script operation. This denotes the number of nodes to be allocated.</p>
   <p><em>-s script-file</em><br/>
@@ -416,19 +417,26 @@
       <tr>
         <td> 6 </td>
         <td> Ringmaster failure </td>
-        <td> 1. Invalid configuration in the <code>ringmaster</code> section,<br />
-          2. invalid <code>pkgs</code> option in <code>gridservice-mapred or gridservice-hdfs</code> section,<br />
-          3. an invalid hadoop tarball,<br />
-          4. mismatched version in Hadoop between the MapReduce and an external HDFS.<br />
-          The Torque <code>qstat</code> command will most likely show a job in the <code>C</code> (Completed) state. Refer to the section <em>Locating Ringmaster Logs</em> below for more information. </td>
+        <td> HOD prints the message "Cluster could not be allocated because of the following errors on the ringmaster host &lt;hostname&gt;". The actual error message may indicate one of the following:<br/>
+          1. Invalid configuration on the node running the ringmaster, specified by the hostname in the error message.<br/>
+          2. Invalid configuration in the <code>ringmaster</code> section,<br />
+          3. Invalid <code>pkgs</code> option in <code>gridservice-mapred or gridservice-hdfs</code> section,<br />
+          4. An invalid hadoop tarball, or a tarball which has bundled an invalid configuration file in the conf directory,<br />
+          5. Mismatched version in Hadoop between the MapReduce and an external HDFS.<br />
+          The Torque <code>qstat</code> command will most likely show a job in the <code>C</code> (Completed) state. <br/>
+          One can login to the ringmaster host as given by HOD failure message and debug the problem with the help of the error message. If the error message doesn't give complete information, ringmaster logs should help finding out the root cause of the problem. Refer to the section <em>Locating Ringmaster Logs</em> below for more information. </td>
       </tr>
       <tr>
         <td> 7 </td>
         <td> DFS failure </td>
-        <td> 1. Problem in starting Hadoop clusters. Review the Hadoop related configuration. Look at the Hadoop logs using information specified in <em>Getting Hadoop Logs</em> section above. <br />
-          2. Invalid configuration in the <code>hodring</code> section of hodrc. <code>ssh</code> to all allocated nodes (determined by <code>qstat -f torque_job_id</code>) and grep for <code>ERROR</code> or <code>CRITICAL</code> in hodring logs. Refer to the section <em>Locating Hodring Logs</em> below for more information. <br />
-          3. Invalid tarball specified which is not packaged correctly. <br />
-          4. Cannot communicate with an externally configured HDFS. </td>
+        <td> When HOD fails to allocate due to DFS failures (or Job tracker failures, error code 8, see below), it prints a failure message "Hodring at &lt;hostname&gt; failed with following errors:" and then gives the actual error message, which may indicate one of the following:<br/>
+          1. Problem in starting Hadoop clusters. Usually the actual cause in the error message will indicate the problem on the hostname mentioned. Also, review the Hadoop related configuration in the HOD configuration files. Look at the Hadoop logs using information specified in <em>Collecting and Viewing Hadoop Logs</em> section above. <br />
+          2. Invalid configuration on the node running the hodring, specified by the hostname in the error message <br/>
+          3. Invalid configuration in the <code>hodring</code> section of hodrc. <code>ssh</code> to the hostname specified in the error message and grep for <code>ERROR</code> or <code>CRITICAL</code> in hodring logs. Refer to the section <em>Locating Hodring Logs</em> below for more information. <br />
+          4. Invalid tarball specified which is not packaged correctly. <br />
+          5. Cannot communicate with an externally configured HDFS.<br/>
+          When such DFS or Job tracker failure occurs, one can login into the host with hostname mentioned in HOD failure message and debug the problem. While fixing the problem, one should also review other log messages in the ringmaster log to see which other machines also might have had problems bringing up the jobtracker/namenode, apart from the hostname that is reported in the failure message. This possibility of other machines also having problems occurs because HOD continues to try and launch hadoop daemons on multiple machines one after another depending upon the value of the configuration variable <a href="hod_config_guide.html#3.4+ringmaster+options">ringmaster.max-master-failures</a>. Refer to the section <em>Locating Ringmaster Logs</em> below to find more about ringmaster logs.
+          </td>
       </tr>
       <tr>
         <td> 8 </td>
