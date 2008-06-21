@@ -62,6 +62,9 @@ Hbase Change Log
                (Rong-En Fan via Stack)
    HBASE-699   Fix TestMigrate up on Hudson
    HBASE-615   Region balancer oscillates during cluster startup
+   HBASE-613   Timestamp-anchored scanning fails to find all records
+   HBASE-681   NPE in Memcache
+   
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

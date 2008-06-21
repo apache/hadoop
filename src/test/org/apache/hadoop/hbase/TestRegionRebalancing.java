@@ -84,20 +84,13 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // Now create the root and meta regions and insert the data regions
     // created above into the meta
     
-    HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
-      testDir, conf);
-    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      testDir, conf);
-    HRegion.addRegionToMETA(root, meta);
+    createRootAndMetaRegions();
     
     for (HRegion region : regions) {
       HRegion.addRegionToMETA(meta, region);
     }
     
-    root.close();
-    root.getLog().closeAndDelete();
-    meta.close();
-    meta.getLog().closeAndDelete();
+    closeRootAndMeta();
   }
   
   /**

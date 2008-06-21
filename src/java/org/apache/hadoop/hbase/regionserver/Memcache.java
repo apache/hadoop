@@ -584,7 +584,7 @@ class Memcache {
       HStoreKey key = es.getKey();
   
       // if there's no column name, then compare rows and timestamps
-      if (origin.getColumn().length == 0) {
+      if (origin.getColumn() != null && origin.getColumn().length == 0) {
         // if the current and origin row don't match, then we can jump
         // out of the loop entirely.
         if (!Bytes.equals(key.getRow(), origin.getRow())) {
@@ -697,6 +697,7 @@ class Memcache {
       if (results.size() > 0) {
         results.clear();
       }
+      long latestTimestamp = -1;
       while (results.size() <= 0 && this.currentRow != null) {
         if (deletes.size() > 0) {
           deletes.clear();
@@ -723,10 +724,22 @@ class Memcache {
               continue;
             }
           }
+          // We should never return HConstants.LATEST_TIMESTAMP as the time for
+          // the row. As a compromise, we return the largest timestamp for the
+          // entries that we find that match.
+          if (c.getTimestamp() != HConstants.LATEST_TIMESTAMP &&
+              c.getTimestamp() > latestTimestamp) {
+            latestTimestamp = c.getTimestamp();
+          }
           results.put(column, c.getValue());
         }
         this.currentRow = getNextRow(this.currentRow);
 
+      }
+      // Set the timestamp to the largest one for the row if we would otherwise
+      // return HConstants.LATEST_TIMESTAMP
+      if (key.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+        key.setVersion(latestTimestamp);
       }
       return results.size() > 0;
     }

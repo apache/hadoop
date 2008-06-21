@@ -85,16 +85,14 @@ public class MultiRegionTable extends HBaseClusterTestCase {
 
       // Now create the root and meta regions and insert the data regions
       // created above into the meta
-      HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
-          testDir, this.conf);
-      HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-          testDir, this.conf);
-      HRegion.addRegionToMETA(root, meta);
+
+      createRootAndMetaRegions();
+
       for(int i = 0; i < regions.length; i++) {
         HRegion.addRegionToMETA(meta, regions[i]);
       }
-      closeRegionAndDeleteLog(root);
-      closeRegionAndDeleteLog(meta);
+      
+      closeRootAndMeta();
     } catch (Exception e) {
       shutdownDfs(dfsCluster);
       throw e;

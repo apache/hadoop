@@ -60,6 +60,8 @@ public abstract class HBaseTestCase extends TestCase {
   private boolean localfs = false;
   protected Path testDir = null;
   protected FileSystem fs = null;
+  protected HRegion root = null;
+  protected HRegion meta = null;
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
   protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
@@ -624,6 +626,24 @@ public abstract class HBaseTestCase extends TestCase {
         // here because of an InterruptedException. Don't let exceptions in
         // here be cause of test failure.
       }
+    }
+  }
+  
+  protected void createRootAndMetaRegions() throws IOException {
+    root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir, conf);
+    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir, 
+        conf);
+    HRegion.addRegionToMETA(root, meta);
+  }
+  
+  protected void closeRootAndMeta() throws IOException {
+    if (meta != null) {
+      meta.close();
+      meta.getLog().closeAndDelete();
+    }
+    if (root != null) {
+      root.close();
+      root.getLog().closeAndDelete();
     }
   }
 }

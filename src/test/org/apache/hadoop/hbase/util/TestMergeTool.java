@@ -47,7 +47,6 @@ public class TestMergeTool extends HBaseTestCase {
   private final HRegion[] regions = new HRegion[5];
   private HTableDescriptor desc;
   private byte [][][] rows;
-  private Path rootdir = null;
   private MiniDFSCluster dfsCluster = null;
   private FileSystem fs;
   
@@ -102,9 +101,6 @@ public class TestMergeTool extends HBaseTestCase {
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     this.fs = this.dfsCluster.getFileSystem();
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.rootdir = new Path(this.fs.getHomeDirectory(), "hbase");
-    this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     
     // Note: we must call super.setUp after starting the mini cluster or
     // we will end up with a local file system
@@ -117,7 +113,7 @@ public class TestMergeTool extends HBaseTestCase {
        */
       for (int i = 0; i < sourceRegions.length; i++) {
         regions[i] =
-          HRegion.createHRegion(this.sourceRegions[i], this.rootdir, this.conf);
+          HRegion.createHRegion(this.sourceRegions[i], this.testDir, this.conf);
         /*
          * Insert data
          */
@@ -128,23 +124,14 @@ public class TestMergeTool extends HBaseTestCase {
           regions[i].batchUpdate(b);
         }
       }
-      // Create root region
-      HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
-          this.rootdir, this.conf);
-      // Create meta region
-      HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-          this.rootdir, this.conf);
-      // Insert meta into root region
-      HRegion.addRegionToMETA(root, meta);
+      // Create root and meta regions
+      createRootAndMetaRegions();
       // Insert the regions we created into the meta
       for(int i = 0; i < regions.length; i++) {
         HRegion.addRegionToMETA(meta, regions[i]);
       }
       // Close root and meta regions
-      root.close();
-      root.getLog().closeAndDelete();
-      meta.close();
-      meta.getLog().closeAndDelete();
+      closeRootAndMeta();
       
     } catch (Exception e) {
       shutdownDfs(dfsCluster);
@@ -182,7 +169,7 @@ public class TestMergeTool extends HBaseTestCase {
     // Now verify that we can read all the rows from regions 0, 1
     // in the new merged region.
     HRegion merged =
-      HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
+      HRegion.openHRegion(mergedInfo, this.testDir, log, this.conf);
     verifyMerge(merged, upperbound);
     merged.close();
     LOG.info("Verified " + msg);

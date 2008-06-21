@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,7 +63,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -1268,20 +1266,15 @@ public class HRegion implements HConstants {
       if (this.closed.get()) {
         throw new IOException("Region " + this + " closed");
       }
-      TreeSet<byte []> families = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+      HashSet<HStore> storeSet = new HashSet<HStore>();
       for (int i = 0; i < cols.length; i++) {
-        families.add(HStoreKey.getFamily(cols[i]));
-      }
-      List<HStore> storelist = new ArrayList<HStore>();
-      for (byte [] family: families) {
-        HStore s = stores.get(Bytes.mapKey(family));
-        if (s == null) {
-          continue;
+        HStore s = stores.get(Bytes.mapKey(HStoreKey.getFamily(cols[i])));
+        if (s != null) {
+          storeSet.add(s);
         }
-        storelist.add(s);
       }
       return new HScanner(cols, firstRow, timestamp,
-        storelist.toArray(new HStore [storelist.size()]), filter);
+        storeSet.toArray(new HStore [storeSet.size()]), filter);
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
@@ -1750,15 +1743,26 @@ public class HRegion implements HConstants {
       this.scanners = new InternalScanner[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
-          // TODO: The cols passed in here can include columns from other
-          // stores; add filter so only pertinent columns are passed.
-          //
-          // Also, if more than one store involved, need to replicate filters.
-          // At least WhileMatchRowFilter will mess up the scan if only
-          // one shared across many rows. See HADOOP-2467.
-          scanners[i] = stores[i].getScanner(timestamp, cols, firstRow,
-            filter != null ?
-              (RowFilterInterface)WritableUtils.clone(filter, conf) : filter);
+          
+          // Only pass relevant columns to each store
+          
+          List<byte[]> columns = new ArrayList<byte[]>();
+          for (int j = 0; j < cols.length; j++) {
+            if (Bytes.equals(HStoreKey.getFamily(cols[j]),
+                stores[i].getFamily().getName())) {
+              columns.add(cols[j]);
+            }
+          }
+
+          RowFilterInterface f = filter;
+          if (f != null) {
+            // Need to replicate filters.
+            // At least WhileMatchRowFilter will mess up the scan if only
+            // one shared across many rows. See HADOOP-2467.
+            f = (RowFilterInterface)WritableUtils.clone(filter, conf);
+          }
+          scanners[i] = stores[i].getScanner(timestamp,
+              columns.toArray(new byte[columns.size()][]), firstRow, f);
         }
       } catch (IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
@@ -1928,14 +1932,6 @@ public class HRegion implements HConstants {
       }
     }
 
-    /**
-     * @return an iterator for the scanner
-     */
-    public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
-      throw new UnsupportedOperationException("Unimplemented serverside. " +
-        "next(HStoreKey, StortedMap(...) is more efficient");
-    }
-    
     /** {@inheritDoc} */
     public boolean isWildcardScanner() {
       throw new UnsupportedOperationException("Unimplemented on HScanner");

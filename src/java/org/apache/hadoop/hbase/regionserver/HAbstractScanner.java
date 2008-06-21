@@ -21,11 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -183,12 +181,9 @@ public abstract class HAbstractScanner implements InternalScanner {
     return this.multipleMatchers;
   }
 
+  /** {@inheritDoc} */
   public abstract boolean next(HStoreKey key,
-    SortedMap<byte [], byte []> results)
+      SortedMap<byte [], byte []> results)
   throws IOException;
   
-  public Iterator<Entry<HStoreKey, SortedMap<byte [], byte[]>>> iterator() {
-    throw new UnsupportedOperationException("Unimplemented serverside. " +
-      "next(HStoreKey, StortedMap(...) is more efficient");
-  }
 }

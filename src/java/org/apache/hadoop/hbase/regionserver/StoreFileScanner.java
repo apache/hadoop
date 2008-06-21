@@ -49,6 +49,13 @@ implements ChangedReadersObserver {
   // Used around replacement of Readers if they change while we're scanning.
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   
+  /**
+   * @param store
+   * @param timestamp
+   * @param targetCols
+   * @param firstRow
+   * @throws IOException
+   */
   public StoreFileScanner(final HStore store, final long timestamp,
     final byte [][] targetCols, final byte [] firstRow)
   throws IOException {
@@ -209,7 +216,7 @@ implements ChangedReadersObserver {
       return this.ts;
     }
   }
-  
+
   /*
    * @return An instance of <code>ViableRow</code>
    * @throws IOException
@@ -221,9 +228,21 @@ implements ChangedReadersObserver {
     long now = System.currentTimeMillis();
     long ttl = store.ttl;
     for(int i = 0; i < keys.length; i++) {
+      // The first key that we find that matches may have a timestamp greater
+      // than the one we're looking for. We have to advance to see if there
+      // is an older version present, since timestamps are sorted descending
+      while (keys[i] != null &&
+          keys[i].getTimestamp() > this.timestamp &&
+          columnMatch(i) &&
+          getNext(i)) {
+        if (columnMatch(i)) {
+          break;
+        }
+      }
       if((keys[i] != null)
-          && (columnMatch(i))
-          && (keys[i].getTimestamp() <= this.timestamp)
+          // If we get here and keys[i] is not null, we already know that the
+          // column matches and the timestamp of the row is less than or equal
+          // to this.timestamp, so we do not need to test that here
           && ((viableRow == null)
               || (Bytes.compareTo(keys[i].getRow(), viableRow) < 0)
               || ((Bytes.compareTo(keys[i].getRow(), viableRow) == 0)
@@ -293,10 +312,9 @@ implements ChangedReadersObserver {
           vals[i] = ibw.get();
           result = true;
           break;
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("getNext: " + keys[i] + ": expired, skipped");
-          }
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("getNext: " + keys[i] + ": expired, skipped");
         }
       }
     }
@@ -343,6 +361,8 @@ implements ChangedReadersObserver {
   }
 
   // Implementation of ChangedReadersObserver
+  
+  /** {@inheritDoc} */
   public void updateReaders() throws IOException {
     this.lock.writeLock().lock();
     try {
