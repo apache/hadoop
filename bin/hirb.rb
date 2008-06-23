@@ -263,7 +263,7 @@ end
 
 def deleteall(table, row, column = nil,
     timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-  table(table).get(row, column, timestamp)
+  table(table).deleteall(row, column, timestamp)
 end
 
 def deletefc(table, row, column_family,

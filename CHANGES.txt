@@ -65,6 +65,7 @@ Hbase Change Log
    HBASE-613   Timestamp-anchored scanning fails to find all records
    HBASE-681   NPE in Memcache
    HBASE-701   Showing bytes in log when should be String
+   HBASE-702   deleteall doesn't
    
    
   IMPROVEMENTS

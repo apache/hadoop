@@ -1088,6 +1088,30 @@ public class HTable {
     deleteAll(row, null, ts);
   }
 
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException
+   */
+  public void deleteAll(final String row, final long ts)
+  throws IOException {
+    deleteAll(row, null, ts);
+  }
+
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException
+   */
+  public void deleteAll(final Text row, final long ts)
+  throws IOException {
+    deleteAll(row, null, ts);
+  }
+
   /** 
    * Delete all cells that match the passed row and column.
    * @param row Row to update
@@ -1132,7 +1156,8 @@ public class HTable {
    */
   public void deleteAll(final String row, final String column, final long ts)
   throws IOException {
-    deleteAll(Bytes.toBytes(row), Bytes.toBytes(column), ts);
+    deleteAll(Bytes.toBytes(row),
+      column != null? Bytes.toBytes(column): null, ts);
   }
 
   /** 
@@ -1148,8 +1173,13 @@ public class HTable {
     connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, row) {
           public Boolean call() throws IOException {
-            server.deleteAll(location.getRegionInfo().getRegionName(), row, 
-                column, ts);
+            if (column != null) {
+              this.server.deleteAll(location.getRegionInfo().getRegionName(),
+                row, column, ts);
+            } else {
+              this.server.deleteAll(location.getRegionInfo().getRegionName(),
+                  row, ts);
+            }
             return null;
           }
         }
