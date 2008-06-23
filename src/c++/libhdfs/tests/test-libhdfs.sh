@@ -68,6 +68,7 @@ unset IFS
 
 # Put delays to ensure hdfs is up and running and also shuts down 
 # after the tests are complete
+cd $HADOOP_HOME
 echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
 $HADOOP_BIN_DIR/hadoop-daemon.sh start namenode && sleep 2 && 
 $HADOOP_BIN_DIR/hadoop-daemon.sh start datanode && sleep 2 && 

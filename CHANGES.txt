@@ -655,6 +655,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3615. Set DatanodeProtocol.versionID to the correct value.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3559. Fix the libhdfs test script and config to work with the
+    current semantics. (lohit vijayarenu via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
