@@ -54,7 +54,7 @@ abstract class ColumnOperation extends TableOperation {
     b.put(COL_REGIONINFO, Writables.getBytes(i));
     server.batchUpdate(regionName, b);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("updated columns in row: " + i.getRegionName());
+      LOG.debug("updated columns in row: " + i.getRegionNameAsString());
     }
   }
 }

@@ -51,7 +51,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
+    return "ProcessRegionClose of " + this.regionInfo.getRegionNameAsString() +
       ", " + this.offlineRegion;
   }
 
@@ -60,7 +60,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
     Boolean result =
       new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
         public Boolean call() throws IOException {
-          LOG.info("region closed: " + regionInfo.getRegionName());
+          LOG.info("region closed: " + regionInfo.getRegionNameAsString());
 
           // Mark the Region as unavailable in the appropriate meta table
 

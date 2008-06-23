@@ -84,7 +84,7 @@ class ChangeTableState extends TableOperation {
       // Update meta table
       
       if (LOG.isDebugEnabled()) {
-        LOG.debug("updating columns in row: " + i.getRegionName());
+        LOG.debug("updating columns in row: " + i.getRegionNameAsString());
       }
 
       BatchUpdate b = new BatchUpdate(i.getRegionName());
@@ -93,7 +93,7 @@ class ChangeTableState extends TableOperation {
       b.delete(COL_STARTCODE);
       server.batchUpdate(m.getRegionName(), b);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + i.getRegionName());
+        LOG.debug("updated columns in row: " + i.getRegionNameAsString());
       }
 
       if (online) {
@@ -126,7 +126,7 @@ class ChangeTableState extends TableOperation {
         new TreeMap<byte [], HRegionInfo>(Bytes.BYTES_COMPARATOR);
       for (HRegionInfo i: e.getValue()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("adding region " + i.getRegionName() + " to kill list");
+          LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
         }
         // this marks the regions to be closed
         localKillList.put(i.getRegionName(), i);

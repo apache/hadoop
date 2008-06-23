@@ -423,7 +423,7 @@ class RegionManager implements HConstants {
         continue;
       }
       
-      LOG.debug("Going to close region " + currentRegion.getRegionName());
+      LOG.debug("Going to close region " + currentRegion.getRegionNameAsString());
       
       // make a message to close the region
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,

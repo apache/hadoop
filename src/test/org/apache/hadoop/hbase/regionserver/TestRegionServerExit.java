@@ -70,6 +70,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     // Now abort the meta region server and wait for it to go down and come back
     stopOrAbortMetaRegionServer(true);
     // Verify that everything is back up.
+    LOG.info("Starting up the verification thread for " + getName());
     Thread t = startVerificationThread(tableName, row);
     t.start();
     threadDumpingJoin(t);
@@ -91,6 +92,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     // Now abort the meta region server and wait for it to go down and come back
     stopOrAbortMetaRegionServer(false);
     // Verify that everything is back up.
+    LOG.info("Starting up the verification thread for " + getName());
     Thread t = startVerificationThread(tableName, row);
     t.start();
     threadDumpingJoin(t);
