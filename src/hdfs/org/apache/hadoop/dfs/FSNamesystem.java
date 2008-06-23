@@ -1716,8 +1716,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
 
     // Remove old block from blocks map. This always have to be done
-    // because the generationstamp of this block is changing.
-    blocksMap.remove(lastblock);
+    // because the generation stamp of this block is changing.
+    blocksMap.removeBlock(oldblockinfo);
 
     if (deleteblock) {
       pendingFile.removeBlock(lastblock);

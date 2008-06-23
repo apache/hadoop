@@ -707,6 +707,8 @@ Release 0.17.1 - Unreleased
     HADOOP-3537. Disallow adding a datanode to a network topology when its
     network location is not resolved. (hairong)
 
+    HADOOP-3571. Fix bug in block removal used in lease recovery. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
