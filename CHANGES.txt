@@ -701,6 +701,9 @@ Release 0.17.1 - Unreleased
     HADOOP-3320. Fix NullPointerException in NetworkTopology.getDistance().
     (hairong)
 
+    HADOOP-3537. Disallow adding a datanode to a network topology when its
+    network location is not resolved. (hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

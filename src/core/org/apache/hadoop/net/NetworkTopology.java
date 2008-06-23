@@ -184,7 +184,7 @@ public class NetworkTopology {
       if (!isAncestor(n))
         throw new IllegalArgumentException(n.getName()
                                            +", which is located at "
-                                           +parent+", is not a decendent of "+currentPath);
+                                           +parent+", is not a descendent of "+currentPath);
       if (isParent(n)) {
         // this node is the parent of n; remove n directly
         for(int i=0; i<children.size(); i++) {
@@ -344,6 +344,11 @@ public class NetworkTopology {
    */ 
   public void remove(Node node) {
     if (node==null) return;
+    if (NetworkTopology.UNRESOLVED.equals(node.getNetworkLocation())) {
+      // the node's network location has not resolved yet; 
+      // so it is not in the network topology
+      return;  
+    }
     if( node instanceof InnerNode ) {
       throw new IllegalArgumentException(
         "Not allow to remove an inner node: "+NodeBase.getPath(node));
