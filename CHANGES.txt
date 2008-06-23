@@ -668,6 +668,9 @@ Release 0.17.1 - Unreleased
     HADOOP-3522. Improve documentation on reduce pointing out that
     input keys and values will be reused. (omalley)
 
+    HADOOP-3487. Balancer uses thread pools for managing its threads;
+    therefore provides better resource management. (hairong)
+
   BUG FIXES
 
     HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
