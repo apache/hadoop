@@ -804,6 +804,7 @@ public class DataNode extends Configured
       return false;
     case DatanodeProtocol.DNA_REGISTER:
       // namenode requested a registration - at start or if NN lost contact
+      LOG.info("DatanodeCommand action: DNA_REGISTER");
       register();
       break;
     case DatanodeProtocol.DNA_FINALIZE:
@@ -816,10 +817,14 @@ public class DataNode extends Configured
     case DatanodeProtocol.DNA_BLOCKREPORT:
       // only send BR when receive request the 1st time
       if (waitForFirstBlockReportRequest) {
+        LOG.info("DatanodeCommand action: DNA_BLOCKREPORT - scheduled");
         // dropping all following BR requests
         waitForFirstBlockReportRequest = false;
         // random short delay - helps scatter the BR from all DNs
         scheduleBlockReport(initialBlockReportDelay);
+      } else {
+        LOG.info("DatanodeCommand action: DNA_BLOCKREPORT" +
+            "- ignored becaused one is already scheduled");
       }
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:

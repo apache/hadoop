@@ -7,6 +7,8 @@ Trunk (unreleased changes)
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-3577. Tools to inject blocks into name node and simulated
+    data nodes for testing. (Sanjay Radia via hairong)
 
   OPTIMIZATIONS
 

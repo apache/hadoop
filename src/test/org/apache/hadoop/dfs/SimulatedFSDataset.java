@@ -250,8 +250,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
           throw new IOException("Block already exists in  block list");
         }
       }
-      
-      blockMap = new HashMap<Block,BInfo>(injectBlocks.length);
+      HashMap<Block, BInfo> oldBlockMap = blockMap;
+      blockMap = 
+          new HashMap<Block,BInfo>(injectBlocks.length + oldBlockMap.size());
+      blockMap.putAll(oldBlockMap);
       for (Block b: injectBlocks) {
           BInfo binfo = new BInfo(b, false);
           blockMap.put(b, binfo);

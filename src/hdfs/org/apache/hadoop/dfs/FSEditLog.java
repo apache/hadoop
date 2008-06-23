@@ -733,7 +733,8 @@ class FSEditLog {
     long end = FSNamesystem.now();
     numTransactions++;
     totalTimeTransactions += (end-start);
-    metrics.transactions.inc((end-start));
+    if (metrics != null) // Metrics is non-null only when used inside name node
+      metrics.transactions.inc((end-start));
   }
 
   //
@@ -804,7 +805,8 @@ class FSEditLog {
        this.notifyAll();
     }
 
-    metrics.syncs.inc(elapsed);
+    if (metrics != null) // Metrics is non-null only when used inside name node
+      metrics.syncs.inc(elapsed);
   }
 
   //

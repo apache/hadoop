@@ -104,7 +104,7 @@ abstract class Storage extends StorageInfo {
   
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
-  private   static final String STORAGE_DIR_CURRENT   = "current";
+  protected   static final String STORAGE_DIR_CURRENT   = "current";
   private   static final String STORAGE_DIR_PREVIOUS  = "previous";
   private   static final String STORAGE_TMP_REMOVED   = "removed.tmp";
   private   static final String STORAGE_TMP_PREVIOUS  = "previous.tmp";

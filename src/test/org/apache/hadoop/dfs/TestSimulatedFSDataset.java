@@ -36,7 +36,7 @@ public class TestSimulatedFSDataset extends TestCase {
   
   Configuration conf = null;
   
-  FSDatasetInterface fsdataset = null;
+
   
   static final int NUMBLOCKS = 20;
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
@@ -45,7 +45,7 @@ public class TestSimulatedFSDataset extends TestCase {
     super.setUp();
       conf = new Configuration();
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-    fsdataset = new SimulatedFSDataset(conf);  
+ 
   }
 
   protected void tearDown() throws Exception {
@@ -56,9 +56,9 @@ public class TestSimulatedFSDataset extends TestCase {
     return blkid*BLOCK_LENGTH_MULTIPLIER;
   }
   
-  int addSomeBlocks() throws IOException {
+  int addSomeBlocks(FSDatasetInterface fsdataset, int startingBlockId) throws IOException {
     int bytesAdded = 0;
-    for (int i = 1; i <= NUMBLOCKS; ++i) {
+    for (int i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
       Block b = new Block(i, 0, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
       OutputStream dataOut  = fsdataset.writeToBlock(b, false).dataOut;
       assertEquals(0, fsdataset.getLength(b));
@@ -74,8 +74,12 @@ public class TestSimulatedFSDataset extends TestCase {
     }
     return bytesAdded;  
   }
+  int addSomeBlocks(FSDatasetInterface fsdataset ) throws IOException {
+    return addSomeBlocks(fsdataset, 1);
+  }
 
   public void testGetMetaData() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
     Block b = new Block(1, 5, 0);
     try {
       assertFalse(fsdataset.metaFileExists(b));
@@ -83,7 +87,7 @@ public class TestSimulatedFSDataset extends TestCase {
     } catch (IOException e) {
       // ok - as expected
     }
-    addSomeBlocks(); // Only need to add one but ....
+    addSomeBlocks(fsdataset); // Only need to add one but ....
     b = new Block(1, 0, 0);
     InputStream metaInput = fsdataset.getMetaDataInputStream(b);
     DataInputStream metaDataInput = new DataInputStream(metaInput);
@@ -96,9 +100,10 @@ public class TestSimulatedFSDataset extends TestCase {
 
 
   public void testStorageUsage() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
     assertEquals(fsdataset.getDfsUsed(), 0);
     assertEquals(fsdataset.getRemaining(), fsdataset.getCapacity());
-    int bytesAdded = addSomeBlocks();
+    int bytesAdded = addSomeBlocks(fsdataset);
     assertEquals(bytesAdded, fsdataset.getDfsUsed());
     assertEquals(fsdataset.getCapacity()-bytesAdded,  fsdataset.getRemaining());
     
@@ -106,7 +111,8 @@ public class TestSimulatedFSDataset extends TestCase {
 
 
 
-  void  checkBlockDataAndSize(Block b, long expectedLen) throws IOException {
+  void  checkBlockDataAndSize(FSDatasetInterface fsdataset, 
+              Block b, long expectedLen) throws IOException { 
     InputStream input = fsdataset.getBlockInputStream(b);
     long lengthRead = 0;
     int data;
@@ -118,21 +124,35 @@ public class TestSimulatedFSDataset extends TestCase {
   }
   
   public void testWriteRead() throws IOException {
-    addSomeBlocks();
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
+    addSomeBlocks(fsdataset);
     for (int i=1; i <= NUMBLOCKS; ++i) {
       Block b = new Block(i, 0, 0);
       assertTrue(fsdataset.isValidBlock(b));
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
-      checkBlockDataAndSize(b, blockIdToLen(i));
+      checkBlockDataAndSize(fsdataset, b, blockIdToLen(i));
     }
   }
 
 
 
   public void testGetBlockReport() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
     Block[] blockReport = fsdataset.getBlockReport();
     assertEquals(0, blockReport.length);
-    int bytesAdded = addSomeBlocks();
+    int bytesAdded = addSomeBlocks(fsdataset);
+    blockReport = fsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS, blockReport.length);
+    for (Block b: blockReport) {
+      assertNotNull(b);
+      assertEquals(blockIdToLen(b.blkid), b.len);
+    }
+  }
+  public void testInjectionEmpty() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
+    Block[] blockReport = fsdataset.getBlockReport();
+    assertEquals(0, blockReport.length);
+    int bytesAdded = addSomeBlocks(fsdataset);
     blockReport = fsdataset.getBlockReport();
     assertEquals(NUMBLOCKS, blockReport.length);
     for (Block b: blockReport) {
@@ -140,8 +160,8 @@ public class TestSimulatedFSDataset extends TestCase {
       assertEquals(blockIdToLen(b.blkid), b.len);
     }
     
-    // Inject blocks
-    // Now reset fsdataset with an initial block report (Use the blocks we got above)
+    // Inject blocks into an empty fsdataset
+    //  - injecting the blocks we got above.
   
    
     SimulatedFSDataset sfsdataset = new SimulatedFSDataset(conf);
@@ -154,14 +174,51 @@ public class TestSimulatedFSDataset extends TestCase {
       assertEquals(blockIdToLen(b.blkid), sfsdataset.getLength(b));
     }
     assertEquals(bytesAdded, sfsdataset.getDfsUsed());
-    assertEquals(sfsdataset.getCapacity()-bytesAdded,  sfsdataset.getRemaining());
+    assertEquals(sfsdataset.getCapacity()-bytesAdded, sfsdataset.getRemaining());
+  }
 
+  public void testInjectionNonEmpty() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
+    
+    Block[] blockReport = fsdataset.getBlockReport();
+    assertEquals(0, blockReport.length);
+    int bytesAdded = addSomeBlocks(fsdataset);
+    blockReport = fsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS, blockReport.length);
+    for (Block b: blockReport) {
+      assertNotNull(b);
+      assertEquals(blockIdToLen(b.blkid), b.len);
+    }
+    fsdataset = null;
+    
+    // Inject blocks into an non-empty fsdataset
+    //  - injecting the blocks we got above.
+  
+   
+    SimulatedFSDataset sfsdataset = new SimulatedFSDataset(conf);
+    // Add come blocks whose block ids do not conflict with
+    // the ones we are going to inject.
+    bytesAdded += addSomeBlocks(sfsdataset, NUMBLOCKS+1);
+    Block[] blockReport2 = sfsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS, blockReport.length);
+    blockReport2 = sfsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS, blockReport.length);
+    sfsdataset.injectBlocks(blockReport);
+    blockReport = sfsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS*2, blockReport.length);
+    for (Block b: blockReport) {
+      assertNotNull(b);
+      assertEquals(blockIdToLen(b.blkid), b.len);
+      assertEquals(blockIdToLen(b.blkid), sfsdataset.getLength(b));
+    }
+    assertEquals(bytesAdded, sfsdataset.getDfsUsed());
+    assertEquals(sfsdataset.getCapacity()-bytesAdded,  sfsdataset.getRemaining());
+    
     
     // Now test that the dataset cannot be created if it does not have sufficient cap
 
     conf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY, 10);
  
-    
     try {
       sfsdataset = new SimulatedFSDataset(conf);
       sfsdataset.injectBlocks(blockReport);
@@ -172,7 +229,8 @@ public class TestSimulatedFSDataset extends TestCase {
 
   }
 
-  public void checkInvalidBlock(Block b) {
+  public void checkInvalidBlock(Block b) throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
     assertFalse(fsdataset.isValidBlock(b));
     try {
       fsdataset.getLength(b);
@@ -198,18 +256,20 @@ public class TestSimulatedFSDataset extends TestCase {
   }
   
   public void testInValidBlocks() throws IOException {
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
     Block b = new Block(1, 5, 0);
     checkInvalidBlock(b);
     
     // Now check invlaid after adding some blocks
-    addSomeBlocks();
+    addSomeBlocks(fsdataset);
     b = new Block(NUMBLOCKS + 99, 5, 0);
     checkInvalidBlock(b);
     
   }
 
   public void testInvalidate() throws IOException {
-    int bytesAdded = addSomeBlocks();
+    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
+    int bytesAdded = addSomeBlocks(fsdataset);
     Block[] deleteBlocks = new Block[2];
     deleteBlocks[0] = new Block(1, 0, 0);
     deleteBlocks[1] = new Block(2, 0, 0);
