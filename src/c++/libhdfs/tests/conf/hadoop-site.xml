@@ -9,7 +9,7 @@
 
 <property>
   <name>hadoop.tmp.dir</name>
-  <value>../../../build/test/libhdfs</value>
+  <value>build/test/libhdfs</value>
   <description>A base for other temporary directories.</description>
 </property>
 
