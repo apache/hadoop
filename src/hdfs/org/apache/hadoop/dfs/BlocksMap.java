@@ -156,11 +156,7 @@ class BlocksMap {
      * Remove data-node from the block.
      */
     boolean removeNode(DatanodeDescriptor node) {
-      return removeNode(findDatanode(node));
-    }
-
-    /** Remove the indexed datanode from the block. */
-    boolean removeNode(int dnIndex) {
+      int dnIndex = findDatanode(node);
       if(dnIndex < 0) // the node is not found
         return false;
       assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
@@ -336,18 +332,19 @@ class BlocksMap {
   }
 
   /**
-   * Remove the block from the block map.
-   * If the mapped BlockInfo is not null,
-   * it also removes the datanodes associated with the BlockInfo. 
+   * Remove the block from the block map;
+   * remove it from all data-node lists it belongs to;
+   * and remove all data-node locations associated with the block.
    */
-  void remove(Block b) {
-    BlockInfo info = map.remove(b);
-    if (info != null) {
-      info.inode = null;
-      for(int n = info.numNodes(); n >= 0; ) {
-        info.removeNode(--n);
-      }
+  void removeBlock(BlockInfo blockInfo) {
+    if (blockInfo == null)
+      return;
+    blockInfo.inode = null;
+    for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
+      DatanodeDescriptor dn = blockInfo.getDatanode(idx);
+      dn.removeBlock(blockInfo); // remove from the list and wipe the location
     }
+    map.remove(blockInfo);  // remove block from the map
   }
 
   /** Returns the block object it it exists in the map. */
