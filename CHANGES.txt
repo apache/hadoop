@@ -4,6 +4,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-3595. Remove deprecated methods for mapred.combine.once 
+    functionality, which was necessary to providing backwards
+    compatible combiner semantics for 0.18. (cdouglas via omalley)
+
   NEW FEATURES
 
   IMPROVEMENTS
