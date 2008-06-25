@@ -464,6 +464,22 @@ runCoreTests () {
 }
 
 ###############################################################################
+### Tests parts of contrib specific to the eclipse files
+runContribTestOnEclipseFiles () {
+  export ECLIPSE_DECLARED_JARS=$(sed -n 's@.*kind="lib".*path="\(.*jar\)".*@\1@p' < .eclipse.templates/.classpath |sort)
+  export PRESENT_JARS=$(find lib/ -name '*.jar' |sort)
+  export ECLIPSE_DECLARED_SRC=$(sed -n 's@.*kind="src".*path="\(.*\)".*@\1@p' < .eclipse.templates/.classpath |sort)
+  if [ "${ECLIPSE_DECLARED_JARS}" != "${PRESENT_JARS}" ]; then
+    echo "Some jars are not declared in the Eclipse project."
+    return 1
+  fi
+  for dir in $ECLIPSE_DECLARED_SRC; do
+    [ '!' -d $dir ] && echo "$dir is referenced in the Eclipse project although it doesn't exists anymore." && return 1
+  done
+  return 0
+}
+
+###############################################################################
 ### Run the test-contrib target
 runContribTests () {
   echo ""
@@ -479,7 +495,7 @@ runContribTests () {
   ### Kill any rogue build processes from the last attempt
   $PS -auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /usr/bin/kill -9 {} > /dev/null
 
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib && runContribTestOnEclipseFiles
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 

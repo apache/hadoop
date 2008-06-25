@@ -667,6 +667,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3559. Fix the libhdfs test script and config to work with the
     current semantics. (lohit vijayarenu via cdouglas)
 
+    HADOOP-3480.  Need to update Eclipse template to reflect current trunk.
+    (Brice Arnould via tomwhite)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
