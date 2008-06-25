@@ -351,9 +351,9 @@ document.write("Last Published: " + document.lastModified);
     	
 <li>
     		
-<em>Secondary Namenode</em> : helps keep the size of file
-    		containing log of HDFS modification with in certain limit at
-    		the Namenode.
+<em>Secondary Namenode</em> : performs periodic checkpoints of the 
+    		namespace and helps keep the size of file containing log of HDFS 
+    		modifications within certain limits at the Namenode.
     	</li>
       
 </ul>
@@ -458,8 +458,8 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3"> Secondary Namenode </h2>
 <div class="section">
 <p>
-     Namenode stores modifications to the filesystem as a log
-     appended to a native filesystem file (<span class="codefrag">edits</span>). 
+     Namenode stores modifications to the file system as a log
+     appended to a native file system file (<span class="codefrag">edits</span>). 
    	When a Namenode starts up, it reads HDFS state from an image
    	file (<span class="codefrag">fsimage</span>) and then applies <em>edits</em> from 
     edits log file. It then writes new HDFS state to (<span class="codefrag">fsimage</span>)
@@ -478,8 +478,65 @@ document.write("Last Published: " + document.lastModified);
      namenode is started by <span class="codefrag">bin/start-dfs.sh</span> on the nodes 
      specified in <span class="codefrag">conf/masters</span> file.
    </p>
+<p>
+     The start of the checkpoint process on the secondary name-node is 
+     controlled by two configuration parameters.
+   </p>
+<ul>
+      
+<li>
+        
+<span class="codefrag">fs.checkpoint.period</span>, set to 1 hour by default, specifies
+        the maximal delay between two consecutive checkpoints, and 
+      </li>
+      
+<li>
+        
+<span class="codefrag">fs.checkpoint.size</span>, set to 64MB by default, defines the
+        size of the edits log file that forces an urgent checkpoint even if 
+        the maximal checkpoint delay is not reached.
+      </li>
+   
+</ul>
+<p>
+     The secondary name-node stores the latest checkpoint in a storage 
+     directory, which is structured the same way as the primary name-node's
+     storage directory. So that the checkpointed image is always ready to be
+     read by the primary name-node if necessary.
+   </p>
+<p>
+     The latest checkpoint can be imported to the primary name-node if
+     all other copies of the image and the edits files are lost.
+     In order to do that one should:
+   </p>
+<ul>
+      
+<li>
+        create an empty storage directory specified in the 
+        <span class="codefrag">dfs.name.dir</span> configuration variable;
+      </li>
+      
+<li>
+        specify the location of the checkpoint storage directory in the 
+        configuration variable <span class="codefrag">fs.checkpoint.dir</span>;
+      </li>
+      
+<li>
+        and start the name-node with <span class="codefrag">-importCheckpoint</span> option.
+      </li>
+   
+</ul>
+<p>
+     The name-node will upload the checkpoint from the 
+     <span class="codefrag">fs.checkpoint.dir</span> directory and then save it to the name-node
+     storage directory(s) set in <span class="codefrag">dfs.name.dir</span>.
+     The name-node will fail if a legal image is contained in 
+     <span class="codefrag">dfs.name.dir</span>.
+     The name-node verifies that the image in <span class="codefrag">fs.checkpoint.dir</span> is
+     consistent, but does not modify it in any way.
+   </p>
 </div> 
-<a name="N1010B"></a><a name="Rebalancer"></a>
+<a name="N10147"></a><a name="Rebalancer"></a>
 <h2 class="h3"> Rebalancer </h2>
 <div class="section">
 <p>
@@ -524,7 +581,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
     </p>
 </div> 
-<a name="N10132"></a><a name="Rack+Awareness"></a>
+<a name="N1016E"></a><a name="Rack+Awareness"></a>
 <h2 class="h3"> Rack Awareness </h2>
 <div class="section">
 <p>
@@ -543,7 +600,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>.
     </p>
 </div> 
-<a name="N10150"></a><a name="Safemode"></a>
+<a name="N1018C"></a><a name="Safemode"></a>
 <h2 class="h3"> Safemode </h2>
 <div class="section">
 <p>
@@ -563,7 +620,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><span class="codefrag">setSafeMode()</span></a>.
     </p>
 </div> 
-<a name="N1016E"></a><a name="Fsck"></a>
+<a name="N101AA"></a><a name="Fsck"></a>
 <h2 class="h3"> Fsck </h2>
 <div class="section">
 <p>    
@@ -580,7 +637,7 @@ document.write("Last Published: " + document.lastModified);
       Fsck can be run on the whole filesystem or on a subset of files.
      </p>
 </div> 
-<a name="N1017E"></a><a name="Upgrade+and+Rollback"></a>
+<a name="N101BA"></a><a name="Upgrade+and+Rollback"></a>
 <h2 class="h3"> Upgrade and Rollback </h2>
 <div class="section">
 <p>
@@ -639,7 +696,7 @@ document.write("Last Published: " + document.lastModified);
       
 </ul>
 </div> 
-<a name="N101BF"></a><a name="File+Permissions+and+Security"></a>
+<a name="N101FB"></a><a name="File+Permissions+and+Security"></a>
 <h2 class="h3"> File Permissions and Security </h2>
 <div class="section">
 <p>           
@@ -652,7 +709,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="hdfs_permissions_guide.html"><em>Permissions User and Administrator Guide</em></a>.
      </p>
 </div> 
-<a name="N101D1"></a><a name="Scalability"></a>
+<a name="N1020D"></a><a name="Scalability"></a>
 <h2 class="h3"> Scalability </h2>
 <div class="section">
 <p>
@@ -670,7 +727,7 @@ document.write("Last Published: " + document.lastModified);
       suggested configuration improvements for large Hadoop clusters.
      </p>
 </div> 
-<a name="N101E3"></a><a name="Related+Documentation"></a>
+<a name="N1021F"></a><a name="Related+Documentation"></a>
 <h2 class="h3"> Related Documentation </h2>
 <div class="section">
 <p>
