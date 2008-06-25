@@ -1220,10 +1220,12 @@
           description="Generate files for Eclipse">
     <pathconvert property="eclipse.project">
       <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1"/>
+      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
     </pathconvert>
-    <copy todir=".">
-      <fileset dir=".eclipse.templates"/>
+    <copy todir="." overwrite="true">
+      <fileset dir=".eclipse.templates">
+      	<exclude name="**/README.txt"/>
+      </fileset>
       <filterset>
         <filter token="PROJECT" value="${eclipse.project}"/>
       </filterset>
