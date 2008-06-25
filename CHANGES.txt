@@ -187,6 +187,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3413. Allow SequenceFile.Reader to use serialization
     framework. (tomwhite via omalley)
 
+    HADOOP-3541. Import of the namespace from a checkpoint documented 
+    in hadoop user guide. (shv)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

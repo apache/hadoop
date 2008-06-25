@@ -112,9 +112,9 @@
     		problems.
     	</li>
     	<li>
-    		<em>Secondary Namenode</em> : helps keep the size of file
-    		containing log of HDFS modification with in certain limit at
-    		the Namenode.
+    		<em>Secondary Namenode</em> : performs periodic checkpoints of the 
+    		namespace and helps keep the size of file containing log of HDFS 
+    		modifications within certain limits at the Namenode.
     	</li>
       </ul>
     </li>
@@ -196,8 +196,8 @@
    
    </section> <section> <title> Secondary Namenode </title>
    <p>
-     Namenode stores modifications to the filesystem as a log
-     appended to a native filesystem file (<code>edits</code>). 
+     Namenode stores modifications to the file system as a log
+     appended to a native file system file (<code>edits</code>). 
    	When a Namenode starts up, it reads HDFS state from an image
    	file (<code>fsimage</code>) and then applies <em>edits</em> from 
     edits log file. It then writes new HDFS state to (<code>fsimage</code>)
@@ -215,6 +215,54 @@
      are on the same order as the primary namemode. The secondary
      namenode is started by <code>bin/start-dfs.sh</code> on the nodes 
      specified in <code>conf/masters</code> file.
+   </p>
+   <p>
+     The start of the checkpoint process on the secondary name-node is 
+     controlled by two configuration parameters.
+   </p>
+   <ul>
+      <li>
+        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
+        the maximal delay between two consecutive checkpoints, and 
+      </li>
+      <li>
+        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
+        size of the edits log file that forces an urgent checkpoint even if 
+        the maximal checkpoint delay is not reached.
+      </li>
+   </ul>
+   <p>
+     The secondary name-node stores the latest checkpoint in a storage 
+     directory, which is structured the same way as the primary name-node's
+     storage directory. So that the checkpointed image is always ready to be
+     read by the primary name-node if necessary.
+   </p>
+   <p>
+     The latest checkpoint can be imported to the primary name-node if
+     all other copies of the image and the edits files are lost.
+     In order to do that one should:
+   </p>
+   <ul>
+      <li>
+        create an empty storage directory specified in the 
+        <code>dfs.name.dir</code> configuration variable;
+      </li>
+      <li>
+        specify the location of the checkpoint storage directory in the 
+        configuration variable <code>fs.checkpoint.dir</code>;
+      </li>
+      <li>
+        and start the name-node with <code>-importCheckpoint</code> option.
+      </li>
+   </ul>
+   <p>
+     The name-node will upload the checkpoint from the 
+     <code>fs.checkpoint.dir</code> directory and then save it to the name-node
+     storage directory(s) set in <code>dfs.name.dir</code>.
+     The name-node will fail if a legal image is contained in 
+     <code>dfs.name.dir</code>.
+     The name-node verifies that the image in <code>fs.checkpoint.dir</code> is
+     consistent, but does not modify it in any way.
    </p>
    
    </section> <section> <title> Rebalancer </title>
