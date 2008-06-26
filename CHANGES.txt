@@ -67,6 +67,7 @@ Hbase Change Log
    HBASE-701   Showing bytes in log when should be String
    HBASE-702   deleteall doesn't
    HBASE-704   update new shell docs and commands on help menu
+   HBASE-709   Deadlock while rolling WAL-log while finishing flush
    
    
   IMPROVEMENTS

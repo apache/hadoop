@@ -393,23 +393,21 @@ public class HLog implements HConstants {
         try {
       	  this.writer.append(logKey, logEdit);
       	} catch (IOException e) {
-      	  LOG.error("Could not append to log. Opening new log. Exception: ", e);
-          rollWriter();
-          try {
-            this.writer.append(logKey, logEdit);
-          } catch (IOException e2) { 
-            LOG.fatal("Could not append to log the second time because " + 
-              e2.toString() + ", aborting.");
-            throw e2;
-          }
+          LOG.fatal("Could not append. Requesting close of log", e);
+          requestLogRoll();
+          throw e;
       	}
         this.numEntries++;
       }
     }
     if (this.numEntries > this.maxlogentries) {
-      if (listener != null) {
-        listener.logRollRequested();
-      }
+        requestLogRoll();
+    }
+  }
+
+  private void requestLogRoll() {
+    if (this.listener != null) {
+      this.listener.logRollRequested();
     }
   }
 
