@@ -300,7 +300,7 @@ public class MetaUtils {
    * properly set.
    * @param row Row in the catalog .META. table whose HRegionInfo's offline
    * status we want to change.
-   * @param onlineOffline Pass <code>true</code> to online the region.
+   * @param onlineOffline Pass <code>true</code> to OFFLINE the region.
    * @throws IOException
    */
   public static void changeOnlineStatus (final HBaseConfiguration c,
