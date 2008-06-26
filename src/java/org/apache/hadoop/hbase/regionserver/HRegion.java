@@ -723,15 +723,23 @@ public class HRegion implements HConstants {
       if(!this.fs.exists(splits)) {
         this.fs.mkdirs(splits);
       }
+      // Calculate regionid to use.  Can't be less than that of parent else
+      // it'll insert into wrong location over in .META. table: HBASE-710.
+      long rid = System.currentTimeMillis();
+      if (rid < this.regionInfo.getRegionId()) {
+        LOG.warn("Clock skew; parent regions id is " +
+          this.regionInfo.getRegionId() + " but current time here is " + rid);
+        rid = this.regionInfo.getRegionId() + 1;
+      }
       HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        startKey, midKey);
+        startKey, midKey, false, rid);
       Path dirA =
         new Path(splits, Integer.toString(regionAInfo.getEncodedName()));
       if(fs.exists(dirA)) {
         throw new IOException("Cannot split; target file collision at " + dirA);
       }
       HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        midKey, endKey);
+        midKey, endKey, false, rid);
       Path dirB =
         new Path(splits, Integer.toString(regionBInfo.getEncodedName()));
       if(this.fs.exists(dirB)) {

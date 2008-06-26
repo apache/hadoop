@@ -68,6 +68,9 @@ Hbase Change Log
    HBASE-702   deleteall doesn't
    HBASE-704   update new shell docs and commands on help menu
    HBASE-709   Deadlock while rolling WAL-log while finishing flush
+   HBASE-710   If clocks are way off, then we can have daughter split come
+               before rather than after its parent in .META.
+   HBASE-714   Showing bytes in log when should be string (2)
    
    
   IMPROVEMENTS

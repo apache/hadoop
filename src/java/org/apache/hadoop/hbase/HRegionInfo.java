@@ -176,11 +176,28 @@ public class HRegionInfo implements WritableComparable {
   public HRegionInfo(HTableDescriptor tableDesc, final byte [] startKey,
       final byte [] endKey, final boolean split)
   throws IllegalArgumentException {
+    this(tableDesc, startKey, endKey, split, System.currentTimeMillis());
+  }
+
+  /**
+   * Construct HRegionInfo with explicit parameters
+   * 
+   * @param tableDesc the table descriptor
+   * @param startKey first key in region
+   * @param endKey end of key range
+   * @param split true if this region has split and we have daughter regions
+   * regions that may or may not hold references to this region.
+   * @param regionid Region id to use.
+   * @throws IllegalArgumentException
+   */
+  public HRegionInfo(HTableDescriptor tableDesc, final byte [] startKey,
+    final byte [] endKey, final boolean split, final long regionid)
+  throws IllegalArgumentException {
     if (tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
     this.offLine = false;
-    this.regionId = System.currentTimeMillis();
+    this.regionId = regionid;
     this.regionName = createRegionName(tableDesc.getName(), startKey, regionId);
     this.regionNameStr = Bytes.toString(this.regionName);
     this.split = split;

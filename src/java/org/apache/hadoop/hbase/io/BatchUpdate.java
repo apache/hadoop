@@ -208,6 +208,24 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     return operations.iterator();
   }
   
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("row => ");
+    sb.append(row == null? "": Bytes.toString(row));
+    sb.append(", {");
+    boolean morethanone = false;
+    for (BatchOperation bo: this.operations) {
+      if (morethanone) {
+        sb.append(", ");
+      }
+      morethanone = true;
+      sb.append(bo.toString());
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+
   //
   // Writable
   //

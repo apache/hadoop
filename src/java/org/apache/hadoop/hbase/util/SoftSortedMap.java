@@ -29,6 +29,7 @@ import java.util.TreeSet;
 import java.util.Comparator;
 import java.util.Collection;
 import java.util.ArrayList;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -178,8 +179,9 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
     Object obj;
     while((obj = referenceQueue.poll()) != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Reference for key " + ((SoftValue<K,V>)obj).key.toString() +
-          " has been cleared.");
+        Object k = ((SoftValue<K,V>)obj).key;
+        String name = (k instanceof byte [])? Bytes.toString((byte [])k): k.toString();
+        LOG.debug("Reference for key " + name + " has been cleared.");
       }
       internalMap.remove(((SoftValue<K,V>)obj).key);
     }

@@ -103,6 +103,11 @@ public class BatchOperation implements Writable {
   public boolean isPut() {
     return this.value != null;
   }
+
+  @Override
+  public String toString() {
+    return "column => " + Bytes.toString(this.column) + ", value => '...'";
+  }
   
   // Writable methods
 

@@ -93,15 +93,14 @@ class CompactSplitThread extends Thread implements HConstants {
         continue;
       } catch (IOException ex) {
         LOG.error("Compaction failed" +
-            (r != null ? (" for region " + r.getRegionName()) : ""),
+            (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
             RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {
           break;
         }
-
       } catch (Exception ex) {
         LOG.error("Compaction failed" +
-            (r != null ? (" for region " + r.getRegionName()) : ""),
+            (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
             ex);
         if (!server.checkFileSystem()) {
           break;
@@ -154,7 +153,7 @@ class CompactSplitThread extends Thread implements HConstants {
       }
       t = meta;
     }
-    LOG.info("Updating " + t.getTableName() + " with region split info");
+    LOG.info("Updating " + Bytes.toString(t.getTableName()) + " with region split info");
 
     // Mark old region as offline and split in META.
     // NOTE: there is no need for retry logic here. HTable does it for us.

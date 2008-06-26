@@ -335,7 +335,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     
     if (LOG.isDebugEnabled()) {
       LOG.debug(split.getRegionNameAsString() +
-        " no longer has references to " + parent.toString());
+        " no longer has references to " + Bytes.toString(parent));
     }
     
     BatchUpdate b = new BatchUpdate(parent);
