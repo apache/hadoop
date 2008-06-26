@@ -25,7 +25,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -48,7 +47,6 @@ public class TestMergeTool extends HBaseTestCase {
   private HTableDescriptor desc;
   private byte [][][] rows;
   private MiniDFSCluster dfsCluster = null;
-  private FileSystem fs;
   
   /** {@inheritDoc} */
   @Override
@@ -101,13 +99,19 @@ public class TestMergeTool extends HBaseTestCase {
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     this.fs = this.dfsCluster.getFileSystem();
-    
+    conf.set("fs.default.name", fs.getUri().toString());
+    Path parentdir = fs.getHomeDirectory();
+    conf.set(HConstants.HBASE_DIR, parentdir.toString());
+    fs.mkdirs(parentdir);
+    FSUtils.setVersion(fs, parentdir);
+
     // Note: we must call super.setUp after starting the mini cluster or
     // we will end up with a local file system
     
     super.setUp();
-
     try {
+      // Create root and meta regions
+      createRootAndMetaRegions();
       /*
        * Create the regions we will merge
        */
@@ -123,11 +127,6 @@ public class TestMergeTool extends HBaseTestCase {
           b.put(COLUMN_NAME, new ImmutableBytesWritable(row).get());
           regions[i].batchUpdate(b);
         }
-      }
-      // Create root and meta regions
-      createRootAndMetaRegions();
-      // Insert the regions we created into the meta
-      for(int i = 0; i < regions.length; i++) {
         HRegion.addRegionToMETA(meta, regions[i]);
       }
       // Close root and meta regions

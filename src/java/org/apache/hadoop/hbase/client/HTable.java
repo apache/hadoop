@@ -1343,8 +1343,8 @@ public class HTable {
       byte [] localStartKey = oldRegion == null? startRow: oldRegion.getEndKey();
 
       if (CLIENT_LOG.isDebugEnabled()) {
-        CLIENT_LOG.debug("Advancing internal scanner to startKey at " +
-          Bytes.toString(localStartKey));
+        CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
+          Bytes.toString(localStartKey) + "'");
       }
             
       try {
@@ -1387,7 +1387,7 @@ public class HTable {
       RowResult values = null;
       do {
         values = getConnection().getRegionServerWithRetries(callable);
-      } while (values != null && values.size() == 0 && nextScanner());
+      } while ((values == null || values.size() == 0) && nextScanner());
 
       if (values != null && values.size() != 0) {
         return values;

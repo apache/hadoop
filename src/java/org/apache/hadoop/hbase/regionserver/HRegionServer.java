@@ -1128,7 +1128,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // No data for this row, go get another.
         results.clear();
       }
-      return new RowResult(key.getRow(), values);
+      return values.size() == 0 ? null : new RowResult(key.getRow(), values);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
