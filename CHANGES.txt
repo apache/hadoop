@@ -724,6 +724,9 @@ Release 0.17.1 - Unreleased
 
     HADOOP-3571. Fix bug in block removal used in lease recovery. (shv)
 
+    HADOOP-3645. MetricsTimeVaryingRate returns wrong value for
+    metric_avg_time. (Lohit Vijayarenu via hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

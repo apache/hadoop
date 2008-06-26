@@ -134,7 +134,7 @@ public class MetricsTimeVaryingRate {
     intervalHeartBeat();
     try {
       mr.incrMetric(name + "_num_ops", getPreviousIntervalNumOps());
-      mr.incrMetric(name + "_avg_time", getPreviousIntervalNumOps());
+      mr.incrMetric(name + "_avg_time", getPreviousIntervalAverageTime());
     } catch (Exception e) {
       LOG.info("pushMetric failed for " + name + "\n" +
           StringUtils.stringifyException(e));
