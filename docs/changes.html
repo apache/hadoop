@@ -56,8 +56,11 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(none)
+</a>&nbsp;&nbsp;&nbsp;(1)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
+functionality, which was necessary to providing backwards
+compatible combiner semantics for 0.18.<br />(cdouglas via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
@@ -66,8 +69,10 @@
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(none)
+</a>&nbsp;&nbsp;&nbsp;(1)
     <ol id="trunk_(unreleased_changes)_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3577">HADOOP-3577</a>. Tools to inject blocks into name node and simulated
+data nodes for testing.<br />(Sanjay Radia via hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -87,7 +92,7 @@ easier to identify datanode and namenode related code.<br />(dhruba)</li>
 </a></h2>
 <ul id="release_0.18.0_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(20)
+</a>&nbsp;&nbsp;&nbsp;(21)
     <ol id="release_0.18.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a>.  The default options to fsck skips checking files
 that are being written to. The output of fsck is incompatible
@@ -152,10 +157,12 @@ FileSystem.<br />(lohit vijayarenu via cdouglas)</li>
 block in the log. Also include a CorruptedBlocks metric to track the size
 of the corrupted block map.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3512">HADOOP-3512</a>. Separate out the tools into a tools jar.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3598">HADOOP-3598</a>. Ensure that temporary task-output directories are not created
+if they are not necessary e.g. for Maps with no side-effect files.<br />(acmurthy)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(24)
+</a>&nbsp;&nbsp;&nbsp;(25)
     <ol id="release_0.18.0_-_unreleased_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
 relying on FileSystem<br />(taton)</li>
@@ -206,6 +213,8 @@ line.<br />(tomwhite via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3502">HADOOP-3502</a>. Quota API needs documentation in Forrest.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3413">HADOOP-3413</a>. Allow SequenceFile.Reader to use serialization
 framework.<br />(tomwhite via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3541">HADOOP-3541</a>. Import of the namespace from a checkpoint documented
+in hadoop user guide.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
@@ -323,7 +332,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(98)
+</a>&nbsp;&nbsp;&nbsp;(102)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -519,6 +528,14 @@ instead of 4.<br />(Sriram Rao via omalley)</li>
 than a parameter.<br />(Owen O'Malley via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3590">HADOOP-3590</a>. Null pointer exception in JobTracker when the task tracker is
 not yet resolved.<br />(Amar Ramesh Kamat via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3603">HADOOP-3603</a>. Fix MapOutputCollector to spill when io.sort.spill.percent is
+1.0 and to detect spills when emitted records write no data.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3615">HADOOP-3615</a>. Set DatanodeProtocol.versionID to the correct value.
+(Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3559">HADOOP-3559</a>. Fix the libhdfs test script and config to work with the
+current semantics.<br />(lohit vijayarenu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3480">HADOOP-3480</a>.  Need to update Eclipse template to reflect current trunk.<br />(Brice Arnould via tomwhite)</li>
     </ol>
   </li>
 </ul>
@@ -535,14 +552,16 @@ default, to clear the state of the serializer between objects.<br />(tomwhite vi
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="release_0.17.1_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3522">HADOOP-3522</a>. Improve documentation on reduce pointing out that
 input keys and values will be reused.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3487">HADOOP-3487</a>. Balancer uses thread pools for managing its threads;
+therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(13)
     <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2159">HADOOP-2159</a> Namenode stuck in safemode. The counter blockSafe should
 not be decremented for invalid blocks.<br />(hairong)</li>
@@ -565,6 +584,11 @@ Vijaya Renu via omalley)</li>
 to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3320">HADOOP-3320</a>. Fix NullPointerException in NetworkTopology.getDistance().<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3537">HADOOP-3537</a>. Disallow adding a datanode to a network topology when its
+network location is not resolved.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3571">HADOOP-3571</a>. Fix bug in block removal used in lease recovery.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3645">HADOOP-3645</a>. MetricsTimeVaryingRate returns wrong value for
+metric_avg_time.<br />(Lohit Vijayarenu via hairong)</li>
     </ol>
   </li>
 </ul>

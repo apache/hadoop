@@ -358,6 +358,9 @@ Release 0.18.0 - Unreleased
     especially for non-HDFS file systems. Deprecates
     InputFormat.validateInput. (tomwhite via omalley)
 
+    HADOOP-3552. Add forrest documentation for Hadoop commands.
+    (Sharad Agarwal via cdouglas)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 

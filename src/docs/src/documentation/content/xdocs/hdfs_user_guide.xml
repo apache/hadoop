@@ -192,6 +192,9 @@
    		: removes previous backup of the cluster made during last upgrade.
    	</li>
    	</ul>
+   	<p>
+   	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.
+   	</p>  
    </section>
    
    </section> <section> <title> Secondary Namenode </title>
@@ -264,6 +267,9 @@
      The name-node verifies that the image in <code>fs.checkpoint.dir</code> is
      consistent, but does not modify it in any way.
    </p>
+   <p>
+     For command usage, see <a href="commands_manual.html#secondarynamenode">secondarynamenode command</a>.
+   </p>
    
    </section> <section> <title> Rebalancer </title>
     <p>
@@ -302,6 +308,9 @@
       is attached to
       <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
     </p>
+    <p>
+     For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
+   </p>
     
    </section> <section> <title> Rack Awareness </title>
     <p>
@@ -350,6 +359,7 @@
       fsck ignores open files but provides an option to select during reporting.
       HDFS' fsck is not a
       Hadoop shell command. It can be run as '<code>bin/hadoop fsck</code>'.
+      For command usage, see <a href="commands_manual.html#fsck">fsck command</a>. 
       Fsck can be run on the whole filesystem or on a subset of files.
      </p>
      
@@ -459,6 +469,10 @@
          Explore <code>conf/hadoop-default.xml</code>. 
          It includes brief 
          description of most of the configuration variables available.
+      </li>
+      <li>
+        <a href="commands_manual.html">Commands Manual</a> 
+        : commands usage.
       </li>
       </ul>
      </section>
