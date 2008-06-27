@@ -126,7 +126,7 @@ if they are not necessary e.g. for Maps with no side-effect files.<br />(acmurth
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(24)
+</a>&nbsp;&nbsp;&nbsp;(25)
     <ol id="release_0.18.0_-_unreleased_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
 relying on FileSystem<br />(taton)</li>
@@ -177,6 +177,8 @@ line.<br />(tomwhite via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3502">HADOOP-3502</a>. Quota API needs documentation in Forrest.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3413">HADOOP-3413</a>. Allow SequenceFile.Reader to use serialization
 framework.<br />(tomwhite via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3541">HADOOP-3541</a>. Import of the namespace from a checkpoint documented
+in hadoop user guide.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
@@ -294,7 +296,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(107)
+</a>&nbsp;&nbsp;&nbsp;(111)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -509,6 +511,14 @@ instead of 4.<br />(Sriram Rao via omalley)</li>
 than a parameter.<br />(Owen O'Malley via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3590">HADOOP-3590</a>. Null pointer exception in JobTracker when the task tracker is
 not yet resolved.<br />(Amar Ramesh Kamat via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3603">HADOOP-3603</a>. Fix MapOutputCollector to spill when io.sort.spill.percent is
+1.0 and to detect spills when emitted records write no data.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3615">HADOOP-3615</a>. Set DatanodeProtocol.versionID to the correct value.
+(Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3559">HADOOP-3559</a>. Fix the libhdfs test script and config to work with the
+current semantics.<br />(lohit vijayarenu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3480">HADOOP-3480</a>.  Need to update Eclipse template to reflect current trunk.<br />(Brice Arnould via tomwhite)</li>
     </ol>
   </li>
 </ul>
@@ -523,17 +533,24 @@ default, to clear the state of the serializer between objects.<br />(tomwhite vi
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="release_0.17.1_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3522">HADOOP-3522</a>. Improve documentation on reduce pointing out that
 input keys and values will be reused.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3487">HADOOP-3487</a>. Balancer uses thread pools for managing its threads;
+therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1979">HADOOP-1979</a>. Speed up fsck by adding a buffered stream.<br />(Lohit
 Vijaya Renu via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3537">HADOOP-3537</a>. Disallow adding a datanode to a network topology when its
+network location is not resolved.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3571">HADOOP-3571</a>. Fix bug in block removal used in lease recovery.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3645">HADOOP-3645</a>. MetricsTimeVaryingRate returns wrong value for
+metric_avg_time.<br />(Lohit Vijayarenu via hairong)</li>
     </ol>
   </li>
 </ul>

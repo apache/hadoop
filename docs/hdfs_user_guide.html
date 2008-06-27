@@ -128,6 +128,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
 </div>
 <div class="menuitem">
+<a href="commands_manual.html">Commands Manual</a>
+</div>
+<div class="menuitem">
 <a href="hdfs_shell.html">FS Shell Guide</a>
 </div>
 <div class="menuitem">
@@ -453,8 +456,11 @@ document.write("Last Published: " + document.lastModified);
    	</li>
    	
 </ul>
+<p>
+   	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.
+   	</p>
 </div> 
-<a name="N100E6"></a><a name="Secondary+Namenode"></a>
+<a name="N100ED"></a><a name="Secondary+Namenode"></a>
 <h2 class="h3"> Secondary Namenode </h2>
 <div class="section">
 <p>
@@ -535,8 +541,11 @@ document.write("Last Published: " + document.lastModified);
      The name-node verifies that the image in <span class="codefrag">fs.checkpoint.dir</span> is
      consistent, but does not modify it in any way.
    </p>
+<p>
+     For command usage, see <a href="commands_manual.html#secondarynamenode">secondarynamenode command</a>.
+   </p>
 </div> 
-<a name="N10147"></a><a name="Rebalancer"></a>
+<a name="N10155"></a><a name="Rebalancer"></a>
 <h2 class="h3"> Rebalancer </h2>
 <div class="section">
 <p>
@@ -580,8 +589,11 @@ document.write("Last Published: " + document.lastModified);
       is attached to
       <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
     </p>
+<p>
+     For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
+   </p>
 </div> 
-<a name="N1016E"></a><a name="Rack+Awareness"></a>
+<a name="N10183"></a><a name="Rack+Awareness"></a>
 <h2 class="h3"> Rack Awareness </h2>
 <div class="section">
 <p>
@@ -600,7 +612,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>.
     </p>
 </div> 
-<a name="N1018C"></a><a name="Safemode"></a>
+<a name="N101A1"></a><a name="Safemode"></a>
 <h2 class="h3"> Safemode </h2>
 <div class="section">
 <p>
@@ -620,7 +632,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><span class="codefrag">setSafeMode()</span></a>.
     </p>
 </div> 
-<a name="N101AA"></a><a name="Fsck"></a>
+<a name="N101BF"></a><a name="Fsck"></a>
 <h2 class="h3"> Fsck </h2>
 <div class="section">
 <p>    
@@ -634,10 +646,11 @@ document.write("Last Published: " + document.lastModified);
       fsck ignores open files but provides an option to select during reporting.
       HDFS' fsck is not a
       Hadoop shell command. It can be run as '<span class="codefrag">bin/hadoop fsck</span>'.
+      For command usage, see <a href="commands_manual.html#fsck">fsck command</a>. 
       Fsck can be run on the whole filesystem or on a subset of files.
      </p>
 </div> 
-<a name="N101BA"></a><a name="Upgrade+and+Rollback"></a>
+<a name="N101D3"></a><a name="Upgrade+and+Rollback"></a>
 <h2 class="h3"> Upgrade and Rollback </h2>
 <div class="section">
 <p>
@@ -696,7 +709,7 @@ document.write("Last Published: " + document.lastModified);
       
 </ul>
 </div> 
-<a name="N101FB"></a><a name="File+Permissions+and+Security"></a>
+<a name="N10214"></a><a name="File+Permissions+and+Security"></a>
 <h2 class="h3"> File Permissions and Security </h2>
 <div class="section">
 <p>           
@@ -709,7 +722,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="hdfs_permissions_guide.html"><em>Permissions User and Administrator Guide</em></a>.
      </p>
 </div> 
-<a name="N1020D"></a><a name="Scalability"></a>
+<a name="N10226"></a><a name="Scalability"></a>
 <h2 class="h3"> Scalability </h2>
 <div class="section">
 <p>
@@ -727,7 +740,7 @@ document.write("Last Published: " + document.lastModified);
       suggested configuration improvements for large Hadoop clusters.
      </p>
 </div> 
-<a name="N1021F"></a><a name="Related+Documentation"></a>
+<a name="N10238"></a><a name="Related+Documentation"></a>
 <h2 class="h3"> Related Documentation </h2>
 <div class="section">
 <p>
@@ -770,6 +783,12 @@ document.write("Last Published: " + document.lastModified);
          Explore <span class="codefrag">conf/hadoop-default.xml</span>. 
          It includes brief 
          description of most of the configuration variables available.
+      </li>
+      
+<li>
+        
+<a href="commands_manual.html">Commands Manual</a> 
+        : commands usage.
       </li>
       
 </ul>
