@@ -210,7 +210,7 @@ document.write("Last Published: " + document.lastModified);
         maps to a FileSystem directory. A Hadoop archive always has a *.har
         extension. A Hadoop archive directory contains metadata (in the form 
         of _index and _masterindex) and data (part-*) files. The _index file contains
-        the name of the files that are part of the archive and there location
+        the name of the files that are part of the archive and the location
         within the part files. 
         </p>
 </div>
@@ -245,7 +245,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3"> How to look up files in archives? </h2>
 <div class="section">
 <p>
-        The archives exposes itself as a filesystem layer. So all the fs shell commands in the archives work but 
+        The archive exposes itself as a filesystem layer. So all the fs shell commands in the archives work but 
         with a different URI. Also, note that archives are immutable. So, rename's, deletes and creates return an error. 
         URI for Hadoop Archives is 
         </p>
@@ -259,6 +259,25 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">
         har:///archivepath/fileinarchive</span>
+</p>
+<p>
+        Here is an example of archive. The input to the archives is /dir. The directory dir contains 
+        files filea, fileb. To archive /dir to /user/hadoop/foo.har, the command is 
+        </p>
+<p>
+<span class="codefrag">hadoop archive -archiveName foo.har /dir /user/hadoop</span>
+        
+</p>
+<p>
+        To get file listing for files in the created archive 
+        </p>
+<p>
+<span class="codefrag">hadoop dfs -lsr har:///user/hadoop/foo.har</span>
+</p>
+<p>To cat filea in archive -
+        </p>
+<p>
+<span class="codefrag">hadoop dfs -cat har:///user/hadoop/foo.har/dir/filea</span>
 </p>
 </div>
 	

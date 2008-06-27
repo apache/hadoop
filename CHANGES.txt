@@ -672,6 +672,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3480.  Need to update Eclipse template to reflect current trunk.
     (Brice Arnould via tomwhite)
+  
+    HADOOP-3588. Fixed usability issues with archives. (mahadev)
 
 Release 0.17.1 - Unreleased
 
