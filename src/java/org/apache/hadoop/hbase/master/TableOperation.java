@@ -97,7 +97,7 @@ abstract class TableOperation implements HConstants {
           }
 
           tableExists = true;
-          if (!isBeingServed(serverName, startCode)) {
+          if (!isBeingServed(serverName, startCode) || !isEnabled(info)) {
             unservedRegions.add(info);
           }
           processScanItem(serverName, startCode, info);

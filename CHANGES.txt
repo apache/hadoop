@@ -71,6 +71,7 @@ Hbase Change Log
    HBASE-710   If clocks are way off, then we can have daughter split come
                before rather than after its parent in .META.
    HBASE-714   Showing bytes in log when should be string (2)
+   HBASE-627   Disable table doesn't work reliably
    
    
   IMPROVEMENTS

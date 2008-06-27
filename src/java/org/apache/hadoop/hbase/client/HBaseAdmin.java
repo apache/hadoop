@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -314,78 +313,17 @@ public class HBaseAdmin {
       throw new MasterNotRunningException("master has been shut down");
     }
     HTableDescriptor.isLegalTableName(tableName);
-    HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
-    
     try {
       this.master.enableTable(tableName);
-      
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
 
-    // Wait until first region is enabled
+    // Wait until all regions are enabled
     
-    HRegionInterface server =
-      connection.getHRegionConnection(firstMetaServer.getServerAddress());
-
-    HRegionInfo info = new HRegionInfo();
-    for (int tries = 0; tries < numRetries; tries++) {
-      int valuesfound = 0;
-      long scannerId = -1L;
-      try {
-        scannerId =
-          server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            HConstants.COL_REGIONINFO_ARRAY, tableName,
-            HConstants.LATEST_TIMESTAMP, null);
-        boolean isenabled = false;
-        
-        while (true) {
-          RowResult values = server.next(scannerId);
-          if (values == null || values.size() == 0) {
-            if (valuesfound == 0) {
-              throw new NoSuchElementException(
-                  "table " + Bytes.toString(tableName) + " not found");
-            }
-            break;
-          }
-          valuesfound += 1;
-          for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-            if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
-              info = (HRegionInfo) Writables.getWritable(
-                e.getValue().getValue(), info);
-            
-              isenabled = !info.isOffline();
-              break;
-            }
-          }
-          if (isenabled) {
-            break;
-          }
-        }
-        if (isenabled) {
-          break;
-        }
-        
-      } catch (IOException e) {
-        if (tries == numRetries - 1) {                  // no more retries
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
-          throw e;
-        }
-        
-      } finally {
-        if (scannerId != -1L) {
-          try {
-            server.close(scannerId);
-            
-          } catch (Exception e) {
-            LOG.warn(e);
-          }
-        }
-      }
+    while (!isTableEnabled(tableName)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleep. Waiting for first region to be enabled from " +
+        LOG.debug("Sleep. Waiting for all regions to be enabled from " +
           Bytes.toString(tableName));
       }
       try {
@@ -395,7 +333,7 @@ public class HBaseAdmin {
         // continue
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Wake. Waiting for first region to be enabled from " +
+        LOG.debug("Wake. Waiting for all regions to be enabled from " +
           Bytes.toString(tableName));
       }
     }
@@ -436,88 +374,56 @@ public class HBaseAdmin {
       throw new MasterNotRunningException("master has been shut down");
     }
     HTableDescriptor.isLegalTableName(tableName);
-    HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
     try {
       this.master.disableTable(tableName);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
 
-    // Wait until first region is disabled
+    // Wait until all regions are disabled
     
-    HRegionInterface server =
-      connection.getHRegionConnection(firstMetaServer.getServerAddress());
-
-    HRegionInfo info = new HRegionInfo();
-    for(int tries = 0; tries < numRetries; tries++) {
-      int valuesfound = 0;
-      long scannerId = -1L;
-      try {
-        scannerId =
-          server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-              HConstants.COL_REGIONINFO_ARRAY, tableName,
-              HConstants.LATEST_TIMESTAMP, null);
-        boolean disabled = false;
-        while (true) {
-          RowResult values = server.next(scannerId);
-          if (values == null || values.size() == 0) {
-            if (valuesfound == 0) {
-              throw new NoSuchElementException("table " +
-                Bytes.toString(tableName) + " not found");
-            }
-            break;
-          }
-          valuesfound += 1;
-          for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-            if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
-              info = (HRegionInfo) Writables.getWritable(
-                e.getValue().getValue(), info);
-            
-              disabled = info.isOffline();
-              break;
-            }
-          }
-          if (disabled) {
-            break;
-          }
-        }
-        if (disabled) {
-          break;
-        }
-        
-      } catch (IOException e) {
-        if (tries == numRetries - 1) {                  // no more retries
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
-          throw e;
-        }
-        
-      } finally {
-        if (scannerId != -1L) {
-          try {
-            server.close(scannerId);
-            
-          } catch (Exception e) {
-            LOG.warn(e);
-          }
-        }
-      }
+    while (isTableEnabled(tableName)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleep. Waiting for first region to be disabled from " +
+        LOG.debug("Sleep. Waiting for all regions to be disabled from " +
           Bytes.toString(tableName));
       }
       try {
         Thread.sleep(pause);
+        
       } catch (InterruptedException e) {
         // continue
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Wake. Waiting for first region to be disabled from " +
-            tableName);
+        LOG.debug("Wake. Waiting for all regions to be disabled from " +
+          Bytes.toString(tableName));
       }
     }
     LOG.info("Disabled " + Bytes.toString(tableName));
+  }
+  
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public boolean isTableEnabled(Text tableName) throws IOException {
+    return isTableEnabled(tableName.getBytes());
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public boolean isTableEnabled(String tableName) throws IOException {
+    return isTableEnabled(Bytes.toBytes(tableName));
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public boolean isTableEnabled(byte[] tableName) throws IOException {
+    return connection.isTableEnabled(tableName);
   }
   
   /**

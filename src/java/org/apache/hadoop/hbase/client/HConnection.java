@@ -46,8 +46,17 @@ public interface HConnection {
    * Checks if <code>tableName</code> exists.
    * @param tableName Table to check.
    * @return True if table exists already.
+   * @throws MasterNotRunningException
    */
-  public boolean tableExists(final byte [] tableName);
+  public boolean tableExists(final byte [] tableName)
+  throws MasterNotRunningException;
+
+  /**
+   * @param tableName
+   * @return true if the table is enabled, false otherwise
+   * @throws IOException
+   */
+  public boolean isTableEnabled(byte[] tableName) throws IOException;
   
   /**
    * List all the userspace tables.  In other words, scan the META table.
