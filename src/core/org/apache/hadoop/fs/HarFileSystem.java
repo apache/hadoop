@@ -576,7 +576,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public FSDataOutputStream create(Path f, int bufferSize) 
                                     throws IOException {
-    throw new IOException("Har: Create not implemented");
+    throw new IOException("Har: Create not allowed");
   }
   
   public FSDataOutputStream create(Path f,
@@ -586,7 +586,7 @@ public class HarFileSystem extends FilterFileSystem {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
-    throw new IOException("Har: create not implemented.");
+    throw new IOException("Har: create not allowed.");
   }
   
   @Override
@@ -606,7 +606,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public boolean setReplication(Path src, short replication) throws IOException{
-    throw new IOException("Har: setreplication not implemented");
+    throw new IOException("Har: setreplication not allowed");
   }
   
   /**
@@ -614,7 +614,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException { 
-    throw new IOException("Har: delete not implemented");
+    throw new IOException("Har: delete not allowed");
   }
   
   /**
@@ -667,7 +667,7 @@ public class HarFileSystem extends FilterFileSystem {
    * not implemented.
    */
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-    throw new IOException("Har: mkdirs not implemented");
+    throw new IOException("Har: mkdirs not allowed");
   }
   
   /**
@@ -675,7 +675,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws 
         IOException {
-    throw new IOException("Har: copyfromlocalfile not implemented");
+    throw new IOException("Har: copyfromlocalfile not allowed");
   }
   
   /**
@@ -691,7 +691,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile) 
     throws IOException {
-    throw new IOException("Har: startLocalOutput not implemented");
+    throw new IOException("Har: startLocalOutput not allowed");
   }
   
   /**
@@ -699,7 +699,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile) 
     throws IOException {
-    throw new IOException("Har: completeLocalOutput not implemented");
+    throw new IOException("Har: completeLocalOutput not allowed");
   }
   
   /**
@@ -707,7 +707,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public void setOwner(Path p, String username, String groupname)
     throws IOException {
-    throw new IOException("Har: setowner not implemented");
+    throw new IOException("Har: setowner not allowed");
   }
 
   /**
@@ -715,7 +715,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public void setPermission(Path p, FsPermission permisssion) 
     throws IOException {
-    throw new IOException("Har: setPermission not implemented");
+    throw new IOException("Har: setPermission not allowed");
   }
   
   /**

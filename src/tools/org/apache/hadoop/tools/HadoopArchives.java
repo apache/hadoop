@@ -209,6 +209,10 @@ public class HadoopArchives implements Tool {
   }
 
   private boolean checkValidName(String name) {
+    Path tmp = new Path(name);
+    if (tmp.depth() != 1) {
+      return false;
+    }
     if (name.endsWith(".har")) 
       return true;
     return false;
@@ -301,16 +305,16 @@ public class HadoopArchives implements Tool {
    */
   public void archive(List<Path> srcPaths, String archiveName, Path dest) 
   throws IOException {
-    boolean isValid = checkValidName(archiveName);
-    if (!isValid) { 
-      throw new IOException("Invalid archiveName " + archiveName);
-    }
     checkPaths(conf, srcPaths);
     int numFiles = 0;
     long totalSize = 0;
     conf.set(DST_HAR_LABEL, archiveName);
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);
+    FileSystem outFs = outputPath.getFileSystem(conf);
+    if (outFs.exists(outputPath) || outFs.isFile(dest)) {
+      throw new IOException("Invalid Output.");
+    }
     conf.set(DST_DIR_LABEL, outputPath.toString());
     final String randomId = DistCp.getRandomId();
     Path jobDirectory = new Path(new JobClient(conf).getSystemDir(),
@@ -620,41 +624,51 @@ public class HadoopArchives implements Tool {
    */
 
   public int run(String[] args) throws Exception {
-    List<Path> srcPaths = new ArrayList<Path>();
-    Path destPath = null;
-    // check we were supposed to archive or 
-    // unarchive
-    String archiveName = null;
-    if (args.length < 2) {
-      System.out.println(usage);
-      throw new IOException("Invalid usage.");
-    }
-    if (!"-archiveName".equals(args[0])) {
-      System.out.println(usage);
-      throw new IOException("Archive Name not specified.");
-    }
-    archiveName = args[1];
-    if (!checkValidName(archiveName)) {
-      throw new IOException("Invalid name for archives. " + archiveName);
-    }
-    for (int i = 2; i < args.length; i++) {
-      if (i == (args.length - 1)) {
-        destPath = new Path(args[i]);
+    try {
+      List<Path> srcPaths = new ArrayList<Path>();
+      Path destPath = null;
+      // check we were supposed to archive or 
+      // unarchive
+      String archiveName = null;
+      if (args.length < 4) {
+        System.out.println(usage);
+        throw new IOException("Invalid usage.");
       }
-      else {
-        srcPaths.add(new Path(args[i]));
+      if (!"-archiveName".equals(args[0])) {
+        System.out.println(usage);
+        throw new IOException("Archive Name not specified.");
       }
-    }
-    // do a glob on the srcPaths and then pass it on
-    List<Path> globPaths = new ArrayList<Path>();
-    for (Path p: srcPaths) {
-      FileSystem fs = p.getFileSystem(getConf());
-      FileStatus[] statuses = fs.globStatus(p);
-      for (FileStatus status: statuses) {
-        globPaths.add(fs.makeQualified(status.getPath()));
+      archiveName = args[1];
+      if (!checkValidName(archiveName)) {
+        System.out.println(usage);
+        throw new IOException("Invalid name for archives. " + archiveName);
       }
+      for (int i = 2; i < args.length; i++) {
+        if (i == (args.length - 1)) {
+          destPath = new Path(args[i]);
+        }
+        else {
+          srcPaths.add(new Path(args[i]));
+        }
+      }
+      if (srcPaths.size() == 0) {
+        System.out.println(usage);
+        throw new IOException("Invalid Usage: No input sources specified.");
+      }
+      // do a glob on the srcPaths and then pass it on
+      List<Path> globPaths = new ArrayList<Path>();
+      for (Path p: srcPaths) {
+        FileSystem fs = p.getFileSystem(getConf());
+        FileStatus[] statuses = fs.globStatus(p);
+        for (FileStatus status: statuses) {
+          globPaths.add(fs.makeQualified(status.getPath()));
+        }
+      }
+      archive(globPaths, archiveName, destPath);
+    } catch(IOException ie) {
+      System.err.println(ie.getLocalizedMessage());
+      return -1;
     }
-    archive(globPaths, archiveName, destPath);
     return 0;
   }
 

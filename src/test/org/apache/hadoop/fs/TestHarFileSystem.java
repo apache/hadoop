@@ -123,14 +123,38 @@ public class TestHarFileSystem extends TestCase {
     out.close();
     Configuration conf = mapred.createJobConf();
     HadoopArchives har = new HadoopArchives(conf);
-    String[] args = new String[4];
+    String[] args = new String[3];
+    //check for destination not specfied
+    args[0] = "-archiveName";
+    args[1] = "foo.har";
+    args[2] = inputPath.toString();
+    int ret = ToolRunner.run(har, args);
+    assertTrue(ret != 0);
+    args = new String[4];
+    //check for wrong archiveName
+    args[0] = "-archiveName";
+    args[1] = "/d/foo.har";
+    args[2] = inputPath.toString();
+    args[3] = archivePath.toString();
+    ret = ToolRunner.run(har, args);
+    assertTrue(ret != 0);
+//  se if dest is a file 
+    args[1] = "foo.har";
+    args[3] = filec.toString();
+    ret = ToolRunner.run(har, args);
+    assertTrue(ret != 0);
+    //this is a valid run
     args[0] = "-archiveName";
     args[1] = "foo.har";
     args[2] = inputPath.toString();
     args[3] = archivePath.toString();
-    int ret = ToolRunner.run(har, args);
+    ret = ToolRunner.run(har, args);
     //checl for the existenece of the archive
     assertTrue(ret == 0);
+    ///try running it again. it should not 
+    // override the directory
+    ret = ToolRunner.run(har, args);
+    assertTrue(ret != 0);
     Path finalPath = new Path(archivePath, "foo.har");
     Path fsPath = new Path(inputPath.toUri().getPath());
     String relative = fsPath.toString().substring(1);
