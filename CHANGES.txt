@@ -73,7 +73,7 @@ Hbase Change Log
    HBASE-714   Showing bytes in log when should be string (2)
    HBASE-627   Disable table doesn't work reliably
    HBASE-716   TestGet2.testGetClosestBefore fails with hadoop-0.17.1
-   
+   HBASE-715   Base HBase 0.2 on Hadoop 0.17.1
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
