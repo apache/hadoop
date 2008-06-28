@@ -72,6 +72,7 @@ Hbase Change Log
                before rather than after its parent in .META.
    HBASE-714   Showing bytes in log when should be string (2)
    HBASE-627   Disable table doesn't work reliably
+   HBASE-716   TestGet2.testGetClosestBefore fails with hadoop-0.17.1
    
    
   IMPROVEMENTS

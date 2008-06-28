@@ -1544,7 +1544,6 @@ public class HStore implements HConstants {
   private void rowAtOrBeforeFromMapFile(MapFile.Reader map, final byte [] row, 
     SortedMap<HStoreKey, Long> candidateKeys)
   throws IOException {
-    HStoreKey searchKey = null;
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
     HStoreKey readkey = new HStoreKey();
 
@@ -1585,52 +1584,72 @@ public class HStore implements HConstants {
       return;
     }
     
-    // seek to the exact row, or the one that would be immediately before it
-    readkey = (HStoreKey)map.getClosest(searchKey, readval, true);
-  
-    if (readkey == null) {
-      // didn't find anything that would match, so return
-      return;
-    }
-  
-    do {
-      // if we have an exact match on row, and it's not a delete, save this
-      // as a candidate key
-      if (Bytes.equals(readkey.getRow(), row)) {
-        if (!HLogEdit.isDeleted(readval.get())) {
-          if (ttl == HConstants.FOREVER || 
-                now < readkey.getTimestamp() + ttl) {
-            candidateKeys.put(stripTimestamp(readkey), 
-              new Long(readkey.getTimestamp()));
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("rowAtOrBeforeFromMapFile:" + readkey +
-                ": expired, skipped");
-            }
-          }
-        }
-      } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
-        // if the row key we just read is beyond the key we're searching for,
-        // then we're done. return.
+    HStoreKey deletedOrExpiredRow = null;
+    boolean foundCandidate = false;
+    while (!foundCandidate) {
+      // seek to the exact row, or the one that would be immediately before it
+      readkey = (HStoreKey)map.getClosest(searchKey, readval, true);
+
+      if (readkey == null) {
+        // didn't find anything that would match, so return
         return;
-      } else {
-        // so, the row key doesn't match, but we haven't gone past the row
-        // we're seeking yet, so this row is a candidate for closest
-        // (assuming that it isn't a delete).
-        if (!HLogEdit.isDeleted(readval.get())) {
-          if (ttl == HConstants.FOREVER || 
-                  now < readkey.getTimestamp() + ttl) {
-            candidateKeys.put(stripTimestamp(readkey), 
-              new Long(readkey.getTimestamp()));
-          } else {
+      }
+
+      do {
+        // if we have an exact match on row, and it's not a delete, save this
+        // as a candidate key
+        if (Bytes.equals(readkey.getRow(), row)) {
+          if (!HLogEdit.isDeleted(readval.get())) {
+            if (ttl == HConstants.FOREVER || 
+                now < readkey.getTimestamp() + ttl) {
+              candidateKeys.put(stripTimestamp(readkey), 
+                  new Long(readkey.getTimestamp()));
+              foundCandidate = true;
+              continue;
+            }
             if (LOG.isDebugEnabled()) {
               LOG.debug("rowAtOrBeforeFromMapFile:" + readkey +
-                ": expired, skipped");
+              ": expired, skipped");
             }
           }
-        }
-      }        
-    } while(map.next(readkey, readval));
+          deletedOrExpiredRow = stripTimestamp(readkey);
+        } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
+          // if the row key we just read is beyond the key we're searching for,
+          // then we're done. return.
+          break;
+        } else {
+          // so, the row key doesn't match, but we haven't gone past the row
+          // we're seeking yet, so this row is a candidate for closest
+          // (assuming that it isn't a delete).
+          if (!HLogEdit.isDeleted(readval.get())) {
+            if (ttl == HConstants.FOREVER || 
+                now < readkey.getTimestamp() + ttl) {
+              candidateKeys.put(stripTimestamp(readkey), 
+                  new Long(readkey.getTimestamp()));
+              foundCandidate = true;
+              continue;
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("rowAtOrBeforeFromMapFile:" + readkey +
+              ": expired, skipped");
+            }
+          }
+          deletedOrExpiredRow = stripTimestamp(readkey);
+        }        
+      } while(map.next(readkey, readval));
+      
+      // If we get here and have no candidates but we did find a deleted or
+      // expired candidate, we need to look at the key before that
+      
+      if (!foundCandidate && deletedOrExpiredRow != null) {
+        searchKey = deletedOrExpiredRow;
+        deletedOrExpiredRow = null;
+        
+      } else {
+        // No candidates and no deleted or expired candidates. Give up.
+        break;
+      }
+    }
   
     // arriving here just means that we consumed the whole rest of the map
     // without going "past" the key we're searching for. we can just fall
