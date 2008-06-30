@@ -718,6 +718,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3539. Exception when closing DFSClient while multiple files are
     open. (Benjamin Gufler via hairong)
 
+    HADOOP-3572. SetQuotas usage interface has some minor bugs. (hairong)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
