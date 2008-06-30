@@ -715,6 +715,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3536. Uncaught exception in DataBlockScanner.
     (Tsz Wo (Nicholas), SZE via hairong)
 
+    HADOOP-3539. Exception when closing DFSClient while multiple files are
+    open. (Benjamin Gufler via hairong)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -22,6 +22,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 public class TestDistributedFileSystem extends junit.framework.TestCase {
   public void testFileSystemCloseAll() throws Exception {
@@ -42,4 +43,26 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+  
+  /**
+   * Tests DFSClient.close throws no ConcurrentModificationException if 
+   * multiple files are open.
+   */
+  public void testDFSClose() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    FileSystem fileSys = cluster.getFileSystem();
+
+    try {
+      // create two files
+      fileSys.create(new Path("/test/dfsclose/file-0"));
+      fileSys.create(new Path("/test/dfsclose/file-1"));
+
+      fileSys.close();
+    }
+    finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
 }
