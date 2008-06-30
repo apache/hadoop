@@ -37,15 +37,17 @@ public class TestMD5Hash extends TestCase {
     return new MD5Hash(digest.digest());
   }
 
+  protected static byte[] D00 = new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  protected static byte[] DFF = new byte[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; 
+  
   public void testMD5Hash() throws Exception {
     MD5Hash md5Hash = getTestHash();
 
-    MD5Hash md5Hash00
-      = new MD5Hash(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    final MD5Hash md5Hash00
+      = new MD5Hash(D00);
 
-    MD5Hash md5HashFF
-      = new MD5Hash(new byte[] {-1, -1, -1, -1, -1, -1, -1, -1,
-                                -1, -1, -1, -1, -1, -1, -1, -1});
+    final MD5Hash md5HashFF
+      = new MD5Hash(DFF);
     
     MD5Hash orderedHash = new MD5Hash(new byte[]{1,2,3,4,5,6,7,8,9,10,11,12,
                                                  13,14,15,16});
@@ -84,6 +86,30 @@ public class TestMD5Hash extends TestCase {
     assertEquals(0xfffefdfcfbfaf9f8L, backwardHash.halfDigest());
     assertTrue("hash collision", 
                closeHash1.hashCode() != closeHash2.hashCode());
+     
+    Thread t1 = new Thread() {      
+      public void run() {
+        for (int i = 0; i < 100; i++) {
+          MD5Hash hash = new MD5Hash(DFF);
+          assertEquals(hash, md5HashFF);
+        }        
+      }
+    };
+    
+    Thread t2 = new Thread() {
+      public void run() {
+        for (int i = 0; i < 100; i++) {
+          MD5Hash hash = new MD5Hash(D00);
+          assertEquals(hash, md5Hash00);
+        }
+      }      
+    };
+    
+    t1.start();
+    t2.start();
+    t1.join();
+    t2.join();
+    
   }
 	
 }

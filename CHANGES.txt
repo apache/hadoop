@@ -30,6 +30,7 @@ Trunk (unreleased changes)
     All of them default to "\t". (Zheng Shao via omalley)
 
   IMPROVEMENTS
+
     HADOOP-3577. Tools to inject blocks into name node and simulated
     data nodes for testing. (Sanjay Radia via hairong)
 
@@ -37,6 +38,10 @@ Trunk (unreleased changes)
     may be processed by map/reduce. (cdouglas via omalley)
 
   OPTIMIZATIONS
+
+    HADOOP-3556. Removed lock contention in MD5Hash by changing the 
+    singleton MessageDigester by an instance per Thread using 
+    ThreadLocal. (Iv‡n de Prado via omalley)
 
   BUG FIXES
 

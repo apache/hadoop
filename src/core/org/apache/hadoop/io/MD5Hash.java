@@ -28,14 +28,15 @@ import java.security.*;
  */
 public class MD5Hash implements WritableComparable {
   public static final int MD5_LEN = 16;
-  private static final MessageDigest DIGESTER;
-  static {
-    try {
-      DIGESTER = MessageDigest.getInstance("MD5");
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
+  private static ThreadLocal<MessageDigest> DIGESTER_FACTORY = new ThreadLocal<MessageDigest>() {
+    protected MessageDigest initialValue() {
+      try {
+        return MessageDigest.getInstance("MD5");
+      } catch (NoSuchAlgorithmException e) {
+        throw new RuntimeException(e);
+      }
     }
-  }
+  };
 
   private byte[] digest;
 
@@ -89,10 +90,9 @@ public class MD5Hash implements WritableComparable {
   /** Construct a hash value for a byte array. */
   public static MD5Hash digest(byte[] data, int start, int len) {
     byte[] digest;
-    synchronized (DIGESTER) {
-      DIGESTER.update(data, start, len);
-      digest = DIGESTER.digest();
-    }
+    MessageDigest digester = DIGESTER_FACTORY.get();
+    digester.update(data, start, len);
+    digest = digester.digest();
     return new MD5Hash(digest);
   }
 
