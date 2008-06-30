@@ -40,6 +40,8 @@ Trunk (unreleased changes)
     HADOOP-3655. Add additional ant properties to control junit. (Steve 
     Loughran via omalley)
 
+    HADOOP-3543. Update the copyright year to 2008. (cdouglas via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
