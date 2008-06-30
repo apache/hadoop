@@ -96,6 +96,10 @@
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
   <property name="test.junit.output.format" value="plain"/>
+  <property name="test.junit.fork.mode" value="perTest" />
+  <property name="test.junit.printsummary" value="yes" />
+  <property name="test.junit.haltonfailure" value="no" />
+  <property name="test.junit.maxmemory" value="256m" />
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
   <property name="libhdfs.test.dir" value="${test.build.dir}/libhdfs"/>
@@ -613,8 +617,13 @@
     <mkdir dir="${test.build.data}"/>
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
-    <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no" 
-           fork="yes" maxmemory="256m" dir="${basedir}" timeout="${test.timeout}"
+    <junit showoutput="${test.output}"
+      printsummary="${test.junit.printsummary}"
+      haltonfailure="${test.junit.haltonfailure}"
+      fork="yes"
+      forkmode="${test.junit.fork.mode}"
+      maxmemory="${test.junit.maxmemory}"
+      dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
