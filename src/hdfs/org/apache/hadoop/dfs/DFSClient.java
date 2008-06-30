@@ -207,20 +207,18 @@ class DFSClient implements FSConstants {
     synchronized (this) {
       checkOpen();
       synchronized (pendingCreates) {
-        Iterator file_itr = pendingCreates.keySet().iterator();
-        while (file_itr.hasNext()) {
-          String name = (String) file_itr.next();
-          OutputStream out = pendingCreates.get(name);
-          try {
-            if (out != null) {
+        while (!pendingCreates.isEmpty()) {
+          String name = pendingCreates.firstKey();
+          OutputStream out = pendingCreates.remove(name);
+          if (out != null) {
+            try {
               out.close();
+            } catch (IOException ie) {
+              System.err.println("Exception closing file " + name);
+              ie.printStackTrace();
             }
-          } catch (IOException ie) {
-            System.err.println("Exception closing file " + name);
-            ie.printStackTrace();
           }
         }
-        pendingCreates.clear();
       }
       this.clientRunning = false;
       try {
