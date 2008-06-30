@@ -712,6 +712,9 @@ Release 0.18.0 - Unreleased
   
     HADOOP-3588. Fixed usability issues with archives. (mahadev)
 
+    HADOOP-3536. Uncaught exception in DataBlockScanner.
+    (Tsz Wo (Nicholas), SZE via hairong)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
