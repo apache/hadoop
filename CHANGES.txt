@@ -333,6 +333,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3606. Updates the Streaming doc. (Amareshwari Sriramadasu via ddas) 
 
+    HADOOP-3532. Add jdiff reports to the build scripts. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
