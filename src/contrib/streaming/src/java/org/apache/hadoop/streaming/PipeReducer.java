@@ -36,6 +36,10 @@ import org.apache.hadoop.io.Writable;
  */
 public class PipeReducer extends PipeMapRed implements Reducer {
 
+  private byte[] reduceOutFieldSeparator;
+  private byte[] reduceInputFieldSeparator;
+  private int numOfReduceOutputKeyFields = 1;
+  
   String getPipeCommand(JobConf job) {
     String str = job.get("stream.reduce.streamprocessor");
     if (str == null) {
@@ -53,6 +57,18 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     String argv = getPipeCommand(job_);
     // Currently: null is identity reduce. REDUCE_NONE is no-map-outputs.
     return (argv != null) && !StreamJob.REDUCE_NONE.equals(argv);
+  }
+
+  public void configure(JobConf job) {
+    super.configure(job);
+
+    try {
+      reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t").getBytes("UTF-8");
+      reduceInputFieldSeparator = job_.get("stream.reduce.input.field.separator", "\t").getBytes("UTF-8");
+      this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("The current system does not support UTF-8 encoding!", e);
+    }
   }
 
   public void reduce(Object key, Iterator values, OutputCollector output,
@@ -75,7 +91,7 @@ public class PipeReducer extends PipeMapRed implements Reducer {
                                                                     outerrThreadsThrowable));
           }
           write(key);
-          clientOut_.write('\t');
+          clientOut_.write(getInputSeparator());
           write(val);
           clientOut_.write('\n');
         } else {
@@ -109,14 +125,18 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     mapRedFinished();
   }
 
-  @Override
-  char getFieldSeparator() {
-    return super.reduceOutFieldSeparator;
+  byte[] getInputSeparator() {
+    return reduceInputFieldSeparator;
   }
 
   @Override
+  byte[] getFieldSeparator() {
+    return reduceOutFieldSeparator;
+  }
+  
+  @Override
   int getNumOfKeyFields() {
-    return super.numOfReduceOutputKeyFields;
+    return numOfReduceOutputKeyFields;
   }
 
 }

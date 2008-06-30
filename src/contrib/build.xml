@@ -46,7 +46,7 @@
   <!-- ====================================================== -->
   <target name="test">
     <subant target="test">
-      <fileset dir="." includes="*/build.xml"/>
+      <fileset dir="." includes="streaming/build.xml"/>
     </subant>
   </target>
   

@@ -642,7 +642,7 @@
     <fail if="tests.failed">Tests failed!</fail>
   </target>   
 
-  <target name="test-contrib" depends="compile-core, compile-core-test" description="Run contrib unit tests">
+  <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
        <fileset file="${contrib.dir}/build.xml"/>

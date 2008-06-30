@@ -60,7 +60,32 @@ public class UTF8ByteArrayUtils {
     }
     return -1;      
   }
-  
+
+  /**
+   * Find the first occurrence of the given bytes b in a UTF-8 encoded string
+   * @param utf a byte array containing a UTF-8 encoded string
+   * @param start starting offset
+   * @param end ending position
+   * @param b the bytes to find
+   * @return position that first byte occures otherwise -1
+   */
+  public static int findBytes(byte [] utf, int start, int end, byte[] b) {
+    int matchEnd = end - b.length;
+    for(int i=start; i<=matchEnd; i++) {
+      boolean matched = true;
+      for(int j=0; j<b.length; j++) {
+        if (utf[i+j] != b[j]) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) {
+        return i;
+      }
+    }
+    return -1;      
+  }
+    
   /**
    * Find the nth occurrence of the given byte b in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
@@ -112,23 +137,57 @@ public class UTF8ByteArrayUtils {
    * @param key contains key upon the method is returned
    * @param val contains value upon the method is returned
    * @param splitPos the split pos
+   * @param separatorLength the length of the separator between key and value
    * @throws IOException
    */
   public static void splitKeyVal(byte[] utf, int start, int length, 
-                                 Text key, Text val, int splitPos) throws IOException {
+                                 Text key, Text val, int splitPos,
+                                 int separatorLength) throws IOException {
     if (splitPos<start || splitPos >= (start+length))
       throw new IllegalArgumentException("splitPos must be in the range " +
                                          "[" + start + ", " + (start+length) + "]: " + splitPos);
     int keyLen = (splitPos-start);
     byte [] keyBytes = new byte[keyLen];
     System.arraycopy(utf, start, keyBytes, 0, keyLen);
-    int valLen = (start+length)-splitPos-1;
+    int valLen = (start+length)-splitPos-separatorLength;
     byte [] valBytes = new byte[valLen];
-    System.arraycopy(utf, splitPos+1, valBytes, 0, valLen);
+    System.arraycopy(utf, splitPos+separatorLength, valBytes, 0, valLen);
     key.set(keyBytes);
     val.set(valBytes);
   }
-    
+
+  /**
+   * split a UTF-8 byte array into key and value 
+   * assuming that the delimilator is at splitpos. 
+   * @param utf utf-8 encoded string
+   * @param start starting offset
+   * @param length no. of bytes
+   * @param key contains key upon the method is returned
+   * @param val contains value upon the method is returned
+   * @param splitPos the split pos
+   * @throws IOException
+   */
+  public static void splitKeyVal(byte[] utf, int start, int length, 
+                                 Text key, Text val, int splitPos) throws IOException {
+    splitKeyVal(utf, start, length, key, val, splitPos, 1);
+  }
+  
+
+  /**
+   * split a UTF-8 byte array into key and value 
+   * assuming that the delimilator is at splitpos. 
+   * @param utf utf-8 encoded string
+   * @param key contains key upon the method is returned
+   * @param val contains value upon the method is returned
+   * @param splitPos the split pos
+   * @param separatorLength the length of the separator between key and value
+   * @throws IOException
+   */
+  public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos, 
+                                 int separatorLength) 
+    throws IOException {
+    splitKeyVal(utf, 0, utf.length, key, val, splitPos, separatorLength);
+  }
 
   /**
    * split a UTF-8 byte array into key and value 
@@ -141,9 +200,9 @@ public class UTF8ByteArrayUtils {
    */
   public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos) 
     throws IOException {
-    splitKeyVal(utf, 0, utf.length, key, val, splitPos);
+    splitKeyVal(utf, 0, utf.length, key, val, splitPos, 1);
   }
-    
+  
   /**
    * Read a utf8 encoded line from a data input stream. 
    * @param lineReader LineReader to read the line from.

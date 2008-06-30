@@ -26,10 +26,10 @@ import org.apache.hadoop.streaming.Environment;
     Used to test the usage of external applications without adding
     platform-specific dependencies.
  */
-public class TrApp
+public class TrAppReduce
 {
 
-  public TrApp(char find, char replace)
+  public TrAppReduce(char find, char replace)
   {
     this.find = find;
     this.replace = replace;
@@ -48,12 +48,8 @@ public class TrApp
     expect("mapred_output_key_class", "org.apache.hadoop.io.Text");
     expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
 
-    expect("mapred_task_is_map", "true");
+    expect("mapred_task_is_map", "false");
     expectDefined("mapred_task_id");
-
-    expectDefined("map_input_file");
-    expect("map_input_start", "0");
-    expectDefined("map_input_length");
 
     expectDefined("io_sort_factor");
 
@@ -90,7 +86,6 @@ public class TrApp
     while ((line = in.readLine()) != null) {
       String out = line.replace(find, replace);
       System.out.println(out);
-      System.err.println("reporter:counter:UserCounters,InputLines,1");
     }
   }
 
@@ -98,7 +93,7 @@ public class TrApp
   {
     args[0] = CUnescape(args[0]);
     args[1] = CUnescape(args[1]);
-    TrApp app = new TrApp(args[0].charAt(0), args[1].charAt(0));
+    TrAppReduce app = new TrAppReduce(args[0].charAt(0), args[1].charAt(0));
     app.go();
   }
 

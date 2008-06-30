@@ -53,8 +53,8 @@ public abstract class PipeMapRed {
    */
   abstract String getPipeCommand(JobConf job);
 
-  abstract char getFieldSeparator();
-  
+  abstract byte[] getFieldSeparator();
+
   abstract int getNumOfKeyFields();
 
   abstract boolean getDoPipe();
@@ -119,13 +119,6 @@ public abstract class PipeMapRed {
 
       job_ = job;
       fs_ = FileSystem.get(job_);
-
-      String mapOutputFieldSeparator = job_.get("stream.map.output.field.separator", "\t");
-      String reduceOutputFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t");
-      this.mapOutputFieldSeparator = mapOutputFieldSeparator.charAt(0);
-      this.reduceOutFieldSeparator = reduceOutputFieldSeparator.charAt(0);
-      this.numOfMapOutputKeyFields = job_.getInt("stream.num.map.output.key.fields", 1);
-      this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
 
       nonZeroExitIsFailure_ = job_.getBoolean("stream.non.zero.exit.is.failure", true);
       
@@ -317,7 +310,7 @@ public abstract class PipeMapRed {
   }
 
   /**
-   * Split a line into key and value. Assume the delimitor is a tab.
+   * Split a line into key and value.
    * @param line: a byte array of line containing UTF-8 bytes
    * @param key: key of a record
    * @param val: value of a record
@@ -325,14 +318,21 @@ public abstract class PipeMapRed {
    */
   void splitKeyVal(byte[] line, int length, Text key, Text val)
   throws IOException {
-    int pos = UTF8ByteArrayUtils.findNthByte(line, 0, length,
-                (byte)this.getFieldSeparator(), this.getNumOfKeyFields());
+    int numKeyFields = getNumOfKeyFields();
+    byte[] separator = getFieldSeparator();
+    
+    // Need to find numKeyFields separators
+    int pos = UTF8ByteArrayUtils.findBytes(line, 0, line.length, separator);
+    for(int k=1; k<numKeyFields && pos!=-1; k++) {
+      pos = UTF8ByteArrayUtils.findBytes(line, pos + separator.length, 
+          line.length, separator);
+    }
     try {
       if (pos == -1) {
         key.set(line, 0, length);
         val.set("");
       } else {
-        UTF8ByteArrayUtils.splitKeyVal(line, 0, length, key, val, pos);
+        UTF8ByteArrayUtils.splitKeyVal(line, 0, length, key, val, pos, separator.length);
       }
     } catch (CharacterCodingException e) {
       LOG.warn(StringUtils.stringifyException(e));
@@ -647,10 +647,4 @@ public abstract class PipeMapRed {
   String LOGNAME;
   PrintStream log_;
 
-  protected char mapOutputFieldSeparator = '\t';
-  protected char reduceOutFieldSeparator = '\t';
-  protected int numOfMapOutputKeyFields = 1;
-  protected int numOfMapOutputPartitionFields = 1;
-  protected int numOfReduceOutputKeyFields = 1;
-  
 }

@@ -34,6 +34,10 @@ import org.apache.hadoop.util.StringUtils;
 public class PipeMapper extends PipeMapRed implements Mapper {
 
   private boolean ignoreKey = false;
+
+  private byte[] mapOutputFieldSeparator;
+  private byte[] mapInputFieldSeparator;
+  private int numOfMapOutputKeyFields = 1;
   
   String getPipeCommand(JobConf job) {
     String str = job.get("stream.map.streamprocessor");
@@ -56,7 +60,15 @@ public class PipeMapper extends PipeMapRed implements Mapper {
   public void configure(JobConf job) {
     super.configure(job);
     String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
-    this.ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
+    ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
+
+    try {
+      mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t").getBytes("UTF-8");
+      mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t").getBytes("UTF-8");
+      numOfMapOutputKeyFields = job.getInt("stream.num.map.output.key.fields", 1);
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("The current system does not support UTF-8 encoding!", e);
+    }
   }
 
   // Do NOT declare default constructor
@@ -85,7 +97,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
       if (numExceptions_ == 0) {
         if (!this.ignoreKey) {
           write(key);
-          clientOut_.write('\t');
+          clientOut_.write(getInputSeparator());
         }
         write(value);
         clientOut_.write('\n');
@@ -112,14 +124,18 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     mapRedFinished();
   }
 
+  byte[] getInputSeparator() {
+    return mapInputFieldSeparator;
+  }
+
   @Override
-  char getFieldSeparator() {
-    return super.mapOutputFieldSeparator;
+  byte[] getFieldSeparator() {
+    return mapOutputFieldSeparator;
   }
 
   @Override
   int getNumOfKeyFields() {
-    return super.numOfMapOutputKeyFields;
+    return numOfMapOutputKeyFields;
   }
 
 }
