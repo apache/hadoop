@@ -21,13 +21,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.StringTokenizer;
-
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.Enumeration;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -185,17 +180,6 @@ public class JobConf extends Configuration {
     }   
   }
 
-  /**
-   * @deprecated Use {@link JobClient#getSystemDir()} instead.
-   * Get the system directory where job-specific files are to be placed.
-   * 
-   * @return the system directory where job-specific files are to be placed.
-   */
-  @Deprecated
-  public Path getSystemDir() {
-    return new Path(get("mapred.system.dir", "/tmp/hadoop/mapred/system"));
-  }
-
   public String[] getLocalDirs() throws IOException {
     return getStrings("mapred.local.dir");
   }
@@ -220,51 +204,6 @@ public class JobConf extends Configuration {
    */
   public Path getLocalPath(String pathString) throws IOException {
     return getLocalPath("mapred.local.dir", pathString);
-  }
-
-  /**
-   * Set the {@link Path} of the input directory for the map-reduce job.
-   * 
-   * @param dir the {@link Path} of the input directory for the map-reduce job.
-   * @deprecated Use {@link FileInputFormat#setInputPaths(JobConf, Path...)} or
-   *                 {@link FileInputFormat#setInputPaths(JobConf, String)}
-   */
-  @Deprecated
-  public void setInputPath(Path dir) {
-    dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.input.dir", dir.toString());
-  }
-
-  /**
-   * Add a {@link Path} to the list of inputs for the map-reduce job.
-   * 
-   * @param dir {@link Path} to be added to the list of inputs for 
-   *            the map-reduce job.
-   * @deprecated Use {@link FileInputFormat#addInputPath(JobConf, Path)} or
-   *                 {@link FileInputFormat#addInputPaths(JobConf, String)}
-   */
-  @Deprecated
-  public void addInputPath(Path dir) {
-    dir = new Path(getWorkingDirectory(), dir);
-    String dirs = get("mapred.input.dir");
-    set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
-  }
-
-  /**
-   * Get the list of input {@link Path}s for the map-reduce job.
-   * 
-   * @return the list of input {@link Path}s for the map-reduce job.
-   * @deprecated Use {@link FileInputFormat#getInputPaths(JobConf)}
-   */
-  @Deprecated
-  public Path[] getInputPaths() {
-    String dirs = get("mapred.input.dir", "");
-    ArrayList<Object> list = Collections.list(new StringTokenizer(dirs, ","));
-    Path[] result = new Path[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      result[i] = new Path((String)list.get(i));
-    }
-    return result;
   }
 
   /**
@@ -361,38 +300,6 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * @deprecated Use {@link FileOutputFormat#getOutputPath(JobConf)} or
-   *                 {@link FileOutputFormat#getWorkOutputPath(JobConf)}
-   * Get the {@link Path} to the output directory for the map-reduce job.
-   * 
-   * @return the {@link Path} to the output directory for the map-reduce job.
-   */
-  @Deprecated
-  public Path getOutputPath() {
-    // this return context sensitive value for output path
-    // Returns task's temporary output path while task's execution
-    // Otherwise returns the output path that was set.
-    Path workOutputDir = FileOutputFormat.getWorkOutputPath(this);
-    if (workOutputDir != null) {
-      return workOutputDir;
-    }
-    else return FileOutputFormat.getOutputPath(this);
-  }
-
-  /**
-   * @deprecated Use {@link FileOutputFormat#setOutputPath(JobConf, Path)} 
-   * Set the {@link Path} of the output directory for the map-reduce job.
-   * 
-   * <p><i>Note</i>:
-   * </p>
-   * @param dir the {@link Path} of the output directory for the map-reduce job.
-   */
-  @Deprecated
-  public void setOutputPath(Path dir) {
-    FileOutputFormat.setOutputPath(this, dir);
-  }
-
-  /**
    * Get the {@link InputFormat} implementation for the map-reduce job,
    * defaults to {@link TextInputFormat} if not specified explicity.
    * 
@@ -456,39 +363,6 @@ public class JobConf extends Configuration {
    */
   public boolean getCompressMapOutput() {
     return getBoolean("mapred.compress.map.output", false);
-  }
-
-  /**
-   * Set the {@link CompressionType} for the map outputs.
-   * 
-   * @param style the {@link CompressionType} to control how the map outputs  
-   *              are compressed.
-   * @deprecated {@link CompressionType} is no longer valid for intermediate
-   *             map-outputs. 
-   */
-  @Deprecated
-  public void setMapOutputCompressionType(CompressionType style) {
-    setCompressMapOutput(true);
-    set("mapred.map.output.compression.type", style.toString());
-    LOG.warn("SequenceFile compression is no longer valid for intermediate " +
-    		     "map-outputs!");
-  }
-  
-  /**
-   * Get the {@link CompressionType} for the map outputs.
-   * 
-   * @return the {@link CompressionType} for map outputs, defaulting to 
-   *         {@link CompressionType#RECORD}.
-   * @deprecated {@link CompressionType} is no longer valid for intermediate
-   *             map-outputs. 
-   */
-  @Deprecated
-  public CompressionType getMapOutputCompressionType() {
-    String val = get("mapred.map.output.compression.type", 
-                     CompressionType.RECORD.toString());
-    LOG.warn("SequenceFile compression is no longer valid for intermediate " +
-    "map-outputs!");
-    return CompressionType.valueOf(val);
   }
 
   /**

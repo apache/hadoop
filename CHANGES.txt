@@ -8,6 +8,17 @@ Trunk (unreleased changes)
     functionality, which was necessary to providing backwards
     compatible combiner semantics for 0.18. (cdouglas via omalley)
 
+    HADOOP-3667. Remove the following deprecated methods from JobConf:
+      addInputPath(Path)
+      getInputPaths()
+      getMapOutputCompressionType()
+      getOutputPath()
+      getSystemDir()
+      setInputPath(Path)
+      setMapOutputCompressionType(CompressionType style)
+      setOutputPath(Path)
+    (Amareshwari Sriramadasu via omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

@@ -23,7 +23,6 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -70,7 +69,7 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
     Text cmpval = new Text();
     DataInputBuffer buf = new DataInputBuffer();
     final int NUM_SPLITS = 3;
-    job.setInputPath(file);
+    FileInputFormat.setInputPaths(job, file);
     for (InputSplit split : bformat.getSplits(job, NUM_SPLITS)) {
       RecordReader<BytesWritable,BytesWritable> reader =
         bformat.getRecordReader(split, job, Reporter.NULL);
