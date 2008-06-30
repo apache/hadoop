@@ -981,8 +981,10 @@ class FSDirectory implements FSConstants, Closeable {
     synchronized (rootDir) {
       rootDir.getExistingPathINodes(components, inodes);
       INode targetNode = inodes[inodes.length-1];
-      if (targetNode == null || !targetNode.isDirectory()) {
+      if (targetNode == null) {
         throw new FileNotFoundException("Directory does not exist: " + srcs);
+      } else if (!targetNode.isDirectory()) {
+        throw new FileNotFoundException("Cannot set quota on a file: " + srcs);  
       } else { // a directory inode
         INodeDirectory dirNode = (INodeDirectory)targetNode;
         if (dirNode instanceof INodeDirectoryWithQuota) { 
