@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 
     easier to identify datanode and namenode related code. (dhruba)
 
+    HADOOP-3640. Fix the read method in the NativeS3InputStream. (tomwhite via
+    omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

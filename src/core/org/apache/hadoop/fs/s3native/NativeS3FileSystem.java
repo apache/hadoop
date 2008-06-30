@@ -87,8 +87,8 @@ public class NativeS3FileSystem extends FileSystem {
     
     public synchronized int read() throws IOException {
       int result = in.read();
-      if (result > 0) {
-        pos += result;
+      if (result != -1) {
+        pos++;
       }
       return result;
     }
