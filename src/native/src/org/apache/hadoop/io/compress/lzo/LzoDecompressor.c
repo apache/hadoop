@@ -36,6 +36,8 @@
 
 // The lzo2 library-handle
 static void *liblzo2 = NULL;
+// lzo2 library version
+static jint liblzo2_version = 0;
 
 // The lzo 'decompressors'
 static char* lzo_decompressors[] = {
@@ -117,6 +119,12 @@ Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_initIDs(
                                               "directBufferSize", "I");
   LzoDecompressor_lzoDecompressor = (*env)->GetFieldID(env, class,
                                               "lzoDecompressor", "J");
+
+  // record lzo library version
+  void* lzo_version_ptr = NULL;
+  LOAD_DYNAMIC_SYMBOL(lzo_version_ptr, env, liblzo2, "lzo_version");
+  liblzo2_version = (NULL == lzo_version_ptr) ? 0
+    : (jint) ((unsigned (__LZO_CDECL *)())lzo_version_ptr)();
 }
 
 JNIEXPORT void JNICALL
@@ -150,6 +158,12 @@ Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_init(
                        JLONG(decompressor_func_ptr));
 
   return;
+}
+
+JNIEXPORT jint JNICALL
+Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_getLzoLibraryVersion(
+    JNIEnv* env, jclass class) {
+  return liblzo2_version;
 }
 
 JNIEXPORT jint JNICALL

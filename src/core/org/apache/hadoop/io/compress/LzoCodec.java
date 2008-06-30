@@ -193,6 +193,6 @@ public class LzoCodec implements Configurable, CompressionCodec {
    * @return the extension including the '.'
    */
   public String getDefaultExtension() {
-    return ".lzo";
+    return ".lzo_deflate";
   }
 }

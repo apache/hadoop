@@ -146,18 +146,22 @@ public class LzoCompressor implements Compressor {
     }
   }; // CompressionStrategy
 
-  private static boolean nativeLzoLoaded = false;
+  private static final boolean nativeLzoLoaded;
+  public static final int LZO_LIBRARY_VERSION;
   
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       // Initialize the native library
       initIDs();
       nativeLzoLoaded = true;
+      LZO_LIBRARY_VERSION = 0xFFFF & getLzoLibraryVersion();
     } else {
       LOG.error("Cannot load " + LzoCompressor.class.getName() + 
                 " without native-hadoop library!");
-    }
-  }
+      nativeLzoLoaded = false;
+      LZO_LIBRARY_VERSION = -1;
+     }
+   }
   
   /**
    * Check if lzo compressors are loaded and initialized.
@@ -340,6 +344,7 @@ public class LzoCompressor implements Compressor {
   }
   
   private native static void initIDs();
+  private native static int getLzoLibraryVersion();
   private native void init(int compressor);
   private native int compressBytesDirect(int compressor);
 }

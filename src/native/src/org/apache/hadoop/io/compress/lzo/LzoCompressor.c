@@ -36,6 +36,8 @@
 
 // The lzo2 library-handle
 static void *liblzo2 = NULL;
+// lzo2 library version
+static jint liblzo2_version = 0;
 
 // The lzo 'compressors'
 typedef struct {
@@ -156,6 +158,12 @@ Java_org_apache_hadoop_io_compress_lzo_LzoCompressor_initIDs(
   LzoCompressor_workingMemoryBuf = (*env)->GetFieldID(env, class, 
                                               "workingMemoryBuf", 
                                               "Ljava/nio/Buffer;");
+
+  // record lzo library version
+  void* lzo_version_ptr = NULL;
+  LOAD_DYNAMIC_SYMBOL(lzo_version_ptr, env, liblzo2, "lzo_version");
+  liblzo2_version = (NULL == lzo_version_ptr) ? 0
+    : (jint) ((unsigned (__LZO_CDECL *)())lzo_version_ptr)();
 }
 
 JNIEXPORT void JNICALL
@@ -192,6 +200,12 @@ Java_org_apache_hadoop_io_compress_lzo_LzoCompressor_init(
                       lzo_compressors[compressor].wrkmem);
 
   return;
+}
+
+JNIEXPORT jint JNICALL
+Java_org_apache_hadoop_io_compress_lzo_LzoCompressor_getLzoLibraryVersion(
+    JNIEnv* env, jclass class) {
+  return liblzo2_version;
 }
 
 JNIEXPORT jint JNICALL

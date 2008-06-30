@@ -58,6 +58,12 @@ public class TestCodec extends TestCase {
     }
   }
   
+  public void testLzopCodec() throws IOException {
+    if (LzopCodec.isNativeLzoLoaded(conf)) {
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
+    }
+  }
+
   private static void codecTest(Configuration conf, int seed, int count, 
                                 String codecClass) 
     throws IOException {

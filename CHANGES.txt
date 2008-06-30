@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     HADOOP-3577. Tools to inject blocks into name node and simulated
     data nodes for testing. (Sanjay Radia via hairong)
 
+    HADOOP-2664. Add a lzop compatible codec, so that files compressed by lzop
+    may be processed by map/reduce. (cdouglas via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES

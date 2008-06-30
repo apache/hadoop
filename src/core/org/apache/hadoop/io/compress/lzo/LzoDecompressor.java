@@ -123,18 +123,22 @@ public class LzoDecompressor implements Decompressor {
     }
   }; // CompressionStrategy
   
-  private static boolean nativeLzoLoaded = false;
+  private static final boolean nativeLzoLoaded;
+  public static final int LZO_LIBRARY_VERSION;
   
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       // Initialize the native library
       initIDs();
       nativeLzoLoaded = true;
+      LZO_LIBRARY_VERSION = 0xFFFF & getLzoLibraryVersion();
     } else {
       LOG.error("Cannot load " + LzoDecompressor.class.getName() + 
                 " without native-hadoop library!");
-    }
-  }
+      nativeLzoLoaded = false;
+      LZO_LIBRARY_VERSION = -1;
+     }
+   }
   
   /**
    * Check if lzo decompressors are loaded and initialized.
@@ -302,6 +306,7 @@ public class LzoDecompressor implements Decompressor {
   }
   
   private native static void initIDs();
+  private native static int getLzoLibraryVersion();
   private native void init(int decompressor);
   private native int decompressBytesDirect(int decompressor);
 }
