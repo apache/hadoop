@@ -1345,8 +1345,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                    "block " + blk + " could not be marked " +
                                    "as corrupt as it does not exists in " +
                                    "blocksMap");
-    else 
+    else {
+      // Add this replica to corruptReplicas Map and 
+      // add the block to neededReplication 
       corruptReplicas.addToCorruptReplicasMap(blk, node);
+      updateNeededReplications(blk, 0, 1);
+    }
   }
 
   /**
@@ -2803,7 +2807,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // filter out containingNodes that are marked for decommission.
     NumberReplicas num = countNodes(storedBlock);
-    int numCurrentReplica = num.liveReplicas()
+    int numLiveReplicas = num.liveReplicas();
+    int numCurrentReplica = numLiveReplicas
       + pendingReplications.getNumReplicas(block);
 
     // check whether safe replication is reached for the block
@@ -2835,9 +2840,43 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // If the file replication has reached desired value
     // we can remove any corrupt replicas the block may have
     int corruptReplicasCount = num.corruptReplicas();
-    if ((corruptReplicasCount > 0) && (numCurrentReplica == fileReplication))
-      corruptReplicas.invalidateCorruptReplicas(block);
+    if ((corruptReplicasCount > 0) && (numLiveReplicas == fileReplication)) 
+      invalidateCorruptReplicas(block);
     return block;
+  }
+
+  /**
+   * Invalidate corrupt replicas.
+   * <p>
+   * This will remove the replicas from the block's location list,
+   * add them to {@link #recentInvalidateSets} so that they could be further
+   * deleted from the respective data-nodes,
+   * and remove the block from corruptReplicasMap.
+   * <p>
+   * This method should be called when the block has sufficient
+   * number of live replicas.
+   *
+   * @param blk Block whose corrupt replicas need to be invalidated
+   */
+  void invalidateCorruptReplicas(Block blk) {
+    Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
+    boolean gotException = false;
+    if (nodes == null)
+      return;
+    for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext(); ) {
+      DatanodeDescriptor node = it.next();
+      try {
+        invalidateBlock(blk, node);
+      } catch (IOException e) {
+        NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
+                                      "error in deleting bad block " + blk +
+                                      " on " + node + e);
+        gotException = true;
+      }
+    }
+    // Remove the block from corruptReplicasMap
+    if (!gotException)
+      corruptReplicas.removeFromCorruptReplicasMap(blk);
   }
 
   /**
@@ -3067,7 +3106,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     // If block is removed from blocksMap, remove it from corruptReplicas
-    corruptReplicas.removeFromCorruptReplicasMap(block);
+    if (fileINode == null)
+      corruptReplicas.removeFromCorruptReplicasMap(block);
   }
 
   /**

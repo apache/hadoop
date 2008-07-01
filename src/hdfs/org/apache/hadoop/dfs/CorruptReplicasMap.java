@@ -20,7 +20,6 @@ package org.apache.hadoop.dfs;
 import org.apache.hadoop.ipc.Server;
 
 import java.util.*;
-import java.io.IOException;
 
 /**
  * Stores information about all corrupt blocks in the File System.
@@ -71,9 +70,6 @@ class CorruptReplicasMap{
    * @param blk Block to be removed
    */
   void removeFromCorruptReplicasMap(Block blk) {
-    FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
-    if (fsNamesystem.blocksMap.contains(blk))
-      return;
     if (corruptReplicasMap != null) {
       corruptReplicasMap.remove(blk);
       NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
@@ -103,29 +99,8 @@ class CorruptReplicasMap{
     return ((nodes != null) && (nodes.contains(node)));
   }
 
-  /**
-   * Invalidate corrupt replicas
-   *
-   * @param blk Block whose corrupt replicas need to be invalidated
-   */
-  void invalidateCorruptReplicas(Block blk) {
-    FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
+  int numCorruptReplicas(Block blk) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
-    boolean gotException = false;
-    if (nodes == null)
-      return;
-    for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext(); ) {
-      DatanodeDescriptor node = it.next();
-      try {
-        fsNamesystem.invalidateBlock(blk, node);
-      } catch (IOException e) {
-        NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
-                                      "error in deleting bad block " + blk +
-                                      " on " + node + e);
-      }
-    }
-    // Remove the block from corruptReplicasMap if empty
-    if (!gotException)
-      removeFromCorruptReplicasMap(blk);
+    return (nodes == null) ? 0 : nodes.size();
   }
 }
