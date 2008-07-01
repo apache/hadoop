@@ -44,7 +44,7 @@ class ModifyColumn extends ColumnOperation {
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
     for (HRegionInfo i: unservedRegions) {
-      if (!i.getTableDesc().hasFamily(columnName)) {
+      if (i.getTableDesc().hasFamily(columnName)) {
         i.getTableDesc().addFamily(descriptor);
         updateRegionInfo(server, m.getRegionName(), i);
       } else { // otherwise, we have an error.

@@ -3,6 +3,7 @@ Hbase Change Log
 
   BUG FIXES
    HBASE-718   hbase shell help info
+   HBASE-717   alter table broke with new shell returns InvalidColumnNameException
 
 Release 0.1.3 - 07/25/2008
 
