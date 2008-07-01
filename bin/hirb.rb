@@ -114,14 +114,6 @@ HBASE SHELL COMMANDS:
 
            hbase> alter 't1', {NAME => 'f1', VERSIONS => 5}
 
-           To create a table with an 'f1', 'f2', and 'f3' using all defaults:
-
-           hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2'}, {NAME => 'f3'}
-
-           or in shorthand:
-
-           hbase> alter 't1', 'f1', 'f2', 'f3'
-
  create    Create table; pass table name, a dictionary of specifications per
            column family, and optionally a dictionary of table configuration.
            Dictionaries are described below in the GENERAL NOTES section.
@@ -129,6 +121,14 @@ HBASE SHELL COMMANDS:
            'f1' with an alternate maximum number of cells, type:
 
            hbase> create 't1', {NAME => 'f1', VERSIONS => 5}
+
+           To create a table with 'f1', 'f2', and 'f3' using all defaults:
+
+           hbase> create 't1', {NAME => 'f1'}, {NAME => 'f2'}, {NAME => 'f3'}
+
+           or in shorthand:
+
+           hbase> create 't1', 'f1', 'f2', 'f3'
 
  describe  Describe the named table: e.g. "hbase> describe 't1'"
 

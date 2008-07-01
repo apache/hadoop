@@ -1,4 +1,10 @@
 Hbase Change Log
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+   HBASE-718   hbase shell help info
+
+Release 0.1.3 - 07/25/2008
 
   INCOMPATIBLE CHANGES
    HBASE-584   Names in the filter interface are confusing (Clint Morgan via
