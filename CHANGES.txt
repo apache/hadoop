@@ -46,7 +46,7 @@ Trunk (unreleased changes)
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
     singleton MessageDigester by an instance per Thread using 
-    ThreadLocal. (Iv‡n de Prado via omalley)
+    ThreadLocal. (Iv?n de Prado via omalley)
 
   BUG FIXES
 
@@ -719,6 +719,9 @@ Release 0.18.0 - Unreleased
     open. (Benjamin Gufler via hairong)
 
     HADOOP-3572. SetQuotas usage interface has some minor bugs. (hairong)
+
+    HADOOP-3649. Fix bug in removing blocks from the corrupted block map.
+    (Lohit Vijayarenu via shv)
 
 Release 0.17.1 - Unreleased
 

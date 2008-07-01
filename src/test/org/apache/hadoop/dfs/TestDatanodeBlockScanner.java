@@ -27,7 +27,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
 import java.nio.channels.FileChannel;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -142,9 +141,10 @@ public class TestDatanodeBlockScanner extends TestCase {
     cluster.shutdown();
   }
 
-  void corruptReplica(String blockName, int replica) throws IOException {
+  boolean corruptReplica(String blockName, int replica) throws IOException {
     Random random = new Random();
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    boolean corrupted = false;
     for (int i=replica*2; i<replica*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
                                blockName);
@@ -157,8 +157,10 @@ public class TestDatanodeBlockScanner extends TestCase {
         raFile.seek(rand);
         raFile.write(badString.getBytes());
         raFile.close();
+        corrupted = true;
       }
     }
+    return corrupted;
   }
 
   public void testBlockCorruptionPolicy() throws IOException {
@@ -239,6 +241,145 @@ public class TestDatanodeBlockScanner extends TestCase {
     } while (blockCount != 3);
     assertTrue(blocks.get(0).isCorrupt() == true);
 
+    cluster.shutdown();
+  }
+  
+  /**
+   * testBlockCorruptionRecoveryPolicy.
+   * This tests recovery of corrupt replicas, first for one corrupt replica
+   * then for two. The test invokes blockCorruptionRecoveryPolicy which
+   * 1. Creates a block with desired number of replicas
+   * 2. Corrupts the desired number of replicas and restarts the datanodes
+   *    containing the corrupt replica. Additionaly we also read the block
+   *    in case restarting does not report corrupt replicas.
+   *    Restarting or reading from the datanode would trigger reportBadBlocks 
+   *    to namenode.
+   *    NameNode adds it to corruptReplicasMap and neededReplication
+   * 3. Test waits until all corrupt replicas are reported, meanwhile
+   *    Re-replciation brings the block back to healthy state
+   * 4. Test again waits until the block is reported with expected number
+   *    of good replicas.
+   */
+  public void testBlockCorruptionRecoveryPolicy() throws IOException {
+    // Test recovery of 1 corrupt replica
+    LOG.info("Testing corrupt replica recovery for one corrupt replica");
+    blockCorruptionRecoveryPolicy(4, (short)3, 1);
+
+    // Test recovery of 2 corrupt replicas
+    LOG.info("Testing corrupt replica recovery for two corrupt replicas");
+    blockCorruptionRecoveryPolicy(5, (short)3, 2);
+  }
+  
+  private void blockCorruptionRecoveryPolicy(int numDataNodes, 
+                                             short numReplicas,
+                                             int numCorruptReplicas) 
+                                             throws IOException {
+    Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 30L);
+    conf.setLong("dfs.replication.interval", 30);
+    conf.setLong("dfs.heartbeat.interval", 30L);
+    conf.setBoolean("dfs.replication.considerLoad", false);
+    Random random = new Random();
+    FileSystem fs = null;
+    DFSClient dfsClient = null;
+    LocatedBlocks blocks = null;
+    int replicaCount = 0;
+    int rand = random.nextInt(numDataNodes);
+
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+    Path file1 = new Path("/tmp/testBlockCorruptRecovery/file");
+    DFSTestUtil.createFile(fs, file1, 1024, numReplicas, 0);
+    Block blk = DFSTestUtil.getFirstBlock(fs, file1);
+    String block = blk.getBlockName();
+    
+    dfsClient = new DFSClient(new InetSocketAddress("localhost", 
+                                        cluster.getNameNodePort()), conf);
+    blocks = dfsClient.namenode.
+               getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+    replicaCount = blocks.get(0).getLocations().length;
+
+    // Wait until block is replicated to numReplicas
+    while (replicaCount != numReplicas) {
+      try {
+        LOG.info("Looping until expected replicaCount of " + numReplicas +
+                  "is reached");
+        Thread.sleep(1000);
+      } catch (InterruptedException ignore) {
+      }
+      blocks = dfsClient.namenode.
+                   getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      replicaCount = blocks.get(0).getLocations().length;
+    }
+    assertTrue(blocks.get(0).isCorrupt() == false);
+
+    // Corrupt numCorruptReplicas replicas of block 
+    int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
+    for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
+      if (corruptReplica(block, i)) 
+        corruptReplicasDNIDs[j++] = i;
+    }
+    
+    // Restart the datanodes containing corrupt replicas 
+    // so they would be reported to namenode and re-replicated
+    for (int i =0; i < numCorruptReplicas; i++) 
+     cluster.restartDataNode(corruptReplicasDNIDs[i]);
+
+    // Loop until all corrupt replicas are reported
+    int corruptReplicaSize = cluster.getNameNode().namesystem.
+                              corruptReplicas.numCorruptReplicas(blk);
+    while (corruptReplicaSize != numCorruptReplicas) {
+      try {
+        IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), 
+                          conf, true);
+      } catch (IOException e) {
+      }
+      try {
+        LOG.info("Looping until expected " + numCorruptReplicas + " are " +
+                 "reported. Current reported " + corruptReplicaSize);
+        Thread.sleep(1000);
+      } catch (InterruptedException ignore) {
+      }
+      corruptReplicaSize = cluster.getNameNode().namesystem.
+                              corruptReplicas.numCorruptReplicas(blk);
+    }
+    
+    // Loop until the block recovers after replication
+    blocks = dfsClient.namenode.
+               getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+    replicaCount = blocks.get(0).getLocations().length;
+    while (replicaCount != numReplicas) {
+      try {
+        LOG.info("Looping until block gets rereplicated to " + numReplicas);
+        Thread.sleep(1000);
+      } catch (InterruptedException ignore) {
+      }
+      blocks = dfsClient.namenode.
+                 getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      replicaCount = blocks.get(0).getLocations().length;
+    }
+
+    // Make sure the corrupt replica is invalidated and removed from
+    // corruptReplicasMap
+    corruptReplicaSize = cluster.getNameNode().namesystem.
+                          corruptReplicas.numCorruptReplicas(blk);
+    while (corruptReplicaSize != 0) {
+      try {
+        LOG.info("Looping until corrupt replica is invalidated");
+        Thread.sleep(1000);
+      } catch (InterruptedException ignore) {
+      }
+      corruptReplicaSize = cluster.getNameNode().namesystem.
+                            corruptReplicas.numCorruptReplicas(blk);
+      blocks = dfsClient.namenode.
+                 getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      replicaCount = blocks.get(0).getLocations().length;
+    }
+    // Make sure block is healthy 
+    assertTrue(corruptReplicaSize == 0);
+    assertTrue(replicaCount == numReplicas);
+    assertTrue(blocks.get(0).isCorrupt() == false);
     cluster.shutdown();
   }
 }
