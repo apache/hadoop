@@ -31,7 +31,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 
 /**
- * This abstract class extends the OutputFormatBase, allowing to write the
+ * This abstract class extends the FileOutputFormat, allowing to write the
  * output data to different output files. There are three basic use cases for
  * this class.
  * 

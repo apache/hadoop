@@ -19,6 +19,9 @@ Trunk (unreleased changes)
       setOutputPath(Path)
     (Amareshwari Sriramadasu via omalley)
 
+    HADOOP-3652. Remove deprecated class OutputFormatBase.
+    (Amareshwari Sriramadasu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
