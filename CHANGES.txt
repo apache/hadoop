@@ -367,6 +367,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3532. Add jdiff reports to the build scripts. (omalley)
 
+    HADOOP-3100. Develop tests to test the DFS command line interface. (mukund)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
