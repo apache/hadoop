@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(2)
+</a>&nbsp;&nbsp;&nbsp;(3)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -70,6 +70,7 @@ compatible combiner semantics for 0.18.<br />(cdouglas via omalley)</li>
   setInputPath(Path)
   setMapOutputCompressionType(CompressionType style)
   setOutputPath(Path)<br />(Amareshwari Sriramadasu via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3652">HADOOP-3652</a>. Remove deprecated class OutputFormatBase.<br />(Amareshwari Sriramadasu via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
@@ -85,7 +86,7 @@ All of them default to "\t".<br />(Zheng Shao via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(3)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3577">HADOOP-3577</a>. Tools to inject blocks into name node and simulated
 data nodes for testing.<br />(Sanjay Radia via hairong)</li>
@@ -93,6 +94,7 @@ data nodes for testing.<br />(Sanjay Radia via hairong)</li>
 may be processed by map/reduce.<br />(cdouglas via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3655">HADOOP-3655</a>. Add additional ant properties to control junit.<br />(Steve
 Loughran via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3543">HADOOP-3543</a>. Update the copyright year to 2008.<br />(cdouglas via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -100,14 +102,16 @@ Loughran via omalley)</li>
     <ol id="trunk_(unreleased_changes)_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3556">HADOOP-3556</a>. Removed lock contention in MD5Hash by changing the
 singleton MessageDigester by an instance per Thread using
-ThreadLocal.<br />(Iv‡n de Prado via omalley)</li>
+ThreadLocal.<br />(Iv?n de Prado via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3640">HADOOP-3640</a>. Fix the read method in the NativeS3InputStream.<br />(tomwhite via
+omalley)</li>
     </ol>
   </li>
 </ul>
@@ -241,7 +245,7 @@ in hadoop user guide.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(44)
+</a>&nbsp;&nbsp;&nbsp;(45)
     <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -331,6 +335,7 @@ reflect that it should only be used in cleanup contexts.<br />(omalley)</li>
 via the DistributedCache.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3606">HADOOP-3606</a>. Updates the Streaming doc.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3532">HADOOP-3532</a>. Add jdiff reports to the build scripts.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3100">HADOOP-3100</a>. Develop tests to test the DFS command line interface.<br />(mukund)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -357,7 +362,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(103)
+</a>&nbsp;&nbsp;&nbsp;(108)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -562,6 +567,16 @@ not yet resolved.<br />(Amar Ramesh Kamat via ddas)</li>
 current semantics.<br />(lohit vijayarenu via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3480">HADOOP-3480</a>.  Need to update Eclipse template to reflect current trunk.<br />(Brice Arnould via tomwhite)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3588">HADOOP-3588</a>. Fixed usability issues with archives.<br />(mahadev)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3536">HADOOP-3536</a>. Uncaught exception in DataBlockScanner.
+(Tsz Wo (Nicholas), SZE via hairong)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3539">HADOOP-3539</a>. Exception when closing DFSClient while multiple files are
+open.<br />(Benjamin Gufler via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3572">HADOOP-3572</a>. SetQuotas usage interface has some minor bugs.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3649">HADOOP-3649</a>. Fix bug in removing blocks from the corrupted block map.<br />(Lohit Vijayarenu via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3604">HADOOP-3604</a>. Work around a JVM synchronization problem observed while
+retrieving the address of direct buffers from compression code by obtaining
+a lock during this call.<br />(Arun C Murthy via cdouglas)</li>
     </ol>
   </li>
 </ul>
