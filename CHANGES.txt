@@ -732,6 +732,9 @@ Release 0.18.0 - Unreleased
     retrieving the address of direct buffers from compression code by obtaining
     a lock during this call. (Arun C Murthy via cdouglas)
 
+    HADOOP-3678. Avoid spurious exceptions logged at DataNode when clients
+    read from DFS. (rangadi)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
