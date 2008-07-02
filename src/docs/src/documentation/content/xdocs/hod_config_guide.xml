@@ -16,26 +16,26 @@
     <section>
       <title>1. Introduction</title>
     
-      <p>Configuration options for HOD are organized as sections and options 
-      within them. They can be specified in two ways: a configuration file 
+      <p>This document explains some of the most important and commonly used 
+      Hadoop On Demand (HOD) configuration options. Configuration options 
+      can be specified in two ways: a configuration file 
       in the INI format, and as command line options to the HOD shell, 
       specified in the format --section.option[=value]. If the same option is 
       specified in both places, the value specified on the command line 
       overrides the value in the configuration file.</p>
       
       <p>
-        To get a simple description of all configuration options, you can type
+        To get a simple description of all configuration options, type:
       </p>
       <table><tr><td><code>$ hod --verbose-help</code></td></tr></table>
       
-      <p>This document explains some of the most important or commonly used
-      configuration options in some more detail.</p>
+
     </section>
     
     <section>
       <title>2. Sections</title>
     
-      <p>The following are the various sections in the HOD configuration:</p>
+      <p>HOD organizes configuration options into these sections:</p>
       
       <ul>
         <li>  hod:                  Options for the HOD client</li>
@@ -43,19 +43,19 @@
          to use, and other parameters for using that resource manager</li>
         <li>  ringmaster:           Options for the RingMaster process, </li>
         <li>  hodring:              Options for the HodRing processes</li>
-        <li>  gridservice-mapred:   Options for the MapReduce daemons</li>
+        <li>  gridservice-mapred:   Options for the Map/Reduce daemons</li>
         <li>  gridservice-hdfs:     Options for the HDFS daemons.</li>
       </ul>
     
-      
-      <p>The next section deals with some of the important options in the HOD 
-        configuration.</p>
     </section>
     
     <section>
-      <title>3. Important / Commonly Used Configuration Options</title>
+      <title>3. HOD Configuration Options</title>
   
-  
+      <p>The following section describes configuration options common to most 
+      HOD sections followed by sections that describe configuration options 
+      specific to each HOD section.</p>
+      
       <section> 
         <title>3.1 Common configuration options</title>
         
@@ -70,7 +70,7 @@
                       sure that the users who will run hod have rights to create 
                       directories under the directory specified here.</li>
           
-          <li>debug: A numeric value from 1-4. 4 produces the most log information,
+          <li>debug: Numeric value from 1-4. 4 produces the most log information,
                    and 1 the least.</li>
           
           <li>log-dir: Directory where log files are stored. By default, this is
@@ -78,10 +78,10 @@
                      temp-dir variable apply here too.
           </li>
           
-          <li>xrs-port-range: A range of ports, among which an available port shall
+          <li>xrs-port-range: Range of ports, among which an available port shall
                             be picked for use to run an XML-RPC server.</li>
           
-          <li>http-port-range: A range of ports, among which an available port shall
+          <li>http-port-range: Range of ports, among which an available port shall
                              be picked for use to run an HTTP server.</li>
           
           <li>java-home: Location of Java to be used by Hadoop.</li>
@@ -96,15 +96,15 @@
         <title>3.2 hod options</title>
         
         <ul>
-          <li>cluster: A descriptive name given to the cluster. For Torque, this is
+          <li>cluster: Descriptive name given to the cluster. For Torque, this is
                      specified as a 'Node property' for every node in the cluster.
                      HOD uses this value to compute the number of available nodes.</li>
           
-          <li>client-params: A comma-separated list of hadoop config parameters
+          <li>client-params: Comma-separated list of hadoop config parameters
                            specified as key-value pairs. These will be used to
                            generate a hadoop-site.xml on the submit node that 
-                           should be used for running MapReduce jobs.</li>
-          <li>job-feasibility-attr: A regular expression string that specifies
+                           should be used for running Map/Reduce jobs.</li>
+          <li>job-feasibility-attr: Regular expression string that specifies
                            whether and how to check job feasibility - resource
                            manager or scheduler limits. The current
                            implementation corresponds to the torque job
@@ -113,16 +113,16 @@
                            of limit violation is triggered and either
                            deallocates the cluster or stays in queued state
                            according as the request is beyond maximum limits or
-                           the cumulative usage has crossed maxumum limits. 
+                           the cumulative usage has crossed maximum limits. 
                            The torque comment attribute may be updated
-                           periodically by an external mechanism. For e.g.,
+                           periodically by an external mechanism. For example,
                            comment attribute can be updated by running <a href=
 "hod_admin_guide.html#checklimits.sh+-+Tool+to+update+torque+comment+field+reflecting+resource+limits">
                            checklimits.sh</a> script in hod/support directory,
                            and then setting job-feasibility-attr equal to the
-                           value TORQUE_USER_LIMITS_COMMENT_FIELD i.e
+                           value TORQUE_USER_LIMITS_COMMENT_FIELD,
                            "User-limits exceeded. Requested:([0-9]*)
-                           Used:([0-9]*) MaxLimit:([0-9]*)" will make HOD
+                           Used:([0-9]*) MaxLimit:([0-9]*)", will make HOD
                            behave accordingly.
                            </li>
          </ul>
@@ -139,7 +139,7 @@
                         which the executables of the resource manager can be 
                         found.</li> 
           
-          <li>env-vars: This is a comma separated list of key-value pairs, 
+          <li>env-vars: Comma-separated list of key-value pairs, 
                       expressed as key=value, which would be passed to the jobs 
                       launched on the compute nodes. 
                       For example, if the python installation is 
@@ -154,18 +154,18 @@
         <title>3.4 ringmaster options</title>
         
         <ul>
-          <li>work-dirs: These are a list of comma separated paths that will serve
+          <li>work-dirs: Comma-separated list of paths that will serve
                        as the root for directories that HOD generates and passes
-                       to Hadoop for use to store DFS / MapReduce data. For e.g.
+                       to Hadoop for use to store DFS and Map/Reduce data. For e.g.
                        this is where DFS data blocks will be stored. Typically,
                        as many paths are specified as there are disks available
                        to ensure all disks are being utilized. The restrictions
                        and notes for the temp-dir variable apply here too.</li>
-          <li>max-master-failures: It defines how many times a hadoop master
+          <li>max-master-failures: Number of times a hadoop master
                        daemon can fail to launch, beyond which HOD will fail
                        the cluster allocation altogether. In HOD clusters,
                        sometimes there might be a single or few "bad" nodes due
-                       to issues like missing java, missing/incorrect version
+                       to issues like missing java, missing or incorrect version
                        of Hadoop etc. When this configuration variable is set
                        to a positive integer, the RingMaster returns an error
                        to the client only when the number of times a hadoop
@@ -184,7 +184,7 @@
         <title>3.5 gridservice-hdfs options</title>
         
         <ul>
-          <li>external: If false, this indicates that a HDFS cluster must be 
+          <li>external: If false, indicates that a HDFS cluster must be 
                       bought up by the HOD system, on the nodes which it 
                       allocates via the allocate command. Note that in that case,
                       when the cluster is de-allocated, it will bring down the 
@@ -207,7 +207,7 @@
                   located. This can be used to use a pre-installed version of
                   Hadoop on the cluster.</li>
           
-          <li>server-params: A comma-separated list of hadoop config parameters
+          <li>server-params: Comma-separated list of hadoop config parameters
                            specified key-value pairs. These will be used to
                            generate a hadoop-site.xml that will be used by the
                            NameNode and DataNodes.</li>
@@ -220,11 +220,11 @@
         <title>3.6 gridservice-mapred options</title>
         
         <ul>
-          <li>external: If false, this indicates that a MapReduce cluster must be
+          <li>external: If false, indicates that a Map/Reduce cluster must be
                       bought up by the HOD system on the nodes which it allocates
                       via the allocate command.
                       If true, if will try and connect to an externally 
-                      configured MapReduce system.</li>
+                      configured Map/Reduce system.</li>
           
           <li>host: Hostname of the externally configured JobTracker, if any</li>
           
@@ -235,7 +235,7 @@
           <li>pkgs: Installation directory, under which bin/hadoop executable is 
                   located</li>
           
-          <li>server-params: A comma-separated list of hadoop config parameters
+          <li>server-params: Comma-separated list of hadoop config parameters
                            specified key-value pairs. These will be used to
                            generate a hadoop-site.xml that will be used by the
                            JobTracker and TaskTrackers</li>
@@ -266,8 +266,8 @@
                                    cluster node's local file path, use the format 'file://path'.
 
                                    When clusters are deallocated by HOD, the hadoop logs will
-                                   be deleted as part of HOD's cleanup process. In order to
-                                   persist these logs, you can use this configuration option.
+                                   be deleted as part of HOD's cleanup process. To ensure these
+                                   logs persist, you can use this configuration option.
 
                                    The format of the path is 
                                    value-of-this-option/userid/hod-logs/cluster-id
