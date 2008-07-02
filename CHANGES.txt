@@ -728,6 +728,10 @@ Release 0.18.0 - Unreleased
     HADOOP-3649. Fix bug in removing blocks from the corrupted block map.
     (Lohit Vijayarenu via shv)
 
+    HADOOP-3604. Work around a JVM synchronization problem observed while
+    retrieving the address of direct buffers from compression code by obtaining
+    a lock during this call. (Arun C Murthy via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES

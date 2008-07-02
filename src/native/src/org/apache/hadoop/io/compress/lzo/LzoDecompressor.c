@@ -88,6 +88,7 @@ static char* lzo_decompressors[] = {
   /* 27 */  "lzo2a_decompress_safe"
 };
 
+static jfieldID LzoDecompressor_clazz;
 static jfieldID LzoDecompressor_finished;
 static jfieldID LzoDecompressor_compressedDirectBuf;
 static jfieldID LzoDecompressor_compressedDirectBufLen;
@@ -106,6 +107,8 @@ Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_initIDs(
 	  return;
 	}
     
+  LzoDecompressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz", 
+                                                   "Ljava/lang/Class;");
   LzoDecompressor_finished = (*env)->GetFieldID(env, class, "finished", "Z");
   LzoDecompressor_compressedDirectBuf = (*env)->GetFieldID(env, class, 
                                                 "compressedDirectBuf", 
@@ -173,6 +176,8 @@ Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_decompressBytesDirect(
   const char *lzo_decompressor_function = lzo_decompressors[decompressor];
 
 	// Get members of LzoDecompressor
+	jobject clazz = (*env)->GetStaticObjectField(env, this, 
+	                                             LzoDecompressor_clazz);
 	jobject compressed_direct_buf = (*env)->GetObjectField(env, this,
                                               LzoDecompressor_compressedDirectBuf);
 	lzo_uint compressed_direct_buf_len = (*env)->GetIntField(env, this, 
@@ -186,15 +191,22 @@ Java_org_apache_hadoop_io_compress_lzo_LzoDecompressor_decompressBytesDirect(
   jlong lzo_decompressor_funcptr = (*env)->GetLongField(env, this,
                                               LzoDecompressor_lzoDecompressor);
 
-  // Get direct buffers
+    // Get the input direct buffer
+    LOCK_CLASS(env, clazz, "LzoDecompressor");
 	lzo_bytep uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
 											                    uncompressed_direct_buf);
+    UNLOCK_CLASS(env, clazz, "LzoDecompressor");
+    
  	if (uncompressed_bytes == 0) {
     return (jint)0;
 	}
 	
+    // Get the output direct buffer
+    LOCK_CLASS(env, clazz, "LzoDecompressor");
 	lzo_bytep compressed_bytes = (*env)->GetDirectBufferAddress(env, 
 										                    compressed_direct_buf);
+    UNLOCK_CLASS(env, clazz, "LzoDecompressor");
+
   if (compressed_bytes == 0) {
 		return (jint)0;
 	}

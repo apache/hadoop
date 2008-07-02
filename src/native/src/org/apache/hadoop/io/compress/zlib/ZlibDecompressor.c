@@ -47,6 +47,7 @@
 #include "org_apache_hadoop_io_compress_zlib.h"
 #include "org_apache_hadoop_io_compress_zlib_ZlibDecompressor.h"
 
+static jfieldID ZlibDecompressor_clazz;
 static jfieldID ZlibDecompressor_stream;
 static jfieldID ZlibDecompressor_compressedDirectBuf;
 static jfieldID ZlibDecompressor_compressedDirectBufOff;
@@ -82,6 +83,8 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_initIDs(
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflateEnd, env, libz, "inflateEnd");
 
 	// Initialize the requisite fieldIds
+    ZlibDecompressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz", 
+                                                      "Ljava/lang/Class;");
     ZlibDecompressor_stream = (*env)->GetFieldID(env, class, "stream", "J");
     ZlibDecompressor_needDict = (*env)->GetFieldID(env, class, "needDict", "Z");
     ZlibDecompressor_finished = (*env)->GetFieldID(env, class, "finished", "Z");
@@ -181,6 +184,9 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
 		return (jint)0;
     } 
 
+    // Get members of ZlibDecompressor
+    jobject clazz = (*env)->GetStaticObjectField(env, this, 
+                                                 ZlibDecompressor_clazz);
 	jarray compressed_direct_buf = (jarray)(*env)->GetObjectField(env, this, 
 											ZlibDecompressor_compressedDirectBuf);
 	jint compressed_direct_buf_off = (*env)->GetIntField(env, this, 
@@ -193,14 +199,22 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
 	jint uncompressed_direct_buf_len = (*env)->GetIntField(env, this, 
 										ZlibDecompressor_directBufferSize);
 
+    // Get the input direct buffer
+    LOCK_CLASS(env, clazz, "ZlibDecompressor");
 	Bytef *compressed_bytes = (*env)->GetDirectBufferAddress(env, 
 										compressed_direct_buf);
+    UNLOCK_CLASS(env, clazz, "ZlibDecompressor");
+    
 	if (!compressed_bytes) {
 	    return (jint)0;
 	}
 	
+    // Get the output direct buffer
+    LOCK_CLASS(env, clazz, "ZlibDecompressor");
 	Bytef *uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
 											uncompressed_direct_buf);
+    UNLOCK_CLASS(env, clazz, "ZlibDecompressor");
+
 	if (!uncompressed_bytes) {
 	    return (jint)0;
 	}

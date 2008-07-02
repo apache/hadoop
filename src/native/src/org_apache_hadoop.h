@@ -79,6 +79,19 @@ static void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
     return; \
   }
 
+#define LOCK_CLASS(env, clazz, classname) \
+  if ((*env)->MonitorEnter(env, clazz) != 0) { \
+    char exception_msg[128]; \
+    snprintf(exception_msg, 128, "Failed to lock %s", classname); \
+    THROW(env, "java/lang/InternalError", exception_msg); \
+  }
+
+#define UNLOCK_CLASS(env, clazz, classname) \
+  if ((*env)->MonitorExit(env, clazz) != 0) { \
+    char exception_msg[128]; \
+    snprintf(exception_msg, 128, "Failed to unlock %s", classname); \
+    THROW(env, "java/lang/InternalError", exception_msg); \
+  }
 
 #endif
 
