@@ -1,11 +1,6 @@
 Hbase Change Log
-  INCOMPATIBLE CHANGES
 
-  BUG FIXES
-   HBASE-718   hbase shell help info
-   HBASE-717   alter table broke with new shell returns InvalidColumnNameException
-
-Release 0.1.3 - 07/25/2008
+Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
    HBASE-584   Names in the filter interface are confusing (Clint Morgan via
@@ -16,6 +11,9 @@ Release 0.1.3 - 07/25/2008
    HBASE-76    Purge servers of Text (Done as part of HBASE-82 commit).
    HBASE-487   Replace hql w/ a hbase-friendly jirb or jython shell
                Part 1: purge of hql and added raw jirb in its place.
+   HBASE-521   Improve client scanner interface
+   HBASE-288   Add in-memory caching of data. Required update of hadoop to 
+               0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
 
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
@@ -81,55 +79,8 @@ Release 0.1.3 - 07/25/2008
    HBASE-627   Disable table doesn't work reliably
    HBASE-716   TestGet2.testGetClosestBefore fails with hadoop-0.17.1
    HBASE-715   Base HBase 0.2 on Hadoop 0.17.1
-   
-  IMPROVEMENTS
-   HBASE-559   MR example job to count table rows
-   HBASE-596   DemoClient.py (Ivan Begtin via Stack)
-   HBASE-581   Allow adding filters to TableInputFormat (At same time, ensure TIF
-               is subclassable) (David Alves via Stack)
-   HBASE-603   When an exception bubbles out of getRegionServerWithRetries, wrap 
-               the exception with a RetriesExhaustedException
-   HBASE-600   Filters have excessive DEBUG logging
-   HBASE-611   regionserver should do basic health check before reporting
-               alls-well to the master
-   HBASE-614   Retiring regions is not used; exploit or remove
-   HBASE-538   Improve exceptions that come out on client-side
-   HBASE-569   DemoClient.php (Jim R. Wilson via Stack)
-   HBASE-522   Where new Text(string) might be used in client side method calls,
-               add an overload that takes String (Done as part of HBASE-82)
-   HBASE-570   Remove HQL unit test (Done as part of HBASE-82 commit).
-   HBASE-626   Use Visitor pattern in MetaRegion to reduce code clones in HTable
-               and HConnectionManager (Jean-Daniel Cryans via Stack)
-   HBASE-621   Make MAX_VERSIONS work like TTL: In scans and gets, check
-               MAX_VERSIONs setting and return that many only rather than wait on
-               compaction (Jean-Daniel Cryans via Stack)
-   HBASE-504   Allow HMsg's carry a payload: e.g. exception that happened over
-               on the remote side.
-   HBASE-583   RangeRowFilter/ColumnValueFilter to allow choice of rows based on
-               a (lexicographic) comparison to column's values
-               (Clint Morgan via Stack)
-   HBASE-579   Add hadoop 0.17.x
-   HBASE-660   [Migration] addColumn/deleteColumn functionality in MetaUtils
-   HBASE-632   HTable.getMetadata is very inefficient
-   HBASE-671   New UI page displaying all regions in a table should be sorted
-   HBASE-672   Sort regions in the regionserver UI
-   HBASE-677   Make HTable, HRegion, HRegionServer, HStore, and HColumnDescriptor
-               subclassable (Clint Morgan via Stack)
-   HBASE-682   Regularize toString
-   HBASE-672   Sort regions in the regionserver UI
-
-  NEW FEATURES
-   HBASE-47    Option to set TTL for columns in hbase
-               (Andrew Purtell via Bryan Duxbury and Stack)
-   HBASE-23    UI listing regions should be sorted by address and show additional
-               region state (Jean-Daniel Cryans via Stack)
-   HBASE-639   Add HBaseAdmin.getTableDescriptor function
-   HBASE-533   Region Historian
-   HBASE-487   Replace hql w/ a hbase-friendly jirb or jython shell
-   
-Release 0.1.2 - 05/13/2008
-   
-  BUG FIXES
+   HBASE-718   hbase shell help info
+   HBASE-717   alter table broke with new shell returns InvalidColumnNameException
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after 
                moving out hadoop/contrib
    HBASE-11    Unexpected exits corrupt DFS
@@ -157,22 +108,11 @@ Release 0.1.2 - 05/13/2008
    HBASE-478   offlining of table does not run reliably
    HBASE-453   undeclared throwable exception from HTable.get
    HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
-
-
-Release 0.1.1 - 04/11/2008
-
-  INCOMPATIBLE CHANGES
-   HBASE-521   Improve client scanner interface
-  
-  BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment
    HBASE-551   Master stuck splitting server logs in shutdown loop; on each
                iteration, edits are aggregated up into the millions
    HBASE-505   Region assignments should never time out so long as the region
                server reports that it is processing the open request
-   HBASE-555   Only one Worker in HRS; on startup, if assigned tens of regions,
-               havoc of reassignments because open processing is done in series
-   HBASE-547   UI shows hadoop version, not hbase version
    HBASE-561   HBase package does not include LICENSE.txt nor build.xml
    HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
                0.0.0.0:60100 rather than relying on conf
@@ -181,39 +121,10 @@ Release 0.1.1 - 04/11/2008
    HBASE-554   filters generate StackOverflowException
    HBASE-567   Reused BatchUpdate instances accumulate BatchOperations
    HBASE-577   NPE getting scanner
-
-  NEW FEATURES
-   HBASE-548   Tool to online single region
-   HBASE-71    Master should rebalance region assignments periodically
-   HBASE-512   Add configuration for global aggregate memcache size
-   
-  IMPROVEMENTS
-   HBASE-469   Streamline HStore startup and compactions
-   HBASE-544   Purge startUpdate from internal code and test cases
-   HBASE-557   HTable.getRow() should receive RowResult objects
-   HBASE-452   "region offline" should throw IOException, not IllegalStateException
-   HBASE-541   Update hadoop jars.
-   HBASE-523   package-level javadoc should have example client
-   
-Release 0.1.0
-
-  INCOMPATIBLE CHANGES
-   HBASE-288 Add in-memory caching of data. Required update of hadoop to 
-            0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
-
-  NEW FEATURES
-   HBASE-40    Add a method of getting multiple (but not all) cells for a row at once
-   HBASE-506   When an exception has to escape ServerCallable due to exhausted retries, 
-               show all the exceptions that lead to this situation
-   
-  OPTIMIZATIONS
-   HBASE-430   Performance: Scanners and getRow return maps with duplicate data
-   
-  BUG FIXES
    HBASE-19    CountingBloomFilter can overflow its storage
                (Stu Hood and Bryan Duxbury via Stack)
-   HBASE-28    thrift put/mutateRow methods need to throw IllegalArgument exceptions
-               (Dave Simpson via Bryan Duxbury via Stack)
+   HBASE-28    thrift put/mutateRow methods need to throw IllegalArgument
+               exceptions (Dave Simpson via Bryan Duxbury via Stack)
    HBASE-2     hlog numbers should wrap around when they reach 999
                (Bryan Duxbury via Stack)
    HBASE-421   TestRegionServerExit broken
@@ -252,8 +163,48 @@ Release 0.1.0
    HBASE-527   RegexpRowFilter does not work when there are columns from 
                multiple families (Clint Morgan via Jim Kellerman)
    HBASE-534   Double-assignment at SPLIT-time
-      
+   
   IMPROVEMENTS
+   HBASE-559   MR example job to count table rows
+   HBASE-596   DemoClient.py (Ivan Begtin via Stack)
+   HBASE-581   Allow adding filters to TableInputFormat (At same time, ensure TIF
+               is subclassable) (David Alves via Stack)
+   HBASE-603   When an exception bubbles out of getRegionServerWithRetries, wrap 
+               the exception with a RetriesExhaustedException
+   HBASE-600   Filters have excessive DEBUG logging
+   HBASE-611   regionserver should do basic health check before reporting
+               alls-well to the master
+   HBASE-614   Retiring regions is not used; exploit or remove
+   HBASE-538   Improve exceptions that come out on client-side
+   HBASE-569   DemoClient.php (Jim R. Wilson via Stack)
+   HBASE-522   Where new Text(string) might be used in client side method calls,
+               add an overload that takes String (Done as part of HBASE-82)
+   HBASE-570   Remove HQL unit test (Done as part of HBASE-82 commit).
+   HBASE-626   Use Visitor pattern in MetaRegion to reduce code clones in HTable
+               and HConnectionManager (Jean-Daniel Cryans via Stack)
+   HBASE-621   Make MAX_VERSIONS work like TTL: In scans and gets, check
+               MAX_VERSIONs setting and return that many only rather than wait on
+               compaction (Jean-Daniel Cryans via Stack)
+   HBASE-504   Allow HMsg's carry a payload: e.g. exception that happened over
+               on the remote side.
+   HBASE-583   RangeRowFilter/ColumnValueFilter to allow choice of rows based on
+               a (lexicographic) comparison to column's values
+               (Clint Morgan via Stack)
+   HBASE-579   Add hadoop 0.17.x
+   HBASE-660   [Migration] addColumn/deleteColumn functionality in MetaUtils
+   HBASE-632   HTable.getMetadata is very inefficient
+   HBASE-671   New UI page displaying all regions in a table should be sorted
+   HBASE-672   Sort regions in the regionserver UI
+   HBASE-677   Make HTable, HRegion, HRegionServer, HStore, and HColumnDescriptor
+               subclassable (Clint Morgan via Stack)
+   HBASE-682   Regularize toString
+   HBASE-672   Sort regions in the regionserver UI
+   HBASE-469   Streamline HStore startup and compactions
+   HBASE-544   Purge startUpdate from internal code and test cases
+   HBASE-557   HTable.getRow() should receive RowResult objects
+   HBASE-452   "region offline" should throw IOException, not IllegalStateException
+   HBASE-541   Update hadoop jars.
+   HBASE-523   package-level javadoc should have example client
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
    HBASE-35    Make BatchUpdate public in the API
    HBASE-409   Add build path to svn:ignore list (Edward Yoon via Stack)
@@ -303,8 +254,121 @@ Release 0.1.0
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
    HBASE-536   Remove MiniDFS startup from MiniHBaseCluster
    HBASE-521   Improve client scanner interface
+
+  NEW FEATURES
+   HBASE-47    Option to set TTL for columns in hbase
+               (Andrew Purtell via Bryan Duxbury and Stack)
+   HBASE-23    UI listing regions should be sorted by address and show additional
+               region state (Jean-Daniel Cryans via Stack)
+   HBASE-639   Add HBaseAdmin.getTableDescriptor function
+   HBASE-533   Region Historian
+   HBASE-487   Replace hql w/ a hbase-friendly jirb or jython shell
+   HBASE-548   Tool to online single region
+   HBASE-71    Master should rebalance region assignments periodically
+   HBASE-512   Add configuration for global aggregate memcache size
+   HBASE-40    Add a method of getting multiple (but not all) cells for a row
+               at once
+   HBASE-506   When an exception has to escape ServerCallable due to exhausted
+               retries, show all the exceptions that lead to this situation
    
-Branch 0.1
+  OPTIMIZATIONS
+   HBASE-430   Performance: Scanners and getRow return maps with duplicate data
+
+Release 0.1.3 - 07/25/2008
+
+  BUG FIXES
+   HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
+   HBASE-645   EOFException opening region (HBASE-550 redux)
+   HBASE-641   Improve master split logging
+   HBASE-642   Splitting log in a hostile environment -- bad hdfs -- we drop
+               write-ahead-log edits
+   HBASE-646   EOFException opening HStoreFile info file (spin on HBASE-645 and 550)
+   HBASE-648   If mapfile index is empty, run repair
+   HBASE-659   HLog#cacheFlushLock not cleared; hangs a region
+   HBASE-663   Incorrect sequence number for cache flush
+   HBASE-652   Dropping table fails silently if table isn't disabled 
+   HBASE-674   Memcache size unreliable
+   HBASE-665   server side scanner doesn't honor stop row
+   HBASE-681   NPE in Memcache (Clint Morgan via Jim Kellerman)
+   HBASE-680   config parameter hbase.io.index.interval should be
+               hbase.index.interval, accroding to HBaseMapFile.HbaseWriter
+               (LN via Stack)
+   HBASE-684   unnecessary iteration in HMemcache.internalGet? got much better
+               reading performance after break it (LN via Stack)
+   HBASE-686   MemcacheScanner didn't return the first row(if it exists),
+               because HScannerInterface's output incorrect (LN via Jim Kellerman)
+   HBASE-613   Timestamp-anchored scanning fails to find all records
+   HBASE-709   Deadlock while rolling WAL-log while finishing flush
+   HBASE-707   High-load import of data into single table/family never triggers split
+   HBASE-710   If clocks are way off, then we can have daughter split come
+               before rather than after its parent in .META.
+
+Release 0.1.2 - 05/13/2008
+
+  BUG FIXES
+   HBASE-577   NPE getting scanner
+   HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack).
+   HBASE-11    Unexpected exits corrupt DFS - best we can do until we have at
+               least a subset of HADOOP-1700
+   HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after
+               moving out hadoop/contrib
+   HBASE-12    when hbase regionserver restarts, it says "impossible state for
+               createLease()"
+   HBASE-575   master dies with stack overflow error if rootdir isn't qualified
+   HBASE-500   Regionserver stuck on exit
+   HBASE-582   HBase 554 forgot to clear results on each iteration caused by a filter
+               (Clint Morgan via Stack)
+   HBASE-532   Odd interaction between HRegion.get, HRegion.deleteAll and compactions
+   HBASE-590   HBase migration tool does not get correct FileSystem or root
+               directory if configuration is not correct
+   HBASE-595   RowFilterInterface.rowProcessed() is called *before* fhe final
+               filtering decision is made (Clint Morgan via Stack)
+   HBASE-586   HRegion runs HStore memcache snapshotting -- fix it so only HStore
+               knows about workings of memcache
+   HBASE-572   Backport HBASE-512 to 0.1 branch
+   HBASE-588   Still a 'hole' in scanners, even after HBASE-532
+   HBASE-604   Don't allow CLASSPATH from environment pollute the hbase CLASSPATH
+   HBASE-608   HRegionServer::getThisIP() checks hadoop config var for dns interface name
+               (Jim R. Wilson via Stack)
+   HBASE-609   Master doesn't see regionserver edits because of clock skew
+   HBASE-607   MultiRegionTable.makeMultiRegionTable is not deterministic enough
+               for regression tests
+   HBASE-478   offlining of table does not run reliably
+   HBASE-618   We always compact if 2 files, regardless of the compaction threshold setting
+   HBASE-619   Fix 'logs' link in UI
+   HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
+   
+  IMPROVEMENTS
+   HBASE-559   MR example job to count table rows
+   HBASE-578   Upgrade branch to 0.16.3 hadoop.
+   HBASE-596   DemoClient.py (Ivan Begtin via Stack)
+
+
+Release 0.1.1 - 04/11/2008
+
+  BUG FIXES
+   HBASE-550   EOF trying to read reconstruction log stops region deployment
+   HBASE-551   Master stuck splitting server logs in shutdown loop; on each
+               iteration, edits are aggregated up into the millions
+   HBASE-505   Region assignments should never time out so long as the region
+               server reports that it is processing the open request
+   HBASE-552   Fix bloom filter bugs (Andrzej Bialecki via Jim Kellerman)
+   HBASE-507   Add sleep between retries
+   HBASE-555   Only one Worker in HRS; on startup, if assigned tens of regions,
+               havoc of reassignments because open processing is done in series
+   HBASE-547   UI shows hadoop version, not hbase version
+   HBASE-561   HBase package does not include LICENSE.txt nor build.xml
+   HBASE-556   Add 0.16.2 to hbase branch -- if it works
+   HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
+               0.0.0.0:60100 rather than relying on conf
+   HBASE-554   filters generate StackOverflowException (Clint Morgan via
+               Jim Kellerman)
+   HBASE-567   Reused BatchUpdate instances accumulate BatchOperations
+
+  NEW FEATURES
+   HBASE-548   Tool to online single region
+
+Release 0.1.0
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
@@ -312,8 +376,12 @@ Branch 0.1
                Jim Kellerman)
    HADOOP-2786 Move hbase out of hadoop core
    HBASE-403   Fix build after move of hbase in svn
+   HBASE-494   Up IPC version on 0.1 branch so we cannot mistakenly connect
+               with a hbase from 0.16.0
 
   NEW FEATURES
+   HBASE-506   When an exception has to escape ServerCallable due to exhausted retries, 
+               show all the exceptions that lead to this situation
 
   OPTIMIZATIONS
 
@@ -326,12 +394,47 @@ Branch 0.1
    HADOOP-2773 Master marks region offline when it is recovering from a region
                server death
    HBASE-425   Fix doc. so it accomodates new hbase untethered context
-
+   HBase-421   TestRegionServerExit broken
+   HBASE-426   hbase can't find remote filesystem
+   HBASE-446   Fully qualified hbase.rootdir doesn't work
+   HBASE-428   Under continuous upload of rows, WrongRegionExceptions are
+               thrown that reach the client even after retries
+   HBASE-490   Doubly-assigned .META.; master uses one and clients another
+   HBASE-496   impossible state for createLease writes 400k lines in about 15mins
+   HBASE-472   Passing on edits, we dump all to log
+   HBASE-79    When HBase needs to be migrated, it should display a message on
+               stdout, not just in the logs
+   HBASE-495   No server address listed in .META.
+   HBASE-433 HBASE-251 Region server should delete restore log after successful
+               restore, Stuck replaying the edits of crashed machine.
+   HBASE-27    hregioninfo cell empty in meta table
+   HBASE-501   Empty region server address in info:server entry and a
+               startcode of -1 in .META.
+   HBASE-516   HStoreFile.finalKey does not update the final key if it is not
+               the top region of a split region
+   HBASE-524   Problems with getFull
+   HBASE-514   table 'does not exist' when it does
+   HBASE-537   Wait for hdfs to exit safe mode
+   HBASE-534   Double-assignment at SPLIT-time
+   
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
                repetition of retry-on-failure logic (thanks to Peter Dolan and
                Bryan Duxbury)
-
+   HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
+   HBASE-480   Tool to manually merge two regions
+   HBASE-477   Add support for an HBASE_CLASSPATH
+   HBASE-515   At least double default timeouts between regionserver and master
+   HBASE-482   package-level javadoc should have example client or at least 
+               point at the FAQ
+   HBASE-497   RegionServer needs to recover if datanode goes down
+   HBASE-456   Clearly state which ports need to be opened in order to run HBase
+   HBASE-483   Merge tool won't merge two overlapping regions
+   HBASE-476   RegexpRowFilter behaves incorectly when there are multiple store
+               files (Clint Morgan via Jim Kellerman)
+   HBASE-527   RegexpRowFilter does not work when there are columns from 
+               multiple families (Clint Morgan via Jim Kellerman)
+              
 Release 0.16.0
 
   2008/02/04   HBase is now a subproject of Hadoop. The first HBase release as
@@ -476,7 +579,7 @@ Release 0.16.0
                to have
    HADOOP-2493 hbase will split on row when the start and end row is the
                same cause data loss (Bryan Duxbury via Stack)
-   HADOOP-2629 Shell digests garbage without complaint (Edward Yoon via Stack)
+   HADOOP-2629 Shell digests garbage without complaint
    HADOOP-2619 Compaction errors after a region splits
    HADOOP-2621 Memcache flush flushing every 60 secs with out considering
                the max memcache size
@@ -768,4 +871,3 @@ Below are the list of changes before 2007-08-18
      (Edward Yoon via Stack).
  61. HADOOP-1709 Make HRegionInterface more like that of HTable
      HADOOP-1725 Client find of table regions should not include offlined, split parents
-
