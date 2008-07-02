@@ -35,6 +35,9 @@ import org.apache.hadoop.util.NativeCodeLoader;
 public class LzoDecompressor implements Decompressor {
   private static final Log LOG = 
     LogFactory.getLog(LzoDecompressor.class.getName());
+
+  // HACK - Use this as a global lock in the JNI layer
+  private static Class clazz = LzoDecompressor.class;
   
   private int directBufferSize;
   private Buffer compressedDirectBuf = null;

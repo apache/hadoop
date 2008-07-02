@@ -36,6 +36,9 @@ public class LzoCompressor implements Compressor {
   private static final Log LOG = 
     LogFactory.getLog(LzoCompressor.class.getName());
 
+  // HACK - Use this as a global lock in the JNI layer
+  private static Class clazz = LzoDecompressor.class;
+  
   private int directBufferSize;
   private byte[] userBuf = null;
   private int userBufOff = 0, userBufLen = 0;

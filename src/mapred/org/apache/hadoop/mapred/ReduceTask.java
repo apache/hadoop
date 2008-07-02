@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -1048,145 +1049,50 @@ class ReduceTask extends Task {
        * local fs) from the remote server.
        * We use the file system so that we generate checksum files on the data.
        * @param mapOutputLoc map-output to be fetched
-       * @param localFilename the filename to write the data into
+       * @param filename the filename to write the data into
        * @param connectionTimeout number of milliseconds for connection timeout
        * @param readTimeout number of milliseconds for read timeout
        * @return the path of the file that got created
        * @throws IOException when something goes wrong
        */
       private MapOutput getMapOutput(MapOutputLocation mapOutputLoc, 
-                                     Path localFilename)
+                                     Path filename)
       throws IOException, InterruptedException {
-        boolean good = false;
-        OutputStream output = null;
+        // Connect
+        URLConnection connection = 
+          mapOutputLoc.getOutputLocation().openConnection();
+        InputStream input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
+                                           STALLED_COPY_TIMEOUT);
+
+        //We will put a file in memory if it meets certain criteria:
+        //1. The size of the (decompressed) file should be less than 25% of 
+        //    the total inmem fs
+        //2. There is space available in the inmem fs
+
+        long decompressedLength = 
+          Long.parseLong(connection.getHeaderField(RAW_MAP_OUTPUT_LENGTH));  
+        long compressedLength = 
+          Long.parseLong(connection.getHeaderField(MAP_OUTPUT_LENGTH));
+
+        // Check if this map-output can be saved in-memory
+        boolean shuffleInMemory = ramManager.canFitInMemory(decompressedLength); 
+
+        // Shuffle
         MapOutput mapOutput = null;
-        
-        try {
-          URLConnection connection = 
-            mapOutputLoc.getOutputLocation().openConnection();
-          InputStream input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
-                                             STALLED_COPY_TIMEOUT);
-          //We will put a file in memory if it meets certain criteria:
-          //1. The size of the (decompressed) file should be less than 25% of 
-          //    the total inmem fs
-          //2. There is space available in the inmem fs
-          
-          long decompressedLength = 
-            Long.parseLong(connection.getHeaderField(RAW_MAP_OUTPUT_LENGTH));  
-          long compressedLength = 
-            Long.parseLong(connection.getHeaderField(MAP_OUTPUT_LENGTH));
-          
-          // Check if this map-output can be saved in-memory
-          boolean canFitInMemory = 
-            ramManager.canFitInMemory(decompressedLength); 
+        if (shuffleInMemory) { 
+          LOG.info("Shuffling " + decompressedLength + " bytes (" + 
+              compressedLength + " raw bytes) " + 
+              "into RAM from " + mapOutputLoc.getTaskAttemptId());
 
-          if (canFitInMemory) {
-            int requestedSize = (int)decompressedLength;
-            // Check if we have enough buffer-space to keep map-output in-memory
-            boolean createdNow = 
-              ramManager.reserve(requestedSize, input);
+          mapOutput = shuffleInMemory(mapOutputLoc, connection, input, (int)decompressedLength);
+        } else {
+          LOG.info("Shuffling " + decompressedLength + " bytes (" + 
+              compressedLength + " raw bytes) " + 
+              "into Local-FS from " + mapOutputLoc.getTaskAttemptId());
 
-            LOG.info("Shuffling " + requestedSize + " bytes (" + 
-                     compressedLength + " raw bytes) " + 
-                     "into RAM-FS from " + mapOutputLoc.getTaskAttemptId());
-            
-            if (!createdNow) {
-              // Reconnect
-              try {
-                connection = mapOutputLoc.getOutputLocation().openConnection();
-                input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
-                                       STALLED_COPY_TIMEOUT);
-              } catch (Throwable t) {
-                // Cleanup
-                ramManager.closeInMemoryFile(requestedSize);
-                ramManager.unreserve(requestedSize);
-                
-                IOException ioe = new IOException("Failed to re-open " +
-                		                              "connection to " + 
-                		                              mapOutputLoc.getHost());
-                ioe.initCause(t);
-                throw ioe;
-              }
-            }
-            
-            // Are map-outputs compressed?
-            if (codec != null) {
-              decompressor.reset();
-              input = codec.createInputStream(input, decompressor);
-            }
-
-            output = new DataOutputBuffer((int)decompressedLength);
-          }
-          else {
-            // Find out a suitable location for the output on local-filesystem
-            localFilename = lDirAlloc.getLocalPathForWrite(
-                localFilename.toUri().getPath(), decompressedLength, conf);
-            LOG.info("Shuffling " + decompressedLength + " bytes (" + 
-                     compressedLength + " raw bytes) " + 
-                     "into Local-FS from " + mapOutputLoc.getTaskAttemptId());
-            output = localFileSys.create(localFilename);
-          }
-          
-          long bytesRead = 0;
-          try {  
-            try {
-              byte[] buf = new byte[64 * 1024];
-
-              int n = input.read(buf, 0, buf.length);
-              while (n > 0) {
-                bytesRead += n;
-                shuffleClientMetrics.inputBytes(n);
-                output.write(buf, 0, n);
-
-                // indicate we're making progress
-                reporter.progress();
-                n = input.read(buf, 0, buf.length);
-              }
-              
-              LOG.info("Read " + bytesRead + " bytes from map-output " +
-                       "for " + mapOutputLoc.getTaskAttemptId());
-              
-              if (canFitInMemory) {
-                byte[] shuffleData = ((DataOutputBuffer)output).getData();
-                mapOutput = new MapOutput(mapOutputLoc.getTaskId(), 
-                                          ((DataOutputBuffer)output).getData());
-                ramManager.closeInMemoryFile(shuffleData.length);
-              } else {
-              mapOutput = 
-                new MapOutput(mapOutputLoc.getTaskId(), conf, 
-                              localFileSys.makeQualified(localFilename), 
-                              compressedLength);
-              }
-            } finally {
-              output.close();
-            }
-          } finally {
-            input.close();
-          }
-          
-          // Sanity check
-          good = (canFitInMemory) ? (bytesRead == decompressedLength) : 
-                                           (bytesRead == compressedLength);
-          if (!good) {
-            throw new IOException("Incomplete map output received for " +
-                                  mapOutputLoc.getTaskAttemptId() + " from " +
-                                  mapOutputLoc.getOutputLocation() + " (" + 
-                                  bytesRead + " instead of " + 
-                                  decompressedLength + ")"
-                                 );
-          }
-        } finally {
-          if (!good) {
-            try {
-              if (mapOutput != null) {
-                mapOutput.discard();
-              }
-            } catch (Throwable th) {
-              // IGNORED because we are cleaning up
-            }
-          }
+          mapOutput = shuffleToDisk(mapOutputLoc, input, filename, compressedLength);
         }
-        
+            
         return mapOutput;
       }
 
@@ -1235,7 +1141,197 @@ class ReduceTask extends Task {
         }
       }
 
-    }
+      private MapOutput shuffleInMemory(MapOutputLocation mapOutputLoc,
+                                        URLConnection connection, 
+                                        InputStream input,
+                                        int mapOutputLength) 
+      throws IOException, InterruptedException {
+        // Reserve ram for the map-output
+        boolean createdNow = ramManager.reserve(mapOutputLength, input);
+      
+        // Reconnect if we need to
+        if (!createdNow) {
+          // Reconnect
+          try {
+            connection = mapOutputLoc.getOutputLocation().openConnection();
+            input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
+                STALLED_COPY_TIMEOUT);
+          } catch (IOException ioe) {
+            LOG.info("Failed reopen connection to fetch map-output from " + 
+                     mapOutputLoc.getHost());
+            
+            // Inform the ram-manager
+            ramManager.closeInMemoryFile(mapOutputLength);
+            ramManager.unreserve(mapOutputLength);
+            
+            throw ioe;
+          }
+        }
+      
+        // Are map-outputs compressed?
+        if (codec != null) {
+          decompressor.reset();
+          input = codec.createInputStream(input, decompressor);
+        }
+      
+        // Copy map-output into an in-memory buffer
+        byte[] shuffleData = new byte[mapOutputLength];
+        MapOutput mapOutput = 
+          new MapOutput(mapOutputLoc.getTaskId(), shuffleData);
+        
+        int bytesRead = 0;
+        try {
+          int n = input.read(shuffleData, 0, shuffleData.length);
+          while (n > 0) {
+            bytesRead += n;
+            shuffleClientMetrics.inputBytes(n);
+
+            // indicate we're making progress
+            reporter.progress();
+            n = input.read(shuffleData, bytesRead, 
+                           (shuffleData.length-bytesRead));
+          }
+
+          LOG.info("Read " + bytesRead + " bytes from map-output for " +
+                   mapOutputLoc.getTaskAttemptId());
+
+          input.close();
+        } catch (IOException ioe) {
+          LOG.info("Failed to shuffle from " + mapOutputLoc.getTaskAttemptId(), 
+                   ioe);
+
+          // Inform the ram-manager
+          ramManager.closeInMemoryFile(mapOutputLength);
+          ramManager.unreserve(mapOutputLength);
+          
+          // Discard the map-output
+          try {
+            mapOutput.discard();
+          } catch (IOException ignored) {
+            LOG.info("Failed to discard map-output from " + 
+                     mapOutputLoc.getTaskAttemptId(), ignored);
+          }
+          mapOutput = null;
+          
+          // Close the streams
+          IOUtils.cleanup(LOG, input);
+
+          // Re-throw
+          throw ioe;
+        }
+
+        // Close the in-memory file
+        ramManager.closeInMemoryFile(mapOutputLength);
+
+        // Sanity check
+        if (bytesRead != mapOutputLength) {
+          // Inform the ram-manager
+          ramManager.unreserve(mapOutputLength);
+          
+          // Discard the map-output
+          try {
+            mapOutput.discard();
+          } catch (IOException ignored) {
+            // IGNORED because we are cleaning up
+            LOG.info("Failed to discard map-output from " + 
+                     mapOutputLoc.getTaskAttemptId(), ignored);
+          }
+          mapOutput = null;
+
+          throw new IOException("Incomplete map output received for " +
+                                mapOutputLoc.getTaskAttemptId() + " from " +
+                                mapOutputLoc.getOutputLocation() + " (" + 
+                                bytesRead + " instead of " + 
+                                mapOutputLength + ")"
+          );
+        }
+
+        return mapOutput;
+      }
+      
+      private MapOutput shuffleToDisk(MapOutputLocation mapOutputLoc,
+                                      InputStream input,
+                                      Path filename,
+                                      long mapOutputLength) 
+      throws IOException {
+        // Find out a suitable location for the output on local-filesystem
+        Path localFilename = 
+          lDirAlloc.getLocalPathForWrite(filename.toUri().getPath(), 
+                                         mapOutputLength, conf);
+
+        MapOutput mapOutput = 
+          new MapOutput(mapOutputLoc.getTaskId(), conf, 
+                        localFileSys.makeQualified(localFilename), 
+                        mapOutputLength);
+
+
+        // Copy data to local-disk
+        OutputStream output = null;
+        long bytesRead = 0;
+        try {
+          output = localFileSys.create(localFilename);
+          
+          byte[] buf = new byte[64 * 1024];
+          int n = input.read(buf, 0, buf.length);
+          while (n > 0) {
+            bytesRead += n;
+            shuffleClientMetrics.inputBytes(n);
+            output.write(buf, 0, n);
+
+            // indicate we're making progress
+            reporter.progress();
+            n = input.read(buf, 0, buf.length);
+          }
+
+          LOG.info("Read " + bytesRead + " bytes from map-output for " +
+              mapOutputLoc.getTaskAttemptId());
+
+          output.close();
+          input.close();
+        } catch (IOException ioe) {
+          LOG.info("Failed to shuffle from " + mapOutputLoc.getTaskAttemptId(), 
+                   ioe);
+
+          // Discard the map-output
+          try {
+            mapOutput.discard();
+          } catch (IOException ignored) {
+            LOG.info("Failed to discard map-output from " + 
+                mapOutputLoc.getTaskAttemptId(), ignored);
+          }
+          mapOutput = null;
+
+          // Close the streams
+          IOUtils.cleanup(LOG, input, output);
+
+          // Re-throw
+          throw ioe;
+        }
+
+        // Sanity check
+        if (bytesRead != mapOutputLength) {
+          try {
+            mapOutput.discard();
+          } catch (Throwable th) {
+            // IGNORED because we are cleaning up
+            LOG.info("Failed to discard map-output from " + 
+                mapOutputLoc.getTaskAttemptId(), th);
+          }
+          mapOutput = null;
+
+          throw new IOException("Incomplete map output received for " +
+                                mapOutputLoc.getTaskAttemptId() + " from " +
+                                mapOutputLoc.getOutputLocation() + " (" + 
+                                bytesRead + " instead of " + 
+                                mapOutputLength + ")"
+          );
+        }
+
+        return mapOutput;
+
+      }
+      
+    } // MapOutputCopier
     
     private void configureClasspath(JobConf conf)
       throws IOException {
