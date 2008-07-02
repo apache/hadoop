@@ -62,9 +62,6 @@ Release 0.18.0 - Unreleased
     script.exitcode file when a cluster directory is specified as a relative
     path. (Vinod Kumar Vavilapalli via yhemanth)
 
-    HADOOP-3668. Makes editorial changes to HOD documentation.
-    (Vinod Kumar Vavilapalli via yhemanth)
-
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

@@ -210,7 +210,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Configuring+HOD">Configuring HOD</a>
 <ul class="minitoc">
 <li>
-<a href="#Minimal+Configuration">Minimal Configuration</a>
+<a href="#Minimal+Configuration+to+get+started">Minimal Configuration to get started</a>
 </li>
 <li>
 <a href="#Advanced+Configuration">Advanced Configuration</a>
@@ -224,7 +224,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Supporting+Tools+and+Utilities">Supporting Tools and Utilities</a>
 <ul class="minitoc">
 <li>
-<a href="#logcondense.py+-+Manage+Log+Files">logcondense.py - Manage Log Files</a>
+<a href="#logcondense.py+-+Tool+for+removing+log+files+uploaded+to+DFS">logcondense.py - Tool for removing log files uploaded to DFS</a>
 <ul class="minitoc">
 <li>
 <a href="#Running+logcondense.py">Running logcondense.py</a>
@@ -235,7 +235,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
-<a href="#checklimits.sh+-+Monitor+Resource+Limits">checklimits.sh - Monitor Resource Limits</a>
+<a href="#checklimits.sh+-+Tool+to+update+torque+comment+field+reflecting+resource+limits">checklimits.sh - Tool to update torque comment field reflecting resource limits</a>
 <ul class="minitoc">
 <li>
 <a href="#Running+checklimits.sh">Running checklimits.sh</a>
@@ -251,8 +251,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Overview</h2>
 <div class="section">
 <p>The Hadoop On Demand (HOD) project is a system for provisioning and
-managing independent Hadoop Map/Reduce and Hadoop Distributed File System (HDFS)
-instances on a shared cluster 
+managing independent Hadoop MapReduce and HDFS instances on a shared cluster 
 of nodes. HOD is a tool that makes it easy for administrators and users to 
 quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers 
 and testers who need to share a physical cluster for testing their own Hadoop 
@@ -263,20 +262,20 @@ running Hadoop instances. At present it runs with the <a href="http://www.cluste
 resource manager</a>.
 </p>
 <p>
-The basic system architecture of HOD includes these components:</p>
+The basic system architecture of HOD includes components from:</p>
 <ul>
   
-<li>A Resource manager (possibly together with a scheduler)</li>
+<li>A Resource manager (possibly together with a scheduler),</li>
   
-<li>Various HOD components</li>
+<li>HOD components, and </li>
   
-<li>Hadoop Map/Reduce and HDFS daemons</li>
+<li>Hadoop Map/Reduce and HDFS daemons.</li>
 
 </ul>
 <p>
 HOD provisions and maintains Hadoop Map/Reduce and, optionally, HDFS instances 
 through interaction with the above components on a given cluster of nodes. A cluster of
-nodes can be thought of as comprising two sets of nodes:</p>
+nodes can be thought of as comprising of two sets of nodes:</p>
 <ul>
   
 <li>Submit nodes: Users use the HOD client on these nodes to allocate clusters, and then
@@ -292,22 +291,22 @@ running jobs on them.
 </p>
 <ul>
   
-<li>The user uses the HOD client on the Submit node to allocate a desired number of
-cluster nodes and to provision Hadoop on them.</li>
+<li>The user uses the HOD client on the Submit node to allocate a required number of
+cluster nodes, and provision Hadoop on them.</li>
   
-<li>The HOD client uses a resource manager interface (qsub, in Torque) to submit a HOD
-process, called the RingMaster, as a Resource Manager job, to request the user's desired number 
-of nodes. This job is submitted to the central server of the resource manager (pbs_server, in Torque).</li>
+<li>The HOD client uses a Resource Manager interface, (qsub, in Torque), to submit a HOD
+process, called the RingMaster, as a Resource Manager job, requesting the user desired number 
+of nodes. This job is submitted to the central server of the Resource Manager (pbs_server, in Torque).</li>
   
-<li>On the compute nodes, the resource manager slave daemons (pbs_moms in Torque) accept
-and run jobs that they are assigned by the central server (pbs_server in Torque). The RingMaster 
+<li>On the compute nodes, the resource manager slave daemons, (pbs_moms in Torque), accept
+and run jobs that they are given by the central server (pbs_server in Torque). The RingMaster 
 process is started on one of the compute nodes (mother superior, in Torque).</li>
   
-<li>The RingMaster then uses another resource manager interface (pbsdsh, in Torque) to run
+<li>The Ringmaster then uses another Resource Manager interface, (pbsdsh, in Torque), to run
 the second HOD component, HodRing, as distributed tasks on each of the compute
 nodes allocated.</li>
   
-<li>The HodRings, after initializing, communicate with the RingMaster to get Hadoop commands, 
+<li>The Hodrings, after initializing, communicate with the Ringmaster to get Hadoop commands, 
 and run them accordingly. Once the Hadoop commands are started, they register with the RingMaster,
 giving information about the daemons.</li>
   
@@ -318,20 +317,18 @@ some obtained from options given by user in its own configuration file.</li>
 JobTracker and HDFS daemons.</li>
 
 </ul>
-<p>The rest of this document describes how to setup HOD on a physical cluster of nodes.</p>
+<p>The rest of the document deals with the steps needed to setup HOD on a physical cluster of nodes.</p>
 </div>
 
 
 <a name="N10056"></a><a name="Pre-requisites"></a>
 <h2 class="h3">Pre-requisites</h2>
 <div class="section">
-<p>To use HOD, your system should include the following hardware and software
-components.</p>
 <p>Operating System: HOD is currently tested on RHEL4.<br>
-Nodes : HOD requires a minimum of three nodes configured through a resource manager.<br>
+Nodes : HOD requires a minimum of 3 nodes configured through a resource manager.<br>
 </p>
 <p> Software </p>
-<p>The following components must be installed on ALL nodes before using HOD:</p>
+<p>The following components are to be installed on *ALL* the nodes before using HOD:</p>
 <ul>
  
 <li>Torque: Resource manager</li>
@@ -340,7 +337,7 @@ Nodes : HOD requires a minimum of three nodes configured through a resource mana
 <a href="http://www.python.org">Python</a> : HOD requires version 2.5.1 of Python.</li>
 
 </ul>
-<p>The following components are optional and can be installed to obtain better
+<p>The following components can be optionally installed for getting better
 functionality from HOD:</p>
 <ul>
  
@@ -364,7 +361,7 @@ nodes.
 </div>
 
 
-<a name="N1008D"></a><a name="Resource+Manager"></a>
+<a name="N1008A"></a><a name="Resource+Manager"></a>
 <h2 class="h3">Resource Manager</h2>
 <div class="section">
 <p>  Currently HOD works with the Torque resource manager, which it uses for its node
@@ -379,49 +376,48 @@ nodes.
   Users may wish to subscribe to TORQUE&rsquo;s mailing list or view the archive for questions,
   comments <a href="http://www.clusterresources.com/pages/resources/mailing-lists.php">here</a>.
 </p>
-<p>To use HOD with Torque:</p>
+<p>For using HOD with Torque:</p>
 <ul>
  
-<li>Install Torque components: pbs_server on one node (head node), pbs_mom on all
+<li>Install Torque components: pbs_server on one node(head node), pbs_mom on all
   compute nodes, and PBS client tools on all compute nodes and submit
-  nodes. Perform at least a basic configuration so that the Torque system is up and
-  running, that is, pbs_server knows which machines to talk to. Look <a href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.2_basic_configuration">here</a>
+  nodes. Perform atleast a basic configuration so that the Torque system is up and
+  running i.e pbs_server knows which machines to talk to. Look <a href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.2_basic_configuration">here</a>
   for basic configuration.
 
   For advanced configuration, see <a href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.3_advanced_configuration">here</a>
 </li>
  
 <li>Create a queue for submitting jobs on the pbs_server. The name of the queue is the
-  same as the HOD configuration parameter, resource-manager.queue. The HOD client uses this queue to
-  submit the RingMaster process as a Torque job.</li>
+  same as the HOD configuration parameter, resource-manager.queue. The Hod client uses this queue to
+  submit the Ringmaster process as a Torque job.</li>
  
-<li>Specify a cluster name as a property for all nodes in the cluster.
-  This can be done by using the qmgr command. For example:
-  <span class="codefrag">qmgr -c "set node node properties=cluster-name"</span>. The name of the cluster is the same as
+<li>Specify a 'cluster name' as a 'property' for all nodes in the cluster.
+  This can be done by using the 'qmgr' command. For example:
+  qmgr -c "set node node properties=cluster-name". The name of the cluster is the same as
   the HOD configuration parameter, hod.cluster. </li>
  
-<li>Make sure that jobs can be submitted to the nodes. This can be done by
-  using the qsub command. For example:
-  <span class="codefrag">echo "sleep 30" | qsub -l nodes=3</span>
-</li>
+<li>Ensure that jobs can be submitted to the nodes. This can be done by
+  using the 'qsub' command. For example:
+  echo "sleep 30" | qsub -l nodes=3</li>
 
 </ul>
 </div>
 
 
-<a name="N100CC"></a><a name="Installing+HOD"></a>
+<a name="N100C4"></a><a name="Installing+HOD"></a>
 <h2 class="h3">Installing HOD</h2>
 <div class="section">
-<p>Once the resource manager is set up, you can obtain and
-install HOD.</p>
+<p>Now that the resource manager set up is done, we proceed on to obtaining and
+installing HOD.</p>
 <ul>
  
-<li>If you are getting HOD from the Hadoop tarball, it is available under the 
+<li>If you are getting HOD from the Hadoop tarball,it is available under the 
   'contrib' section of Hadoop, under the root  directory 'hod'.</li>
  
 <li>If you are building from source, you can run ant tar from the Hadoop root
-  directory to generate the Hadoop tarball, and then get HOD from there,
-  as described above.</li>
+  directory, to generate the Hadoop tarball, and then pick HOD from there,
+  as described in the point above.</li>
  
 <li>Distribute the files under this directory to all the nodes in the
   cluster. Note that the location where the files are copied should be
@@ -434,21 +430,18 @@ install HOD.</p>
 </div>
 
 
-<a name="N100E5"></a><a name="Configuring+HOD"></a>
+<a name="N100DD"></a><a name="Configuring+HOD"></a>
 <h2 class="h3">Configuring HOD</h2>
 <div class="section">
-<p>You can configure HOD once it is installed. The minimal configuration needed
-to run HOD is described below. More advanced configuration options are discussed
-in the HOD Configuration Guide.</p>
-<a name="N100EE"></a><a name="Minimal+Configuration"></a>
-<h3 class="h4">Minimal Configuration</h3>
-<p>To get started using HOD, the following minimal configuration is
-  required:</p>
+<p>After HOD installation is done, it has to be configured before we start using
+it.</p>
+<a name="N100E6"></a><a name="Minimal+Configuration+to+get+started"></a>
+<h3 class="h4">Minimal Configuration to get started</h3>
 <ul>
  
-<li>On the node from where you want to run HOD, edit the file hodrc
-  located in the &lt;install dir&gt;/conf directory. This file
-  contains the minimal set of values required to run hod.</li>
+<li>On the node from where you want to run hod, edit the file hodrc
+  which can be found in the &lt;install dir&gt;/conf directory. This file
+  contains the minimal set of values required for running hod.</li>
  
 <li>
 
@@ -468,7 +461,7 @@ in the HOD Configuration Guide.</p>
 <li>${HADOOP_HOME}: Location of Hadoop installation on the compute and
     submit nodes.</li>
    
-<li>${RM_QUEUE}: Queue configured for submitting jobs in the resource
+<li>${RM_QUEUE}: Queue configured for submiting jobs in the resource
     manager configuration.</li>
    
 <li>${RM_HOME}: Location of the resource manager installation on the
@@ -481,9 +474,9 @@ in the HOD Configuration Guide.</p>
 
 <li>
 
-<p>The following environment variables may need to be set depending on
+<p>The following environment variables *may* need to be set depending on
   your environment. These variables must be defined where you run the
-  HOD client and must also be specified in the HOD configuration file as the
+  HOD client, and also be specified in the HOD configuration file as the
   value of the key resource_manager.env-vars. Multiple variables can be
   specified as a comma separated list of key=value pairs.</p>
 
@@ -491,7 +484,7 @@ in the HOD Configuration Guide.</p>
 <ul>
    
 <li>HOD_PYTHON_HOME: If you install python to a non-default location
-    of the compute nodes, or submit nodes, then this variable must be
+    of the compute nodes, or submit nodes, then, this variable must be
     defined to point to the python executable in the non-standard
     location.</li>
     
@@ -500,46 +493,47 @@ in the HOD Configuration Guide.</p>
 </li>
 
 </ul>
-<a name="N10122"></a><a name="Advanced+Configuration"></a>
+<a name="N10117"></a><a name="Advanced+Configuration"></a>
 <h3 class="h4">Advanced Configuration</h3>
-<p> You can review and modify other configuration options to suit
- your specific needs. Refer to the <a href="hod_config_guide.html">Configuration
- Guide</a> for more information.</p>
+<p> You can review other configuration options in the file and modify them to suit
+ your needs. Refer to the <a href="hod_config_guide.html">Configuration Guide</a> for information about the HOD
+ configuration.
+    </p>
 </div>
 
   
-<a name="N10131"></a><a name="Running+HOD"></a>
+<a name="N10126"></a><a name="Running+HOD"></a>
 <h2 class="h3">Running HOD</h2>
 <div class="section">
-<p>You can run HOD once it is configured. Refer to <a href="hod_user_guide.html">the HOD User Guide</a> for more information.</p>
+<p>You can now proceed to <a href="hod_user_guide.html">HOD User Guide</a> for information about how to run HOD,
+    what are the various features, options and for help in trouble-shooting.</p>
 </div>
 
   
-<a name="N1013F"></a><a name="Supporting+Tools+and+Utilities"></a>
+<a name="N10134"></a><a name="Supporting+Tools+and+Utilities"></a>
 <h2 class="h3">Supporting Tools and Utilities</h2>
 <div class="section">
-<p>This section describes supporting tools and utilities that can be used to
-    manage HOD deployments.</p>
-<a name="N10148"></a><a name="logcondense.py+-+Manage+Log+Files"></a>
-<h3 class="h4">logcondense.py - Manage Log Files</h3>
-<p>As mentioned in the 
-         <a href="hod_user_guide.html#Collecting+and+Viewing+Hadoop+Logs">HOD User Guide</a>,
-         HOD can be configured to upload
+<p>This section describes certain supporting tools and utilities that can be used in managing HOD deployments.</p>
+<a name="N1013D"></a><a name="logcondense.py+-+Tool+for+removing+log+files+uploaded+to+DFS"></a>
+<h3 class="h4">logcondense.py - Tool for removing log files uploaded to DFS</h3>
+<p>As mentioned in 
+         <a href="hod_user_guide.html#Collecting+and+Viewing+Hadoop+Logs">this section</a> of the
+         <a href="hod_user_guide.html">HOD User Guide</a>, HOD can be configured to upload
          Hadoop logs to a statically configured HDFS. Over time, the number of logs uploaded
-         to HDFS could increase. logcondense.py is a tool that helps
-         administrators to remove log files uploaded to HDFS. </p>
-<a name="N10155"></a><a name="Running+logcondense.py"></a>
+         to DFS could increase. logcondense.py is a tool that helps administrators to clean-up
+         the log files older than a certain number of days. </p>
+<a name="N1014E"></a><a name="Running+logcondense.py"></a>
 <h4>Running logcondense.py</h4>
 <p>logcondense.py is available under hod_install_location/support folder. You can either
-        run it using python, for example, <em>python logcondense.py</em>, or give execute permissions 
+        run it using python, for e.g. <em>python logcondense.py</em>, or give execute permissions 
         to the file, and directly run it as <em>logcondense.py</em>. logcondense.py needs to be 
         run by a user who has sufficient permissions to remove files from locations where log 
-        files are uploaded in the HDFS, if permissions are enabled. For example as mentioned in the
+        files are uploaded in the DFS, if permissions are enabled. For e.g. as mentioned in the
         <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>, the logs could
         be configured to come under the user's home directory in HDFS. In that case, the user
         running logcondense.py should have super user privileges to remove the files from under
         all user home directories.</p>
-<a name="N10169"></a><a name="Command+Line+Options+for+logcondense.py"></a>
+<a name="N10162"></a><a name="Command+Line+Options+for+logcondense.py"></a>
 <h4>Command Line Options for logcondense.py</h4>
 <p>The following command line options are supported for logcondense.py.</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
@@ -599,9 +593,8 @@ in the HOD Configuration Guide.</p>
               <td colspan="1" rowspan="1">--dynamicdfs</td>
               <td colspan="1" rowspan="1">If true, this will indicate that the logcondense.py script should delete HDFS logs
               in addition to Map/Reduce logs. Otherwise, it only deletes Map/Reduce logs, which is also the
-              default if this option is not specified. This option is useful if
-              dynamic HDFS installations 
-              are being provisioned by HOD, and the static HDFS installation is being used only to collect 
+              default if this option is not specified. This option is useful if dynamic DFS installations 
+              are being provisioned by HOD, and the static DFS installation is being used only to collect 
               logs - a scenario that may be common in test clusters.</td>
               <td colspan="1" rowspan="1">false</td>
             
@@ -613,34 +606,33 @@ in the HOD Configuration Guide.</p>
 <p>
 <em>python logcondense.py -p ~/hadoop-0.17.0/bin/hadoop -d 7 -c ~/hadoop-conf -l /user</em>
 </p>
-<a name="N1020C"></a><a name="checklimits.sh+-+Monitor+Resource+Limits"></a>
-<h3 class="h4">checklimits.sh - Monitor Resource Limits</h3>
-<p>checklimits.sh is a HOD tool specific to the Torque/Maui environment
+<a name="N10205"></a><a name="checklimits.sh+-+Tool+to+update+torque+comment+field+reflecting+resource+limits"></a>
+<h3 class="h4">checklimits.sh - Tool to update torque comment field reflecting resource limits</h3>
+<p>checklimits is a HOD tool specific to Torque/Maui environment
       (<a href="http://www.clusterresources.com/pages/products/maui-cluster-scheduler.php">Maui Cluster Scheduler</a> is an open source job
       scheduler for clusters and supercomputers, from clusterresources). The
       checklimits.sh script
-      updates the torque comment field when newly submitted job(s) violate or
-      exceed
+      updates torque comment field when newly submitted job(s) violate/cross
       over user limits set up in Maui scheduler. It uses qstat, does one pass
-      over the torque job-list to determine queued or unfinished jobs, runs Maui
+      over torque job list to find out queued or unfinished jobs, runs Maui
       tool checkjob on each job to see if user limits are violated and then
       runs torque's qalter utility to update job attribute 'comment'. Currently
       it updates the comment as <em>User-limits exceeded. Requested:([0-9]*)
       Used:([0-9]*) MaxLimit:([0-9]*)</em> for those jobs that violate limits.
       This comment field is then used by HOD to behave accordingly depending on
       the type of violation.</p>
-<a name="N1021C"></a><a name="Running+checklimits.sh"></a>
+<a name="N10215"></a><a name="Running+checklimits.sh"></a>
 <h4>Running checklimits.sh</h4>
-<p>checklimits.sh is available under the hod_install_location/support
-        folder. This shell script can be run directly as <em>sh
+<p>checklimits.sh is available under hod_install_location/support
+        folder. This is a shell script and can be run directly as <em>sh
         checklimits.sh </em>or as <em>./checklimits.sh</em> after enabling
         execute permissions. Torque and Maui binaries should be available
         on the machine where the tool is run and should be in the path
-        of the shell script process. To update the
-        comment field of jobs from different users, this tool must be run with
-        torque administrative privileges. This tool must be run repeatedly
+        of the shell script process. In order for this tool to be able to update
+        comment field of jobs from different users, it has to be run with
+        torque administrative privileges. This tool has to be run repeatedly
         after specific intervals of time to frequently update jobs violating
-        constraints, for example via cron. Please note that the resource manager
+        constraints, for e.g. via cron. Please note that the resource manager
         and scheduler commands used in this script can be expensive and so
         it is better not to run this inside a tight loop without sleeping.</p>
 </div>

@@ -290,7 +290,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="Introduction" id="Introduction"></a>
 <p>Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.</p>
 <p>HOD supports Hadoop from version 0.15 onwards.</p>
-<p>The rest of this document comprises of a quick-start guide that helps you get quickly started with using HOD, a more detailed guide of all HOD features, and a trouble-shooting section.</p>
+<p>The rest of the documentation comprises of a quick-start guide that helps you get quickly started with using HOD, a more detailed guide of all HOD features, command line options, known issues and trouble-shooting information.</p>
 </div>
   
 <a name="N1001E"></a><a name="Getting+Started+Using+HOD"></a>
@@ -470,7 +470,7 @@ document.write("Last Published: " + document.lastModified);
 <strong> Operation <em>list</em></strong>
 </p>
 <a name="Operation_list" id="Operation_list"></a>
-<p>The list operation lists all the clusters allocated so far by a user. The cluster directory where the hadoop-site.xml is stored for the cluster, and its status vis-a-vis connectivity with the JobTracker and/or HDFS is shown. The list operation has the following syntax:</p>
+<p>The list operation lists all the clusters allocated so far by a user. The cluster directory where the hadoop-site.xml is stored for the cluster, and it's status vis-a-vis connectivity with the JobTracker and/or HDFS is shown. The list operation has the following syntax:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
       
         
@@ -681,7 +681,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
     
 </table>
-<p>Under the root directory specified above in the path, HOD will create a path user_name/torque_jobid and store gzipped log files for each node that was part of the job.</p>
+<p>Under the root directory specified above in the path, HOD will create a create a path user_name/torque_jobid and store gzipped log files for each node that was part of the job.</p>
 <p>Note that to store the files to HDFS, you may need to configure the <span class="codefrag">hodring.pkgs</span> option with the Hadoop version that matches the HDFS mentioned. If not, HOD will try to use the Hadoop version that it is using to provision the Hadoop cluster itself.</p>
 <a name="N10359"></a><a name="Auto-deallocation+of+Idle+Clusters"></a>
 <h3 class="h4"> Auto-deallocation of Idle Clusters </h3>
@@ -716,7 +716,7 @@ document.write("Last Published: " + document.lastModified);
     
 </table>
 <p>
-<em>Note:</em> Due to restriction in the underlying Torque resource manager, names which do not start with an alphabet character or contain a 'space' will cause the job to fail. The failure message points to the problem being in the specified job name.</p>
+<em>Note:</em> Due to restriction in the underlying Torque resource manager, names which do not start with a alphabet or contain a 'space' will cause the job to fail. The failure message points to the problem being in the specified job name.</p>
 <a name="N103A6"></a><a name="Capturing+HOD+exit+codes+in+Torque"></a>
 <h3 class="h4"> Capturing HOD exit codes in Torque </h3>
 <a name="Capturing_HOD_exit_codes_in_Torq" id="Capturing_HOD_exit_codes_in_Torq"></a>
