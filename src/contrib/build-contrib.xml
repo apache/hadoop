@@ -75,6 +75,7 @@
     <pathelement location="${hadoop.root}/src/contrib/test"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
+    <pathelement location="${build.examples}"/>
     <path refid="classpath"/>
   </path>
 
@@ -133,7 +134,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  -->
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile" if="test.available">
+  <target name="compile-test" depends="compile-examples" if="test.available">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -187,7 +188,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
-  <target name="test" depends="compile-test, compile, compile-examples" if="test.available">
+  <target name="test" depends="compile-test, compile" if="test.available">
     <echo message="contrib: ${name}"/>
     <delete dir="${hadoop.log.dir}"/>
     <mkdir dir="${hadoop.log.dir}"/>
