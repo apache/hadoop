@@ -166,7 +166,7 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3317. Add default port for HDFS namenode.  The port in
     "hdfs:" URIs now defaults to 8020, so that one may simply use URIs
-    of the form "hdfs://example.com/dir/file".
+    of the form "hdfs://example.com/dir/file". (cutting)
 
     HADOOP-2019. Adds support for .tar, .tgz and .tar.gz files in 
     DistributedCache (Amareshwari Sriramadasu via ddas)
