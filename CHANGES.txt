@@ -48,6 +48,8 @@ Trunk (unreleased changes)
     HADOOP-3587. Add a unit test for the contrib/data_join framework.
     (cdouglas)
 
+    HADOOP-3402. Add terasort example program (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

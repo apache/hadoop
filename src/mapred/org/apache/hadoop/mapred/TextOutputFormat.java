@@ -47,7 +47,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       }
     }
 
-    private DataOutputStream out;
+    protected DataOutputStream out;
     private final byte[] keyValueSeparator;
 
     public LineRecordWriter(DataOutputStream out, String keyValueSeparator) {

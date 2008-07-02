@@ -19,6 +19,9 @@
 package org.apache.hadoop.examples;
 import org.apache.hadoop.examples.dancing.DistributedPentomino;
 import org.apache.hadoop.examples.dancing.Sudoku;
+import org.apache.hadoop.examples.terasort.TeraGen;
+import org.apache.hadoop.examples.terasort.TeraSort;
+import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -50,6 +53,9 @@ public class ExampleDriver {
       pgd.addClass("sleep", SleepJob.class, "A job that sleeps at each map and reduce task.");
       pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");
       pgd.addClass("multifilewc", MultiFileWordCount.class, "A job that counts words from several files.");
+      pgd.addClass("teragen", TeraGen.class, "Generate data for the terasort");
+      pgd.addClass("terasort", TeraSort.class, "Run the terasort");
+      pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
       pgd.driver(argv);
     }
     catch(Throwable e){
