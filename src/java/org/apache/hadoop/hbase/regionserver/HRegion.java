@@ -876,10 +876,12 @@ public class HRegion implements HConstants {
       LOG.info("starting compaction on region " + this);
       long startTime = System.currentTimeMillis();
       doRegionCompactionPrep();
+      long maxSize = -1;
       for (HStore store: stores.values()) {
-        final byte [] key = store.compact(force);
-        if (key != null && midKey == null) {
-          midKey = key;
+        final HStore.StoreSize size = store.compact(force);
+        if (size != null && size.getSize() > maxSize) {
+          maxSize = size.getSize();
+          midKey = size.getKey();
         }
       }
       doRegionCompactionCleanup();

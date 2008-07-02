@@ -854,7 +854,7 @@ public class HStore implements HConstants {
    * @return mid key if a split is needed, null otherwise
    * @throws IOException
    */
-  byte [] compact(final boolean force) throws IOException {
+  StoreSize compact(final boolean force) throws IOException {
     synchronized (compactLock) {
       long maxId = -1;
       List<HStoreFile> filesToCompact = null;
@@ -1811,9 +1811,9 @@ public class HStore implements HConstants {
   /**
    * Determines if HStore can be split
    * 
-   * @return midKey if store can be split, null otherwise
+   * @return a StoreSize if store can be split, null otherwise
    */
-  byte [] checkSplit() {
+  StoreSize checkSplit() {
     if (this.storefiles.size() <= 0) {
       return null;
     }
@@ -1865,7 +1865,7 @@ public class HStore implements HConstants {
             Bytes.equals(mk.getRow(), lastKey.getRow())) {
           return null;
         }
-        return mk.getRow();
+        return new StoreSize(maxSize, mk.getRow());
       }
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this.storeNameStr, e);
@@ -1929,6 +1929,24 @@ public class HStore implements HConstants {
       SortedMap<Long, HStoreFile> copy =
         new TreeMap<Long, HStoreFile>(this.storefiles);
       return copy;
+    }
+  }
+  
+  class StoreSize {
+    private final long size;
+    private final byte[] key;
+    StoreSize(long size, byte[] key) {
+      this.size = size;
+      this.key = new byte[key.length];
+      System.arraycopy(key, 0, this.key, 0, key.length);
+    }
+    /* @return the size */
+    long getSize() {
+      return size;
+    }
+    /* @return the key */
+    byte[] getKey() {
+      return key;
     }
   }
 }

@@ -163,6 +163,7 @@ Trunk (unreleased changes)
    HBASE-527   RegexpRowFilter does not work when there are columns from 
                multiple families (Clint Morgan via Jim Kellerman)
    HBASE-534   Double-assignment at SPLIT-time
+   HBASE-712   midKey found compacting is the first, not necessarily the optimal
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
