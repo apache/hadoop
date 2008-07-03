@@ -160,6 +160,12 @@ Release 0.18.0 - Unreleased
     if they are not necessary e.g. for Maps with no side-effect files.
     (acmurthy)
 
+    HADOOP-3665. Modify WritableComparator so that it only creates instances
+    of the keytype if the type does not define a WritableComparator. Calling
+    the superclass compare will throw a NullPointerException. Also define
+    a RawComparator for NullWritable and permit it to be written as a key
+    to SequenceFiles. (cdouglas)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
