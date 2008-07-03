@@ -164,6 +164,8 @@ Trunk (unreleased changes)
                multiple families (Clint Morgan via Jim Kellerman)
    HBASE-534   Double-assignment at SPLIT-time
    HBASE-712   midKey found compacting is the first, not necessarily the optimal
+   HBASE-719   Find out why users have network problems in HBase and not in Hadoop
+               and HConnectionManager (Jean-Daniel Cryans via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

@@ -87,6 +87,14 @@ public class HServerInfo implements WritableComparable {
   public HServerAddress getServerAddress() {
     return serverAddress;
   }
+  
+  /**
+   * Change the server address.
+   * @param serverAddress New server address
+   */
+  public void setServerAddress(HServerAddress serverAddress) {
+    this.serverAddress = serverAddress;
+  }
  
   /** @return the server start code */
   public long getStartCode() {

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -88,7 +87,6 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -248,8 +246,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.server = HbaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
+    // Address is givin a default IP for the moment. Will be changed after
+    // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
-      new InetSocketAddress(getThisIP(),
+      new InetSocketAddress(DEFAULT_HOST,
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
       this.conf.getInt("hbase.regionserver.info.port", 60030));
     this.numRegionsToReport =                                        
@@ -487,6 +487,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         this.conf.set(key, value);
       }
+      // Master may have sent us a new address with the other configs.
+      // Update our address in this case. See HBASE-719
+      if(conf.get("hbase.regionserver.address") != null)
+        serverInfo.setServerAddress(new HServerAddress
+            (conf.get("hbase.regionserver.address"), 
+            serverInfo.getServerAddress().getPort()));
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included.  Set 'fs.default.name'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
@@ -522,7 +528,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
     
-    Path logdir = new Path(rootDir, "log" + "_" + getThisIP() + "_" +
+    Path logdir = new Path(rootDir, "log" + "_" + 
+        serverInfo.getServerAddress().getBindAddress() + "_" +
         this.serverInfo.getStartCode() + "_" + 
         this.serverInfo.getServerAddress().getPort());
     if (LOG.isDebugEnabled()) {
@@ -623,16 +630,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** @return the HLog */
   HLog getLog() {
     return this.log;
-  }
-
-  /*
-   * Use interface to get the 'real' IP for this host. 'serverInfo' is sent to
-   * master.  Should have the real IP of this host rather than 'localhost' or
-   * 0.0.0.0 or 127.0.0.1 in it.
-   * @return This servers' IP.
-   */
-  private String getThisIP() throws UnknownHostException {
-    return DNS.getDefaultIP(conf.get("hbase.regionserver.dns.interface","default"));
   }
 
   /**

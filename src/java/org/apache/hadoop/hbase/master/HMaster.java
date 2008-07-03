@@ -529,6 +529,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   @SuppressWarnings("unused")
   public MapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
+    // Set the address for now even tho it will not be persisted on
+    // the HRS side.
+    String rsAddress = Server.getRemoteAddress();
+    serverInfo.setServerAddress(new HServerAddress
+        (rsAddress, serverInfo.getServerAddress().getPort()));
     // register with server manager
     serverManager.regionServerStartup(serverInfo);
     // send back some config info
@@ -541,6 +546,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   protected MapWritable createConfigurationSubset() {
     MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
+    // Get the real address of the HRS.
+    String rsAddress = Server.getRemoteAddress();
+    if (rsAddress != null) {
+      mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
+    }
+    
     return addConfig(mw, "fs.default.name");
   }
 
