@@ -36,9 +36,9 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.DataNode;
-import org.apache.hadoop.dfs.DistributedFileSystem;
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;

@@ -197,13 +197,13 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
-  CLASS='org.apache.hadoop.dfs.NameNode'
+  CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
 elif [ "$COMMAND" = "secondarynamenode" ] ; then
-  CLASS='org.apache.hadoop.dfs.SecondaryNameNode'
+  CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
-  CLASS='org.apache.hadoop.dfs.DataNode'
+  CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DATANODE_OPTS"
 elif [ "$COMMAND" = "fs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
@@ -212,13 +212,13 @@ elif [ "$COMMAND" = "dfs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "dfsadmin" ] ; then
-  CLASS=org.apache.hadoop.dfs.DFSAdmin
+  CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "fsck" ] ; then
-  CLASS=org.apache.hadoop.dfs.DFSck
+  CLASS=org.apache.hadoop.hdfs.tools.DFSck
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "balancer" ] ; then
-  CLASS=org.apache.hadoop.dfs.Balancer
+  CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker

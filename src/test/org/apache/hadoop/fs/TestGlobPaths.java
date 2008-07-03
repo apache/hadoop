@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import junit.framework.TestCase;
 

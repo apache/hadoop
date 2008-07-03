@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
 
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

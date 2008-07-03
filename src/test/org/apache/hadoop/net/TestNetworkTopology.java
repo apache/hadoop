@@ -24,8 +24,8 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.dfs.DatanodeDescriptor;
-import org.apache.hadoop.dfs.DatanodeID;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 
 public class TestNetworkTopology extends TestCase {
   private final static NetworkTopology cluster = new NetworkTopology();

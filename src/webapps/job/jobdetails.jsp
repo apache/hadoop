@@ -8,7 +8,7 @@
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
-  import="org.apache.hadoop.dfs.JspHelper"
+  import="org.apache.hadoop.hdfs.server.namenode.JspHelper"
 %>
 
 <%

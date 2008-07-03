@@ -43,7 +43,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /** Provide command line access to a FileSystem. */
 public class FsShell extends Configured implements Tool {

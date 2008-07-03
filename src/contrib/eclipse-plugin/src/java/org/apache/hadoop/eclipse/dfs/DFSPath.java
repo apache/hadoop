@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.eclipse.ErrorMessageDialog;
 import org.apache.hadoop.eclipse.server.ConfProp;
 import org.apache.hadoop.eclipse.server.HadoopServer;

@@ -22,6 +22,11 @@ Trunk (unreleased changes)
     HADOOP-3652. Remove deprecated class OutputFormatBase.
     (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-2885. Break the hadoop.dfs package into separate packages under
+    hadoop.hdfs that reflect whether they are client, server, protocol, 
+    etc. DistributedFileSystem and DFSClient have moved and are now 
+    considered package private. (Sanjay Radia via omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

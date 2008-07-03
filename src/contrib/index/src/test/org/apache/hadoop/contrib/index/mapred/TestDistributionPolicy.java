@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.contrib.index.example.HashingDistributionPolicy;
 import org.apache.hadoop.contrib.index.example.RoundRobinDistributionPolicy;
 import org.apache.hadoop.contrib.index.lucene.FileSystemDirectory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;

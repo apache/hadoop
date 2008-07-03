@@ -26,7 +26,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Utility class to simplify creation and reporting of hadoop metrics.
  *
- * For examples of usage, see {@link org.apache.hadoop.dfs.DataNode}.
+ * For examples of usage, see {@link org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics}.
  * @see org.apache.hadoop.metrics.MetricsRecord
  * @see org.apache.hadoop.metrics.MetricsContext
  * @see org.apache.hadoop.metrics.ContextFactory

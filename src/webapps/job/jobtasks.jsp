@@ -45,7 +45,7 @@
   }
 %>
 
-<%@page import="org.apache.hadoop.dfs.JspHelper"%>
+<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
 <html>
   <head>
     <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerName%></title>

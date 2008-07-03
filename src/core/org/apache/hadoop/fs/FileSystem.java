@@ -27,11 +27,11 @@ import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 

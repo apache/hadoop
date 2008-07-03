@@ -20,7 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import junit.framework.TestCase;
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
 
@@ -37,7 +37,7 @@ public class TestMiniMRDFSCaching extends TestCase {
     try {
       JobConf conf = new JobConf();
       conf.set("fs.hdfs.impl",
-               "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");      
+               "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");      
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(2, fileSys.getName(), 4);

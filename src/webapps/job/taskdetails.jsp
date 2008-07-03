@@ -9,7 +9,7 @@
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
   import="org.apache.hadoop.util.*"
-  import="org.apache.hadoop.dfs.JspHelper"
+  import="org.apache.hadoop.hdfs.server.namenode.JspHelper"
 %>
 <%!static SimpleDateFormat dateFormat = new SimpleDateFormat(
       "d-MMM-yyyy HH:mm:ss");
@@ -66,7 +66,7 @@
         : null;
 %>
 
-<%@page import="org.apache.hadoop.dfs.JspHelper"%>
+<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
 <html>
 <head>
   <link rel="stylesheet" type="text/css" href="/static/hadoop.css">

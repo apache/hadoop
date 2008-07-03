@@ -24,7 +24,7 @@ import java.text.NumberFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.contrib.index.lucene.FileSystemDirectory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

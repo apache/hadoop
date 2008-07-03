@@ -171,7 +171,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>fs.hdfs.impl</name>
-  <value>org.apache.hadoop.dfs.DistributedFileSystem</value>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
   <description>The FileSystem for hdfs: uris.</description>
 </property>
 
@@ -195,12 +195,12 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>fs.hftp.impl</name>
-  <value>org.apache.hadoop.dfs.HftpFileSystem</value>
+  <value>org.apache.hadoop.hdfs.HftpFileSystem</value>
 </property>
 
 <property>
   <name>fs.hsftp.impl</name>
-  <value>org.apache.hadoop.dfs.HsftpFileSystem</value>
+  <value>org.apache.hadoop.hdfs.HsftpFileSystem</value>
 </property>
 
 <property>

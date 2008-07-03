@@ -87,7 +87,7 @@
               "</td></tr></table>\n");
   }%>
 
-<%@page import="org.apache.hadoop.dfs.JspHelper"%>
+<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
 <html>
 <head>
 <title><%= trackerName %> Hadoop Map/Reduce Administration</title>

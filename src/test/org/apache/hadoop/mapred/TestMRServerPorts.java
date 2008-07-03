@@ -19,8 +19,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import junit.framework.TestCase;
-import org.apache.hadoop.dfs.TestHDFSServerPorts;
-import org.apache.hadoop.dfs.NameNode;
+import org.apache.hadoop.hdfs.TestHDFSServerPorts;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.FileSystem;
 
 /**

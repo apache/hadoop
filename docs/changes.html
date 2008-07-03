@@ -86,7 +86,7 @@ All of them default to "\t".<br />(Zheng Shao via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(4)
+</a>&nbsp;&nbsp;&nbsp;(6)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3577">HADOOP-3577</a>. Tools to inject blocks into name node and simulated
 data nodes for testing.<br />(Sanjay Radia via hairong)</li>
@@ -95,6 +95,8 @@ may be processed by map/reduce.<br />(cdouglas via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3655">HADOOP-3655</a>. Add additional ant properties to control junit.<br />(Steve
 Loughran via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3543">HADOOP-3543</a>. Update the copyright year to 2008.<br />(cdouglas via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3587">HADOOP-3587</a>. Add a unit test for the contrib/data_join framework.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3402">HADOOP-3402</a>. Add terasort example program<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -201,8 +203,7 @@ Bialecki via omalley)</li>
 via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3317">HADOOP-3317</a>. Add default port for HDFS namenode.  The port in
 "hdfs:" URIs now defaults to 8020, so that one may simply use URIs
-of the form "hdfs://example.com/dir/file".
-</li>
+of the form "hdfs://example.com/dir/file".<br />(cutting)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2019">HADOOP-2019</a>. Adds support for .tar, .tgz and .tar.gz files in
 DistributedCache<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3058">HADOOP-3058</a>. Add FSNamesystem status metrics.<br />(Lohit Vjayarenu via rangadi)</li>
@@ -362,7 +363,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(108)
+</a>&nbsp;&nbsp;&nbsp;(109)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -577,6 +578,8 @@ open.<br />(Benjamin Gufler via hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3604">HADOOP-3604</a>. Work around a JVM synchronization problem observed while
 retrieving the address of direct buffers from compression code by obtaining
 a lock during this call.<br />(Arun C Murthy via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3678">HADOOP-3678</a>. Avoid spurious exceptions logged at DataNode when clients
+read from DFS.<br />(rangadi)</li>
     </ol>
   </li>
 </ul>
