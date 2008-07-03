@@ -159,6 +159,9 @@ class CompactSplitThread extends Thread implements HConstants {
     // NOTE: there is no need for retry logic here. HTable does it for us.
     oldRegionInfo.setOffline(true);
     oldRegionInfo.setSplit(true);
+    // Inform the HRegionServer that the parent HRegion is no-longer online.
+    this.server.removeFromOnlineRegions(oldRegionInfo);
+    
     BatchUpdate update = new BatchUpdate(oldRegionInfo.getRegionName());
     update.put(COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
     update.put(COL_SPLITA, Writables.getBytes(newRegions[0].getRegionInfo()));

@@ -904,15 +904,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
-  throws IOException {  
-    this.lock.writeLock().lock();
-    HRegion region = null;
-    try {
-      region = onlineRegions.remove(Bytes.mapKey(hri.getRegionName()));
-    } finally {
-      this.lock.writeLock().unlock();
-    }
-      
+  throws IOException {
+	HRegion region = this.removeFromOnlineRegions(hri);
     if (region != null) {
       region.close();
       if(reportWhenCompleted) {
@@ -1325,6 +1318,23 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     return result;
+  }
+  
+  /**
+   * This method removes HRegion corresponding to hri from the Map of onlineRegions.  
+   * 
+   * @param hri the HRegionInfo corresponding to the HRegion to-be-removed.
+   * @return the removed HRegion, or null if the HRegion was not in onlineRegions.
+   */
+  HRegion removeFromOnlineRegions(HRegionInfo hri) {
+    this.lock.writeLock().lock();
+    HRegion toReturn = null;
+    try {
+      toReturn = onlineRegions.remove(Bytes.mapKey(hri.getRegionName()));
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+    return toReturn;
   }
 
   /**

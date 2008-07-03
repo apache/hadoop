@@ -166,6 +166,7 @@ Trunk (unreleased changes)
    HBASE-712   midKey found compacting is the first, not necessarily the optimal
    HBASE-719   Find out why users have network problems in HBase and not in Hadoop
                and HConnectionManager (Jean-Daniel Cryans via Stack)
+   HBASE-703   Invalid regions listed by regionserver.jsp (Izaak Rubin via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
