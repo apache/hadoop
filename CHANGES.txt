@@ -258,6 +258,7 @@ Trunk (unreleased changes)
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
    HBASE-536   Remove MiniDFS startup from MiniHBaseCluster
    HBASE-521   Improve client scanner interface
+   HBASE-562   Move Exceptions to subpackages (Jean-Daniel Cryans via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase
