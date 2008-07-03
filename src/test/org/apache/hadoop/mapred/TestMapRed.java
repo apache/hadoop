@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -346,7 +347,58 @@ public class TestMapRed extends TestCase {
     }
     assertFalse("should fail for partition >= numPartitions", pass);
   }
-    
+
+  public static class NullMapper
+      implements Mapper<NullWritable,Text,NullWritable,Text> {
+    public void map(NullWritable key, Text val,
+        OutputCollector<NullWritable,Text> output, Reporter reporter)
+        throws IOException {
+      output.collect(NullWritable.get(), val);
+    }
+    public void configure(JobConf conf) { }
+    public void close() { }
+  }
+
+  public void testNullKeys() throws Exception {
+    JobConf conf = new JobConf(TestMapRed.class);
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path testdir = new Path(
+        System.getProperty("test.build.data","/tmp")).makeQualified(fs);
+    fs.delete(testdir, true);
+    Path inFile = new Path(testdir, "nullin/blah");
+    SequenceFile.Writer w = SequenceFile.createWriter(fs, conf, inFile,
+        NullWritable.class, Text.class, SequenceFile.CompressionType.NONE);
+    Text t = new Text();
+    t.set("AAAAAAAAAAAAAA"); w.append(NullWritable.get(), t);
+    t.set("BBBBBBBBBBBBBB"); w.append(NullWritable.get(), t);
+    t.set("CCCCCCCCCCCCCC"); w.append(NullWritable.get(), t);
+    t.set("DDDDDDDDDDDDDD"); w.append(NullWritable.get(), t);
+    t.set("EEEEEEEEEEEEEE"); w.append(NullWritable.get(), t);
+    t.set("FFFFFFFFFFFFFF"); w.append(NullWritable.get(), t);
+    t.set("GGGGGGGGGGGGGG"); w.append(NullWritable.get(), t);
+    t.set("HHHHHHHHHHHHHH"); w.append(NullWritable.get(), t);
+    w.close();
+    FileInputFormat.setInputPaths(conf, inFile);
+    FileOutputFormat.setOutputPath(conf, new Path(testdir, "nullout"));
+    conf.setMapperClass(NullMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    conf.setOutputKeyClass(NullWritable.class);
+    conf.setOutputValueClass(Text.class);
+    conf.setInputFormat(SequenceFileInputFormat.class);
+    conf.setOutputFormat(SequenceFileOutputFormat.class);
+    conf.setNumReduceTasks(1);
+
+    JobClient.runJob(conf);
+
+    SequenceFile.Reader r = new SequenceFile.Reader(fs,
+        new Path(testdir, "nullout/part-00000"), conf);
+    String m = "AAAAAAAAAAAAAA";
+    for (int i = 1; r.next(NullWritable.get(), t); ++i) {
+      assertTrue(t.toString() + " doesn't match " + m, m.equals(t.toString()));
+      m = m.replace((char)('A' + i - 1), (char)('A' + i));
+    }
+  }
+
   private void checkCompression(boolean compressMapOutputs,
                                 CompressionType redCompression,
                                 boolean includeCombine

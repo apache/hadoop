@@ -21,6 +21,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 
+import org.apache.hadoop.util.ReflectionUtils;
+
 /** A Comparator for {@link WritableComparable}s.
  *
  * <p>This base implemenation uses the natural ordering.  To define alternate
@@ -39,7 +41,7 @@ public class WritableComparator implements RawComparator {
   public static synchronized WritableComparator get(Class c) {
     WritableComparator comparator = comparators.get(c);
     if (comparator == null)
-      comparator = new WritableComparator(c);
+      comparator = new WritableComparator(c, true);
     return comparator;
   }
 
@@ -51,17 +53,26 @@ public class WritableComparator implements RawComparator {
   }
 
 
-  private DataInputBuffer buffer = new DataInputBuffer();
-
-  private Class keyClass;
-  private WritableComparable key1;
-  private WritableComparable key2;
+  private final Class keyClass;
+  private final WritableComparable key1;
+  private final WritableComparable key2;
+  private final DataInputBuffer buffer;
 
   /** Construct for a {@link WritableComparable} implementation. */
   protected WritableComparator(Class keyClass) {
+    this(keyClass, false);
+  }
+
+  private WritableComparator(Class keyClass, boolean createInstances) {
     this.keyClass = keyClass;
-    this.key1 = newKey();
-    this.key2 = newKey();
+    if (createInstances) {
+      key1 = newKey();
+      key2 = newKey();
+      buffer = new DataInputBuffer();
+    } else {
+      key1 = key2 = null;
+      buffer = null;
+    }
   }
 
   /** Returns the WritableComparable implementation class. */
@@ -69,13 +80,8 @@ public class WritableComparator implements RawComparator {
 
   /** Construct a new {@link WritableComparable} instance. */
   public WritableComparable newKey() {
-    try {
-      return (WritableComparable)keyClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    }
+    return (WritableComparable)
+      ReflectionUtils.newInstance(keyClass, null);
   }
 
   /** Optimization hook.  Override this to make SequenceFile.Sorter's scream.

@@ -995,8 +995,8 @@ public class SequenceFile {
       // Append the 'key'
       keySerializer.serialize(key);
       int keyLength = buffer.getLength();
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed: " + key);
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed: " + key);
 
       // Append the 'value'
       if (compress) {
@@ -1017,8 +1017,8 @@ public class SequenceFile {
 
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed: " + keyLength);
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed: " + keyLength);
 
       int valLength = val.getSize();
 
@@ -1122,8 +1122,8 @@ public class SequenceFile {
       // Append the 'key'
       keySerializer.serialize(key);
       int keyLength = buffer.getLength();
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed: " + key);
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed: " + key);
 
       // Compress 'value' and append it
       deflateFilter.resetState();
@@ -1142,8 +1142,8 @@ public class SequenceFile {
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
 
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed");
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed: " + keyLength);
 
       int valLength = val.getSize();
       
@@ -1305,8 +1305,8 @@ public class SequenceFile {
       int oldKeyLength = keyBuffer.getLength();
       keySerializer.serialize(key);
       int keyLength = keyBuffer.getLength() - oldKeyLength;
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed: " + key);
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed: " + key);
       WritableUtils.writeVInt(keyLenBuffer, keyLength);
 
       int oldValLength = valBuffer.getLength();
@@ -1328,8 +1328,8 @@ public class SequenceFile {
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
       
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed");
+      if (keyLength < 0)
+        throw new IOException("negative length keys not allowed");
 
       int valLength = val.getSize();
       
@@ -2232,7 +2232,7 @@ public class SequenceFile {
 
     /** Sort and merge files containing the named classes. */
     public Sorter(FileSystem fs, Class keyClass, Class valClass, Configuration conf)  {
-      this(fs, new WritableComparator(keyClass), keyClass, valClass, conf);
+      this(fs, WritableComparator.get(keyClass), keyClass, valClass, conf);
     }
 
     /** Sort and merge using an arbitrary {@link RawComparator}. */
