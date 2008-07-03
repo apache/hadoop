@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HRegionInfo;

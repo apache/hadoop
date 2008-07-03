@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionHistorian;
-import org.apache.hadoop.hbase.RegionServerRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
