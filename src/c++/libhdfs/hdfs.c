@@ -26,7 +26,7 @@
 #define HADOOP_LOCALFS  "org/apache/hadoop/fs/LocalFileSystem"
 #define HADOOP_FS       "org/apache/hadoop/fs/FileSystem"
 #define HADOOP_BLK_LOC  "org/apache/hadoop/fs/BlockLocation"
-#define HADOOP_DFS      "org/apache/hadoop/dfs/DistributedFileSystem"
+#define HADOOP_DFS      "org/apache/hadoop/hdfs/DistributedFileSystem"
 #define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
 #define HADOOP_OSTRM    "org/apache/hadoop/fs/FSDataOutputStream"
 #define HADOOP_STAT     "org/apache/hadoop/fs/FileStatus"
