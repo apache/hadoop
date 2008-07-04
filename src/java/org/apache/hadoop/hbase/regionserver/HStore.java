@@ -620,11 +620,12 @@ public class HStore implements HConstants {
    * 
    * @param key
    * @param value
+   * @return memcache size delta
    */
-  protected void add(HStoreKey key, byte[] value) {
+  protected long add(HStoreKey key, byte[] value) {
     lock.readLock().lock();
     try {
-      this.memcache.add(key, value);
+      return this.memcache.add(key, value);
     } finally {
       lock.readLock().unlock();
     }
@@ -726,7 +727,7 @@ public class HStore implements HConstants {
                   now < curkey.getTimestamp() + ttl) {
               entries++;
               out.append(curkey, new ImmutableBytesWritable(bytes));
-              flushed += HRegion.getEntrySize(curkey, bytes);
+              flushed += curkey.getSize() + (bytes == null ? 0 : bytes.length);
             } else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("internalFlushCache: " + curkey +
@@ -1879,7 +1880,7 @@ public class HStore implements HConstants {
   public long getSize() {
     return storeSize;
   }
-     
+  
   //////////////////////////////////////////////////////////////////////////////
   // File administration
   //////////////////////////////////////////////////////////////////////////////

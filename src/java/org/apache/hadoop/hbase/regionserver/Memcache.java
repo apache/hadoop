@@ -59,7 +59,7 @@ class Memcache {
   // The currently active sorted map of edits.
   private volatile SortedMap<HStoreKey, byte[]> memcache =
     createSynchronizedSortedMap();
-  
+
   // Snapshot of memcache.  Made for flusher.
   private volatile SortedMap<HStoreKey, byte[]> snapshot =
     createSynchronizedSortedMap();
@@ -158,11 +158,15 @@ class Memcache {
    * Write an update
    * @param key
    * @param value
+   * @return memcache size delta
    */
-  void add(final HStoreKey key, final byte[] value) {
+  long add(final HStoreKey key, final byte[] value) {
     this.lock.readLock().lock();
     try {
+      byte[] oldValue = this.memcache.remove(key);
       this.memcache.put(key, value);
+      return key.getSize() + (value == null ? 0 : value.length) -
+          (oldValue == null ? 0 : oldValue.length);
     } finally {
       this.lock.readLock().unlock();
     }

@@ -504,7 +504,7 @@ public class HRegion implements HConstants {
   long getMinSequenceId() {
     return this.minSequenceId;
   }
-
+  
   /** @return a HRegionInfo object for this region */
   public HRegionInfo getRegionInfo() {
     return this.regionInfo;
@@ -1002,6 +1002,9 @@ public class HRegion implements HConstants {
     // to do this for a moment.  Its quick.  The subsequent sequence id that
     // goes into the HLog after we've flushed all these snapshots also goes
     // into the info file that sits beside the flushed files.
+    // We also set the memcache size to zero here before we allow updates
+    // again so its value will represent the size of the updates received
+    // during the flush
     long sequenceId = -1L;
     this.updatesLock.writeLock().lock();
     try {
@@ -1009,6 +1012,7 @@ public class HRegion implements HConstants {
         s.snapshot();
       }
       sequenceId = log.startCacheFlush();
+      this.memcacheSize.set(0);
     } finally {
       this.updatesLock.writeLock().unlock();
     }
@@ -1017,20 +1021,13 @@ public class HRegion implements HConstants {
     // restart so hlog content can be replayed and put back into the memcache.
     // Otherwise, the snapshot content while backed up in the hlog, it will not
     // be part of the current running servers state.
+    long flushed = 0;
     try {
       // A.  Flush memcache to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
       for (HStore hstore: stores.values()) {
-        long flushed = hstore.flushCache(sequenceId);
-        // Subtract amount flushed.
-        long size = this.memcacheSize.addAndGet(-flushed);
-        if (size < 0) {
-           if (LOG.isDebugEnabled()) {
-             LOG.warn("Memcache size went negative " + size + "; resetting");
-           }
-           this.memcacheSize.set(0);
-        }
+        flushed += hstore.flushCache(sequenceId);
       }
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
@@ -1068,7 +1065,7 @@ public class HRegion implements HConstants {
         " in " +
           (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
           sequenceId + ", " +
-          StringUtils.humanReadableInt(this.memcacheSize.get()));
+          StringUtils.humanReadableInt(flushed));
       if (!regionInfo.isMetaRegion()) {
         this.historian.addRegionFlush(regionInfo, timeTaken);
       }
@@ -1374,7 +1371,7 @@ public class HRegion implements HConstants {
    */
   private synchronized void checkResources() {
     boolean blocked = false;
-    
+
     while (this.memcacheSize.get() >= this.blockingMemcacheSize) {
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
@@ -1538,9 +1535,8 @@ public class HRegion implements HConstants {
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
-        byte[] val = e.getValue();
-        size = this.memcacheSize.addAndGet(getEntrySize(key, val));
-        getStore(key.getColumn()).add(key, val);
+        size = this.memcacheSize.addAndGet(
+            getStore(key.getColumn()).add(key, e.getValue()));
       }
       flush = this.flushListener != null && !this.flushRequested &&
         size > this.memcacheFlushSize;
@@ -1578,19 +1574,6 @@ public class HRegion implements HConstants {
     return this.stores.get(HStoreKey.getFamilyMapKey(column)); 
   }
   
-  /*
-   * Calculate size of passed key/value pair.
-   * Used here when we update region to figure what to add to this.memcacheSize
-   * Also used in Store when flushing calculating size of flush.  Both need to
-   * use same method making size calculation.
-   * @param key
-   * @param value
-   * @return Size of the passed key + value
-   */
-  static long getEntrySize(final HStoreKey key, byte [] value) {
-    return key.getSize() + (value == null ? 0 : value.length);
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // Support code
   //////////////////////////////////////////////////////////////////////////////
