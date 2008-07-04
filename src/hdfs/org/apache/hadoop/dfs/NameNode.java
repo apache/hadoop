@@ -286,6 +286,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
             null, masked),
         clientName, clientMachine, overwrite, replication, blockSize);
     myMetrics.numFilesCreated.inc();
+    myMetrics.numCreateFileOps.inc();
   }
 
   /** Coming in a future release.... */
@@ -326,7 +327,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                String clientName) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
-    return namesystem.getAdditionalBlock(src, clientName);
+    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, clientName);
+    if (locatedBlock != null)
+      myMetrics.numAddBlockOps.inc();
+    return locatedBlock;
   }
 
   /**
@@ -418,7 +422,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
     }
-    return namesystem.delete(src, recursive);
+    boolean ret = namesystem.delete(src, recursive);
+    if (ret) 
+      myMetrics.numDeleteFileOps.inc();
+    return ret;
   }
 
   /**
@@ -456,7 +463,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public DFSFileInfo[] getListing(String src) throws IOException {
     DFSFileInfo[] files = namesystem.getListing(src);
     if (files != null) {
-      myMetrics.numFilesListed.inc(files.length);
+      myMetrics.numGetListingOps.inc();
     }
     return files;
   }
