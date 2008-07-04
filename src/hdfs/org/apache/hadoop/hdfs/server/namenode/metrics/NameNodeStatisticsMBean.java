@@ -156,6 +156,32 @@ public interface NameNodeStatisticsMBean {
   /**
    *   Number of files listed in the last interval
    * @return number of operations
+   * @deprecated Use getNumGetListingOps() instead
    */
+  @Deprecated
   int getNumFilesListed();
+
+  /**
+   *   Number of files listed in the last interval
+   * @return number of operations
+   */
+  int getNumGetListingOps();
+
+  /**
+   *   Number of file creation operations in the last interval
+   * @return number of file creation operations
+   */
+  int getNumCreateFileOps();
+
+  /**
+   *   Number of file deletion operations in the last interval
+   * @return number of file deletion operations
+   */
+  int getNumDeleteFileOps();
+
+  /**
+   *   Number of add block operations in the last interval
+   * @return number of add block operations
+   */
+  int getNumAddBlockOps();
 }

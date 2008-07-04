@@ -49,9 +49,15 @@ public class NameNodeMetrics implements Updater {
     public MetricsTimeVaryingInt numFilesCreated = new MetricsTimeVaryingInt("FilesCreated");
     public MetricsTimeVaryingInt numGetBlockLocations = new MetricsTimeVaryingInt("GetBlockLocations");
     public MetricsTimeVaryingInt numFilesRenamed = new MetricsTimeVaryingInt("FilesRenamed");
-    public MetricsTimeVaryingInt numFilesListed = new MetricsTimeVaryingInt("FilesListed");
+    public MetricsTimeVaryingInt numGetListingOps = 
+                                   new MetricsTimeVaryingInt("GetListingOps");
+    public MetricsTimeVaryingInt numCreateFileOps = 
+                                   new MetricsTimeVaryingInt("CreateFileOps");
+    public MetricsTimeVaryingInt numDeleteFileOps = 
+                                   new MetricsTimeVaryingInt("DeleteFileOps");
+    public MetricsTimeVaryingInt numAddBlockOps = 
+                                   new MetricsTimeVaryingInt("AddBlockOps");
 
-    
     public MetricsTimeVaryingRate transactions = new MetricsTimeVaryingRate("Transactions");
     public MetricsTimeVaryingRate syncs = new MetricsTimeVaryingRate("Syncs");
     public MetricsTimeVaryingRate blockReport = new MetricsTimeVaryingRate("blockReport");
@@ -95,8 +101,10 @@ public class NameNodeMetrics implements Updater {
         numFilesCreated.pushMetric(metricsRecord);
         numGetBlockLocations.pushMetric(metricsRecord);
         numFilesRenamed.pushMetric(metricsRecord);
-        numFilesListed.pushMetric(metricsRecord);
-
+        numGetListingOps.pushMetric(metricsRecord);
+        numCreateFileOps.pushMetric(metricsRecord);
+        numDeleteFileOps.pushMetric(metricsRecord);
+        numAddBlockOps.pushMetric(metricsRecord);
 
         transactions.pushMetric(metricsRecord);
         syncs.pushMetric(metricsRecord);

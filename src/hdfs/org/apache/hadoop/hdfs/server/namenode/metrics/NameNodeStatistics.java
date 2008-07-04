@@ -163,11 +163,40 @@ public class NameNodeStatistics implements NameNodeStatisticsMBean {
     return myMetrics.numFilesCreated.getPreviousIntervalValue();
   }
 
+  /** 
+   *@deprecated call getNumGetListingOps() instead
+   */
+  @Deprecated
+  public int getNumFilesListed() {
+    return getNumGetListingOps();
+  }
+
   /**
    * @inheritDoc
    */
-  public int getNumFilesListed() {
-    return myMetrics.numFilesListed.getPreviousIntervalValue();
+  public int getNumGetListingOps() {
+    return myMetrics.numGetListingOps.getPreviousIntervalValue();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public int getNumCreateFileOps() {
+    return myMetrics.numCreateFileOps.getPreviousIntervalValue();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public int getNumDeleteFileOps() {
+    return myMetrics.numDeleteFileOps.getPreviousIntervalValue();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public int getNumAddBlockOps() {
+    return myMetrics.numAddBlockOps.getPreviousIntervalValue();
   }
 
   /** @inheritDoc */

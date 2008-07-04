@@ -751,6 +751,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3678. Avoid spurious exceptions logged at DataNode when clients
     read from DFS. (rangadi)
 
+    HADOOP-3683. Fix dfs metrics to count file listings rather than files
+    listed. (lohit vijayarenu via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
