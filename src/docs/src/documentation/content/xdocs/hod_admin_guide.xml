@@ -196,7 +196,7 @@ in the HOD Configuration Guide.</p>
 
   <ul>
    <li>${JAVA_HOME}: Location of Java for Hadoop. Hadoop supports Sun JDK
-    1.5.x and above.</li>
+    1.6.x and above.</li>
    <li>${CLUSTER_NAME}: Name of the cluster which is specified in the
     'node property' as mentioned in resource manager configuration.</li>
    <li>${HADOOP_HOME}: Location of Hadoop installation on the compute and

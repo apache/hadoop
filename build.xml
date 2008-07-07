@@ -108,7 +108,7 @@
   <property name="src.webapps" value="${basedir}/src/webapps"/>
 
   <property name="javadoc.link.java"
-	    value="http://java.sun.com/j2se/1.5/docs/api/"/>
+	    value="http://java.sun.com/javase/6/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.*"/>
 
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
@@ -116,7 +116,7 @@
   <property name="javac.debug" value="on"/>
   <property name="javac.optimize" value="on"/>
   <property name="javac.deprecation" value="off"/>
-  <property name="javac.version" value="1.5"/>
+  <property name="javac.version" value="1.6"/>
   <property name="javac.args" value=""/>
   <property name="javac.args.warnings" value="-Xlint:unchecked"/>
 
@@ -758,7 +758,10 @@
   <!-- ================================================================== -->
   
   <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
-    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" />
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
+	  failonerror="true">
+      <env key="JAVA_HOME" value="${java5.home}"/>
+    </exec>
     <copy todir="${docs.dir}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
@@ -767,8 +770,12 @@
     <antcall target="changes-to-html"/>
   </target>
 
-  <target name="forrest.check" unless="forrest.home">
+  <target name="forrest.check" unless="forrest.home" depends="java5.check">
     <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+  </target>
+
+  <target name="java5.check" unless="java5.home">
+    <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
   </target>
 	
   <target name="javadoc" description="Generate javadoc">
@@ -1249,6 +1256,7 @@
     <arg value="${findbugs.home}"/>
     <arg value="${forrest.home}"/>
     <arg value="${basedir}"/>
+    <arg value="${java5.home}"/>
   </exec>
 </target>
 
@@ -1271,6 +1279,7 @@
     <arg value="${basedir}"/>
     <arg value="${trigger.url}"/>
     <arg value="${jira.passwd}"/>
+    <arg value="${java5.home}"/>
   </exec>
 </target>
 	

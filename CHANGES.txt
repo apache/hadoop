@@ -27,6 +27,8 @@ Trunk (unreleased changes)
     etc. DistributedFileSystem and DFSClient have moved and are now 
     considered package private. (Sanjay Radia via omalley)
 
+    HADOOP-2325.  Require Java 6. (cutting)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
