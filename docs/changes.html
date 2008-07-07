@@ -187,7 +187,7 @@ in hadoop user guide.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(45)
+</a>&nbsp;&nbsp;&nbsp;(46)
     <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -278,6 +278,7 @@ via the DistributedCache.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3606">HADOOP-3606</a>. Updates the Streaming doc.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3532">HADOOP-3532</a>. Add jdiff reports to the build scripts.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3100">HADOOP-3100</a>. Develop tests to test the DFS command line interface.<br />(mukund)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3688">HADOOP-3688</a>. Fix up HDFS docs.<br />(Robert Chansler via hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -565,7 +566,7 @@ therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(4)
+</a>&nbsp;&nbsp;&nbsp;(5)
     <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1979">HADOOP-1979</a>. Speed up fsck by adding a buffered stream.<br />(Lohit
 Vijaya Renu via omalley)</li>
@@ -574,6 +575,8 @@ network location is not resolved.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3571">HADOOP-3571</a>. Fix bug in block removal used in lease recovery.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3645">HADOOP-3645</a>. MetricsTimeVaryingRate returns wrong value for
 metric_avg_time.<br />(Lohit Vijayarenu via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3633">HADOOP-3633</a>. Correct exception handling in DataXceiveServer, and throttle
+the number of xceiver threads in a data-node.<br />(shv)</li>
     </ol>
   </li>
 </ul>
