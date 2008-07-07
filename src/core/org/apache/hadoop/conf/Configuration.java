@@ -72,8 +72,8 @@ import org.w3c.dom.Text;
  * <code>Path</code>, then the local filesystem is examined directly, without 
  * referring to the classpath.
  *
- * <p>Hadoop by default specifies two resources, loaded in-order from the
- * classpath: <ol>
+ * <p>Unless explicitly turned off, Hadoop by default specifies two 
+ * resources, loaded in-order from the classpath: <ol>
  * <li><tt><a href="{@docRoot}/../hadoop-default.html">hadoop-default.xml</a>
  * </tt>: Read-only defaults for hadoop.</li>
  * <li><tt>hadoop-site.xml</tt>: Site-specific configuration for a given hadoop
@@ -153,13 +153,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   
   /** A new configuration. */
   public Configuration() {
+    this(true);
+  }
+
+  /** A new configuration where the behavior of reading from the default 
+   * resources can be turned off.
+   * 
+   * If the parameter {@code loadDefaults} is false, the new instance
+   * will not load resources from the default files. 
+   * @param loadDefaults specifies whether to load from the default files
+   */
+  public Configuration(boolean loadDefaults) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(StringUtils.stringifyException(new IOException("config()")));
     }
-    resources.add("hadoop-default.xml");
-    resources.add("hadoop-site.xml");
+    if (loadDefaults) {
+      resources.add("hadoop-default.xml");
+      resources.add("hadoop-site.xml");
+    }
   }
-
+  
   /** 
    * A new configuration with the same settings cloned from another.
    * 
@@ -189,7 +202,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    *             with that name.
    */
   public void addResource(String name) {
-    addResource(resources, name);
+    addResourceObject(name);
   }
 
   /**
@@ -203,7 +216,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    *            the classpath.
    */
   public void addResource(URL url) {
-    addResource(resources, url);
+    addResourceObject(url);
   }
 
   /**
@@ -217,15 +230,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    *             the classpath.
    */
   public void addResource(Path file) {
-    addResource(resources, file);
+    addResourceObject(file);
   }
 
-  private synchronized void addResource(ArrayList<Object> resources,
-                                        Object resource) {
-    
-    resources.add(resource);                      // add to resources
+  /**
+   * Reload configuration from previously added resources.
+   *
+   * This method will clear all the configuration read from the added 
+   * resources, and final parameters. This will make the resources to 
+   * be read again before accessing the values. Values that are added
+   * via set methods will overlay values read from the resources.
+   */
+  public synchronized void reloadConfiguration() {
     properties = null;                            // trigger reload
     finalParameters.clear();                      // clear site-limits
+  }
+  
+  private synchronized void addResourceObject(Object resource) {
+    resources.add(resource);                      // add to resources
+    reloadConfiguration();
   }
   
   private static Pattern varPat = Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");

@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+
+<!-- This is the configuration file for the resource manager in Hadoop. -->
+<!-- You can configure various parameters related to scheduling, such as -->
+<!-- queues and queue properties here. -->
+<!-- The properties for a queue follow a naming convention,such as, -->
+<!-- hadoop.rm.queue.queue-name.property-name. -->
+
+<configuration>
+
+  <property>
+    <name>hadoop.rm.queue.names</name>
+    <value>default</value>
+    <description>Comma separated list of queue names that are configured
+      for this installation. Properties for a queue in this list will be 
+      listed as hadoop.rm.queue.queue-name.property-name.</description>
+  </property>
+  
+  <property>
+    <name>hadoop.rm.queue.default.guaranteed-capacity-maps</name>
+    <value></value>
+    <description>Guaranteed number of maps that will be available 
+      for jobs in this queue.
+    </description>    
+  </property>
+  
+  <property>
+    <name>hadoop.rm.queue.default.guaranteed-capacity-reduces</name>
+    <value></value>
+    <description>Guaranteed number of reduces that will be available 
+      for jobs in this queue.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.reclaim-time-limit</name>
+    <value>0</value>
+    <description>The amount of time in seconds before which 
+      resources distributed to other queues will be reclaimed.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.allowed-users</name>
+    <value></value>
+    <description>Comma separated list of users who can submit jobs 
+      to this queue. If empty, it means there are no ACLs 
+      configured.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.denied-users</name>
+    <value></value>
+    <description>Comma separated list of users who cannot submit 
+      jobs to this queue. If empty, it means there are no ACLs 
+      configured.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.allowed-users-override</name>
+    <value>false</value>
+    <description>If true, specifies that users in the allowed 
+      list will be able to submit, even if there names are in 
+      the denied list.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.supports-priority</name>
+    <value>true</value>
+    <description>If true, priorities of jobs will be taken into 
+      account in scheduling decisions.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.rm.queue.default.minimum-user-limit-percent</name>
+    <value>100</value>
+    <description>The minimum percentage of the cluster which can 
+      be utilized by a single user.
+    </description>
+  </property>
+  
+</configuration>

@@ -37,6 +37,12 @@ Trunk (unreleased changes)
       stream.reduce.output.field.separator
     All of them default to "\t". (Zheng Shao via omalley)
 
+    HADOOP-3479. Defines the configuration file for the resource manager in 
+    Hadoop. You can configure various parameters related to scheduling, such 
+    as queues and queue properties here. The properties for a queue follow a
+    naming convention,such as, hadoop.rm.queue.queue-name.property-name.
+    (Hemanth Yamijala via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3577. Tools to inject blocks into name node and simulated

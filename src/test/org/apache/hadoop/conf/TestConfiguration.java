@@ -292,7 +292,48 @@ public class TestConfiguration extends TestCase {
     assertEquals(-20, conf.getInt("test.int3", 0));
     assertEquals(-20, conf.getLong("test.int3", 0));
   }
-	  
+	
+  public void testReload() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.key1", "final-value1", true);
+    appendProperty("test.key2", "value2");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("test.key1", "value1");
+    appendProperty("test.key3", "value3");
+    endConfig();
+    Path fileResource1 = new Path(CONFIG2);
+    conf.addResource(fileResource1);
+    
+    // add a few values via set.
+    conf.set("test.key3", "value4");
+    conf.set("test.key4", "value5");
+    
+    assertEquals("final-value1", conf.get("test.key1"));
+    assertEquals("value2", conf.get("test.key2"));
+    assertEquals("value4", conf.get("test.key3"));
+    assertEquals("value5", conf.get("test.key4"));
+    
+    // change values in the test file...
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.key1", "final-value1");
+    appendProperty("test.key3", "final-value3", true);
+    endConfig();
+    
+    conf.reloadConfiguration();
+    assertEquals("value1", conf.get("test.key1"));
+    // overlayed property overrides.
+    assertEquals("value4", conf.get("test.key3"));
+    assertEquals(null, conf.get("test.key2"));
+    assertEquals("value5", conf.get("test.key4"));
+  }
+  
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
