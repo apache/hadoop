@@ -817,6 +817,9 @@ Release 0.17.1 - Unreleased
     HADOOP-3645. MetricsTimeVaryingRate returns wrong value for
     metric_avg_time. (Lohit Vijayarenu via hairong)
 
+    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
+    the number of xceiver threads in a data-node. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
