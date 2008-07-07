@@ -764,6 +764,10 @@ Release 0.18.0 - Unreleased
     HADOOP-3683. Fix dfs metrics to count file listings rather than files
     listed. (lohit vijayarenu via cdouglas)
 
+    HADOOP-3597. Fix SortValidator to use filesystems other than the default as
+    input. Validation job still runs on default fs.
+    (Jothi Padmanabhan via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
