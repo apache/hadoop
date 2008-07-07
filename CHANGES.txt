@@ -168,6 +168,7 @@ Trunk (unreleased changes)
                and HConnectionManager (Jean-Daniel Cryans via Stack)
    HBASE-703   Invalid regions listed by regionserver.jsp (Izaak Rubin via Stack)
    HBASE-674   Memcache size unreliable
+   HBASE-726   Unit tests won't run because of a typo (Sebastien Rainville via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

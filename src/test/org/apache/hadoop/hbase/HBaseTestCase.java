@@ -112,7 +112,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     localfs =
-      (conf.get("fs.default.name", "file:///").compareTo("file::///") == 0);
+      (conf.get("fs.default.name", "file:///").compareTo("file:///") == 0);
 
     if (fs == null) {
       this.fs = FileSystem.get(conf);
