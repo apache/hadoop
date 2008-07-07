@@ -41,6 +41,9 @@ Release 0.17.1 - 2008-06-23
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
 
+    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
+    the number of xceiver threads in a data-node. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
