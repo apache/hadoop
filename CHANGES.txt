@@ -394,6 +394,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3100. Develop tests to test the DFS command line interface. (mukund)
 
+    HADOOP-3688. Fix up HDFS docs. (Robert Chansler via hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
