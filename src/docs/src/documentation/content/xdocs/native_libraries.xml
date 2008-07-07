@@ -29,10 +29,10 @@
       <title>Purpose</title>
       
       <p>Hadoop has native implementations of certain components for reasons of 
-      both performace &amp; non-availability of Java implementations. These 
+      both performance and non-availability of Java implementations. These 
       components are available in a single, dynamically-linked, native library. 
       On the *nix platform it is <em>libhadoop.so</em>. This document describes 
-      the usage &amp; details on how to build the native libraries.</p>
+      the usage and details on how to build the native libraries.</p>
     </section>
     
     <section>
@@ -68,7 +68,7 @@
           <a href="#Building+Native+Hadoop+Libraries">build</a> them yourself.
         </li>
         <li>
-          Ensure you have either or both of <strong>&gt;zlib-1.2</strong> and 
+          Make sure you have either or both of <strong>&gt;zlib-1.2</strong> and 
           <strong>&gt;lzo2.0</strong> packages for your platform installed; 
           depending on your needs.
         </li>

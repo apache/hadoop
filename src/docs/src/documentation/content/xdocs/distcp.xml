@@ -29,10 +29,10 @@
       <title>Overview</title>
 
       <p>DistCp (distributed copy) is a tool used for large inter/intra-cluster
-      copying. It uses map/reduce to effect its distribution, error
-      handling/recovery, and reporting. It expands a list of files and
+      copying. It uses Map/Reduce to effect its distribution, error
+      handling and recovery, and reporting. It expands a list of files and
       directories into input to map tasks, each of which will copy a partition
-      of the files specified in the source list. Its map/reduce pedigree has
+      of the files specified in the source list. Its Map/Reduce pedigree has
       endowed it with some quirks in both its semantics and execution. The
       purpose of this document is to offer guidance for common tasks and to
       elucidate its model.</p>
@@ -85,14 +85,14 @@
         attempt (see <a href="#etc">Appendix</a>).</p>
 
         <p>It is important that each TaskTracker can reach and communicate with
-        both the source and destination filesystems. For hdfs, both the source
+        both the source and destination file systems. For HDFS, both the source
         and destination must be running the same version of the protocol or use
         a backwards-compatible protocol (see <a href="#cpver">Copying Between
         Versions</a>).</p>
 
         <p>After a copy, it is recommended that one generates and cross-checks
         a listing of the source and destination to verify that the copy was
-        truly successful. Since DistCp employs both map/reduce and the
+        truly successful. Since DistCp employs both Map/Reduce and the
         FileSystem API, issues in or between any of the three could adversely
         and silently affect the copy. Some have had success running with
         <code>-update</code> enabled to perform a second pass, but users should
@@ -253,7 +253,7 @@
           simultaneous copies nor the overall throughput.</p>
 
           <p>If <code>-m</code> is not specified, DistCp will attempt to
-          schedule work for <code>min(total_bytes / bytes.per.map, 20 *
+          schedule work for <code>min (total_bytes / bytes.per.map, 20 *
           num_task_trackers)</code> where <code>bytes.per.map</code> defaults
           to 256MB.</p>
 
