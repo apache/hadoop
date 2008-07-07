@@ -6,7 +6,7 @@
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title>
-      Hadoop DFS Name Space Quotas Administrator Guide
+      Name Space Quotas Administrator Guide
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -190,20 +190,20 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 <h1>
-      Hadoop DFS Name Space Quotas Administrator Guide
+      Name Space Quotas Administrator Guide
     </h1>
       
 <p>
-      HDFS allows the administrator to set quotas on individual directories. 
+      The Hadoop Distributed File System (HDFS) allows the administrator to set quotas on individual directories. 
       Newly created directories have no associated quota. 
-      The largest quota is Long.Max_Value. A quota of one forces a directory 
+      The largest quota is <span class="codefrag">Long.Max_Value</span>. A quota of one forces a directory 
       to remain empty.
       </p>
 
       
 <p>
       The directory quota is a hard limit on the number of names in the tree 
-      rooted at that directory. File/directory creations fault if the quota 
+      rooted at that directory. File and directory creations fault if the quota 
       would be exceeded. Quotas stick to renamed directories; the rename 
       operation faults if operation would result in a quota violation. 
       The attempt to set a quota faults if the directory would be in violation 
@@ -213,9 +213,9 @@ document.write("Last Published: " + document.lastModified);
       
 <p>
       Quotas are persistent with the fsimage. When starting, if the fsimage 
-      is immediately in violation of aquota (perhaps the fsimage was 
-      surreptitiously modified), startup operation fails with an error report. 
-      Setting/removing a quota creates a journal entry.
+      is immediately in violation of a quota (perhaps the fsimage was 
+      surreptitiously modified), the startup operation fails with an error report. 
+      Setting or removing a quota creates a journal entry.
       </p> 
 
       
@@ -229,11 +229,11 @@ document.write("Last Published: " + document.lastModified);
       
 <li>
       
-<strong><em>dfsadmin -setquota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</em></strong> 
+<span class="codefrag">dfsadmin -setquota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</span> 
       
 <br>
-      Set the quota <em></em> for each directory. Best effort for each directory,
-      with faults reported if <em>N</em> is not a positive long integer, 
+      Set the quota to be <span class="codefrag">N</span> for each directory. Best effort for each directory,
+      with faults reported if <span class="codefrag">N</span> is not a positive long integer, 
       the directory does not exist or it is a file, or the directory would 
       immediately exceed the new quota.
       </li>
@@ -241,7 +241,7 @@ document.write("Last Published: " + document.lastModified);
       
 <li>
       
-<strong><em>dfsadmin -clrquota &lt;directory&gt;...&lt;director&gt;</em></strong>
+<span class="codefrag">dfsadmin -clrquota &lt;directory&gt;...&lt;director&gt;</span>
 <br> 
       Remove any quota for each directory. Best effort for each directory, 
       with faults reported if the directory does not exist or it is a file. 
@@ -251,11 +251,11 @@ document.write("Last Published: " + document.lastModified);
       
 <li>
       
-<strong><em>fs -count -q &lt;directory&gt;...&lt;directory&gt;</em></strong>
+<span class="codefrag">fs -count -q &lt;directory&gt;...&lt;directory&gt;</span>
 <br>
-      With the <em>-q</em> option, also report the quota value set for each 
+      With the <span class="codefrag">-q</span> option, also report the quota value set for each 
       directory, and the available quota remaining. If the directory does not have 
-      a quota set, the reported values are <em>none</em> and <em>inf</em>.
+      a quota set, the reported values are <span class="codefrag">none</span> and <span class="codefrag">inf</span>.
       </li>
       
 </ul>

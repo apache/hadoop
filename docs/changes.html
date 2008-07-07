@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(3)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -71,10 +71,14 @@ compatible combiner semantics for 0.18.<br />(cdouglas via omalley)</li>
   setMapOutputCompressionType(CompressionType style)
   setOutputPath(Path)<br />(Amareshwari Sriramadasu via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3652">HADOOP-3652</a>. Remove deprecated class OutputFormatBase.<br />(Amareshwari Sriramadasu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2885">HADOOP-2885</a>. Break the hadoop.dfs package into separate packages under
+hadoop.hdfs that reflect whether they are client, server, protocol,
+etc. DistributedFileSystem and DFSClient have moved and are now
+considered package private.<br />(Sanjay Radia via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3341">HADOOP-3341</a>. Allow streaming jobs to specify the field separator for map
 and reduce input and output. The new configuration values are:
@@ -83,6 +87,10 @@ and reduce input and output. The new configuration values are:
   stream.reduce.input.field.separator
   stream.reduce.output.field.separator
 All of them default to "\t".<br />(Zheng Shao via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3479">HADOOP-3479</a>. Defines the configuration file for the resource manager in
+Hadoop. You can configure various parameters related to scheduling, such
+as queues and queue properties here. The properties for a queue follow a
+naming convention,such as, hadoop.rm.queue.queue-name.property-name.<br />(Hemanth Yamijala via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
@@ -121,7 +129,7 @@ omalley)</li>
 </a></h2>
 <ul id="release_0.18.0_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(21)
+</a>&nbsp;&nbsp;&nbsp;(22)
     <ol id="release_0.18.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a>.  The default options to fsck skips checking files
 that are being written to. The output of fsck is incompatible
@@ -188,6 +196,11 @@ of the corrupted block map.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3512">HADOOP-3512</a>. Separate out the tools into a tools jar.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3598">HADOOP-3598</a>. Ensure that temporary task-output directories are not created
 if they are not necessary e.g. for Maps with no side-effect files.<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3665">HADOOP-3665</a>. Modify WritableComparator so that it only creates instances
+of the keytype if the type does not define a WritableComparator. Calling
+the superclass compare will throw a NullPointerException. Also define
+a RawComparator for NullWritable and permit it to be written as a key
+to SequenceFiles.<br />(cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._new_features_')">  NEW FEATURES
@@ -363,7 +376,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(109)
+</a>&nbsp;&nbsp;&nbsp;(110)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -580,6 +593,8 @@ retrieving the address of direct buffers from compression code by obtaining
 a lock during this call.<br />(Arun C Murthy via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3678">HADOOP-3678</a>. Avoid spurious exceptions logged at DataNode when clients
 read from DFS.<br />(rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3683">HADOOP-3683</a>. Fix dfs metrics to count file listings rather than files
+listed.<br />(lohit vijayarenu via cdouglas)</li>
     </ol>
   </li>
 </ul>
