@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(4)
+</a>&nbsp;&nbsp;&nbsp;(5)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -75,6 +75,7 @@ compatible combiner semantics for 0.18.<br />(cdouglas via omalley)</li>
 hadoop.hdfs that reflect whether they are client, server, protocol,
 etc. DistributedFileSystem and DFSClient have moved and are now
 considered package private.<br />(Sanjay Radia via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2325">HADOOP-2325</a>.  Require Java 6.<br />(cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
@@ -259,7 +260,7 @@ in hadoop user guide.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(45)
+</a>&nbsp;&nbsp;&nbsp;(46)
     <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -350,6 +351,7 @@ via the DistributedCache.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3606">HADOOP-3606</a>. Updates the Streaming doc.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3532">HADOOP-3532</a>. Add jdiff reports to the build scripts.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3100">HADOOP-3100</a>. Develop tests to test the DFS command line interface.<br />(mukund)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3688">HADOOP-3688</a>. Fix up HDFS docs.<br />(Robert Chansler via hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -376,7 +378,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(110)
+</a>&nbsp;&nbsp;&nbsp;(111)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -595,6 +597,8 @@ a lock during this call.<br />(Arun C Murthy via cdouglas)</li>
 read from DFS.<br />(rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3683">HADOOP-3683</a>. Fix dfs metrics to count file listings rather than files
 listed.<br />(lohit vijayarenu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3597">HADOOP-3597</a>. Fix SortValidator to use filesystems other than the default as
+input. Validation job still runs on default fs.<br />(Jothi Padmanabhan via cdouglas)</li>
     </ol>
   </li>
 </ul>
@@ -620,7 +624,7 @@ therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(13)
+</a>&nbsp;&nbsp;&nbsp;(14)
     <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2159">HADOOP-2159</a> Namenode stuck in safemode. The counter blockSafe should
 not be decremented for invalid blocks.<br />(hairong)</li>
@@ -648,6 +652,8 @@ network location is not resolved.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3571">HADOOP-3571</a>. Fix bug in block removal used in lease recovery.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3645">HADOOP-3645</a>. MetricsTimeVaryingRate returns wrong value for
 metric_avg_time.<br />(Lohit Vijayarenu via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3633">HADOOP-3633</a>. Correct exception handling in DataXceiveServer, and throttle
+the number of xceiver threads in a data-node.<br />(shv)</li>
     </ol>
   </li>
 </ul>
