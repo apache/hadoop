@@ -831,6 +831,8 @@ Release 0.17.1 - Unreleased
     HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
     the number of xceiver threads in a data-node. (shv)
 
+    HADOOP-3002. HDFS should not remove blocks while in safemode. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
