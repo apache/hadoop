@@ -201,11 +201,6 @@ document.write("Last Published: " + document.lastModified);
 </li>
 <li>
 <a href="#Required+Software">Required Software</a>
-<ul class="minitoc">
-<li>
-<a href="#Additional+requirements+for+Windows">Additional requirements for Windows</a>
-</li>
-</ul>
 </li>
 <li>
 <a href="#Installing+Software">Installing Software</a>
@@ -245,12 +240,12 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1000D"></a><a name="Purpose"></a>
 <h2 class="h3">Purpose</h2>
 <div class="section">
-<p>The purpose of this document is to help users get a single-node Hadoop 
-      installation up and running very quickly so that users can get a flavour 
+<p>The purpose of this document is to help you get a single-node Hadoop 
+      installation up and running very quickly so that you can get a flavour 
       of the <a href="hdfs_design.html">Hadoop Distributed File System 
       (<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a> and 
-      the Map-Reduce framework i.e. perform simple operations on HDFS, run 
-      example/simple jobs etc.</p>
+      the Map/Reduce framework; that is, perform simple operations on HDFS and 
+      run example jobs.</p>
 </div>
     
     
@@ -262,18 +257,20 @@ document.write("Last Published: " + document.lastModified);
 <ul>
           
 <li>
+            GNU/Linux is supported as a development and production platform. 
             Hadoop has been demonstrated on GNU/Linux clusters with 2000 nodes.
           </li>
           
 <li>
             Win32 is supported as a <em>development platform</em>. Distributed 
-            operation has not been well tested on Win32, so this is not a 
-            <em>production platform</em>.
+            operation has not been well tested on Win32, so it is not 
+            supported as a <em>production platform</em>.
           </li>
         
 </ul>
 <a name="N1003B"></a><a name="Required+Software"></a>
 <h3 class="h4">Required Software</h3>
+<p>Required software for Linux and Windows include:</p>
 <ol>
           
 <li>
@@ -288,18 +285,17 @@ document.write("Last Published: " + document.lastModified);
           </li>
         
 </ol>
-<a name="N10053"></a><a name="Additional+requirements+for+Windows"></a>
-<h4>Additional requirements for Windows</h4>
+<p>Additional requirements for Windows include:</p>
 <ol>
-            
-<li>
-              
-<a href="http://www.cygwin.com/">Cygwin</a> - Required for shell 
-              support in addition to the required software above. 
-            </li>
           
+<li>
+            
+<a href="http://www.cygwin.com/">Cygwin</a> - Required for shell 
+            support in addition to the required software above. 
+          </li>
+        
 </ol>
-<a name="N10065"></a><a name="Installing+Software"></a>
+<a name="N10064"></a><a name="Installing+Software"></a>
 <h3 class="h4">Installing Software</h3>
 <p>If your cluster doesn't have the requisite software you will need to
         install it.</p>
@@ -322,7 +318,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10089"></a><a name="Download"></a>
+<a name="N10088"></a><a name="Download"></a>
 <h2 class="h3">Download</h2>
 <div class="section">
 <p>
@@ -333,7 +329,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10097"></a><a name="Prepare+to+Start+the+Hadoop+Cluster"></a>
+<a name="N10096"></a><a name="Prepare+to+Start+the+Hadoop+Cluster"></a>
 <h2 class="h3">Prepare to Start the Hadoop Cluster</h2>
 <div class="section">
 <p>
@@ -364,10 +360,10 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N100C2"></a><a name="Local"></a>
+<a name="N100C1"></a><a name="Local"></a>
 <h2 class="h3">Standalone Operation</h2>
 <div class="section">
-<p>By default, Hadoop is configured to run things in a non-distributed 
+<p>By default, Hadoop is configured to run in a non-distributed 
       mode, as a single Java process. This is useful for debugging.</p>
 <p>
         The following example copies the unpacked <span class="codefrag">conf</span> directory to 
@@ -392,12 +388,12 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N100E6"></a><a name="PseudoDistributed"></a>
+<a name="N100E5"></a><a name="PseudoDistributed"></a>
 <h2 class="h3">Pseudo-Distributed Operation</h2>
 <div class="section">
 <p>Hadoop can also be run on a single-node in a pseudo-distributed mode 
 	  where each Hadoop daemon runs in a separate Java process.</p>
-<a name="N100EF"></a><a name="Configuration"></a>
+<a name="N100EE"></a><a name="Configuration"></a>
 <h3 class="h4">Configuration</h3>
 <p>Use the following <span class="codefrag">conf/hadoop-site.xml</span>:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
@@ -463,7 +459,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N10153"></a><a name="Setup+passphraseless"></a>
+<a name="N10152"></a><a name="Setup+passphraseless"></a>
 <h3 class="h4">Setup passphraseless ssh</h3>
 <p>
           Now check that you can ssh to the localhost without a passphrase:<br>
@@ -481,7 +477,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">$ cat ~/.ssh/id_dsa.pub &gt;&gt; ~/.ssh/authorized_keys</span>
 		
 </p>
-<a name="N10170"></a><a name="Execution"></a>
+<a name="N1016F"></a><a name="Execution"></a>
 <h3 class="h4">Execution</h3>
 <p>
           Format a new distributed-filesystem:<br>
@@ -490,7 +486,7 @@ document.write("Last Published: " + document.lastModified);
         
 </p>
 <p>
-		  Start The hadoop daemons:<br>
+		  Start the hadoop daemons:<br>
           
 <span class="codefrag">$ bin/start-all.sh</span>
         
@@ -498,7 +494,7 @@ document.write("Last Published: " + document.lastModified);
 <p>The hadoop daemon log output is written to the 
         <span class="codefrag">${HADOOP_LOG_DIR}</span> directory (defaults to 
         <span class="codefrag">${HADOOP_HOME}/logs</span>).</p>
-<p>Browse the web-interface for the NameNode and the JobTracker, by
+<p>Browse the web interface for the NameNode and the JobTracker; by
         default they are available at:</p>
 <ul>
           
@@ -520,7 +516,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
           Copy the input files into the distributed filesystem:<br>
 		  
-<span class="codefrag">$ bin/hadoop dfs -put conf input</span>
+<span class="codefrag">$ bin/hadoop fs -put conf input</span>
 		
 </p>
 <p>
@@ -536,7 +532,7 @@ document.write("Last Published: " + document.lastModified);
           Copy the output files from the distributed filesystem to the local 
           filesytem and examine them:<br>
           
-<span class="codefrag">$ bin/hadoop dfs -get output output</span>
+<span class="codefrag">$ bin/hadoop fs -get output output</span>
 <br>
           
 <span class="codefrag">$ cat output/*</span>
@@ -546,7 +542,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
           View the output files on the distributed filesystem:<br>
           
-<span class="codefrag">$ bin/hadoop dfs -cat output/*</span>
+<span class="codefrag">$ bin/hadoop fs -cat output/*</span>
         
 </p>
 <p>
@@ -558,7 +554,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N101DD"></a><a name="FullyDistributed"></a>
+<a name="N101DC"></a><a name="FullyDistributed"></a>
 <h2 class="h3">Fully-Distributed Operation</h2>
 <div class="section">
 <p>Information on setting up fully-distributed, non-trivial clusters

@@ -448,7 +448,7 @@ document.write("Last Published: " + document.lastModified);
 		      
 <td colspan="1" rowspan="1">mapred.system.dir</td>
 		      <td colspan="1" rowspan="1">
-		        Path on the HDFS where where the Map-Reduce framework stores 
+		        Path on the HDFS where where the Map/Reduce framework stores 
 		        system files e.g. <span class="codefrag">/hadoop/mapred/system/</span>.
 		      </td>
 		      <td colspan="1" rowspan="1">
@@ -463,7 +463,7 @@ document.write("Last Published: " + document.lastModified);
 <td colspan="1" rowspan="1">mapred.local.dir</td>
 		      <td colspan="1" rowspan="1">
 		        Comma-separated list of paths on the local filesystem where 
-		        temporary Map-Reduce data is written.
+		        temporary Map/Reduce data is written.
 		      </td>
 		      <td colspan="1" rowspan="1">Multiple paths help spread disk i/o.</td>
 		    
@@ -473,7 +473,7 @@ document.write("Last Published: " + document.lastModified);
 		      
 <td colspan="1" rowspan="1">mapred.tasktracker.{map|reduce}.tasks.maximum</td>
 		      <td colspan="1" rowspan="1">
-		        The maximum number of map/reduce tasks, which are run 
+		        The maximum number of Map/Reduce tasks, which are run 
 		        simultaneously on a given <span class="codefrag">TaskTracker</span>, individually.
 		      </td>
 		      <td colspan="1" rowspan="1">
@@ -500,7 +500,7 @@ document.write("Last Published: " + document.lastModified);
 		      <td colspan="1" rowspan="1">List of permitted/excluded TaskTrackers.</td>
 		      <td colspan="1" rowspan="1">
 		        If necessary, use these files to control the list of allowable 
-		        tasktrackers.
+		        TaskTrackers.
 		      </td>
   		    
 </tr>
@@ -724,7 +724,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="N10398"></a><a name="Hadoop+Rack+Awareness"></a>
 <h2 class="h3">Hadoop Rack Awareness</h2>
 <div class="section">
-<p>The HDFS and the Map-Reduce components are rack-aware.</p>
+<p>The HDFS and the Map/Reduce components are rack-aware.</p>
 <p>The <span class="codefrag">NameNode</span> and the <span class="codefrag">JobTracker</span> obtains the
       <span class="codefrag">rack id</span> of the slaves in the cluster by invoking an API 
       <a href="api/org/apache/hadoop/net/DNSToSwitchMapping.html#resolve(java.util.List)">resolve</a> in an administrator configured
@@ -734,7 +734,7 @@ document.write("Last Published: " + document.lastModified);
       implementation of the same runs a script/command configured using 
       <span class="codefrag">topology.script.file.name</span>. If topology.script.file.name is
       not set, the rack id <span class="codefrag">/default-rack</span> is returned for any 
-      passed IP address. The additional configuration in the Map-Reduce
+      passed IP address. The additional configuration in the Map/Reduce
       part is <span class="codefrag">mapred.cache.task.levels</span> which determines the number
       of levels (in the network topology) of caches. So, for example, if it is
       the default value of 2, two levels of caches will be constructed - 
@@ -748,7 +748,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
-      Map-Reduce cluster.</p>
+      Map/Reduce cluster.</p>
 <p>
         Format a new distributed filesystem:<br>
         
@@ -793,7 +793,7 @@ document.write("Last Published: " + document.lastModified);
       <span class="codefrag">${HADOOP_CONF_DIR}/slaves</span> file on the <span class="codefrag">NameNode</span> 
       and stops the <span class="codefrag">DataNode</span> daemon on all the listed slaves.</p>
 <p>
-        Stop Map-Reduce with the following command, run on the designated
+        Stop Map/Reduce with the following command, run on the designated
         the designated <span class="codefrag">JobTracker</span>:<br>
         
 <span class="codefrag">$ bin/stop-mapred.sh</span>

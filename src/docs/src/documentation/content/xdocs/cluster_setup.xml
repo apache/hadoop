@@ -201,7 +201,7 @@
 		    <tr>
 		      <td>mapred.system.dir</td>
 		      <td>
-		        Path on the HDFS where where the Map-Reduce framework stores 
+		        Path on the HDFS where where the Map/Reduce framework stores 
 		        system files e.g. <code>/hadoop/mapred/system/</code>.
 		      </td>
 		      <td>
@@ -213,14 +213,14 @@
 		      <td>mapred.local.dir</td>
 		      <td>
 		        Comma-separated list of paths on the local filesystem where 
-		        temporary Map-Reduce data is written.
+		        temporary Map/Reduce data is written.
 		      </td>
 		      <td>Multiple paths help spread disk i/o.</td>
 		    </tr>
 		    <tr>
 		      <td>mapred.tasktracker.{map|reduce}.tasks.maximum</td>
 		      <td>
-		        The maximum number of map/reduce tasks, which are run 
+		        The maximum number of Map/Reduce tasks, which are run 
 		        simultaneously on a given <code>TaskTracker</code>, individually.
 		      </td>
 		      <td>
@@ -241,7 +241,7 @@
 		      <td>List of permitted/excluded TaskTrackers.</td>
 		      <td>
 		        If necessary, use these files to control the list of allowable 
-		        tasktrackers.
+		        TaskTrackers.
 		      </td>
   		    </tr>
 		  </table>
@@ -423,7 +423,7 @@
     
     <section>
       <title>Hadoop Rack Awareness</title>
-      <p>The HDFS and the Map-Reduce components are rack-aware.</p>
+      <p>The HDFS and the Map/Reduce components are rack-aware.</p>
       <p>The <code>NameNode</code> and the <code>JobTracker</code> obtains the
       <code>rack id</code> of the slaves in the cluster by invoking an API 
       <a href="ext:api/org/apache/hadoop/net/dnstoswitchmapping/resolve
@@ -434,7 +434,7 @@
       implementation of the same runs a script/command configured using 
       <code>topology.script.file.name</code>. If topology.script.file.name is
       not set, the rack id <code>/default-rack</code> is returned for any 
-      passed IP address. The additional configuration in the Map-Reduce
+      passed IP address. The additional configuration in the Map/Reduce
       part is <code>mapred.cache.task.levels</code> which determines the number
       of levels (in the network topology) of caches. So, for example, if it is
       the default value of 2, two levels of caches will be constructed - 
@@ -447,7 +447,7 @@
       <title>Hadoop Startup</title>
       
       <p>To start a Hadoop cluster you will need to start both the HDFS and 
-      Map-Reduce cluster.</p>
+      Map/Reduce cluster.</p>
 
       <p>
         Format a new distributed filesystem:<br/>
@@ -487,7 +487,7 @@
       and stops the <code>DataNode</code> daemon on all the listed slaves.</p>
       
       <p>
-        Stop Map-Reduce with the following command, run on the designated
+        Stop Map/Reduce with the following command, run on the designated
         the designated <code>JobTracker</code>:<br/>
         <code>$ bin/stop-mapred.sh</code><br/>
       </p>
