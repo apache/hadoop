@@ -3113,7 +3113,7 @@ public class DataNode extends Configured
   public Daemon recoverBlocks(final Block[] blocks, final DatanodeInfo[][] targets) {
     Daemon d = new Daemon(threadGroup, new Runnable() {
       public void run() {
-        LeaseManager.recoverBlocks(blocks, targets, namenode, getConf());
+        LeaseManager.recoverBlocks(blocks, targets, DataNode.this, namenode, getConf());
       }
     });
     d.start();
@@ -3151,7 +3151,7 @@ public class DataNode extends Configured
   public Block recoverBlock(Block block, DatanodeInfo[] targets
       ) throws IOException {
     LOG.info("Client invoking recoverBlock for block " + block);
-    return LeaseManager.recoverBlock(block, targets, namenode, 
+    return LeaseManager.recoverBlock(block, targets, this, namenode, 
                                      getConf(), false);
   }
 }

@@ -31,7 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
  * which it currently represents.
  * 
  */
-public class DatanodeID implements WritableComparable {
+public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
   public String name;      /// hostname:portNumber
@@ -158,11 +158,11 @@ public class DatanodeID implements WritableComparable {
     
   /** Comparable.
    * Basis of compare is the String name (host:portNumber) only.
-   * @param o
+   * @param that
    * @return as specified by Comparable.
    */
-  public int compareTo(Object o) {
-    return name.compareTo(((DatanodeID)o).getName());
+  public int compareTo(DatanodeID that) {
+    return name.compareTo(that.getName());
   }
 
   /////////////////////////////////////////////////

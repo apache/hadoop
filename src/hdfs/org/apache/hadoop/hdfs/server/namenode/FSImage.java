@@ -50,7 +50,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.CheckpointStates;
 import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
 import org.apache.hadoop.hdfs.protocol.FSConstants.NodeType;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -1258,35 +1258,8 @@ public class FSImage extends Storage {
    * DatanodeImage is used to store persistent information
    * about datanodes into the fsImage.
    */
-  static class DatanodeImage implements WritableComparable {
-    DatanodeDescriptor              node;
-
-    DatanodeImage() {
-      node = new DatanodeDescriptor();
-    }
-
-    DatanodeImage(DatanodeDescriptor from) {
-      node = from;
-    }
-
-    /** 
-     * Returns the underlying Datanode Descriptor
-     */
-    DatanodeDescriptor getDatanodeDescriptor() { 
-      return node; 
-    }
-
-    public int compareTo(Object o) {
-      return node.compareTo(o);
-    }
-
-    public boolean equals(Object o) {
-      return node.equals(o);
-    }
-
-    public int hashCode() {
-      return node.hashCode();
-    }
+  static class DatanodeImage implements Writable {
+    DatanodeDescriptor node = new DatanodeDescriptor();
 
     /////////////////////////////////////////////////
     // Writable

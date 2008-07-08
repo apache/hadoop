@@ -2183,10 +2183,12 @@ public class DFSClient implements FSConstants {
         // by stamping appropriate generation stamps.
         //
         Block newBlock = null;
-        ClientDatanodeProtocol datanodeRPC =  null;
+        ClientDatanodeProtocol primary =  null;
         try {
-          datanodeRPC = createClientDatanodeProtocolProxy(newnodes[0], conf);
-          newBlock = datanodeRPC.recoverBlock(block, newnodes);
+          // Pick the "least" datanode as the primary datanode to avoid deadlock.
+          primary = createClientDatanodeProtocolProxy(
+              Collections.min(Arrays.asList(newnodes)), conf);
+          newBlock = primary.recoverBlock(block, newnodes);
         } catch (IOException e) {
           recoveryErrorCount++;
           if (recoveryErrorCount > maxRecoveryErrorCount) {
@@ -2206,7 +2208,7 @@ public class DFSClient implements FSConstants {
                    " times. Will retry...");
           return true;          // sleep when we return from here
         } finally {
-          RPC.stopProxy(datanodeRPC);
+          RPC.stopProxy(primary);
         }
         recoveryErrorCount = 0; // block recovery successful
 
