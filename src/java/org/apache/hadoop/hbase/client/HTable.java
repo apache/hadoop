@@ -544,7 +544,7 @@ public class HTable {
    * Get selected columns for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.
+   * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
@@ -557,7 +557,7 @@ public class HTable {
    * Get selected columns for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.
+   * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
@@ -570,7 +570,7 @@ public class HTable {
    * Get selected columns for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.
+   * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
@@ -583,7 +583,7 @@ public class HTable {
    * Get selected columns for the specified row at a specified timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.   
+   * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
    * @throws IOException
@@ -598,7 +598,7 @@ public class HTable {
    * Get selected columns for the specified row at a specified timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.   
+   * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
    * @throws IOException
@@ -613,7 +613,7 @@ public class HTable {
    * Get selected columns for the specified row at a specified timestamp
    * 
    * @param row row key
-   * @param columns Array of column names you want to retrieve.   
+   * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
    * @throws IOException

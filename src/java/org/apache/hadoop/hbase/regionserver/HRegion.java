@@ -1160,6 +1160,17 @@ public class HRegion implements HConstants {
       for (HStore targetStore: stores.values()) {
         targetStore.getFull(key, columns, result);
       }
+      // Previous step won't fetch whole families: HBASE-631.
+      // For each column name that is just a column family, open the store
+      // related to it and fetch everything for that row. 
+      if (columns != null) {
+        for (byte[] bs : columns) {
+          if (HStoreKey.getFamilyDelimiterIndex(bs) == (bs.length - 1)) {
+            HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
+            store.getFull(key, null, result);
+          }
+        }
+      }
       return result;
     } finally {
       releaseRowLock(lid);

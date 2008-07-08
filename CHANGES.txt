@@ -261,6 +261,8 @@ Trunk (unreleased changes)
    HBASE-536   Remove MiniDFS startup from MiniHBaseCluster
    HBASE-521   Improve client scanner interface
    HBASE-562   Move Exceptions to subpackages (Jean-Daniel Cryans via Stack)
+   HBASE-631   HTable.getRow() for only a column family
+               (Jean-Daniel Cryans via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

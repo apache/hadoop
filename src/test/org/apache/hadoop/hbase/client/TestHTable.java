@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -148,8 +147,6 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     */
   public void testTableNotFoundExceptionWithATable() {
     try {
-      HColumnDescriptor column =
-        new HColumnDescriptor(COLUMN_FAMILY);
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor testTableADesc =
         new HTableDescriptor("table");
@@ -165,6 +162,52 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     } catch (IOException e) {
       e.printStackTrace();
       fail("Should have thrown a TableNotFoundException instead of a " +
+        e.getClass());
+    }
+  }
+  
+  public void testGetRow() {
+    HTable table = null;
+    try {
+      HColumnDescriptor column2 =
+        new HColumnDescriptor(Bytes.toBytes("info2:"));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor testTableADesc =
+        new HTableDescriptor(tableAname);
+      testTableADesc.addFamily(column);
+      testTableADesc.addFamily(column2);
+      admin.createTable(testTableADesc);
+      
+      table = new HTable(conf, tableAname);
+      BatchUpdate batchUpdate = new BatchUpdate(row);
+      
+      for(int i = 0; i < 5; i++)
+        batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
+      
+      table.commit(batchUpdate);
+      
+      RowResult result = null;
+      result = table.getRow(row,  new byte[][] {COLUMN_FAMILY});
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+      
+      result = table.getRow(row);
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put("info2:a", Bytes.toBytes("a"));
+      table.commit(batchUpdate);
+      
+      result = table.getRow(row, new byte[][] { COLUMN_FAMILY,
+          Bytes.toBytes("info2:a") });
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+      assertTrue(result.containsKey(Bytes.toBytes("info2:a")));
+   
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Should not have any exception " +
         e.getClass());
     }
   }
