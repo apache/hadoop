@@ -468,10 +468,16 @@ runCoreTests () {
 ###############################################################################
 ### Tests parts of contrib specific to the eclipse files
 runContribTestOnEclipseFiles () {
-  export ECLIPSE_DECLARED_JARS=$(sed -n 's@.*kind="lib".*path="\(.*jar\)".*@\1@p' < .eclipse.templates/.classpath |sort)
-  export PRESENT_JARS=$(find lib/ -name '*.jar' |sort)
+  export DECLARED_JARS=$(sed -n 's@.*kind="lib".*path="\(.*jar\)".*@\1@p' < .eclipse.templates/.classpath)
+  export PRESENT_JARS=$(find lib/ src/test/lib/ -name '*.jar' |sort)
+  # When run by Hudson, consider libs from ${SUPPORT_DIR} declared
+  if [[ ${HUDSON} == "true" ]]; then
+      DECLARED_JARS="${DECLARED_JARS} $(cd "${SUPPORT_DIR}"; find lib -name '*.jar')"
+  fi
+  DECLARED_JARS=$(sed 'y/ /\n/' <<< ${DECLARED_JARS} | sort)
   export ECLIPSE_DECLARED_SRC=$(sed -n 's@.*kind="src".*path="\(.*\)".*@\1@p' < .eclipse.templates/.classpath |sort)
-  if [ "${ECLIPSE_DECLARED_JARS}" != "${PRESENT_JARS}" ]; then
+
+  if [ "${DECLARED_JARS}" != "${PRESENT_JARS}" ]; then
     echo "Some jars are not declared in the Eclipse project."
     return 1
   fi

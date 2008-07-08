@@ -771,6 +771,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3693. Fix archives, distcp and native library documentation to
     conform to style guidelines. (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-3653. Fix test-patch target to properly account for Eclipse
+    classpath jars. (Brice Arnould via nigel)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
