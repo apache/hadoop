@@ -65,6 +65,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3668. Makes editorial changes to HOD documentation.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-3703. Fixes logcondense.py to use the new format of hadoop dfs -lsr
+    command line output format. (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

@@ -126,7 +126,7 @@ def runcondense():
   toPurge = { }
   for line in stdout:
     try:
-      m = re.match("^(.*?)\s.*$", line)
+      m = re.match("^.*\s(.*)\n$", line)
       filename = m.group(1)
       # file name format: <prefix>/<user>/hod-logs/<jobid>/[0-1]-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
       # first strip prefix:
