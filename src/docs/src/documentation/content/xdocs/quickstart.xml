@@ -28,12 +28,12 @@
     <section>
       <title>Purpose</title>
       
-      <p>The purpose of this document is to help users get a single-node Hadoop 
-      installation up and running very quickly so that users can get a flavour 
+      <p>The purpose of this document is to help you get a single-node Hadoop 
+      installation up and running very quickly so that you can get a flavour 
       of the <a href="hdfs_design.html">Hadoop Distributed File System 
       (<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a> and 
-      the Map-Reduce framework i.e. perform simple operations on HDFS, run 
-      example/simple jobs etc.</p>
+      the Map/Reduce framework; that is, perform simple operations on HDFS and 
+      run example jobs.</p>
     </section>
     
     <section id="PreReqs">
@@ -44,19 +44,20 @@
         
         <ul>
           <li>
+            GNU/Linux is supported as a development and production platform. 
             Hadoop has been demonstrated on GNU/Linux clusters with 2000 nodes.
           </li>
           <li>
             Win32 is supported as a <em>development platform</em>. Distributed 
-            operation has not been well tested on Win32, so this is not a 
-            <em>production platform</em>.
+            operation has not been well tested on Win32, so it is not 
+            supported as a <em>production platform</em>.
           </li>
         </ul>        
       </section>
       
       <section>
         <title>Required Software</title>
-        
+        <p>Required software for Linux and Windows include:</p>
         <ol>
           <li>
             Java<sup>TM</sup> 1.6.x, preferably from Sun, must be installed.
@@ -67,18 +68,13 @@
             daemons.
           </li>
         </ol>
-        
-        <section>
-          <title>Additional requirements for Windows</title>
-          
-          <ol>
-            <li>
-              <a href="http://www.cygwin.com/">Cygwin</a> - Required for shell 
-              support in addition to the required software above. 
-            </li>
-          </ol>
-        </section>
-        
+        <p>Additional requirements for Windows include:</p>
+        <ol>
+          <li>
+            <a href="http://www.cygwin.com/">Cygwin</a> - Required for shell 
+            support in addition to the required software above. 
+          </li>
+        </ol>
       </section>
 
       <section>
@@ -140,7 +136,7 @@
     <section id="Local">
       <title>Standalone Operation</title>
       
-      <p>By default, Hadoop is configured to run things in a non-distributed 
+      <p>By default, Hadoop is configured to run in a non-distributed 
       mode, as a single Java process. This is useful for debugging.</p>
       
       <p>
@@ -213,7 +209,7 @@
         </p>
 
 		<p>
-		  Start The hadoop daemons:<br/>
+		  Start the hadoop daemons:<br/>
           <code>$ bin/start-all.sh</code>
         </p>
 
@@ -221,7 +217,7 @@
         <code>${HADOOP_LOG_DIR}</code> directory (defaults to 
         <code>${HADOOP_HOME}/logs</code>).</p>
 
-        <p>Browse the web-interface for the NameNode and the JobTracker, by
+        <p>Browse the web interface for the NameNode and the JobTracker; by
         default they are available at:</p>
         <ul>
           <li>
@@ -236,7 +232,7 @@
         
         <p>
           Copy the input files into the distributed filesystem:<br/>
-		  <code>$ bin/hadoop dfs -put conf input</code>
+		  <code>$ bin/hadoop fs -put conf input</code>
 		</p>
 		
         <p>
@@ -250,13 +246,13 @@
         <p>
           Copy the output files from the distributed filesystem to the local 
           filesytem and examine them:<br/>
-          <code>$ bin/hadoop dfs -get output output</code><br/>
+          <code>$ bin/hadoop fs -get output output</code><br/>
           <code>$ cat output/*</code>
         </p>
         <p> or </p>
         <p>
           View the output files on the distributed filesystem:<br/>
-          <code>$ bin/hadoop dfs -cat output/*</code>
+          <code>$ bin/hadoop fs -cat output/*</code>
         </p>
 
 		<p>
