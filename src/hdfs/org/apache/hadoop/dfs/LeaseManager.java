@@ -406,10 +406,10 @@ class LeaseManager {
    * This method is invoked by the primary datanode.
    */
   static void recoverBlocks(Block[] blocks, DatanodeID[][] targets,
-      DatanodeProtocol namenode, Configuration conf) {
+      DataNode primary, DatanodeProtocol namenode, Configuration conf) {
     for(int i = 0; i < blocks.length; i++) {
       try {
-        recoverBlock(blocks[i], targets[i], namenode, conf, true);
+        recoverBlock(blocks[i], targets[i], primary, namenode, conf, true);
       } catch (IOException e) {
         LOG.warn("recoverBlocks, i=" + i, e);
       }
@@ -418,7 +418,7 @@ class LeaseManager {
 
   /** Recover a block */
   static Block recoverBlock(Block block, DatanodeID[] datanodeids,
-      DatanodeProtocol namenode, Configuration conf,
+      DataNode primary, DatanodeProtocol namenode, Configuration conf,
       boolean closeFile) throws IOException {
 
     // If the block is already being recovered, then skip recovering it.
@@ -447,8 +447,8 @@ class LeaseManager {
       //check generation stamps
       for(DatanodeID id : datanodeids) {
         try {
-          InterDatanodeProtocol datanode
-              = DataNode.createInterDataNodeProtocolProxy(id, conf);
+          InterDatanodeProtocol datanode = primary.dnRegistration.equals(id)?
+              primary: DataNode.createInterDataNodeProtocolProxy(id, conf);
           BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
           if (info != null && info.getGenerationStamp() >= block.generationStamp) {
             syncList.add(new BlockRecord(id, datanode, new Block(info)));
