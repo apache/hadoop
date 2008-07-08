@@ -792,6 +792,8 @@ Release 0.17.2 - Unreleased
     HADOOP-3681. DFSClient can get into an infinite loop while closing
     a file if there are some errors. (Lohit Vijayarenu via rangadi)
 
+    HADOOP-3002. Hold off block removal while in safe mode. (shv)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES

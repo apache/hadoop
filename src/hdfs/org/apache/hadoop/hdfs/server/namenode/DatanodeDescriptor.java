@@ -350,7 +350,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   void reportDiff(BlocksMap blocksMap,
                   BlockListAsLongs newReport,
                   Collection<Block> toAdd,
-                  Collection<Block> toRemove) {
+                  Collection<Block> toRemove,
+                  Collection<Block> toInvalidate) {
     // place a deilimiter in the list which separates blocks 
     // that have been reported from those that have not
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -366,8 +367,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
       iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i), 
                newReport.getBlockGenStamp(i));
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
-      if(storedBlock == null) { // Brand new block
-        toAdd.add(new Block(iblk));
+      if(storedBlock == null) {
+        // If block is not in blocksMap it does not belong to any file
+        toInvalidate.add(new Block(iblk));
         continue;
       }
       if(storedBlock.findDatanode(this) < 0) {// Known block, but not on the DN
