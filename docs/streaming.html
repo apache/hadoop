@@ -287,7 +287,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Hadoop Streaming</h2>
 <div class="section">
 <p>
-Hadoop streaming is a utility that comes with the Hadoop distribution. The utility allows you to create and run map/reduce jobs with any executable or script as the mapper and/or the reducer. For example:
+Hadoop streaming is a utility that comes with the Hadoop distribution. The utility allows you to create and run Map/Reduce jobs with any executable or script as the mapper and/or the reducer. For example:
 </p>
 <pre class="code">
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
@@ -303,7 +303,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <h2 class="h3">How Does Streaming Work </h2>
 <div class="section">
 <p>
-In the above example, both the mapper and the reducer are executables that read the input from stdin (line by line) and emit the output to stdout. The utility will create a map/reduce job, submit the job to an appropriate cluster, and monitor the progress of the job until it completes.
+In the above example, both the mapper and the reducer are executables that read the input from stdin (line by line) and emit the output to stdout. The utility will create a Map/Reduce job, submit the job to an appropriate cluster, and monitor the progress of the job until it completes.
 </p>
 <p>
   When an executable is specified for mappers, each mapper task will launch the executable as a separate process when the mapper is initialized. As the mapper task runs, it converts its inputs into lines and feed the lines to the stdin of the process. In the meantime, the mapper collects the line oriented outputs from the stdout of the process and converts each line into a key/value pair, which is collected as the output of the mapper. By default, the 
@@ -314,7 +314,7 @@ In the above example, both the mapper and the reducer are executables that read 
 When an executable is specified for reducers, each reducer task will launch the executable as a separate process then the reducer is initialized. As the reducer task runs, it converts its input key/values pairs into lines and feeds the lines to the stdin of the process. In the meantime, the reducer collects the line oriented outputs from the stdout of the process, converts each line into a key/value pair, which is collected as the output of the reducer. By default, the prefix of a line up to the first tab character is the key and the the rest of the line (excluding the tab character) is the value. However, this can be customized, as discussed later.
 </p>
 <p>
-This is the basis for the communication protocol between the map/reduce framework and the streaming mapper/reducer.
+This is the basis for the communication protocol between the Map/Reduce framework and the streaming mapper/reducer.
 </p>
 <p>
 You can supply a Java class as the mapper and/or the reducer. The above example is equivalent to:
@@ -372,7 +372,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <a name="N10077"></a><a name="Mapper-Only+Jobs"></a>
 <h3 class="h4">Mapper-Only Jobs </h3>
 <p>
-Often, you may want to process input data using a map function only. To do this, simply set mapred.reduce.tasks to zero. The map/reduce framework will not create any reducer tasks. Rather, the outputs of the mapper tasks will be the final output of the job.
+Often, you may want to process input data using a map function only. To do this, simply set mapred.reduce.tasks to zero. The Map/Reduce framework will not create any reducer tasks. Rather, the outputs of the mapper tasks will be the final output of the job.
 </p>
 <p>
 To be backward compatible, Hadoop Streaming also supports the "-reduce NONE" option, which is equivalent to "-jobconf mapred.reduce.tasks=0".
@@ -380,7 +380,7 @@ To be backward compatible, Hadoop Streaming also supports the "-reduce NONE" opt
 <a name="N10083"></a><a name="Specifying+Other+Plugins+for+Jobs"></a>
 <h3 class="h4">Specifying Other Plugins for Jobs </h3>
 <p>
-Just as with a normal map/reduce job, you can specify other plugins for a streaming job:
+Just as with a normal Map/Reduce job, you can specify other plugins for a streaming job:
 </p>
 <pre class="code">
    -inputformat JavaClassName
@@ -500,7 +500,7 @@ Other options you may specify for a streaming job are described here:
 
 
 <tr>
-<td colspan="1" rowspan="1"> -dfs  host:port or local </td><td colspan="1" rowspan="1"> Optional </td><td colspan="1" rowspan="1"> Override the DFS configuration for the job </td>
+<td colspan="1" rowspan="1"> -dfs  host:port or local </td><td colspan="1" rowspan="1"> Optional </td><td colspan="1" rowspan="1"> Override the HDFS configuration for the job </td>
 </tr>
 
 <tr>
@@ -571,7 +571,7 @@ To set an environment variable in a streaming command use:
 <a name="N10194"></a><a name="Customizing+the+Way+to+Split+Lines+into+Key%2FValue+Pairs"></a>
 <h3 class="h4">Customizing the Way to Split Lines into Key/Value Pairs </h3>
 <p>
-As noted earlier, when the map/reduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. By default, the prefix of the line up to the first tab character is the key and the the rest of the line (excluding the tab character) is the value.
+As noted earlier, when the Map/Reduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. By default, the prefix of the line up to the first tab character is the key and the the rest of the line (excluding the tab character) is the value.
 </p>
 <p>
 However, you can customize this default. You can specify a field separator other than the tab character (the default), and you can specify the nth (n &gt;= 1) character rather than the first character in a line (the default) as the separator between the key and value. For example:
@@ -594,7 +594,7 @@ Similarly, you can use "-jobconf stream.reduce.output.field.separator=SEP" and "
 <a name="N101AA"></a><a name="A+Useful+Partitioner+Class+%28secondary+sort%2C+the+-partitioner+org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner+option%29"></a>
 <h3 class="h4">A Useful Partitioner Class (secondary sort, the -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner option) </h3>
 <p>
-Hadoop has a library class, org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner, that is useful for many applications. This class allows the map/reduce framework to partition the map outputs based on prefixes of keys, not the whole keys. For example:
+Hadoop has a library class, org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner, that is useful for many applications. This class allows the Map/Reduce framework to partition the map outputs based on prefixes of keys, not the whole keys. For example:
 </p>
 <pre class="code">
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
@@ -613,7 +613,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 Here, <em>-jobconf stream.map.output.field.separator=.</em> and <em>-jobconf stream.num.map.output.key.fields=4</em> are as explained in previous example. The two variables are used by streaming to identify the key/value pair of mapper. 
 </p>
 <p>
-The map output keys of the above map/reduce job normally have four fields separated by ".". However, the map/reduce framework will partition the map outputs by the first two fields of the keys using the <em>-jobconf num.key.fields.for.partition=2</em> option. Here, <em>-jobconf map.output.key.field.separator=.</em> specifies the separator for the partition. This guarantees that all the key/value pairs with the same first two fields in the keys will be partitioned into the same reducer.
+The map output keys of the above Map/Reduce job normally have four fields separated by ".". However, the Map/Reduce framework will partition the map outputs by the first two fields of the keys using the <em>-jobconf num.key.fields.for.partition=2</em> option. Here, <em>-jobconf map.output.key.field.separator=.</em> specifies the separator for the partition. This guarantees that all the key/value pairs with the same first two fields in the keys will be partitioned into the same reducer.
 </p>
 <p>
 
@@ -746,7 +746,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 
 <li> Hadoop Streaming and custom mapper script:<ul>
   
-<li> Generate a file containing the full DFS path of the input files. Each map task would get one file name as input.</li>
+<li> Generate a file containing the full HDFS path of the input files. Each map task would get one file name as input.</li>
   
 <li> Create a mapper script which, given a filename, will get the file to local disk, gzip the file and put it back in the desired output directory</li>
 
