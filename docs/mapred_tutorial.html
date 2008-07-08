@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>Hadoop Map-Reduce Tutorial</title>
+<title>Hadoop Map/Reduce Tutorial</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -187,7 +187,7 @@ document.write("Last Published: " + document.lastModified);
 <a class="dida" href="mapred_tutorial.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>Hadoop Map-Reduce Tutorial</h1>
+<h1>Hadoop Map/Reduce Tutorial</h1>
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
@@ -217,7 +217,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
-<a href="#Map-Reduce+-+User+Interfaces">Map-Reduce - User Interfaces</a>
+<a href="#Map%2FReduce+-+User+Interfaces">Map/Reduce - User Interfaces</a>
 <ul class="minitoc">
 <li>
 <a href="#Payload">Payload</a>
@@ -328,7 +328,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Purpose</h2>
 <div class="section">
 <p>This document comprehensively describes all user-facing facets of the 
-      Hadoop Map-Reduce framework and serves as a tutorial.
+      Hadoop Map/Reduce framework and serves as a tutorial.
       </p>
 </div>
     
@@ -356,11 +356,11 @@ document.write("Last Published: " + document.lastModified);
 <a name="N10032"></a><a name="Overview"></a>
 <h2 class="h3">Overview</h2>
 <div class="section">
-<p>Hadoop Map-Reduce is a software framework for easily writing 
+<p>Hadoop Map/Reduce is a software framework for easily writing 
       applications which process vast amounts of data (multi-terabyte data-sets) 
       in-parallel on large clusters (thousands of nodes) of commodity 
       hardware in a reliable, fault-tolerant manner.</p>
-<p>A Map-Reduce <em>job</em> usually splits the input data-set into 
+<p>A Map/Reduce <em>job</em> usually splits the input data-set into 
       independent chunks which are processed by the <em>map tasks</em> in a
       completely parallel manner. The framework sorts the outputs of the maps, 
       which are then input to the <em>reduce tasks</em>. Typically both the 
@@ -368,12 +368,12 @@ document.write("Last Published: " + document.lastModified);
       takes care of scheduling tasks, monitoring them and re-executes the failed
       tasks.</p>
 <p>Typically the compute nodes and the storage nodes are the same, that is, 
-      the Map-Reduce framework and the <a href="hdfs_design.html">Distributed 
+      the Map/Reduce framework and the <a href="hdfs_design.html">Distributed 
       FileSystem</a> are running on the same set of nodes. This configuration
       allows the framework to effectively schedule tasks on the nodes where data 
       is already present, resulting in very high aggregate bandwidth across the 
       cluster.</p>
-<p>The Map-Reduce framework consists of a single master 
+<p>The Map/Reduce framework consists of a single master 
       <span class="codefrag">JobTracker</span> and one slave <span class="codefrag">TaskTracker</span> per 
       cluster-node. The master is responsible for scheduling the jobs' component 
       tasks on the slaves, monitoring them and re-executing the failed tasks. The 
@@ -388,7 +388,7 @@ document.write("Last Published: " + document.lastModified);
       scheduling tasks and monitoring them, providing status and diagnostic 
       information to the job-client.</p>
 <p>Although the Hadoop framework is implemented in Java<sup>TM</sup>, 
-      Map-Reduce applications need not be written in Java.</p>
+      Map/Reduce applications need not be written in Java.</p>
 <ul>
         
 <li>
@@ -403,7 +403,7 @@ document.write("Last Published: " + document.lastModified);
           
 <a href="api/org/apache/hadoop/mapred/pipes/package-summary.html">
           Hadoop Pipes</a> is a <a href="http://www.swig.org/">SWIG</a>-
-          compatible <em>C++ API</em> to implement Map-Reduce applications (non 
+          compatible <em>C++ API</em> to implement Map/Reduce applications (non 
           JNI<sup>TM</sup> based).
         </li>
       
@@ -414,7 +414,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1008B"></a><a name="Inputs+and+Outputs"></a>
 <h2 class="h3">Inputs and Outputs</h2>
 <div class="section">
-<p>The Map-Reduce framework operates exclusively on 
+<p>The Map/Reduce framework operates exclusively on 
       <span class="codefrag">&lt;key, value&gt;</span> pairs, that is, the framework views the 
       input to the job as a set of <span class="codefrag">&lt;key, value&gt;</span> pairs and 
       produces a set of <span class="codefrag">&lt;key, value&gt;</span> pairs as the output of 
@@ -426,7 +426,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="api/org/apache/hadoop/io/WritableComparable.html">
       WritableComparable</a> interface to facilitate sorting by the framework.
       </p>
-<p>Input and Output types of a Map-Reduce job:</p>
+<p>Input and Output types of a Map/Reduce job:</p>
 <p>
         (input) <span class="codefrag">&lt;k1, v1&gt;</span> 
         -&gt; 
@@ -448,7 +448,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="N100CD"></a><a name="Example%3A+WordCount+v1.0"></a>
 <h2 class="h3">Example: WordCount v1.0</h2>
 <div class="section">
-<p>Before we jump into the details, lets walk through an example Map-Reduce 
+<p>Before we jump into the details, lets walk through an example Map/Reduce 
       application to get a flavour for how they work.</p>
 <p>
 <span class="codefrag">WordCount</span> is a simple application that counts the number of
@@ -1226,11 +1226,11 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N105A3"></a><a name="Map-Reduce+-+User+Interfaces"></a>
-<h2 class="h3">Map-Reduce - User Interfaces</h2>
+<a name="N105A3"></a><a name="Map%2FReduce+-+User+Interfaces"></a>
+<h2 class="h3">Map/Reduce - User Interfaces</h2>
 <div class="section">
 <p>This section provides a reasonable amount of detail on every user-facing 
-      aspect of the Map-Reduce framwork. This should help users implement, 
+      aspect of the Map/Reduce framwork. This should help users implement, 
       configure and tune their jobs in a fine-grained manner. However, please 
       note that the javadoc for each class/interface remains the most 
       comprehensive documentation available; this is only meant to be a tutorial.
@@ -1260,7 +1260,7 @@ document.write("Last Published: " + document.lastModified);
           intermediate records. The transformed intermediate records do not need
           to be of the same type as the input records. A given input pair may 
           map to zero or many output pairs.</p>
-<p>The Hadoop Map-Reduce framework spawns one map task for each 
+<p>The Hadoop Map/Reduce framework spawns one map task for each 
           <span class="codefrag">InputSplit</span> generated by the <span class="codefrag">InputFormat</span> for 
           the job.</p>
 <p>Overall, <span class="codefrag">Mapper</span> implementations are passed the 
@@ -1423,7 +1423,7 @@ document.write("Last Published: " + document.lastModified);
 <h4>Reporter</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/Reporter.html">
-          Reporter</a> is a facility for Map-Reduce applications to report 
+          Reporter</a> is a facility for Map/Reduce applications to report 
           progress, set application-level status messages and update 
           <span class="codefrag">Counters</span>.</p>
 <p>
@@ -1443,20 +1443,20 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <a href="api/org/apache/hadoop/mapred/OutputCollector.html">
           OutputCollector</a> is a generalization of the facility provided by
-          the Map-Reduce framework to collect data output by the 
+          the Map/Reduce framework to collect data output by the 
           <span class="codefrag">Mapper</span> or the <span class="codefrag">Reducer</span> (either the 
           intermediate outputs or the output of the job).</p>
-<p>Hadoop Map-Reduce comes bundled with a 
+<p>Hadoop Map/Reduce comes bundled with a 
         <a href="api/org/apache/hadoop/mapred/lib/package-summary.html">
         library</a> of generally useful mappers, reducers, and partitioners.</p>
 <a name="N107B6"></a><a name="Job+Configuration"></a>
 <h3 class="h4">Job Configuration</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/JobConf.html">
-        JobConf</a> represents a Map-Reduce job configuration.</p>
+        JobConf</a> represents a Map/Reduce job configuration.</p>
 <p>
 <span class="codefrag">JobConf</span> is the primary interface for a user to describe
-        a map-reduce job to the Hadoop framework for execution. The framework 
+        a Map/Reduce job to the Hadoop framework for execution. The framework 
         tries to faithfully execute the job as described by <span class="codefrag">JobConf</span>, 
         however:</p>
 <ul>
@@ -1747,7 +1747,7 @@ document.write("Last Published: " + document.lastModified);
         with the <span class="codefrag">JobTracker</span>.</p>
 <p>
 <span class="codefrag">JobClient</span> provides facilities to submit jobs, track their 
-        progress, access component-tasks' reports/logs, get the Map-Reduce 
+        progress, access component-tasks' reports and logs, get the Map/Reduce 
         cluster's status information and so on.</p>
 <p>The job submission process involves:</p>
 <ol>
@@ -1762,7 +1762,7 @@ document.write("Last Published: " + document.lastModified);
           </li>
           
 <li>
-            Copying the job's jar and configuration to the map-reduce system 
+            Copying the job's jar and configuration to the Map/Reduce system 
             directory on the <span class="codefrag">FileSystem</span>.
           </li>
           
@@ -1802,8 +1802,8 @@ document.write("Last Published: " + document.lastModified);
         <span class="codefrag">JobClient</span> to submit the job and monitor its progress.</p>
 <a name="N10A48"></a><a name="Job+Control"></a>
 <h4>Job Control</h4>
-<p>Users may need to chain map-reduce jobs to accomplish complex
-          tasks which cannot be done via a single map-reduce job. This is fairly
+<p>Users may need to chain Map/Reduce jobs to accomplish complex
+          tasks which cannot be done via a single Map/Reduce job. This is fairly
           easy since the output of the job typically goes to distributed 
           file-system, and the output, in turn, can be used as the input for the 
           next job.</p>
@@ -1840,9 +1840,9 @@ document.write("Last Published: " + document.lastModified);
 <h3 class="h4">Job Input</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/InputFormat.html">
-        InputFormat</a> describes the input-specification for a Map-Reduce job.
+        InputFormat</a> describes the input-specification for a Map/Reduce job.
         </p>
-<p>The Map-Reduce framework relies on the <span class="codefrag">InputFormat</span> of 
+<p>The Map/Reduce framework relies on the <span class="codefrag">InputFormat</span> of 
         the job to:</p>
 <ol>
           
@@ -1914,9 +1914,9 @@ document.write("Last Published: " + document.lastModified);
 <h3 class="h4">Job Output</h3>
 <p>
 <a href="api/org/apache/hadoop/mapred/OutputFormat.html">
-        OutputFormat</a> describes the output-specification for a Map-Reduce 
+        OutputFormat</a> describes the output-specification for a Map/Reduce 
         job.</p>
-<p>The Map-Reduce framework relies on the <span class="codefrag">OutputFormat</span> of 
+<p>The Map/Reduce framework relies on the <span class="codefrag">OutputFormat</span> of 
         the job to:</p>
 <ol>
           
@@ -1946,7 +1946,7 @@ document.write("Last Published: " + document.lastModified);
           application-writer will have to pick unique names per task-attempt 
           (using the attemptid, say <span class="codefrag">attempt_200709221812_0001_m_000000_0</span>), 
           not just per task.</p>
-<p>To avoid these issues the Map-Reduce framework maintains a special 
+<p>To avoid these issues the Map/Reduce framework maintains a special 
           <span class="codefrag">${mapred.output.dir}/_temporary/_${taskid}</span> sub-directory
           accessible via <span class="codefrag">${mapred.work.output.dir}</span>
           for each task-attempt on the <span class="codefrag">FileSystem</span> where the output
@@ -1966,7 +1966,7 @@ document.write("Last Published: " + document.lastModified);
 <p>Note: The value of <span class="codefrag">${mapred.work.output.dir}</span> during 
           execution of a particular task-attempt is actually 
           <span class="codefrag">${mapred.output.dir}/_temporary/_{$taskid}</span>, and this value is 
-          set by the map-reduce framework. So, just create any side-files in the 
+          set by the Map/Reduce framework. So, just create any side-files in the 
           path  returned by
           <a href="api/org/apache/hadoop/mapred/FileOutputFormat.html#getWorkOutputPath(org.apache.hadoop.mapred.JobConf)">
           FileOutputFormat.getWorkOutputPath() </a>from map/reduce 
@@ -1988,7 +1988,7 @@ document.write("Last Published: " + document.lastModified);
 <h4>Counters</h4>
 <p>
 <span class="codefrag">Counters</span> represent global counters, defined either by 
-          the Map-Reduce framework or applications. Each <span class="codefrag">Counter</span> can 
+          the Map/Reduce framework or applications. Each <span class="codefrag">Counter</span> can 
           be of any <span class="codefrag">Enum</span> type. Counters of a particular 
           <span class="codefrag">Enum</span> are bunched into groups of type 
           <span class="codefrag">Counters.Group</span>.</p>
@@ -2009,7 +2009,7 @@ document.write("Last Published: " + document.lastModified);
           files efficiently.</p>
 <p>
 <span class="codefrag">DistributedCache</span> is a facility provided by the 
-          Map-Reduce framework to cache files (text, archives, jars and so on) 
+          Map/Reduce framework to cache files (text, archives, jars and so on) 
           needed by applications.</p>
 <p>Applications specify the files to be cached via urls (hdfs://)
           in the <span class="codefrag">JobConf</span>. The <span class="codefrag">DistributedCache</span> 
@@ -2078,7 +2078,7 @@ document.write("Last Published: " + document.lastModified);
           interface supports the handling of generic Hadoop command-line options.
           </p>
 <p>
-<span class="codefrag">Tool</span> is the standard for any Map-Reduce tool or 
+<span class="codefrag">Tool</span> is the standard for any Map/Reduce tool or 
           application. The application should delegate the handling of 
           standard command-line options to 
           <a href="api/org/apache/hadoop/util/GenericOptionsParser.html">
@@ -2116,7 +2116,7 @@ document.write("Last Published: " + document.lastModified);
 <h4>IsolationRunner</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/IsolationRunner.html">
-          IsolationRunner</a> is a utility to help debug Map-Reduce programs.</p>
+          IsolationRunner</a> is a utility to help debug Map/Reduce programs.</p>
 <p>To use the <span class="codefrag">IsolationRunner</span>, first set 
           <span class="codefrag">keep.failed.tasks.files</span> to <span class="codefrag">true</span> 
           (also see <span class="codefrag">keep.tasks.files.pattern</span>).</p>
@@ -2219,11 +2219,11 @@ document.write("Last Published: " + document.lastModified);
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
-          JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
+          JobControl</a> is a utility which encapsulates a set of Map/Reduce jobs
           and their dependencies.</p>
 <a name="N10D57"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
-<p>Hadoop Map-Reduce provides facilities for the application-writer to
+<p>Hadoop Map/Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
           job-outputs i.e. output of the reduces. It also comes bundled with
           <a href="api/org/apache/hadoop/io/compress/CompressionCodec.html">
@@ -2268,7 +2268,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
-      features provided by the Map-Reduce framework we discussed so far.</p>
+      features provided by the Map/Reduce framework we discussed so far.</p>
 <p>This needs the HDFS to be up and running, especially for the 
       <span class="codefrag">DistributedCache</span>-related features. Hence it only works with a 
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
@@ -3655,7 +3655,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1160B"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
-        previous one by using some features offered by the Map-Reduce framework:
+        previous one by using some features offered by the Map/Reduce framework:
         </p>
 <ul>
           
