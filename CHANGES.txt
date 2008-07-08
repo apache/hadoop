@@ -1,5 +1,11 @@
 Hadoop Change Log
 
+Release 0.17.2 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-3681. DFSClient can get into an infinite loop while closing
+    a file if there are some errors. (Lohit Vijayarenu via rangadi)
 
 Release 0.17.1 - 2008-06-23
 
