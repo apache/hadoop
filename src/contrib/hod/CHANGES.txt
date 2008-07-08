@@ -50,6 +50,9 @@ Release 0.18.0 - Unreleased
     script.exitcode file when a cluster directory is specified as a relative
     path. (Vinod Kumar Vavilapalli via mahadev)
 
+    HADOOP-3703. Fixes logcondense.py to use the new format of hadoop dfs -lsr
+    command line output format. (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
