@@ -785,7 +785,14 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3691. Fix streaming and tutorial docs. (Jothi Padmanabhan via ddas)
 
-Release 0.17.1 - Unreleased
+Release 0.17.2 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-3681. DFSClient can get into an infinite loop while closing
+    a file if there are some errors. (Lohit Vijayarenu via rangadi)
+
+Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
 

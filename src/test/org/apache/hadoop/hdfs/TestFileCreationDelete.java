@@ -91,6 +91,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       assertTrue(!fs.exists(file1));
       assertTrue(fs.exists(file2));
     } finally {
+      fs.close();
       cluster.shutdown();
     }
   }
