@@ -104,7 +104,10 @@ public interface HConstants {
   
   /** Default maximum file size */
   static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
-
+  
+  /** Default size of a reservation block   */
+  static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
+  
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
   

@@ -251,6 +251,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.nbreservationblocks</name>
+    <value>4</value>
+    <description>The number of reservation blocks which are used to prevent
+    unstable region servers caused by an OOME.
+    </description>
+  </property>
+  <property>
     <name>hbase.io.index.interval</name>
     <value>32</value>
     <description>The interval at which we record offsets in hbase

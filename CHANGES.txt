@@ -265,6 +265,8 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-731   Add a meta refresh tag to the Web ui for master and region server
                (Jean-Daniel Cryans via Stack)
+   HBASE-706   On OOME, regionserver sticks around and doesn't go down with cluster
+               (Jean-Daniel Cryans via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -157,6 +158,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public static final String REGIONSERVER = "regionserver";
   
   /**
+   * Space is reserved in HRS constructor and then released when aborting
+   * to recover from an OOME. See HBASE-706.
+   */
+  private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
+  
+  /**
    * Thread to shutdown the region server in an orderly manner.  This thread
    * is registered as a shutdown hook in the HRegionServer constructor and is
    * only called when the HRegionServer receives a kill signal.
@@ -257,7 +264,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.leases = new Leases(
       conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
       this.threadWakeFrequency);
-     
+    
+    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+    for(int i = 0; i < nbBlocks; i++)  {
+      reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
+    }
+    
     // Register shutdown hook for HRegionServer, runs an orderly shutdown
     // when a kill signal is recieved
     Runtime.getRuntime().addShutdownHook(new ShutdownThread(this));
@@ -403,6 +415,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         housekeeping();
         sleeper.sleep(lastMsg);
       } // for
+    } catch (OutOfMemoryError error) {
+      abort();
+      LOG.fatal("Ran out of memory", error);
     } catch (Throwable t) {
       LOG.fatal("Unhandled exception. Aborting...", t);
       abort();
@@ -649,6 +664,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * from under hbase or we OOME.
    */
   public void abort() {
+    reservedSpace.clear();
     this.abortRequested = true;
     stop();
   }
@@ -1133,6 +1149,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b);
+    } catch (OutOfMemoryError error) {
+      abort();
+      LOG.fatal("Ran out of memory", error);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
