@@ -774,6 +774,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3653. Fix test-patch target to properly account for Eclipse
     classpath jars. (Brice Arnould via nigel)
 
+    HADOOP-3692. Fix documentation for Cluster setup and Quick start guides. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
