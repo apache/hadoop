@@ -1948,8 +1948,9 @@ class DFSClient implements FSConstants {
                           " offsetInBlock:" + one.offsetInBlock + 
                           " lastPacketInBlock:" + one.lastPacketInBlock);
               }
-            } catch (IOException e) {
-              LOG.warn("DataStreamer Exception: " + e);
+            } catch (Throwable e) {
+              LOG.warn("DataStreamer Exception: " + 
+                       StringUtils.stringifyException(e));
               hasError = true;
             }
           }
@@ -2698,6 +2699,7 @@ class DFSClient implements FSConstants {
           }
 
         flushInternal();             // flush all data to Datanodes
+        isClosed();
         closed = true;
 
         closeThreads();
@@ -2720,6 +2722,8 @@ class DFSClient implements FSConstants {
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
+        int fileCompleteRetry = 0;
+        final int checkFileCompleteRetry = 10;
         while (!fileComplete) {
           fileComplete = namenode.complete(src, clientName);
           if (!fileComplete) {
@@ -2730,6 +2734,9 @@ class DFSClient implements FSConstants {
               }
             } catch (InterruptedException ie) {
             }
+            // after retrying for checkFileCompleteRetry times check isClosed() 
+            if ((++fileCompleteRetry % checkFileCompleteRetry) == 0) 
+              isClosed();
           }
         }
       } finally {
