@@ -607,9 +607,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            +"from "+nodeReg.getName()+" "+blist.getNumberOfBlocks() +" blocks");
 
-    Block blocksToDelete[] = namesystem.processReport(nodeReg, blist);
-    if (blocksToDelete != null && blocksToDelete.length > 0)
-      return new BlockCommand(blocksToDelete);
+    namesystem.processReport(nodeReg, blist);
     if (getFSImage().isUpgradeFinalized())
       return new DatanodeCommand(DatanodeProtocol.DNA_FINALIZE);
     return null;
