@@ -36,6 +36,9 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
  * 
  * CreateEditsLog
  *   Synopsis: CreateEditsLog -f numFiles StartingBlockId numBlocksPerFile
+ *        [-d editsLogDirectory]
+ *             Default replication factor is 1
+ *             Default edits log directory is /tmp/EditsLogOut
  *   
  *   Create an name node's fsimage edits log in /tmp/EditsLogOut.
  *   The file /tmp/EditsLogOut/current/edits can be copied to a name node's

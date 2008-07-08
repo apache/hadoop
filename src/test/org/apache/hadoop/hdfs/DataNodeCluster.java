@@ -45,8 +45,10 @@ import org.apache.hadoop.net.DNS;
  *  simulated data nodes for say a NN benchmark.
  *  
  * Synopisis:
- *   DataNodeCluster -n numDatNodes [-r numRacks] -simulated
+ *   DataNodeCluster -n numDatNodes [-racks numRacks] -simulated
  *              [-inject startingBlockId numBlocksPerDN]
+ *              [ -r replicationForInjectedBlocks ]
+ *              [-d editsLogDirectory]
  *
  * if -simulated is specified then simulated data nodes are started.
  * if -inject is specified then blocks are injected in each datanode;
@@ -62,19 +64,24 @@ import org.apache.hadoop.net.DNS;
  */
 
 public class DataNodeCluster {
-  static String usage =
+  static final String DATANODE_DIRS = "/tmp/DataNodeCluster";
+  static String dataNodeDirs = DATANODE_DIRS;
+  static final String USAGE =
     "Usage: datanodecluster " +
     " -n <numDataNodes> " + 
-    " [-r <numRacks>] " +
+    " [-racks <numRacks>] " +
     " [-simulated] " +
     " [-inject startingBlockId numBlocksPerDN]" +
-    "\n" + 
-    "  If -r not specified then default rack is used for all Data Nodes\n" +
-    "  Data nodes are simulated if -simulated OR conf file specifies simulated\n";
+    " [-r replicationFactorForInjectedBlocks]" +
+    " [-d dataNodeDirs]\n" + 
+    "      Default datanode direcory is " + DATANODE_DIRS + "\n" +
+    "      Default replication factor for injected blocks is 1\n" +
+    "      Defaul rack is used if -racks is not specified\n" +
+    "      Data nodes are simulated if -simulated OR conf file specifies simulated\n";
   
   
   static void printUsageExit() {
-    System.out.println(usage);
+    System.out.println(USAGE);
     System.exit(-1); 
   }
   static void printUsageExit(String err) {
@@ -88,20 +95,31 @@ public class DataNodeCluster {
     boolean inject = false;
     long startingBlockId = 1;
     int numBlocksPerDNtoInject = 0;
+    int replication = 1;
     
     Configuration conf = new Configuration();
 
     for (int i = 0; i < args.length; i++) { // parse command line
       if (args[i].equals("-n")) {
-        if (++i >= args.length) {
-          printUsageExit("missing number of nodes" + i + " " + args.length);
+        if (++i >= args.length || args[i].startsWith("-")) {
+          printUsageExit("missing number of nodes");
         }
         numDataNodes = Integer.parseInt(args[i]);
-      } else if (args[i].equals("-r")) {
-        if (++i >= args.length) {
+      } else if (args[i].equals("-racks")) {
+        if (++i >= args.length  || args[i].startsWith("-")) {
           printUsageExit("Missing number of racks");
         }
         numRacks = Integer.parseInt(args[i]);
+      } else if (args[i].equals("-r")) {
+        if (++i >= args.length || args[i].startsWith("-")) {
+          printUsageExit("Missing replicaiton factor");
+        }
+        replication = Integer.parseInt(args[i]);
+      } else if (args[i].equals("-d")) {
+        if (++i >= args.length || args[i].startsWith("-")) {
+          printUsageExit("Missing datanode dirs parameter");
+        }
+        dataNodeDirs = args[i];
       } else if (args[i].equals("-simulated")) {
         conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
       } else if (args[i].equals("-inject")) {
@@ -111,12 +129,12 @@ public class DataNodeCluster {
           printUsageExit(); 
         }
        inject = true;
-       if (++i >= args.length) {
+       if (++i >= args.length  || args[i].startsWith("-")) {
          printUsageExit(
              "Missing starting block and number of blocks per DN to inject");
        }
        startingBlockId = Integer.parseInt(args[i]);
-       if (++i >= args.length) {
+       if (++i >= args.length  || args[i].startsWith("-")) {
          printUsageExit("Missing number of blocks to inject");
        }
        numBlocksPerDNtoInject = Integer.parseInt(args[i]);      
@@ -124,9 +142,12 @@ public class DataNodeCluster {
         printUsageExit();
       }
     }
-    if (numDataNodes <= 0) {
-      System.out.println(usage);
-      System.exit(-1);
+    if (numDataNodes <= 0 || replication <= 0 ) {
+      printUsageExit("numDataNodes and replication have to be greater than zero");
+    }
+    if (replication > numDataNodes) {
+      printUsageExit("Replication must be less than or equal to numDataNodes");
+      
     }
     String nameNodeAdr = FileSystem.getDefaultUri(conf).getAuthority();
     if (nameNodeAdr == null) {
@@ -136,10 +157,10 @@ public class DataNodeCluster {
     boolean simulated = 
       conf.getBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, false);
     System.out.println("Starting " + numDataNodes + 
-          (simulated ? "Simulated " : " ") +
+          (simulated ? " Simulated " : " ") +
           " Data Nodes that will connect to Name Node at " + nameNodeAdr);
   
-    System.setProperty("test.build.data", "/tmp/DataNodeCluster");
+    System.setProperty("test.build.data", dataNodeDirs);
 
     MiniDFSCluster mc = new MiniDFSCluster();
     try {
@@ -147,7 +168,7 @@ public class DataNodeCluster {
     } catch (IOException e) {
       System.out.println("Error formating data node dirs:" + e);
     }
-    String[] racks = null;
+
     String[] rack4DataNode = null;
     if (numRacks > 0) {
       System.out.println("Using " + numRacks + " racks: ");
@@ -176,7 +197,12 @@ public class DataNodeCluster {
           for (int i = 0; i < blocks.length; ++i) {
             blocks[i] = new Block(blkid++, blockSize, 1);
           }
-          mc.injectBlocks(i_dn, blocks);
+          for (int i = 1; i <= replication; ++i) { 
+            // inject blocks for dn_i into dn_i and replica in dn_i's neighbors 
+            mc.injectBlocks((i_dn + i- 1)% numDataNodes, blocks);
+            System.out.println("Injecting blocks of dn " + i_dn  + " into dn" + 
+                ((i_dn + i- 1)% numDataNodes));
+          }
         }
         System.out.println("Created blocks from Bids " 
             + startingBlockId + " to "  + (blkid -1));

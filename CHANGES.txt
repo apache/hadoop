@@ -63,6 +63,9 @@ Trunk (unreleased changes)
 
     HADOOP-3402. Add terasort example program (omalley)
 
+    HADOOP-3660. Add replication factor for injecting blocks in simulated
+    datanodes. (Sanjay Radia via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
