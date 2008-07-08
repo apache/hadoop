@@ -118,6 +118,7 @@ public class HConnectionManager implements HConstants {
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
     private final int numRetries;
+    private final int maxRPCAttempts;
 
     private final Integer masterLock = new Integer(0);
     private volatile boolean closed;
@@ -164,6 +165,7 @@ public class HConnectionManager implements HConstants {
 
       this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 5);
+      this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       
       this.master = null;
       this.masterChecked = false;
@@ -761,7 +763,8 @@ public class HConnectionManager implements HConstants {
 
           try {
             server = (HRegionInterface)HbaseRPC.waitForProxy(serverInterfaceClass,
-                versionId, regionServer.getInetSocketAddress(), this.conf);
+                versionId, regionServer.getInetSocketAddress(), this.conf, 
+                this.maxRPCAttempts);
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);
           }

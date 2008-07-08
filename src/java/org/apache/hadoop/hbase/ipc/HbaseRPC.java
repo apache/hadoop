@@ -28,6 +28,7 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collection;
@@ -36,6 +37,7 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.Client;
@@ -273,16 +275,28 @@ public class HbaseRPC {
     }
   }
   
+  /** 
+   * @param maxAttempts the number of times that getProxy() should be called before 
+   * giving up.  If a negative number is passed, it will retry indefinitely.
+   */
   public static VersionedProtocol waitForProxy(Class protocol,
                                                long clientVersion,
                                                InetSocketAddress addr,
-                                               Configuration conf
-                                               ) throws IOException {
-    while (true) {
+                                               Configuration conf,
+                                               int maxAttempts) throws IOException {
+    int reconnectAttempts = 0;
+	while (true) {
       try {
         return getProxy(protocol, clientVersion, addr, conf);
       } catch(ConnectException se) {  // namenode has not been started
         LOG.info("Server at " + addr + " not available yet, Zzzzz...");
+        if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
+        	LOG.info("Server at " + addr + " could not be reached after " + 
+        			reconnectAttempts + " tries, giving up.");
+        	throw new RetriesExhaustedException(addr.toString(), "unknown".getBytes(), 
+        			"unknown".getBytes(), reconnectAttempts - 1, 
+        			new ArrayList<Throwable>());
+        }
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
       }

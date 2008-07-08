@@ -700,11 +700,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.debug("Telling master at " +
         conf.get(MASTER_ADDRESS) + " that we are up");
     }
-    // Do initial RPC setup.
+    // Do initial RPC setup.  The final argument indicates that the RPC should retry indefinitely.
     this.hbaseMaster = (HMasterRegionInterface)HbaseRPC.waitForProxy(
       HMasterRegionInterface.class, HMasterRegionInterface.versionID,
       new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
-      this.conf);
+      this.conf, -1);
     MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
