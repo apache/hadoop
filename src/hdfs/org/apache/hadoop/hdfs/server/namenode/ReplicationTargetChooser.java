@@ -143,7 +143,8 @@ class ReplicationTargetChooser {
     }
       
     int numOfResults = results.size();
-    if (writer == null && (numOfResults==1 || numOfResults==2)) {
+    boolean newBlock = (numOfResults==0);
+    if (writer == null && !newBlock) {
       writer = (DatanodeDescriptor)results.get(0);
     }
       
@@ -156,17 +157,20 @@ class ReplicationTargetChooser {
           break;
         }
       case 1:
-        chooseRemoteRack(1, writer, excludedNodes, 
+        chooseRemoteRack(1, results.get(0), excludedNodes, 
                          blocksize, maxNodesPerRack, results);
         if (--numOfReplicas == 0) {
           break;
         }
       case 2:
         if (clusterMap.isOnSameRack(results.get(0), results.get(1))) {
-          chooseRemoteRack(1, writer, excludedNodes,
+          chooseRemoteRack(1, results.get(0), excludedNodes,
                            blocksize, maxNodesPerRack, results);
-        } else {
+        } else if (newBlock){
           chooseLocalRack(results.get(1), excludedNodes, blocksize, 
+                          maxNodesPerRack, results);
+        } else {
+          chooseLocalRack(writer, excludedNodes, blocksize,
                           maxNodesPerRack, results);
         }
         if (--numOfReplicas == 0) {

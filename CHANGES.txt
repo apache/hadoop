@@ -794,6 +794,8 @@ Release 0.17.2 - Unreleased
 
     HADOOP-3002. Hold off block removal while in safe mode. (shv)
 
+    HADOOP-3685. Unbalanced replication target. (hairong)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
