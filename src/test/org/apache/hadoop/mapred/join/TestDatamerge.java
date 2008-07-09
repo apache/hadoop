@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -40,6 +41,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 public class TestDatamerge extends TestCase {
 
@@ -250,5 +253,23 @@ public class TestDatamerge extends TestCase {
           ConfigurableInputFormat.class, "/dingos"));
     CompositeInputFormat cif = new CompositeInputFormat();
     cif.validateInput(conf);
+  }
+
+  public void testEmptyJoin() throws Exception {
+    JobConf job = new JobConf();
+    Path base = cluster.getFileSystem().makeQualified(new Path("/empty"));
+    Path[] src = { new Path(base,"i0"), new Path("i1"), new Path("i2") };
+    job.set("mapred.join.expr", CompositeInputFormat.compose("outer",
+        FakeIF.class, src));
+    job.setInputFormat(CompositeInputFormat.class);
+    FileOutputFormat.setOutputPath(job, new Path(base, "out"));
+
+    job.setMapperClass(IdentityMapper.class);
+    job.setReducerClass(IdentityReducer.class);
+    job.setOutputKeyClass(IncomparableKey.class);
+    job.setOutputValueClass(NullWritable.class);
+
+    JobClient.runJob(job);
+    base.getFileSystem(job).delete(base, true);
   }
 }
