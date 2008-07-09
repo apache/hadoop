@@ -77,7 +77,7 @@ module Formatter
       result = []
       index = 0
       while index < str.length do
-        result << str.slice(index, index + width)
+        result << str.slice(index, width)
         index += width
       end
       result
@@ -121,11 +121,13 @@ module Formatter
   # Do a bit of testing.
   if $0 == __FILE__
     formatter = Console.new(STDOUT)
+    now = Time.now
     formatter.header(['a', 'b'])
     formatter.row(['a', 'b'])
     formatter.row(['xxxxxxxxx xxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxxx xxxxxxxxx xxxxxxxxxxxx xxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxxxxxxxx'])
     formatter.row(['yyyyyy yyyyyy yyyyy yyy', 'xxxxxxxxx xxxxxxxxxxx xxxxxxxxxxx xxxxxxxxxxxx xxxxxxxxx xxxxxxxxxxxx xxxxxxxxxxxxxxx xxxxxxxxx xxxxxxxxxxxxxx  xxx xx x xx xxx xx xx xx x xx x x xxx x x xxx x x xx x x x x x x xx '])
-    formatter.footer()
+    formatter.row(["NAME => 'table1', FAMILIES => [{NAME => 'fam2', VERSIONS => 3, COMPRESSION => 'NONE', IN_MEMORY => false, BLOCKCACHE => false, LENGTH => 2147483647, TTL => FOREVER, BLOOMFILTER => NONE}, {NAME => 'fam1', VERSIONS => 3, COMPRESSION => 'NONE', IN_MEMORY => false, BLOCKCACHE => false, LENGTH => 2147483647, TTL => FOREVER, BLOOMFILTER => NONE}]"])
+    formatter.footer(now)
   end
 end
 
