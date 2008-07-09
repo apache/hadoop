@@ -135,7 +135,9 @@ public abstract class CompositeRecordReader<
             }
           });
     }
-    q.add(rr);
+    if (rr.hasNext()) {
+      q.add(rr);
+    }
   }
 
   /**
@@ -357,7 +359,9 @@ public abstract class CompositeRecordReader<
     }
     for (ComposableRecordReader<K,?> rr : tmp) {
       rr.skip(key);
-      q.add(rr);
+      if (rr.hasNext()) {
+        q.add(rr);
+      }
     }
   }
 
