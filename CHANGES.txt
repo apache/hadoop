@@ -171,7 +171,11 @@ Trunk (unreleased changes)
    HBASE-726   Unit tests won't run because of a typo (Sebastien Rainville via Stack)
    HBASE-727   Client caught in an infinite loop when trying to connect to cached
                server locations (Izaak Rubin via Stack)
-   
+   HBASE-732   shell formatting error with the describe command
+               (Izaak Rubin via Stack)
+   HBASE-731   delete, deletefc in HBase shell do not work correctly
+               (Izaak Rubin via Stack)
+
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
    HBASE-596   DemoClient.py (Ivan Begtin via Stack)

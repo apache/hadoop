@@ -135,16 +135,14 @@ HBASE SHELL COMMANDS:
  delete    Put a delete cell value at specified table/row/column and optionally
            timestamp coordinates.  Deletes must match the deleted cell's
            coordinates exactly.  When scanning, a delete cell suppresses older
-           versions. Takes arguments like 'put' described below
+           versions. Takes arguments like the 'put' command described below
  
- deleteall Delete all cells; pass a table name, row and optionally, a column
-           and timestamp
-
- deletefc  Delete all in the named column family.  Pass table name and family
-
- drop      Drop the named table. Table must first be disabled
+ deleteall Delete all cells in a given row; pass a table name, row, and optionally 
+           a column and timestamp
 
  disable   Disable the named table: e.g. "hbase> disable 't1'"
+ 
+ drop      Drop the named table. Table must first be disabled
 
  enable    Enable the named table
 
@@ -169,14 +167,15 @@ HBASE SHELL COMMANDS:
            hbase> put 't1', 'r1', 'c1', ts1
 
  scan      Scan a table; pass table name and optionally an array of column
-           names and a dictionary of scanner specification that includes one
-           or more of following: LIMIT, FILTER, STARTROW, STOPROW, or TIMESTAMP.
-           Examples:
+           names and a dictionary of scanner specification that may include
+           one or more of following: LIMIT, STARTROW, STOPROW, or TIMESTAMP.
+           To scan all members of a column family, leave the qualifier empty
+           as in 'col_family:'.  Examples:
            
            hbase> scan '.META.'
            hbase> scan '.META.', ['info:regioninfo']
            hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10, STARTROW => 'xyz'}
-
+           
  version   Output this HBase version
 
 GENERAL NOTES:
@@ -265,18 +264,14 @@ def scan(table, columns = [], args = {})
   table(table).scan(columns, args)
 end
   
-def delete(table, row, *args)
-  table(table).get(row, args)
+def delete(table, row, column,
+    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+  table(table).delete(row, column, timestamp)
 end
 
 def deleteall(table, row, column = nil,
     timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
   table(table).deleteall(row, column, timestamp)
-end
-
-def deletefc(table, row, column_family,
-    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-  table(table).get(row, column_family, timestamp)
 end
 
 # Output a banner message that tells users where to go for help

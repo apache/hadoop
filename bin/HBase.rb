@@ -174,14 +174,9 @@ module HBase
     end
 
     # Delete a cell
-    def delete(row, args)
+    def delete(row, column, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
-      bu = nil
-      if timestamp
-        bu = BatchUpdate.new(row, timestamp)
-      else
-        bu = BatchUpdate.new(row)
-      end
+      bu = BatchUpdate.new(row, timestamp)
       bu.delete(column)
       @table.commit(bu)
       @formatter.header()
@@ -191,13 +186,6 @@ module HBase
     def deleteall(row, column = nil, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
       @table.deleteAll(row, column, timestamp)
-      @formatter.header()
-      @formatter.footer(now)
-    end
-
-    def deletefc(row, column_family, timestamp = HConstants::LATEST_TIMESTAMP)
-      now = Time.now 
-      @table.deleteFamily(row, column_family)
       @formatter.header()
       @formatter.footer(now)
     end
@@ -402,6 +390,25 @@ module HBase
     table.scan(['x:'], {STARTROW => 'x5', ENDROW => 'x8'})
     if formatter.rowCount() != 3
       raise IOError.new("Failed endrow test")
+    end
+    # Verify that delete works
+    table.delete('x1', 'x:1');
+    table.scan(['x:1'])
+    scan1 = formatter.rowCount()
+    table.scan(['x:'])
+    scan2 = formatter.rowCount()
+    if scan1 != 0 or scan2 != 9
+      raise IOError.new("Failed delete test")
+    end
+    # Verify that deletall works
+    table.put('x2', 'x:1', 'x:1')
+    table.deleteall('x2')
+    table.scan(['x:2'])
+    scan1 = formatter.rowCount()
+    table.scan(['x:'])
+    scan2 = formatter.rowCount()
+    if scan1 != 0 or scan2 != 8
+      raise IOError.new("Failed deleteall test")
     end
     admin.disable(TESTTABLE)
     admin.drop(TESTTABLE)
