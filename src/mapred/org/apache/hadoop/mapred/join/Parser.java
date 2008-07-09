@@ -267,8 +267,8 @@ public class Parser {
         Token t = i.next();
         if (TType.COMMA.equals(t.getType())) {
           try {
-            inf = (InputFormat)ReflectionUtils.newInstance(
-                Class.forName(sb.toString()).asSubclass(InputFormat.class),
+          	inf = (InputFormat)ReflectionUtils.newInstance(
+          			job.getClassByName(sb.toString()),
                 job);
           } catch (ClassNotFoundException e) {
             throw (IOException)new IOException().initCause(e);
