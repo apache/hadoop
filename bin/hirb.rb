@@ -167,20 +167,16 @@ HBASE SHELL COMMANDS:
            hbase> put 't1', 'r1', 'c1', ts1
 
  scan      Scan a table; pass table name and optionally an array of column
-           names OR an array of column names and a dictionary of scanner 
+           names OR an array of column names AND a dictionary of scanner 
            specifications.  If you wish to include scanner specifications, 
            you must also include an array of columns.  Scanner specifications 
-           may include one or more of following: LIMIT, STARTROW, STOPROW, or 
-           TIMESTAMP.  To scan all members of a column family, leave the 
+           may include one or more of the following: LIMIT, STARTROW, STOPROW,
+           or TIMESTAMP.  To scan all members of a column family, leave the 
            qualifier empty as in 'col_family:'.  Examples:
            
-           Correct:
            hbase> scan '.META.'
            hbase> scan '.META.', ['info:regioninfo']
            hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10, STARTROW => 'xyz'}
-           
-           Incorrect:
-           hbase> scan 't1', {STARTROW => 'xyz'}
            
  version   Output this HBase version
 
