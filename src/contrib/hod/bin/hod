@@ -229,8 +229,10 @@ defList = { 'hod' : (
 
              ('max-master-failures', 'pos_int', 
               'Defines how many times a master can fail before' \
-              ' failing cluster allocation', False, 5, True, True)),
+              ' failing cluster allocation', False, 5, True, True),
 
+             ('workers_per_ring', 'pos_int', 'Defines number of workers per service per hodring',
+             False, 1, False, True)),
 
             'gridservice-mapred' : (
              ('external', 'bool', "Connect to an already running MapRed?",
@@ -517,6 +519,12 @@ if __name__ == '__main__':
           "The log destiniation uri must be of type local:// or hdfs://."))
         sys.exit(1)
   
+    if hodConfig['ringmaster']['workers_per_ring'] < 1:
+      printErrors(hodConfig.var_error('ringmaster', 'workers_per_ring',
+                "ringmaster.workers_per_ring must be a positive integer " +
+                "greater than or equal to 1"))
+      sys.exit(1)
+                        
     ## TODO : end of should move the dependency verification to hodConfig.verif
       
     hodConfig['hod']['base-dir'] = rootDirectory

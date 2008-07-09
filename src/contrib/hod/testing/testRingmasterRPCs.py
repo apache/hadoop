@@ -30,38 +30,7 @@ from hodlib.GridServices import *
 from hodlib.Common.desc import ServiceDesc
 from hodlib.RingMaster.ringMaster import _LogMasterSources
 
-# All test-case classes should have the naming convention test_.*
-class test_MINITEST1(unittest.TestCase):
-  def setUp(self):
-    pass
-
-  # All testMethods have to have their names start with 'test'
-  def testSuccess(self):
-    pass
-    
-  def testFailure(self):
-    pass
-
-  def tearDown(self):
-    pass
-
-class test_MINITEST2(unittest.TestCase):
-  def setUp(self):
-    pass
-
-  # All testMethods have to have their names start with 'test'
-  def testSuccess(self):
-    pass
-    
-  def testFailure(self):
-    pass
-
-  def tearDown(self):
-    pass
-
-class test_GetCommand(unittest.TestCase):
-  def setUp(self):
-    self.config = {
+configuration = {
        'hod': {}, 
       'resource_manager': {
                             'id': 'torque', 
@@ -82,6 +51,76 @@ class test_GetCommand(unittest.TestCase):
        'servicedesc' : {} ,
        'nodepooldesc': {} , 
        }
+
+# All test-case classes should have the naming convention test_.*
+class test_MINITEST1(unittest.TestCase):
+  def setUp(self):
+    pass
+
+  # All testMethods have to have their names start with 'test'
+  def testSuccess(self):
+    pass
+    
+  def testFailure(self):
+    pass
+
+  def tearDown(self):
+    pass
+
+class test_Multiple_Workers(unittest.TestCase):
+  def setUp(self):
+    self.config = configuration
+    self.config['ringmaster']['workers_per_ring'] = 2
+
+    hdfsDesc = self.config['servicedesc']['hdfs'] = ServiceDesc(self.config['gridservice-hdfs'])
+    mrDesc = self.config['servicedesc']['mapred'] = ServiceDesc(self.config['gridservice-mapred'])
+
+    self.hdfs = Hdfs(hdfsDesc, [], 0, 19, workers_per_ring = \
+                                 self.config['ringmaster']['workers_per_ring'])
+    self.mr = MapReduce(mrDesc, [],1, 19, workers_per_ring = \
+                                 self.config['ringmaster']['workers_per_ring'])
+    
+    self.log = logging.getLogger()
+    pass
+
+  # All testMethods have to have their names start with 'test'
+  def testWorkersCount(self):
+    self.serviceDict = {}
+    self.serviceDict[self.hdfs.getName()] = self.hdfs
+    self.serviceDict[self.mr.getName()] = self.mr
+    self.rpcSet = _LogMasterSources(self.serviceDict, self.config, None, self.log, None)
+
+    cmdList = self.rpcSet.getCommand('host1')
+    self.assertEquals(len(cmdList), 2)
+    self.assertEquals(cmdList[0].dict['argv'][0], 'namenode')
+    self.assertEquals(cmdList[1].dict['argv'][0], 'namenode')
+    addParams = ['fs.default.name=host1:51234', 'dfs.http.address=host1:5125' ]
+    self.rpcSet.addMasterParams('host1', addParams)
+    # print "NN is launched"
+
+    cmdList = self.rpcSet.getCommand('host2')
+    self.assertEquals(len(cmdList), 1)
+    self.assertEquals(cmdList[0].dict['argv'][0], 'jobtracker')
+    addParams = ['mapred.job.tracker=host2:51236',
+                 'mapred.job.tracker.http.address=host2:51237']
+    self.rpcSet.addMasterParams('host2', addParams)
+    # print "JT is launched"
+
+    cmdList = self.rpcSet.getCommand('host3')
+    # Verify the workers count per ring : TTs + DNs
+    self.assertEquals(len(cmdList),
+                      self.config['ringmaster']['workers_per_ring'] * 2)
+    pass
+    
+  def testFailure(self):
+    pass
+
+  def tearDown(self):
+    pass
+
+class test_GetCommand(unittest.TestCase):
+  def setUp(self):
+    self.config = configuration
 
     hdfsDesc = self.config['servicedesc']['hdfs'] = ServiceDesc(self.config['gridservice-hdfs'])
     mrDesc = self.config['servicedesc']['mapred'] = ServiceDesc(self.config['gridservice-mapred'])

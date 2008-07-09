@@ -117,7 +117,10 @@ defList = { 'ringmaster' : (
 
              ('max-master-failures', 'pos_int', 
               'Defines how many times a master can fail before' \
-              ' failing cluster allocation', False, 5, True, True)),
+              ' failing cluster allocation', False, 5, True, True),
+
+             ('workers_per_ring', 'pos_int', 'Defines number of workers per service per hodring',
+              False, 1, False, True)),
 
             'resource_manager' : (
              ('id', 'string', 'Batch scheduler ID: torque|condor.',

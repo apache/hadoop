@@ -113,11 +113,10 @@ def runcondense():
   # otherwise only JobTracker logs. Likewise, in case of dynamic dfs, we must also look for
   # deleting datanode logs
   filteredNames = ['jobtracker']
-  deletedNamePrefixes = ['0-tasktracker-*']
+  deletedNamePrefixes = ['*-tasktracker-*']
   if options.dynamicdfs == 'true':
     filteredNames.append('namenode')
-    deletedNamePrefixes.append('1-tasktracker-*')
-    deletedNamePrefixes.append('0-datanode-*')
+    deletedNamePrefixes.append('*-datanode-*')
 
   filepath = '%s/\*/hod-logs/' % (options.log)
   cmd = getDfsCommand(options, "-lsr " + filepath)
@@ -128,7 +127,7 @@ def runcondense():
     try:
       m = re.match("^.*\s(.*)\n$", line)
       filename = m.group(1)
-      # file name format: <prefix>/<user>/hod-logs/<jobid>/[0-1]-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
+      # file name format: <prefix>/<user>/hod-logs/<jobid>/[0-9]*-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
       # first strip prefix:
       if filename.startswith(options.log):
         filename = filename.lstrip(options.log)

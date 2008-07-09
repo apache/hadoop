@@ -82,7 +82,8 @@ class MapReduceExternal(MasterSlave):
   
 class MapReduce(MasterSlave):
 
-  def __init__(self, serviceDesc, workDirs,required_node, version):
+  def __init__(self, serviceDesc, workDirs,required_node, version,
+                workers_per_ring = 1):
     MasterSlave.__init__(self, serviceDesc, workDirs,required_node)
 
     self.masterNode = None
@@ -91,6 +92,7 @@ class MapReduce(MasterSlave):
     self.workers = []
     self.required_node = required_node
     self.version = version
+    self.workers_per_ring = workers_per_ring
 
   def isLaunchable(self, serviceDict):
     hdfs = serviceDict['hdfs']
@@ -116,8 +118,11 @@ class MapReduce(MasterSlave):
 
     hdfs = serviceDict['hdfs']
 
-    cmdDesc = self._getTaskTrackerCommand(hdfs)
-    return [cmdDesc]
+    workerCmds = []
+    for id in range(1, self.workers_per_ring + 1):
+      workerCmds.append(self._getTaskTrackerCommand(str(id), hdfs))
+      
+    return workerCmds
 
   def setMasterNodes(self, list):
     node = list[0]
@@ -217,7 +222,7 @@ class MapReduce(MasterSlave):
     cmd = CommandDesc(dict)
     return cmd
 
-  def _getTaskTrackerCommand(self, hdfs):
+  def _getTaskTrackerCommand(self, id, hdfs):
 
     sd = self.serviceDesc
 
@@ -244,6 +249,14 @@ class MapReduce(MasterSlave):
         attrs['mapred.task.tracker.report.address'] = 'fillinhostport'
       if 'mapred.task.tracker.http.address' not in attrs:
         attrs['mapred.task.tracker.http.address'] = 'fillinhostport'
+
+    # unique parentDirs in case of multiple tasktrackers per hodring
+    pd = []
+    for dir in parentDirs:
+      dir = dir + "-" + id
+      pd.append(dir)
+    parentDirs = pd
+    # end of unique workdirs
 
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'mapred-tt')
 

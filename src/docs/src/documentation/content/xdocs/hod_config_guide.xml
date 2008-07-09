@@ -156,7 +156,8 @@
         <ul>
           <li>work-dirs: Comma-separated list of paths that will serve
                        as the root for directories that HOD generates and passes
-                       to Hadoop for use to store DFS and Map/Reduce data. For e.g.
+                       to Hadoop for use to store DFS and Map/Reduce data. For
+                       example,
                        this is where DFS data blocks will be stored. Typically,
                        as many paths are specified as there are disks available
                        to ensure all disks are being utilized. The restrictions
@@ -177,6 +178,19 @@
                        successful allocation even in the presence of a few bad
                        nodes in the cluster.
                        </li>
+          <li>workers_per_ring: Number of workers per service per HodRing.
+                       By default this is set to 1. If this configuration
+                       variable is set to a value 'n', the HodRing will run
+                       'n' instances of the workers (TaskTrackers or DataNodes)
+                       on each node acting as a slave. This can be used to run
+                       multiple workers per HodRing, so that the total number of
+                       workers  in a HOD cluster is not limited by the total
+                       number of nodes requested during allocation. However, note
+                       that this will mean each worker should be configured to use
+                       only a proportional fraction of the capacity of the 
+                       resources on the node. In general, this feature is only
+                       useful for testing and simulation purposes, and not for
+                       production use.</li>
         </ul>
       </section>
       

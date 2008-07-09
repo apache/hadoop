@@ -553,6 +553,8 @@ class RingMaster:
     self.__isStopped = False # to let main exit
     self.__exitCode = 0 # exit code with which the ringmaster main method should return
 
+    self.workers_per_ring = self.cfg['ringmaster']['workers_per_ring']
+
     self.__initialize_signal_handlers()
     
     sdd = self.cfg['servicedesc']
@@ -609,7 +611,8 @@ class RingMaster:
         hdfs = HdfsExternal(hdfsDesc, workDirs, version=int(hadoopVers['minor']))
         hdfs.setMasterParams( self.cfg['gridservice-hdfs'] )
       else:
-        hdfs = Hdfs(hdfsDesc, workDirs, 0, version=int(hadoopVers['minor']))
+        hdfs = Hdfs(hdfsDesc, workDirs, 0, version=int(hadoopVers['minor']),
+                    workers_per_ring = self.workers_per_ring)
 
       self.serviceDict[hdfs.getName()] = hdfs
       
@@ -619,7 +622,8 @@ class RingMaster:
         mr = MapReduceExternal(mrDesc, workDirs, version=int(hadoopVers['minor']))
         mr.setMasterParams( self.cfg['gridservice-mapred'] )
       else:
-        mr = MapReduce(mrDesc, workDirs,1, version=int(hadoopVers['minor']))
+        mr = MapReduce(mrDesc, workDirs,1, version=int(hadoopVers['minor']),
+                       workers_per_ring = self.workers_per_ring)
 
       self.serviceDict[mr.getName()] = mr
     except:

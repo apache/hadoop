@@ -6,6 +6,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-3695. Provide an ability to start multiple workers per node.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

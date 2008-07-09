@@ -95,7 +95,7 @@ naming convention,such as, hadoop.rm.queue.queue-name.property-name.<br />(Heman
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(6)
+</a>&nbsp;&nbsp;&nbsp;(7)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3577">HADOOP-3577</a>. Tools to inject blocks into name node and simulated
 data nodes for testing.<br />(Sanjay Radia via hairong)</li>
@@ -106,6 +106,8 @@ Loughran via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3543">HADOOP-3543</a>. Update the copyright year to 2008.<br />(cdouglas via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3587">HADOOP-3587</a>. Add a unit test for the contrib/data_join framework.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3402">HADOOP-3402</a>. Add terasort example program<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3660">HADOOP-3660</a>. Add replication factor for injecting blocks in simulated
+datanodes.<br />(Sanjay Radia via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -130,7 +132,7 @@ omalley)</li>
 </a></h2>
 <ul id="release_0.18.0_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(22)
+</a>&nbsp;&nbsp;&nbsp;(23)
     <ol id="release_0.18.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a>.  The default options to fsck skips checking files
 that are being written to. The output of fsck is incompatible
@@ -202,6 +204,9 @@ of the keytype if the type does not define a WritableComparator. Calling
 the superclass compare will throw a NullPointerException. Also define
 a RawComparator for NullWritable and permit it to be written as a key
 to SequenceFiles.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3673">HADOOP-3673</a>. Avoid deadlock caused by DataNode RPC receoverBlock().
+(Tsz Wo (Nicholas), SZE via rangadi)
+</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._new_features_')">  NEW FEATURES
@@ -378,7 +383,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(115)
+</a>&nbsp;&nbsp;&nbsp;(117)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -605,33 +610,50 @@ conform to style guidelines.<br />(Amareshwari Sriramadasu via cdouglas)</li>
 classpath jars.<br />(Brice Arnould via nigel)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3692">HADOOP-3692</a>. Fix documentation for Cluster setup and Quick start guides.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3691">HADOOP-3691</a>. Fix streaming and tutorial docs.<br />(Jothi Padmanabhan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3630">HADOOP-3630</a>. Fix NullPointerException in CompositeRecordReader from empty
+sources<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3706">HADOOP-3706</a>. Fix a ClassLoader issue in the mapred.join Parser that
+prevents it from loading user-specified InputFormats.<br />(Jingkei Ly via cdouglas)</li>
     </ol>
   </li>
 </ul>
 <h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
 <ul id="older">
-<h3><a href="javascript:toggleList('release_0.17.1_-_unreleased_')">Release 0.17.1 - Unreleased
+<h3><a href="javascript:toggleList('release_0.17.2_-_unreleased_')">Release 0.17.2 - Unreleased
 </a></h3>
-<ul id="release_0.17.1_-_unreleased_">
-  <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+<ul id="release_0.17.2_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.17.2_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(3)
+    <ol id="release_0.17.2_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3681">HADOOP-3681</a>. DFSClient can get into an infinite loop while closing
+a file if there are some errors.<br />(Lohit Vijayarenu via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3002">HADOOP-3002</a>. Hold off block removal while in safe mode.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3685">HADOOP-3685</a>. Unbalanced replication target.<br />(hairong)</li>
+    </ol>
+  </li>
+</ul>
+<h3><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_')">Release 0.17.1 - 2008-06-23
+</a></h3>
+<ul id="release_0.17.1_-_2008-06-23_">
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(1)
-    <ol id="release_0.17.1_-_unreleased_._incompatible_changes_">
+    <ol id="release_0.17.1_-_2008-06-23_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3565">HADOOP-3565</a>. Fix the Java serialization, which is not enabled by
 default, to clear the state of the serializer between objects.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._improvements_')">  IMPROVEMENTS
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._improvements_')">  IMPROVEMENTS
 </a>&nbsp;&nbsp;&nbsp;(2)
-    <ol id="release_0.17.1_-_unreleased_._improvements_">
+    <ol id="release_0.17.1_-_2008-06-23_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3522">HADOOP-3522</a>. Improve documentation on reduce pointing out that
 input keys and values will be reused.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3487">HADOOP-3487</a>. Balancer uses thread pools for managing its threads;
 therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.17.1_-_unreleased_._bug_fixes_')">  BUG FIXES
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._bug_fixes_')">  BUG FIXES
 </a>&nbsp;&nbsp;&nbsp;(14)
-    <ol id="release_0.17.1_-_unreleased_._bug_fixes_">
+    <ol id="release_0.17.1_-_2008-06-23_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2159">HADOOP-2159</a> Namenode stuck in safemode. The counter blockSafe should
 not be decremented for invalid blocks.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3472">HADOOP-3472</a> MapFile.Reader getClosest() function returns incorrect results

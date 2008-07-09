@@ -76,7 +76,8 @@ class HdfsExternal(MasterSlave):
 class Hdfs(MasterSlave):
 
   def __init__(self, serviceDesc, nodePool, required_node, version, \
-                                        format=True, upgrade=False):
+                                        format=True, upgrade=False,
+                                        workers_per_ring = 1):
     MasterSlave.__init__(self, serviceDesc, nodePool, required_node)
     self.masterNode = None
     self.masterAddr = None
@@ -87,6 +88,7 @@ class Hdfs(MasterSlave):
     self.upgrade = upgrade
     self.workers = []
     self.version = version
+    self.workers_per_ring = workers_per_ring
 
   def getMasterRequest(self):
     req = NodeRequest(1, [], False)
@@ -117,8 +119,11 @@ class Hdfs(MasterSlave):
     return adminCommands
 
   def getWorkerCommands(self, serviceDict):
-    cmdDesc = self._getDataNodeCommand()
-    return [cmdDesc]
+    workerCmds = []
+    for id in range(1, self.workers_per_ring + 1):
+      workerCmds.append(self._getDataNodeCommand(str(id)))
+
+    return workerCmds
 
   def setMasterNodes(self, list):
     node = list[0]
@@ -250,7 +255,7 @@ class Hdfs(MasterSlave):
     cmd = CommandDesc(dict)
     return cmd
  
-  def _getDataNodeCommand(self):
+  def _getDataNodeCommand(self, id):
 
     sd = self.serviceDesc
 
@@ -282,6 +287,14 @@ class Hdfs(MasterSlave):
       # TODO: check for major as well as minor versions
       attrs['dfs.datanode.ipc.address'] = 'fillinhostport'
                     
+    # unique workdirs in case of multiple datanodes per hodring
+    pd = []
+    for dir in parentDirs:
+      dir = dir + "-" + id
+      pd.append(dir)
+    parentDirs = pd
+    # end of unique workdirs
+
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-dn')
 
     dict = { 'name' : 'datanode' }
@@ -292,7 +305,7 @@ class Hdfs(MasterSlave):
     dict['workdirs'] = workDirs
     dict['final-attrs'] = attrs
     dict['attrs'] = sd.getAttrs()
-
+ 
     cmd = CommandDesc(dict)
     return cmd
 
