@@ -788,6 +788,10 @@ Release 0.18.0 - Unreleased
     HADOOP-3630. Fix NullPointerException in CompositeRecordReader from empty
     sources (cdouglas)
 
+    HADOOP-3706. Fix a ClassLoader issue in the mapred.join Parser that
+    prevents it from loading user-specified InputFormats.
+    (Jingkei Ly via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
