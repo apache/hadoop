@@ -175,6 +175,7 @@ Trunk (unreleased changes)
                (Izaak Rubin via Stack)
    HBASE-731   delete, deletefc in HBase shell do not work correctly
                (Izaak Rubin via Stack)
+   HBASE-734   scan '.META.', {LIMIT => 10} crashes (Izaak Rubin via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

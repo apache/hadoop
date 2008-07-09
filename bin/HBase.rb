@@ -209,6 +209,8 @@ module HBase
       end
       if columns.class == String
         columns = [columns]
+      elsif columns.class != Array
+        raise ArgumentError.new("Must supply columns")
       end
       cs = columns.to_java(java.lang.String)
       limit = -1
