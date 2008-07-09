@@ -72,6 +72,10 @@ Trunk (unreleased changes)
     singleton MessageDigester by an instance per Thread using 
     ThreadLocal. (Iv?n de Prado via omalley)
 
+    HADOOP-3328. When client is writing data to DFS, only the last 
+    datanode in the pipeline needs to verify the checksum. Saves around
+    30% CPU on intermediate datanodes. (rangadi)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

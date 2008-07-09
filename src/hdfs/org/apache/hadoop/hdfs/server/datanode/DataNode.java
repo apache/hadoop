@@ -2652,7 +2652,16 @@ public class DataNode extends Configured
 
         buf.position(buf.limit()); // move to the end of the data.
 
-        verifyChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
+        /* skip verifying checksum iff this is not the last one in the 
+         * pipeline and clientName is non-null. i.e. Checksum is verified
+         * on all the datanodes when the data is being written by a 
+         * datanode rather than a client. Whe client is writing the data, 
+         * protocol includes acks and only the last datanode needs to verify 
+         * checksum.
+         */
+        if (mirrorOut == null || clientName.length() == 0) {
+          verifyChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
+        }
 
         try {
           if (!finalized) {
