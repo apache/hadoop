@@ -955,6 +955,26 @@ public class HTable {
    * Completely delete the row's cells.
    *
    * @param row Key of the row you want to completely delete.
+   * @throws IOException
+   */
+  public void deleteAll(final Text row) throws IOException {
+    deleteAll(row, null);
+  }
+  
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @throws IOException
+   */
+  public void deleteAll(final String row) throws IOException {
+    deleteAll(row, null);
+  }
+  
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
    * @param column column to be deleted
    * @throws IOException
    */

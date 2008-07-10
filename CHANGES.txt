@@ -176,6 +176,8 @@ Trunk (unreleased changes)
    HBASE-731   delete, deletefc in HBase shell do not work correctly
                (Izaak Rubin via Stack)
    HBASE-734   scan '.META.', {LIMIT => 10} crashes (Izaak Rubin via Stack)
+   HBASE-736   Should have HTable.deleteAll(String row) and HTable.deleteAll(Text row)
+               (Jean-Daniel Cryans via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
