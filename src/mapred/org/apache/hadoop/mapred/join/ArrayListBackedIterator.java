@@ -65,8 +65,9 @@ public class ArrayListBackedIterator<X extends Writable>
     return false;
   }
 
-  public void replay(X val) throws IOException {
+  public boolean replay(X val) throws IOException {
     WritableUtils.cloneInto(val, hold);
+    return true;
   }
 
   public void reset() {

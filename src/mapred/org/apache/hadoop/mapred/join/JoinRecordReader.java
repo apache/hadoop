@@ -91,8 +91,8 @@ public abstract class JoinRecordReader<K extends WritableComparable>
       return jc.flush(val);
     }
 
-    public void replay(TupleWritable val) throws IOException {
-      jc.replay(val);
+    public boolean replay(TupleWritable val) throws IOException {
+      return jc.replay(val);
     }
 
     public void reset() {

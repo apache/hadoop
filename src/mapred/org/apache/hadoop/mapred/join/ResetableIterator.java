@@ -35,10 +35,10 @@ public interface ResetableIterator<T extends Writable> {
     public void close() throws IOException { }
     public void clear() { }
     public boolean next(U val) throws IOException {
-      throw new UnsupportedOperationException();
+      return false;
     }
-    public void replay(U val) throws IOException {
-      throw new UnsupportedOperationException();
+    public boolean replay(U val) throws IOException {
+      return false;
     }
     public void add(U item) throws IOException {
       throw new UnsupportedOperationException();
@@ -46,7 +46,8 @@ public interface ResetableIterator<T extends Writable> {
   }
 
   /**
-   * True iff a call to next will succeed.
+   * True if a call to next may return a value. This is permitted false
+   * positives, but not false negatives.
    */
   public boolean hasNext();
 
@@ -63,7 +64,7 @@ public interface ResetableIterator<T extends Writable> {
   /**
    * Assign last value returned to actual.
    */
-  public void replay(T val) throws IOException;
+  public boolean replay(T val) throws IOException;
 
   /**
    * Set iterator to return to the start of its range. Must be called after

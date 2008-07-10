@@ -22,20 +22,40 @@ import java.io.DataInput;
 import java.io.DataOutput;
 
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.util.ReflectionUtils;
 
-public class FakeIF
-    implements InputFormat<IncomparableKey,NullWritable> {
+public class FakeIF<K,V>
+    implements InputFormat<K,V>, JobConfigurable {
 
   public static class FakeSplit implements InputSplit {
     public void write(DataOutput out) throws IOException { }
     public void readFields(DataInput in) throws IOException { }
     public long getLength() { return 0L; }
     public String[] getLocations() { return new String[0]; }
+  }
+
+  public static void setKeyClass(JobConf job, Class<?> k) {
+    job.setClass("test.fakeif.keyclass", k, WritableComparable.class);
+  }
+
+  public static void setValClass(JobConf job, Class<?> v) {
+    job.setClass("test.fakeif.valclass", v, Writable.class);
+  }
+
+  private Class<?> keyclass;
+  private Class<?> valclass;
+
+  public void configure(JobConf job) {
+    keyclass = job.getClass("test.fakeif.keyclass", IncomparableKey.class, WritableComparable.class);
+    valclass = job.getClass("test.fakeif.valclass", NullWritable.class, WritableComparable.class);
   }
 
   public FakeIF() { }
@@ -46,13 +66,18 @@ public class FakeIF
     return new InputSplit[] { new FakeSplit() };
   }
 
-  public RecordReader<IncomparableKey,NullWritable> getRecordReader(
+  public RecordReader<K,V> getRecordReader(
       InputSplit ignored, JobConf conf, Reporter reporter) {
-    return new RecordReader<IncomparableKey,NullWritable>() {
-      public boolean next(IncomparableKey key, NullWritable value)
-          throws IOException { return false; }
-      public IncomparableKey createKey() { return new IncomparableKey(); }
-      public NullWritable createValue() { return NullWritable.get(); }
+    return new RecordReader<K,V>() {
+      public boolean next(K key, V value) throws IOException { return false; }
+      @SuppressWarnings("unchecked")
+      public K createKey() {
+        return (K)ReflectionUtils.newInstance(keyclass, null);
+      }
+      @SuppressWarnings("unchecked")
+      public V createValue() {
+        return (V)ReflectionUtils.newInstance(valclass, null);
+      }
       public long getPos() throws IOException { return 0L; }
       public void close() throws IOException { }
       public float getProgress() throws IOException { return 0.0f; }

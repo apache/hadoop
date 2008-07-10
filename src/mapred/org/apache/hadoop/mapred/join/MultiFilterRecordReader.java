@@ -129,8 +129,9 @@ public abstract class MultiFilterRecordReader<K extends WritableComparable,
       return ret;
     }
 
-    public void replay(V val) throws IOException {
+    public boolean replay(V val) throws IOException {
       WritableUtils.cloneInto(val, emit(ivalue));
+      return true;
     }
 
     public void reset() {

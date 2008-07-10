@@ -62,9 +62,12 @@ public class StreamBackedIterator<X extends Writable>
     return false;
   }
 
-  public void replay(X val) throws IOException {
+  public boolean replay(X val) throws IOException {
     inbuf.reset();
+    if (0 == inbuf.available())
+      return false;
     val.readFields(infbuf);
+    return true;
   }
 
   public void reset() {

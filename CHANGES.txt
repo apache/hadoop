@@ -100,6 +100,9 @@ Trunk (unreleased changes)
     HADOOP-3726. Throw exceptions from TestCLI setup and teardown instead of
     swallowing them. (Steve Loughran via cdouglas)
 
+    HADOOP-3721. Refactor CompositeRecordReader and related mapred.join classes
+    to make them clearer. (cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

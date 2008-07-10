@@ -377,7 +377,8 @@ public class Parser {
           throw new IOException("Error gathering splits from child RReader");
         }
         if (i > 0 && splits[i-1].length != tmp.length) {
-          throw new IOException("Inconsistent split cardinality from child");
+          throw new IOException("Inconsistent split cardinality from child " +
+              i + " (" + splits[i-1].length + "/" + tmp.length + ")");
         }
         splits[i] = tmp;
       }

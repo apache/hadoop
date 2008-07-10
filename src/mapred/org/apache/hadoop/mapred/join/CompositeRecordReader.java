@@ -149,11 +149,7 @@ public abstract class CompositeRecordReader<
   class JoinCollector {
     private K key;
     private ResetableIterator<X>[] iters;
-    private long partial = 0L;
-    private long replaymask = 0L;
-    private int start = 0;
     private int pos = -1;
-    private int iterpos = -1;
     private boolean first = true;
 
     /**
@@ -190,10 +186,8 @@ public abstract class CompositeRecordReader<
      */
     public void reset(K key) {
       this.key = key;
-      start = 0;
-      pos = 0;
       first = true;
-      partial = 0L;
+      pos = iters.length - 1;
       for (int i = 0; i < iters.length; ++i) {
         iters[i].reset();
       }
@@ -205,12 +199,10 @@ public abstract class CompositeRecordReader<
     public void clear() {
       key = null;
       pos = -1;
-      first = true;
       for (int i = 0; i < iters.length; ++i) {
         iters[i].clear();
         iters[i] = EMPTY;
       }
-      partial = 0L;
     }
 
     /**
@@ -228,52 +220,42 @@ public abstract class CompositeRecordReader<
      */
     @SuppressWarnings("unchecked") // No static typeinfo on Tuples
     protected boolean next(TupleWritable val) throws IOException {
+      if (first) {
+        int i = -1;
+        for (pos = 0; pos < iters.length; ++pos) {
+          if (iters[pos].hasNext() && iters[pos].next((X)val.get(pos))) {
+            i = pos;
+            val.setWritten(i);
+          }
+        }
+        pos = i;
+        first = false;
+        if (pos < 0) {
+          clear();
+          return false;
+        }
+        return true;
+      }
+      while (0 <= pos && !(iters[pos].hasNext() &&
+                           iters[pos].next((X)val.get(pos)))) {
+        --pos;
+      }
       if (pos < 0) {
         clear();
         return false;
       }
-      int i = start;
-      if (first) { // Find first iterator with elements
-        for (; i < iters.length && !iters[i].hasNext(); ++i);
-        if (iters.length <= i) { // no children had key
-          clear();
-          return false;
-        }
-        start = i;
-        for (int j = i; j < iters.length; ++j) {
-          if (iters[j].hasNext()) {
-            partial |= 1 << j;
-          }
-        }
-        iterpos = pos = iters.length - 1;
-        first = false;
-      } else { // Copy all elements in partial into tuple
-        for (; i < iterpos; ++i) {
-          if ((partial & (1 << i)) != 0) {
-            iters[i].replay((X)val.get(i));
-            val.setWritten(i);
-          }
-        }
-      }
-      long partialwritten = val.mask();
-      if (iters[i].next((X)val.get(i))) {
-        val.setWritten(i);
-      }
-      for (++i; i < iters.length; ++i) {
-        iters[i].reset();
-        if (iters[i].hasNext() && iters[i].next((X)val.get(i))) {
+      val.setWritten(pos);
+      for (int i = 0; i < pos; ++i) {
+        if (iters[i].replay((X)val.get(i))) {
           val.setWritten(i);
         }
       }
-      iterpos = iters.length - 1;
-      for (; iterpos > pos && !iters[iterpos].hasNext(); --iterpos);
-      if (!iters[iterpos].hasNext()) {
-        for (; !(pos < 0 || iters[pos].hasNext()); --pos);
-        iterpos = pos;
-      }
-      replaymask = val.mask();
-      if ((replaymask ^ partialwritten) == 0L) {
-        return next(val);
+      while (pos + 1 < iters.length) {
+        ++pos;
+        iters[pos].reset();
+        if (iters[pos].hasNext() && iters[pos].next((X)val.get(pos))) {
+          val.setWritten(pos);
+        }
       }
       return true;
     }
@@ -282,18 +264,19 @@ public abstract class CompositeRecordReader<
      * Replay the last Tuple emitted.
      */
     @SuppressWarnings("unchecked") // No static typeinfo on Tuples
-    public void replay(TupleWritable val) throws IOException {
+    public boolean replay(TupleWritable val) throws IOException {
       // The last emitted tuple might have drawn on an empty source;
       // it can't be cleared prematurely, b/c there may be more duplicate
       // keys in iterator positions < pos
-      if (first) {
-        throw new IllegalStateException();
-      }
+      assert !first;
+      boolean ret = false;
       for (int i = 0; i < iters.length; ++i) {
-        if ((replaymask & (1 << i)) != 0) {
-          iters[i].replay((X)val.get(i));
+        if (iters[i].replay((X)val.get(i))) {
+          val.setWritten(i);
+          ret = true;
         }
       }
+      return ret;
     }
 
     /**
