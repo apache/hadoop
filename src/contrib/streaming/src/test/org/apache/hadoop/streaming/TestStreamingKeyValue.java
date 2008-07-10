@@ -35,9 +35,14 @@ public class TestStreamingKeyValue extends TestCase
   // Third line of input does not have any tab character.
   // So, the whole line is the key and value is empty.
   protected String input = 
-    "roses are \tred\t\n\tviolets are blue\nbunnies are pink\n";
+    "roses are \tred\t\n\tviolets are blue\nbunnies are pink\n" +
+    "this is for testing a big\tinput line\n" +
+    "small input\n";
   protected String outputExpect = 
-    "\tviolets are blue\nbunnies are pink\t\nroses are \tred\t\n";
+    "\tviolets are blue\nbunnies are pink\t\n" + 
+    "roses are \tred\t\n" +
+    "small input\t\n" +
+    "this is for testing a big\tinput line\n";
 
   private StreamJob job;
 

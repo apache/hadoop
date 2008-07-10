@@ -84,6 +84,9 @@ Trunk (unreleased changes)
     HADOOP-3640. Fix the read method in the NativeS3InputStream. (tomwhite via
     omalley)
 
+    HADOOP-3711. Fixes the Streaming input parsing to properly find the 
+    separator. (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

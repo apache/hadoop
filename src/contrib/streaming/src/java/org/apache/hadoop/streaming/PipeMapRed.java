@@ -322,10 +322,10 @@ public abstract class PipeMapRed {
     byte[] separator = getFieldSeparator();
     
     // Need to find numKeyFields separators
-    int pos = UTF8ByteArrayUtils.findBytes(line, 0, line.length, separator);
+    int pos = UTF8ByteArrayUtils.findBytes(line, 0, length, separator);
     for(int k=1; k<numKeyFields && pos!=-1; k++) {
       pos = UTF8ByteArrayUtils.findBytes(line, pos + separator.length, 
-          line.length, separator);
+          length, separator);
     }
     try {
       if (pos == -1) {
