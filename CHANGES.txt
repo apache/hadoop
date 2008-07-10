@@ -93,6 +93,9 @@ Trunk (unreleased changes)
     HADOOP-3725. Prevent TestMiniMRMapDebugScript from swallowing exceptions.
     (Steve Loughran via cdouglas)
 
+    HADOOP-3726. Throw exceptions from TestCLI setup and teardown instead of
+    swallowing them. (Steve Loughran via cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

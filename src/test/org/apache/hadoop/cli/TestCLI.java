@@ -104,46 +104,38 @@ public class TestCLI extends TestCase {
   /*
    * Setup
    */
-  public void setUp() {
+  public void setUp() throws Exception {
     // Read the testConfig.xml file
     readTestConfigFile();
     
     // Start up the mini dfs cluster
     boolean success = false;
-    try {
-      conf = new Configuration();
-      cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = conf.get("fs.default.name", "file:///");
-      clitestDataDir = new File(System.getProperty("test.cache.data")).
-        toURI().toString().replace(' ', '+');
-      username = System.getProperty("user.name");
-      
-      FileSystem fs = cluster.getFileSystem();
-      assertTrue("Not a HDFS: "+fs.getUri(),
-                 fs instanceof DistributedFileSystem);
-      dfs = (DistributedFileSystem) fs;
-      success = true;
-    } catch (Exception e) {
-      LOG.info("Exception starting MiniDFS cluster: " + e);
-    }
-    
+    conf = new Configuration();
+    cluster = new MiniDFSCluster(conf, 1, true, null);
+    namenode = conf.get("fs.default.name", "file:///");
+    clitestDataDir = new File(System.getProperty("test.cache.data")).
+      toURI().toString().replace(' ', '+');
+    username = System.getProperty("user.name");
+
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+               fs instanceof DistributedFileSystem);
+    dfs = (DistributedFileSystem) fs;
+    success = true;
+
     assertTrue("Error setting up Mini DFS cluster", success);
   }
   
   /**
    * Tear down
    */
-  public void tearDown() {
+  public void tearDown() throws Exception {
     boolean success = false;
-    try {
-      dfs.close();
-      cluster.shutdown();
-      success = true;
-      Thread.sleep(2000);
-    } catch (Exception e) {
-      LOG.info("Exception shutting down MiniDFS cluster: " + e);
-    }
-    
+    dfs.close();
+    cluster.shutdown();
+    success = true;
+    Thread.sleep(2000);
+
     assertTrue("Error tearing down Mini DFS cluster", success);
     
     displayResults();
