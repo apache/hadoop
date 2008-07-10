@@ -20,6 +20,8 @@ package org.apache.hadoop.contrib.utils.join;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.JobConf;
 
 /**
  * This abstract class serves as the base class for the values that 
@@ -46,5 +48,9 @@ public abstract class TaggedMapOutput implements Writable {
   }
 
   public abstract Writable getData();
+  
+  public TaggedMapOutput clone(JobConf job) {
+    return (TaggedMapOutput) WritableUtils.clone(this, job);
+  }
 
 }

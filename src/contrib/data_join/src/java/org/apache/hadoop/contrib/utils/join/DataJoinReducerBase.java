@@ -95,7 +95,6 @@ public abstract class DataJoinReducerBase extends JobBase {
     SortedMap<Object, ResetableIterator> retv = new TreeMap<Object, ResetableIterator>();
     TaggedMapOutput aRecord = null;
     while (arg1.hasNext()) {
-      aRecord = (TaggedMapOutput) arg1.next();
       this.numOfValues += 1;
       if (this.numOfValues % 100 == 0) {
         reporter.setStatus("key: " + key.toString() + " numOfValues: "
@@ -104,13 +103,14 @@ public abstract class DataJoinReducerBase extends JobBase {
       if (this.numOfValues > this.maxNumOfValuesPerGroup) {
         continue;
       }
-      Text tag = new Text((Text)aRecord.getTag());
+      aRecord = ((TaggedMapOutput) arg1.next()).clone(job);
+      Text tag = aRecord.getTag();
       ResetableIterator data = retv.get(tag);
       if (data == null) {
         data = createResetableIterator();
         retv.put(tag, data);
       }
-      data.add(WritableUtils.clone(aRecord, job));
+      data.add(aRecord);
     }
     if (this.numOfValues > this.largestNumOfValues) {
       this.largestNumOfValues = numOfValues;

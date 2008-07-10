@@ -69,6 +69,10 @@ Trunk (unreleased changes)
     HADOOP-3660. Add replication factor for injecting blocks in simulated
     datanodes. (Sanjay Radia via cdouglas)
 
+    HADOOP-3684. Add a cloning function to the contrib/data_join framework
+    permitting users to define a more efficient method for cloning values from
+    the reduce than serialization/deserialization. (Runping Qi via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
