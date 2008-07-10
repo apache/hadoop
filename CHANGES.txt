@@ -45,6 +45,9 @@ Trunk (unreleased changes)
     naming convention,such as, hadoop.rm.queue.queue-name.property-name.
     (Hemanth Yamijala via ddas)
 
+    HADOOP-3149. Adds a way in which map/reducetasks can create multiple 
+    outputs. (Alejandro Abdelnur via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3577. Tools to inject blocks into name node and simulated

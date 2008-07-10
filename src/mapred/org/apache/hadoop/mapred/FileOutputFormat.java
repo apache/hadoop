@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.text.NumberFormat;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -230,5 +231,56 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
     // ${mapred.out.dir}/_temporary/_${taskid}/${name}
     return new Path(taskTmpDir, name);
   } 
+
+  /**
+   * Helper function to generate a name that is unique for the task.
+   *
+   * <p>The generated name can be used to create custom files from within the
+   * different tasks for the job, the names for different tasks will not collide
+   * with each other.</p>
+   *
+   * <p>The given name is postfixed with the task type, 'm' for maps, 'r' for
+   * reduces and the task partition number. For example, give a name 'test'
+   * running on the first map o the job the generated name will be
+   * 'test-m-00000'.</p>
+   *
+   * @param conf the configuration for the job.
+   * @param name the name to make unique.
+   * @return a unique name accross all tasks of the job.
+   */
+  public static String getUniqueName(JobConf conf, String name) {
+    int partition = conf.getInt("mapred.task.partition", -1);
+    if (partition == -1) {
+      throw new IllegalArgumentException(
+        "This method can only be called from within a Job");
+    }
+
+    String taskType = (conf.getBoolean("mapred.task.is.map", true)) ? "m" : "r";
+
+    NumberFormat numberFormat = NumberFormat.getInstance();
+    numberFormat.setMinimumIntegerDigits(5);
+    numberFormat.setGroupingUsed(false);
+
+    return name + "-" + taskType + "-" + numberFormat.format(partition);
+  }
+
+  /**
+   * Helper function to generate a {@link Path} for a file that is unique for
+   * the task within the job output directory.
+   *
+   * <p>The path can be used to create custom files from within the map and
+   * reduce tasks. The path name will be unique for each task. The path parent
+   * will be the job output directory.</p>ls
+   *
+   * <p>This method uses the {@link #getUniqueName} method to make the file name
+   * unique for the task.</p>
+   *
+   * @param conf the configuration for the job.
+   * @param name the name for the file.
+   * @return a unique path accross all tasks of the job.
+   */
+  public static Path getPathForCustomFile(JobConf conf, String name) {
+    return new Path(getWorkOutputPath(conf), getUniqueName(conf, name));
+  }
 }
 
