@@ -21,7 +21,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import junit.framework.TestCase;
 
@@ -159,8 +158,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     try {
       job = new JobClient(conf).submitJob(conf);
     } catch (IOException e) {
-    	LOG.info("Running Job failed");
-    	e.printStackTrace();
+    	LOG.info("Running Job failed", e);
     }
 
     JobID jobId = job.getID();
@@ -182,7 +180,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
    * the output of debug out log. 
    *
    */
-  public void testMapDebugScript(){
+  public void testMapDebugScript() throws Exception {
     try {
       
       // create configuration, dfs, file system and mapred cluster 
@@ -207,10 +205,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
       
       // Assert the output of debug script.
       assertEquals("Test Script\nBailing out", result);
-      
-    } catch(Exception e) {
-      e.printStackTrace();
-      fail("Exception in testing mapred debug script");
+
     } finally {  
       // close file system and shut down dfs and mapred cluster
       try {
@@ -224,15 +219,18 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
           mr.shutdown();
         }
       } catch (IOException ioe) {
-        LOG.info("IO exception in closing file system)" );
-        ioe.printStackTrace();        			
+        LOG.info("IO exception in closing file system:"+ioe.getMessage(), ioe);
       }
     }
   }
 
   public static void main(String args[]){
     TestMiniMRMapRedDebugScript tmds = new TestMiniMRMapRedDebugScript();
-    tmds.testMapDebugScript();
+    try {
+      tmds.testMapDebugScript();
+    } catch (Exception e) {
+      LOG.error("Exception in test: "+e.getMessage(), e);
+    }
   }
   
 }
