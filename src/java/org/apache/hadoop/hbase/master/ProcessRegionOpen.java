@@ -108,6 +108,9 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
               // Add it to the online meta regions
               LOG.debug("Adding to onlineMetaRegions: " + m.toString());
               master.regionManager.putMetaRegionOnline(m);
+              // Interrupting the Meta Scanner sleep so that it can
+              // process regions right away
+              master.regionManager.metaScannerThread.interrupt();
             }
           }
           // If updated successfully, remove from pending list.
