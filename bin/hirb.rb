@@ -332,10 +332,6 @@ module IRB
     @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
     @CONF[:MAIN_CONTEXT] = hirb.context
 
-    trap("SIGINT") do
-      hirb.signal_handle
-    end
-
     catch(:IRB_EXIT) do
       hirb.eval_input
     end

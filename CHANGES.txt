@@ -276,6 +276,8 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-706   On OOME, regionserver sticks around and doesn't go down with cluster
                (Jean-Daniel Cryans via Stack)
+   HBASE-735   hbase shell doesn't trap CTRL-C signal
+               (Jean-Daniel Cryans via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase
