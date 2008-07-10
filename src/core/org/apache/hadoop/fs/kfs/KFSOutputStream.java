@@ -55,13 +55,10 @@ class KFSOutputStream extends OutputStream {
         if (kfsChannel == null) {
             throw new IOException("File closed");
         }
-        byte[] b = new byte[4];
+        byte[] b = new byte[1];
 
-        b[0] = (byte) (v & 0xFF);
-        b[1] = (byte) ((v >> 8) & 0xFF);
-        b[1] = (byte) ((v >> 16) & 0xFF);
-        b[1] = (byte) ((v >> 24) & 0xFF);
-        write(b, 0, 4);
+        b[0] = (byte) v;
+        write(b, 0, 1);
     }
 
     public void write(byte b[], int off, int len) throws IOException {

@@ -808,6 +808,9 @@ Release 0.18.0 - Unreleased
     prevents it from loading user-specified InputFormats.
     (Jingkei Ly via cdouglas)
 
+    HADOOP-3718. Fix KFSOutputStream::write(int) to output a byte instead of
+    an int, per the OutputStream contract. (Sriram Rao via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
