@@ -73,6 +73,10 @@ Trunk (unreleased changes)
     permitting users to define a more efficient method for cloning values from
     the reduce than serialization/deserialization. (Runping Qi via cdouglas)
 
+    HADOOP-3478. Improves the handling of map output fetching. Now the
+    randomization is by the hosts (and not the map outputs themselves). 
+    (Jothi Padmanabhan via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
