@@ -178,6 +178,8 @@ Trunk (unreleased changes)
    HBASE-734   scan '.META.', {LIMIT => 10} crashes (Izaak Rubin via Stack)
    HBASE-736   Should have HTable.deleteAll(String row) and HTable.deleteAll(Text row)
                (Jean-Daniel Cryans via Stack)
+   HBASE-740   ThriftServer getting table names incorrectly (Tim Sell via Stack)
+   HBASE-742   Rename getMetainfo in HTable as getTableDescriptor
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
@@ -280,7 +282,6 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-730   On startup, rinse STARTCODE and SERVER from .META.
                (Jean-Daniel Cryans via Stack)
-   HBASE-740   ThriftServer getting table names incorrectly (Tim Sell via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase
