@@ -93,6 +93,11 @@ public class HColumnDescriptor implements WritableComparable {
   public static final boolean DEFAULT_BLOCKCACHE = false;
 
   /**
+   * Default setting for whether or not to use bloomfilters.
+   */
+  public static final boolean DEFAULT_BLOOMFILTER = false;
+  
+  /**
    * Default time to live of cell contents.
    */
   public static final int DEFAULT_TTL = HConstants.FOREVER;
