@@ -181,6 +181,8 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-740   ThriftServer getting table names incorrectly (Tim Sell via Stack)
    HBASE-742   Rename getMetainfo in HTable as getTableDescriptor
+   HBASE-739   HBaseAdmin.createTable() using old HTableDescription doesn't work
+               (Izaak Rubin via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
