@@ -280,6 +280,7 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-730   On startup, rinse STARTCODE and SERVER from .META.
                (Jean-Daniel Cryans via Stack)
+   HBASE-740   ThriftServer getting table names incorrectly (Tim Sell via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

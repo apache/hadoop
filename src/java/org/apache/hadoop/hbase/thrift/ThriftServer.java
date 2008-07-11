@@ -169,7 +169,7 @@ public class ThriftServer {
         HTableDescriptor[] tables = this.admin.listTables();
         ArrayList<byte[]> list = new ArrayList<byte[]>(tables.length);
         for (int i = 0; i < tables.length; i++) {
-          list.add(tables[i].getName().toString().getBytes());
+          list.add(tables[i].getName());
         }
         return list;
       } catch (IOException e) {
@@ -186,7 +186,7 @@ public class ThriftServer {
         ArrayList<RegionDescriptor> regions = new ArrayList<RegionDescriptor>();
         for (int i = 0; i < startKeys.length; i++) {
           RegionDescriptor region = new RegionDescriptor();
-          region.startKey = startKeys[i].toString().getBytes();
+          region.startKey = startKeys[i];
           regions.add(region);
         }
         return regions;
