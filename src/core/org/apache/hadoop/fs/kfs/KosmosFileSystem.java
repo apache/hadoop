@@ -147,11 +147,6 @@ public class KosmosFileSystem extends FileSystem {
 		continue;
 	    numEntries++;
 	}
-	if (numEntries == 0) {
-	    return null;
-        }
-
-        // System.out.println("Calling listStatus on: " + path);
 
 	FileStatus[] pathEntries = new FileStatus[numEntries];
 	int j = 0;
