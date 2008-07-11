@@ -822,6 +822,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3718. Fix KFSOutputStream::write(int) to output a byte instead of
     an int, per the OutputStream contract. (Sriram Rao via cdouglas)
 
+    HADOOP-3647. Add debug logs to help track down a very occassional,
+    hard-to-reproduce, bug in shuffle/merge on the reducer. (acmurthy) 
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

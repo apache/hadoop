@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
@@ -2371,9 +2372,9 @@ public class TaskTracker
         indexIn.seek(reduce * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH);
           
         //read the offset and length of the partition data
-        long startOffset = indexIn.readLong();
-        long rawPartLength = indexIn.readLong();
-        long partLength = indexIn.readLong();
+        final long startOffset = indexIn.readLong();
+        final long rawPartLength = indexIn.readLong();
+        final long partLength = indexIn.readLong();
 
         indexIn.close();
         indexIn = null;
@@ -2396,6 +2397,23 @@ public class TaskTracker
          */
         //open the map-output file
         mapOutputIn = fileSys.open(mapOutputFileName);
+        
+        // TODO: Remove this after a 'fix' for HADOOP-3647
+        // The clever trick here to reduce the impact of the extra seek for
+        // logging the first key/value lengths is to read the lengths before
+        // the second seek for the actual shuffle. The second seek is almost
+        // a no-op since it is very short (go back length of two VInts) and the 
+        // data is almost guaranteed to be in the filesystem's buffers.
+        // WARN: This won't work for compressed map-outputs!
+        int firstKeyLength = 0;
+        int firstValueLength = 0;
+        if (partLength > 0) {
+          mapOutputIn.seek(startOffset);
+          firstKeyLength = WritableUtils.readVInt(mapOutputIn);
+          firstValueLength = WritableUtils.readVInt(mapOutputIn);
+        }
+        
+
         //seek to the correct offset for the reduce
         mapOutputIn.seek(startOffset);
           
@@ -2421,7 +2439,8 @@ public class TaskTracker
         
         LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
                  " from map: " + mapId + " given " + partLength + "/" + 
-                 rawPartLength);
+                 rawPartLength + " from " + startOffset + " with (" + 
+                 firstKeyLength + ", " + firstValueLength + ")");
       } catch (IOException ie) {
         TaskTracker tracker = 
           (TaskTracker) context.getAttribute("task.tracker");

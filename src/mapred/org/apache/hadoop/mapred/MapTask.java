@@ -981,18 +981,14 @@ class MapTask extends Task {
       //The final index file output stream
       FSDataOutputStream finalIndexOut = localFs.create(finalIndexFile, true,
                                                         4096);
-      long segmentStart;
-      
       if (numSpills == 0) {
         //create dummy files
         for (int i = 0; i < partitions; i++) {
-          segmentStart = finalOut.getPos();
+          long segmentStart = finalOut.getPos();
           Writer<K, V> writer = new Writer<K, V>(job, finalOut, 
                                                  keyClass, valClass, null);
-          finalIndexOut.writeLong(segmentStart);
-          finalIndexOut.writeLong(finalOut.getPos() - segmentStart);
-          finalIndexOut.writeLong(finalOut.getPos() - segmentStart);
           writer.close();
+          writeIndexRecord(finalIndexOut, finalOut, segmentStart, writer);
         }
         finalOut.close();
         finalIndexOut.close();
@@ -1033,7 +1029,7 @@ class MapTask extends Task {
                          job.getOutputKeyComparator(), reporter);
 
           //write merged output to disk
-          segmentStart = finalOut.getPos();
+          long segmentStart = finalOut.getPos();
           Writer<K, V> writer = 
               new Writer<K, V>(job, finalOut, keyClass, valClass, codec);
           if (null == combinerClass || numSpills < minSpillsForCombine) {
@@ -1075,6 +1071,8 @@ class MapTask extends Task {
       indexOut.writeLong(writer.getRawLength());
       long segmentLength = out.getPos() - start;
       indexOut.writeLong(segmentLength);
+      LOG.info("Index: (" + start + ", " + writer.getRawLength() + ", " + 
+               segmentLength + ")");
     }
     
   } // MapOutputBuffer

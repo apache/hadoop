@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
@@ -59,6 +60,7 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -663,6 +665,7 @@ class ReduceTask extends Task {
     /** Describes the output of a map; could either be on disk or in-memory. */
     private class MapOutput {
       final TaskID mapId;
+      final TaskAttemptID mapAttemptId;
       
       final Path file;
       final Configuration conf;
@@ -671,8 +674,10 @@ class ReduceTask extends Task {
       final boolean inMemory;
       long size;
       
-      public MapOutput(TaskID mapId, Configuration conf, Path file, long size) {
+      public MapOutput(TaskID mapId, TaskAttemptID mapAttemptId, 
+                       Configuration conf, Path file, long size) {
         this.mapId = mapId;
+        this.mapAttemptId = mapAttemptId;
         
         this.conf = conf;
         this.file = file;
@@ -683,8 +688,9 @@ class ReduceTask extends Task {
         this.inMemory = false;
       }
       
-      public MapOutput(TaskID mapId, byte[] data) {
+      public MapOutput(TaskID mapId, TaskAttemptID mapAttemptId, byte[] data) {
         this.mapId = mapId;
+        this.mapAttemptId = mapAttemptId;
         
         this.file = null;
         this.conf = null;
@@ -1177,7 +1183,8 @@ class ReduceTask extends Task {
         // Copy map-output into an in-memory buffer
         byte[] shuffleData = new byte[mapOutputLength];
         MapOutput mapOutput = 
-          new MapOutput(mapOutputLoc.getTaskId(), shuffleData);
+          new MapOutput(mapOutputLoc.getTaskId(), 
+                        mapOutputLoc.getTaskAttemptId(), shuffleData);
         
         int bytesRead = 0;
         try {
@@ -1246,6 +1253,16 @@ class ReduceTask extends Task {
           );
         }
 
+        // TODO: Remove this after a 'fix' for HADOOP-3647
+        if (mapOutputLength > 0) {
+          DataInputBuffer dib = new DataInputBuffer();
+          dib.reset(shuffleData, 0, shuffleData.length);
+          LOG.info("Rec #1 from " + mapOutputLoc.getTaskAttemptId() + " -> (" + 
+                   WritableUtils.readVInt(dib) + ", " + 
+                   WritableUtils.readVInt(dib) + ") from " + 
+                   mapOutputLoc.getHost());
+        }
+        
         return mapOutput;
       }
       
@@ -1260,8 +1277,8 @@ class ReduceTask extends Task {
                                          mapOutputLength, conf);
 
         MapOutput mapOutput = 
-          new MapOutput(mapOutputLoc.getTaskId(), conf, 
-                        localFileSys.makeQualified(localFilename), 
+          new MapOutput(mapOutputLoc.getTaskId(), mapOutputLoc.getTaskAttemptId(), 
+                        conf, localFileSys.makeQualified(localFilename), 
                         mapOutputLength);
 
 
@@ -1826,7 +1843,7 @@ class ReduceTask extends Task {
           MapOutput mo = mapOutputsFilesInMemory.remove(0);
           
           Reader<K, V> reader = 
-            new InMemoryReader<K, V>(ramManager, 
+            new InMemoryReader<K, V>(ramManager, mo.mapAttemptId,
                                      mo.data, 0, mo.data.length);
           Segment<K, V> segment = 
             new Segment<K, V>(reader, true);
