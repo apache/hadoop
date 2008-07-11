@@ -107,7 +107,7 @@ public class TestKosmosFileSystem extends TestCase {
 
         kosmosFileSystem.delete(file2, true);
         p = kosmosFileSystem.listStatus(subDir1);
-        assertEquals(p, null);
+        assertEquals(p.length, 0);
 
         kosmosFileSystem.delete(baseDir, true);
         assertFalse(kosmosFileSystem.exists(baseDir));
