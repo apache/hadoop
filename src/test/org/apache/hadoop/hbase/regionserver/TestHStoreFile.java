@@ -129,9 +129,9 @@ public class TestHStoreFile extends HBaseTestCase {
       JenkinsHash.hash(Bytes.toBytes(getName())),
       Bytes.toBytes("colfamily"), 1234567890L, null);
     MapFile.Writer writer =
-      hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, null);
+      hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, false, 0);
     writeStoreFile(writer);
-    MapFile.Reader reader = hsf.getReader(this.fs, null);
+    MapFile.Reader reader = hsf.getReader(this.fs, false, false);
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
@@ -162,7 +162,7 @@ public class TestHStoreFile extends HBaseTestCase {
         otherReference.getMidkey().toString());
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    MapFile.Reader halfReader = refHsf.getReader(this.fs, null);
+    MapFile.Reader halfReader = refHsf.getReader(this.fs, false, false);
     HStoreKey key = new HStoreKey();
     ImmutableBytesWritable value = new ImmutableBytesWritable();
     boolean first = true;

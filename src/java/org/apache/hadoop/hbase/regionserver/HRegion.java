@@ -2147,8 +2147,5 @@ public class HRegion implements HConstants {
   throws IOException {
     fs.mkdirs(HStoreFile.getMapDir(basedir, encodedRegionName, colFamily));
     fs.mkdirs(HStoreFile.getInfoDir(basedir, encodedRegionName, colFamily));
-    if (tabledesc.getFamily(colFamily).getBloomFilter() != null) {
-      fs.mkdirs(HStoreFile.getFilterDir(basedir, encodedRegionName, colFamily));
-    }
   }
 }

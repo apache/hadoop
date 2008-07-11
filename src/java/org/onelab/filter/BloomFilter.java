@@ -192,6 +192,13 @@ public class BloomFilter extends Filter {
     bf.or(this);
     return bf;
   }//end clone()
+  
+  /**
+   * @return size of the the bloomfilter
+   */
+  public int getVectorSize() {
+    return this.vectorSize;
+  }
 
   // Writable
 

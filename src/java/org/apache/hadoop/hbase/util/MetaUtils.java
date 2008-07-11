@@ -389,7 +389,14 @@ public class MetaUtils {
     }
   }
   
-  private void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
+  /**
+   * Update COL_REGIONINFO in meta region r with HRegionInfo hri
+   * 
+   * @param r
+   * @param hri
+   * @throws IOException
+   */
+  public void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
   throws IOException {
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(

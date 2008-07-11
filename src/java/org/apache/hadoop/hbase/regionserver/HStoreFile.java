@@ -27,7 +27,6 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -45,7 +44,7 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.onelab.filter.Filter;
+import org.onelab.filter.BloomFilter;
 import org.onelab.filter.Key;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -394,33 +393,13 @@ public class HStoreFile implements HConstants {
    * Get reader for the store file map file.
    * Client is responsible for closing file when done.
    * @param fs
-   * @param bloomFilter If null, no filtering is done.
-   * @return MapFile.Reader
-   * @throws IOException
-   */
-  public synchronized MapFile.Reader getReader(final FileSystem fs,
-      final Filter bloomFilter)
-  throws IOException {
-    if (isReference()) {
-      return new HStoreFile.HalfMapFileReader(fs,
-          getMapFilePath(reference).toString(), conf, 
-          reference.getFileRegion(), reference.getMidkey(), bloomFilter);
-    }
-    return new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
-        conf, bloomFilter);
-  }
-  
-  /**
-   * Get reader for the store file map file.
-   * Client is responsible for closing file when done.
-   * @param fs
-   * @param bloomFilter If null, no filtering is done.
+   * @param bloomFilter If true, a bloom filter exists
    * @param blockCacheEnabled If true, MapFile blocks should be cached.
-   * @return MapFile.Reader
+   * @return BloomFilterMapFile.Reader
    * @throws IOException
    */
-  public synchronized MapFile.Reader getReader(final FileSystem fs,
-      final Filter bloomFilter, final boolean blockCacheEnabled)
+  public synchronized BloomFilterMapFile.Reader getReader(final FileSystem fs,
+      final boolean bloomFilter, final boolean blockCacheEnabled)
   throws IOException {
     if (isReference()) {
       return new HStoreFile.HalfMapFileReader(fs,
@@ -438,20 +417,21 @@ public class HStoreFile implements HConstants {
    * @param fs
    * @param compression Pass <code>SequenceFile.CompressionType.NONE</code>
    * for none.
-   * @param bloomFilter If null, no filtering is done.
+   * @param bloomFilter If true, create a bloom filter
+   * @param nrows number of rows expected. Required if bloomFilter is true.
    * @return MapFile.Writer
    * @throws IOException
    */
   public MapFile.Writer getWriter(final FileSystem fs,
       final SequenceFile.CompressionType compression,
-      final Filter bloomFilter)
+      final boolean bloomFilter, int nrows)
   throws IOException {
     if (isReference()) {
       throw new IOException("Illegal Access: Cannot get a writer on a" +
         "HStoreFile reference");
     }
     return new BloomFilterMapFile.Writer(conf, fs,
-      getMapFilePath().toString(), compression, bloomFilter);
+      getMapFilePath().toString(), compression, bloomFilter, nrows);
   }
 
   /**
@@ -472,25 +452,6 @@ public class HStoreFile implements HConstants {
       (isReference()? "-" + reference.toString(): "");
   }
   
-  /**
-   * Custom bloom filter key maker.
-   * @param key
-   * @return Key made of bytes of row and column only.
-   * @throws IOException
-   */
-  static Key getBloomFilterKey(WritableComparable key)
-  throws IOException {
-    HStoreKey hsk = (HStoreKey)key;
-    byte [] bytes = null;
-    try {
-      bytes = (hsk.getRow().toString() + hsk.getColumn().toString()).
-        getBytes(UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      throw new IOException(e.toString());
-    }
-    return new Key(bytes);
-  }
-
   static boolean isTopFileRegion(final Range r) {
     return r.equals(Range.top);
   }
@@ -529,6 +490,7 @@ public class HStoreFile implements HConstants {
    * @param f Column family.
    * @return the bloom filter directory path
    */
+  @Deprecated
   public static Path getFilterDir(Path dir, int encodedRegionName,
       final byte [] f) {
     return getFamilySubDir(dir, encodedRegionName, f, HSTORE_FILTER_DIR);
@@ -627,6 +589,15 @@ public class HStoreFile implements HConstants {
       ImmutableBytesWritable.class;
 
     /**
+     * Custom bloom filter key maker.
+     * @param key
+     * @return Key made of bytes of row only.
+     */
+    protected static Key getBloomFilterKey(WritableComparable key) {
+      return new Key(((HStoreKey) key).getRow());
+    }
+
+    /**
      * A reader capable of reading and caching blocks of the data file.
      */
     static class HbaseReader extends MapFile.Reader {
@@ -718,22 +689,10 @@ public class HStoreFile implements HConstants {
    * filter is null, just passes invocation to parent.
    */
   static class BloomFilterMapFile extends HbaseMapFile {
-    static class Reader extends HbaseReader {
-      private final Filter bloomFilter;
+    protected static final String BLOOMFILTER_FILE_NAME = "filter";
 
-      /**
-       * @param fs
-       * @param dirName
-       * @param conf
-       * @param filter
-       * @throws IOException
-       */
-      public Reader(FileSystem fs, String dirName, Configuration conf,
-          final Filter filter)
-      throws IOException {
-        super(fs, dirName, conf);
-        bloomFilter = filter;
-      }
+    static class Reader extends HbaseReader {
+      private final BloomFilter bloomFilter;
 
       /**
        * @param fs
@@ -744,10 +703,31 @@ public class HStoreFile implements HConstants {
        * @throws IOException
        */
       public Reader(FileSystem fs, String dirName, Configuration conf,
-          final Filter filter, final boolean blockCacheEnabled)
+          final boolean filter, final boolean blockCacheEnabled)
       throws IOException {
         super(fs, dirName, conf, blockCacheEnabled);
-        bloomFilter = filter;
+        if (filter) {
+          this.bloomFilter = loadBloomFilter(fs, dirName);
+        } else {
+          this.bloomFilter = null;
+        }
+      }
+
+      private BloomFilter loadBloomFilter(FileSystem fs, String dirName)
+      throws IOException {
+        Path filterFile = new Path(dirName, BLOOMFILTER_FILE_NAME);
+        if(!fs.exists(filterFile)) {
+          throw new FileNotFoundException("Could not find bloom filter: " +
+              filterFile);
+        }
+        BloomFilter filter = new BloomFilter();
+        FSDataInputStream in = fs.open(filterFile);
+        try {
+          bloomFilter.readFields(in);
+        } finally {
+          fs.close();
+        }
+        return filter;
       }
       
       /** {@inheritDoc} */
@@ -788,27 +768,65 @@ public class HStoreFile implements HConstants {
         }
         return null;
       }
+      
+      /* @return size of the bloom filter */
+      int getBloomFilterSize() {
+        return bloomFilter == null ? 0 : bloomFilter.getVectorSize();
+      }
     }
     
     static class Writer extends HbaseWriter {
-      private final Filter bloomFilter;
+      private static final double DEFAULT_NUMBER_OF_HASH_FUNCTIONS = 4.0;
+      private final BloomFilter bloomFilter;
+      private final String dirName;
+      private final FileSystem fs;
       
       /**
        * @param conf
        * @param fs
        * @param dirName
-       * @param keyClass
-       * @param valClass
        * @param compression
        * @param filter
+       * @param nrows
        * @throws IOException
        */
       @SuppressWarnings("unchecked")
       public Writer(Configuration conf, FileSystem fs, String dirName,
-        SequenceFile.CompressionType compression, final Filter filter)
+        SequenceFile.CompressionType compression, final boolean filter,
+        int nrows)
       throws IOException {
         super(conf, fs, dirName, compression);
-        bloomFilter = filter;
+        this.dirName = dirName;
+        this.fs = fs;
+        if (filter) {
+          /* 
+           * There is no way to automatically determine the vector size and the
+           * number of hash functions to use. In particular, bloom filters are
+           * very sensitive to the number of elements inserted into them. For
+           * HBase, the number of entries depends on the size of the data stored
+           * in the column. Currently the default region size is 256MB, so the
+           * number of entries is approximately 
+           * 256MB / (average value size for column).
+           * 
+           * If m denotes the number of bits in the Bloom filter (vectorSize),
+           * n denotes the number of elements inserted into the Bloom filter and
+           * k represents the number of hash functions used (nbHash), then
+           * according to Broder and Mitzenmacher,
+           * 
+           * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey.pdf )
+           * 
+           * the probability of false positives is minimized when k is
+           * approximately m/n ln(2).
+           */
+          this.bloomFilter = new BloomFilter(
+              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
+              (int) Math.ceil(
+                  (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
+                  Math.log(2.0))
+          );
+        } else {
+          this.bloomFilter = null;
+        }
       }
 
       /** {@inheritDoc} */
@@ -819,6 +837,36 @@ public class HStoreFile implements HConstants {
           bloomFilter.add(getBloomFilterKey(key));
         }
         super.append(key, val);
+      }
+
+      /** {@inheritDoc} */
+      @Override
+      public synchronized void close() throws IOException {
+        super.close();
+        if (this.bloomFilter != null) {
+          flushBloomFilter();
+        }
+      }
+      
+      /**
+       * Flushes bloom filter to disk
+       * 
+       * @throws IOException
+       */
+      private void flushBloomFilter() throws IOException {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("flushing bloom filter for " + this.dirName);
+        }
+        FSDataOutputStream out =
+          fs.create(new Path(dirName, BLOOMFILTER_FILE_NAME));
+        try {
+          bloomFilter.write(out);
+        } finally {
+          out.close();
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("flushed bloom filter for " + this.dirName);
+        }
       }
     }
   }
@@ -841,21 +889,12 @@ public class HStoreFile implements HConstants {
         final Configuration conf, final Range r,
         final WritableComparable midKey)
     throws IOException {
-      this(fs, dirName, conf, r, midKey, null, false);
+      this(fs, dirName, conf, r, midKey, false, false);
     }
     
     HalfMapFileReader(final FileSystem fs, final String dirName, 
         final Configuration conf, final Range r,
-        final WritableComparable midKey, final Filter filter)
-    throws IOException {
-      super(fs, dirName, conf, filter);
-      top = isTopFileRegion(r);
-      midkey = midKey;
-    }
-    
-    HalfMapFileReader(final FileSystem fs, final String dirName, 
-        final Configuration conf, final Range r,
-        final WritableComparable midKey, final Filter filter,
+        final WritableComparable midKey, final boolean filter,
         final boolean blockCacheEnabled)
     throws IOException {
       super(fs, dirName, conf, filter, blockCacheEnabled);

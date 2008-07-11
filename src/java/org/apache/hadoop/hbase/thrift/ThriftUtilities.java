@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import org.apache.hadoop.hbase.BloomFilterDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -38,19 +37,9 @@ public class ThriftUtilities {
   static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in)
       throws IllegalArgument {
     CompressionType comp = CompressionType.valueOf(in.compression);
-    BloomFilterDescriptor bloom = null;
+    boolean bloom = false;
     if (in.bloomFilterType.compareTo("NONE") != 0) {
-      if (in.bloomFilterVectorSize > 0 && in.bloomFilterNbHashes > 0) {
-        bloom = new BloomFilterDescriptor(BloomFilterDescriptor.BloomFilterType
-            .valueOf(in.bloomFilterType), in.bloomFilterVectorSize,
-            in.bloomFilterNbHashes);
-      } else if (in.bloomFilterVectorSize > 0) {
-        bloom = new BloomFilterDescriptor(BloomFilterDescriptor.BloomFilterType
-            .valueOf(in.bloomFilterType), in.bloomFilterVectorSize);
-      } else {
-        throw new IllegalArgument(
-            "must specify number of entries for bloom filter");
-      }
+      bloom = true;
     }
     
     if (in.name == null || in.name.length <= 0) {
@@ -78,12 +67,7 @@ public class ThriftUtilities {
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
     col.maxValueLength = in.getMaxValueLength();
-    BloomFilterDescriptor bloom = in.getBloomFilter();
-    if (bloom != null) {
-      col.bloomFilterType = bloom.getType().toString();
-      col.bloomFilterVectorSize = bloom.getVectorSize();
-      col.bloomFilterNbHashes = bloom.getNbHash();
-    }
+    col.bloomFilterType = Boolean.toString(in.isBloomFilterEnabled());
     return col;
   }
   

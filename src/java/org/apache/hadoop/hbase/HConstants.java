@@ -40,9 +40,9 @@ public interface HConstants {
   
   /**
    * Current version of file system
-   * Version 3 added 'historian' family to .META.
+   * Version 4 supports only one kind of bloom filter
    */
-  public static final String FILE_SYSTEM_VERSION = "3";
+  public static final String FILE_SYSTEM_VERSION = "4";
   
   // Configuration parameters
   

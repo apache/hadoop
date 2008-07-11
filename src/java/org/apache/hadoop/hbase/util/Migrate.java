@@ -44,10 +44,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -218,12 +220,16 @@ public class Migrate extends Configured implements Tool {
         migrateFromNoVersion(rootFiles);
         migrateToV2(rootFiles);
         migrateToV3();
+        migrateToV4();
       } else if (version.compareTo("0.1") == 0) {
         migrateToV2(getRootDirFiles());
         migrateToV3();
+        migrateToV4();
       } else if (version.compareTo("2") == 0) {
         migrateToV3();
       } else if (version.compareTo("3") == 0) {
+        migrateToV4();
+      } else if (version.compareTo("4") == 0) {
         // Nothing to do.
       } else {
         throw new IOException("Unrecognized version: " + version);
@@ -288,6 +294,11 @@ public class Migrate extends Configured implements Tool {
   private void migrateToV3() throws IOException {
     LOG.info("Checking to see if hbase in Filesystem is at version 3.");
     addHistorianFamilyToMeta();
+  }
+  
+  private void migrateToV4() throws IOException {
+    LOG.info("Checking to see if hbase in Filesystem is at version 4.");
+    updateBloomFilters();
   }
 
   private FileStatus[] getRootDirFiles() throws IOException {
@@ -496,10 +507,61 @@ public class Migrate extends Configured implements Tool {
         utils.addColumn(HConstants.META_TABLE_NAME,
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
             HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-            false, false, Integer.MAX_VALUE, HConstants.FOREVER, null));
+            false, false, Integer.MAX_VALUE, HConstants.FOREVER, false));
         LOG.info("Historian family added to .META.");
         // Flush out the meta edits.
       }
+    } finally {
+      utils.shutdown();
+    }
+  }
+  
+  private void updateBloomFilters() throws IOException {
+    if (this.migrationNeeded && this.readOnly) {
+      return;
+    }
+    final Path rootDir = FSUtils.getRootDir(conf);
+    final MetaUtils utils = new MetaUtils(this.conf);
+    try {
+      // Scan the root region
+      utils.scanRootRegion(new MetaUtils.ScannerListener() {
+        public boolean processRow(HRegionInfo info) throws IOException {
+          // Scan every meta region
+          final HRegion metaRegion = utils.getMetaRegion(info);
+          utils.scanMetaRegion(info, new MetaUtils.ScannerListener() {
+            public boolean processRow(HRegionInfo tableInfo) throws IOException {
+              HTableDescriptor desc = tableInfo.getTableDesc();
+              Path tableDir =
+                HTableDescriptor.getTableDir(rootDir, desc.getName()); 
+              for (HColumnDescriptor column: desc.getFamilies()) {
+                if (column.isBloomFilterEnabled()) {
+                  // Column has a bloom filter
+                  migrationNeeded = true;
+
+                  Path filterDir = HStoreFile.getFilterDir(tableDir,
+                      tableInfo.getEncodedName(), column.getName());
+                  if (fs.exists(filterDir)) {
+                    // Filter dir exists
+                    if (readOnly) {
+                      // And if we are only checking to see if a migration is
+                      // needed - it is. We're done.
+                      return false;
+                    }
+                    // Delete the filter
+                    fs.delete(filterDir, true);
+                    // Update the HRegionInfo in meta
+                    utils.updateMETARegionInfo(metaRegion, tableInfo);
+                  }
+                }
+              }
+              return true;
+            }
+          });
+          // Stop scanning if only doing a check and we've determined that a
+          // migration is needed. Otherwise continue by returning true
+          return readOnly && migrationNeeded ? false : true;
+        }
+      });
     } finally {
       utils.shutdown();
     }

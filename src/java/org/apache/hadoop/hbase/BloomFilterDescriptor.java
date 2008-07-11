@@ -47,6 +47,7 @@ import org.apache.hadoop.io.WritableComparable;
  * m/n ln(2).
  * 
  */
+@Deprecated
 public class BloomFilterDescriptor implements WritableComparable {
   private static final double DEFAULT_NUMBER_OF_HASH_FUNCTIONS = 4.0;
   
@@ -152,14 +153,12 @@ public class BloomFilterDescriptor implements WritableComparable {
     return value.toString();
   }
 
-  public BloomFilterType getType() {
-    return filterType;
-  }
-  
+  /** @return the vector size */
   public int getVectorSize() {
     return vectorSize;
   }
-  
+
+  /** @return number of hash functions */
   public int getNbHash() {
     return nbHash;
   }

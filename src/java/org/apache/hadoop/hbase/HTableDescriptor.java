@@ -42,17 +42,17 @@ public class HTableDescriptor implements WritableComparable {
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
           1, HColumnDescriptor.CompressionType.NONE, false, false,
-          Integer.MAX_VALUE, HConstants.FOREVER, null) });
+          Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
               HColumnDescriptor.CompressionType.NONE, false, false,
-              Integer.MAX_VALUE, HConstants.FOREVER, null),
+              Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
               HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-              false, false, Integer.MAX_VALUE, HConstants.FOREVER, null) });
+              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   private boolean rootregion = false;
   private boolean metaregion = false;

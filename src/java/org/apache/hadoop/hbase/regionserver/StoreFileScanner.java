@@ -92,7 +92,8 @@ implements ChangedReadersObserver {
     // Most recent map file should be first
     int i = readers.length - 1;
     for(HStoreFile curHSF: store.getStorefiles().values()) {
-      readers[i--] = curHSF.getReader(store.fs, store.bloomFilter);
+      readers[i--] = curHSF.getReader(store.fs,
+          store.getFamily().isBloomFilterEnabled(), false);
     }
     
     this.keys = new HStoreKey[readers.length];

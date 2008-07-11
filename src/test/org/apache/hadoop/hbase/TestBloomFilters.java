@@ -145,78 +145,8 @@ public class TestBloomFilters extends HBaseClusterTestCase {
       Bytes.toBytes("yzabcdef")
   };
   
-  /** constructor */
-  public TestBloomFilters() {
-    super();
-  }
-  
   /**
-   * Test that specifies explicit parameters for the bloom filter
-   * @throws IOException
-   */
-  public void testExplicitParameters() throws IOException {
-    HTable table = null;
-
-    // Setup
-    
-    HTableDescriptor desc = new HTableDescriptor(getName());
-    BloomFilterDescriptor bloomFilter =
-      new BloomFilterDescriptor(              // if we insert 1000 values
-          BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
-          12499,                              // number of bits
-          4                                   // number of hash functions
-      );
-
-    desc.addFamily(
-        new HColumnDescriptor(CONTENTS,               // Column name
-            1,                                        // Max versions
-            HColumnDescriptor.CompressionType.NONE,   // no compression
-            HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
-            HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_LENGTH,
-            HColumnDescriptor.DEFAULT_TTL,
-            bloomFilter
-        )
-    );
-
-    // Create the table
-
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-
-    // Open table
-
-    table = new HTable(conf, desc.getName());
-
-    // Store some values
-
-    for(int i = 0; i < 100; i++) {
-      byte [] row = rows[i];
-      String value = row.toString();
-      BatchUpdate b = new BatchUpdate(row);
-      b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-      table.commit(b);
-    }
-    try {
-      // Give cache flusher and log roller a chance to run
-      // Otherwise we'll never hit the bloom filter, just the memcache
-      Thread.sleep(conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000) * 2);
-    } catch (InterruptedException e) {
-      // ignore
-    }
-
-    
-    for(int i = 0; i < testKeys.length; i++) {
-      Cell value = table.get(testKeys[i], CONTENTS);
-      if(value != null && value.getValue().length != 0) {
-        LOG.info("non existant key: " + testKeys[i] + " returned value: " +
-            new String(value.getValue(), HConstants.UTF8_ENCODING));
-      }
-    }
-  }
-  
-  /**
-   * Test that uses computed for the bloom filter
+   * Test that uses automatic bloom filter
    * @throws IOException
    */
   public void testComputedParameters() throws IOException {
@@ -225,14 +155,6 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     // Setup
     
     HTableDescriptor desc = new HTableDescriptor(getName());
-      
-    BloomFilterDescriptor bloomFilter =
-      new BloomFilterDescriptor(
-          BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
-          1000                                  // estimated number of entries
-      );
-    LOG.info("vector size: " + bloomFilter.vectorSize);
-
     desc.addFamily(
         new HColumnDescriptor(CONTENTS,               // Column name
             1,                                        // Max versions
@@ -241,7 +163,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
             HColumnDescriptor.DEFAULT_BLOCKCACHE,
             HColumnDescriptor.DEFAULT_LENGTH,
             HColumnDescriptor.DEFAULT_TTL,
-            bloomFilter
+            true
         )
     );
 

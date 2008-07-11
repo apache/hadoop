@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -38,12 +37,9 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.BloomFilterDescriptor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,10 +56,6 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
-import org.onelab.filter.BloomFilter;
-import org.onelab.filter.CountingBloomFilter;
-import org.onelab.filter.Filter;
-import org.onelab.filter.RetouchedBloomFilter;
 
 /**
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -84,8 +76,6 @@ public class HStore implements HConstants {
   private static final Pattern REF_NAME_PARSER =
     Pattern.compile("^(\\d+)(?:\\.(.+))?$");
   
-  private static final String BLOOMFILTER_FILE_NAME = "filter";
-
   protected final Memcache memcache;
   private final Path basedir;
   private final HRegionInfo info;
@@ -93,8 +83,6 @@ public class HStore implements HConstants {
   private final SequenceFile.CompressionType compression;
   final FileSystem fs;
   private final HBaseConfiguration conf;
-  private final Path filterDir;
-  final Filter bloomFilter;
   protected long ttl;
 
   private final long desiredMaxFileSize;
@@ -215,18 +203,6 @@ public class HStore implements HConstants {
       fs.mkdirs(infodir);
     }
     
-    if(family.getBloomFilter() == null) {
-      this.filterDir = null;
-      this.bloomFilter = null;
-    } else {
-      this.filterDir = HStoreFile.getFilterDir(basedir, info.getEncodedName(),
-          family.getName());
-      if (!fs.exists(filterDir)) {
-        fs.mkdirs(filterDir);
-      }
-      this.bloomFilter = loadOrCreateBloomFilter();
-    }
-
     // Go through the 'mapdir' and 'infodir' together, make sure that all 
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
@@ -266,11 +242,12 @@ public class HStore implements HConstants {
       if (first) {
         // Use a block cache (if configured) for the first reader only
         // so as to control memory usage.
-        r = e.getValue().getReader(this.fs, this.bloomFilter,
+        r = e.getValue().getReader(this.fs, this.family.isBloomFilterEnabled(),
           family.isBlockCacheEnabled());
         first = false;
       } else {
-        r = e.getValue().getReader(this.fs, this.bloomFilter);
+        r = e.getValue().getReader(this.fs, this.family.isBloomFilterEnabled(),
+            false);
       }
       this.readers.put(e.getKey(), r);
     }
@@ -516,105 +493,6 @@ public class HStore implements HConstants {
       this.fs.getFileStatus(f).getLen() == 0;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Bloom filters
-  //////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * Called by constructor if a bloom filter is enabled for this column family.
-   * If the HStore already exists, it will read in the bloom filter saved
-   * previously. Otherwise, it will create a new bloom filter.
-   */
-  private Filter loadOrCreateBloomFilter() throws IOException {
-    Path filterFile = new Path(filterDir, BLOOMFILTER_FILE_NAME);
-    Filter bloomFilter = null;
-    if(fs.exists(filterFile)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("loading bloom filter for " + this.storeNameStr);
-      }
-      
-      BloomFilterDescriptor.BloomFilterType type =
-        family.getBloomFilter().getType();
-
-      switch(type) {
-      
-      case BLOOMFILTER:
-        bloomFilter = new BloomFilter();
-        break;
-        
-      case COUNTING_BLOOMFILTER:
-        bloomFilter = new CountingBloomFilter();
-        break;
-        
-      case RETOUCHED_BLOOMFILTER:
-        bloomFilter = new RetouchedBloomFilter();
-        break;
-      
-      default:
-        throw new IllegalArgumentException("unknown bloom filter type: " +
-            type);
-      }
-      FSDataInputStream in = fs.open(filterFile);
-      try {
-        bloomFilter.readFields(in);
-      } finally {
-        fs.close();
-      }
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("creating bloom filter for " + this.storeNameStr);
-      }
-
-      BloomFilterDescriptor.BloomFilterType type =
-        family.getBloomFilter().getType();
-
-      switch(type) {
-      
-      case BLOOMFILTER:
-        bloomFilter = new BloomFilter(family.getBloomFilter().getVectorSize(),
-            family.getBloomFilter().getNbHash());
-        break;
-        
-      case COUNTING_BLOOMFILTER:
-        bloomFilter =
-          new CountingBloomFilter(family.getBloomFilter().getVectorSize(),
-            family.getBloomFilter().getNbHash());
-        break;
-        
-      case RETOUCHED_BLOOMFILTER:
-        bloomFilter =
-          new RetouchedBloomFilter(family.getBloomFilter().getVectorSize(),
-            family.getBloomFilter().getNbHash());
-      }
-    }
-    return bloomFilter;
-  }
-
-  /**
-   * Flushes bloom filter to disk
-   * 
-   * @throws IOException
-   */
-  private void flushBloomFilter() throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("flushing bloom filter for " + this.storeNameStr);
-    }
-    FSDataOutputStream out =
-      fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
-    try {
-      bloomFilter.write(out);
-    } finally {
-      out.close();
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("flushed bloom filter for " + this.storeNameStr);
-    }
-  }
-  
-  //////////////////////////////////////////////////////////////////////////////
-  // End bloom filters
-  //////////////////////////////////////////////////////////////////////////////
-
   /**
    * Adds a value to the memcache
    * 
@@ -704,7 +582,7 @@ public class HStore implements HConstants {
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
         info.getEncodedName(),  family.getName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
-        this.bloomFilter);
+        this.family.isBloomFilterEnabled(), cache.size());
       
       // Here we tried picking up an existing HStoreFile from disk and
       // interlacing the memcache flush compacting as we go.  The notion was
@@ -746,12 +624,7 @@ public class HStore implements HConstants {
       // MapFile.  The MapFile is current up to and including the log seq num.
       flushedFile.writeInfo(fs, logCacheFlushId);
       
-      // C. Flush the bloom filter if any
-      if (bloomFilter != null) {
-        flushBloomFilter();
-      }
-
-      // D. Finally, make the new MapFile available.
+      // C. Finally, make the new MapFile available.
       updateReaders(logCacheFlushId, flushedFile);
       if(LOG.isDebugEnabled()) {
         LOG.debug("Added " + FSUtils.getPath(flushedFile.getMapFilePath()) +
@@ -778,7 +651,8 @@ public class HStore implements HConstants {
       Long flushid = Long.valueOf(logCacheFlushId);
       // Open the map file reader.
       this.readers.put(flushid,
-        flushedFile.getReader(this.fs, this.bloomFilter));
+        flushedFile.getReader(this.fs, this.family.isBloomFilterEnabled(),
+        this.family.isBlockCacheEnabled()));
       this.storefiles.put(flushid, flushedFile);
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
@@ -819,21 +693,6 @@ public class HStore implements HConstants {
   // Compaction
   //////////////////////////////////////////////////////////////////////////////
 
-  /*
-   * @param files
-   * @return True if any of the files in <code>files</code> are References.
-   */
-  private boolean hasReferences(Collection<HStoreFile> files) {
-    if (files != null && files.size() > 0) {
-      for (HStoreFile hsf: files) {
-        if (hsf.isReference()) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-  
   /**
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
@@ -858,44 +717,69 @@ public class HStore implements HConstants {
   StoreSize compact(final boolean force) throws IOException {
     synchronized (compactLock) {
       long maxId = -1;
+      int nrows = -1;
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         if (this.storefiles.size() <= 0) {
           return null;
         }
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
-        if (!force && !hasReferences(filesToCompact) &&
-             filesToCompact.size() < compactionThreshold) {
-          return checkSplit();
-        }
-        if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
-          LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
-          return checkSplit();
-        }
 
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
         // last key of storefiles.
         maxId = this.storefiles.lastKey().longValue();
       }
+      if (!force && filesToCompact.size() < compactionThreshold) {
+        return checkSplit();
+      }
+      if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
+        LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
+        return checkSplit();
+      }
+      /*
+       * We create a new list of MapFile.Reader objects so we don't screw up the
+       * caching associated with the currently-loaded ones. Our iteration-based
+       * access pattern is practically designed to ruin the cache.
+       */
+      List<MapFile.Reader> readers = new ArrayList<MapFile.Reader>();
+      for (HStoreFile file: filesToCompact) {
+        try {
+          HStoreFile.BloomFilterMapFile.Reader reader = file.getReader(fs,
+              this.family.isBloomFilterEnabled(), false);
+          readers.add(reader);
+          
+          // Compute the size of the new bloomfilter if needed
+          if (this.family.isBloomFilterEnabled()) {
+            nrows += reader.getBloomFilterSize();
+          }
+        } catch (IOException e) {
+          // Add info about which file threw exception. It may not be in the
+          // exception message so output a message here where we know the
+          // culprit.
+          LOG.warn("Failed with " + e.toString() + ": " + file.toString());
+          closeCompactionReaders(readers);
+          throw e;
+        }
+      }
+      
       // Storefiles are keyed by sequence id. The oldest file comes first.
       // We need to return out of here a List that has the newest file first.
-      Collections.reverse(filesToCompact);
+      Collections.reverse(readers);
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
           this.compactionDir, info.getEncodedName(), family.getName(),
           -1L, null);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + filesToCompact.size() +
-          " files " + filesToCompact.toString() + " into " +
+        LOG.debug("started compaction of " + readers.size() + " files into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
-      MapFile.Writer compactedOut = compactedOutputFile.getWriter(this.fs,
-        this.compression, this.bloomFilter);
+      MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
+        this.compression, this.family.isBloomFilterEnabled(), nrows);
       try {
-        compactHStoreFiles(compactedOut, filesToCompact);
+        compactHStoreFiles(writer, readers);
       } finally {
-        compactedOut.close();
+        writer.close();
       }
 
       // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
@@ -913,36 +797,17 @@ public class HStore implements HConstants {
   }
   
   /*
-   * Compact passed <code>toCompactFiles</code> into <code>compactedOut</code>.
-   * We create a new set of MapFile.Reader objects so we don't screw up the
-   * caching associated with the currently-loaded ones. Our iteration-based
-   * access pattern is practically designed to ruin the cache.
+   * Compact a list of MapFile.Readers into MapFile.Writer.
    * 
-   * We work by opening a single MapFile.Reader for each file, and iterating
-   * through them in parallel. We always increment the lowest-ranked one.
+   * We work by iterating through the readers in parallel. We always increment
+   * the lowest-ranked one.
    * Updates to a single row/column will appear ranked by timestamp. This allows
-   * us to throw out deleted values or obsolete versions. @param compactedOut
-   * @param toCompactFiles @throws IOException
+   * us to throw out deleted values or obsolete versions.
    */
   private void compactHStoreFiles(final MapFile.Writer compactedOut,
-      final List<HStoreFile> toCompactFiles) throws IOException {
+      final List<MapFile.Reader> readers) throws IOException {
     
-    int size = toCompactFiles.size();
-    CompactionReader[] rdrs = new CompactionReader[size];
-    int index = 0;
-    for (HStoreFile hsf: toCompactFiles) {
-      try {
-        rdrs[index++] =
-          new MapFileCompactionReader(hsf.getReader(fs, bloomFilter));
-      } catch (IOException e) {
-        // Add info about which file threw exception. It may not be in the
-        // exception message so output a message here where we know the
-        // culprit.
-        LOG.warn("Failed with " + e.toString() + ": " + hsf.toString());
-        closeCompactionReaders(rdrs);
-        throw e;
-      }
-    }
+    MapFile.Reader[] rdrs = readers.toArray(new MapFile.Reader[readers.size()]);
     try {
       HStoreKey[] keys = new HStoreKey[rdrs.length];
       ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
@@ -1035,18 +900,16 @@ public class HStore implements HConstants {
         }
       }
     } finally {
-      closeCompactionReaders(rdrs);
+      closeCompactionReaders(readers);
     }
   }
   
-  private void closeCompactionReaders(final CompactionReader [] rdrs) {
-    for (int i = 0; i < rdrs.length; i++) {
-      if (rdrs[i] != null) {
-        try {
-          rdrs[i].close();
-        } catch (IOException e) {
-          LOG.warn("Exception closing reader for " + this.storeNameStr, e);
-        }
+  private void closeCompactionReaders(final List<MapFile.Reader> rdrs) {
+    for (MapFile.Reader r: rdrs) {
+      try {
+        r.close();
+      } catch (IOException e) {
+        LOG.warn("Exception closing reader for " + this.storeNameStr, e);
       }
     }
   }
@@ -1163,10 +1026,11 @@ public class HStore implements HConstants {
           // Add new compacted Reader and store file.
           Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
           this.readers.put(orderVal,
-          // Use a block cache (if configured) for this reader since
+              // Use a block cache (if configured) for this reader since
               // it is the only one.
-              finalCompactedFile.getReader(this.fs, this.bloomFilter, family
-                  .isBlockCacheEnabled()));
+              finalCompactedFile.getReader(this.fs,
+                  this.family.isBloomFilterEnabled(),
+                  this.family.isBlockCacheEnabled()));
           this.storefiles.put(orderVal, finalCompactedFile);
           // Tell observers that list of Readers has changed.
           notifyChangedReadersObservers();

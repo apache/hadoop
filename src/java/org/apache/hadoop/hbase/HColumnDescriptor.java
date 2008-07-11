@@ -41,7 +41,8 @@ public class HColumnDescriptor implements WritableComparable {
 
   // Version 3 was when column names becaome byte arrays and when we picked up
   // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)4;
+  // Version 5 was when bloom filter descriptors were removed.
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)5;
 
   /** 
    * The type of compression.
@@ -96,11 +97,6 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public static final int DEFAULT_TTL = HConstants.FOREVER;
 
-  /**
-   * Default bloom filter description.
-   */
-  public static final BloomFilterDescriptor DEFAULT_BLOOMFILTER = null;
-
   // Column family name
   private byte [] name;
   // Number of versions to keep
@@ -116,9 +112,7 @@ public class HColumnDescriptor implements WritableComparable {
   // Time to live of cell contents, in seconds from last timestamp
   private int timeToLive = DEFAULT_TTL;
   // True if bloom filter was specified
-  private boolean bloomFilterSpecified = false;
-  // Descriptor of bloom filter
-  private BloomFilterDescriptor bloomFilter = DEFAULT_BLOOMFILTER;
+  private boolean bloomFilter = false;
 
   /**
    * Default constructor. Must be present for Writable.
@@ -155,11 +149,9 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public HColumnDescriptor(final byte [] columnName) {
     this (columnName == null || columnName.length <= 0?
-      HConstants.EMPTY_BYTE_ARRAY: columnName,
-      DEFAULT_VERSIONS, DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY,
-      DEFAULT_BLOCKCACHE, 
-      Integer.MAX_VALUE, DEFAULT_TTL,
-      DEFAULT_BLOOMFILTER);
+      HConstants.EMPTY_BYTE_ARRAY: columnName, DEFAULT_VERSIONS,
+      DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY, DEFAULT_BLOCKCACHE,
+      Integer.MAX_VALUE, DEFAULT_TTL, false);
   }
 
   /**
@@ -182,9 +174,8 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public HColumnDescriptor(final byte [] columnName, final int maxVersions,
       final CompressionType compression, final boolean inMemory,
-      final boolean blockCacheEnabled,
-      final int maxValueLength, final int timeToLive,
-      final BloomFilterDescriptor bloomFilter) {
+      final boolean blockCacheEnabled, final int maxValueLength,
+      final int timeToLive, final boolean bloomFilter) {
     isLegalFamilyName(columnName);
     this.name = stripColon(columnName);
     if (maxVersions <= 0) {
@@ -198,7 +189,6 @@ public class HColumnDescriptor implements WritableComparable {
     this.maxValueLength = maxValueLength;
     this.timeToLive = timeToLive;
     this.bloomFilter = bloomFilter;
-    this.bloomFilterSpecified = this.bloomFilter == null ? false : true;
     this.compressionType = compression;
   }
   
@@ -295,9 +285,9 @@ public class HColumnDescriptor implements WritableComparable {
   }
 
   /**
-   * @return Bloom filter descriptor or null if none set.
+   * @return true if a bloom filter is enabled
    */
-  public BloomFilterDescriptor getBloomFilter() {
+  public boolean isBloomFilterEnabled() {
     return this.bloomFilter;
   }
 
@@ -313,9 +303,7 @@ public class HColumnDescriptor implements WritableComparable {
       ", " + TTL + " => " +
           (timeToLive == HConstants.FOREVER ? "FOREVER" : 
               Integer.toString(timeToLive)) +
-      ", " + BLOOMFILTER + " => " +
-        (bloomFilterSpecified ? bloomFilter.toString() : CompressionType.NONE) +
-      "}";
+      ", " + BLOOMFILTER + " => " + bloomFilter + "}";
   }
   
   /** {@inheritDoc} */
@@ -334,11 +322,8 @@ public class HColumnDescriptor implements WritableComparable {
     result ^= Boolean.valueOf(this.blockCacheEnabled).hashCode();
     result ^= Integer.valueOf(this.maxValueLength).hashCode();
     result ^= Integer.valueOf(this.timeToLive).hashCode();
-    result ^= Boolean.valueOf(this.bloomFilterSpecified).hashCode();
+    result ^= Boolean.valueOf(this.bloomFilter).hashCode();
     result ^= Byte.valueOf(COLUMN_DESCRIPTOR_VERSION).hashCode();
-    if (this.bloomFilterSpecified) {
-      result ^= this.bloomFilter.hashCode();
-    }
     return result;
   }
   
@@ -362,13 +347,15 @@ public class HColumnDescriptor implements WritableComparable {
     this.compressionType = CompressionType.values()[ordinal];
     this.inMemory = in.readBoolean();
     this.maxValueLength = in.readInt();
-    this.bloomFilterSpecified = in.readBoolean();
-    
-    if(bloomFilterSpecified) {
-      bloomFilter = new BloomFilterDescriptor();
-      bloomFilter.readFields(in);
+    this.bloomFilter = in.readBoolean();
+    if (this.bloomFilter && versionNumber < 5) {
+      // If a bloomFilter is enabled and the column descriptor is less than
+      // version 5, we need to skip over it to read the rest of the column
+      // descriptor. There are no BloomFilterDescriptors written to disk for
+      // column descriptors with a version number >= 5
+      BloomFilterDescriptor junk = new BloomFilterDescriptor();
+      junk.readFields(in);
     }
-    
     if (versionNumber > 1) {
       this.blockCacheEnabled = in.readBoolean();
     }
@@ -386,11 +373,7 @@ public class HColumnDescriptor implements WritableComparable {
     out.writeInt(this.compressionType.ordinal());
     out.writeBoolean(this.inMemory);
     out.writeInt(this.maxValueLength);
-    out.writeBoolean(this.bloomFilterSpecified);
-    
-    if(bloomFilterSpecified) {
-      bloomFilter.write(out);
-    }
+    out.writeBoolean(this.bloomFilter);
     out.writeBoolean(this.blockCacheEnabled);
     out.writeInt(this.timeToLive);
   }
@@ -443,21 +426,16 @@ public class HColumnDescriptor implements WritableComparable {
     }
 
     if(result == 0) {
-      if(this.bloomFilterSpecified == other.bloomFilterSpecified) {
+      if(this.bloomFilter == other.bloomFilter) {
         result = 0;
         
-      } else if(this.bloomFilterSpecified) {
+      } else if(this.bloomFilter) {
         result = -1;
         
       } else {
         result = 1;
       }
     }
-    
-    if(result == 0 && this.bloomFilterSpecified) {
-      result = this.bloomFilter.compareTo(other.bloomFilter);
-    }
-    
     return result;
   }
 }

@@ -413,7 +413,7 @@ public class TableHandler extends GenericHandler {
           doElement(outputter, "name", Bytes.toString(e.getName()));
           doElement(outputter, "compression", e.getCompression().toString());
           doElement(outputter, "bloomfilter",
-            e.getBloomFilter() == null? "NONE": e.getBloomFilter().toString());
+              Boolean.toString(e.isBloomFilterEnabled()));
           doElement(outputter, "max-versions",
             Integer.toString(e.getMaxVersions()));
           doElement(outputter, "maximum-cell-size",
