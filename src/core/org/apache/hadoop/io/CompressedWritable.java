@@ -73,6 +73,7 @@ public abstract class CompressedWritable implements Writable {
         new DataOutputStream(new DeflaterOutputStream(deflated, deflater));
       writeCompressed(dout);
       dout.close();
+      deflater.end();
       compressed = deflated.toByteArray();
     }
     out.writeInt(compressed.length);

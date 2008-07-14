@@ -837,6 +837,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3752. Fix audit logging to record rename events. (cdouglas)
 
+    HADOOP-3737. Fix CompressedWritable to call Deflater::end to release
+    compressor memory. (Grant Glouser via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
