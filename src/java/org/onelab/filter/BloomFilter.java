@@ -226,15 +226,13 @@ public class BloomFilter extends Filter {
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
+    bits = new BitSet(this.vectorSize);
     byte[] bytes = new byte[getNBytes()];
     in.readFully(bytes);
     for(int i = 0, byteIndex = 0, bitIndex = 0; i < vectorSize; i++, bitIndex++) {
       if (bitIndex == 8) {
         bitIndex = 0;
         byteIndex++;
-      }
-      if (bitIndex == 0) {
-        bytes[byteIndex] = 0;
       }
       if ((bytes[byteIndex] & bitvalues[bitIndex]) != 0) {
         bits.set(i);

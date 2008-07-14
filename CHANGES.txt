@@ -183,6 +183,7 @@ Trunk (unreleased changes)
    HBASE-742   Rename getMetainfo in HTable as getTableDescriptor
    HBASE-739   HBaseAdmin.createTable() using old HTableDescription doesn't work
                (Izaak Rubin via Stack)
+   HBASE-744   BloomFilter serialization/deserialization broken
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

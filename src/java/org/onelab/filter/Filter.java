@@ -76,13 +76,13 @@ import org.apache.hadoop.io.Writable;
  */
 public abstract class Filter implements Writable {
   /** The vector size of <i>this</i> filter. */
-  int vectorSize;
+  protected int vectorSize;
 
   /** The hash function used to map a key to several positions in the vector. */
   protected HashFunction hash;
 
   /** The number of hash function to consider. */
-  int nbHash;
+  protected int nbHash;
 
   protected Filter() {}
   
