@@ -48,6 +48,10 @@ Trunk (unreleased changes)
     HADOOP-3149. Adds a way in which map/reducetasks can create multiple 
     outputs. (Alejandro Abdelnur via ddas)
 
+    HADOOP-3714.  Add a new contrib, bash-tab-completion, which enables 
+    bash tab completion for the bin/hadoop script. See the README file
+    in the contrib directory for the installation. (Chris Smith via enis)
+
   IMPROVEMENTS
 
     HADOOP-3577. Tools to inject blocks into name node and simulated
