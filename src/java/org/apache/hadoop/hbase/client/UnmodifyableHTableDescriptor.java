@@ -29,6 +29,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  */
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
 
+  public UnmodifyableHTableDescriptor() {
+	  super();
+  }
+
   /*
    * Create an unmodifyable copy of an HTableDescriptor
    * @param desc
