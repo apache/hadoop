@@ -184,6 +184,7 @@ Trunk (unreleased changes)
    HBASE-739   HBaseAdmin.createTable() using old HTableDescription doesn't work
                (Izaak Rubin via Stack)
    HBASE-744   BloomFilter serialization/deserialization broken
+   HBASE-742   Column length limit is not enforced (Jean-Daniel Cryans via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

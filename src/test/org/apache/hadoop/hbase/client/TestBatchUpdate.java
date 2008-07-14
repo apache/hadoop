@@ -38,7 +38,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestBatchUpdate extends HBaseClusterTestCase {
   private static final String CONTENTS_STR = "contents:";
   private static final byte [] CONTENTS = Bytes.toBytes(CONTENTS_STR);
+  private static final String SMALLFAM_STR = "smallfam:";
+  private static final byte [] SMALLFAM = Bytes.toBytes(SMALLFAM_STR);
+  private static final int SMALL_LENGTH = 1;
   private byte[] value;
+  private byte[] smallValue;
 
   private HTableDescriptor desc = null;
   private HTable table = null;
@@ -49,6 +53,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   public TestBatchUpdate() throws UnsupportedEncodingException {
     super();
     value = "abcd".getBytes(HConstants.UTF8_ENCODING);
+    smallValue = "a".getBytes(HConstants.UTF8_ENCODING);
   }
   
   /**
@@ -59,6 +64,12 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     super.setUp();
     this.desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
+    desc.addFamily(new HColumnDescriptor(SMALLFAM, 
+        HColumnDescriptor.DEFAULT_VERSIONS, 
+        HColumnDescriptor.DEFAULT_COMPRESSION,  
+        HColumnDescriptor.DEFAULT_IN_MEMORY, 
+        HColumnDescriptor.DEFAULT_BLOCKCACHE, SMALL_LENGTH, 
+        HColumnDescriptor.DEFAULT_TTL, HColumnDescriptor.DEFAULT_BLOOMFILTER));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     table = new HTable(conf, desc.getName());
@@ -84,6 +95,34 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
         System.out.println(r.getRow() + ": row: " + e.getKey() + " value: " + 
             new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
       }
+    }
+  }
+  
+  public void testBatchUpdateMaxLength() {
+    // Test for a single good value
+    BatchUpdate batchUpdate = new BatchUpdate("row1");
+    batchUpdate.put(SMALLFAM, value);
+    try {
+      table.commit(batchUpdate);
+      fail("Value is too long, should throw exception");
+    } catch (IOException e) {
+      // This is expected
+    }
+    // Try to see if it's still inserted
+    try {
+      Cell cell = table.get("row1", SMALLFAM_STR);
+      assertNull(cell);
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("This is unexpected");
+    }
+    // Try to put a good value
+    batchUpdate = new BatchUpdate("row1");
+    batchUpdate.put(SMALLFAM, smallValue);
+    try {
+      table.commit(batchUpdate);
+    } catch (IOException e) {
+      fail("Value is long enough, should not throw exception");
     }
   }
 }

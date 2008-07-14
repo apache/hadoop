@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -1146,6 +1147,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
+    validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b);
@@ -1155,6 +1157,30 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     } catch (IOException e) {
       checkFileSystem();
       throw e;
+    }
+  }
+  
+  /**
+   * Utility method to verify values length
+   * @param batchUpdate The update to verify
+   * @throws IOException Thrown if a value is too long
+   */
+  private void validateValuesLength(BatchUpdate batchUpdate, 
+      HRegion region) throws IOException {
+    HTableDescriptor desc = region.getTableDesc();
+    for (Iterator<BatchOperation> iter = 
+      batchUpdate.iterator(); iter.hasNext();) {
+      
+      BatchOperation operation = iter.next();
+      int maxLength = 
+        desc.getFamily(HStoreKey.getFamily(operation.getColumn())).
+          getMaxValueLength();
+      if(operation.getValue() != null)
+        if(operation.getValue().length > maxLength) {
+          throw new IOException("Value in column " + 
+              Bytes.toString(operation.getColumn()) + " is too long. " + 
+              operation.getValue().length + " instead of " + maxLength);
+        }
     }
   }
   
