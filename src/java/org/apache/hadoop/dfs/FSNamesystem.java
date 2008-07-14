@@ -1147,6 +1147,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             minReplication);
     }
 
+    for (DatanodeDescriptor dn : targets) {
+      dn.incBlocksScheduled();
+    }
+    
     // Allocate a new block and record it in the INode. 
     synchronized (this) {
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
@@ -2402,6 +2406,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         srcNode.addBlockToBeReplicated(block, targets);
         scheduledReplicationCount++;
 
+        for (DatanodeDescriptor dn : targets) {
+          dn.incBlocksScheduled();
+        }
+        
         // Move the block-replication into a "pending" state.
         // The reason we use 'pending' is so we can retry
         // replications that fail after an appropriate amount of time.
@@ -3093,6 +3101,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new DisallowedDatanodeException(node);
     }
 
+    // decrement number of blocks scheduled to this datanode.
+    node.decBlocksScheduled();
+    
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
     if(delHint!=null && delHint.length()!=0) {

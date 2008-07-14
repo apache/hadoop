@@ -4,6 +4,10 @@ Release 0.17.2 - Unreleased
 
   BUG FIXES
 
+    HADOOP-3707. NameNode keeps a count of number of blocks scheduled 
+    to be written to a datanode and uses it to avoid allocating more
+    blocks than a datanode can hold. (rangadi)
+
     HADOOP-3681. DFSClient can get into an infinite loop while closing
     a file if there are some errors. (Lohit Vijayarenu via rangadi)
 

@@ -49,6 +49,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
   Set<Block> invalidateBlocks;
   boolean processedBlockReport = false;
   
+  /* Variables for maintaning number of blocks scheduled to be written to
+   * this datanode. This count is approximate and might be slightly higger
+   * in case of errors (e.g. datanode does not report if an error occurs 
+   * while writing the block).
+   */
+  private int currApproxBlocksScheduled = 0;
+  private int prevApproxBlocksScheduled = 0;
+  private long lastBlocksScheduledRollTime = 0;
+  private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 300 * 1000; // 5 min
+  
   /** Default constructor */
   public DatanodeDescriptor() {
     super();
@@ -181,6 +191,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.remaining = remaining;
     this.lastUpdate = System.currentTimeMillis();
     this.xceiverCount = xceiverCount;
+    rollBlocksScheduled(lastUpdate);
   }
 
   /**
@@ -366,5 +377,44 @@ public class DatanodeDescriptor extends DatanodeInfo {
     while(it.hasNext())
       toRemove.add(it.next());
     this.removeBlock(delimiter);
+  }
+  
+  /**
+   * @return Approximate number of blocks currently scheduled to be written 
+   * to this datanode.
+   */
+  int getBlocksScheduled() {
+    return currApproxBlocksScheduled + prevApproxBlocksScheduled;
+  }
+  
+  /**
+   * Increments counter for number of blocks scheduled. 
+   */
+  void incBlocksScheduled() {
+    currApproxBlocksScheduled++;
+  }
+  
+  /**
+   * Decrements counter for number of blocks scheduled.
+   */
+  void decBlocksScheduled() {
+    if (prevApproxBlocksScheduled > 0) {
+      prevApproxBlocksScheduled--;
+    } else if (currApproxBlocksScheduled > 0) {
+      currApproxBlocksScheduled--;
+    } 
+    // its ok if both counters are zero.
+  }
+  
+  /**
+   * Adjusts curr and prev number of blocks scheduled every few minutes.
+   */
+  private void rollBlocksScheduled(long now) {
+    if ((now - lastBlocksScheduledRollTime) > 
+        BLOCKS_SCHEDULED_ROLL_INTERVAL) {
+      prevApproxBlocksScheduled = currApproxBlocksScheduled;
+      currApproxBlocksScheduled = 0;
+      lastBlocksScheduledRollTime = now;
+    }
   }
 }
