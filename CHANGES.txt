@@ -835,6 +835,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3716. Prevent listStatus in KosmosFileSystem from returning
     null for valid, empty directories. (Sriram Rao via cdouglas)
 
+    HADOOP-3752. Fix audit logging to record rename events. (cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

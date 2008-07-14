@@ -57,6 +57,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.DataOutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
@@ -85,8 +86,30 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     "ugi=%s\t" +  // ugi
     "ip=%s\t" +   // remote IP
     "cmd=%s\t" +  // command
-    "path=%s\t" + // path
+    "src=%s\t" +  // src path
+    "dst=%s\t" +  // dst path (optional)
     "perm=%s";    // permissions (optional)
+
+  private static final ThreadLocal<Formatter> auditFormatter =
+    new ThreadLocal<Formatter>() {
+      protected Formatter initialValue() {
+        return new Formatter(new StringBuilder(AUDIT_FORMAT.length() * 4));
+      }
+  };
+
+  private static final void logAuditEvent(UserGroupInformation ugi,
+      InetAddress addr, String cmd, String src, String dst,
+      FileStatus stat) {
+    final Formatter fmt = auditFormatter.get();
+    ((StringBuilder)fmt.out()).setLength(0);
+    auditLog.info(fmt.format(AUDIT_FORMAT, ugi, addr, cmd, src, dst,
+                  (stat == null)
+                    ? null
+                    : stat.getOwner() + ':' + stat.getGroup() + ':' +
+                      stat.getPermission()
+          ).toString());
+
+  }
 
   public static final Log auditLog = LogFactory.getLog(
       "org.apache.hadoop.fs.FSNamesystem.audit");
@@ -646,11 +669,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "setPermission", src, stat.getOwner() + ':' +
-                    stat.getGroup() + ':' + stat.getPermission()));
+                    "setPermission", src, null, stat);
     }
   }
 
@@ -674,11 +695,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "setOwner", src, stat.getOwner() + ':' +
-                    stat.getGroup() + ':' + stat.getPermission()));
+                    "setOwner", src, null, stat);
     }
   }
 
@@ -720,10 +739,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     final LocatedBlocks ret = getBlockLocationsInternal(dir.getFileINode(src),
         offset, length, Integer.MAX_VALUE);  
     if (auditLog.isInfoEnabled()) {
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "open", src, null));
+                    "open", src, null, null);
     }
     return ret;
   }
@@ -811,11 +829,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                 throws IOException {
     boolean status = setReplicationInternal(src, replication);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+    if (status && auditLog.isInfoEnabled()) {
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "setReplication", src, null));
+                    "setReplication", src, null, null);
     }
     return status;
   }
@@ -900,11 +917,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "create", src, stat.getOwner() + ':' +
-                    stat.getGroup() + ':' + stat.getPermission()));
+                    "create", src, null, stat);
     }
   }
 
@@ -1413,6 +1428,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public boolean renameTo(String src, String dst) throws IOException {
     boolean status = renameToInternal(src, dst);
     getEditLog().logSync();
+    if (status && auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(dst);
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "rename", src, dst, stat);
+    }
     return status;
   }
 
@@ -1451,11 +1472,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       boolean status = deleteInternal(src, true, true);
       getEditLog().logSync();
-      if (auditLog.isInfoEnabled()) {
-        auditLog.info(String.format(AUDIT_FORMAT,
-                      UserGroupInformation.getCurrentUGI(),
+      if (status && auditLog.isInfoEnabled()) {
+        logAuditEvent(UserGroupInformation.getCurrentUGI(),
                       Server.getRemoteIp(),
-                      "delete", src, null));
+                      "delete", src, null, null);
       }
       return status;
     }
@@ -1515,13 +1535,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       ) throws IOException {
     boolean status = mkdirsInternal(src, permissions);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (status && auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "mkdirs", src, stat.getOwner() + ':' +
-                    stat.getGroup() + ':' + stat.getPermission()));
+                    "mkdirs", src, null, stat);
     }
     return status;
   }
@@ -1777,10 +1795,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     if (auditLog.isInfoEnabled()) {
-      auditLog.info(String.format(AUDIT_FORMAT,
-                    UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
-                    "listStatus", src, null));
+                    "listStatus", src, null, null);
     }
     return dir.getListing(src);
   }
