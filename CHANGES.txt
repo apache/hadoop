@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1627. Various small improvements to 'dfsadmin -report' output.
+    (rangadi)
+
     HADOOP-3577. Tools to inject blocks into name node and simulated
     data nodes for testing. (Sanjay Radia via hairong)
 

@@ -150,17 +150,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
         !NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
     }
+    buffer.append("Decommission Status : ");
     if (isDecommissioned()) {
-      buffer.append("State          : Decommissioned\n");
+      buffer.append("Decommissioned\n");
     } else if (isDecommissionInProgress()) {
-      buffer.append("State          : Decommission in progress\n");
+      buffer.append("Decommission in progress\n");
     } else {
-      buffer.append("State          : In Service\n");
+      buffer.append("Normal\n");
     }
     buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
     buffer.append("Remaining raw bytes: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
     buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
-    buffer.append("% used: "+FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%"+"\n");
+    buffer.append("% used: "+FsShell.limitDecimalTo2(100.0*u/(c+1e-10))+"%\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }

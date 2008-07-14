@@ -243,7 +243,7 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
-  DFSClient getClient() {
+  public DFSClient getClient() {
     return dfs;
   }        
   

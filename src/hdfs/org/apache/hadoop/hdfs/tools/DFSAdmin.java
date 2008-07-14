@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.fs.FileSystem;
@@ -166,7 +168,6 @@ public class DFSAdmin extends FsShell {
       long raw = ds.getCapacity();
       long rawUsed = ds.getDfsUsed();
       long remaining = ds.getRemaining();
-      long used = dfs.getUsed();
       boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
       UpgradeStatusReport status = 
                       dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
@@ -187,19 +188,25 @@ public class DFSAdmin extends FsShell {
                          + limitDecimalTo2(((1.0 * rawUsed) / raw) * 100)
                          + "%");
       System.out.println();
-      System.out.println("Total effective bytes: " + used
-                         + " (" + byteDesc(used) + ")");
-      System.out.println("Effective replication multiplier: "
-                         + (1.0 * rawUsed / used));
 
       System.out.println("-------------------------------------------------");
-      DatanodeInfo[] info = dfs.getDataNodeStats();
-      System.out.println("Datanodes available: " + info.length);
-      System.out.println();
-      for (int i = 0; i < info.length; i++) {
-        System.out.println(info[i].getDatanodeReport());
+      
+      DatanodeInfo[] live = dfs.getClient().datanodeReport(
+                                                   DatanodeReportType.LIVE);
+      DatanodeInfo[] dead = dfs.getClient().datanodeReport(
+                                                   DatanodeReportType.DEAD);
+      System.out.println("Datanodes available: " + live.length +
+                         " (" + (live.length + dead.length) + " total, " + 
+                         dead.length + " dead)\n");
+      
+      for (DatanodeInfo dn : live) {
+        System.out.println(dn.getDatanodeReport());
         System.out.println();
       }
+      for (DatanodeInfo dn : dead) {
+        System.out.println(dn.getDatanodeReport());
+        System.out.println();
+      }      
     }
   }
 

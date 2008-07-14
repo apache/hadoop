@@ -200,6 +200,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
+    this.dfsUsed = 0;
     this.xceiverCount = 0;
     this.blockList = null;
   }
