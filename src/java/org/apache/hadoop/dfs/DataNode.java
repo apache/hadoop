@@ -30,6 +30,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.dfs.IncorrectVersionException;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
@@ -609,6 +610,7 @@ public class DataNode implements FSConstants, Runnable {
           // -- Total capacity
           // -- Bytes remaining
           //
+          lastHeartbeat = startTime;
           DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration,
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
@@ -617,7 +619,6 @@ public class DataNode implements FSConstants, Runnable {
                                                        getXceiverCount());
           myMetrics.heartbeats.inc(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
-          lastHeartbeat = startTime;
           if (!processCommand(cmd))
             continue;
         }
@@ -699,7 +700,8 @@ public class DataNode implements FSConstants, Runnable {
       } catch(RemoteException re) {
         String reClass = re.getClassName();
         if (UnregisteredDatanodeException.class.getName().equals(reClass) ||
-            DisallowedDatanodeException.class.getName().equals(reClass)) {
+            DisallowedDatanodeException.class.getName().equals(reClass) ||
+            IncorrectVersionException.class.getName().equals(reClass)) {
           LOG.warn("DataNode is shutting down: " + 
                    StringUtils.stringifyException(re));
           shutdown();
