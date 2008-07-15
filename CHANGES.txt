@@ -851,6 +851,10 @@ Release 0.17.2 - Unreleased
 
     HADOOP-3685. Unbalanced replication target. (hairong)
 
+    HADOOP-3758. Shutdown datanode on version mismatch instead of retrying
+    continuously, preventing excessive logging at the namenode.
+    (lohit vijayarenu via cdouglas)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES

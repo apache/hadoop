@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -667,6 +668,7 @@ public class DataNode extends Configured
           // -- Total capacity
           // -- Bytes remaining
           //
+          lastHeartbeat = startTime;
           DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration,
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
@@ -675,7 +677,6 @@ public class DataNode extends Configured
                                                        getXceiverCount());
           myMetrics.heartbeats.inc(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
-          lastHeartbeat = startTime;
           if (!processCommand(cmd))
             continue;
         }
@@ -765,7 +766,8 @@ public class DataNode extends Configured
       } catch(RemoteException re) {
         String reClass = re.getClassName();
         if (UnregisteredDatanodeException.class.getName().equals(reClass) ||
-            DisallowedDatanodeException.class.getName().equals(reClass)) {
+            DisallowedDatanodeException.class.getName().equals(reClass) ||
+            IncorrectVersionException.class.getName().equals(reClass)) {
           LOG.warn("DataNode is shutting down: " + 
                    StringUtils.stringifyException(re));
           shutdown();
