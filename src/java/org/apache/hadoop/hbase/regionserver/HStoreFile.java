@@ -723,9 +723,9 @@ public class HStoreFile implements HConstants {
         BloomFilter filter = new BloomFilter();
         FSDataInputStream in = fs.open(filterFile);
         try {
-          bloomFilter.readFields(in);
+          filter.readFields(in);
         } finally {
-          fs.close();
+          in.close();
         }
         return filter;
       }
@@ -817,12 +817,15 @@ public class HStoreFile implements HConstants {
            * 
            * the probability of false positives is minimized when k is
            * approximately m/n ln(2).
+           * 
+           * If we fix the number of hash functions and know the number of
+           * entries, then the optimal vector size m = (k * n) / ln(2)
            */
           this.bloomFilter = new BloomFilter(
-              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
               (int) Math.ceil(
                   (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
-                  Math.log(2.0))
+                  Math.log(2.0)),
+              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS
           );
         } else {
           this.bloomFilter = null;
