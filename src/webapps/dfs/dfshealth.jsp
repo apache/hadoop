@@ -109,7 +109,8 @@
 	      JspHelper.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(d.getRemaining()*1.0/diskBytes) +
-          "<td class=\"blocks\">" + d.numBlocks() + "\n");
+              "<td title=" + "\"blocks scheduled : " + d.getBlocksScheduled() + 
+              "\" class=\"blocks\">" + d.numBlocks() + "\n");
   }
 
   public void generateDFSHealthReport(JspWriter out,

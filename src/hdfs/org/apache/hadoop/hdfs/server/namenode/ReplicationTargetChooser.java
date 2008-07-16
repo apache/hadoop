@@ -401,8 +401,10 @@ class ReplicationTargetChooser {
       return false;
     }
 
+    long remaining = node.getRemaining() - 
+                     (node.getBlocksScheduled() * blockSize); 
     // check the remaining capacity of the target machine
-    if (blockSize* FSConstants.MIN_BLOCKS_FOR_WRITE>node.getRemaining()) {
+    if (blockSize* FSConstants.MIN_BLOCKS_FOR_WRITE>remaining) {
       logr.debug("Node "+NodeBase.getPath(node)+
                 " is not chosen because the node does not have enough space");
       return false;

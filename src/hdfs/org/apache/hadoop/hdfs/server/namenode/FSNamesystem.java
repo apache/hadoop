@@ -1141,6 +1141,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pendingFile);
       pendingFile.setTargets(targets);
+      
+      for (DatanodeDescriptor dn : targets) {
+        dn.incBlocksScheduled();
+      }      
     }
         
     // Create next block
@@ -2321,6 +2325,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         srcNode.addBlockToBeReplicated(block, targets);
         scheduledReplicationCount++;
 
+        for (DatanodeDescriptor dn : targets) {
+          dn.incBlocksScheduled();
+        }
+        
         // Move the block-replication into a "pending" state.
         // The reason we use 'pending' is so we can retry
         // replications that fail after an appropriate amount of time.
@@ -2487,6 +2495,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                  getReplication(timedOutItems[i]));
         }
       }
+      /* If we know the the target datanodes where the replication timedout,
+       * we could invoke decBlocksScheduled() on it. Its ok for now.
+       */
     }
   }
 
@@ -3106,6 +3117,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new DisallowedDatanodeException(node);
     }
 
+    // decrement number of blocks scheduled to this datanode.
+    node.decBlocksScheduled();
+    
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
     if(delHint!=null && delHint.length()!=0) {
