@@ -13,6 +13,7 @@ INDIRECT_DATA_BYTES=58720256
 if [ -z ${NUM_MAPS} ] ; then
   NUM_MAPS=100
 fi
+
 INDIRECT_DATA_FILES=200
 
 # If the env var USE_REAL_DATASET is set, then use the params to generate the bigger (real) dataset.
@@ -37,7 +38,7 @@ ${HADOOP_HOME}/bin/hadoop jar \
   -D mapred.output.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
   -outFormat org.apache.hadoop.mapred.SequenceFileOutputFormat \
-  ${VARCOMPSEQ}
+  ${VARCOMPSEQ} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
@@ -50,7 +51,7 @@ ${HADOOP_HOME}/bin/hadoop jar \
   -D mapred.output.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
   -outFormat org.apache.hadoop.mapred.SequenceFileOutputFormat \
-  ${FIXCOMPSEQ}
+  ${FIXCOMPSEQ} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
@@ -62,7 +63,7 @@ ${HADOOP_HOME}/bin/hadoop jar \
   -D test.randomtextwrite.max_words_value=200 \
   -D mapred.output.compress=false \
   -outFormat org.apache.hadoop.mapred.TextOutputFormat \
-  ${VARINFLTEXT}
+  ${VARINFLTEXT} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
@@ -75,4 +76,4 @@ ${HADOOP_HOME}/bin/hadoop jar \
   -D mapred.output.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
   -outFormat org.apache.hadoop.mapred.TextOutputFormat \
-  ${FIXCOMPTEXT}
+  ${FIXCOMPTEXT} &

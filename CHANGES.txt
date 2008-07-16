@@ -120,6 +120,8 @@ Trunk (unreleased changes)
     HADOOP-3721. Refactor CompositeRecordReader and related mapred.join classes
     to make them clearer. (cdouglas)
 
+    HADOOP-3755. Update gridmix to work with HOD 0.4 (Runping Qi via cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

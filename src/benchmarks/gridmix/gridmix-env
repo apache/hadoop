@@ -15,17 +15,17 @@ fi
 # Hadoop example jar
 # set var only if it has not already been set externally
 if [ -z "${EXAMPLE_JAR}" ] ; then
-  export EXAMPLE_JAR="${HADOOP_HOME}/hadoop-*-examples.jar"
+  export EXAMPLE_JAR="${HADOOP_HOME}/hadoop-*examples.jar"
 fi
 # Hadoop test jar
 # set var only if it has not already been set externally
 if [ -z "${APP_JAR}" ] ; then
-  export APP_JAR="${HADOOP_HOME}/hadoop-*-test.jar"
+  export APP_JAR="${HADOOP_HOME}/hadoop-*test.jar"
 fi
 # Hadoop streaming jar
 # set var only if it has not already been set externally
 if [ -z "${STREAM_JAR}" ] ; then
-  export STREAM_JAR="${HADOOP_HOME}/contrib/hadoop-*-streaming.jar"
+  export STREAM_JAR="${HADOOP_HOME}/contrib/streaming/hadoop-*streaming.jar"
 fi
 # Location on default filesystem for writing gridmix data (usually HDFS)
 # Default: /gridmix/data
@@ -64,9 +64,13 @@ export NUM_OF_REDUCERS_FOR_SMALL_JOB=15
 export INTERVAL_BETWEEN_SUBMITION=20
 
 ## Hod
-#export HOD_OPTIONS="--ringmaster.hadoop-tar-ball=/path/to/hadoop-0.15.0-dev.tar.gz"
-#export HOD_CONFIG=
-#export ALL_HOD_OPTIONS="-c ${HOD_CONFIG} ${HOD_OPTIONS}"
-#export SMALL_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 5"
-#export MEDIUM_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 50"
-#export LARGE_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 100"
+#export HOD_OPTIONS=""
+
+export CLUSTER_DIR_BASE=$GRID_MIX_HOME/CLUSTER_DIR_BASE
+export HOD_CONFIG=
+export ALL_HOD_OPTIONS="-c ${HOD_CONFIG} ${HOD_OPTIONS}
+export SMALL_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -n 5"
+export MEDIUM_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -n 50"
+export LARGE_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -n 100"
+export USE_REAL_DATASET=false
+
