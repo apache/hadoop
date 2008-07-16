@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
@@ -41,6 +42,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   private static final String SMALLFAM_STR = "smallfam:";
   private static final byte [] SMALLFAM = Bytes.toBytes(SMALLFAM_STR);
   private static final int SMALL_LENGTH = 1;
+  private static final int NB_BATCH_ROWS = 10;
   private byte[] value;
   private byte[] smallValue;
 
@@ -123,6 +125,27 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       table.commit(batchUpdate);
     } catch (IOException e) {
       fail("Value is long enough, should not throw exception");
+    }
+  }
+  
+  public void testRowsBatchUpdate() {
+    ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
+    for(int i = 0; i < NB_BATCH_ROWS; i++) {
+      BatchUpdate batchUpdate = new BatchUpdate("row"+i);
+      batchUpdate.put(CONTENTS, value);
+      rowsUpdate.add(batchUpdate);
+    }
+    try {
+      table.commit(rowsUpdate);  
+    
+      byte [][] columns = { CONTENTS };
+      Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+      int nbRows = 0;
+      for(RowResult row : scanner)
+        nbRows++;
+      assertEquals(NB_BATCH_ROWS, nbRows);
+    } catch (IOException e) {
+      fail("This is unexpected : " + e);
     }
   }
 }

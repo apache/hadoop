@@ -1168,6 +1168,17 @@ public class HTable {
       }
     );  
   }
+  
+  /**
+   * Commit a RowsBatchUpdate to the table.
+   * @param batchUpdate
+   * @throws IOException
+   */ 
+  public synchronized void commit(final List<BatchUpdate> batchUpdates) 
+  throws IOException {
+    for(BatchUpdate batchUpdate : batchUpdates) 
+      commit(batchUpdate);
+  }
 
   /**
    * Implements the scanner interface for the HBase client.
