@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-3732. Delay intialization of datanode block verification till
+    the verification thread is started. (rangadi)
+
     HADOOP-1627. Various small improvements to 'dfsadmin -report' output.
     (rangadi)
 

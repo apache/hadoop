@@ -95,7 +95,7 @@ public class DataBlockScanner implements Runnable {
   
   Random random = new Random();
   
-  DataNode.Throttler throttler = new DataNode.Throttler(200, MAX_SCAN_RATE);
+  DataNode.Throttler throttler = null;
   
   private static enum ScanType {
     REMOTE_READ,           // Verified when a block read by a client etc
@@ -143,7 +143,11 @@ public class DataBlockScanner implements Runnable {
       scanPeriod = DEFAULT_SCAN_PERIOD_HOURS;
     }
     scanPeriod *= 3600 * 1000;
-    init();
+    // initialized when the scanner thread is started.
+  }
+  
+  private synchronized boolean isInitiliazed() {
+    return throttler != null;
   }
   
   private void updateBytesToScan(long len, long lastScanTime) {
@@ -234,6 +238,9 @@ public class DataBlockScanner implements Runnable {
                "Verification times are not stored.");
     }
     
+    synchronized (this) {
+      throttler = new DataNode.Throttler(200, MAX_SCAN_RATE);
+    }
   }
 
   private synchronized long getNewBlockScanTime() {
@@ -248,6 +255,9 @@ public class DataBlockScanner implements Runnable {
 
   /** Adds block to list of blocks */
   synchronized void addBlock(Block block) {
+    if (!isInitiliazed()) {
+      return;
+    }
     
     BlockScanInfo info = blockMap.get(block);
     if ( info != null ) {
@@ -264,6 +274,9 @@ public class DataBlockScanner implements Runnable {
   
   /** Deletes the block from internal structures */
   synchronized void deleteBlock(Block block) {
+    if (!isInitiliazed()) {
+      return;
+    }
     BlockScanInfo info = blockMap.get(block);
     if ( info != null ) {
       delBlockInfo(info);
@@ -272,6 +285,9 @@ public class DataBlockScanner implements Runnable {
 
   /** @return the last scan time */
   public synchronized long getLastScanTime(Block block) {
+    if (!isInitiliazed()) {
+      return 0;
+    }
     BlockScanInfo info = blockMap.get(block);
     return info == null? 0: info.lastScanTime;
   }
@@ -550,6 +566,9 @@ public class DataBlockScanner implements Runnable {
   
   public void run() {
     try {
+      
+      init();
+      
       //Read last verification times
       if (!assignInitialVerificationTimes()) {
         return;
@@ -816,7 +835,7 @@ public class DataBlockScanner implements Runnable {
      * If the data is not read completely (i.e, untill hasNext() returns
      * false), it needs to be explicitly 
      */
-    class Reader implements Iterator<String>, Closeable {
+    private class Reader implements Iterator<String>, Closeable {
       
       BufferedReader reader;
       File file;
@@ -929,10 +948,13 @@ public class DataBlockScanner implements Runnable {
       
       StringBuilder buffer = new StringBuilder(8*1024);
       if (blockScanner == null) {
-        buffer.append("Period block scanner is not running. " +
+        buffer.append("Periodic block scanner is not running. " +
                       "Please check the datanode log if this is unexpected.");
-      } else {
+      } else if (blockScanner.isInitiliazed()) {
         blockScanner.printBlockReport(buffer, summary);
+      } else {
+        buffer.append("Periodic block scanner is not yet initialized. " +
+                      "Please check back again after some time.");
       }
       response.getWriter().write(buffer.toString()); // extra copy!
     }
