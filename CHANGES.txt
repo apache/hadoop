@@ -844,6 +844,9 @@ Release 0.17.2 - Unreleased
 
   BUG FIXES
 
+    HADOOP-3760. Fix a bug with HDFS file close() mistakenly introduced
+    by HADOOP-3681. (Lohit Vijayarenu via rangadi)
+
     HADOOP-3681. DFSClient can get into an infinite loop while closing
     a file if there are some errors. (Lohit Vijayarenu via rangadi)
 

@@ -2704,8 +2704,8 @@ public class DFSClient implements FSConstants {
           }
 
         flushInternal();             // flush all data to Datanodes
-        isClosed();
-        closed = true;
+        isClosed(); // check to see if flushInternal had any exceptions
+        closed = true; // allow closeThreads() to showdown threads
 
         closeThreads();
         
@@ -2727,8 +2727,6 @@ public class DFSClient implements FSConstants {
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
-        int fileCompleteRetry = 0;
-        final int checkFileCompleteRetry = 10;
         while (!fileComplete) {
           fileComplete = namenode.complete(src, clientName);
           if (!fileComplete) {
@@ -2739,9 +2737,6 @@ public class DFSClient implements FSConstants {
               }
             } catch (InterruptedException ie) {
             }
-            // after retrying for checkFileCompleteRetry times check isClosed() 
-            if ((++fileCompleteRetry % checkFileCompleteRetry) == 0) 
-              isClosed();
           }
         }
       } finally {
