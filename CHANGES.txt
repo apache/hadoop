@@ -120,6 +120,10 @@ Trunk (unreleased changes)
     HADOOP-3721. Refactor CompositeRecordReader and related mapred.join classes
     to make them clearer. (cdouglas)
 
+    HADOOP-3720. Re-read the config file when dfsadmin -refreshNodes is invoked
+    so dfs.hosts and dfs.hosts.exclude are observed. (lohit vijayarenu via
+    cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

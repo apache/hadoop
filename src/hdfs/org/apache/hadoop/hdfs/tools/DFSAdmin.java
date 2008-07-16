@@ -305,9 +305,16 @@ public class DFSAdmin extends FsShell {
       "\t\tcondition.  Safe mode can also be entered manually, but then\n" +
       "\t\tit can only be turned off manually as well.\n";
 
-    String refreshNodes = "-refreshNodes: \tRe-read the hosts and exclude files to update the set\n" +
-      "\t\tof Datanodes that are allowed to connect to the Namenode\n" +
-      "\t\tand those that should be decommissioned of recommissioned.\n";
+    String refreshNodes = "-refreshNodes: \tUpdates the set of hosts allowed " +
+                          "to connect to namenode.\n\n" +
+      "\t\tRe-reads the config file to update values defined by \n" +
+      "\t\tdfs.hosts and dfs.host.exclude and reads the \n" +
+      "\t\tentires (hostnames) in those files.\n\n" +
+      "\t\tEach entry not defined in dfs.hosts but in \n" + 
+      "\t\tdfs.hosts.exclude is decommissioned. Each entry defined \n" +
+      "\t\tin dfs.hosts and also in dfs.host.exclude is stopped from \n" +
+      "\t\tdecommissioning if it has aleady been marked for decommission.\n" + 
+      "\t\tEntires not present in both the lists are decommissioned.\n";
 
     String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of DFS.\n" +
       "\t\tDatanodes delete their previous version working directories,\n" +

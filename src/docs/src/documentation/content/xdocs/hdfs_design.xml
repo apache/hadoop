@@ -313,7 +313,7 @@
             <td> Generate a list of DataNodes </td> <td> <code>bin/hadoop dfsadmin -report</code> </td>
           </tr>
           <tr>
-            <td> Decommission DataNode <code>datanodename</code> </td><td> <code>bin/hadoop dfsadmin -decommission datanodename</code> </td>
+            <td> Recommission or decommission DataNode(s) </td><td> <code>bin/hadoop dfsadmin -refreshNodes</code> </td>
           </tr>
         </table>
       </section>

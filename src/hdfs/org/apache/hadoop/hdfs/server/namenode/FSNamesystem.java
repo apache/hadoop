@@ -3480,6 +3480,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
+   * Rereads the config to get hosts and exclude list file names.
    * Rereads the files to update the hosts and exclude lists.  It
    * checks if any of the hosts have changed states:
    * 1. Added to hosts  --> no further work needed here.
@@ -3487,8 +3488,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  void refreshNodes() throws IOException {
+  public void refreshNodes(Configuration conf) throws IOException {
     checkSuperuserPrivilege();
+    // Reread the config to get dfs.hosts and dfs.hosts.exclude filenames.
+    // Update the file names and refresh internal includes and excludes list
+    if (conf == null)
+      conf = new Configuration();
+    hostsReader.updateFileNames(conf.get("dfs.hosts",""), 
+                                conf.get("dfs.hosts.exclude", ""));
     hostsReader.refresh();
     synchronized (this) {
       for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();

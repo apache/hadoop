@@ -521,10 +521,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /*
    * Refresh the list of datanodes that the namenode should allow to  
-   * connect.  Uses the files list in the configuration to update the list. 
+   * connect.  Re-reads conf by creating new Configuration object and 
+   * uses the files list in the configuration to update the list. 
    */
   public void refreshNodes() throws IOException {
-    namesystem.refreshNodes();
+    namesystem.refreshNodes(new Configuration());
   }
 
   /**

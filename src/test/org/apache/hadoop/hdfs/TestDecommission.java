@@ -28,6 +28,7 @@ import java.lang.InterruptedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -170,7 +171,9 @@ public class TestDecommission extends TestCase {
   /*
    * decommission one random node.
    */
-  private String decommissionNode(DFSClient client, 
+  private String decommissionNode(NameNode namenode,
+                                  Configuration conf,
+                                  DFSClient client, 
                                   FileSystem filesys,
                                   FileSystem localFileSys)
     throws IOException {
@@ -195,7 +198,7 @@ public class TestDecommission extends TestCase {
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(nodename);
     writeConfigFile(localFileSys, excludeFile, nodes);
-    dfs.refreshNodes();
+    namenode.namesystem.refreshNodes(conf);
     return nodename;
   }
 
@@ -303,7 +306,8 @@ public class TestDecommission extends TestCase {
                            replicas + " replicas.");
         checkFile(fileSys, file1, replicas);
         printFileLocations(fileSys, file1);
-        String downnode = decommissionNode(client, fileSys, localFileSys);
+        String downnode = decommissionNode(cluster.getNameNode(), conf,
+                                           client, fileSys, localFileSys);
         decommissionedNodes.add(downnode);
         waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
         checkFile(fileSys, file1, replicas, downnode);

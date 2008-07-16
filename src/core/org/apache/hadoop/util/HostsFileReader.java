@@ -63,7 +63,7 @@ public class HostsFileReader {
     }  
   }
 
-  public void refresh() throws IOException {
+  public synchronized void refresh() throws IOException {
     includes.clear();
     excludes.clear();
     
@@ -83,4 +83,18 @@ public class HostsFileReader {
     return excludes;
   }
 
+  public synchronized void setIncludesFile(String includesFile) {
+    this.includesFile = includesFile;
+  }
+  
+  public synchronized void setExcludesFile(String excludesFile) {
+    this.excludesFile = excludesFile;
+  }
+
+  public synchronized void updateFileNames(String includesFile, 
+                                           String excludesFile) 
+                                           throws IOException {
+    setIncludesFile(includesFile);
+    setExcludesFile(excludesFile);
+  }
 }
