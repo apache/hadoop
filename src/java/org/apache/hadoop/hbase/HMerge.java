@@ -330,11 +330,11 @@ class HMerge implements HConstants {
       
       try {
         HStoreKey key = new HStoreKey();
-        TreeMap<byte [], byte[]> results =
-          new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+        TreeMap<byte [], Cell> results =
+          new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
         while(rootScanner.next(key, results)) {
-          for(byte [] b: results.values()) {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(b);
+          for(Cell c: results.values()) {
+            HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
             if (info != null) {
               metaRegions.add(info);
             }

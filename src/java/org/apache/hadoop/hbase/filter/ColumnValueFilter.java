@@ -27,6 +27,7 @@ import java.util.SortedMap;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.ObjectWritable;
 
 /**
@@ -124,7 +125,7 @@ public class ColumnValueFilter implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRow(final SortedMap<byte[], byte[]> columns) {
+  public boolean filterRow(final SortedMap<byte[], Cell> columns) {
     // Don't let rows through if they don't have the column we are checking
     return !columns.containsKey(columnName);
   }

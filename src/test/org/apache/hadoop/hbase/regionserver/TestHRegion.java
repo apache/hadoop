@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -284,13 +285,13 @@ public class TestHRegion extends HBaseTestCase {
     int numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
@@ -333,13 +334,13 @@ public class TestHRegion extends HBaseTestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
@@ -392,13 +393,13 @@ public class TestHRegion extends HBaseTestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
@@ -440,13 +441,13 @@ public class TestHRegion extends HBaseTestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
@@ -479,13 +480,13 @@ public class TestHRegion extends HBaseTestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 500;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
@@ -567,13 +568,13 @@ public class TestHRegion extends HBaseTestCase {
       int contentsFetched = 0;
       int anchorFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           String curval = Bytes.toString(val);
           if(Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
@@ -619,13 +620,13 @@ public class TestHRegion extends HBaseTestCase {
     try {
       int numFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           byte [] col = it.next();
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
 
@@ -663,8 +664,8 @@ public class TestHRegion extends HBaseTestCase {
     try {
       int fetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       while(s.next(curKey, curVals)) {
         for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           it.next();

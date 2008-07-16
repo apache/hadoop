@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Read-only table descriptor.
- * Returned out of {@link HTable.getTableDescriptor}.
  */
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
 

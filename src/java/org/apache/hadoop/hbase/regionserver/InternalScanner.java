@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.SortedMap;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -49,7 +50,7 @@ public interface InternalScanner extends Closeable {
    * @return true if data was returned
    * @throws IOException
    */
-  public boolean next(HStoreKey key, SortedMap<byte [], byte[]> results)
+  public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
   throws IOException;
   
   /**

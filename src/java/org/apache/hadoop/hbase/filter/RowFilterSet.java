@@ -28,6 +28,7 @@ import java.util.SortedMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.ObjectWritable;
 
 /**
@@ -179,7 +180,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRow(final SortedMap<byte [], byte[]> columns) {
+  public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {

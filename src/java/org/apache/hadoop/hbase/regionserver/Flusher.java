@@ -27,8 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 
 import org.apache.commons.logging.Log;
@@ -169,8 +167,9 @@ class Flusher extends Thread implements FlushRequester {
       }
       lock.lock();
       try {
-        // See javadoc comment above for removeFromQueue on why we do not
-        // compact if removeFromQueue is true.
+        // See comment above for removeFromQueue on why we do not
+        // compact if removeFromQueue is true. Note that region.flushCache()
+        // only returns true if a flush is done and if a compaction is needed.
         if (region.flushcache() && !removeFromQueue) {
           server.compactSplitThread.compactionRequested(region);
         }

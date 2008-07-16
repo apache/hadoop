@@ -1120,12 +1120,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HbaseMapWritable<byte [], Cell> values
         = new HbaseMapWritable<byte [], Cell>();
       HStoreKey key = new HStoreKey();
-      TreeMap<byte [], byte []> results =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> results =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       while (s.next(key, results)) {
-        for (Map.Entry<byte [], byte []> e: results.entrySet()) {
-          values.put(e.getKey(), new Cell(e.getValue(), key.getTimestamp()));
-        }
+        values.putAll(results);
         if (values.size() > 0) {
           // Row has something in it. Return the value.
           break;

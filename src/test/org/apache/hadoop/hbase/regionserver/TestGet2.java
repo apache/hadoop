@@ -76,8 +76,8 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
           arbitraryStartRow, HConstants.LATEST_TIMESTAMP,
           new WhileMatchRowFilter(new StopRowFilter(arbitraryStopRow)));
       HStoreKey key = new HStoreKey();
-      TreeMap<byte [], byte[]> value =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> value =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       while (scanner.next(key, value)) { 
         if (actualStartRow == null) {
           actualStartRow = key.getRow();

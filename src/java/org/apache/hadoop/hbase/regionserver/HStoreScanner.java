@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -33,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -42,7 +42,7 @@ class HStoreScanner implements InternalScanner {
   static final Log LOG = LogFactory.getLog(HStoreScanner.class);
 
   private InternalScanner[] scanners;
-  private TreeMap<byte [], byte []>[] resultSets;
+  private TreeMap<byte [], Cell>[] resultSets;
   private HStoreKey[] keys;
   private boolean wildcardMatch = false;
   private boolean multipleMatchers = false;
@@ -87,7 +87,7 @@ class HStoreScanner implements InternalScanner {
     // All results will match the required column-set and scanTime.
     for (int i = 0; i < scanners.length; i++) {
       keys[i] = new HStoreKey();
-      resultSets[i] = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
         closeScanner(i);
       }
@@ -105,7 +105,7 @@ class HStoreScanner implements InternalScanner {
   }
 
   /** {@inheritDoc} */
-  public boolean next(HStoreKey key, SortedMap<byte [], byte[]> results)
+  public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
 
     // Filtered flag is set by filters.  If a cell has been 'filtered out'
@@ -166,9 +166,9 @@ class HStoreScanner implements InternalScanner {
             // a result if the map does not contain the key.
             HStoreKey hsk = new HStoreKey(key.getRow(), HConstants.EMPTY_BYTE_ARRAY,
               key.getTimestamp());
-            for (Map.Entry<byte [], byte[]> e : resultSets[i].entrySet()) {
+            for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
               hsk.setColumn(e.getKey());
-              if (HLogEdit.isDeleted(e.getValue())) {
+              if (HLogEdit.isDeleted(e.getValue().getValue())) {
                 if (!deletes.contains(hsk)) {
                   // Key changes as we cycle the for loop so add a copy to
                   // the set of deletes.
@@ -180,8 +180,8 @@ class HStoreScanner implements InternalScanner {
                   !results.containsKey(e.getKey())) {
                 if (dataFilter != null) {
                   // Filter whole row by column data?
-                  filtered =
-                      dataFilter.filterColumn(chosenRow, e.getKey(), e.getValue());
+                  filtered = dataFilter.filterColumn(chosenRow, e.getKey(),
+                      e.getValue().getValue());
                   if (filtered) {
                     results.clear();
                     break;
@@ -264,10 +264,5 @@ class HStoreScanner implements InternalScanner {
         closeScanner(i);
       }
     }
-  }
-
-  public Iterator<Map.Entry<HStoreKey, SortedMap<byte [], byte[]>>> iterator() {
-    throw new UnsupportedOperationException("Unimplemented serverside. " +
-      "next(HStoreKey, StortedMap(...) is more efficient");
   }
 }

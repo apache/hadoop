@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,8 +45,8 @@ public class TestScannerAPI extends HBaseClusterTestCase {
   });
   private final byte [] startRow = Bytes.toBytes("0");
 
-  private final TreeMap<byte [], SortedMap<byte [], byte[]>> values =
-    new TreeMap<byte [], SortedMap<byte [], byte[]>>(Bytes.BYTES_COMPARATOR);
+  private final TreeMap<byte [], SortedMap<byte [], Cell>> values =
+    new TreeMap<byte [], SortedMap<byte [], Cell>>(Bytes.BYTES_COMPARATOR);
   
   /**
    * @throws Exception
@@ -53,13 +54,16 @@ public class TestScannerAPI extends HBaseClusterTestCase {
   public TestScannerAPI() throws Exception {
     super();
     try {
-      TreeMap<byte [], byte[]> columns =
-        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
-      columns.put(Bytes.toBytes("a:1"), Bytes.toBytes("1"));
+      TreeMap<byte [], Cell> columns =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      columns.put(Bytes.toBytes("a:1"),
+          new Cell(Bytes.toBytes("1"), HConstants.LATEST_TIMESTAMP));
       values.put(Bytes.toBytes("1"), columns);
-      columns = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
-      columns.put(Bytes.toBytes("a:2"), Bytes.toBytes("2"));
-      columns.put(Bytes.toBytes("b:2"), Bytes.toBytes("2"));
+      columns = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      columns.put(Bytes.toBytes("a:2"),
+          new Cell(Bytes.toBytes("2"), HConstants.LATEST_TIMESTAMP));
+      columns.put(Bytes.toBytes("b:2"),
+          new Cell(Bytes.toBytes("2"), HConstants.LATEST_TIMESTAMP));
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
@@ -85,10 +89,10 @@ public class TestScannerAPI extends HBaseClusterTestCase {
     
     HTable table = new HTable(conf, getName());
 
-    for (Map.Entry<byte [], SortedMap<byte [], byte[]>> row: values.entrySet()) {
+    for (Map.Entry<byte [], SortedMap<byte [], Cell>> row: values.entrySet()) {
       BatchUpdate b = new BatchUpdate(row.getKey());
-      for (Map.Entry<byte [], byte[]> val: row.getValue().entrySet()) {
-        b.put(val.getKey(), val.getValue());
+      for (Map.Entry<byte [], Cell> val: row.getValue().entrySet()) {
+        b.put(val.getKey(), val.getValue().getValue());
       }
       table.commit(b);
     }
@@ -128,12 +132,12 @@ public class TestScannerAPI extends HBaseClusterTestCase {
       for (RowResult r : scanner2) {
         assertTrue("row key", values.containsKey(r.getRow()));
 
-        SortedMap<byte [], byte[]> columnValues = values.get(r.getRow());
+        SortedMap<byte [], Cell> columnValues = values.get(r.getRow());
         assertEquals(columnValues.size(), r.size());
-        for (Map.Entry<byte [], byte[]> e: columnValues.entrySet()) {
+        for (Map.Entry<byte [], Cell> e: columnValues.entrySet()) {
           byte [] column = e.getKey();
           assertTrue("column", r.containsKey(column));
-          assertTrue("value", Arrays.equals(columnValues.get(column),
+          assertTrue("value", Arrays.equals(columnValues.get(column).getValue(),
             r.get(column).getValue()));
         }
       }      
@@ -144,19 +148,19 @@ public class TestScannerAPI extends HBaseClusterTestCase {
   
   private void verify(ScannerIncommon scanner) throws IOException {
     HStoreKey key = new HStoreKey();
-    SortedMap<byte [], byte[]> results =
-      new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+    SortedMap<byte [], Cell> results =
+      new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     while (scanner.next(key, results)) {
       byte [] row = key.getRow();
       assertTrue("row key", values.containsKey(row));
       
-      SortedMap<byte [], byte[]> columnValues = values.get(row);
+      SortedMap<byte [], Cell> columnValues = values.get(row);
       assertEquals(columnValues.size(), results.size());
-      for (Map.Entry<byte [], byte[]> e: columnValues.entrySet()) {
+      for (Map.Entry<byte [], Cell> e: columnValues.entrySet()) {
         byte [] column = e.getKey();
         assertTrue("column", results.containsKey(column));
-        assertTrue("value", Arrays.equals(columnValues.get(column),
-            results.get(column)));
+        assertTrue("value", Arrays.equals(columnValues.get(column).getValue(),
+            results.get(column).getValue()));
       }
       results.clear();
     }

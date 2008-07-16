@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * WhileMatchRowFilter is a wrapper filter that filters everything after the 
@@ -98,7 +99,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filterRow(final SortedMap<byte [], byte[]> columns) {
+  public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     changeFAR(this.filter.filterRow(columns));
     return filterAllRemaining();
   }

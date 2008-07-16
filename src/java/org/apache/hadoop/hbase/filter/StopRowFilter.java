@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -123,7 +124,7 @@ public class StopRowFilter implements RowFilterInterface {
    * @param columns
    */
   public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<byte [], byte[]> columns) {
+      final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 

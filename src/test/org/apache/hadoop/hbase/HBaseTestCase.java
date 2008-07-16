@@ -509,8 +509,8 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   public interface ScannerIncommon 
-  extends Iterable<Map.Entry<HStoreKey, SortedMap<byte [], byte[]>>> {
-    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
+  extends Iterable<Map.Entry<HStoreKey, SortedMap<byte [], Cell>>> {
+    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
     throws IOException;
     
     public void close() throws IOException;
@@ -522,7 +522,7 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
+    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
     throws IOException {
       RowResult results = scanner.next();
       if (results == null) {
@@ -531,7 +531,7 @@ public abstract class HBaseTestCase extends TestCase {
       key.setRow(results.getRow());
       values.clear();
       for (Map.Entry<byte [], Cell> entry : results.entrySet()) {
-        values.put(entry.getKey(), entry.getValue().getValue());
+        values.put(entry.getKey(), entry.getValue());
       }
       return true;
     }
@@ -552,7 +552,7 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
+    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
     throws IOException {
       return scanner.next(key, values);
     }

@@ -685,7 +685,7 @@ class Memcache {
 
     /** {@inheritDoc} */
     @Override
-    public boolean next(HStoreKey key, SortedMap<byte [], byte []> results)
+    public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
       if (this.scannerClosed) {
         return false;
@@ -735,7 +735,7 @@ class Memcache {
               c.getTimestamp() > latestTimestamp) {
             latestTimestamp = c.getTimestamp();
           }
-          results.put(column, c.getValue());
+          results.put(column, c);
         }
         this.currentRow = getNextRow(this.currentRow);
 

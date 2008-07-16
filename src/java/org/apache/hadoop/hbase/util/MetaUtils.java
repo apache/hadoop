@@ -201,11 +201,11 @@ public class MetaUtils {
 
     try {
       HStoreKey key = new HStoreKey();
-      SortedMap<byte [], byte[]> results =
-        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+      SortedMap<byte [], Cell> results =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       while (rootScanner.next(key, results)) {
         HRegionInfo info = Writables.getHRegionInfoOrNull(
-            results.get(HConstants.COL_REGIONINFO));
+            results.get(HConstants.COL_REGIONINFO).getValue());
         if (info == null) {
           LOG.warn("region info is null for row " + key.getRow() +
               " in table " + HConstants.ROOT_TABLE_NAME);
@@ -253,11 +253,11 @@ public class MetaUtils {
       HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
     try {
       HStoreKey key = new HStoreKey();
-      SortedMap<byte[], byte[]> results =
-        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      SortedMap<byte[], Cell> results =
+        new TreeMap<byte[], Cell>(Bytes.BYTES_COMPARATOR);
       while (metaScanner.next(key, results)) {
-        HRegionInfo info =
-          Writables.getHRegionInfoOrNull(results.get(HConstants.COL_REGIONINFO));
+        HRegionInfo info = Writables.getHRegionInfoOrNull(
+            results.get(HConstants.COL_REGIONINFO).getValue());
         if (info == null) {
           LOG.warn("regioninfo null for row " + key.getRow() + " in table " +
             Bytes.toString(m.getTableDesc().getName()));

@@ -185,6 +185,7 @@ Trunk (unreleased changes)
                (Izaak Rubin via Stack)
    HBASE-744   BloomFilter serialization/deserialization broken
    HBASE-742   Column length limit is not enforced (Jean-Daniel Cryans via Stack)
+   HBASE-737   Scanner: every cell in a row has the same timestamp
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

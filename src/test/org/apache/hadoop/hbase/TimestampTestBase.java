@@ -177,13 +177,13 @@ public class TimestampTestBase extends HBaseTestCase {
     int count = 0;
     try {
       HStoreKey key = new HStoreKey();
-      TreeMap<byte [], byte []>value =
-        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell>value =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       while (scanner.next(key, value)) {
         assertTrue(key.getTimestamp() <= ts);
         // Content matches the key or HConstants.LATEST_TIMESTAMP.
         // (Key does not match content if we 'put' with LATEST_TIMESTAMP).
-        long l = Bytes.toLong(value.get(COLUMN));
+        long l = Bytes.toLong(value.get(COLUMN).getValue());
         assertTrue(key.getTimestamp() == l ||
           HConstants.LATEST_TIMESTAMP == l);
         count++;

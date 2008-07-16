@@ -92,8 +92,9 @@ public class TestRowFilterOnMultipleFamilies extends HBaseClusterTestCase {
 
   private void scanTableWithRowFilter(final String tableName, final boolean printValues) throws IOException {
     HTable table = new HTable(conf, tableName);
-    Map<byte [], byte[]> columnMap = new HashMap<byte [], byte[]>();
-    columnMap.put(TEXT_COLUMN1, VALUE);
+    Map<byte [], Cell> columnMap = new HashMap<byte [], Cell>();
+    columnMap.put(TEXT_COLUMN1,
+        new Cell(VALUE, HConstants.LATEST_TIMESTAMP));
     RegExpRowFilter filter = new RegExpRowFilter(null, columnMap);
     Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW, filter);
     int numFound = doScan(scanner, printValues);

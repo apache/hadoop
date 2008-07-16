@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
 
@@ -36,12 +37,12 @@ import org.apache.hadoop.io.MapFile;
 class StoreFileScanner extends HAbstractScanner
 implements ChangedReadersObserver {
     // Keys retrieved from the sources
-  private HStoreKey keys[];
+  private volatile HStoreKey keys[];
   // Values that correspond to those keys
-  private byte [][] vals;
+  private volatile byte [][] vals;
   
   // Readers we go against.
-  private MapFile.Reader[] readers;
+  private volatile MapFile.Reader[] readers;
   
   // Store this scanner came out of.
   private final HStore store;
@@ -62,6 +63,7 @@ implements ChangedReadersObserver {
     super(timestamp, targetCols);
     this.store = store;
     this.store.addChangedReaderObserver(this);
+    this.store.lock.readLock().lock();
     try {
       openReaders(firstRow);
     } catch (Exception ex) {
@@ -69,6 +71,8 @@ implements ChangedReadersObserver {
       IOException e = new IOException("HStoreScanner failed construction");
       e.initCause(ex);
       throw e;
+    } finally {
+      this.store.lock.readLock().unlock();
     }
   }
   
@@ -92,8 +96,7 @@ implements ChangedReadersObserver {
     // Most recent map file should be first
     int i = readers.length - 1;
     for(HStoreFile curHSF: store.getStorefiles().values()) {
-      readers[i--] = curHSF.getReader(store.fs,
-          store.getFamily().isBloomFilterEnabled(), false);
+      readers[i--] = curHSF.getReader(store.fs, false, false);
     }
     
     this.keys = new HStoreKey[readers.length];
@@ -140,7 +143,7 @@ implements ChangedReadersObserver {
    * @see org.apache.hadoop.hbase.regionserver.InternalScanner#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
    */
   @Override
-  public boolean next(HStoreKey key, SortedMap<byte [], byte []> results)
+  public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
   throws IOException {
     if (this.scannerClosed) {
       return false;
@@ -173,7 +176,8 @@ implements ChangedReadersObserver {
             if(columnMatch(i)) {              
               // We only want the first result for any specific family member
               if(!results.containsKey(keys[i].getColumn())) {
-                results.put(keys[i].getColumn(), vals[i]);
+                results.put(keys[i].getColumn(), 
+                    new Cell(vals[i], keys[i].getTimestamp()));
                 insertedItem = true;
               }
             }

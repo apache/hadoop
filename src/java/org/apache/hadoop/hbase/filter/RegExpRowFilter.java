@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.regionserver.HLogEdit;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -80,7 +81,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    */
   @Deprecated
   public RegExpRowFilter(final String rowKeyRegExp,
-      final Map<byte [], byte[]> columnFilter) {
+      final Map<byte [], Cell> columnFilter) {
     this.rowKeyRegExp = rowKeyRegExp;
     this.setColumnFilters(columnFilter);
   }
@@ -122,13 +123,13 @@ public class RegExpRowFilter implements RowFilterInterface {
    *          Map of columns with value criteria.
    */
   @Deprecated
-  public void setColumnFilters(final Map<byte [], byte[]> columnFilter) {
+  public void setColumnFilters(final Map<byte [], Cell> columnFilter) {
     if (null == columnFilter) {
       nullColumns.clear();
       equalsMap.clear();
     } else {
-      for (Entry<byte [], byte[]> entry : columnFilter.entrySet()) {
-        setColumnFilter(entry.getKey(), entry.getValue());
+      for (Entry<byte [], Cell> entry : columnFilter.entrySet()) {
+        setColumnFilter(entry.getKey(), entry.getValue().getValue());
       }
     }
   }
@@ -186,10 +187,10 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterRow(final SortedMap<byte [], byte[]> columns) {
-    for (Entry<byte [], byte[]> col : columns.entrySet()) {
+  public boolean filterRow(final SortedMap<byte [], Cell> columns) {
+    for (Entry<byte [], Cell> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
-          && !HLogEdit.isDeleted(col.getValue())) {
+          && !HLogEdit.isDeleted(col.getValue().getValue())) {
         return true;
       }
     }

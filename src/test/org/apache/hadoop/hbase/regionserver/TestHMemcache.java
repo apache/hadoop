@@ -151,7 +151,8 @@ public class TestHMemcache extends TestCase {
     }
   }
   
-  private void isExpectedRowWithoutTimestamps(final int rowIndex, TreeMap<byte [], byte[]> row) {
+  private void isExpectedRowWithoutTimestamps(final int rowIndex,
+      TreeMap<byte [], Cell> row) {
     int i = 0;
     for (byte [] colname: row.keySet()) {
       String expectedColname = Bytes.toString(getColumnName(rowIndex, i++));
@@ -161,18 +162,19 @@ public class TestHMemcache extends TestCase {
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable.  For comparison, comvert bytes to
       // String and trim to remove trailing null bytes.
-      byte [] value = row.get(colname);
+      byte [] value = row.get(colname).getValue();
       String colvalueStr = Bytes.toString(value).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }
   }
 
   private void isExpectedRow(final int rowIndex, TreeMap<byte [], Cell> row) {
-    TreeMap<byte [], byte[]> converted =
-      new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte [], Cell> converted =
+      new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte [], Cell> entry : row.entrySet()) {
       converted.put(entry.getKey(), 
-        entry.getValue() == null ? null : entry.getValue().getValue());
+        new Cell(entry.getValue() == null ? null : entry.getValue().getValue(),
+            HConstants.LATEST_TIMESTAMP));
     }
     isExpectedRowWithoutTimestamps(rowIndex, converted);
   }
@@ -241,16 +243,16 @@ public class TestHMemcache extends TestCase {
     InternalScanner scanner =
       this.hmemcache.getScanner(timestamp, cols, HConstants.EMPTY_START_ROW);
     HStoreKey key = new HStoreKey();
-    TreeMap<byte [], byte []> results =
-      new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte [], Cell> results =
+      new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; scanner.next(key, results); i++) {
       assertTrue("Row name",
           key.toString().startsWith(Bytes.toString(getRowName(i))));
       assertEquals("Count of columns", COLUMNS_COUNT,
           results.size());
-      TreeMap<byte [], byte []> row =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
-      for(Map.Entry<byte [], byte []> e: results.entrySet() ) {
+      TreeMap<byte [], Cell> row =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      for(Map.Entry<byte [], Cell> e: results.entrySet() ) {
         row.put(e.getKey(), e.getValue());
       }
       isExpectedRowWithoutTimestamps(i, row);
@@ -323,8 +325,8 @@ public class TestHMemcache extends TestCase {
       InternalScanner scanner = this.hmemcache.getScanner(timestamp,
           cols, getRowName(startRowId));
       HStoreKey key = new HStoreKey();
-      TreeMap<byte[], byte[]> results =
-        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte[], Cell> results =
+        new TreeMap<byte[], Cell>(Bytes.BYTES_COMPARATOR);
       for (int i = 0; scanner.next(key, results); i++) {
         int rowId = startRowId + i;
         assertTrue("Row name",
@@ -332,9 +334,8 @@ public class TestHMemcache extends TestCase {
         assertEquals("Count of columns", COLUMNS_COUNT, results.size());
         TreeMap<byte[], Cell> row =
           new TreeMap<byte[], Cell>(Bytes.BYTES_COMPARATOR);
-        for (Map.Entry<byte[], byte[]> e : results.entrySet()) {
-          row.put(e.getKey(),
-              new Cell(e.getValue(), HConstants.LATEST_TIMESTAMP));
+        for (Map.Entry<byte[], Cell> e : results.entrySet()) {
+          row.put(e.getKey(),e.getValue());
         }
         isExpectedRow(rowId, row);
         // Clear out set.  Otherwise row results accumulate.

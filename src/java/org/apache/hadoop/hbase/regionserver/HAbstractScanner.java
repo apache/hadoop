@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -182,8 +183,7 @@ public abstract class HAbstractScanner implements InternalScanner {
   }
 
   /** {@inheritDoc} */
-  public abstract boolean next(HStoreKey key,
-      SortedMap<byte [], byte []> results)
+  public abstract boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
   throws IOException;
   
 }

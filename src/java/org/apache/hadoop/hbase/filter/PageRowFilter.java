@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Implementation of RowFilterInterface that limits results to a specific page
@@ -123,7 +124,7 @@ public class PageRowFilter implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<byte [], byte[]> columns) {
+      final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 

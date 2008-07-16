@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -44,7 +45,7 @@ public class TestRowFilterSet extends TestCase {
   static final int MAX_PAGES = 5;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
-  TreeMap<byte [], byte[]> colvalues;
+  TreeMap<byte [], Cell> colvalues;
   static byte[] GOOD_BYTES = null;
   static byte[] BAD_BYTES = null;
 
@@ -62,9 +63,10 @@ public class TestRowFilterSet extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     
-    colvalues = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+    colvalues = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     for (char c = FIRST_CHAR; c < LAST_CHAR; c++) {
-      colvalues.put(new byte [] {(byte)c}, GOOD_BYTES);
+      colvalues.put(new byte [] {(byte)c},
+          new Cell(GOOD_BYTES, HConstants.LATEST_TIMESTAMP));
     }
     
     Set<RowFilterInterface> filters = new HashSet<RowFilterInterface>();

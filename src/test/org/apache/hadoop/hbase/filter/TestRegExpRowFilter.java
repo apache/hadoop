@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLogEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Tests for regular expression row filter
  */
 public class TestRegExpRowFilter extends TestCase {
-  TreeMap<byte [], byte []> colvalues;
+  TreeMap<byte [], Cell> colvalues;
   RowFilterInterface mainFilter;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
@@ -55,9 +56,10 @@ public class TestRegExpRowFilter extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    this.colvalues = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+    this.colvalues = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     for (char c = FIRST_CHAR; c < LAST_CHAR; c++) {
-      colvalues.put(Bytes.toBytes(new String(new char [] {c})), GOOD_BYTES);
+      colvalues.put(Bytes.toBytes(new String(new char [] {c})),
+          new Cell(GOOD_BYTES, HConstants.LATEST_TIMESTAMP));
     }
     this.mainFilter = new RegExpRowFilter(HOST_PREFIX + ".*", colvalues);
   }
@@ -126,9 +128,9 @@ public class TestRegExpRowFilter extends TestCase {
     
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       byte [] t = createRow(c);
-      for (Map.Entry<byte [], byte []> e: this.colvalues.entrySet()) {
+      for (Map.Entry<byte [], Cell> e: this.colvalues.entrySet()) {
         assertFalse("Failed on " + c,
-          filter.filterColumn(t, e.getKey(), e.getValue()));
+          filter.filterColumn(t, e.getKey(), e.getValue().getValue()));
       }
     }
     // Try a row and column I know will pass.
@@ -171,13 +173,15 @@ public class TestRegExpRowFilter extends TestCase {
     // Try a row that has all expected columnKeys, and NO null-expected
     // columnKeys.
     // Testing row with columnKeys: a-d
-    colvalues.put(new byte [] {(byte)secondToLast}, GOOD_BYTES);
+    colvalues.put(new byte [] {(byte)secondToLast},
+        new Cell(GOOD_BYTES, HConstants.LATEST_TIMESTAMP));
     assertFalse("Failed with last columnKey " + secondToLast, filter.
       filterRow(colvalues));
 
     // Try a row that has all expected columnKeys AND a null-expected columnKey.
     // Testing row with columnKeys: a-e
-    colvalues.put(new byte [] {LAST_CHAR}, GOOD_BYTES);
+    colvalues.put(new byte [] {LAST_CHAR},
+        new Cell(GOOD_BYTES, HConstants.LATEST_TIMESTAMP));
     assertTrue("Failed with last columnKey " + LAST_CHAR, filter.
       filterRow(colvalues));
     
@@ -185,7 +189,7 @@ public class TestRegExpRowFilter extends TestCase {
     // that maps to a null value.
     // Testing row with columnKeys: a-e, e maps to null
     colvalues.put(new byte [] {LAST_CHAR}, 
-      HLogEdit.deleteBytes.get());
+      new Cell(HLogEdit.deleteBytes.get(), HConstants.LATEST_TIMESTAMP));
     assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
       filter.filterRow(colvalues));
   }

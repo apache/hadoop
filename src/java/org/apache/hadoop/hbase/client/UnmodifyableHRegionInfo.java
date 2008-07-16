@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 
 class UnmodifyableHRegionInfo extends HRegionInfo {
   /*

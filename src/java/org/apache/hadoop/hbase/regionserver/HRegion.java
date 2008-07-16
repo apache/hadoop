@@ -977,7 +977,7 @@ public class HRegion implements HConstants {
    * 
    * <p> This method may block for some time.
    * 
-   * @return true if the cache was flushed
+   * @return true if the region needs compacting
    * 
    * @throws IOException
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
@@ -1021,13 +1021,16 @@ public class HRegion implements HConstants {
     // restart so hlog content can be replayed and put back into the memcache.
     // Otherwise, the snapshot content while backed up in the hlog, it will not
     // be part of the current running servers state.
-    long flushed = 0;
+    boolean compactionRequested = false;
     try {
       // A.  Flush memcache to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
       for (HStore hstore: stores.values()) {
-        flushed += hstore.flushCache(sequenceId);
+        boolean needsCompaction = hstore.flushCache(sequenceId);
+        if (needsCompaction) {
+          compactionRequested = true;
+        }
       }
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
@@ -1037,7 +1040,8 @@ public class HRegion implements HConstants {
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
       // all and sundry.
       this.log.abortCacheFlush();
-      DroppedSnapshotException dse = new DroppedSnapshotException();
+      DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
+          Bytes.toString(getRegionName()));
       dse.initCause(t);
       throw dse;
     }
@@ -1064,13 +1068,12 @@ public class HRegion implements HConstants {
       LOG.debug("Finished memcache flush for region " + this +
         " in " +
           (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
-          sequenceId + ", " +
-          StringUtils.humanReadableInt(flushed));
+          sequenceId + ", compaction requested=" + compactionRequested);
       if (!regionInfo.isMetaRegion()) {
         this.historian.addRegionFlush(regionInfo, timeTaken);
       }
     }
-    return true;
+    return compactionRequested;
   }
   
   //////////////////////////////////////////////////////////////////////////////
@@ -1733,7 +1736,7 @@ public class HRegion implements HConstants {
    */
   private class HScanner implements InternalScanner {
     private InternalScanner[] scanners;
-    private TreeMap<byte [], byte []>[] resultSets;
+    private TreeMap<byte [], Cell>[] resultSets;
     private HStoreKey[] keys;
     private RowFilterInterface filter;
 
@@ -1782,7 +1785,7 @@ public class HRegion implements HConstants {
       this.keys = new HStoreKey[scanners.length];
       for (int i = 0; i < scanners.length; i++) {
         keys[i] = new HStoreKey();
-        resultSets[i] = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+        resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
         if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
           closeScanner(i);
         }
@@ -1795,7 +1798,7 @@ public class HRegion implements HConstants {
 
     /** {@inheritDoc} */
     @SuppressWarnings("null")
-    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> results)
+    public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
       boolean moreToFollow = false;
       boolean filtered = false;
@@ -1830,7 +1833,7 @@ public class HRegion implements HConstants {
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
               // a result if the map does not contain the key.
-              for (Map.Entry<byte [], byte[]> e : resultSets[i].entrySet()) {
+              for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
                 if (!results.containsKey(e.getKey())) {
                   results.put(e.getKey(), e.getValue());
                 }

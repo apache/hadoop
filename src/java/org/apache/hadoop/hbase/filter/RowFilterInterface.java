@@ -23,6 +23,8 @@ import java.util.SortedMap;
 
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.hbase.io.Cell;
+
 /**
  * 
  * Interface used for row-level filters applied to HRegion.HScanner scan
@@ -98,7 +100,7 @@ public interface RowFilterInterface extends Writable {
    * @param columns
    * @return true if row filtered and should not be processed.
    */
-  boolean filterRow(final SortedMap<byte [], byte[]> columns);
+  boolean filterRow(final SortedMap<byte [], Cell> columns);
 
   /**
    * Validates that this filter applies only to a subset of the given columns.

@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HRegionInfo;
 
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -88,8 +88,8 @@ public class TestScanner extends HBaseTestCase {
       throws IOException {
     
     InternalScanner scanner = null;
-    TreeMap<byte [], byte []> results =
-      new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte [], Cell> results =
+      new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
     HStoreKey key = new HStoreKey();
 
     byte [][][] scanColumns = {
@@ -104,11 +104,11 @@ public class TestScanner extends HBaseTestCase {
         
         while (scanner.next(key, results)) {
           assertTrue(results.containsKey(HConstants.COL_REGIONINFO));
-          byte [] val = results.get(HConstants.COL_REGIONINFO); 
+          byte [] val = results.get(HConstants.COL_REGIONINFO).getValue(); 
           validateRegionInfo(val);
           if(validateStartcode) {
             assertTrue(results.containsKey(HConstants.COL_STARTCODE));
-            val = results.get(HConstants.COL_STARTCODE);
+            val = results.get(HConstants.COL_STARTCODE).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             long startCode = Bytes.toLong(val);
@@ -117,7 +117,7 @@ public class TestScanner extends HBaseTestCase {
           
           if(serverName != null) {
             assertTrue(results.containsKey(HConstants.COL_SERVER));
-            val = results.get(HConstants.COL_SERVER);
+            val = results.get(HConstants.COL_SERVER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             String server = Bytes.toString(val);

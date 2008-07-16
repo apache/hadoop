@@ -90,7 +90,7 @@ public class HStore implements HConstants {
 
   private final Integer flushLock = new Integer(0);
 
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   final byte [] storeName;
   private final String storeNameStr;
@@ -550,27 +550,27 @@ public class HStore implements HConstants {
    * Write out current snapshot.  Presumes {@link #snapshot()} has been called
    * previously.
    * @param logCacheFlushId flush sequence number
-   * @return count of bytes flushed
+   * @return true if a compaction is needed
    * @throws IOException
    */
-  long flushCache(final long logCacheFlushId) throws IOException {
+  boolean flushCache(final long logCacheFlushId) throws IOException {
     // Get the snapshot to flush.  Presumes that a call to
     // this.memcache.snapshot() has happened earlier up in the chain.
     SortedMap<HStoreKey, byte []> cache = this.memcache.getSnapshot();
-    long flushed = internalFlushCache(cache, logCacheFlushId);
+    boolean compactionNeeded = internalFlushCache(cache, logCacheFlushId);
     // If an exception happens flushing, we let it out without clearing
     // the memcache snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     this.memcache.clearSnapshot(cache);
-    return flushed;
+    return compactionNeeded;
   }
   
-  private long internalFlushCache(SortedMap<HStoreKey, byte []> cache,
+  private boolean internalFlushCache(SortedMap<HStoreKey, byte []> cache,
       long logCacheFlushId) throws IOException {
     long flushed = 0;
     // Don't flush if there are no entries.
     if (cache.size() == 0) {
-      return flushed;
+      return false;
     }
     
     // TODO:  We can fail in the below block before we complete adding this
@@ -634,7 +634,7 @@ public class HStore implements HConstants {
           StringUtils.humanReadableInt(newStoreSize));
       }
     }
-    return flushed;
+    return storefiles.size() >= compactionThreshold;
   }
   
   /*
@@ -744,8 +744,8 @@ public class HStore implements HConstants {
       List<MapFile.Reader> readers = new ArrayList<MapFile.Reader>();
       for (HStoreFile file: filesToCompact) {
         try {
-          HStoreFile.BloomFilterMapFile.Reader reader = file.getReader(fs,
-              this.family.isBloomFilterEnabled(), false);
+          HStoreFile.BloomFilterMapFile.Reader reader =
+            file.getReader(fs, false, false);
           readers.add(reader);
           
           // Compute the size of the new bloomfilter if needed

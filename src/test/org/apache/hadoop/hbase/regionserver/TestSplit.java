@@ -182,12 +182,12 @@ public class TestSplit extends HBaseClusterTestCase {
       HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], byte []> curVals =
-        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Cell> curVals =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       boolean first = true;
       OUTER_LOOP: while(s.next(curKey, curVals)) {
         for(byte [] col: curVals.keySet()) {
-          byte [] val = curVals.get(col);
+          byte [] val = curVals.get(col).getValue();
           byte [] curval = val;
           if (first) {
             first = false;
