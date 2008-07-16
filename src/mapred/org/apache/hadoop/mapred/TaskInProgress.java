@@ -777,6 +777,9 @@ class TaskInProgress {
    * Gets the Node list of input split locations sorted in rack order.
    */ 
   public String getSplitNodes() {
+    if ( rawSplit == null) {
+      return "";
+    }
     String[] splits = rawSplit.getLocations();
     Node[] nodes = new Node[splits.length];
     for (int i = 0; i < splits.length; i++) {
@@ -803,6 +806,10 @@ class TaskInProgress {
       ret.append(nodes[i].toString());
     }
     return ret.toString();
+  }
+
+  public void clearSplit() {
+    rawSplit.clearBytes();
   }
 
 }
