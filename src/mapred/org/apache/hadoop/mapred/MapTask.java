@@ -84,7 +84,7 @@ class MapTask extends Task {
                  ) throws IOException {
     super(jobFile, taskId, partition);
     this.splitClass = splitClass;
-    this.split.set(split);
+    this.split = split;
   }
 
   @Override
@@ -114,6 +114,7 @@ class MapTask extends Task {
     super.write(out);
     Text.writeString(out, splitClass);
     split.write(out);
+    split = null;
   }
   
   @Override

@@ -757,6 +757,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public BytesWritable getBytes() {
       return bytes;
     }
+
+    public void clearBytes() {
+      bytes = null;
+    }
       
     public void setLocations(String[] locations) {
       this.locations = locations;

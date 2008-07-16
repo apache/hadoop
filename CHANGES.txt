@@ -843,6 +843,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3737. Fix CompressedWritable to call Deflater::end to release
     compressor memory. (Grant Glouser via cdouglas)
 
+    HADOOP-3670. Fixes JobTracker to clear out split bytes when no longer 
+    required. (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

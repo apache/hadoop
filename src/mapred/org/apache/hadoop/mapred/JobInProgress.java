@@ -1638,6 +1638,11 @@ class JobInProgress {
         localJarFile = null;
       }
 
+      // clean up splits
+      for (int i = 0; i < maps.length; i++) {
+        maps[i].clearSplit();
+      }
+
       // JobClient always creates a new directory with job files
       // so we remove that directory to cleanup
       // Delete temp dfs dirs created if any, like in case of 
