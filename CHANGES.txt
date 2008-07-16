@@ -120,8 +120,6 @@ Trunk (unreleased changes)
     HADOOP-3721. Refactor CompositeRecordReader and related mapred.join classes
     to make them clearer. (cdouglas)
 
-    HADOOP-3755. Update gridmix to work with HOD 0.4 (Runping Qi via cdouglas)
-
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -850,6 +848,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3670. Fixes JobTracker to clear out split bytes when no longer 
     required. (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-3755. Update gridmix to work with HOD 0.4 (Runping Qi via cdouglas)
 
 Release 0.17.2 - Unreleased
 
