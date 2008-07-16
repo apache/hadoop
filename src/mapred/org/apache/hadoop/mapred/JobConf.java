@@ -154,6 +154,18 @@ public class JobConf extends Configuration {
     addResource(config);
   }
 
+  /** A new map/reduce configuration where the behavior of reading from the
+   * default resources can be turned off.
+   * <p/>
+   * If the parameter {@code loadDefaults} is false, the new instance
+   * will not load resources from the default files.
+   *
+   * @param loadDefaults specifies whether to load from the default files
+   */
+  public JobConf(boolean loadDefaults) {
+    super(loadDefaults);
+  }
+
   /**
    * Get the user jar for the map-reduce job.
    * 

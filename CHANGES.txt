@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     bash tab completion for the bin/hadoop script. See the README file
     in the contrib directory for the installation. (Chris Smith via enis)
 
+    HADOOP-3730. Adds a new JobConf constructor that disables loading
+    default configurations. (Alejandro Abdelnur via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till
