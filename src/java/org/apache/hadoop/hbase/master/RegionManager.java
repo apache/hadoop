@@ -519,15 +519,21 @@ class RegionManager implements HConstants {
     byte [] firstMetaRegion = null;
     Set<MetaRegion> metaRegions = new HashSet<MetaRegion>();
     
-    synchronized (onlineMetaRegions) {
-      if (onlineMetaRegions.size() == 1) {
-        firstMetaRegion = onlineMetaRegions.firstKey();
-      } else if (onlineMetaRegions.containsKey(tableName)) {
-        firstMetaRegion = tableName;
-      } else {
-        firstMetaRegion = onlineMetaRegions.headMap(tableName).lastKey();
+    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+      metaRegions.add(new MetaRegion(rootRegionLocation.get(),
+          HRegionInfo.ROOT_REGIONINFO.getRegionName()));
+      
+    } else {
+      synchronized (onlineMetaRegions) {
+        if (onlineMetaRegions.size() == 1) {
+          firstMetaRegion = onlineMetaRegions.firstKey();
+        } else if (onlineMetaRegions.containsKey(tableName)) {
+          firstMetaRegion = tableName;
+        } else {
+          firstMetaRegion = onlineMetaRegions.headMap(tableName).lastKey();
+        }
+        metaRegions.addAll(onlineMetaRegions.tailMap(firstMetaRegion).values());
       }
-      metaRegions.addAll(onlineMetaRegions.tailMap(firstMetaRegion).values());
     }
     return metaRegions;
   }

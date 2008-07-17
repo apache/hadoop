@@ -193,6 +193,7 @@ Trunk (unreleased changes)
    HBASE-34    Set memcache flush size per column (Andrew Purtell via Stack)
    HBASE-42    Set region split size on table creation (Andrew Purtell via Stack)
    HBASE-43    Add a read-only attribute to columns (Andrew Purtell via Stack)
+   HBASE-424   Should be able to enable/disable .META. table
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

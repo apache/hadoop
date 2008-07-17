@@ -312,7 +312,6 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.enableTable(tableName);
     } catch (RemoteException e) {
@@ -373,7 +372,6 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.disableTable(tableName);
     } catch (RemoteException e) {
