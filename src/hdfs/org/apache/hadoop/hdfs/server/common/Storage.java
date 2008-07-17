@@ -69,6 +69,10 @@ public abstract class Storage extends StorageInfo {
   // this corresponds to Hadoop-0.14.
   public static final int LAST_UPGRADABLE_LAYOUT_VERSION = -7;
   protected static final String LAST_UPGRADABLE_HADOOP_VERSION = "Hadoop-0.14";
+
+  /* this should be removed when LAST_UPGRADABLE_LV goes beyond -13.
+   * any upgrade code that uses this constant should also be removed. */
+  public static final int PRE_GENERATIONSTAMP_LAYOUT_VERSION = -13;
   
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";

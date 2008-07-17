@@ -28,7 +28,10 @@ import java.util.Collection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.NodeType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
@@ -275,7 +278,7 @@ public class DataStorage extends Storage {
     // rename current to tmp
     rename(curDir, tmpDir);
     // hardlink blocks
-    linkBlocks(tmpDir, curDir);
+    linkBlocks(tmpDir, curDir, this.getLayoutVersion());
     // write version file
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     assert this.namespaceID == nsInfo.getNamespaceID() :
@@ -357,12 +360,19 @@ public class DataStorage extends Storage {
     }
   }
   
-  static void linkBlocks(File from, File to) throws IOException {
+  static void linkBlocks(File from, File to, int oldLV) throws IOException {
     if (!from.isDirectory()) {
       if (from.getName().startsWith(COPY_FILE_PREFIX)) {
         IOUtils.copyBytes(new FileInputStream(from), 
                           new FileOutputStream(to), 16*1024, true);
       } else {
+        
+        //check if we are upgrading from pre-generation stamp version.
+        if (oldLV >= PRE_GENERATIONSTAMP_LAYOUT_VERSION) {
+          // Link to the new file name.
+          to = new File(convertMetatadataFileName(to.getAbsolutePath()));
+        }
+        
         HardLink.createHardLink(from, to);
       }
       return;
@@ -379,7 +389,8 @@ public class DataStorage extends Storage {
       });
     
     for(int i = 0; i < blockNames.length; i++)
-      linkBlocks(new File(from, blockNames[i]), new File(to, blockNames[i]));
+      linkBlocks(new File(from, blockNames[i]), 
+                 new File(to, blockNames[i]), oldLV);
   }
 
   protected void corruptPreUpgradeStorage(File rootDir) throws IOException {
@@ -405,5 +416,23 @@ public class DataStorage extends Storage {
     assert um != null : "DataNode.upgradeManager is null.";
     um.setUpgradeState(false, getLayoutVersion());
     um.initializeUpgrade(nsInfo);
+  }
+  
+  private static final Pattern PRE_GENSTAMP_META_FILE_PATTERN = 
+    Pattern.compile("(.*blk_[-]*\\d+)\\.meta$");
+  /**
+   * This is invoked on target file names when upgrading from pre generation 
+   * stamp version (version -13) to correct the metatadata file name.
+   * @param oldFileName
+   * @return the new metadata file name with the default generation stamp.
+   */
+  private static String convertMetatadataFileName(String oldFileName) {
+    Matcher matcher = PRE_GENSTAMP_META_FILE_PATTERN.matcher(oldFileName); 
+    if (matcher.matches()) {
+      //return the current metadata file name
+      return FSDataset.getMetaFileName(matcher.group(1),
+                                       Block.GRANDFATHER_GENERATION_STAMP); 
+    }
+    return oldFileName;
   }
 }

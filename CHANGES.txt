@@ -307,6 +307,10 @@ Release 0.18.0 - Unreleased
     in hadoop user guide. (shv)
 
   IMPROVEMENTS
+
+    HADOOP-3677. Simplify generation stamp upgrade by making is a 
+    local upgrade on datandodes. Deleted distributed upgrade.
+    (rangadi)
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
     (Lohit Vjayarenu via rangadi)

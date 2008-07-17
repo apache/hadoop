@@ -22,8 +22,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.datanode.GenerationStampUpgradeDatanode;
-import org.apache.hadoop.hdfs.server.namenode.GenerationStampUpgradeNamenode;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -36,8 +34,6 @@ public class UpgradeObjectCollection {
     initialize();
     // Registered distributed upgrade objects here
     // registerUpgrade(new UpgradeObject());
-    registerUpgrade(new GenerationStampUpgradeNamenode());
-    registerUpgrade(new GenerationStampUpgradeDatanode());
   }
 
   static class UOSignature implements Comparable<UOSignature> {

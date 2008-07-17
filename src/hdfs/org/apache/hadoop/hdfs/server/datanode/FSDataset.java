@@ -564,9 +564,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
   } 
   
+  static String getMetaFileName(String blockFileName, long genStamp) {
+    return blockFileName + "_" + genStamp + METADATA_EXTENSION;
+  }
+  
   static File getMetaFile(File f , Block b) {
-    return new File( f.getAbsolutePath() +
-                     "_" + b.getGenerationStamp() + METADATA_EXTENSION ); 
+    return new File(getMetaFileName(f.getAbsolutePath(),
+                                    b.getGenerationStamp())); 
   }
   protected File getMetaFile(Block b) throws IOException {
     return getMetaFile(getBlockFile(b), b);
