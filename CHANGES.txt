@@ -862,6 +862,9 @@ Release 0.18.0 - Unreleased
     required. (Amareshwari Sriramadasu via ddas)
 
     HADOOP-3755. Update gridmix to work with HOD 0.4 (Runping Qi via cdouglas)
+  
+    HADOOP-3743. Fix -libjars, -files, -archives options to work even if 
+    user code does not implement tools. (Amareshwari Sriramadasu via mahadev)
 
 Release 0.17.2 - Unreleased
 

@@ -153,6 +153,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
+  private static Configuration commandLineConfig;
   static long MAX_JOBPROFILE_AGE = 1000 * 2;
 
   /**
@@ -359,7 +360,25 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     setConf(conf);
     init(conf);
   }
+
+  /**
+   * set the command line config in the jobclient. these are
+   * parameters paassed from the command line and stored in 
+   * conf
+   * @param conf the configuration object to set.
+   */
+  static synchronized void  setCommandLineConfig(Configuration conf) {
+    commandLineConfig = conf;
+  }
   
+  /**
+   * return the command line configuration
+   */
+  public static synchronized Configuration getCommandLineConfig() {
+    return commandLineConfig;
+  }
+  
+ 
   /**
    * Connect to the default {@link JobTracker}.
    * @param conf the job configuration.
@@ -484,14 +503,51 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   private void configureCommandLineOptions(JobConf job, Path submitJobDir, Path submitJarFile) 
     throws IOException {
+    
+    final String warning = "Use genericOptions for the option ";
+
+    if (!(job.getBoolean("mapred.used.genericoptionsparser", false))) {
+      LOG.warn("Use GenericOptionsParser for parsing the arguments. " +
+               "Applications should implement Tool for the same.");
+    }
+
     // get all the command line arguments into the 
     // jobconf passed in by the user conf
+    Configuration commandConf = JobClient.getCommandLineConfig();
     String files = null;
     String libjars = null;
     String archives = null;
+
     files = job.get("tmpfiles");
+    if (files == null) {
+      if (commandConf != null) {
+        files = commandConf.get("tmpfiles");
+        if (files != null) {
+          LOG.warn(warning + "-files");
+        }
+      }
+    }
+
     libjars = job.get("tmpjars");
+    if (libjars == null) {
+      if (commandConf != null) {
+        libjars = commandConf.get("tmpjars");
+        if (libjars != null) {
+          LOG.warn(warning + "-libjars");
+        }
+      }
+    }
+
     archives = job.get("tmparchives");
+    if (archives == null) {
+      if (commandConf != null) {
+        archives = commandConf.get("tmparchives");
+        if (archives != null) {
+          LOG.warn(warning + "-archives");
+        }
+      }
+    }
+    
     /*
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id

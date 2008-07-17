@@ -57,7 +57,11 @@
 				<p>
 				  Following are supported by <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
 				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a> and 
-				  <a href="commands_manual.html#job">job</a>.
+				  <a href="commands_manual.html#job">job</a>. 
+				  Applications should implement 
+				  <a href="ext:api/org/apache/hadoop/util/tool">Tool</a> to support
+				  <a href="ext:api/org/apache/hadoop/util/genericoptionsparser">
+				  GenericOptions</a>.
 				</p>
 			     <table>
 			          <tr><th> GENERIC_OPTION </th><th> Description </th></tr>

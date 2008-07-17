@@ -247,6 +247,7 @@ public class GenericOptionsParser {
           conf.set(property[i], property[i+1]);
       }
     }
+    conf.setBoolean("mapred.used.genericoptionsparser", true);
   }
 
   /**
