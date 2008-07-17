@@ -332,11 +332,11 @@ public class GenericOptionsParser {
     out.println("Generic options supported are");
     out.println("-conf <configuration file>     specify an application configuration file");
     out.println("-D <property=value>            use value for given property");
-    out.println("-fs <local|namenode:port>      specify a namenod");
+    out.println("-fs <local|namenode:port>      specify a namenode");
     out.println("-jt <local|jobtracker:port>    specify a job tracker");
-    out.println("-files <comma separated list of fiels>    " + 
+    out.println("-files <comma separated list of files>    " + 
       "specify comma separated files to be copied to the map reduce cluster");
-    out.println("-libjars <comma seperated list of jars>    " +
+    out.println("-libjars <comma separated list of jars>    " +
       "specify comma separated jar files to include in the classpath.");
     out.println("-archives <comma separated list of archives>    " +
                 "specify comma separated archives to be unarchived" +

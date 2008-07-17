@@ -866,6 +866,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3743. Fix -libjars, -files, -archives options to work even if 
     user code does not implement tools. (Amareshwari Sriramadasu via mahadev)
 
+    HADOOP-3774. Fix typos in shell output. (Tsz Wo (Nicholas), SZE via
+    cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
