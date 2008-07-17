@@ -1172,7 +1172,7 @@ public class HTable {
   
   /**
    * Commit a RowsBatchUpdate to the table.
-   * @param batchUpdate
+   * @param batchUpdates
    * @throws IOException
    */ 
   public synchronized void commit(final List<BatchUpdate> batchUpdates) 
