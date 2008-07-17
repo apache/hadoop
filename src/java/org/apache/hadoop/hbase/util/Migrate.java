@@ -20,19 +20,12 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,7 +63,7 @@ import org.apache.hadoop.util.ToolRunner;
  * 
  * <p>A migration script must accompany any patch that changes data formats.
  * 
- * <p>This script has a 'check' and 'excecute' mode.  Adding migration steps,
+ * <p>This script has a 'check' and 'execute' mode.  Adding migration steps,
  * its important to keep this in mind.  Testing if migration needs to be run,
  * be careful not to make presumptions about the current state of the data in
  * the filesystem.  It may have a format from many versions previous with
@@ -79,6 +72,10 @@ import org.apache.hadoop.util.ToolRunner;
  * old formats -- or, worse, fail in ways that are hard to figure (One such is
  * edits made by previous migration steps not being apparent in later migration
  * steps).  The upshot is always verify presumptions migrating.
+ * 
+ * <p>This script will migrate an hbase 0.1 install to a 0.2 install only.
+ * 
+ * @see <a href="http://wiki.apache.org/hadoop/Hbase/HowToMigrate">How To Migration</a>
  */
 public class Migrate extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Migrate.class);
@@ -91,35 +88,12 @@ public class Migrate extends Configured implements Tool {
   // Gets set by migration methods if we are in readOnly mode.
   private boolean migrationNeeded = false;
 
-  /** Action to take when an extra file or unrecoverd log file is found */
-  private static String ACTIONS = "abort|ignore|delete|prompt";
-  private static enum ACTION  {
-    /** Stop conversion */
-    ABORT,
-    /** print a warning message, but otherwise ignore */
-    IGNORE,
-    /** delete extra files */
-    DELETE,
-    /** prompt for disposition of extra files */
-    PROMPT
-  }
-  
-  private static final Map<String, ACTION> options =
-    new HashMap<String, ACTION>();
-  
-  static {
-   options.put("abort", ACTION.ABORT);
-   options.put("ignore", ACTION.IGNORE);
-   options.put("delete", ACTION.DELETE);
-   options.put("prompt", ACTION.PROMPT);
-  }
-
   private boolean readOnly = false;
-  private ACTION otherFiles = ACTION.IGNORE;
-
-  private BufferedReader reader = null;
   
   private final Set<String> references = new HashSet<String>();
+  
+  // Filesystem version of hbase 0.1.x.
+  private static final float HBASE_0_1_VERSION = 0.1f;
   
   /** default constructor */
   public Migrate() {
@@ -201,38 +175,23 @@ public class Migrate extends Configured implements Tool {
       LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
 
       // See if there is a file system version file
-      String version = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
-      if (version != null && 
-          version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
+      String versionStr = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
+      if (versionStr != null &&
+          versionStr.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
         LOG.info("No upgrade necessary.");
         return 0;
       }
-
-      // Dependent on which which version hbase is at, run appropriate
-      // migrations.  Be consious that scripts can be run in readOnly -- i.e.
-      // check if migration is needed -- and then in actual migrate mode.  Be
-      // careful when writing your scripts that you do not make presumption
-      // about state of the FileSystem.  For example, in script that migrates
-      // between 2 and 3, it should not presume the layout is that of v2.  If
-      // readOnly mode, the pre-v2 scripts may not have been run yet.
-      if (version == null) {
-        FileStatus[] rootFiles = getRootDirFiles();
-        migrateFromNoVersion(rootFiles);
-        migrateToV2(rootFiles);
-        migrateToV3();
-        migrateToV4();
-      } else if (version.compareTo("0.1") == 0) {
-        migrateToV2(getRootDirFiles());
-        migrateToV3();
-        migrateToV4();
-      } else if (version.compareTo("2") == 0) {
-        migrateToV3();
-      } else if (version.compareTo("3") == 0) {
-        migrateToV4();
-      } else if (version.compareTo("4") == 0) {
-        // Nothing to do.
+      if (versionStr == null || Float.parseFloat(versionStr) < 0.1) {
+        throw new IOException("Install 0.1.x of hbase and run its " +
+          "migration first");
+      }
+      float version = Float.parseFloat(versionStr);
+      if (version == 0.1f) {
+        checkForUnrecoveredLogFiles(getRootDirFiles());
+        migrate();
       } else {
-        throw new IOException("Unrecognized version: " + version);
+        throw new IOException("Unrecognized or non-migratable version: " +
+          version);
       }
 
       if (!readOnly) {
@@ -247,57 +206,11 @@ public class Migrate extends Configured implements Tool {
     } catch (Exception e) {
       LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
       return -1;
-      
-    }
-  }
-
-  private void migrateFromNoVersion(FileStatus[] rootFiles) throws IOException {
-    LOG.info("No file system version found. Checking to see if hbase in " +
-      "Filesystem is at revision 0.1");
-
-    // Check to see if new root region dir exists
-    boolean newRootRegion = checkNewRootRegionDirExists();
-    if (this.readOnly &&  !newRootRegion) {
-      this.migrationNeeded = true;
-      return;
-    }
-
-    // Check for unrecovered region server log files
-    checkForUnrecoveredLogFiles(rootFiles);
-
-    // Check for "extra" files and for old upgradable regions
-    extraFiles(rootFiles);
-
-    if (!newRootRegion) {
-      // find root region
-      String rootRegion = OLD_PREFIX +
-        HRegionInfo.ROOT_REGIONINFO.getEncodedName();
-      if (!fs.exists(new Path(FSUtils.getRootDir(this.conf), rootRegion))) {
-        throw new IOException("Cannot find root region " + rootRegion);
-      } else if (readOnly) {
-        migrationNeeded = true;
-      } else {
-        migrateRegionDir(HConstants.ROOT_TABLE_NAME, rootRegion);
-        scanRootRegion();
-
-        // scan for left over regions
-        extraRegions();
-      }
     }
   }
   
-  private void migrateToV2(FileStatus[] rootFiles) throws IOException {
-    LOG.info("Checking to see if hbase in Filesystem is at version 2.");
-    checkForUnrecoveredLogFiles(rootFiles);
-  }
-
-  private void migrateToV3() throws IOException {
-    LOG.info("Checking to see if hbase in Filesystem is at version 3.");
+  private void migrate() throws IOException {
     addHistorianFamilyToMeta();
-  }
-  
-  private void migrateToV4() throws IOException {
-    LOG.info("Checking to see if hbase in Filesystem is at version 4.");
     updateBloomFilters();
   }
 
@@ -308,14 +221,6 @@ public class Migrate extends Configured implements Tool {
         FSUtils.getRootDir(this.conf).toString());
     }
     return stats;
-  }
-  
-  private boolean checkNewRootRegionDirExists() throws IOException {
-    Path rootRegionDir =  HRegion.getRegionDir(FSUtils.getRootDir(this.conf),
-      HRegionInfo.ROOT_REGIONINFO);
-    boolean newRootRegion = fs.exists(rootRegionDir);
-    this.migrationNeeded = !newRootRegion;
-    return newRootRegion;
   }
 
   private void checkForUnrecoveredLogFiles(FileStatus[] rootFiles)
@@ -332,63 +237,12 @@ public class Migrate extends Configured implements Tool {
           " unrecovered region server logs. Please uninstall this version of " +
           "HBase, re-install the previous version, start your cluster and " +
           "shut it down cleanly, so that all region server logs are recovered" +
-          " and deleted.");
-    }
-  }
-  
-  // Check for files that should not be there or should be migrated
-  private void extraFiles(FileStatus[] stats) throws IOException {
-    for (int i = 0; i < stats.length; i++) {
-      String name = stats[i].getPath().getName();
-      boolean newRootRegion = checkNewRootRegionDirExists();
-      if (name.startsWith(OLD_PREFIX)) {
-        if (!newRootRegion) {
-          // We need to migrate if the new root region directory doesn't exist
-          migrationNeeded = true;
-          String regionName = name.substring(OLD_PREFIX.length());
-          try {
-            Integer.parseInt(regionName);
-          } catch (NumberFormatException e) {
-            extraFile(otherFiles, "Old region format can not be upgraded: " +
-                name, stats[i].getPath());
-          }
-        } else {
-          // Since the new root region directory exists, we assume that this
-          // directory is not necessary
-          extraFile(otherFiles, "Old region directory found: " + name,
-              stats[i].getPath());
-        }
-      } else {
-        // File name does not start with "hregion_"
-        if (!newRootRegion) {
-          // new root region directory does not exist. This is an extra file
-          String message = "Unrecognized file " + name;
-          extraFile(otherFiles, message, stats[i].getPath());
-        }
-      }
+          " and deleted.  Or, if you are sure logs are vestige of old " +
+          "failures in hbase, remove them and then rerun the migration.  " +
+          "Here are the problem log files: " + unrecoveredLogs);
     }
   }
 
-  private void extraFile(ACTION action, String message, Path p)
-  throws IOException {
-    
-    if (action == ACTION.ABORT) {
-      throw new IOException(message + " aborting");
-    } else if (action == ACTION.IGNORE) {
-      LOG.info(message + " ignoring");
-    } else if (action == ACTION.DELETE) {
-      LOG.info(message + " deleting");
-      fs.delete(p, true);
-    } else {
-      // ACTION.PROMPT
-      String response = prompt(message + " delete? [y/n]");
-      if (response.startsWith("Y") || response.startsWith("y")) {
-        LOG.info(message + " deleting");
-        fs.delete(p, true);
-      }
-    }
-  }
-  
   void migrateRegionDir(final byte [] tableName, String oldPath)
   throws IOException {
     // Create directory where table will live
@@ -460,30 +314,6 @@ public class Migrate extends Configured implements Tool {
     }
   }
 
-  private void extraRegions() throws IOException {
-    Path rootdir = FSUtils.getRootDir(this.conf);
-    FileStatus[] stats = fs.listStatus(rootdir);
-    if (stats == null || stats.length == 0) {
-      throw new IOException("No files found under root directory " +
-          rootdir.toString());
-    }
-    for (int i = 0; i < stats.length; i++) {
-      String name = stats[i].getPath().getName();
-      if (name.startsWith(OLD_PREFIX)) {
-        String encodedName = name.substring(OLD_PREFIX.length());
-        String message;
-        if (references.contains(encodedName)) {
-          message =
-            "Region not in meta table but other regions reference it " + name;
-        } else {
-          message = 
-            "Region not in meta table and no other regions reference it " + name;
-        }
-        extraFile(otherFiles, message, stats[i].getPath());
-      }
-    }
-  }
-  
   private void addHistorianFamilyToMeta() throws IOException {
     if (this.migrationNeeded) {
       // Be careful. We cannot use MetAutils if current hbase in the
@@ -570,16 +400,8 @@ public class Migrate extends Configured implements Tool {
   @SuppressWarnings("static-access")
   private int parseArgs(String[] args) {
     Options opts = new Options();
-    Option extraFiles = OptionBuilder.withArgName(ACTIONS)
-    .hasArg()
-    .withDescription("disposition of 'extra' files: {abort|ignore|delete|prompt}")
-    .create("extrafiles");
-    
-    opts.addOption(extraFiles);
-    
     GenericOptionsParser parser =
       new GenericOptionsParser(this.getConf(), opts, args);
-    
     String[] remainingArgs = parser.getRemainingArgs();
     if (remainingArgs.length != 1) {
       usage();
@@ -591,23 +413,6 @@ public class Migrate extends Configured implements Tool {
       usage();
       return -1;
     }
-
-    if (readOnly) {
-      this.otherFiles = ACTION.IGNORE;
-
-    } else {
-      CommandLine commandLine = parser.getCommandLine();
-
-      ACTION action = null;
-      if (commandLine.hasOption("extrafiles")) {
-        action = options.get(commandLine.getOptionValue("extrafiles"));
-        if (action == null) {
-          usage();
-          return -1;
-        }
-        this.otherFiles = action;
-      }
-    }
     return 0;
   }
   
@@ -616,27 +421,11 @@ public class Migrate extends Configured implements Tool {
     System.err.println("  check                            perform upgrade checks only.");
     System.err.println("  upgrade                          perform upgrade checks and modify hbase.\n");
     System.err.println("  Options are:");
-    System.err.println("    -extrafiles={abort|ignore|delete|prompt}");
-    System.err.println("                                   action to take if \"extra\" files are found.\n");
     System.err.println("    -conf <configuration file>     specify an application configuration file");
     System.err.println("    -D <property=value>            use value for given property");
     System.err.println("    -fs <local|namenode:port>      specify a namenode");
   }
-  
-  private synchronized String prompt(String prompt) {
-    System.out.print(prompt + " > ");
-    System.out.flush();
-    if (reader == null) {
-      reader = new BufferedReader(new InputStreamReader(System.in));
-    }
-    try {
-      return reader.readLine();
-      
-    } catch (IOException e) {
-      return null;
-    }
-  }
-  
+
   /**
    * Main program
    * 

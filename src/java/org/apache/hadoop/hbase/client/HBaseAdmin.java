@@ -381,7 +381,6 @@ public class HBaseAdmin {
     }
 
     // Wait until all regions are disabled
-    
     while (isTableEnabled(tableName)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
@@ -389,7 +388,6 @@ public class HBaseAdmin {
       }
       try {
         Thread.sleep(pause);
-        
       } catch (InterruptedException e) {
         // continue
       }

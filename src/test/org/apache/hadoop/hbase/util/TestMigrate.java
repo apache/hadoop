@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**
- * 
+ * Runs migration of filesystem from hbase 0.1 to 0.2.
  */
 public class TestMigrate extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestMigrate.class);
@@ -60,8 +60,8 @@ public class TestMigrate extends HBaseTestCase {
   private static final int EXPECTED_COUNT = 17576;
 
   /**
+   * Test migration
    * @throws IOException 
-   * 
    */
   public void testUpgrade() throws IOException {
     MiniDFSCluster dfsCluster = null;
@@ -71,40 +71,19 @@ public class TestMigrate extends HBaseTestCase {
       this.conf.set(HConstants.HBASE_DIR, new Path(
         dfsCluster.getFileSystem().getHomeDirectory(), "hbase").toString());
       FileSystem dfs = dfsCluster.getFileSystem();
-      Path root = dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
-      dfs.mkdirs(root);
-
-      FileSystem localfs = FileSystem.getLocal(conf);
-      // Get path for zip file.  If running this test in eclipse, define
-      // the system property src.testdata for your test run.
-      String srcTestdata = System.getProperty("src.testdata");
-      if (srcTestdata == null) {
-        throw new NullPointerException("Define src.test system property");
-      }
-      Path data = new Path(srcTestdata, "HADOOP-2478-testdata.zip");
-      if (!localfs.exists(data)) {
-        throw new FileNotFoundException(data.toString());
-      }
-      FSDataInputStream hs = localfs.open(data);
-      ZipInputStream zip = new ZipInputStream(hs);
-      unzip(zip, dfs, root);
-      zip.close();
-      hs.close();
-      listPaths(dfs, root, root.toString().length() + 1);
+      Path rootDir =
+        dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
+      dfs.mkdirs(rootDir);
+      loadTestData(dfs, rootDir);
+      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
       
       Migrate u = new Migrate(conf);
       u.run(new String[] {"check"});
-      listPaths(dfs, root, root.toString().length() + 1);
+      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
       
       u = new Migrate(conf);
       u.run(new String[] {"upgrade"});
-      listPaths(dfs, root, root.toString().length() + 1);
-      
-      // Remove version file and try again
-      dfs.delete(new Path(root, HConstants.VERSION_FILE_NAME), false);
-      u = new Migrate(conf);
-      u.run(new String[] {"upgrade"});
-      listPaths(dfs, root, root.toString().length() + 1);
+      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
       
       // Try again. No upgrade should be necessary
       u = new Migrate(conf);
@@ -119,6 +98,32 @@ public class TestMigrate extends HBaseTestCase {
         shutdownDfs(dfsCluster);
       }
     }
+  }
+  
+  /*
+   * Load up test data.
+   * @param dfs
+   * @param rootDir
+   * @throws IOException
+   */
+  private void loadTestData(final FileSystem dfs, final Path rootDir)
+  throws IOException {
+    FileSystem localfs = FileSystem.getLocal(conf);
+    // Get path for zip file.  If running this test in eclipse, define
+    // the system property src.testdata for your test run.
+    String srcTestdata = System.getProperty("src.testdata");
+    if (srcTestdata == null) {
+      throw new NullPointerException("Define src.test system property");
+    }
+    Path data = new Path(srcTestdata, "HADOOP-2478-testdata-v0.1.zip");
+    if (!localfs.exists(data)) {
+      throw new FileNotFoundException(data.toString());
+    }
+    FSDataInputStream hs = localfs.open(data);
+    ZipInputStream zip = new ZipInputStream(hs);
+    unzip(zip, dfs, rootDir);
+    zip.close();
+    hs.close();
   }
 
   /*
@@ -218,14 +223,14 @@ public class TestMigrate extends HBaseTestCase {
     }
   }
 
-  private void unzip(ZipInputStream zip, FileSystem dfs, Path root)
+  private void unzip(ZipInputStream zip, FileSystem dfs, Path rootDir)
   throws IOException {
     ZipEntry e = null;
     while ((e = zip.getNextEntry()) != null)  {
       if (e.isDirectory()) {
-        dfs.mkdirs(new Path(root, e.getName()));
+        dfs.mkdirs(new Path(rootDir, e.getName()));
       } else {
-        FSDataOutputStream out = dfs.create(new Path(root, e.getName()));
+        FSDataOutputStream out = dfs.create(new Path(rootDir, e.getName()));
         byte[] buffer = new byte[4096];
         int len;
         do {
@@ -240,9 +245,9 @@ public class TestMigrate extends HBaseTestCase {
     }
   }
   
-  private void listPaths(FileSystem fs, Path dir, int rootdirlength)
+  private void listPaths(FileSystem filesystem, Path dir, int rootdirlength)
   throws IOException {
-    FileStatus[] stats = fs.listStatus(dir);
+    FileStatus[] stats = filesystem.listStatus(dir);
     if (stats == null || stats.length == 0) {
       return;
     }
@@ -250,7 +255,7 @@ public class TestMigrate extends HBaseTestCase {
       String path = stats[i].getPath().toString();
       if (stats[i].isDir()) {
         System.out.println("d " + path);
-        listPaths(fs, stats[i].getPath(), rootdirlength);
+        listPaths(filesystem, stats[i].getPath(), rootdirlength);
       } else {
         System.out.println("f " + path + " size=" + stats[i].getLen());
       }
