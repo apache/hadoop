@@ -602,6 +602,22 @@
           <code>Hello    2</code><br/>
           <code>World    2</code><br/>
         </p>
+        
+        <p> Applications can specify a comma separated list of paths which
+        would be present in the current working directory of the task 
+        using the option <code>-files</code>. The <code>-libjars</code>
+        option allows applications to add jars to the classpaths of the maps
+        and reduces. The <code>-archives</code> allows them to pass archives
+        as arguments that are unzipped/unjarred and a link with name of the
+        jar/zip are created in the current working directory of tasks. More
+        details about the command line options are available at 
+        <a href="commands_manual.html">Commands manual</a></p>
+        
+        <p>Running <code>wordcount</code> example with 
+        <code>-libjars</code> and <code>-files</code>:<br/>
+        <code> hadoop jar hadoop-examples.jar wordcount -files cachefile.txt 
+        -libjars mylib.jar input output </code> 
+        </p>
       </section>
       
       <section>
