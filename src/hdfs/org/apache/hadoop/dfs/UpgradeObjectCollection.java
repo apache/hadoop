@@ -33,8 +33,6 @@ class UpgradeObjectCollection {
     initialize();
     // Registered distributed upgrade objects here
     // registerUpgrade(new UpgradeObject());
-    registerUpgrade(new GenerationStampUpgradeNamenode());
-    registerUpgrade(new GenerationStampUpgradeDatanode());
   }
 
   static class UOSignature implements Comparable<UOSignature> {
