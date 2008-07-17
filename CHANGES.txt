@@ -186,6 +186,13 @@ Trunk (unreleased changes)
    HBASE-744   BloomFilter serialization/deserialization broken
    HBASE-742   Column length limit is not enforced (Jean-Daniel Cryans via Stack)
    HBASE-737   Scanner: every cell in a row has the same timestamp
+   HBASE-700   hbase.io.index.interval need be configuratable in column family
+               (Andrew Purtell via Stack)
+   HBASE-62    Allow user add arbitrary key/value pairs to table and column
+               descriptors (Andrew Purtell via Stack)
+   HBASE-34    Set memcache flush size per column (Andrew Purtell via Stack)
+   HBASE-42    Set region split size on table creation (Andrew Purtell via Stack)
+   HBASE-43    Add a read-only attribute to columns (Andrew Purtell via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

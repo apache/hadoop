@@ -37,9 +37,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -188,7 +190,7 @@ public class Migrate extends Configured implements Tool {
       float version = Float.parseFloat(versionStr);
       if (version == 0.1f) {
         checkForUnrecoveredLogFiles(getRootDirFiles());
-        migrate();
+        migrateToV5();
       } else {
         throw new IOException("Unrecognized or non-migratable version: " +
           version);
@@ -209,9 +211,93 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void migrate() throws IOException {
+  private void migrateToV5() throws IOException {
+    rewriteMetaHRegionInfo();
     addHistorianFamilyToMeta();
     updateBloomFilters();
+  }
+  
+  /**
+   * Rewrite the meta tables so that HRI is versioned and so we move to new
+   * HCD and HCD.
+   * @throws IOException 
+   */
+  private void rewriteMetaHRegionInfo() throws IOException {
+    if (this.readOnly && this.migrationNeeded) {
+      return;
+    }
+    // Read using old classes.
+    final org.apache.hadoop.hbase.util.migration.v5.MetaUtils utils =
+      new org.apache.hadoop.hbase.util.migration.v5.MetaUtils(this.conf);
+    try {
+      // Scan the root region
+      utils.scanRootRegion(new org.apache.hadoop.hbase.util.migration.v5.MetaUtils.ScannerListener() {
+        public boolean processRow(org.apache.hadoop.hbase.util.migration.v5.HRegionInfo info)
+        throws IOException {
+          // Scan every meta region
+          final org.apache.hadoop.hbase.util.migration.v5.HRegion metaRegion =
+            utils.getMetaRegion(info);
+          // If here, we were able to read with old classes.  If readOnly, then
+          // needs migration.
+          if (readOnly && !migrationNeeded) {
+            migrationNeeded = true;
+            return false;
+          }
+          updateHRegionInfo(utils.getRootRegion(), info);
+          utils.scanMetaRegion(info, new org.apache.hadoop.hbase.util.migration.v5.MetaUtils.ScannerListener() {
+            public boolean processRow(org.apache.hadoop.hbase.util.migration.v5.HRegionInfo hri)
+            throws IOException {
+              updateHRegionInfo(metaRegion, hri);
+              return true;
+            }
+          });
+          return true;
+        }
+      });
+    } catch (Exception e) {
+      LOG.error("", e);
+    } finally {
+      utils.shutdown();
+    }
+  }
+  
+  /*
+   * Move from old pre-v5 hregioninfo to current HRegionInfo
+   * Persist back into <code>r</code>
+   * @param mr
+   * @param oldHri
+   */
+  void updateHRegionInfo(org.apache.hadoop.hbase.util.migration.v5.HRegion mr,
+    org.apache.hadoop.hbase.util.migration.v5.HRegionInfo oldHri)
+  throws IOException {
+    byte [] oldHriTableName = oldHri.getTableDesc().getName();
+    HTableDescriptor newHtd =
+      Bytes.equals(HConstants.ROOT_TABLE_NAME, oldHriTableName)?
+        HTableDescriptor.ROOT_TABLEDESC:
+        Bytes.equals(HConstants.META_TABLE_NAME, oldHriTableName)?
+          HTableDescriptor.META_TABLEDESC:
+          new HTableDescriptor(oldHri.getTableDesc().getName());
+    for (org.apache.hadoop.hbase.util.migration.v5.HColumnDescriptor oldHcd:
+        oldHri.getTableDesc().getFamilies()) {
+      HColumnDescriptor newHcd = new HColumnDescriptor(
+        HStoreKey.addDelimiter(oldHcd.getName()),
+        oldHcd.getMaxValueLength(),
+        HColumnDescriptor.CompressionType.valueOf(oldHcd.getCompressionType().toString()),
+        oldHcd.isInMemory(), oldHcd.isBlockCacheEnabled(),
+        oldHcd.getMaxValueLength(), oldHcd.getTimeToLive(),
+        oldHcd.isBloomFilterEnabled());
+      newHtd.addFamily(newHcd);
+    }
+    HRegionInfo newHri = new HRegionInfo(newHtd, oldHri.getStartKey(),
+      oldHri.getEndKey(), oldHri.isSplit(), oldHri.getRegionId());
+    BatchUpdate b = new BatchUpdate(newHri.getRegionName());
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(newHri));
+    mr.batchUpdate(b);
+    if (LOG.isDebugEnabled()) {
+        LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
+          " for " + oldHri.toString() + " in " + mr.toString() + " is: " +
+          newHri.toString());
+    }
   }
 
   private FileStatus[] getRootDirFiles() throws IOException {
@@ -240,77 +326,6 @@ public class Migrate extends Configured implements Tool {
           " and deleted.  Or, if you are sure logs are vestige of old " +
           "failures in hbase, remove them and then rerun the migration.  " +
           "Here are the problem log files: " + unrecoveredLogs);
-    }
-  }
-
-  void migrateRegionDir(final byte [] tableName, String oldPath)
-  throws IOException {
-    // Create directory where table will live
-    Path rootdir = FSUtils.getRootDir(this.conf);
-    Path tableDir = new Path(rootdir, Bytes.toString(tableName));
-    fs.mkdirs(tableDir);
-
-    // Move the old region directory under the table directory
-
-    Path newPath = new Path(tableDir,
-        oldPath.substring(OLD_PREFIX.length()));
-    fs.rename(new Path(rootdir, oldPath), newPath);
-
-    processRegionSubDirs(fs, newPath);
-  }
-  
-  private void processRegionSubDirs(FileSystem fs, Path newPath)
-  throws IOException {
-    String newName = newPath.getName();
-    FileStatus[] children = fs.listStatus(newPath);
-    for (int i = 0; i < children.length; i++) {
-      String child = children[i].getPath().getName();
-      if (children[i].isDir()) {
-        processRegionSubDirs(fs, children[i].getPath());
-
-        // Rename old compaction directories
-
-        if (child.startsWith(OLD_PREFIX)) {
-          fs.rename(children[i].getPath(),
-              new Path(newPath, child.substring(OLD_PREFIX.length())));
-        }
-      } else {
-        if (newName.compareTo("mapfiles") == 0) {
-          // Check to see if this mapfile is a reference
-
-          if (HStore.isReference(children[i].getPath())) {
-            // Keep track of references in case we come across a region
-            // that we can't otherwise account for.
-            references.add(child.substring(child.indexOf(".") + 1));
-          }
-        }
-      }
-    }
-  }
-  
-  private void scanRootRegion() throws IOException {
-    final MetaUtils utils = new MetaUtils(this.conf);
-    try {
-      utils.scanRootRegion(new MetaUtils.ScannerListener() {
-        public boolean processRow(HRegionInfo info) throws IOException {
-          // First move the meta region to where it should be and rename
-          // subdirectories as necessary
-          migrateRegionDir(HConstants.META_TABLE_NAME, OLD_PREFIX
-              + info.getEncodedName());
-          utils.scanMetaRegion(info, new MetaUtils.ScannerListener() {
-            public boolean processRow(HRegionInfo tableInfo) throws IOException {
-              // Move the region to where it should be and rename
-              // subdirectories as necessary
-              migrateRegionDir(tableInfo.getTableDesc().getName(), OLD_PREFIX
-                  + tableInfo.getEncodedName());
-              return true;
-            }
-          });
-          return true;
-        }
-      });
-    } finally {
-      utils.shutdown();
     }
   }
 
@@ -359,17 +374,16 @@ public class Migrate extends Configured implements Tool {
           // Scan every meta region
           final HRegion metaRegion = utils.getMetaRegion(info);
           utils.scanMetaRegion(info, new MetaUtils.ScannerListener() {
-            public boolean processRow(HRegionInfo tableInfo) throws IOException {
-              HTableDescriptor desc = tableInfo.getTableDesc();
+            public boolean processRow(HRegionInfo hri) throws IOException {
+              HTableDescriptor desc = hri.getTableDesc();
               Path tableDir =
                 HTableDescriptor.getTableDir(rootDir, desc.getName()); 
               for (HColumnDescriptor column: desc.getFamilies()) {
-                if (column.isBloomFilterEnabled()) {
+                if (column.isBloomfilter()) {
                   // Column has a bloom filter
                   migrationNeeded = true;
-
                   Path filterDir = HStoreFile.getFilterDir(tableDir,
-                      tableInfo.getEncodedName(), column.getName());
+                      hri.getEncodedName(), column.getName());
                   if (fs.exists(filterDir)) {
                     // Filter dir exists
                     if (readOnly) {
@@ -379,8 +393,10 @@ public class Migrate extends Configured implements Tool {
                     }
                     // Delete the filter
                     fs.delete(filterDir, true);
-                    // Update the HRegionInfo in meta
-                    utils.updateMETARegionInfo(metaRegion, tableInfo);
+                    // Update the HRegionInfo in meta setting the bloomfilter
+                    // to be disabled.
+                    column.setBloomfilter(false);
+                    utils.updateMETARegionInfo(metaRegion, hri);
                   }
                 }
               }

@@ -73,7 +73,19 @@ public class BloomFilterDescriptor implements WritableComparable {
   public BloomFilterDescriptor() {
     super();
   }
-  
+
+  /*
+   * Constructor.
+   * <p>
+   * Creates a deep copy of the supplied BloomFilterDescriptor.
+   */
+  public BloomFilterDescriptor(BloomFilterDescriptor desc) {
+    super();
+    this.filterType = desc.filterType;
+    this.nbHash = desc.nbHash;
+    this.vectorSize = desc.vectorSize;
+  }
+
   /**
    * Creates a BloomFilterDescriptor for the specified type of filter, fixes
    * the number of hash functions to 4 and computes a vector size using:

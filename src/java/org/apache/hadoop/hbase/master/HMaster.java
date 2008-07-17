@@ -689,6 +689,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /** {@inheritDoc} */
+  public void modifyTableMeta(final byte[] tableName, HTableDescriptor desc)
+    throws IOException
+  {
+    new ModifyTableMeta(this, tableName, desc).process();
+  }
+
+  /** {@inheritDoc} */
   public HServerAddress findRootRegion() {
     return regionManager.getRootRegionLocation();
   }

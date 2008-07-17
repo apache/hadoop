@@ -243,7 +243,8 @@ public class HTable {
    * @throws IOException
    */
   public HTableDescriptor getTableDescriptor() throws IOException {
-    return this.connection.getHTableDescriptor(this.tableName);
+    return new UnmodifyableHTableDescriptor(
+      this.connection.getHTableDescriptor(this.tableName));
   }
 
   /**

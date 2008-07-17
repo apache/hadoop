@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,11 +34,14 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
  * Tests HTable
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
+  private static final Log LOG = LogFactory.getLog(TestHTable.class);
   private static final HColumnDescriptor column =
     new HColumnDescriptor(COLUMN_FAMILY);
 
@@ -45,6 +51,9 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   
   private static final byte [] row = Bytes.toBytes("row");
  
+  private static final byte [] attrName = Bytes.toBytes("TESTATTR");
+  private static final byte [] attrValue = Bytes.toBytes("somevalue");
+
   /**
    * the test
    * @throws IOException
@@ -123,7 +132,57 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     // We can still access A through newA because it has the table information
     // cached. And if it needs to recalibrate, that will cause the information
     // to be reloaded.
-    
+
+    // Test user metadata
+
+    try {
+      // make a modifiable descriptor
+      HTableDescriptor desc = new HTableDescriptor(a.getMetadata());
+      // offline the table
+      admin.disableTable(tableAname);
+      // add a user attribute to HTD
+      desc.setValue(attrName, attrValue);
+      // add a user attribute to HCD
+      for (HColumnDescriptor c: desc.getFamilies())
+        c.setValue(attrName, attrValue);
+      // update metadata for all regions of this table
+      admin.modifyTableMeta(tableAname, desc);
+      // enable the table
+      admin.enableTable(tableAname);
+
+      // Use a metascanner to avoid client API caching (HConnection has a
+      // metadata cache)
+      MetaScanner.MetaScannerVisitor visitor = new MetaScanner.MetaScannerVisitor() {
+          public boolean processRow(
+              @SuppressWarnings("unused") RowResult rowResult,
+              HRegionLocation regionLocation,
+              HRegionInfo info) {
+            LOG.info("visiting " + regionLocation.toString());
+            HTableDescriptor desc = info.getTableDesc();
+            if (Bytes.compareTo(desc.getName(), tableAname) == 0) {
+              // check HTD attribute
+              byte[] value = desc.getValue(attrName);
+              if (value == null)
+                fail("missing HTD attribute value");
+              if (Bytes.compareTo(value, attrValue) != 0)
+                fail("HTD attribute value is incorrect");
+              // check HCD attribute
+              for (HColumnDescriptor c: desc.getFamilies()) {
+                value = c.getValue(attrName);
+                if (value == null)
+                  fail("missing HCD attribute value");
+                if (Bytes.compareTo(value, attrValue) != 0)
+                  fail("HCD attribute value is incorrect");
+              }
+            }
+            return true;
+          }
+        };
+        MetaScanner.metaScan(conf, visitor);
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail();
+    }
   }
   
   /**

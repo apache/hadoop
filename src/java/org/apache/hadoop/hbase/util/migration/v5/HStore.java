@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.util.migration.v5;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -41,14 +41,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.regionserver.ChangedReadersObserver;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.MapFile;
@@ -172,20 +171,15 @@ public class HStore implements HConstants {
     this.storeName = Bytes.toBytes(this.info.getEncodedName() + "/" +
       Bytes.toString(this.family.getName()));
     this.storeNameStr = Bytes.toString(this.storeName);
-
+    
     // By default, we compact if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
     this.compactionThreshold =
       conf.getInt("hbase.hstore.compactionThreshold", 3);
     
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
-    long maxFileSize = info.getTableDesc().getMaxFileSize();
-    if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
-      maxFileSize = conf.getLong("hbase.hregion.max.filesize",
-        HConstants.DEFAULT_MAX_FILE_SIZE);
-    }
-    this.desiredMaxFileSize = maxFileSize;
-
+    this.desiredMaxFileSize =
+      conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
     this.storeSize = 0L;
 
     if (family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
@@ -247,11 +241,11 @@ public class HStore implements HConstants {
       if (first) {
         // Use a block cache (if configured) for the first reader only
         // so as to control memory usage.
-        r = e.getValue().getReader(this.fs, this.family.isBloomfilter(),
+        r = e.getValue().getReader(this.fs, this.family.isBloomFilterEnabled(),
           family.isBlockCacheEnabled());
         first = false;
       } else {
-        r = e.getValue().getReader(this.fs, this.family.isBloomfilter(),
+        r = e.getValue().getReader(this.fs, this.family.isBloomFilterEnabled(),
             false);
       }
       this.readers.put(e.getKey(), r);
@@ -587,8 +581,7 @@ public class HStore implements HConstants {
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
         info.getEncodedName(),  family.getName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
-        this.family.isBloomfilter(), cache.size());
-       out.setIndexInterval(family.getMapFileIndexInterval());
+        this.family.isBloomFilterEnabled(), cache.size());
       
       // Here we tried picking up an existing HStoreFile from disk and
       // interlacing the memcache flush compacting as we go.  The notion was
@@ -657,7 +650,7 @@ public class HStore implements HConstants {
       Long flushid = Long.valueOf(logCacheFlushId);
       // Open the map file reader.
       this.readers.put(flushid,
-        flushedFile.getReader(this.fs, this.family.isBloomfilter(),
+        flushedFile.getReader(this.fs, this.family.isBloomFilterEnabled(),
         this.family.isBlockCacheEnabled()));
       this.storefiles.put(flushid, flushedFile);
       // Tell listeners of the change in readers.
@@ -743,9 +736,9 @@ public class HStore implements HConstants {
         return checkSplit();
       }
       /*
-       * We create a new list of MapFile.Reader objects so we don't screw up
-       * the caching associated with the currently-loaded ones. Our iteration-
-       * based access pattern is practically designed to ruin the cache.
+       * We create a new list of MapFile.Reader objects so we don't screw up the
+       * caching associated with the currently-loaded ones. Our iteration-based
+       * access pattern is practically designed to ruin the cache.
        */
       List<MapFile.Reader> readers = new ArrayList<MapFile.Reader>();
       for (HStoreFile file: filesToCompact) {
@@ -755,7 +748,7 @@ public class HStore implements HConstants {
           readers.add(reader);
           
           // Compute the size of the new bloomfilter if needed
-          if (this.family.isBloomfilter()) {
+          if (this.family.isBloomFilterEnabled()) {
             nrows += reader.getBloomFilterSize();
           }
         } catch (IOException e) {
@@ -781,8 +774,7 @@ public class HStore implements HConstants {
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
-        this.compression, this.family.isBloomfilter(), nrows);
-      writer.setIndexInterval(family.getMapFileIndexInterval());
+        this.compression, this.family.isBloomFilterEnabled(), nrows);
       try {
         compactHStoreFiles(writer, readers);
       } finally {
@@ -1036,7 +1028,7 @@ public class HStore implements HConstants {
               // Use a block cache (if configured) for this reader since
               // it is the only one.
               finalCompactedFile.getReader(this.fs,
-                  this.family.isBloomfilter(),
+                  this.family.isBloomFilterEnabled(),
                   this.family.isBlockCacheEnabled()));
           this.storefiles.put(orderVal, finalCompactedFile);
           // Tell observers that list of Readers has changed.

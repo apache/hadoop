@@ -563,7 +563,26 @@ public class HBaseAdmin {
     }
   }
 
-  
+  /**
+   * Modify a table's HTableDescriptor
+   * 
+   * @param tableName name of table
+   * @param desc the updated descriptor
+   * @throws IOException
+   */
+  public void modifyTableMeta(final byte [] tableName, HTableDescriptor desc)
+  throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    HTableDescriptor.isLegalTableName(tableName);
+    try {
+      this.master.modifyTableMeta(tableName, desc);
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
   /** 
    * Shuts down the HBase instance 
    * @throws IOException

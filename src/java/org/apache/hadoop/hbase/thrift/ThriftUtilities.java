@@ -67,7 +67,7 @@ public class ThriftUtilities {
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
     col.maxValueLength = in.getMaxValueLength();
-    col.bloomFilterType = Boolean.toString(in.isBloomFilterEnabled());
+    col.bloomFilterType = Boolean.toString(in.isBloomfilter());
     return col;
   }
   

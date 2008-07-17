@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /** Tests table creation restrictions*/
 public class TestTable extends HBaseClusterTestCase {
@@ -122,5 +123,27 @@ public class TestTable extends HBaseClusterTestCase {
     // Before fix, below would fail throwing a NoServerForRegionException.
     @SuppressWarnings("unused")
     HTable table = new HTable(conf, getName());
+  }
+
+  /**
+   * Test read only tables
+   */
+  public void testReadOnlyTable() throws Exception {
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor desc = new HTableDescriptor(getName());
+    byte[] colName = "test:".getBytes();
+    desc.addFamily(new HColumnDescriptor(colName));
+    desc.setReadOnly(true);
+    admin.createTable(desc);
+    HTable table = new HTable(conf, getName());
+    try {
+      byte[] value = "somedata".getBytes();
+      BatchUpdate update = new BatchUpdate();
+      update.put(colName, value);
+      table.commit(update);
+      fail("BatchUpdate on read only table succeeded");  
+    } catch (Exception e) {
+      // expected
+    }
   }
 }

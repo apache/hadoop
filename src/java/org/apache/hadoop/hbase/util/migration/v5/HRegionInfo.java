@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util.migration.v5;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -25,19 +25,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
-import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
+ * 
+ * <p>This class has been modified so it instantiates using pre-v5 versions of
+ * the HTableDescriptor, etc: i.e. it will uses classes that in this
+ * migration v0_2 package.
  */
-public class HRegionInfo extends VersionedWritable implements WritableComparable {
-  private final byte VERSION = 0;
-
+public class HRegionInfo implements WritableComparable {
   /**
    * @param regionName
    * @return the encodedName
@@ -140,7 +142,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * first meta regions
    */
   private HRegionInfo(long regionId, HTableDescriptor tableDesc) {
-    super();
     this.regionId = regionId;
     this.tableDesc = tableDesc;
     this.regionName = createRegionName(tableDesc.getName(), null, regionId);
@@ -150,7 +151,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   /** Default constructor - creates empty object */
   public HRegionInfo() {
-    super();
     this.tableDesc = new HTableDescriptor();
   }
   
@@ -198,7 +198,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public HRegionInfo(HTableDescriptor tableDesc, final byte [] startKey,
     final byte [] endKey, final boolean split, final long regionid)
   throws IllegalArgumentException {
-    super();
     if (tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
@@ -220,7 +219,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @param other
    */
   public HRegionInfo(HRegionInfo other) {
-    super();
     this.endKey = other.getEndKey();
     this.offLine = other.isOffline();
     this.regionId = other.getRegionId();
@@ -315,13 +313,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return tableDesc;
   }
 
-  /**
-   * @param newDesc new table descriptor to use
-   */
-  public void setTableDesc(HTableDescriptor newDesc) {
-    this.tableDesc = newDesc;
-  }
-
   /** @return true if this is the root region */
   public boolean isRootRegion() {
     return this.tableDesc.isRootRegion();
@@ -395,10 +386,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public int hashCode() {
     return this.hashCode;
   }
-  
-  public byte getVersion() {
-    return VERSION;
-  }
 
   //
   // Writable
@@ -408,7 +395,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
-    super.write(out);
     Bytes.writeByteArray(out, endKey);
     out.writeBoolean(offLine);
     out.writeLong(regionId);
@@ -423,7 +409,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
     this.endKey = Bytes.readByteArray(in);
     this.offLine = in.readBoolean();
     this.regionId = in.readLong();

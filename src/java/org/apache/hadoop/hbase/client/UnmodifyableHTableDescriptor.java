@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Read-only table descriptor.
  */
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
-
   public UnmodifyableHTableDescriptor() {
 	  super();
   }
@@ -39,7 +38,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   UnmodifyableHTableDescriptor(final HTableDescriptor desc) {
     super(desc.getName());
     for (HColumnDescriptor c: desc.getFamilies()) {
-      super.addFamily(c);
+      super.addFamily(new UnmodifyableHColumnDescriptor(c));
     }
   }
 
@@ -59,6 +58,36 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    */
   @Override
   public HColumnDescriptor removeFamily(final byte [] column) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setInMemory(boolean inMemory) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setReadOnly(boolean readOnly) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setValue(byte[] key, byte[] value) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setValue(String key, String value) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setMaxFileSize(long maxFileSize) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public void setMemcacheFlushSize(int memcacheFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 }

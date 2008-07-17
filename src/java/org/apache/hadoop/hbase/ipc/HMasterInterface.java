@@ -104,7 +104,16 @@ public interface HMasterInterface extends VersionedProtocol {
    * @throws IOException
    */
   public void disableTable(final byte [] tableName) throws IOException;
-  
+
+  /**
+   * Modify a table's metadata
+   * 
+   * @param tableName
+   * @param desc
+   */
+  public void modifyTableMeta(byte[] tableName, HTableDescriptor desc)
+    throws IOException;
+
   /**
    * Shutdown an HBase cluster.
    * @throws IOException

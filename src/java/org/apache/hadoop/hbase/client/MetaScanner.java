@@ -82,8 +82,7 @@ class MetaScanner implements HConstants {
   /**
    * Visitor class called to process each row of the .META. table
    */
-  protected interface MetaScannerVisitor {
-
+  interface MetaScannerVisitor {
     /**
      * Visitor method that accepts a RowResult and the meta region location.
      * Implementations can return false to stop the region's loop if it becomes

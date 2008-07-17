@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.util.migration.v5;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -45,13 +45,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ColumnNameParseException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -59,6 +55,9 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
@@ -156,7 +155,6 @@ public class HRegion implements HConstants {
         b.getRegionInfo().getTableDesc().getNameAsString())) {
       throw new IOException("Regions do not belong to the same table");
     }
-
     FileSystem fs = a.getFilesystem();
 
     // Make sure each region's cache is empty
@@ -484,18 +482,12 @@ public class HRegion implements HConstants {
       fs.delete(merges, true);
     }
 
-    int flushSize = regionInfo.getTableDesc().getMemcacheFlushSize();
-    if (flushSize == HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE) {
-      flushSize = conf.getInt("hbase.hregion.memcache.flush.size",
-                      HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
-    }
-    this.memcacheFlushSize = flushSize;
+    // By default, we flush the cache when 64M.
+    this.memcacheFlushSize = conf.getInt("hbase.hregion.memcache.flush.size",
+      1024*1024*64);
 
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
-
-    if (this.regionInfo.getTableDesc().isReadOnly())
-      this.writestate.writesEnabled = false;
 
     // HRegion is ready to go!
     this.writestate.compacting = false;
@@ -1318,10 +1310,6 @@ public class HRegion implements HConstants {
   public void batchUpdate(BatchUpdate b)
   throws IOException {
 
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
-
     // Do a rough check that we have resources to accept a write.  The check is
     // 'rough' in that between the resource check and the call to obtain a 
     // read lock, resources may run out.  For now, the thought is that this
@@ -1429,9 +1417,6 @@ public class HRegion implements HConstants {
   public void deleteAll(final byte [] row, final byte [] column, final long ts)
   throws IOException {
     checkColumn(column);
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
     Integer lid = obtainRowLock(row);
     try {
       deleteMultiple(row, column, ts, ALL_VERSIONS);
@@ -1448,9 +1433,6 @@ public class HRegion implements HConstants {
    */
   public void deleteAll(final byte [] row, final long ts)
   throws IOException {
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
     Integer lid = obtainRowLock(row);    
     try {
       for (HStore store : stores.values()){
@@ -1478,9 +1460,6 @@ public class HRegion implements HConstants {
    */
   public void deleteFamily(byte [] row, byte [] family, long timestamp)
   throws IOException{
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
     Integer lid = obtainRowLock(row);    
     try {
       // find the HStore for the column family
@@ -1513,9 +1492,6 @@ public class HRegion implements HConstants {
   private void deleteMultiple(final byte [] row, final byte [] column,
       final long ts, final int versions)
   throws IOException {
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
     HStoreKey origin = new HStoreKey(row, column, ts);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
@@ -1543,9 +1519,6 @@ public class HRegion implements HConstants {
       final byte [] val)
   throws IOException {
     checkColumn(key.getColumn());
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
     TreeMap<HStoreKey, byte []> targets = this.targetColumns.get(lockid);
     if (targets == null) {
       targets = new TreeMap<HStoreKey, byte []>();
@@ -1566,9 +1539,6 @@ public class HRegion implements HConstants {
   throws IOException {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
-    }
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
     }
     boolean flush = false;
     this.updatesLock.readLock().lock();

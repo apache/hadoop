@@ -17,15 +17,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util.migration.v5;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.BloomFilterDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,11 +42,10 @@ import org.apache.hadoop.io.WritableComparable;
 public class HColumnDescriptor implements WritableComparable {
   // For future backward compatibility
 
-  // Version 3 was when column names become byte arrays and when we picked up
-  // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
-  // Version 5 was when bloom filter descriptors were removed.
-  // Version 6 adds metadata as a map where keys and values are byte[].
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)6;
+  // Version 3 was when column names becaome byte arrays and when we picked up
+  // Time-to-live feature.
+  // Version 4 was when bloom filter descriptors were removed.
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)4;
 
   /** 
    * The type of compression.
@@ -61,17 +60,14 @@ public class HColumnDescriptor implements WritableComparable {
     BLOCK
   }
 
+  // Defines for jruby/shell
   public static final String COMPRESSION = "COMPRESSION";
   public static final String IN_MEMORY = "IN_MEMORY";
   public static final String BLOCKCACHE = "BLOCKCACHE";
   public static final String LENGTH = "LENGTH";
   public static final String TTL = "TTL";
-  public static final String VERSIONS = "VERSIONS";
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
-  public static final String MAPFILE_INDEX_INTERVAL =
-      "MAPFILE_INDEX_INTERVAL";
-  public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
 
   /**
    * Default compression type.
@@ -111,16 +107,20 @@ public class HColumnDescriptor implements WritableComparable {
 
   // Column family name
   private byte [] name;
-
-  /**
-   * Default mapfile index interval.
-   */
-  public static final int DEFAULT_MAPFILE_INDEX_INTERVAL = 128;
-
-  // Column metadata
-  protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
-    new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
-
+  // Number of versions to keep
+  private int maxVersions = DEFAULT_VERSIONS;
+  // Compression setting if any
+  private CompressionType compressionType = DEFAULT_COMPRESSION;
+  // Serve reads from in-memory cache
+  private boolean inMemory = DEFAULT_IN_MEMORY;
+  // Serve reads from in-memory block cache
+  private boolean blockCacheEnabled = DEFAULT_BLOCKCACHE;
+  // Maximum value size
+  private int maxValueLength = DEFAULT_LENGTH;
+  // Time to live of cell contents, in seconds from last timestamp
+  private int timeToLive = DEFAULT_TTL;
+  // True if bloom filter was specified
+  private boolean bloomFilter = false;
 
   /**
    * Default constructor. Must be present for Writable.
@@ -163,21 +163,6 @@ public class HColumnDescriptor implements WritableComparable {
   }
 
   /**
-   * Constructor.
-   * Makes a deep copy of the supplied descriptor. 
-   * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
-   * @param desc The descriptor.
-   */
-  public HColumnDescriptor(HColumnDescriptor desc) {
-    super();
-    this.name = desc.name.clone();
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        desc.values.entrySet()) {
-      this.values.put(e.getKey(), e.getValue());
-    }
-  }
-
-  /**
    * Constructor
    * @param columnName Column family name.  Must have the ':' ending.
    * @param maxVersions Maximum number of versions to keep
@@ -206,13 +191,13 @@ public class HColumnDescriptor implements WritableComparable {
       // Until there is support, consider 0 or < 0 -- a configuration error.
       throw new IllegalArgumentException("Maximum versions must be positive");
     }
-    setMaxVersions(maxVersions);
-    setInMemory(inMemory);
-    setBlockCacheEnabled(blockCacheEnabled);
-    setMaxValueLength(maxValueLength);
-    setTimeToLive(timeToLive);
-    setCompressionType(compression);
-    setBloomfilter(bloomFilter);
+    this.maxVersions = maxVersions;
+    this.inMemory = inMemory;
+    this.blockCacheEnabled = blockCacheEnabled;
+    this.maxValueLength = maxValueLength;
+    this.timeToLive = timeToLive;
+    this.bloomFilter = bloomFilter;
+    this.compressionType = compression;
   }
   
   private static byte [] stripColon(final byte [] n) {
@@ -221,7 +206,7 @@ public class HColumnDescriptor implements WritableComparable {
     System.arraycopy(n, 0, result, 0, n.length - 1);
     return result;
   }
-
+  
   /**
    * @param b Family name.
    * @return <code>b</code>
@@ -256,229 +241,77 @@ public class HColumnDescriptor implements WritableComparable {
   }
 
   /**
-   * @return Name of this column family with colon as required by client API
-   */
-  public byte [] getNameWithColon() {
-    return HStoreKey.addDelimiter(this.name);
-  }
-
-  /**
    * @return Name of this column family
    */
   public String getNameAsString() {
     return Bytes.toString(this.name);
   }
 
-  /**
-   * @param key The key.
-   * @return The value.
-   */
-  public byte[] getValue(byte[] key) {
-    ImmutableBytesWritable ibw = values.get(new ImmutableBytesWritable(key));
-    if (ibw == null)
-      return null;
-    return ibw.get();
-  }
-
-  /**
-   * @param key The key.
-   * @return The value as a string.
-   */
-  public String getValue(String key) {
-    byte[] value = getValue(Bytes.toBytes(key));
-    if (value == null)
-      return null;
-    return Bytes.toString(value);
-  }
-
-  /**
-   * @param key The key.
-   * @param value The value.
-   */
-  public void setValue(byte[] key, byte[] value) {
-    values.put(new ImmutableBytesWritable(key),
-      new ImmutableBytesWritable(value));
-  }
-
-  /**
-   * @param key The key.
-   * @param value The value.
-   */
-  public void setValue(String key, String value) {
-    setValue(Bytes.toBytes(key), Bytes.toBytes(value));
-  }
-
   /** @return compression type being used for the column family */
   public CompressionType getCompression() {
-    String value = getValue(COMPRESSION);
-    if (value != null) {
-      if (value.equalsIgnoreCase("BLOCK"))
-        return CompressionType.BLOCK;
-      else if (value.equalsIgnoreCase("RECORD"))
-        return CompressionType.RECORD;
-    }
-    return CompressionType.NONE;
+    return this.compressionType;
   }
   
   /** @return maximum number of versions */
   public int getMaxVersions() {
-    String value = getValue(VERSIONS);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_VERSIONS;
-  }
-
-  /**
-   * @param maxVersions maximum number of versions
-   */
-  public void setMaxVersions(int maxVersions) {
-    setValue(VERSIONS, Integer.toString(maxVersions));
+    return this.maxVersions;
   }
   
   /**
    * @return Compression type setting.
    */
   public CompressionType getCompressionType() {
-    return getCompression();
-  }
-
-  /**
-   * @param type Compression type setting.
-   */
-  public void setCompressionType(CompressionType type) {
-    String compressionType;
-    switch (type) {
-      case BLOCK:  compressionType = "BLOCK";   break;
-      case RECORD: compressionType = "RECORD";  break;
-      default:     compressionType = "NONE";    break;
-    }
-    setValue(COMPRESSION, compressionType);
+    return this.compressionType;
   }
 
   /**
    * @return True if we are to keep all in use HRegionServer cache.
    */
   public boolean isInMemory() {
-    String value = getValue(IN_MEMORY);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return DEFAULT_IN_MEMORY;
+    return this.inMemory;
   }
   
-  /**
-   * @param inMemory True if we are to keep all values in the HRegionServer
-   * cache
-   */
-  public void setInMemory(boolean inMemory) {
-    setValue(IN_MEMORY, Boolean.toString(inMemory));
-  }
-
   /**
    * @return Maximum value length.
    */
   public int getMaxValueLength() {
-    String value = getValue(LENGTH);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_LENGTH;
-  }
-
-  /**
-   * @param maxLength Maximum value length.
-   */
-  public void setMaxValueLength(int maxLength) {
-    setValue(LENGTH, Integer.toString(maxLength));
+    return this.maxValueLength;
   }
 
   /**
    * @return Time to live.
    */
   public int getTimeToLive() {
-    String value = getValue(TTL);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_TTL;
-  }
-
-  /**
-   * @param timeToLive
-   */
-  public void setTimeToLive(int timeToLive) {
-    setValue(TTL, Integer.toString(timeToLive));
+    return this.timeToLive;
   }
 
   /**
    * @return True if MapFile blocks should be cached.
    */
   public boolean isBlockCacheEnabled() {
-    String value = getValue(BLOCKCACHE);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return DEFAULT_BLOCKCACHE;
-  }
-
-  /**
-   * @param blockCacheEnabled True if MapFile blocks should be cached.
-   */
-  public void setBlockCacheEnabled(boolean blockCacheEnabled) {
-    setValue(BLOCKCACHE, Boolean.toString(blockCacheEnabled));
+    return blockCacheEnabled;
   }
 
   /**
    * @return true if a bloom filter is enabled
    */
-  public boolean isBloomfilter() {
-    String value = getValue(BLOOMFILTER);
-    if (value != null)
-      return Boolean.valueOf(value);
-    return DEFAULT_BLOOMFILTER;
-  }
-
-  /**
-   * @param onOff Enable/Disable bloom filter
-   */
-  public void setBloomfilter(final boolean onOff) {
-    setValue(BLOOMFILTER, Boolean.toString(onOff));
-  }
-
-  /**
-   * @return The number of entries that are added to the store MapFile before
-   * an index entry is added.
-   */
-  public int getMapFileIndexInterval() {
-    String value = getValue(MAPFILE_INDEX_INTERVAL);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_MAPFILE_INDEX_INTERVAL;
-  }
-
-  /**
-   * @param interval The number of entries that are added to the store MapFile before
-   * an index entry is added.
-   */
-  public void setMapFileIndexInterval(int interval) {
-    setValue(MAPFILE_INDEX_INTERVAL, Integer.toString(interval));
+  public boolean isBloomFilterEnabled() {
+    return this.bloomFilter;
   }
 
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    StringBuffer s = new StringBuffer();
-    s.append('{');
-    s.append(HConstants.NAME);
-    s.append(" => '");
-    s.append(Bytes.toString(name));
-    s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      s.append(", ");
-      s.append(Bytes.toString(e.getKey().get()));
-      s.append(" => '");
-      s.append(Bytes.toString(e.getValue().get()));
-      s.append("'");
-    }
-    s.append('}');
-    return s.toString();
+    return "{" + HConstants.NAME + " => '" + Bytes.toString(name) +
+      "', " + HConstants.VERSIONS + " => " + maxVersions +
+      ", " + COMPRESSION + " => '" + this.compressionType +
+      "', " + IN_MEMORY + " => " + inMemory +
+      ", " + BLOCKCACHE + " => " + blockCacheEnabled +
+      ", " + LENGTH + " => " + maxValueLength +
+      ", " + TTL + " => " +
+          (timeToLive == HConstants.FOREVER ? "FOREVER" : 
+              Integer.toString(timeToLive)) +
+      ", " + BLOOMFILTER + " => " + bloomFilter + "}";
   }
   
   /** {@inheritDoc} */
@@ -491,8 +324,14 @@ public class HColumnDescriptor implements WritableComparable {
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);
+    result ^= Integer.valueOf(this.maxVersions).hashCode();
+    result ^= this.compressionType.hashCode();
+    result ^= Boolean.valueOf(this.inMemory).hashCode();
+    result ^= Boolean.valueOf(this.blockCacheEnabled).hashCode();
+    result ^= Integer.valueOf(this.maxValueLength).hashCode();
+    result ^= Integer.valueOf(this.timeToLive).hashCode();
+    result ^= Boolean.valueOf(this.bloomFilter).hashCode();
     result ^= Byte.valueOf(COLUMN_DESCRIPTOR_VERSION).hashCode();
-    result ^= values.hashCode();
     return result;
   }
   
@@ -500,51 +339,37 @@ public class HColumnDescriptor implements WritableComparable {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    int version = in.readByte();
-    if (version < 6) {
-      if (version <= 2) {
-        Text t = new Text();
-        t.readFields(in);
-        this.name = t.getBytes();
-        if (HStoreKey.getFamilyDelimiterIndex(this.name) > 0) {
-          this.name = stripColon(this.name);
-        }
-      } else {
-        this.name = Bytes.readByteArray(in);
-      }
-      this.values.clear();
-      setMaxVersions(in.readInt());
-      int ordinal = in.readInt();
-      setCompressionType(CompressionType.values()[ordinal]);
-      setInMemory(in.readBoolean());
-      setMaxValueLength(in.readInt());
-      setBloomfilter(in.readBoolean());
-      if (isBloomfilter() && version < 5) {
-        // If a bloomFilter is enabled and the column descriptor is less than
-        // version 5, we need to skip over it to read the rest of the column
-        // descriptor. There are no BloomFilterDescriptors written to disk for
-        // column descriptors with a version number >= 5
-        BloomFilterDescriptor junk = new BloomFilterDescriptor();
-        junk.readFields(in);
-      }
-      if (version > 1) {
-        setBlockCacheEnabled(in.readBoolean());
-      }
-      if (version > 2) {
-       setTimeToLive(in.readInt());
+    int versionNumber = in.readByte();
+    if (versionNumber <= 2) {
+      Text t = new Text();
+      t.readFields(in);
+      this.name = t.getBytes();
+      if (HStoreKey.getFamilyDelimiterIndex(this.name) > 0) {
+        this.name = stripColon(this.name);
       }
     } else {
-      // version 6+
       this.name = Bytes.readByteArray(in);
-      this.values.clear();
-      int numValues = in.readInt();
-      for (int i = 0; i < numValues; i++) {
-        ImmutableBytesWritable key = new ImmutableBytesWritable();
-        ImmutableBytesWritable value = new ImmutableBytesWritable();
-        key.readFields(in);
-        value.readFields(in);
-        values.put(key, value);
-      }
+    }
+    this.maxVersions = in.readInt();
+    int ordinal = in.readInt();
+    this.compressionType = CompressionType.values()[ordinal];
+    this.inMemory = in.readBoolean();
+    this.maxValueLength = in.readInt();
+    this.bloomFilter = in.readBoolean();
+    if (this.bloomFilter && versionNumber < 5) {
+      // If a bloomFilter is enabled and the column descriptor is less than
+      // version 5, we need to skip over it to read the rest of the column
+      // descriptor. There are no BloomFilterDescriptors written to disk for
+      // column descriptors with a version number >= 5
+      BloomFilterDescriptor junk = new BloomFilterDescriptor();
+      junk.readFields(in);
+    }
+    if (versionNumber > 1) {
+      this.blockCacheEnabled = in.readBoolean();
+    }
+
+    if (versionNumber > 2) {
+      this.timeToLive = in.readInt();
     }
   }
 
@@ -552,12 +377,13 @@ public class HColumnDescriptor implements WritableComparable {
   public void write(DataOutput out) throws IOException {
     out.writeByte(COLUMN_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, this.name);
-    out.writeInt(values.size());
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      e.getKey().write(out);
-      e.getValue().write(out);
-    }
+    out.writeInt(this.maxVersions);
+    out.writeInt(this.compressionType.ordinal());
+    out.writeBoolean(this.inMemory);
+    out.writeInt(this.maxValueLength);
+    out.writeBoolean(this.bloomFilter);
+    out.writeBoolean(this.blockCacheEnabled);
+    out.writeInt(this.timeToLive);
   }
 
   // Comparable
@@ -566,13 +392,57 @@ public class HColumnDescriptor implements WritableComparable {
   public int compareTo(Object o) {
     HColumnDescriptor other = (HColumnDescriptor)o;
     int result = Bytes.compareTo(this.name, other.getName());
-    if (result == 0) {
-      // punt on comparison for ordering, just calculate difference
-      result = this.values.hashCode() - other.values.hashCode();
-      if (result < 0)
+    if(result == 0) {
+      result = Integer.valueOf(this.maxVersions).compareTo(
+          Integer.valueOf(other.maxVersions));
+    }
+    
+    if(result == 0) {
+      result = this.compressionType.compareTo(other.compressionType);
+    }
+    
+    if(result == 0) {
+      if(this.inMemory == other.inMemory) {
+        result = 0;
+        
+      } else if(this.inMemory) {
         result = -1;
-      else if (result > 0)
+        
+      } else {
         result = 1;
+      }
+    }
+    
+    if(result == 0) {
+      if(this.blockCacheEnabled == other.blockCacheEnabled) {
+        result = 0;
+        
+      } else if(this.blockCacheEnabled) {
+        result = -1;
+        
+      } else {
+        result = 1;
+      }
+    }
+    
+    if(result == 0) {
+      result = other.maxValueLength - this.maxValueLength;
+    }
+
+    if(result == 0) {
+      result = other.timeToLive - this.timeToLive;
+    }
+
+    if(result == 0) {
+      if(this.bloomFilter == other.bloomFilter) {
+        result = 0;
+        
+      } else if(this.bloomFilter) {
+        result = -1;
+        
+      } else {
+        result = 1;
+      }
     }
     return result;
   }
