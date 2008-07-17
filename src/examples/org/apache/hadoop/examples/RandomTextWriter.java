@@ -77,14 +77,14 @@ import org.apache.hadoop.util.ToolRunner;
  * and ones supported by {@link Tool} via the command-line.
  * 
  * To run: bin/hadoop jar hadoop-${version}-examples.jar randomtextwriter
- *            [-outFormat <i>output format class</i>] <i>in-dir</i> 
+ *            [-outFormat <i>output format class</i>] <i>output</i> 
  */
 public class RandomTextWriter extends Configured implements Tool {
   
   static int printUsage() {
     System.out.println("randomtextwriter " +
                        "[-outFormat <output format class>] " + 
-                       "<input>");
+                       "<output>");
     ToolRunner.printGenericCommandUsage(System.out);
     return -1;
   }
