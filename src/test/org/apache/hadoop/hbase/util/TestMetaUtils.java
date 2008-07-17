@@ -49,7 +49,7 @@ public class TestMetaUtils extends HBaseClusterTestCase {
     // Now assert columns were added and deleted.
     this.cluster = new MiniHBaseCluster(this.conf, 1);
     HTable t = new HTable(conf, editTable);
-    HTableDescriptor htd = t.getMetadata();
+    HTableDescriptor htd = t.getTableDescriptor();
     HColumnDescriptor hcd = htd.getFamily(newColumn);
     assertTrue(hcd != null);
     assertNull(htd.getFamily(Bytes.toBytes(oldColumn)));

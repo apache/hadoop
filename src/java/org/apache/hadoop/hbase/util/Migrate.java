@@ -22,9 +22,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -82,18 +79,14 @@ import org.apache.hadoop.util.ToolRunner;
 public class Migrate extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Migrate.class);
 
-  private static final String OLD_PREFIX = "hregion_";
-
   private final HBaseConfiguration conf;
   private FileSystem fs;
   
   // Gets set by migration methods if we are in readOnly mode.
-  private boolean migrationNeeded = false;
+  boolean migrationNeeded = false;
 
-  private boolean readOnly = false;
-  
-  private final Set<String> references = new HashSet<String>();
-  
+  boolean readOnly = false;
+
   // Filesystem version of hbase 0.1.x.
   private static final float HBASE_0_1_VERSION = 0.1f;
   
@@ -183,12 +176,13 @@ public class Migrate extends Configured implements Tool {
         LOG.info("No upgrade necessary.");
         return 0;
       }
-      if (versionStr == null || Float.parseFloat(versionStr) < 0.1) {
+      if (versionStr == null ||
+          Float.parseFloat(versionStr) < HBASE_0_1_VERSION) {
         throw new IOException("Install 0.1.x of hbase and run its " +
           "migration first");
       }
       float version = Float.parseFloat(versionStr);
-      if (version == 0.1f) {
+      if (version == HBASE_0_1_VERSION) {
         checkForUnrecoveredLogFiles(getRootDirFiles());
         migrateToV5();
       } else {
@@ -254,8 +248,6 @@ public class Migrate extends Configured implements Tool {
           return true;
         }
       });
-    } catch (Exception e) {
-      LOG.error("", e);
     } finally {
       utils.shutdown();
     }
