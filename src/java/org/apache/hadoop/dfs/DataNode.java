@@ -1780,7 +1780,25 @@ public class DataNode implements FSConstants, Runnable {
         }
       }
 
-      out.write(buf, 0, dataOff + len);
+      try {
+        out.write(buf, 0, dataOff + len);
+      } catch (IOException e) {
+        /* exception while writing to the client (well, with transferTo(),
+         * it could also be while reading from the local file). Many times 
+         * this error can be ignored. We will let the callers distinguish this 
+         * from other exceptions if this is not a subclass of IOException. 
+         */
+        if (e.getClass().equals(IOException.class)) {
+          // "se" could be a new class in stead of SocketException.
+          IOException se = new SocketException("Original Exception : " + e);
+          se.initCause(e);
+          /* Cange the stacktrace so that original trace is not truncated
+           * when printed.*/ 
+          se.setStackTrace(e.getStackTrace());
+          throw se;
+        }
+        throw e;
+      }
 
       if (throttler != null) { // rebalancing so throttle
         throttler.throttle(packetLen);
