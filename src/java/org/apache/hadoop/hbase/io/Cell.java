@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -32,14 +33,14 @@ import org.apache.hadoop.io.Writable;
  * the timestamp of a cell to a first-class value, making it easy to take 
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
-public class Cell implements Writable {
-  protected byte[] value;
-  protected long timestamp;
+public class Cell implements Writable, Iterable<Cell> {
+  protected byte[][] values;
+  protected long[] timestamps;
   
   /** For Writable compatibility */
   public Cell() {
-    value = null;
-    timestamp = 0;
+    values = null;
+    timestamps = null;
   }
 
   /**
@@ -57,46 +58,131 @@ public class Cell implements Writable {
    * @param timestamp
    */
   public Cell(byte[] value, long timestamp) {
-    this.value = value;
-    this.timestamp = timestamp;
+    this.values = new byte[1][];
+    this.values[0] = value;
+    this.timestamps = new long[1];
+    this.timestamps[0] = timestamp;
   }
   
   /**
-   * Get the cell's value.
-   *
-   * @return cell's value
+   * @param vals array of values
+   * @param ts array of timestamps
    */
+  public Cell(String[] vals, long[] ts) {
+    if (vals.length != ts.length) {
+      throw new IllegalArgumentException(
+          "number of values must be the same as the number of timestamps");
+    }
+    this.values = new byte[vals.length][];
+    this.timestamps = new long[ts.length];
+    for (int i = 0; i < values.length; i++) {
+      this.values[i] = Bytes.toBytes(vals[i]);
+      this.timestamps[i] = ts[i];
+    }
+  }
+  
+  /**
+   * @param vals array of values
+   * @param ts array of timestamps
+   */
+  public Cell(byte[][] vals, long[] ts) {
+    if (vals.length != ts.length) {
+      throw new IllegalArgumentException(
+          "number of values must be the same as the number of timestamps");
+    }
+    this.values = new byte[vals.length][];
+    this.timestamps = new long[ts.length];
+    System.arraycopy(vals, 0, this.values, 0, vals.length);
+    System.arraycopy(ts, 0, this.timestamps, 0, ts.length);
+  }
+  
+  /** @return the current cell's value */
   public byte[] getValue() {
-    return value;
+    return values[0];
   }
   
-  /**
-   * Get teh cell's timestamp
-   *
-   * @return cell's timestamp
-   */
+  /** @return the current cell's timestamp */
   public long getTimestamp() {
-    return timestamp;
+    return timestamps[0];
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "timestamp=" + this.timestamp + ", value=" +
-      Bytes.toString(this.value);
+    if (this.values.length == 1) {
+      return "timestamp=" + this.timestamps[0] + ", value=" +
+        Bytes.toString(this.values[0]);
+    }
+    StringBuilder s = new StringBuilder("{ ");
+    for (int i = 0; i < this.values.length; i++) {
+      if (i > 0) {
+        s.append(", ");
+      }
+      s.append("[timestamp=");
+      s.append(timestamps[i]);
+      s.append(", value=");
+      s.append(Bytes.toString(values[i]));
+      s.append("]");
+    }
+    s.append(" }");
+    return s.toString();
   }
+  
   //
   // Writable
   //
 
   /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
-    timestamp = in.readLong();
-    this.value = Bytes.readByteArray(in);
+    int nvalues = in.readInt();
+    this.timestamps = new long[nvalues];
+    this.values = new byte[nvalues][];
+    for (int i = 0; i < nvalues; i++) {
+      this.timestamps[i] = in.readLong();
+    }
+    for (int i = 0; i < nvalues; i++) {
+      this.values[i] = Bytes.readByteArray(in);
+    }
   }
 
   /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
-    out.writeLong(timestamp);
-    Bytes.writeByteArray(out, this.value);
-  } 
+    out.writeInt(this.values.length);
+    for (int i = 0; i < this.timestamps.length; i++) {
+      out.writeLong(this.timestamps[i]);
+    }
+    for (int i = 0; i < this.values.length; i++) {
+      Bytes.writeByteArray(out, this.values[i]);
+    }
+  }
+  
+  //
+  // Iterable
+  //
+
+  /** {@inheritDoc} */
+  public Iterator<Cell> iterator() {
+    return new CellIterator();
+  }
+  private class CellIterator implements Iterator<Cell> {
+    private int currentValue = -1;
+    CellIterator() {
+    }
+    
+    /** {@inheritDoc} */
+    public boolean hasNext() {
+      return currentValue < values.length;
+    }
+    
+    /** {@inheritDoc} */
+    public Cell next() {
+      currentValue += 1;
+      return new Cell(values[currentValue], timestamps[currentValue]);
+    }
+    
+    /** {@inheritDoc} */
+    public void remove() throws UnsupportedOperationException {
+      throw new UnsupportedOperationException("remove is not supported");
+    }
+  }
 }

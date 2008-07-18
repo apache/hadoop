@@ -315,6 +315,8 @@ Trunk (unreleased changes)
                retries, show all the exceptions that lead to this situation
    HBASE-747   Add a simple way to do batch updates of many rows (Jean-Daniel
                Cryans via JimK)
+   HBASE-733   Enhance Cell so that it can contain multiple values at multiple
+               timestamps
    
   OPTIMIZATIONS
    HBASE-430   Performance: Scanners and getRow return maps with duplicate data
