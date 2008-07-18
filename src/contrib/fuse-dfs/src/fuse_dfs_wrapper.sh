@@ -15,23 +15,26 @@
 #
 
 if [ "$HADOOP_HOME" = "" ]; then
- HADOOP_HOME=/usr/local/share/hadoop
+export HADOOP_HOME=/usr/local/share/hadoop
 fi
 
+export PATH=$HADOOP_HOME/contrib/fuse_dfs:$PATH
+
 for f in ls $HADOOP_HOME/lib/*.jar $HADOOP_HOME/*.jar ; do
-  CLASSPATH=$CLASSPATH:$f
+export  CLASSPATH=$CLASSPATH:$f
 done
 
 if [ "$OS_ARCH" = "" ]; then
- OS_ARCH=amd64
+export OS_ARCH=amd64
 fi
 
 if [ "$JAVA_HOME" = "" ]; then
-  JAVA_HOME=/usr/local/java
+export  JAVA_HOME=/usr/local/java
 fi
 
 if [ "$LD_LIBRARY_PATH" = "" ]; then
- LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$OS_ARCH/server:/usr/local/share/hdfs/libhdfs/:/usr/local/lib
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$OS_ARCH/server:/usr/local/share/hdfs/libhdfs/:/usr/local/lib
 fi
+echo $LD_LIBRARY_PATH
 
 ./fuse_dfs $@  -o-o allow_other

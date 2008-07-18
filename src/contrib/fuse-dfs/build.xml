@@ -44,8 +44,16 @@
       <env key="HADOOP_HOME" value="${hadoop.root}"/>
       <env key="PROTECTED_PATHS" value="/,/Trash,/user"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
-      <env key="FUSE_HOME" value="/usr/local"/>
     </exec>
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.dir}/test"/>
+    <exec executable="cp" failonerror="true">
+    <arg line="${root}/src/fuse_dfs ${build.dir}"/>
+    </exec>
+    <exec executable="cp" failonerror="true">
+    <arg line="${root}/src/fuse_dfs_wrapper.sh ${build.dir}"/>
+    </exec>
+
   </target>
 
   <!-- override jar target !-->
@@ -64,6 +72,7 @@
       <arg value="${dist.dir}/contrib/${name}"/>
     </exec>
   </target>
+
 
   <!-- override clean target !-->
   <target name="clean" depends="check-libhdfs-fuse" if="libhdfs-fuse">
