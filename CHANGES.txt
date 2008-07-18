@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     so dfs.hosts and dfs.hosts.exclude are observed. (lohit vijayarenu via
     cdouglas)
 
+    HADOOP-3485. Allow writing to files over fuse.
+    (Pete Wyckoff via dhruba)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
