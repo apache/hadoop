@@ -214,6 +214,16 @@ checkTests () {
   testReferences=`$GREP -c -i '/test' $PATCH_DIR/patch`
   echo "There appear to be $testReferences test files referenced in the patch."
   if [[ $testReferences == 0 ]] ; then
+    if [[ $HUDSON == "true" ]] ; then
+      patchIsDoc=`$GREP -c -i 'title="documentation' $PATCH_DIR/jira`
+      if [[ $patchIsDoc != 0 ]] ; then
+        echo "The patch appears to be a documentation patch that doesn't require tests."
+        JIRA_COMMENT="$JIRA_COMMENT
+
+    +0 tests included.  The patch appears to be a documentation patch that doesn't require tests."
+        return 0
+      fi
+    fi
     JIRA_COMMENT="$JIRA_COMMENT
 
     -1 tests included.  The patch doesn't appear to include any new or modified tests.
