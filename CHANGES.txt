@@ -29,6 +29,9 @@ Trunk (unreleased changes)
 
     HADOOP-2325.  Require Java 6. (cutting)
 
+    HADOOP-372.  Add support for multiple input paths with a different
+    InputFormat and Mapper for each path.  (Chris Smith via tomwhite)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
