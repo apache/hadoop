@@ -816,9 +816,6 @@ Release 0.18.0 - Unreleased
     retrieving the address of direct buffers from compression code by obtaining
     a lock during this call. (Arun C Murthy via cdouglas)
 
-    HADOOP-3678. Avoid spurious exceptions logged at DataNode when clients
-    read from DFS. (rangadi)
-
     HADOOP-3683. Fix dfs metrics to count file listings rather than files
     listed. (lohit vijayarenu via cdouglas)
 
@@ -872,6 +869,9 @@ Release 0.18.0 - Unreleased
 Release 0.17.2 - Unreleased
 
   BUG FIXES
+
+    HADOOP-3678. Avoid spurious exceptions logged at DataNode when clients
+    read from DFS. (rangadi)
 
     HADOOP-3707. NameNode keeps a count of number of blocks scheduled
     to be written to a datanode and uses it to avoid allocating more
