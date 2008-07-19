@@ -140,6 +140,9 @@ Trunk (unreleased changes)
     HADOOP-3723. The flags to the libhdfs.create call can be treated as
     a bitmask. (Pete Wyckoff via dhruba)
 
+    HADOOP-3643. Filter out completed tasks when asking for running tasks in
+    the JobTracker web/ui. (Amar Kamat via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

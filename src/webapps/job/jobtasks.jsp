@@ -66,7 +66,8 @@
     List<TaskReport> filteredReports = new ArrayList<TaskReport>();
     for (int i = 0; i < tasks.length; ++i) {
       if (("completed".equals(state) && tasks[i].isComplete()) 
-          || ("running".equals(state) && tasks[i].isRunning()) 
+          || ("running".equals(state) && tasks[i].isRunning() 
+              && !tasks[i].isComplete()) 
           || ("killed".equals(state) && tasks[i].wasKilled()) 
           || ("pending".equals(state)  && !(tasks[i].isComplete() 
                                             || tasks[i].isRunning() 
