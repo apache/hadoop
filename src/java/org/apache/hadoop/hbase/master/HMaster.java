@@ -627,14 +627,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       tableName, LATEST_TIMESTAMP, null);
     try {
       RowResult data = srvr.next(scannerid);
-          
-      // Test data and that the row for the data is for our table. If table
-      // does not exist, scanner will return row after where our table would
-      // be inserted if it exists so look for exact match on table name.            
       if (data != null && data.size() > 0) {
-        byte [] tn = HRegionInfo.getTableNameFromRegionName(data.getRow());
-        if (Bytes.equals(tn, tableName)) {
-          // Then a region for this table already exists. Ergo table exists.
+        HRegionInfo info = Writables.getHRegionInfo(data.get(COL_REGIONINFO));
+        if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+          // A region for this table already exists. Ergo table exists.
           throw new TableExistsException(Bytes.toString(tableName));
         }
       }

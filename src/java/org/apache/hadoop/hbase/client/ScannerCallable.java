@@ -39,7 +39,15 @@ public class ScannerCallable extends ServerCallable<RowResult> {
   private final long timestamp;
   private final RowFilterInterface filter;
 
-  protected ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
+  /**
+   * @param connection
+   * @param tableName
+   * @param columns
+   * @param startRow
+   * @param timestamp
+   * @param filter
+   */
+  public ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
       byte [] startRow, long timestamp, RowFilterInterface filter) {
     super(connection, tableName, startRow);
     this.columns = columns;

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -258,14 +259,10 @@ public class HTable {
     final List<byte[]> keyList = new ArrayList<byte[]>();
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      @SuppressWarnings("unused")
-      public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
-          @SuppressWarnings("unused") HRegionLocation regionLocation,
-          HRegionInfo info)
-      throws IOException {
-        if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
-          return false;
-        }
+      public boolean processRow(RowResult rowResult) throws IOException {
+        HRegionInfo info = Writables.getHRegionInfo(
+            rowResult.get(HConstants.COL_REGIONINFO));
+
         if (!(info.isOffline() || info.isSplit())) {
           keyList.add(info.getStartKey());
         }
@@ -288,15 +285,23 @@ public class HTable {
       new TreeMap<HRegionInfo, HServerAddress>();
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
-          HRegionLocation regionLocation, HRegionInfo hri) {
+      public boolean processRow(RowResult rowResult) throws IOException {
+        HRegionInfo info = Writables.getHRegionInfo(
+            rowResult.get(HConstants.COL_REGIONINFO));
         
-        HRegionInfo info = new UnmodifyableHRegionInfo(hri); 
         if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
           return false;
         }
+
+        HServerAddress server = new HServerAddress();
+        Cell c = rowResult.get(HConstants.COL_SERVER);
+        if (c != null && c.getValue() != null && c.getValue().length > 0) {
+          String address = Bytes.toString(c.getValue());
+          server = new HServerAddress(address);
+        }
+        
         if (!(info.isOffline() || info.isSplit())) {
-          regionMap.put(info, regionLocation.getServerAddress());
+          regionMap.put(new UnmodifyableHRegionInfo(info), server);
         }
         return true;
       }

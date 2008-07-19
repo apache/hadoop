@@ -122,11 +122,13 @@ public class HServerInfo implements WritableComparable {
     + ", load: (" + this.load.toString() + ")";
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
 
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = this.serverAddress.hashCode();
@@ -137,6 +139,8 @@ public class HServerInfo implements WritableComparable {
 
 
   // Writable
+  
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
@@ -144,6 +148,7 @@ public class HServerInfo implements WritableComparable {
     this.infoPort = in.readInt();
   }
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);
@@ -151,6 +156,7 @@ public class HServerInfo implements WritableComparable {
     out.writeInt(this.infoPort);
   }
 
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HServerInfo that = (HServerInfo)o;
     int result = getServerAddress().compareTo(that.getServerAddress());

@@ -1,15 +1,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic 
@@ -45,30 +42,24 @@ class MetaScanner implements HConstants {
       MetaScannerVisitor visitor, byte[] tableName)
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(configuration);
-    boolean toContinue = true;
-    byte [] startRow = Bytes.equals(tableName, EMPTY_START_ROW)? tableName:
-      HRegionInfo.createRegionName(tableName, null, NINES);
+    byte [] startRow = tableName == null || tableName.length == 0 ?
+        HConstants.EMPTY_START_ROW : 
+          HRegionInfo.createRegionName(tableName, null, ZEROES);
       
     // Scan over each meta region
     do {
       ScannerCallable callable = new ScannerCallable(connection,
-        META_TABLE_NAME, COL_REGIONINFO_ARRAY, tableName, LATEST_TIMESTAMP,
-        null);
+        META_TABLE_NAME, COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP, null);
+      // Open scanner
+      connection.getRegionServerWithRetries(callable);
       try {
-        // Open scanner
-        connection.getRegionServerWithRetries(callable);
-        while (toContinue) {
-          RowResult rowResult = connection.getRegionServerWithRetries(callable);
-          if (rowResult == null || rowResult.size() == 0) {
+        RowResult r = null;
+        do {
+          r = connection.getRegionServerWithRetries(callable);
+          if (r == null || r.size() == 0) {
             break;
           }
-          HRegionInfo info = Writables.getHRegionInfo(rowResult
-              .get(COL_REGIONINFO));
-          List<byte []> parse = HRegionInfo.parseMetaRegionRow(info.getRegionName());
-          HRegionLocation regionLocation =
-            connection.locateRegion(parse.get(0), parse.get(1));
-          toContinue = visitor.processRow(rowResult, regionLocation, info);
-        }
+        } while(visitor.processRow(r));
         // Advance the startRow to the end key of the current region
         startRow = callable.getHRegionInfo().getEndKey();
       } finally {
@@ -89,12 +80,9 @@ class MetaScanner implements HConstants {
      * unnecessary for some reason.
      * 
      * @param rowResult
-     * @param regionLocation
-     * @param info
      * @return A boolean to know if it should continue to loop in the region
      * @throws IOException
      */
-    public boolean processRow(RowResult rowResult,
-        HRegionLocation regionLocation, HRegionInfo info) throws IOException;
+    public boolean processRow(RowResult rowResult) throws IOException;
   }
 }

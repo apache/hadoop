@@ -285,10 +285,9 @@ public class HConnectionManager implements HConstants {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
         /** {@inheritDoc} */
-        public boolean processRow(
-            @SuppressWarnings("unused") RowResult rowResult,
-            @SuppressWarnings("unused") HRegionLocation regionLocation,
-            HRegionInfo info) {
+        public boolean processRow(RowResult rowResult) throws IOException {
+          HRegionInfo info = Writables.getHRegionInfo(
+              rowResult.get(COL_REGIONINFO));
 
           // Only examine the rows where the startKey is zero length
           if (info.getStartKey().length == 0) {

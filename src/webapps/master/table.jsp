@@ -70,7 +70,9 @@
 </table>
 <%    } 
     }
-    catch(IOException ioe) { } 
+    catch(Exception ex) {
+      ex.printStackTrace();
+    } 
   }%>
 </body>
 </html>

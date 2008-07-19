@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
  * Tests HTable
@@ -137,7 +137,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
 
     try {
       // make a modifiable descriptor
-      HTableDescriptor desc = new HTableDescriptor(a.getMetadata());
+      HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
       // offline the table
       admin.disableTable(tableAname);
       // add a user attribute to HTD
@@ -152,12 +152,13 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
 
       // Use a metascanner to avoid client API caching (HConnection has a
       // metadata cache)
-      MetaScanner.MetaScannerVisitor visitor = new MetaScanner.MetaScannerVisitor() {
-          public boolean processRow(
-              @SuppressWarnings("unused") RowResult rowResult,
-              HRegionLocation regionLocation,
-              HRegionInfo info) {
-            LOG.info("visiting " + regionLocation.toString());
+      MetaScanner.MetaScannerVisitor visitor =
+        new MetaScanner.MetaScannerVisitor() {
+          public boolean processRow(RowResult rowResult) throws IOException {
+            HRegionInfo info = Writables.getHRegionInfo(
+                rowResult.get(HConstants.COL_REGIONINFO));
+
+            LOG.info("visiting " + info.toString());
             HTableDescriptor desc = info.getTableDesc();
             if (Bytes.compareTo(desc.getName(), tableAname) == 0) {
               // check HTD attribute
