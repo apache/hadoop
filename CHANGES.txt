@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     makes the spill thread persistent so as to avoid creating a new one for
     each spill. (Chris Douglas via acmurthy)  
 
+    HADOOP-3412. Factor the scheduler out of the JobTracker and make
+    it pluggable. (Tom White and Brice Arnould via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
