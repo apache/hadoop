@@ -39,6 +39,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
@@ -73,13 +75,12 @@ import org.apache.hadoop.util.VersionInfo;
  * tracking MR jobs in a network environment.
  *
  *******************************************************/
-public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmissionProtocol {
+public class JobTracker implements MRConstants, InterTrackerProtocol,
+    JobSubmissionProtocol, TaskTrackerManager {
+
   static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
   static long RETIRE_JOB_INTERVAL;
   static long RETIRE_JOB_CHECK_INTERVAL;
-  static float TASK_ALLOC_EPSILON;
-  static float PAD_FRACTION;
-  static final int MIN_CLUSTER_SIZE_FOR_PADDING = 3;
   public static enum State { INITIALIZING, RUNNING }
   State state = State.INITIALIZING;
   private static final int SYSTEM_DIR_CLEANUP_RETRY_PERIOD = 10000;
@@ -89,6 +90,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   private ResolutionThread resThread = new ResolutionThread();
   private int numTaskCacheLevels; // the max level to which we cache tasks
   private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
+  private final TaskScheduler taskScheduler;
+  private final List<JobInProgressListener> jobInProgressListeners =
+    new CopyOnWriteArrayList<JobInProgressListener>();
 
   // system directories are world-wide readable and owner readable
   final static FsPermission SYSTEM_DIR_PERMISSION =
@@ -130,6 +134,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     while (true) {
       try {
         result = new JobTracker(conf);
+        result.taskScheduler.setTaskTrackerManager(result);
         break;
       } catch (VersionMismatch e) {
         throw e;
@@ -340,8 +345,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
           long retireBefore = System.currentTimeMillis() - 
             RETIRE_JOB_INTERVAL;
-          synchronized (jobsByPriority) {
-            for(JobInProgress job: jobsByPriority) {
+          synchronized (jobs) {
+            for(JobInProgress job: jobs.values()) {
               if (job.getStatus().getRunState() != JobStatus.RUNNING &&
                   job.getStatus().getRunState() != JobStatus.PREP &&
                   (job.getFinishTime()  < retireBefore)) {
@@ -352,28 +357,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           if (!retiredJobs.isEmpty()) {
             synchronized (JobTracker.this) {
               synchronized (jobs) {
-                synchronized (jobsByPriority) {
-                  synchronized (jobInitQueue) {
-                    for (JobInProgress job: retiredJobs) {
-                      removeJobTasks(job);
-                      jobs.remove(job.getProfile().getJobID());
-                      jobInitQueue.remove(job);
-                      jobsByPriority.remove(job);
-                      String jobUser = job.getProfile().getUser();
-                      synchronized (userToJobsMap) {
-                        ArrayList<JobInProgress> userJobs =
-                          userToJobsMap.get(jobUser);
-                        synchronized (userJobs) {
-                          userJobs.remove(job);
-                        }
-                        if (userJobs.isEmpty()) {
-                          userToJobsMap.remove(jobUser);
-                        }
-                      }
-                      LOG.info("Retired job with id: '" + 
-                               job.getProfile().getJobID() + "' of user '" +
-                               jobUser + "'");
+                synchronized (taskScheduler) {
+                  for (JobInProgress job: retiredJobs) {
+                    removeJobTasks(job);
+                    jobs.remove(job.getProfile().getJobID());
+                    for (JobInProgressListener l : jobInProgressListeners) {
+                      l.jobRemoved(job);
                     }
+                    String jobUser = job.getProfile().getUser();
+                    synchronized (userToJobsMap) {
+                      ArrayList<JobInProgress> userJobs =
+                        userToJobsMap.get(jobUser);
+                      synchronized (userJobs) {
+                        userJobs.remove(job);
+                      }
+                      if (userJobs.isEmpty()) {
+                        userToJobsMap.remove(jobUser);
+                      }
+                    }
+                    LOG.info("Retired job with id: '" + 
+                             job.getProfile().getJobID() + "' of user '" +
+                             jobUser + "'");
                   }
                 }
               }
@@ -384,37 +388,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         } catch (Throwable t) {
           LOG.error("Error in retiring job:\n" +
                     StringUtils.stringifyException(t));
-        }
-      }
-    }
-  }
-
-  /////////////////////////////////////////////////////////////////
-  //  Used to init new jobs that have just been created
-  /////////////////////////////////////////////////////////////////
-  class JobInitThread implements Runnable {
-    public JobInitThread() {
-    }
-    public void run() {
-      JobInProgress job;
-      while (true) {
-        job = null;
-        try {
-          synchronized (jobInitQueue) {
-            while (jobInitQueue.isEmpty()) {
-              jobInitQueue.wait();
-            }
-            job = jobInitQueue.remove(0);
-          }
-          job.initTasks();
-        } catch (InterruptedException t) {
-          break;
-        } catch (Throwable t) {
-          LOG.error("Job initialization failed:\n" +
-                    StringUtils.stringifyException(t));
-          if (job != null) {
-            job.kill();
-          }
         }
       }
     }
@@ -528,7 +501,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
   // All the known jobs.  (jobid->JobInProgress)
   Map<JobID, JobInProgress> jobs = new TreeMap<JobID, JobInProgress>();
-  List<JobInProgress> jobsByPriority = new ArrayList<JobInProgress>();
 
   // (user -> list of JobInProgress)
   TreeMap<String, ArrayList<JobInProgress>> userToJobsMap =
@@ -568,14 +540,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   int totalReduces = 0;
   private HashMap<String, TaskTrackerStatus> taskTrackers =
     new HashMap<String, TaskTrackerStatus>();
-  HashMap<String,Integer>uniqueHostsMap = new HashMap<String, Integer>();
-  List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
+  Map<String,Integer>uniqueHostsMap = new ConcurrentHashMap<String, Integer>();
   ExpireTrackers expireTrackers = new ExpireTrackers();
   Thread expireTrackersThread = null;
   RetireJobs retireJobs = new RetireJobs();
   Thread retireJobsThread = null;
-  JobInitThread initJobs = new JobInitThread();
-  Thread initJobsThread = null;
   ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
   Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks,
                                                 "expireLaunchingTasks");
@@ -633,9 +602,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
     RETIRE_JOB_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
     RETIRE_JOB_CHECK_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
-    TASK_ALLOC_EPSILON = conf.getFloat("mapred.jobtracker.taskalloc.loadbalance.epsilon", 0.2f);
-    PAD_FRACTION = conf.getFloat("mapred.jobtracker.taskalloc.capacitypad", 
-                                 0.01f);
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
 
     // This is a directory of temporary submission files.  We delete it
@@ -646,6 +612,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
                                            conf.get("mapred.hosts.exclude", ""));
+    
+    // Create the scheduler
+    Class<? extends TaskScheduler> schedulerClass
+      = conf.getClass("mapred.jobtracker.taskScheduler",
+          JobQueueTaskScheduler.class, TaskScheduler.class);
+    taskScheduler = (TaskScheduler) ReflectionUtils.newInstance(schedulerClass, conf);
                                            
     // Set ports, start RPC servers, etc.
     InetSocketAddress addr = getAddress(conf);
@@ -765,15 +737,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   /**
    * Run forever
    */
-  public void offerService() throws InterruptedException {
+  public void offerService() throws InterruptedException, IOException {
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                           "expireTrackers");
     this.expireTrackersThread.start();
     this.resThread.start();
     this.retireJobsThread = new Thread(this.retireJobs, "retireJobs");
     this.retireJobsThread.start();
-    this.initJobsThread = new Thread(this.initJobs, "initJobs");
-    this.initJobsThread.start();
+    taskScheduler.start();
     expireLaunchingTaskThread.start();
     this.taskCommitThread = new TaskCommitQueue();
     this.taskCommitThread.start();
@@ -819,14 +790,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         ex.printStackTrace();
       }
     }
-    if (this.initJobsThread != null && this.initJobsThread.isAlive()) {
-      LOG.info("Stopping initer");
-      this.initJobsThread.interrupt();
-      try {
-        this.initJobsThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
+    if (taskScheduler != null) {
+      taskScheduler.terminate();
     }
     if (this.expireLaunchingTaskThread != null && this.expireLaunchingTaskThread.isAlive()) {
       LOG.info("Stopping expireLaunchingTasks");
@@ -1023,63 +988,62 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // in memory; information about the purged jobs is available via
     // JobHistory.
     synchronized (jobs) {
-      synchronized (jobsByPriority) {
-        synchronized (jobInitQueue) {
-          synchronized (userToJobsMap) {
-            String jobUser = job.getProfile().getUser();
-            if (!userToJobsMap.containsKey(jobUser)) {
-              userToJobsMap.put(jobUser, 
-                                new ArrayList<JobInProgress>());
-            }
-            ArrayList<JobInProgress> userJobs = 
-              userToJobsMap.get(jobUser);
-            synchronized (userJobs) {
-              // Add the currently completed 'job'
-              userJobs.add(job);
+      synchronized (taskScheduler) {
+        synchronized (userToJobsMap) {
+          String jobUser = job.getProfile().getUser();
+          if (!userToJobsMap.containsKey(jobUser)) {
+            userToJobsMap.put(jobUser, 
+                              new ArrayList<JobInProgress>());
+          }
+          ArrayList<JobInProgress> userJobs = 
+            userToJobsMap.get(jobUser);
+          synchronized (userJobs) {
+            // Add the currently completed 'job'
+            userJobs.add(job);
 
-              // Check if we need to retire some jobs of this user
-              while (userJobs.size() > 
-                     MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
-                JobInProgress rjob = userJobs.get(0);
+            // Check if we need to retire some jobs of this user
+            while (userJobs.size() > 
+                   MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
+              JobInProgress rjob = userJobs.get(0);
+                
+              // Do not delete 'current'
+              // finished job just yet.
+              if (rjob == job) {
+                break;
+              }
+                
+              // Cleanup all datastructures
+              int rjobRunState = 
+                rjob.getStatus().getRunState();
+              if (rjobRunState == JobStatus.SUCCEEDED || 
+                  rjobRunState == JobStatus.FAILED) {
+                // Ok, this call to removeTaskEntries
+                // is dangerous is some very very obscure
+                // cases; e.g. when rjob completed, hit
+                // MAX_COMPLETE_USER_JOBS_IN_MEMORY job
+                // limit and yet some task (taskid)
+                // wasn't complete!
+                removeJobTasks(rjob);
                   
-                // Do not delete 'current'
-                // finished job just yet.
-                if (rjob == job) {
-                  break;
+                userJobs.remove(0);
+                jobs.remove(rjob.getProfile().getJobID());
+                for (JobInProgressListener listener : jobInProgressListeners) {
+                  listener.jobRemoved(rjob);
                 }
                   
-                // Cleanup all datastructures
-                int rjobRunState = 
-                  rjob.getStatus().getRunState();
-                if (rjobRunState == JobStatus.SUCCEEDED || 
-                    rjobRunState == JobStatus.FAILED) {
-                  // Ok, this call to removeTaskEntries
-                  // is dangerous is some very very obscure
-                  // cases; e.g. when rjob completed, hit
-                  // MAX_COMPLETE_USER_JOBS_IN_MEMORY job
-                  // limit and yet some task (taskid)
-                  // wasn't complete!
-                  removeJobTasks(rjob);
-                    
-                  userJobs.remove(0);
-                  jobs.remove(rjob.getProfile().getJobID());
-                  jobInitQueue.remove(rjob);
-                  jobsByPriority.remove(rjob);
-                    
-                  LOG.info("Retired job with id: '" + 
-                           rjob.getProfile().getJobID() + "' of user: '" +
-                           jobUser + "'");
-                } else {
-                  // Do not remove jobs that aren't complete.
-                  // Stop here, and let the next pass take
-                  // care of purging jobs.
-                  break;
-                }
+                LOG.info("Retired job with id: '" + 
+                         rjob.getProfile().getJobID() + "' of user: '" +
+                         jobUser + "'");
+              } else {
+                // Do not remove jobs that aren't complete.
+                // Stop here, and let the next pass take
+                // care of purging jobs.
+                break;
               }
             }
-            if (userJobs.isEmpty()) {
-              userToJobsMap.remove(jobUser);
-            }
+          }
+          if (userJobs.isEmpty()) {
+            userToJobsMap.remove(jobUser);
           }
         }
       }
@@ -1156,7 +1120,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     return v;
   }
-  public Collection taskTrackers() {
+  public Collection<TaskTrackerStatus> taskTrackers() {
     synchronized (taskTrackers) {
       return taskTrackers.values();
     }
@@ -1226,6 +1190,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public int getNumResolvedTaskTrackers() {
     return numResolved;
   }
+  
+  public int getNumberOfUniqueHosts() {
+    return uniqueHostsMap.size();
+  }
+  
+  public void addJobInProgressListener(JobInProgressListener listener) {
+    jobInProgressListeners.add(listener);
+  }
+
+  public void removeJobInProgressListener(JobInProgressListener listener) {
+    jobInProgressListeners.remove(listener);
+  }
+  
   ////////////////////////////////////////////////////
   // InterTrackerProtocol
   ////////////////////////////////////////////////////
@@ -1304,10 +1281,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       
     // Check for new tasks to be executed on the tasktracker
     if (acceptNewTasks) {
-      Task task = getNewTaskForTaskTracker(trackerName);
-      if (task != null) {
-        LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
-        actions.add(new LaunchTaskAction(task));
+      TaskTrackerStatus taskTrackerStatus = getTaskTracker(trackerName);
+      if (taskTrackerStatus == null) {
+        LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
+      } else {
+        List<Task> tasks = taskScheduler.assignTasks(taskTrackerStatus);
+        if (tasks != null) {
+          for (Task task : tasks) {
+            expireLaunchingTasks.addNewTask(task.getTaskID());
+            if (task.isMapTask()) {
+              myMetrics.launchMap();
+            } else {
+              myMetrics.launchReduce();
+            }
+            LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
+            actions.add(new LaunchTaskAction(task));
+          }
+        }
       }
     }
       
@@ -1520,156 +1510,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       LOG.warn(getName() + " exiting...");
     }
   }
-  
-  /**
-   * Returns a task we'd like the TaskTracker to execute right now.
-   *
-   * Eventually this function should compute load on the various TaskTrackers,
-   * and incorporate knowledge of DFS file placement.  But for right now, it
-   * just grabs a single item out of the pending task list and hands it back.
-   */
-  private synchronized Task getNewTaskForTaskTracker(String taskTracker
-                                                     ) throws IOException {
-    //
-    // Compute average map and reduce task numbers across pool
-    //
-    int remainingReduceLoad = 0;
-    int remainingMapLoad = 0;
-    int numTaskTrackers;
-    TaskTrackerStatus tts;
-
-    synchronized (taskTrackers) {
-      numTaskTrackers = taskTrackers.size();
-      tts = taskTrackers.get(taskTracker);
-    }
-    if (tts == null) {
-      LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
-      return null;
-    }
-
-    synchronized(jobsByPriority){
-      for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
-        JobInProgress job = (JobInProgress) it.next();
-        if (job.getStatus().getRunState() == JobStatus.RUNNING) {
-          int totalMapTasks = job.desiredMaps();
-          int totalReduceTasks = job.desiredReduces();
-          remainingMapLoad += (totalMapTasks - job.finishedMaps());
-          remainingReduceLoad += (totalReduceTasks - job.finishedReduces());
-        }
-      }   
-    }
-
-    int maxCurrentMapTasks = tts.getMaxMapTasks();
-    int maxCurrentReduceTasks = tts.getMaxReduceTasks();
-    // find out the maximum number of maps or reduces that we are willing
-    // to run on any node.
-    int maxMapLoad = 0;
-    int maxReduceLoad = 0;
-    if (numTaskTrackers > 0) {
-      maxMapLoad = Math.min(maxCurrentMapTasks,
-                            (int) Math.ceil((double) remainingMapLoad / 
-                                            numTaskTrackers));
-      maxReduceLoad = Math.min(maxCurrentReduceTasks,
-                               (int) Math.ceil((double) remainingReduceLoad
-                                               / numTaskTrackers));
-    }
-        
-    //
-    // Get map + reduce counts for the current tracker.
-    //
-
-    int numMaps = tts.countMapTasks();
-    int numReduces = tts.countReduceTasks();
-
-    //
-    // In the below steps, we allocate first a map task (if appropriate),
-    // and then a reduce task if appropriate.  We go through all jobs
-    // in order of job arrival; jobs only get serviced if their 
-    // predecessors are serviced, too.
-    //
-
-    //
-    // We hand a task to the current taskTracker if the given machine 
-    // has a workload that's less than the maximum load of that kind of
-    // task.
-    //
-       
-    synchronized (jobsByPriority) {
-      if (numMaps < maxMapLoad) {
-
-        int totalNeededMaps = 0;
-        for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
-          JobInProgress job = (JobInProgress) it.next();
-          if (job.getStatus().getRunState() != JobStatus.RUNNING) {
-            continue;
-          }
-
-          Task t = job.obtainNewMapTask(tts, numTaskTrackers,
-                                        uniqueHostsMap.size());
-          if (t != null) {
-            expireLaunchingTasks.addNewTask(t.getTaskID());
-            myMetrics.launchMap();
-            return t;
-          }
-
-          //
-          // Beyond the highest-priority task, reserve a little 
-          // room for failures and speculative executions; don't 
-          // schedule tasks to the hilt.
-          //
-          totalNeededMaps += job.desiredMaps();
-          int padding = 0;
-          if (numTaskTrackers > MIN_CLUSTER_SIZE_FOR_PADDING) {
-            padding = Math.min(maxCurrentMapTasks,
-                               (int)(totalNeededMaps * PAD_FRACTION));
-          }
-          if (totalMaps + padding >= totalMapTaskCapacity) {
-            break;
-          }
-        }
-      }
-
-      //
-      // Same thing, but for reduce tasks
-      //
-      if (numReduces < maxReduceLoad) {
-
-        int totalNeededReduces = 0;
-        for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
-          JobInProgress job = (JobInProgress) it.next();
-          if (job.getStatus().getRunState() != JobStatus.RUNNING ||
-              job.numReduceTasks == 0) {
-            continue;
-          }
-
-          Task t = job.obtainNewReduceTask(tts, numTaskTrackers, 
-                                           uniqueHostsMap.size());
-          if (t != null) {
-            expireLaunchingTasks.addNewTask(t.getTaskID());
-            myMetrics.launchReduce();
-            return t;
-          }
-
-          //
-          // Beyond the highest-priority task, reserve a little 
-          // room for failures and speculative executions; don't 
-          // schedule tasks to the hilt.
-          //
-          totalNeededReduces += job.desiredReduces();
-          int padding = 0;
-          if (numTaskTrackers > MIN_CLUSTER_SIZE_FOR_PADDING) {
-            padding = 
-              Math.min(maxCurrentReduceTasks,
-                       (int) (totalNeededReduces * PAD_FRACTION));
-          }
-          if (totalReduces + padding >= totalReduceTaskCapacity) {
-            break;
-          }
-        }
-      }
-    }
-    return null;
-  }
 
   /**
    * A tracker wants to know if any of its Tasks have been
@@ -1762,10 +1602,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * and JobStatus.  Those two sub-objects are sometimes shipped outside
    * of the JobTracker.  But JobInProgress adds info that's useful for
    * the JobTracker alone.
-   *
-   * We add the JIP to the jobInitQueue, which is processed 
-   * asynchronously to handle split-computation and build up
-   * the right TaskTracker/Block mapping.
    */
   public synchronized JobStatus submitJob(JobID jobId) throws IOException {
     ensureRunning();
@@ -1777,44 +1613,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     totalSubmissions++;
     JobInProgress job = new JobInProgress(jobId, this, this.conf);
     synchronized (jobs) {
-      synchronized (jobsByPriority) {
-        synchronized (jobInitQueue) {
-          jobs.put(job.getProfile().getJobID(), job);
-          jobsByPriority.add(job);
-          jobInitQueue.add(job);
-          resortPriority();
-          jobInitQueue.notifyAll();
+      synchronized (taskScheduler) {
+        jobs.put(job.getProfile().getJobID(), job);
+        for (JobInProgressListener listener : jobInProgressListeners) {
+          listener.jobAdded(job);
         }
       }
     }
     myMetrics.submitJob();
     return job.getStatus();
-  }
-
-  /**
-   * Sort jobs by priority and then by start time.
-   */
-  private synchronized void resortPriority() {
-    Comparator<JobInProgress> comp = new Comparator<JobInProgress>() {
-      public int compare(JobInProgress o1, JobInProgress o2) {
-        int res = o1.getPriority().compareTo(o2.getPriority());
-        if(res == 0) {
-          if(o1.getStartTime() < o2.getStartTime())
-            res = -1;
-          else
-            res = (o1.getStartTime()==o2.getStartTime() ? 0 : 1);
-        }
-          
-        return res;
-      }
-    };
-    
-    synchronized(jobsByPriority) {
-      Collections.sort(jobsByPriority, comp);
-    }
-    synchronized (jobInitQueue) {
-      Collections.sort(jobInitQueue, comp);
-    }
   }
 
   public synchronized ClusterStatus getClusterStatus() {
@@ -2042,10 +1849,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   synchronized void setJobPriority(JobID jobId, JobPriority priority) {
     JobInProgress job = jobs.get(jobId);
     if (job != null) {
-      job.setPriority(priority);
-      
-      // Re-sort jobs to reflect this change
-      resortPriority();
+      synchronized (taskScheduler) {
+        job.setPriority(priority);
+        for (JobInProgressListener listener : jobInProgressListeners) {
+          listener.jobUpdated(job);
+        }
+      }
     } else {
       LOG.warn("Trying to change the priority of an unknown job: " + jobId);
     }

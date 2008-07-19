@@ -702,6 +702,20 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.jobtracker.taskScheduler</name>
+  <value>org.apache.hadoop.mapred.JobQueueTaskScheduler</value>
+  <description>The class responsible for scheduling the tasks.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.taskScheduler.maxRunningTasksPerJob</name>
+  <value></value>
+  <description>The maximum number of running tasks for a job before
+  it gets preempted. No limits if undefined.
+  </description>
+</property>
+
+<property>
   <name>mapred.map.max.attempts</name>
   <value>4</value>
   <description>Expert: The maximum number of attempts per map task.

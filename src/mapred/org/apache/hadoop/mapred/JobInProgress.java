@@ -154,6 +154,16 @@ class JobInProgress {
     new TreeMap<TaskAttemptID, Integer>();
   
   /**
+   * Create an almost empty JobInProgress, which can be used only for tests
+   */
+  protected JobInProgress(JobID jobid, JobConf conf) {
+    this.conf = conf;
+    this.jobId = jobid;
+    this.numMapTasks = conf.getNumMapTasks();
+    this.numReduceTasks = conf.getNumReduceTasks();
+  }
+  
+  /**
    * Create a JobInProgress with the given job file, plus a handle
    * to the tracker.
    */
@@ -1774,5 +1784,12 @@ class JobInProgress {
     JobTrackerMetrics getJobTrackerMetrics() {
       return metrics;
     }
+  }
+  
+  /**
+   * @return The JobID of this JobInProgress.
+   */
+  public JobID getJobID() {
+    return jobId;
   }
 }
