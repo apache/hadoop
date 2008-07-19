@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
         
         const char* writePath = "/tmp/testfile.txt";
         
-        hdfsFile writeFile = hdfsOpenFile(fs, writePath, O_WRONLY, 0, 0, 0);
+        hdfsFile writeFile = hdfsOpenFile(fs, writePath, O_WRONLY|O_CREAT, 0, 0, 0);
         if(!writeFile) {
             fprintf(stderr, "Failed to open %s for writing!\n", writePath);
             exit(-1);

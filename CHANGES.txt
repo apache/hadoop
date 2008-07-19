@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-3485. Allow writing to files over fuse.
     (Pete Wyckoff via dhruba)
 
+    HADOOP-3723. The flags to the libhdfs.create call can be treated as
+    a bitmask. (Pete Wyckoff via dhruba)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

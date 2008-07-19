@@ -253,9 +253,16 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
 
     jobject jFS = (jobject)fs;
 
+    if(flags & O_RDWR) {
+      fprintf(stderr, "ERROR: cannot open an hdfs file in O_RDWR mode\n");
+      errno = ENOTSUP;
+      return NULL;
+    }
+
+
     /* The hadoop java api/signature */
-    const char* method = (flags == O_RDONLY) ? "open" : "create";
-    const char* signature = (flags == O_RDONLY) ?
+    const char* method = ((flags & O_WRONLY) == 0) ? "open" : "create";
+    const char* signature = ((flags & O_WRONLY) == 0) ?
         JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM)) :
         JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
 
@@ -302,7 +309,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         jBufferSize = jVal.i;
     }
 
-    if (flags == O_WRONLY) {
+    if (flags & O_WRONLY) {
         //replication
 
         if (!replication) {
@@ -334,7 +341,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     /* Create and return either the FSDataInputStream or
        FSDataOutputStream references jobject jStream */
 
-    if (flags == O_RDONLY) {
+    if ((flags & O_WRONLY) == 0) {
         if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                          method, signature, jPath, jBufferSize)) {
             fprintf(stderr, "Call to org.apache.hadoop.fs."
@@ -361,7 +368,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         return NULL;
     }
     file->file = (*env)->NewGlobalRef(env, jVal.l);
-    file->type = ((flags == O_RDONLY) ? INPUT : OUTPUT);
+    file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
 
     destroyLocalReference(env, jVal.l);
 
