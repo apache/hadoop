@@ -143,7 +143,7 @@ Trunk (unreleased changes)
     HADOOP-3643. Filter out completed tasks when asking for running tasks in
     the JobTracker web/ui. (Amar Kamat via omalley)
 
-    HADOOP-3771. Ensure that Lzo compressors/decompressors correctly handle the
+    HADOOP-3777. Ensure that Lzo compressors/decompressors correctly handle the
     case where native libraries aren't available. (Chris Douglas via acmurthy) 
 
     HADOOP-3728. Fix SleepJob so that it doesn't depend on temporary files,
