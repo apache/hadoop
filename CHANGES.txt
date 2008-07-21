@@ -888,6 +888,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3762. Fixed FileSystem cache to work with the default port. (cutting
     via omalley)
 
+    HADOOP-3798. Fix tests compilation. (Mukund Madhugiri via omalley)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
