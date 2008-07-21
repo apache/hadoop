@@ -77,6 +77,21 @@ public class DistributedFileSystem extends FileSystem {
     this.workingDir = getHomeDirectory();
   }
 
+  /** Permit paths which explicitly specify the default port. */
+  protected void checkPath(Path path) {
+    URI thisUri = this.getUri();
+    URI thatUri = path.toUri();
+    String thatAuthority = thatUri.getAuthority();
+    if (thatUri.getScheme() != null
+        && thatUri.getScheme().equalsIgnoreCase(thisUri.getScheme())
+        && thatUri.getPort() == NameNode.DEFAULT_PORT
+        && thisUri.getPort() == -1
+        && thatAuthority.substring(0,thatAuthority.indexOf(":"))
+        .equalsIgnoreCase(thisUri.getAuthority()))
+      return;
+    super.checkPath(path);
+  }
+
   public Path getWorkingDirectory() {
     return workingDir;
   }

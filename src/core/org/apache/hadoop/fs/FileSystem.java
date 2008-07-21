@@ -60,6 +60,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** FileSystem cache */
   private static final Cache CACHE = new Cache();
+
+  /** The key this instance is stored under in the cache. */
+  private Cache.Key key;
+
   /** Recording statistics per a FileSystem class */
   private static final Map<Class<? extends FileSystem>, Statistics> 
     statisticsTable =
@@ -312,9 +316,9 @@ public abstract class FileSystem extends Configured implements Closeable {
             thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
           return;
       }
-      throw new IllegalArgumentException("Wrong FS: "+path+
-                                         ", expected: "+this.getUri());
     }
+    throw new IllegalArgumentException("Wrong FS: "+path+
+                                       ", expected: "+this.getUri());
   }
 
   /**
@@ -1237,7 +1241,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   public void close() throws IOException {
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
-    CACHE.remove(new Cache.Key(this), this);
+    CACHE.remove(this.key, this);
   }
 
   /** Return the total size of all files in the filesystem.*/
@@ -1341,13 +1345,15 @@ public abstract class FileSystem extends Configured implements Closeable {
     private final Map<Key, FileSystem> map = new HashMap<Key, FileSystem>();
 
     synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
-      FileSystem fs = map.get(new Key(uri, conf));
+      Key key = new Key(uri, conf);
+      FileSystem fs = map.get(key);
       if (fs == null) {
         fs = createFileSystem(uri, conf);
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           Runtime.getRuntime().addShutdownHook(clientFinalizer);
         }
-        map.put(new Key(fs), fs);
+        fs.key = key;
+        map.put(key, fs);
       }
       return fs;
     }
@@ -1394,10 +1400,6 @@ public abstract class FileSystem extends Configured implements Closeable {
       final String scheme;
       final String authority;
       final String username;
-
-      Key(FileSystem fs) throws IOException {
-        this(fs.getUri(), fs.getConf());
-      }
 
       Key(URI uri, Configuration conf) throws IOException {
         scheme = uri.getScheme();

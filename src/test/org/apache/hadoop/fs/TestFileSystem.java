@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -506,22 +507,51 @@ public class TestFileSystem extends TestCase {
     }
     
     {
-      MiniDFSCluster cluster = null;
       try {
-        cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
-        URI uri = cluster.getFileSystem().getUri();
+        runTestCache(NameNode.DEFAULT_PORT);
+      } catch(java.net.BindException be) {
+        LOG.warn("Cannot test NameNode.DEFAULT_PORT (="
+            + NameNode.DEFAULT_PORT + ")", be);
+      }
+
+      runTestCache(0);
+    }
+  }
+  
+  static void runTestCache(int port) throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(port, conf, 2, true, true, null, null);
+      URI uri = cluster.getFileSystem().getUri();
+      LOG.info("uri=" + uri);
+
+      {
         FileSystem fs = FileSystem.get(uri, new Configuration());
         checkPath(cluster, fs);
         for(int i = 0; i < 100; i++) {
           assertTrue(fs == FileSystem.get(uri, new Configuration()));
         }
-      } finally {
-        cluster.shutdown(); 
       }
+      
+      if (port == NameNode.DEFAULT_PORT) {
+        //test explicit default port
+        URI uri2 = new URI(uri.getScheme(), uri.getUserInfo(),
+            uri.getHost(), NameNode.DEFAULT_PORT, uri.getPath(),
+            uri.getQuery(), uri.getFragment());  
+        LOG.info("uri2=" + uri2);
+        FileSystem fs = FileSystem.get(uri2, conf);
+        checkPath(cluster, fs);
+        for(int i = 0; i < 100; i++) {
+          assertTrue(fs == FileSystem.get(uri2, new Configuration()));
+        }
+      }
+    } finally {
+      if (cluster != null) cluster.shutdown(); 
     }
   }
   
-  private void checkPath(MiniDFSCluster cluster, FileSystem fileSys) throws IOException {
+  static void checkPath(MiniDFSCluster cluster, FileSystem fileSys) throws IOException {
     InetSocketAddress add = cluster.getNameNode().getNameNodeAddress();
     // Test upper/lower case
     fileSys.checkPath(new Path("hdfs://" + add.getHostName().toUpperCase() + ":" + add.getPort()));

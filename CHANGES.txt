@@ -674,12 +674,14 @@ Release 0.18.0 - Unreleased
     HADOOP-3454. Fix Text::find to search only valid byte ranges. (Chad Whipkey
     via cdouglas)
 
-    HADOOP-3417. Removes the static configuration variable, commandLineConfig from 
-    JobClient. Moves the cli parsing from JobShell to GenericOptionsParser. 
-    Thus removes the class org.apache.hadoop.mapred.JobShell.
-    (Amareshwari Sriramadasu via ddas) 
+    HADOOP-3417. Removes the static configuration variable,
+    commandLineConfig from JobClient. Moves the cli parsing from
+    JobShell to GenericOptionsParser.  Thus removes the class
+    org.apache.hadoop.mapred.JobShell.  (Amareshwari Sriramadasu via
+    ddas)
 
-    HADOOP-2132. Only RUNNING/PREP jobs can be killed. (Jothi Padmanabhan via ddas)
+    HADOOP-2132. Only RUNNING/PREP jobs can be killed. (Jothi Padmanabhan 
+    via ddas)
 
     HADOOP-3476. Code cleanup in fuse-dfs.
     (Peter Wyckoff via dhruba)
@@ -709,8 +711,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3135. Get the system directory from the JobTracker instead of from
     the conf. (Subramaniam Krishnan via ddas)
 
-    HADOOP-3503. Fix a race condition when client and namenode start simultaneous
-    recovery of the same block.  (dhruba & Tsz Wo (Nicholas), SZE)
+    HADOOP-3503. Fix a race condition when client and namenode start
+    simultaneous recovery of the same block.  (dhruba & Tsz Wo
+    (Nicholas), SZE)
 
     HADOOP-3440. Fixes DistributedCache to not create symlinks for paths which
     don't have fragments even when createSymLink is true. 
@@ -720,7 +723,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3489. Fix NPE in SafeModeMonitor. (Lohit Vijayarenu via shv)
 
-    HADOOP-3509. Fix NPE in FSNamesystem.close. (Tsz Wo (Nicholas), SZE via shv)
+    HADOOP-3509. Fix NPE in FSNamesystem.close. (Tsz Wo (Nicholas), SZE via 
+    shv)
 
     HADOOP-3491. Name-node shutdown causes InterruptedException in 
     ResolutionMonitor. (Lohit Vijayarenu via shv)
@@ -880,6 +884,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3774. Fix typos in shell output. (Tsz Wo (Nicholas), SZE via
     cdouglas)
+
+    HADOOP-3762. Fixed FileSystem cache to work with the default port. (cutting
+    via omalley)
 
 Release 0.17.2 - Unreleased
 
