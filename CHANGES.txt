@@ -15,6 +15,7 @@ Trunk (unreleased changes)
    HBASE-288   Add in-memory caching of data. Required update of hadoop to 
                0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
    HBASE-696   Make bloomfilter true/false and self-sizing
+   HBASE-720   clean up inconsistencies around deletes (Izaak Rubin via Stack)
 
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
@@ -298,7 +299,6 @@ Trunk (unreleased changes)
    HBASE-730   On startup, rinse STARTCODE and SERVER from .META.
                (Jean-Daniel Cryans via Stack)
    HBASE-738   overview.html in need of updating (Izaak Rubin via Stack)
-   HBASE-720   clean up inconsistencies around deletes (Izaak Rubin via Stack)
    HBASE-754   The JRuby shell documentation is wrong in "get" and "put"
                (Jean-Daniel Cryans via Stack)
    HBASE-756   In HBase shell, the put command doesn't process the timestamp
