@@ -251,7 +251,7 @@ module HBase
       now = Time.now 
       bu = nil
       if timestamp
-        bu = BatchUpdate.new(row)
+        bu = BatchUpdate.new(row, timestamp)
       else
         bu = BatchUpdate.new(row)
       end

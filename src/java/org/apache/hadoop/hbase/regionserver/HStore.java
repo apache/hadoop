@@ -840,8 +840,7 @@ public class HStore implements HConstants {
       int timesSeen = 0;
       byte [] lastRow = null;
       byte [] lastColumn = null;
-      // Map of a row deletes keyed by column with a list of timestamps for value
-      Map<byte [], List<Long>> deletes = null;
+
       while (numDone < done.length) {
         // Find the reader with the smallest key.  If two files have same key
         // but different values -- i.e. one is delete and other is non-delete
@@ -869,14 +868,9 @@ public class HStore implements HConstants {
           timesSeen++;
         } else {
           timesSeen = 0;
-          // We are on to a new row.  Create a new deletes list.
-          deletes = new TreeMap<byte [], List<Long>>(Bytes.BYTES_COMPARATOR);
         }
 
-        byte [] value = (vals[smallestKey] == null)?
-          null: vals[smallestKey].get();
-        if (!isDeleted(sk, value, false, deletes) &&
-            timesSeen <= family.getMaxVersions()) {
+        if (timesSeen <= family.getMaxVersions()) {
           // Keep old versions until we have maxVersions worth.
           // Then just skip them.
           if (sk.getRow().length != 0 && sk.getColumn().length != 0) {

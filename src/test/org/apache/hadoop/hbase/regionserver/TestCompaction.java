@@ -144,16 +144,24 @@ public class TestCompaction extends HBaseTestCase {
     // Assert that the first row is still deleted.
     cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     assertNull(cellValues);
-    // Assert the store files do not have the first record 'aaa' keys in them.
+    // Make sure the store files do have some 'aaa' keys in them.
+    boolean containsStartRow = false;
     for (MapFile.Reader reader: this.r.stores.
         get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
       reader.reset();
       HStoreKey key = new HStoreKey();
       ImmutableBytesWritable val = new ImmutableBytesWritable();
       while(reader.next(key, val)) {
-        assertFalse(Bytes.equals(key.getRow(), STARTROW));
+        if (Bytes.equals(key.getRow(), STARTROW)) {
+          containsStartRow = true;
+          break;
+        }
+      }
+      if (containsStartRow) {
+        break;
       }
     }
+    assertTrue(containsStartRow);
   }
 
   private void createStoreFile(final HRegion region) throws IOException {
