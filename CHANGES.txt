@@ -897,6 +897,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3798. Fix tests compilation. (Mukund Madhugiri via omalley)
 
+    HADOOP-3794. Return modification time instead of zero for KosmosFileSystem.
+    (Sriram Rao via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
