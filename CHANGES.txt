@@ -146,6 +146,10 @@ Trunk (unreleased changes)
     HADOOP-3771. Ensure that Lzo compressors/decompressors correctly handle the
     case where native libraries aren't available. (Chris Douglas via acmurthy) 
 
+    HADOOP-3728. Fix SleepJob so that it doesn't depend on temporary files,
+    this ensures we can now run more than one instance of SleepJob
+    simultaneously. (Chris Douglas via acmurthy) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
