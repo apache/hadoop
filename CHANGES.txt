@@ -303,6 +303,7 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-756   In HBase shell, the put command doesn't process the timestamp
                (Jean-Daniel Cryans via Stack)
+   HBASE-757   REST mangles table names (Sishen via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

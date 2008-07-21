@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.znerd.xmlenc.XMLOutputter;
 
 
@@ -85,7 +86,7 @@ public class MetaHandler extends GenericHandler {
           XMLOutputter outputter = getXMLOutputter(response.getWriter());
           outputter.startTag("tables");
           for (int i = 0; i < tables.length; i++) {
-            doElement(outputter, "table", tables[i].getName().toString());
+            doElement(outputter, "table", Bytes.toString(tables[i].getName()));
           }
           outputter.endTag();
           outputter.endDocument();
@@ -96,7 +97,7 @@ public class MetaHandler extends GenericHandler {
             ContentType.PLAIN.toString());
           PrintWriter out = response.getWriter();
           for (int i = 0; i < tables.length; i++) {
-            out.println(tables[i].getName().toString());
+            out.println(Bytes.toString(tables[i].getName()));
           }
           out.close();
         break;

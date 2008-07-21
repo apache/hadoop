@@ -391,7 +391,7 @@ public class TableHandler extends GenericHandler {
     HTableDescriptor [] tables = this.admin.listTables();
     HTableDescriptor descriptor = null;
     for (int i = 0; i < tables.length; i++) {
-      if (tables[i].getName().toString().equals(tableName)) {
+      if (Bytes.toString(tables[i].getName()).equals(tableName)) {
         descriptor = tables[i];
         break;
       }
@@ -406,7 +406,7 @@ public class TableHandler extends GenericHandler {
         setResponseHeader(response, 200, ContentType.XML.toString());
         XMLOutputter outputter = getXMLOutputter(response.getWriter());
         outputter.startTag("table");
-        doElement(outputter, "name", descriptor.getName().toString());
+        doElement(outputter, "name", Bytes.toString(descriptor.getName()));
         outputter.startTag("columnfamilies");
         for (HColumnDescriptor e: descriptor.getFamilies()) {
           outputter.startTag("columnfamily");
