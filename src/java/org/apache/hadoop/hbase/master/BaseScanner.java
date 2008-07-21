@@ -172,7 +172,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         String serverName = Writables.cellToString(values.get(COL_SERVER));
         long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
         if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() + info.toString() +
+          LOG.debug(Thread.currentThread().getName() + " " + info.toString() +
             "}, SERVER => '" + serverName + "', STARTCODE => " + startCode);
         }
 
@@ -261,25 +261,17 @@ abstract class BaseScanner extends Chore implements HConstants {
     RowResult rowContent)
   throws IOException {
     boolean result = false;
-
     boolean hasReferencesA = hasReferences(metaRegionName, srvr,
         parent.getRegionName(), rowContent, COL_SPLITA);
     boolean hasReferencesB = hasReferences(metaRegionName, srvr,
         parent.getRegionName(), rowContent, COL_SPLITB);
-    
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
       HRegion.deleteRegion(master.fs, master.rootdir, parent);
-      
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());
       result = true;
-    } else if (LOG.isDebugEnabled()) {
-      // If debug, note we checked and current state of daughters.
-      LOG.debug("Checked " + parent.getRegionNameAsString() +
-        " for references: splitA: " + hasReferencesA + ", splitB: "+
-        hasReferencesB);
     }
     return result;
   }

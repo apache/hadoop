@@ -73,6 +73,10 @@ class ServerManager implements HConstants {
   
   private HMaster master;
   private final Leases serverLeases;
+  
+  // Last time we logged average load.
+  private volatile long lastLogOfAverageLaod = 0;
+  private final long loggingPeriodForAverageLoad;
 
   /**
    * @param master
@@ -82,6 +86,8 @@ class ServerManager implements HConstants {
     serverLeases = new Leases(master.leaseTimeout, 
       master.getConfiguration().getInt("hbase.master.lease.thread.wakefrequency",
         15 * 1000));
+    this.loggingPeriodForAverageLoad = master.getConfiguration().
+      getLong("hbase.master.avgload.logging.period", 15000);
   }
   
   /**
@@ -557,18 +563,19 @@ class ServerManager implements HConstants {
     int totalLoad = 0;
     int numServers = 0;
     double averageLoad = 0.0;
-    
     synchronized (serversToLoad) {
       numServers = serversToLoad.size();
-      
       for (HServerLoad load : serversToLoad.values()) {
         totalLoad += load.getNumberOfRegions();
       }
-      
       averageLoad = Math.ceil((double)totalLoad / (double)numServers);
-      if (LOG.isDebugEnabled()) {
+      // Only log on a period, not on every invocation of this method.
+      long now = System.currentTimeMillis();
+      if (LOG.isDebugEnabled() &&
+          (now > (this.loggingPeriodForAverageLoad + this.lastLogOfAverageLaod))) {
         LOG.debug("Total Load: " + totalLoad + ", Num Servers: " + numServers 
           + ", Avg Load: " + averageLoad);
+        this.lastLogOfAverageLaod = now;
       }
     }
     return averageLoad;

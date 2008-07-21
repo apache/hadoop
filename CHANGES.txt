@@ -197,6 +197,7 @@ Trunk (unreleased changes)
    HBASE-424   Should be able to enable/disable .META. table
    HBASE-679   Regionserver addresses are still not right in the new tables page
    HBASE-758   Throwing IOE read-only when should be throwing NSRE
+   HBASE-743   bin/hbase migrate upgrade fails when redo logs exists
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
