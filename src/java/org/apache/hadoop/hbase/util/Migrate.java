@@ -317,6 +317,7 @@ public class Migrate extends Configured implements Tool {
           "shut it down cleanly, so that all region server logs are recovered" +
           " and deleted.  Or, if you are sure logs are vestige of old " +
           "failures in hbase, remove them and then rerun the migration.  " +
+          "See 'Redo Logs' in http://wiki.apache.org/hadoop/Hbase/HowToMigrate. " + 
           "Here are the problem log files: " + unrecoveredLogs);
     }
   }
