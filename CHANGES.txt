@@ -143,6 +143,9 @@ Trunk (unreleased changes)
     HADOOP-3643. Filter out completed tasks when asking for running tasks in
     the JobTracker web/ui. (Amar Kamat via omalley)
 
+    HADOOP-3771. Ensure that Lzo compressors/decompressors correctly handle the
+    case where native libraries aren't available. (Chris Douglas via acmurthy) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
