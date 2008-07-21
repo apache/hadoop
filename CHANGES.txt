@@ -196,6 +196,7 @@ Trunk (unreleased changes)
    HBASE-43    Add a read-only attribute to columns (Andrew Purtell via Stack)
    HBASE-424   Should be able to enable/disable .META. table
    HBASE-679   Regionserver addresses are still not right in the new tables page
+   HBASE-758   Throwing IOE read-only when should be throwing NSRE
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

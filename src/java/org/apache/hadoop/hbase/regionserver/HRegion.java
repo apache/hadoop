@@ -341,6 +341,20 @@ public class HRegion implements HConstants {
     volatile boolean compacting = false;
     // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
+    // Set if region is read-only
+    private volatile boolean readOnly = false;
+    
+    /**
+     * Set flags that make this region read-only.
+     */
+    synchronized void setReadOnly(final boolean onOff) {
+      this.writesEnabled = !onOff;
+      this.readOnly = onOff;
+    }
+    
+    boolean isReadOnly() {
+      return this.readOnly;
+    }
   }
 
   private volatile WriteState writestate = new WriteState();
@@ -494,8 +508,10 @@ public class HRegion implements HConstants {
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
 
-    if (this.regionInfo.getTableDesc().isReadOnly())
-      this.writestate.writesEnabled = false;
+    // See if region is meant to run read-only.
+    if (this.regionInfo.getTableDesc().isReadOnly()) {
+      this.writestate.setReadOnly(true);
+    }
 
     // HRegion is ready to go!
     this.writestate.compacting = false;
@@ -1317,10 +1333,7 @@ public class HRegion implements HConstants {
    */
   public void batchUpdate(BatchUpdate b)
   throws IOException {
-
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
 
     // Do a rough check that we have resources to accept a write.  The check is
     // 'rough' in that between the resource check and the call to obtain a 
@@ -1429,9 +1442,7 @@ public class HRegion implements HConstants {
   public void deleteAll(final byte [] row, final byte [] column, final long ts)
   throws IOException {
     checkColumn(column);
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     Integer lid = obtainRowLock(row);
     try {
       deleteMultiple(row, column, ts, ALL_VERSIONS);
@@ -1448,9 +1459,7 @@ public class HRegion implements HConstants {
    */
   public void deleteAll(final byte [] row, final long ts)
   throws IOException {
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     Integer lid = obtainRowLock(row);    
     try {
       for (HStore store : stores.values()){
@@ -1478,9 +1487,7 @@ public class HRegion implements HConstants {
    */
   public void deleteFamily(byte [] row, byte [] family, long timestamp)
   throws IOException{
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     Integer lid = obtainRowLock(row);    
     try {
       // find the HStore for the column family
@@ -1513,9 +1520,7 @@ public class HRegion implements HConstants {
   private void deleteMultiple(final byte [] row, final byte [] column,
       final long ts, final int versions)
   throws IOException {
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     HStoreKey origin = new HStoreKey(row, column, ts);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
@@ -1524,6 +1529,15 @@ public class HRegion implements HConstants {
         edits.put(key, HLogEdit.deleteBytes.get());
       }
       update(edits);
+    }
+  }
+  
+  /**
+   * @throws IOException Throws exception if region is in read-only mode.
+   */
+  protected void checkReadOnly() throws IOException {
+    if (this.writestate.isReadOnly()) {
+      throw new IOException("region is read only");
     }
   }
   
@@ -1543,9 +1557,7 @@ public class HRegion implements HConstants {
       final byte [] val)
   throws IOException {
     checkColumn(key.getColumn());
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     TreeMap<HStoreKey, byte []> targets = this.targetColumns.get(lockid);
     if (targets == null) {
       targets = new TreeMap<HStoreKey, byte []>();
@@ -1567,9 +1579,7 @@ public class HRegion implements HConstants {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
     }
-    if (!this.writestate.writesEnabled) {
-      throw new IOException("region is read only");
-    }
+    checkReadOnly();
     boolean flush = false;
     this.updatesLock.readLock().lock();
     try {
