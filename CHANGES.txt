@@ -1,6 +1,6 @@
 Hbase Change Log
 
-Trunk (unreleased changes)
+Release 0.2.0
 
   INCOMPATIBLE CHANGES
    HBASE-584   Names in the filter interface are confusing (Clint Morgan via
