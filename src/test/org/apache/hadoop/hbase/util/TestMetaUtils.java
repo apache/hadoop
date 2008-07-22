@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 
 
 public class TestMetaUtils extends HBaseClusterTestCase {
@@ -46,8 +47,11 @@ public class TestMetaUtils extends HBaseClusterTestCase {
     utils.addColumn(editTable, new HColumnDescriptor(newColumn));
     utils.deleteColumn(editTable, Bytes.toBytes(oldColumn));
     utils.shutdown();
+    // Delete again so we go get it all fresh.
+    HConnectionManager.deleteConnectionInfo();
     // Now assert columns were added and deleted.
     this.cluster = new MiniHBaseCluster(this.conf, 1);
+    // Now assert columns were added and deleted.
     HTable t = new HTable(conf, editTable);
     HTableDescriptor htd = t.getTableDescriptor();
     HColumnDescriptor hcd = htd.getFamily(newColumn);

@@ -198,6 +198,14 @@ Trunk (unreleased changes)
    HBASE-679   Regionserver addresses are still not right in the new tables page
    HBASE-758   Throwing IOE read-only when should be throwing NSRE
    HBASE-743   bin/hbase migrate upgrade fails when redo logs exists
+   HBASE-754   The JRuby shell documentation is wrong in "get" and "put"
+               (Jean-Daniel Cryans via Stack)
+   HBASE-756   In HBase shell, the put command doesn't process the timestamp
+               (Jean-Daniel Cryans via Stack)
+   HBASE-757   REST mangles table names (Sishen via Stack)
+   HBASE-706   On OOME, regionserver sticks around and doesn't go down with cluster
+               (Jean-Daniel Cryans via Stack)
+   HBASE-759   TestMetaUtils failing on hudson
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
@@ -294,18 +302,12 @@ Trunk (unreleased changes)
                (Jean-Daniel Cryans via Stack)
    HBASE-731   Add a meta refresh tag to the Web ui for master and region server
                (Jean-Daniel Cryans via Stack)
-   HBASE-706   On OOME, regionserver sticks around and doesn't go down with cluster
-               (Jean-Daniel Cryans via Stack)
-   HBASE-735   hbase shell doesn't trap CTRL-C signal
-               (Jean-Daniel Cryans via Stack)
+   HBASE-735   hbase shell doesn't trap CTRL-C signal (Jean-Daniel Cryans via Stack)
    HBASE-730   On startup, rinse STARTCODE and SERVER from .META.
                (Jean-Daniel Cryans via Stack)
    HBASE-738   overview.html in need of updating (Izaak Rubin via Stack)
-   HBASE-754   The JRuby shell documentation is wrong in "get" and "put"
-               (Jean-Daniel Cryans via Stack)
-   HBASE-756   In HBase shell, the put command doesn't process the timestamp
-               (Jean-Daniel Cryans via Stack)
-   HBASE-757   REST mangles table names (Sishen via Stack)
+   HBASE-745   scaling of one regionserver, improving memory and cpu usage (partial)
+               (LN via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

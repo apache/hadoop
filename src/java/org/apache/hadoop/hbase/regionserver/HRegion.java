@@ -1008,18 +1008,19 @@ public class HRegion implements HConstants {
    */
   private boolean internalFlushcache() throws IOException {
     final long startTime = System.currentTimeMillis();
-    
     // Clear flush flag.
     this.flushRequested = false;
-    
     // Record latest flush time
     this.lastFlushTime = startTime;
-  
+    // If nothing to flush, return and avoid logging start/stop flush.
+    if (this.memcacheSize.get() <= 0) {
+      return false;
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started memcache flush for region " + this +
         ". Current region memcache size " +
           StringUtils.humanReadableInt(this.memcacheSize.get()));
-      }
+    }
 
     // Stop updates while we snapshot the memcache of all stores. We only have
     // to do this for a moment.  Its quick.  The subsequent sequence id that

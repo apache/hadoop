@@ -153,7 +153,6 @@ class CompactSplitThread extends Thread implements HConstants {
       }
       t = meta;
     }
-    LOG.info("Updating " + Bytes.toString(t.getTableName()) + " with region split info");
 
     // Mark old region as offline and split in META.
     // NOTE: there is no need for retry logic here. HTable does it for us.
@@ -177,9 +176,6 @@ class CompactSplitThread extends Thread implements HConstants {
     }
         
     // Now tell the master about the new regions
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Reporting region split to master");
-    }
     server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
       newRegions[1].getRegionInfo());
     LOG.info("region split, META updated, and report to master all" +

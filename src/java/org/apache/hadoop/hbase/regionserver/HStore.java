@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -699,6 +700,21 @@ public class HStore implements HConstants {
   // Compaction
   //////////////////////////////////////////////////////////////////////////////
 
+  /*
+   * @param files
+   * @return True if any of the files in <code>files</code> are References.
+   */
+  private boolean hasReferences(Collection<HStoreFile> files) {
+    if (files != null && files.size() > 0) {
+      for (HStoreFile hsf: files) {
+        if (hsf.isReference()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
   /**
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
@@ -742,6 +758,40 @@ public class HStore implements HConstants {
         LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
         return checkSplit();
       }
+
+      // HBASE-745, preparing all store file size for incremental compacting selection.
+      int countOfFiles = filesToCompact.size();
+      long totalSize = 0;
+      long[] fileSizes = new long[countOfFiles];
+      long skipped = 0;
+      int point = 0;
+      for (int i = 0; i < countOfFiles; i++) {
+        HStoreFile file = filesToCompact.get(i);
+        Path path = file.getMapFilePath();
+        int len = 0;
+        for (FileStatus fstatus:fs.listStatus(path)) {
+          len += fstatus.getLen();
+        }
+        fileSizes[i] = len;
+        totalSize += len;
+      }
+      if (!force && !hasReferences(filesToCompact)) {
+        // Here we select files for incremental compaction.  
+        // The rule is: if the largest(oldest) one is more than twice the 
+    	// size of the second, skip the largest, and continue to next...,
+        // until we meet the compactionThreshold limit.
+        for (point = 0; point < compactionThreshold - 1; point++) {
+          if (fileSizes[point] < fileSizes[point + 1] * 2) {
+            break;
+          }
+          skipped += fileSizes[point];
+        }
+        filesToCompact = new ArrayList<HStoreFile>(filesToCompact.subList(point,
+          countOfFiles));
+        LOG.info("Compaction size " + totalSize + ", skipped " + point +
+          ", " + skipped);
+      }
+
       /*
        * We create a new list of MapFile.Reader objects so we don't screw up
        * the caching associated with the currently-loaded ones. Our iteration-
@@ -794,10 +844,9 @@ public class HStore implements HConstants {
 
       // Move the compaction into place.
       completeCompaction(filesToCompact, compactedOutputFile);
-
       if (LOG.isDebugEnabled()) {
         LOG.debug("Completed compaction of " + this.storeNameStr +
-            " store size is " + StringUtils.humanReadableInt(storeSize));
+          " store size is " + StringUtils.humanReadableInt(storeSize));
       }
     }
     return checkSplit();

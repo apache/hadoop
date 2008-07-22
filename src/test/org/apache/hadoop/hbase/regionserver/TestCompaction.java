@@ -105,6 +105,7 @@ public class TestCompaction extends HBaseTestCase {
     assertTrue(cellValues.length == 3);
     r.flushcache();
     r.compactStores();
+    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
     // Now assert that there are 4 versions of a record only: thats the
     // 3 versions that should be in the compacted store and then the one more
     // we added when we flushed. But could be 3 only if the flush happened
@@ -132,6 +133,7 @@ public class TestCompaction extends HBaseTestCase {
     // Assert all delted.
     assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
     r.flushcache();
+    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
     assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
     // Add a bit of data and flush it so we for sure have the compaction limit
     // for store files.  Usually by this time we will have but if compaction
@@ -140,7 +142,9 @@ public class TestCompaction extends HBaseTestCase {
     // content to be certain.
     createSmallerStoreFile(this.r);
     r.flushcache();
+    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 3);
     r.compactStores();
+    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
     // Assert that the first row is still deleted.
     cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     assertNull(cellValues);
