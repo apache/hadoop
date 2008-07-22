@@ -41,12 +41,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Tests region server failover when a region server exits both cleanly and
  * when it aborts.
  */
-public class TestRegionServerExit extends HBaseClusterTestCase {
+public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
   HTable table;
 
   /** constructor */
-  public TestRegionServerExit() {
+  public DisabledTestRegionServerExit() {
     super(2);
     conf.setInt("ipc.client.connect.max.retries", 5); // reduce ipc retries
     conf.setInt("ipc.client.timeout", 10000);         // and ipc timeout 
@@ -81,7 +81,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
    * Test is flakey up on hudson.  Needs work.
    * @throws IOException
    */
-  public void disabledTestCleanExit() throws IOException {
+  public void testCleanExit() throws IOException {
     // When the META table can be opened, the region servers are running
     new HTable(this.conf, HConstants.META_TABLE_NAME);
     // Create table and add a row.
