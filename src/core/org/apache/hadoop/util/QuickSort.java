@@ -75,7 +75,6 @@ public final class QuickSort implements IndexedSorter {
     }
     if (--depth < 0) {
       // give up
-      System.out.print("H");
       alt.sort(s, p, r, rep);
       return;
     }
