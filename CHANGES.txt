@@ -150,6 +150,9 @@ Trunk (unreleased changes)
     this ensures we can now run more than one instance of SleepJob
     simultaneously. (Chris Douglas via acmurthy) 
 
+    HADOOP-3592. Improve exception handling in IOUtils. (Bill de hOra via
+    cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
