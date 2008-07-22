@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     HADOOP-3592. Improve exception handling in IOUtils. (Bill de hOra via
     cdouglas)
 
+    HADOOP-3795. Fix saving image files on Namenode with different checkpoint
+    stamps. (Lohit Vijayarenu via mahadev)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

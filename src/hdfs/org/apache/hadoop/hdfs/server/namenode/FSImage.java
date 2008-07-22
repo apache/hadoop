@@ -654,6 +654,12 @@ public class FSImage extends Storage {
       assert getImageFile(sd, NameNodeFile.IMAGE).exists() :
         "Image file must exist.";
       checkpointTime = readCheckpointTime(sd);
+      if ((checkpointTime != Long.MIN_VALUE) && 
+          (checkpointTime != latestCheckpointTime)) {
+        // Force saving of new image if checkpoint time
+        // is not same in all of the storage directories.
+        needToSave |= true;
+      }
       if (latestCheckpointTime < checkpointTime) {
         latestCheckpointTime = checkpointTime;
         latestSD = sd;
