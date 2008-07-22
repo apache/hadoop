@@ -56,14 +56,12 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 
 public class CreateEditsLog {
   static final String BASE_PATH = "/createdViaInjectingInEditsLog";
-  static final String BASE_PATH_PLUS_FILEPREFIX = BASE_PATH + "/file";
-  
   static final String EDITS_DIR = "/tmp/EditsLogOut";
-
   static String edits_dir = EDITS_DIR;
   
   static void addFiles(FSEditLog editLog, int numFiles, short replication, 
-                                  int blocksPerFile, long startingBlockId) {
+                         int blocksPerFile, long startingBlockId,
+                         FileNameGenerator nameGenerator) {
     
     PermissionStatus p = new PermissionStatus("joeDoe", "people",
                                       new FsPermission((short)0777));
@@ -80,7 +78,7 @@ public class CreateEditsLog {
     long currentBlockId = startingBlockId;
     long bidAtSync = startingBlockId;
 
-    for (int iF = 1; iF <= numFiles; iF++) {
+    for (int iF = 0; iF < numFiles; iF++) {
       for (int iB = 0; iB < blocksPerFile; ++iB) {
          blocks[iB].setBlockId(currentBlockId++);
       }
@@ -89,11 +87,16 @@ public class CreateEditsLog {
 
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
                       null, replication, 0, blockSize, blocks, p, "", "", null);
-        String path = BASE_PATH_PLUS_FILEPREFIX  + iF +
-          "_B" + blocks[0].getBlockId() + 
-          "_to_B" + blocks[blocksPerFile-1].getBlockId();
-        editLog.logOpenFile(path, inode);
-        editLog.logCloseFile(path, inode);
+        String path = iF + "_B" + blocks[0].getBlockId() + 
+                      "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
+        String filePath = nameGenerator.getNextFileName(path);
+        if ((iF % nameGenerator.getFilesPerDirectory())  == 0) {
+          String currentDir = nameGenerator.getCurrentDir();
+          dirInode = new INodeDirectory(p, 0L);
+          editLog.logMkDir(currentDir, dirInode);
+        }
+        editLog.logOpenFile(filePath, inode);
+        editLog.logCloseFile(filePath, inode);
 
         if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
           editLog.logSync();
@@ -145,6 +148,8 @@ public class CreateEditsLog {
     }
 
     for (int i = 0; i < args.length; i++) { // parse command line
+      if (args[i].equals("-h"))
+        printUsageExit();
       if (args[i].equals("-f")) {
        if (i + 3 >= args.length || args[i+1].startsWith("-") || 
            args[i+2].startsWith("-") || args[i+3].startsWith("-")) {
@@ -191,12 +196,14 @@ public class CreateEditsLog {
     }
   
     FSImage fsImage = new FSImage(new File(edits_dir));
+    FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
 
 
     FSEditLog editLog = fsImage.getEditLog();
     editLog.createEditLogFile(fsImage.getFsEditName());
     editLog.open();
-    addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId);
+    addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
+             nameGenerator);
     editLog.logSync();
     editLog.close();
   }

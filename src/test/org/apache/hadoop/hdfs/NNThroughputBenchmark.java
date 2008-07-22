@@ -365,71 +365,6 @@ public class NNThroughputBenchmark implements FSConstants {
   }
 
   /**
-   * File name generator.
-   * 
-   * Each directory contains not more than a fixed number (filesPerDir) 
-   * of files and directories.
-   * When the number of files in one directory reaches the maximum,
-   * the generator creates a new directory and proceeds generating files in it.
-   * The generated namespace tree is balanced that is any path to a leaf
-   * file is not less than the height of the tree minus one.
-   */
-  private static class FileGenerator {
-    private static final int DEFAULT_FILES_PER_DIRECTORY = 32;
-    // Average file name size is 16.5 bytes
-    private static final String FILE_NAME_PREFFIX ="ThrouputBenchfile"; // 17 bytes
-    private static final String DIR_NAME_PREFFIX = "ThrouputBenchDir";  // 16 bytes
-    // private static final int NUM_CLIENTS = 100;
-
-    private int[] pathIndecies = new int[20]; // this will support up to 32**20 = 2**100 = 10**30 files
-    private String baseDir;
-    private String currentDir;
-    private int filesPerDirectory = DEFAULT_FILES_PER_DIRECTORY;
-    private long fileCount;
-
-    FileGenerator(String baseDir, int filesPerDir) {
-      this.baseDir = baseDir;
-      this.filesPerDirectory = filesPerDir;
-      reset();
-    }
-
-    String getNextDirName() {
-      int depth = 0;
-      while(pathIndecies[depth] >= 0)
-        depth++;
-      int level;
-      for(level = depth-1; 
-          level >= 0 && pathIndecies[level] == filesPerDirectory-1; level--)
-        pathIndecies[level] = 0;
-      if(level < 0)
-        pathIndecies[depth] = 0;
-      else
-        pathIndecies[level]++;
-      level = 0;
-      String next = baseDir;
-      while(pathIndecies[level] >= 0)
-        next = next + "/" + DIR_NAME_PREFFIX + pathIndecies[level++];
-      return next; 
-    }
-
-    synchronized String getNextFileName() {
-      long fNum = fileCount % filesPerDirectory;
-      if(fNum == 0) {
-        currentDir = getNextDirName();
-      }
-      String fn = currentDir + "/" + FILE_NAME_PREFFIX + fileCount;
-      fileCount++;
-      return fn;
-    }
-
-    private synchronized void reset() {
-      Arrays.fill(pathIndecies, -1);
-      fileCount = 0L;
-      currentDir = "";
-    }
-  }
-
-  /**
    * File creation statistics.
    * 
    * Each thread creates the same (+ or -1) number of files.
@@ -442,7 +377,7 @@ public class NNThroughputBenchmark implements FSConstants {
     static final String OP_CREATE_USAGE = 
       "-op create [-threads T] [-files N] [-filesPerDir P]";
 
-    protected FileGenerator nameGenerator;
+    protected FileNameGenerator nameGenerator;
     protected String[][] fileNames;
 
     CreateFileStats(String[] args) {
@@ -470,7 +405,7 @@ public class NNThroughputBenchmark implements FSConstants {
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
-      nameGenerator = new FileGenerator(getBaseDir(), nrFilesPerDir);
+      nameGenerator = new FileNameGenerator(getBaseDir(), nrFilesPerDir);
     }
 
     void generateInputs(int[] opsPerThread) throws IOException {
@@ -483,7 +418,8 @@ public class NNThroughputBenchmark implements FSConstants {
         int threadOps = opsPerThread[idx];
         fileNames[idx] = new String[threadOps];
         for(int jdx=0; jdx < threadOps; jdx++)
-          fileNames[idx][jdx] = nameGenerator.getNextFileName();
+          fileNames[idx][jdx] = nameGenerator.
+                                  getNextFileName("ThroughputBench");
       }
     }
 
@@ -516,7 +452,7 @@ public class NNThroughputBenchmark implements FSConstants {
       LOG.info("--- " + getOpName() + " inputs ---");
       LOG.info("nrFiles = " + numOpsRequired);
       LOG.info("nrThreads = " + numThreads);
-      LOG.info("nrFilesPerDir = " + nameGenerator.filesPerDirectory);
+      LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
       printStats();
     }
   }
@@ -548,7 +484,8 @@ public class NNThroughputBenchmark implements FSConstants {
               "-op", "create", 
               "-threads", String.valueOf(this.numThreads), 
               "-files", String.valueOf(numOpsRequired),
-              "-filesPerDir", String.valueOf(nameGenerator.filesPerDirectory)};
+              "-filesPerDir", 
+              String.valueOf(nameGenerator.getFilesPerDirectory())};
       CreateFileStats opCreate =  new CreateFileStats(createArgs);
       opCreate.benchmark();
       LOG.info("Created " + numOpsRequired + " files.");
@@ -782,12 +719,12 @@ public class NNThroughputBenchmark implements FSConstants {
 
       // create files 
       LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
-      FileGenerator nameGenerator;
-      nameGenerator = new FileGenerator(getBaseDir(), 100);
+      FileNameGenerator nameGenerator;
+      nameGenerator = new FileNameGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
       nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
       for(int idx=0; idx < nrFiles; idx++) {
-        String fileName = nameGenerator.getNextFileName();
+        String fileName = nameGenerator.getNextFileName("ThroughputBench");
         nameNode.create(fileName, FsPermission.getDefault(),
                         clientName, true, replication, BLOCK_SIZE);
         addBlocks(fileName, clientName);
