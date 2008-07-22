@@ -1617,9 +1617,15 @@ public class DFSClient implements FSConstants {
         //
         int diff = (int)(targetPos - pos);
         if (diff <= TCP_WINDOW_SIZE) {
-          pos += blockReader.skip(diff);
-          if (pos == targetPos) {
-            done = true;
+          try {
+            pos += blockReader.skip(diff);
+            if (pos == targetPos) {
+              done = true;
+            }
+          } catch (IOException e) {//make following read to retry
+            LOG.debug("Exception while seek to " + targetPos + " from "
+                      + currentBlock +" of " + src + " from " + currentNode + 
+                      ": " + StringUtils.stringifyException(e));
           }
         }
       }

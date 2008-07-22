@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HADOOP-3624. Improving createeditslog to create tree directory structure.
     (Lohit Vijayarenu via mahadev)
 
+    HADOOP-3778. DFSInputStream.seek() did not retry in case of some errors.
+    (LN via rangadi)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
