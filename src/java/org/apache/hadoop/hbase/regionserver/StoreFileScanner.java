@@ -377,7 +377,8 @@ implements ChangedReadersObserver {
       ViableRow viableRow = getNextViableRow();
       openReaders(viableRow.getRow());
       LOG.debug("Replaced Scanner Readers at row " +
-        Bytes.toString(viableRow.getRow()));
+        (viableRow == null || viableRow.getRow() == null? "null":
+          Bytes.toString(viableRow.getRow())));
     } finally {
       this.lock.writeLock().unlock();
     }
