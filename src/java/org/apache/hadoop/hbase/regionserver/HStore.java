@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -861,8 +862,8 @@ public class HStore implements HConstants {
    * us to throw out deleted values or obsolete versions.
    */
   private void compactHStoreFiles(final MapFile.Writer compactedOut,
-      final List<MapFile.Reader> readers) throws IOException {
-    
+      final List<MapFile.Reader> readers)
+  throws IOException {
     MapFile.Reader[] rdrs = readers.toArray(new MapFile.Reader[readers.size()]);
     try {
       HStoreKey[] keys = new HStoreKey[rdrs.length];
@@ -897,7 +898,7 @@ public class HStore implements HConstants {
         // therefore the one whose value should make it out to the compacted
         // store file.
         int smallestKey = -1;
-        for(int i = 0; i < rdrs.length; i++) {
+        for (int i = 0; i < rdrs.length; i++) {
           if(done[i]) {
             continue;
           }
@@ -941,8 +942,7 @@ public class HStore implements HConstants {
 
         // Advance the smallest key.  If that reader's all finished, then 
         // mark it as done.
-        if(!rdrs[smallestKey].next(keys[smallestKey],
-            vals[smallestKey])) {
+        if (!rdrs[smallestKey].next(keys[smallestKey], vals[smallestKey])) {
           done[smallestKey] = true;
           rdrs[smallestKey].close();
           rdrs[smallestKey] = null;
@@ -950,14 +950,16 @@ public class HStore implements HConstants {
         }
       }
     } finally {
-      closeCompactionReaders(readers);
+      closeCompactionReaders(Arrays.asList(rdrs));
     }
   }
   
   private void closeCompactionReaders(final List<MapFile.Reader> rdrs) {
     for (MapFile.Reader r: rdrs) {
       try {
-        r.close();
+        if (r != null) {
+          r.close();
+        }
       } catch (IOException e) {
         LOG.warn("Exception closing reader for " + this.storeNameStr, e);
       }
