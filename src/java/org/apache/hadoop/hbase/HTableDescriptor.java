@@ -69,7 +69,6 @@ public class HTableDescriptor implements WritableComparable {
   public static final String FAMILIES = "FAMILIES";
 
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
-  public static final String IN_MEMORY = "IN_MEMORY";
   public static final String READONLY = "READONLY";
   public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
   public static final String IS_ROOT = "IS_ROOT";
@@ -269,7 +268,7 @@ public class HTableDescriptor implements WritableComparable {
    * HRegionServer cache only
    */
   public boolean isInMemory() {
-    String value = getValue(IN_MEMORY);
+    String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
       return Boolean.valueOf(value);
     return DEFAULT_IN_MEMORY;
@@ -280,7 +279,7 @@ public class HTableDescriptor implements WritableComparable {
    * the HRegionServer cache only.
    */
   public void setInMemory(boolean inMemory) {
-    setValue(IN_MEMORY, Boolean.toString(inMemory));
+    setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
   /**

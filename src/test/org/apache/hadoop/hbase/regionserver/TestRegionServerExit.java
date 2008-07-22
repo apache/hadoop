@@ -78,6 +78,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
   
   /**
    * Test abort of region server.
+   * Test is flakey up on hudson.  Needs work.
    * @throws IOException
    */
   public void disabledTestCleanExit() throws IOException {

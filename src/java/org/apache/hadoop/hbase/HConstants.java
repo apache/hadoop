@@ -225,4 +225,5 @@ public interface HConstants {
 
   public static final String NAME = "NAME";
   public static final String VERSIONS = "VERSIONS";
+  public static final String IN_MEMORY = "IN_MEMORY";
 }

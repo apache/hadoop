@@ -25,6 +25,7 @@ module HBase
   TIMESTAMP = "TIMESTAMP"
   NAME = HConstants::NAME
   VERSIONS = HConstants::VERSIONS
+  IN_MEMORY = HConstants::IN_MEMORY
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
   ENDROW = STOPROW
@@ -158,7 +159,7 @@ module HBase
         arg[VERSIONS]? arg[VERSIONS]: HColumnDescriptor::DEFAULT_VERSIONS,
         arg[HColumnDescriptor::COMPRESSION]? HColumnDescriptor::CompressionType::valueOf(arg[HColumnDescriptor::COMPRESSION]):
           HColumnDescriptor::DEFAULT_COMPRESSION,
-        arg[HColumnDescriptor::IN_MEMORY]? arg[HColumnDescriptor::IN_MEMORY]: HColumnDescriptor::DEFAULT_IN_MEMORY,
+        arg[IN_MEMORY]? arg[IN_MEMORY]: HColumnDescriptor::DEFAULT_IN_MEMORY,
         arg[HColumnDescriptor::BLOCKCACHE]? arg[HColumnDescriptor::BLOCKCACHE]: HColumnDescriptor::DEFAULT_BLOCKCACHE,
         arg[HColumnDescriptor::LENGTH]? arg[HColumnDescriptor::LENGTH]: HColumnDescriptor::DEFAULT_LENGTH,
         arg[HColumnDescriptor::TTL]? arg[HColumnDescriptor::TTL]: HColumnDescriptor::DEFAULT_TTL,

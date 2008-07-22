@@ -62,16 +62,13 @@ public class HColumnDescriptor implements WritableComparable {
   }
 
   public static final String COMPRESSION = "COMPRESSION";
-  public static final String IN_MEMORY = "IN_MEMORY";
   public static final String BLOCKCACHE = "BLOCKCACHE";
   public static final String LENGTH = "LENGTH";
   public static final String TTL = "TTL";
-  public static final String VERSIONS = "VERSIONS";
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
   public static final String MAPFILE_INDEX_INTERVAL =
       "MAPFILE_INDEX_INTERVAL";
-  public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
 
   /**
    * Default compression type.
@@ -322,7 +319,7 @@ public class HColumnDescriptor implements WritableComparable {
   
   /** @return maximum number of versions */
   public int getMaxVersions() {
-    String value = getValue(VERSIONS);
+    String value = getValue(HConstants.VERSIONS);
     if (value != null)
       return Integer.valueOf(value);
     return DEFAULT_VERSIONS;
@@ -332,7 +329,7 @@ public class HColumnDescriptor implements WritableComparable {
    * @param maxVersions maximum number of versions
    */
   public void setMaxVersions(int maxVersions) {
-    setValue(VERSIONS, Integer.toString(maxVersions));
+    setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
   }
   
   /**
@@ -359,7 +356,7 @@ public class HColumnDescriptor implements WritableComparable {
    * @return True if we are to keep all in use HRegionServer cache.
    */
   public boolean isInMemory() {
-    String value = getValue(IN_MEMORY);
+    String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
       return Boolean.valueOf(value);
     return DEFAULT_IN_MEMORY;
@@ -370,7 +367,7 @@ public class HColumnDescriptor implements WritableComparable {
    * cache
    */
   public void setInMemory(boolean inMemory) {
-    setValue(IN_MEMORY, Boolean.toString(inMemory));
+    setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
   /**
