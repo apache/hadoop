@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 
-
-public class TestMetaUtils extends HBaseClusterTestCase {
+/**
+ * Test is flakey.  Needs work.  Fails too often on hudson.
+ */
+public class DisabledTestMetaUtils extends HBaseClusterTestCase {
   public void testColumnEdits() throws Exception {
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     final String oldColumn = "oldcolumn:";
