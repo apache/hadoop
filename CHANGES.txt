@@ -211,6 +211,7 @@ Release 0.2.0
                (Andrew Purtell via Stack)
    HBASE-764   The name of column request has padding zero using REST interface
                (Sishen Freecity via Stack)
+   HBASE-750   NPE caused by StoreFileScanner.updateReaders
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
