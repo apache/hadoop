@@ -131,6 +131,13 @@ public class RowResult implements Writable, Map<byte [], Cell> {
   }
   
   /**
+   * Get the Cell that corresponds to column, using a String key
+   */
+  public Cell get(String key) {
+    return get(Bytes.toBytes(key));
+  }
+
+  /**
    * Row entry.
    */
   public class Entry implements Map.Entry<byte [], Cell> {

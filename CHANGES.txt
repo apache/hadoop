@@ -207,6 +207,8 @@ Release 0.2.0
                (Jean-Daniel Cryans via Stack)
    HBASE-759   TestMetaUtils failing on hudson
    HBASE-761   IOE: Stream closed exception all over logs
+   HBASE-763   ClassCastException from RowResult.get(String)
+               (Andrew Purtell via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
