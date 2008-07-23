@@ -401,14 +401,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.client.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/dfs/tmp</value>
-  <description>Determines where on the local filesystem an DFS client
-  should store its blocks before it sends them to the datanode.
-  </description>
-</property>
-
-<property>
   <name>dfs.data.dir</name>
   <value>${hadoop.tmp.dir}/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
