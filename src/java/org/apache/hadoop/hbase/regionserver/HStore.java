@@ -390,7 +390,6 @@ public class HStore implements HConstants {
       }
       curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
         family.getName(), fid, reference);
-      storeSize += curfile.length();
       long storeSeqId = -1;
       try {
         storeSeqId = curfile.loadInfo(fs);
@@ -435,6 +434,7 @@ public class HStore implements HConstants {
           continue;
         }
       }
+      storeSize += curfile.length();
       
       // TODO: Confirm referent exists.
       
