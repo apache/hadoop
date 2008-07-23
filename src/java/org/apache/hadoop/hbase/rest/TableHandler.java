@@ -174,7 +174,7 @@ public class TableHandler extends GenericHandler {
 
         // copy over those cells with requested column names
         for(byte [] current_column: columns_retrieved) {
-          if(requested_columns_set.contains(current_column.toString())){
+          if (requested_columns_set.contains(Bytes.toString(current_column))) {
             m.put(current_column, prefiltered_result.get(current_column));            
           }
         }
@@ -295,9 +295,8 @@ public class TableHandler extends GenericHandler {
     
     try{
       // start an update
-      Text key = new Text(row);
       batchUpdate = timestamp == null ? 
-        new BatchUpdate(key) : new BatchUpdate(key, Long.parseLong(timestamp));
+        new BatchUpdate(row) : new BatchUpdate(row, Long.parseLong(timestamp));
 
       // set the columns from the xml
       NodeList columns = doc.getElementsByTagName("column");
@@ -308,7 +307,7 @@ public class TableHandler extends GenericHandler {
 
         // extract the name and value children
         Node name_node = column.getElementsByTagName("name").item(0);
-        Text name = new Text(name_node.getFirstChild().getNodeValue());
+        String name = name_node.getFirstChild().getNodeValue();
 
         Node value_node = column.getElementsByTagName("value").item(0);
 
@@ -356,7 +355,7 @@ public class TableHandler extends GenericHandler {
           XMLOutputter outputter = getXMLOutputter(response.getWriter());
           outputter.startTag("regions");
           for (int i = 0; i < startKeys.length; i++) {
-            doElement(outputter, "region", startKeys[i].toString());
+            doElement(outputter, "region", Bytes.toString(startKeys[i]));
           }
           outputter.endTag();
           outputter.endDocument();
@@ -368,7 +367,7 @@ public class TableHandler extends GenericHandler {
           PrintWriter out = response.getWriter();
           for (int i = 0; i < startKeys.length; i++) {
             // TODO: Add in the server location.  Is it needed?
-            out.print(startKeys[i].toString());
+            out.print(Bytes.toString(startKeys[i]));
           }
           out.close();
         break;
@@ -453,8 +452,6 @@ public class TableHandler extends GenericHandler {
     
     // pull the row key out of the path
     String row = URLDecoder.decode(pathSegments[2], HConstants.UTF8_ENCODING);
-    
-    Text key = new Text(row);
 
     String[] columns = request.getParameterValues(COLUMN);
         
@@ -472,7 +469,7 @@ public class TableHandler extends GenericHandler {
       } else{
         // delete each column in turn      
         for(int i = 0; i < columns.length; i++){
-          table.deleteAll(key, new Text(columns[i]));
+          table.deleteAll(row, columns[i]);
         }
       }
       response.setStatus(202);
