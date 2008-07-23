@@ -214,6 +214,7 @@ Release 0.2.0
    HBASE-750   NPE caused by StoreFileScanner.updateReaders
    HBASE-769   TestMasterAdmin fails throwing RegionOfflineException when we're
                expecting IllegalStateException
+   HBASE-766   FileNotFoundException trying to load HStoreFile 'data'
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
