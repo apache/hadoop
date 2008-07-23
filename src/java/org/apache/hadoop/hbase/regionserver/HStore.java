@@ -789,8 +789,10 @@ public class HStore implements HConstants {
         }
         filesToCompact = new ArrayList<HStoreFile>(filesToCompact.subList(point,
           countOfFiles));
-        LOG.info("Compaction size " + totalSize + ", skipped " + point +
-          ", " + skipped);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Compaction size " + totalSize + ", skipped " + point +
+            ", " + skipped);
+        }
       }
 
       /*
