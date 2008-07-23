@@ -67,12 +67,8 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     try {
       @SuppressWarnings("unused")
       HTable table = new HTable(conf, testDesc.getName());
-    } catch (IllegalStateException e) {
+    } catch (org.apache.hadoop.hbase.client.RegionOfflineException e) {
       // Expected
-      
-      // This exception is not actually thrown.  It doesn't look like it should
-      // throw since the connection manager is already filled w/ data
-      // -- noticed by St.Ack 09/09/2007
     }
 
     admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
