@@ -215,6 +215,7 @@ Release 0.2.0
    HBASE-769   TestMasterAdmin fails throwing RegionOfflineException when we're
                expecting IllegalStateException
    HBASE-766   FileNotFoundException trying to load HStoreFile 'data'
+   HBASE-770   Update HBaseRPC to match hadoop 0.17 RPC
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
