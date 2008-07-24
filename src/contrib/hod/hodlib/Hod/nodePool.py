@@ -112,7 +112,7 @@ class NodePool:
     """Check if job can run by looking at any user/job limits"""
     raise NotImplementedError
 
-  def updateWorkerInfo(self, workerInfoMap):
+  def updateWorkerInfo(self, workerInfoMap, jobId):
     """Update information about the workers started by this NodePool."""
     raise NotImplementedError
 

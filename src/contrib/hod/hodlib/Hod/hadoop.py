@@ -509,6 +509,8 @@ class hadoopCluster:
                     workerInfoMap = {}
                     workerInfoMap['HDFS UI'] = 'http://%s' % self.hdfsInfo
                     workerInfoMap['Mapred UI'] = 'http://%s' % self.mapredInfo
+                    if mapredAddr.find(':') != -1:
+                      workerInfoMap['Mapred RPC Port'] = mapredAddr.split(':')[1]
                     ret = self.__nodePool.updateWorkerInfo(workerInfoMap, self.jobId)
                     if ret != 0:
                       self.__log.warn('Could not update HDFS and Mapred information.' \
