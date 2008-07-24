@@ -233,7 +233,7 @@ class JobInProgress {
       jobMetrics.setTag("group", group.getDisplayName());
       for (Counters.Counter counter : group) {
         jobMetrics.setTag("counter", counter.getDisplayName());
-        jobMetrics.setMetric("value", counter.getCounter());
+        jobMetrics.setMetric("value", (float) counter.getCounter());
         jobMetrics.update();
       }
     }

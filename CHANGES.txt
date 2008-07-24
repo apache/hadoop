@@ -931,6 +931,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3645. MetricsTimeVaryingRate returns wrong value for
     metric_avg_time. (Lohit Vijayarenu via hairong)
 
+    HADOOP-3521. Reverted the missing cast to float for sending Counters' values
+    to Hadoop metrics which was removed by HADOOP-544. (acmurthy)   
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
