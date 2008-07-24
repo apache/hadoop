@@ -67,30 +67,28 @@ public class FileUtil {
   
   /**
    * Delete a directory and all its contents.  If
-   * we return false, the directory might be partially-deleted.
-   *
-   * @param dir the directory to delete
-   * @return true if fully deleted, otherwise false
-   * @throws java.io.IOException
+   * we return false, the directory may be partially-deleted.
    */
   public static boolean fullyDelete(File dir) throws IOException {
     File contents[] = dir.listFiles();
     if (contents != null) {
-      for (File content : contents) {
-        if (content.isFile()) {
-          if (!content.delete()) {
+      for (int i = 0; i < contents.length; i++) {
+        if (contents[i].isFile()) {
+          if (!contents[i].delete()) {
             return false;
           }
         } else {
           //try deleting the directory
           // this might be a symlink
-          if (content.delete()) {
+          boolean b = false;
+          b = contents[i].delete();
+          if (b){
             //this was indeed a symlink or an empty directory
             continue;
           }
           // if not an empty directory or symlink let
           // fullydelete handle it.
-          if (!fullyDelete(content)) {
+          if (!fullyDelete(contents[i])) {
             return false;
           }
         }
@@ -199,28 +197,20 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
 
-    if (srcFS.getFileStatus(src).isDir()) {
+    if (srcFS.isDirectory(src)) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
       }
       FileStatus contents[] = srcFS.listStatus(src);
-      for (FileStatus content : contents) {
-        copy(srcFS, content.getPath(), dstFS,
-          new Path(dst, content.getPath().getName()),
-          deleteSource, overwrite, conf);
+      for (int i = 0; i < contents.length; i++) {
+        copy(srcFS, contents[i].getPath(), dstFS, 
+             new Path(dst, contents[i].getPath().getName()),
+             deleteSource, overwrite, conf);
       }
     } else if (srcFS.isFile(src)) {
-      InputStream in = null;
-      OutputStream out = null;
-      try {
-        in = srcFS.open(src);
-        out = dstFS.create(dst, overwrite);
-      } catch (IOException e) {
-        IOUtils.closeStream(in);
-        IOUtils.closeStream(out);
-        throw e;
-      }
+      InputStream in = srcFS.open(src);
+      OutputStream out = dstFS.create(dst, overwrite);
       IOUtils.copyBytes(in, out, conf, true);
     } else {
       throw new IOException(src.toString() + ": No such file or directory");
@@ -240,29 +230,30 @@ public class FileUtil {
                                   Configuration conf, String addString) throws IOException {
     dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
-    if (!srcFS.getFileStatus(srcDir).isDir())
+    if (!srcFS.isDirectory(srcDir))
       return false;
    
     OutputStream out = dstFS.create(dstFile);
     
     try {
       FileStatus contents[] = srcFS.listStatus(srcDir);
-      for (FileStatus content : contents) {
-        if (!content.isDir()) {
-          InputStream in = srcFS.open(content.getPath());
+      for (int i = 0; i < contents.length; i++) {
+        if (!contents[i].isDir()) {
+          InputStream in = srcFS.open(contents[i].getPath());
           try {
             IOUtils.copyBytes(in, out, conf, false);
-            if (addString != null)
+            if (addString!=null)
               out.write(addString.getBytes("UTF-8"));
                 
           } finally {
-            IOUtils.closeStream(in);
+            in.close();
           } 
         }
       }
     } finally {
-      IOUtils.closeStream(out);
+      out.close();
     }
+    
 
     if (deleteSource) {
       return srcFS.delete(srcDir, true);
@@ -283,48 +274,41 @@ public class FileUtil {
         return false;
       }
       File contents[] = src.listFiles();
-      for (File content : contents) {
-        copy(content, dstFS, new Path(dst, content.getName()),
+      for (int i = 0; i < contents.length; i++) {
+        copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
              deleteSource, conf);
       }
     } else if (src.isFile()) {
-      InputStream in = null;
-      try {
-        in = new FileInputStream(src);
-        IOUtils.copyBytes(in, dstFS.create(dst), conf);
-      } catch (IOException e) {
-        IOUtils.closeStream(in);
-        throw e;
-      }
+      InputStream in = new FileInputStream(src);
+      IOUtils.copyBytes(in, dstFS.create(dst), conf);
     } else {
       throw new IOException(src.toString() + 
                             ": No such file or directory");
     }
-    return !deleteSource || FileUtil.fullyDelete(src);
+    if (deleteSource) {
+      return FileUtil.fullyDelete(src);
+    } else {
+      return true;
+    }
   }
 
   /** Copy FileSystem files to local files. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              File dst, boolean deleteSource,
                              Configuration conf) throws IOException {
-    if (srcFS.getFileStatus(src).isDir()) {
+    if (srcFS.isDirectory(src)) {
       if (!dst.mkdirs()) {
         return false;
       }
       FileStatus contents[] = srcFS.listStatus(src);
-      for (FileStatus content : contents) {
-        copy(srcFS, content.getPath(),
-          new File(dst, content.getPath().getName()), deleteSource, conf);
+      for (int i = 0; i < contents.length; i++) {
+        copy(srcFS, contents[i].getPath(), 
+             new File(dst, contents[i].getPath().getName()),
+             deleteSource, conf);
       }
     } else if (srcFS.isFile(src)) {
-      InputStream in = null;
-      try {
-        in = srcFS.open(src);
-        IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
-      } catch (IOException e) {
-        IOUtils.closeStream(in);
-        throw e;
-      }
+      InputStream in = srcFS.open(src);
+      IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
     } else {
       throw new IOException(src.toString() + 
                             ": No such file or directory");
@@ -419,8 +403,8 @@ public class FileUtil {
     } else {
       size = dir.length();
       File[] allFiles = dir.listFiles();
-      for (File allFile : allFiles) {
-        size = size + getDU(allFile);
+      for (int i = 0; i < allFiles.length; i++) {
+        size = size + getDU(allFiles[i]);
       }
       return size;
     }
@@ -459,10 +443,10 @@ public class FileUtil {
                 out.write(buffer, 0, i);
               }
             } finally {
-              IOUtils.closeStream(out);
+              out.close();
             }
           } finally {
-            IOUtils.closeStream(in);
+            in.close();
           }
         }
       }
@@ -525,7 +509,7 @@ public class FileUtil {
       OS_TYPE_UNIX, 
       OS_TYPE_WINXP,
       OS_TYPE_SOLARIS,
-      OS_TYPE_MAC
+      OS_TYPE_MAC; 
     }
   
     private static String[] hardLinkCommand;
@@ -598,7 +582,9 @@ public class FileUtil {
     public static int getLinkCount(File fileName) throws IOException {
       int len = getLinkCountCommand.length;
       String[] cmd = new String[len + 1];
-      System.arraycopy(getLinkCountCommand, 0, cmd, 0, len);
+      for (int i = 0; i < len; i++) {
+        cmd[i] = getLinkCountCommand[i];
+      }
       cmd[len] = fileName.toString();
       String inpMsg = "";
       String errMsg = "";
@@ -638,8 +624,8 @@ public class FileUtil {
                               " on file:" + fileName);
       } finally {
         process.destroy();
-        IOUtils.closeStream(in);
-        IOUtils.closeStream(err);
+        if (in != null) in.close();
+        if (err != null) err.close();
       }
     }
   }
@@ -688,7 +674,7 @@ public class FileUtil {
    * @see java.io.File#createTempFile(String, String, File)
    * @see java.io.File#deleteOnExit()
    */
-  public static File createLocalTempFile(final File basefile,
+  public static final File createLocalTempFile(final File basefile,
                                                final String prefix,
                                                final boolean isDeleteOnExit)
     throws IOException {
