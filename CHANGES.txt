@@ -318,6 +318,8 @@ Release 0.2.0
    HBASE-738   overview.html in need of updating (Izaak Rubin via Stack)
    HBASE-745   scaling of one regionserver, improving memory and cpu usage (partial)
                (LN via Stack)
+   HBASE-746   Batching row mutations via thrift (Tim Sell via Stack)
+   HBASE-772   Up default lease period from 60 to 120 seconds
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

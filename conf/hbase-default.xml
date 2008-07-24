@@ -128,7 +128,7 @@
   </property>
   <property>
     <name>hbase.master.lease.period</name>
-    <value>60000</value>
+    <value>120000</value>
     <description>HMaster server lease period in milliseconds. Default is
     60 seconds.  Region servers must report in within this period else
     they are considered dead.  On loaded cluster, may need to up this
@@ -136,7 +136,7 @@
   </property>
   <property>
     <name>hbase.hbasemaster.maxregionopen</name>
-    <value>60000</value>
+    <value>120000</value>
     <description>Period to wait for a region open.  If regionserver
     takes longer than this interval, assign to a new regionserver.
     </description>
