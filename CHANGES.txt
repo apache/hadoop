@@ -917,6 +917,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3806. Remove debug statement to stdout from QuickSort. (cdouglas)
 
+    HADOOP-3776. Fix NPE at NameNode when datanode reports a block after it is
+    deleted at NameNode. (rangadi)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

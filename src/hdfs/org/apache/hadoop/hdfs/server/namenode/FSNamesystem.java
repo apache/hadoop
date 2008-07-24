@@ -2694,15 +2694,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                     DatanodeDescriptor node,
                                     DatanodeDescriptor delNodeHint) {
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
-    boolean added = false;
-    if(storedBlock == null) { // block is not in the blocksMaps
-      // add block to the blocksMap and to the data-node
-      added = blocksMap.addNode(block, node, defaultReplication);
-      storedBlock = blocksMap.getStoredBlock(block);
-    } else {
-      // add block to the data-node
-      added = node.addBlock(storedBlock);
+    if(storedBlock == null || storedBlock.getINode() == null) {
+      // If this block does not belong to anyfile, then we are done.
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
+                                   + "addStoredBlock request received for " 
+                                   + block + " on " + node.getName()
+                                   + " size " + block.getNumBytes()
+                                   + " But it does not belong to any file.");
+      // we could add this block to invalidate set of this datanode. 
+      // it will happen in next block report otherwise.
+      return block;      
     }
+     
+    // add block to the data-node
+    boolean added = node.addBlock(storedBlock);
+    
     assert storedBlock != null : "Block must be stored by now";
 
     if (block != storedBlock) {
@@ -2779,8 +2785,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                    + block + " on " + node.getName()
                                    + " size " + block.getNumBytes());
     }
-
-    assert isValidBlock(storedBlock) : "Trying to add an invalid block";
 
     // filter out containingNodes that are marked for decommission.
     NumberReplicas num = countNodes(storedBlock);
