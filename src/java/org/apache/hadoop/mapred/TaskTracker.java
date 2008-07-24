@@ -353,9 +353,6 @@ public class TaskTracker
       } else {
         synchronized (rjob) {
           rjob.tasks.remove(tip);
-          if (rjob.tasks.isEmpty()) {
-            runningJobs.remove(jobId);
-          }
         }
       }
     }
@@ -1714,6 +1711,7 @@ public class TaskTracker
       //
       if (needCleanup) {
         try {
+          removeTaskFromJob(task.getJobId(), this);
           cleanup();
         } catch (IOException ie) {
         }
@@ -2188,6 +2186,23 @@ public class TaskTracker
     for(Map.Entry<String, TaskInProgress> task: tasks.entrySet()) {
       if (!runningTasks.containsKey(task.getKey())) {
         result.add(task.getValue().getStatus());
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Get the list of tasks from running jobs on this task tracker.
+   * @return a copy of the list of TaskStatus objects
+  */
+  synchronized List<TaskStatus> getTasksFromRunningJobs() {
+    List<TaskStatus> result = new ArrayList<TaskStatus>(tasks.size());
+    for (Map.Entry <String, RunningJob> item : runningJobs.entrySet()) {
+      RunningJob rjob = item.getValue();
+      synchronized (rjob) {
+        for (TaskInProgress tip : rjob.tasks) {
+          result.add(tip.getStatus());
+        }
       }
     }
     return result;
