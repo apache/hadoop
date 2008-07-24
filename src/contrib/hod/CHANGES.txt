@@ -29,6 +29,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3610. Modified HOD to create cluster directory if one does not
     exist when using the script option. (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-3808. Modified HOD to include RPC port of the JobTracker
+    into the notes attribute of the resource manager. (yhemanth)
+
   NEW FEATURES
 
   IMPROVEMENTS
