@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
+import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
@@ -430,6 +431,54 @@ public class ThriftServer {
       }
     }
     
+ 
+    public void mutateRows(byte[] tableName, ArrayList<BatchMutation> rowBatches) 
+        throws IOError, IllegalArgument, TException {
+      mutateRowsTs(tableName, rowBatches, HConstants.LATEST_TIMESTAMP);
+    }
+ 
+    public void mutateRowsTs(byte[] tableName, ArrayList<BatchMutation> rowBatches, long timestamp)
+        throws IOError, IllegalArgument, TException {
+      ArrayList<BatchUpdate> batchUpdates = new ArrayList<BatchUpdate>();
+       
+      for (BatchMutation batch : rowBatches) {
+        byte[] row = batch.row;
+        ArrayList<Mutation> mutations = batch.mutations;
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("mutateRowTs: table=" + new String(tableName) + ", row="
+              + new String(row) + ", ts=" + timestamp + " mutations="
+              + mutations.size());
+          for (Mutation m : mutations) {
+            if (m.isDelete) {
+              LOG.debug("mutateRowTs:    : delete - " + getText(m.column));
+            } else {
+              LOG.debug("mutateRowTs:    : put - " + getText(m.column) + " => "
+                  + m.value);
+            }
+          }
+        }
+        BatchUpdate batchUpdate = new BatchUpdate(getText(row), timestamp);
+        for (Mutation m : mutations) {
+          if (m.isDelete) {
+            batchUpdate.delete(getText(m.column));
+          } else {
+            batchUpdate.put(getText(m.column), m.value);
+          }
+        }
+        batchUpdates.add(batchUpdate);
+      }
+
+      HTable table = null;
+      try {
+        table = getTable(tableName);
+        table.commit(batchUpdates);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgument(e.getMessage());
+      }
+    }
+ 
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
       Scanner scanner = getScanner(id);

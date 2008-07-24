@@ -86,6 +86,16 @@ struct Mutation {
   3:Text value
 }
 
+
+/**
+ * A BatchMutation object is used to apply a number of Mutations to a single row.
+ */
+struct BatchMutation {
+  1:Text row,
+  2:list<Mutation> mutations
+}
+
+
 /**
  * A ScanEntry contains the row, column, and value information for a scanner's
  * current location.
@@ -286,6 +296,31 @@ service Hbase {
   void mutateRowTs(1:Text tableName, 2:Text row, 3:list<Mutation> mutations, 4:i64 timestamp)
     throws (1:IOError io, 2:IllegalArgument ia)
 
+  /** 
+   * Apply a series of batches (each a series of mutations on a single row)
+   * in a single transaction.  If an exception is thrown, then the
+   * transaction is aborted.  Default current timestamp is used, and
+   * all entries will have an identical timestamp.
+   *
+   * @param tableName name of table
+   * @param rowBatches list of row batches
+   */
+  void mutateRows(1:Text tableName, 2:list<BatchMutation> rowBatches)
+    throws (1:IOError io, 2:IllegalArgument ia)
+
+  /** 
+   * Apply a series of batches (each a series of mutations on a single row)
+   * in a single transaction.  If an exception is thrown, then the
+   * transaction is aborted.  The specified timestamp is used, and
+   * all entries will have an identical timestamp.
+   *
+   * @param tableName name of table
+   * @param rowBatches list of row batches
+   * @param timestamp timestamp
+   */
+  void mutateRowsTs(1:Text tableName, 2:list<BatchMutation> rowBatches, 3:i64 timestamp)
+    throws (1:IOError io, 2:IllegalArgument ia)  
+    
   /** 
    * Delete all cells that match the passed row and column.
    *
