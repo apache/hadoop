@@ -816,6 +816,12 @@ Release 0.18.0 - Unreleased
     HADOOP-3546. TaskTracker re-initialization gets stuck in cleaning up.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3576. Fix NullPointerException when renaming a directory
+    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
+
+    HADOOP-3320. Fix NullPointerException in NetworkTopology.getDistance().
+    (hairong)
+
     HADOOP-3569. KFS input stream read() now correctly reads 1 byte
     instead of 4. (Sriram Rao via omalley)
 
@@ -917,6 +923,14 @@ Release 0.18.0 - Unreleased
     HADOOP-3776. Fix NPE at NameNode when datanode reports a block after it is
     deleted at NameNode. (rangadi)
 
+    HADOOP-3537. Disallow adding a datanode to a network topology when its
+    network location is not resolved. (hairong)
+
+    HADOOP-3571. Fix bug in block removal used in lease recovery. (shv)
+
+    HADOOP-3645. MetricsTimeVaryingRate returns wrong value for
+    metric_avg_time. (Lohit Vijayarenu via hairong)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
@@ -941,6 +955,9 @@ Release 0.17.2 - Unreleased
     HADOOP-3758. Shutdown datanode on version mismatch instead of retrying
     continuously, preventing excessive logging at the namenode.
     (lohit vijayarenu via cdouglas)
+
+    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
+    the number of xceiver threads in a data-node. (shv)
 
 Release 0.17.1 - 2008-06-23
 
@@ -984,23 +1001,6 @@ Release 0.17.1 - 2008-06-23
 
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
-
-    HADOOP-3576. Fix NullPointerException when renaming a directory
-    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
-
-    HADOOP-3320. Fix NullPointerException in NetworkTopology.getDistance().
-    (hairong)
-
-    HADOOP-3537. Disallow adding a datanode to a network topology when its
-    network location is not resolved. (hairong)
-
-    HADOOP-3571. Fix bug in block removal used in lease recovery. (shv)
-
-    HADOOP-3645. MetricsTimeVaryingRate returns wrong value for
-    metric_avg_time. (Lohit Vijayarenu via hairong)
-
-    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
-    the number of xceiver threads in a data-node. (shv)
 
 Release 0.17.0 - 2008-05-18
 
