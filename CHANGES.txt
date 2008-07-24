@@ -25,6 +25,9 @@ Release 0.17.2 - Unreleased
     continuously, preventing excessive logging at the namenode.
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
+    the number of xceiver threads in a data-node. (shv)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
@@ -37,6 +40,9 @@ Release 0.17.1 - 2008-06-23
 
     HADOOP-3522. Improve documentation on reduce pointing out that
     input keys and values will be reused. (omalley)
+
+    HADOOP-3487. Balancer uses thread pools for managing its threads;
+    therefore provides better resource management. (hairong)
 
   BUG FIXES
 
@@ -64,9 +70,6 @@ Release 0.17.1 - 2008-06-23
 
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
-
-    HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
-    the number of xceiver threads in a data-node. (shv)
 
 Release 0.17.0 - 2008-05-18
 
