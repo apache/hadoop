@@ -962,6 +962,10 @@ Release 0.17.2 - Unreleased
     HADOOP-3370. Ensure that the TaskTracker.runningJobs data-structure is
     correctly cleaned-up on task completion. (Zheng Shao via acmurthy) 
 
+    HADOOP-3813. Fix task-output clean-up on HDFS to use the recursive 
+    FileSystem.delete rather than the FileUtil.fullyDelete. (Amareshwari
+    Sri Ramadasu via acmurthy)  
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES

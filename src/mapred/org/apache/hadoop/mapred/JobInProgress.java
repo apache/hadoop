@@ -34,7 +34,6 @@ import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -1667,7 +1666,7 @@ class JobInProgress {
         Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
         FileSystem fileSys = tmpDir.getFileSystem(conf);
         if (fileSys.exists(tmpDir)) {
-          FileUtil.fullyDelete(fileSys, tmpDir);
+          fileSys.delete(tmpDir, true);
         }
       }
     } catch (IOException e) {
