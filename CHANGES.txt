@@ -636,9 +636,6 @@ Release 0.18.0 - Unreleased
     hierarchy. This also adds a new counter to track cache hits at levels
     greater than two. (Amar Kamat via cdouglas)
 
-    HADOOP-3370. Ensure that the TaskTracker.runningJobs data-structure is
-    correctly cleaned-up on task completion. (Zheng Shao via acmurthy) 
-
     HADOOP-3375. Lease paths were sometimes not removed from 
     LeaseManager.sortedLeasesByPath. (Tsz Wo (Nicholas), SZE via dhruba)
 
@@ -961,6 +958,9 @@ Release 0.17.2 - Unreleased
 
     HADOOP-3633. Correct exception handling in DataXceiveServer, and throttle
     the number of xceiver threads in a data-node. (shv)
+
+    HADOOP-3370. Ensure that the TaskTracker.runningJobs data-structure is
+    correctly cleaned-up on task completion. (Zheng Shao via acmurthy) 
 
 Release 0.17.1 - 2008-06-23
 
