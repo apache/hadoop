@@ -234,7 +234,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
     this.serverLeaseTimeout =
-      conf.getInt("hbase.master.lease.period", 30 * 1000);
+      conf.getInt("hbase.master.lease.period", 120 * 1000);
 
     // Cache flushing thread.
     this.cacheFlusher = new Flusher(conf, this);

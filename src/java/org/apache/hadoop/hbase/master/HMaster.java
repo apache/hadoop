@@ -214,8 +214,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.maxRegionOpenTime =
-      conf.getLong("hbase.hbasemaster.maxregionopen", 60 * 1000);
-    this.leaseTimeout = conf.getInt("hbase.master.lease.period", 30 * 1000);
+      conf.getLong("hbase.hbasemaster.maxregionopen", 120 * 1000);
+    this.leaseTimeout = conf.getInt("hbase.master.lease.period", 120 * 1000);
     
     this.server = HbaseRPC.getServer(this, address.getBindAddress(),
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
