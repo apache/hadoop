@@ -103,6 +103,10 @@ Trunk (unreleased changes)
     HADOOP-3756. Minor. Remove unused dfs.client.buffer.dir from 
     hadoop-default.xml. (rangadi)
 
+    HADOOP-3327. Treats connection and read timeouts differently in the 
+    shuffle and the backoff logic is dependent on the type of timeout.
+    (Jothi Padmanabhan via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
