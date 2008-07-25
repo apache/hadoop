@@ -45,6 +45,13 @@ import java.util.*;
  * key/values written to the job <code>OutputCollector</code> are part of the
  * reduce phase.
  * <p/>
+ * MultipleOutputs supports counters, by default the are disabled. The counters
+ * group is the {@link MultipleOutputs} class name.
+ * </p>
+ * The names of the counters are the same as the named outputs. For multi
+ * named outputs the name of the counter is the concatenation of the named
+ * output, and underscore '_' and the multiname.
+ * <p/>
  * Job configuration usage pattern is:
  * <pre>
  *
@@ -114,6 +121,13 @@ public class MultipleOutputs {
   private static final String KEY = ".key";
   private static final String VALUE = ".value";
   private static final String MULTI = ".multi";
+
+  private static final String COUNTERS_ENABLED = "mo.counters";
+
+  /**
+   * Counters group used by the the counters of MultipleOutputs.
+   */
+  private static final String COUNTERS_GROUP = MultipleOutputs.class.getName();
 
   /**
    * Checks if a named output is alreadyDefined or not.
@@ -319,12 +333,52 @@ public class MultipleOutputs {
     conf.setBoolean(MO_PREFIX + namedOutput + MULTI, multi);
   }
 
+  /**
+   * Enables or disables counters for the named outputs.
+   * <p/>
+   * By default these counters are disabled.
+   * <p/>
+   * MultipleOutputs supports counters, by default the are disabled.
+   * The counters group is the {@link MultipleOutputs} class name.
+   * </p>
+   * The names of the counters are the same as the named outputs. For multi
+   * named outputs the name of the counter is the concatenation of the named
+   * output, and underscore '_' and the multiname.
+   *
+   * @param conf    job conf to enableadd the named output.
+   * @param enabled indicates if the counters will be enabled or not.
+   */
+  public static void setCountersEnabled(JobConf conf, boolean enabled) {
+    conf.setBoolean(COUNTERS_ENABLED, enabled);
+  }
+
+  /**
+   * Returns if the counters for the named outputs are enabled or not.
+   * <p/>
+   * By default these counters are disabled.
+   * <p/>
+   * MultipleOutputs supports counters, by default the are disabled.
+   * The counters group is the {@link MultipleOutputs} class name.
+   * </p>
+   * The names of the counters are the same as the named outputs. For multi
+   * named outputs the name of the counter is the concatenation of the named
+   * output, and underscore '_' and the multiname.
+   *
+   *
+   * @param conf    job conf to enableadd the named output.
+   * @return TRUE if the counters are enabled, FALSE if they are disabled.
+   */
+  public static boolean getCountersEnabled(JobConf conf) {
+    return conf.getBoolean(COUNTERS_ENABLED, false);
+  }
+
   // instance code, to be used from Mapper/Reducer code
 
   private JobConf conf;
   private OutputFormat outputFormat;
   private Set<String> namedOutputs;
   private Map<String, RecordWriter> recordWriters;
+  private boolean countersEnabled;
 
   /**
    * Creates and initializes multiple named outputs support, it should be
@@ -338,6 +392,7 @@ public class MultipleOutputs {
     namedOutputs = Collections.unmodifiableSet(
       new HashSet<String>(MultipleOutputs.getNamedOutputsList(job)));
     recordWriters = new HashMap<String, RecordWriter>();
+    countersEnabled = getCountersEnabled(job);
   }
 
   /**
@@ -354,18 +409,54 @@ public class MultipleOutputs {
   // MultithreaderMapRunner.
   private synchronized RecordWriter getRecordWriter(String namedOutput,
                                                     String baseFileName,
-                                                    Reporter reporter)
+                                                    final Reporter reporter)
     throws IOException {
     RecordWriter writer = recordWriters.get(baseFileName);
     if (writer == null) {
+      if (countersEnabled && reporter == null) {
+        throw new IllegalArgumentException(
+          "Counters are enabled, Reporter cannot be NULL");
+      }
       JobConf jobConf = new JobConf(conf);
       jobConf.set(InternalFileOutputFormat.CONFIG_NAMED_OUTPUT, namedOutput);
       FileSystem fs = FileSystem.get(conf);
       writer =
         outputFormat.getRecordWriter(fs, jobConf, baseFileName, reporter);
+
+      if (countersEnabled) {
+        if (reporter == null) {
+          throw new IllegalArgumentException(
+            "Counters are enabled, Reporter cannot be NULL");
+        }
+        writer = new RecordWriterWithCounter(writer, baseFileName, reporter);
+      }
+
       recordWriters.put(baseFileName, writer);
     }
     return writer;
+  }
+
+  private static class RecordWriterWithCounter implements RecordWriter {
+    private RecordWriter writer;
+    private String counterName;
+    private Reporter reporter;
+
+    public RecordWriterWithCounter(RecordWriter writer, String counterName,
+                                   Reporter reporter) {
+      this.writer = writer;
+      this.counterName = counterName;
+      this.reporter = reporter;
+    }
+
+    @SuppressWarnings({"unchecked"})
+    public void write(Object key, Object value) throws IOException {
+      reporter.incrCounter(COUNTERS_GROUP, counterName, 1);
+      writer.write(key, value);
+    }
+
+    public void close(Reporter reporter) throws IOException {
+      writer.close(reporter);
+    }
   }
 
   /**

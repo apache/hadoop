@@ -37,8 +37,16 @@ public class TestMultipleOutputs extends HadoopTestCase {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
+  public void testWithoutCounters() throws Exception {
+    _testMultipleOutputs(false);
+  }
+
+  public void testWithCounters() throws Exception {
+    _testMultipleOutputs(true);
+  }
+
   @SuppressWarnings({"unchecked"})
-  public void testMultipleOutputs() throws Exception {
+  protected void _testMultipleOutputs(boolean withCounters) throws Exception {
     Path inDir = new Path("testing/mo/input");
     Path outDir = new Path("testing/mo/output");
 
@@ -84,6 +92,8 @@ public class TestMultipleOutputs extends HadoopTestCase {
       LongWritable.class, Text.class);
     MultipleOutputs.addMultiNamedOutput(conf, "sequence",
       SequenceFileOutputFormat.class, LongWritable.class, Text.class);
+
+    MultipleOutputs.setCountersEnabled(conf, withCounters);
 
     conf.setMapperClass(MOMap.class);
     conf.setReducerClass(MOReduce.class);
@@ -146,6 +156,20 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
     reader.close();
     assertFalse(count == 0);
+
+    Counters.Group counters =
+      job.getCounters().getGroup(MultipleOutputs.class.getName());
+    if (!withCounters) {
+      assertEquals(0, counters.size());
+    }
+    else {
+      assertEquals(4, counters.size());
+      assertEquals(4, counters.getCounter("text"));
+      assertEquals(2, counters.getCounter("sequence_A"));
+      assertEquals(4, counters.getCounter("sequence_B"));
+      assertEquals(2, counters.getCounter("sequence_C"));
+
+    }
 
   }
 

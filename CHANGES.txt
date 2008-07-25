@@ -107,6 +107,9 @@ Trunk (unreleased changes)
     shuffle and the backoff logic is dependent on the type of timeout.
     (Jothi Padmanabhan via ddas)
 
+    HADOOP-3747. Adds counter suport for MultipleOutputs. 
+    (Alejandro Abdelnur via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
