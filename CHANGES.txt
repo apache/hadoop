@@ -931,6 +931,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3521. Reverted the missing cast to float for sending Counters' values
     to Hadoop metrics which was removed by HADOOP-544. (acmurthy)   
 
+    HADOOP-3820. Fixes two problems in the gridmix-env - a syntax error, and a 
+    wrong definition of USE_REAL_DATASET by default. (Arun Murthy via ddas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
