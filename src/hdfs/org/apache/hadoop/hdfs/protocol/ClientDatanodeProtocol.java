@@ -29,9 +29,9 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 1: start of time
+   * 2: recoverBlock returns the datanodes on which recovery was successful.
    */
-  public static final long versionID = 1L;
+  public static final long versionID = 2L;
 
   /** Start generation-stamp recovery for specified block
    * @param block the specified block
@@ -41,5 +41,5 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    * not have any data and the block was deleted.
    * @throws IOException
    */
-  Block recoverBlock(Block block, DatanodeInfo[] targets) throws IOException;
+  LocatedBlock recoverBlock(Block block, DatanodeInfo[] targets) throws IOException;
 }

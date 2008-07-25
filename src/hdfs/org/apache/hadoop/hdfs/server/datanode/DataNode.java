@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FSOutputSummer;
+import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.*;
@@ -65,6 +67,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.Semaphore;
+import java.util.zip.Checksum;
+import java.util.zip.CRC32;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -2214,10 +2218,15 @@ public class DataNode extends Configured
               /* The receiver thread cancelled this thread. 
                * We could also check any other status updates from the 
                * receiver thread (e.g. if it is ok to write to replyOut). 
+               * It is prudent to not send any more status back to the client
+               * because this datanode has a problem. The upstream datanode
+               * will detect a timout on heartbeats and will declare that
+               * this datanode is bad, and rightly so.
                */
               LOG.info("PacketResponder " + block +  " " + numTargets +
                        " : Thread is interrupted.");
               running = false;
+              continue;
             }
             
             if (!didRead) {
@@ -2321,6 +2330,7 @@ public class DataNode extends Configured
     private boolean isRecovery = false;
     private String clientName;
     DatanodeInfo srcDataNode = null;
+    private Checksum partialCrc = null;
 
     BlockReceiver(Block block, DataInputStream in, String inAddr,
                   boolean isRecovery, String clientName, 
@@ -2346,6 +2356,11 @@ public class DataNode extends Configured
           this.checksumOut = new DataOutputStream(new BufferedOutputStream(
                                                     streams.checksumOut, 
                                                     SMALL_BUFFER_SIZE));
+          // If this block is for appends, then remove it from periodic
+          // validation.
+          if (blockScanner != null && isRecovery) {
+            blockScanner.deleteBlock(block);
+          }
         }
       } catch(IOException ioe) {
         IOUtils.closeStream(this);
@@ -2360,6 +2375,7 @@ public class DataNode extends Configured
       // close checksum file
       try {
         if (checksumOut != null) {
+          checksumOut.flush();
           checksumOut.close();
           checksumOut = null;
         }
@@ -2369,6 +2385,7 @@ public class DataNode extends Configured
       // close block file
       try {
         if (out != null) {
+          out.flush();
           out.close();
           out = null;
         }
@@ -2498,7 +2515,7 @@ public class DataNode extends Configured
      * be more data from next packet in buf.<br><br>
      * 
      * It tries to read a full packet with single read call.
-     * Consecutinve packets are usually of the same length.
+     * Consecutive packets are usually of the same length.
      */
     private int readNextPacket() throws IOException {
       /* This dances around buf a little bit, mainly to read 
@@ -2669,7 +2686,25 @@ public class DataNode extends Configured
           if (!finalized) {
             //finally write to the disk :
             out.write(pktBuf, dataOff, len);
-            checksumOut.write(pktBuf, checksumOff, checksumLen);
+
+            // If this is a partial chunk, then verify that this is the only
+            // chunk in the packet. Calculate new crc for this chunk.
+            if (partialCrc != null) {
+              if (len > bytesPerChecksum) {
+                throw new IOException("Got wrong length during writeBlock(" + 
+                                      block + ") from " + inAddr + " " +
+                                      "A packet can have only one partial chunk."+
+                                      " len = " + len + 
+                                      " bytesPerChecksum " + bytesPerChecksum);
+              }
+              partialCrc.update(pktBuf, dataOff, len);
+              byte[] buf = FSOutputSummer.convertToByteStream(partialCrc, checksumSize);
+              checksumOut.write(buf);
+              LOG.debug("Writing out partial crc for data len " + len);
+              partialCrc = null;
+            } else {
+              checksumOut.write(pktBuf, checksumOff, checksumLen);
+            }
             myMetrics.bytesWritten.inc(len);
           }
         } catch (IOException iex) {
@@ -2799,12 +2834,6 @@ public class DataNode extends Configured
       if (data.getChannelPosition(block, streams) == offsetInBlock) {
         return;                   // nothing to do 
       }
-      if (offsetInBlock % bytesPerChecksum != 0) {
-        throw new IOException("setBlockPosition trying to set position to " +
-                              offsetInBlock +
-                              " which is not a multiple of bytesPerChecksum " +
-                               bytesPerChecksum);
-      }
       long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
                               offsetInBlock / bytesPerChecksum * checksumSize;
       if (out != null) {
@@ -2813,6 +2842,17 @@ public class DataNode extends Configured
       if (checksumOut != null) {
         checksumOut.flush();
       }
+
+      // If this is a partial chunk, then read in pre-existing checksum
+      if (offsetInBlock % bytesPerChecksum != 0) {
+        LOG.info("setBlockPosition trying to set position to " +
+                 offsetInBlock +
+                 " for block " + block +
+                 " which is not a multiple of bytesPerChecksum " +
+                 bytesPerChecksum);
+        computePartialChunkCrc(offsetInBlock, offsetInChecksum, bytesPerChecksum);
+      }
+
       LOG.info("Changing block file offset of block " + block + " from " + 
                data.getChannelPosition(block, streams) +
                " to " + offsetInBlock +
@@ -2820,6 +2860,58 @@ public class DataNode extends Configured
 
       // set the position of the block file
       data.setChannelPosition(block, streams, offsetInBlock, offsetInChecksum);
+    }
+
+    /**
+     * reads in the partial crc chunk and computes checksum
+     * of pre-existing data in partial chunk.
+     */
+    private void computePartialChunkCrc(long blkoff, long ckoff, 
+                                        int bytesPerChecksum) throws IOException {
+
+      // find offset of the beginning of partial chunk.
+      //
+      int sizePartialChunk = (int) (blkoff % bytesPerChecksum);
+      int checksumSize = checksum.getChecksumSize();
+      blkoff = blkoff - sizePartialChunk;
+      LOG.info("computePartialChunkCrc sizePartialChunk " + 
+                sizePartialChunk +
+                " block " + block +
+                " offset in block " + blkoff +
+                " offset in metafile " + ckoff);
+
+      // create an input stream from the block file
+      // and read in partial crc chunk into temporary buffer
+      //
+      byte[] buf = new byte[sizePartialChunk];
+      byte[] crcbuf = new byte[checksumSize];
+      FSDataset.BlockInputStreams instr = null;
+      try { 
+        instr = data.getTmpInputStreams(block, blkoff, ckoff);
+        IOUtils.readFully(instr.dataIn, buf, 0, sizePartialChunk);
+  
+        // open meta file and read in crc value computer earlier
+        IOUtils.readFully(instr.checksumIn, crcbuf, 0, crcbuf.length);
+      } finally {
+        IOUtils.closeStream(instr);
+      }
+
+      // compute crc of partial chunk from data read in the block file.
+      partialCrc = new CRC32();
+      partialCrc.update(buf, 0, sizePartialChunk);
+      LOG.info("Read in partial CRC chunk from disk for block " + block);
+
+      // paranoia! verify that the pre-computed crc matches what we
+      // recalculated just now
+      if (partialCrc.getValue() != FSInputChecker.checksum2long(crcbuf)) {
+        String msg = "Partial CRC " + partialCrc.getValue() +
+                     " does not match value computed the " +
+                     " last time file was closed " +
+                     FSInputChecker.checksum2long(crcbuf);
+        throw new IOException(msg);
+      }
+      //LOG.debug("Partial CRC matches 0x" + 
+      //            Long.toHexString(partialCrc.getValue()));
     }
   }
 
@@ -3117,8 +3209,22 @@ public class DataNode extends Configured
       LOG.debug("block=" + block);
     }
     Block stored = data.getStoredBlock(block.getBlockId());
-    return stored == null?
-        null: new BlockMetaDataInfo(stored, blockScanner.getLastScanTime(stored));
+
+    if (stored == null) {
+      return null;
+    }
+    BlockMetaDataInfo info = new BlockMetaDataInfo(stored,
+                                 blockScanner.getLastScanTime(stored));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getBlockMetaDataInfo successful block=" + stored +
+                " length " + stored.getNumBytes() +
+                " genstamp " + stored.getGenerationStamp());
+    }
+
+    // paranoia! verify that the contents of the stored block
+    // matches the block file on disk.
+    data.validateBlockMetadata(stored);
+    return info;
   }
 
   public Daemon recoverBlocks(final Block[] blocks, final DatanodeInfo[][] targets) {
@@ -3159,9 +3265,17 @@ public class DataNode extends Configured
 
   // ClientDataNodeProtocol implementation
   /** {@inheritDoc} */
-  public Block recoverBlock(Block block, DatanodeInfo[] targets
+  public LocatedBlock recoverBlock(Block block, DatanodeInfo[] targets
       ) throws IOException {
-    LOG.info("Client invoking recoverBlock for block " + block);
+    StringBuilder msg = new StringBuilder();
+    for (int i = 0; i < targets.length; i++) {
+      msg.append(targets[i].getName());
+      if (i < targets.length - 1) {
+        msg.append(",");
+      }
+    }
+    LOG.info("Client invoking recoverBlock for block " + block +
+             " on datanodes " + msg.toString());
     return LeaseManager.recoverBlock(block, targets, this, namenode, 
                                      getConf(), false);
   }

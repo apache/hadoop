@@ -475,12 +475,45 @@ public class DFSClient implements FSConstants {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     OutputStream result = new DFSOutputStream(src, masked,
-        overwrite, replication, blockSize, progress, buffersize);
+        overwrite, replication, blockSize, progress, buffersize,
+        conf.getInt("io.bytes.per.checksum", 512));
     synchronized (pendingCreates) {
       pendingCreates.put(src, result);
     }
     return result;
   }
+
+  /**
+   * Append to an existing HDFS file.  
+   * 
+   * @param src file name
+   * @param buffersize buffer size
+   * @param progress for reporting write-progress
+   * @return an output stream for writing into the file
+   * @throws IOException
+   * @see {@link ClientProtocol#append(String, String)}
+   */
+  OutputStream append(String src, int buffersize, Progressable progress
+      ) throws IOException {
+    checkOpen();
+    DFSFileInfo stat = null;
+    LocatedBlock lastBlock = null;
+    try {
+      stat = getFileInfo(src);
+      lastBlock = namenode.append(src, clientName);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+                                     AccessControlException.class,
+                                     QuotaExceededException.class);
+    }
+    OutputStream result = new DFSOutputStream(src, buffersize, progress,
+        lastBlock, stat, conf.getInt("io.bytes.per.checksum", 512));
+    synchronized(pendingCreates) {
+      pendingCreates.put(src, result);
+    }
+    return result;
+  }
+
   /**
    * Set replication for an existing file.
    * 
@@ -1751,14 +1784,14 @@ public class DFSClient implements FSConstants {
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
     private Block block;
-    private long blockSize;
+    final private long blockSize;
     private DataChecksum checksum;
     private LinkedList<Packet> dataQueue = new LinkedList<Packet>();
     private LinkedList<Packet> ackQueue = new LinkedList<Packet>();
     private Packet currentPacket = null;
     private int maxPackets = 80; // each packet 64K, total 5MB
     // private int maxPackets = 1000; // each packet 64K, total 64MB
-    private DataStreamer streamer;
+    private DataStreamer streamer = new DataStreamer();;
     private ResponseProcessor response = null;
     private long currentSeqno = 0;
     private long bytesCurBlock = 0; // bytes writen in current block
@@ -1773,6 +1806,7 @@ public class DFSClient implements FSConstants {
     private boolean persistBlocks = false; // persist blocks on namenode
     private int recoveryErrorCount = 0; // number of times block recovery failed
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
+    private volatile boolean appendChunk = false;   // appending to existing partial block
 
     private class Packet {
       ByteBuffer buffer;           // only one of buf and buffer is non-null
@@ -1781,6 +1815,7 @@ public class DFSClient implements FSConstants {
       long    offsetInBlock;       // offset in block
       boolean lastPacketInBlock;   // is this the last packet in block?
       int     numChunks;           // number of chunks currently in packet
+      int     maxChunks;           // max chunks in packet
       int     dataStart;
       int     dataPos;
       int     checksumStart;
@@ -1801,6 +1836,7 @@ public class DFSClient implements FSConstants {
         checksumPos = checksumStart;
         dataStart = checksumStart + chunksPerPkt * checksum.getChecksumSize();
         dataPos = dataStart;
+        maxChunks = chunksPerPkt;
       }
 
       void writeData(byte[] inarray, int off, int len) {
@@ -1875,7 +1911,7 @@ public class DFSClient implements FSConstants {
     // it. When all the packets for a block are sent out and acks for each
     // if them are received, the DataStreamer closes the current block.
     //
-    private class DataStreamer extends Thread {
+    private class DataStreamer extends Daemon {
 
       private volatile boolean closed = false;
   
@@ -1897,7 +1933,7 @@ public class DFSClient implements FSConstants {
           synchronized (dataQueue) {
 
             // process IO errors if any
-            boolean doSleep = processDatanodeError();
+            boolean doSleep = processDatanodeError(hasError);
 
             // wait for a packet to be sent.
             while ((!closed && !hasError && clientRunning 
@@ -2116,7 +2152,7 @@ public class DFSClient implements FSConstants {
     // threads and mark stream as closed. Returns true if we should
     // sleep for a while after returning from this call.
     //
-    private boolean processDatanodeError() {
+    private boolean processDatanodeError(boolean hasError) {
       if (!hasError) {
         return false;
       }
@@ -2125,12 +2161,11 @@ public class DFSClient implements FSConstants {
                  " waiting for responder to exit. ");
         return true;
       }
-      String msg = "Error Recovery for block " + block +
-                   " bad datanode[" + errorIndex + "]";
-      if (nodes != null) {
-        msg += " " + nodes[errorIndex].getName();
+      if (errorIndex >= 0) {
+        LOG.warn("Error Recovery for block " + block
+            + " bad datanode[" + errorIndex + "] "
+            + (nodes == null? "nodes == null": nodes[errorIndex].getName()));
       }
-      LOG.warn(msg);
 
       if (blockStream != null) {
         try {
@@ -2150,11 +2185,12 @@ public class DFSClient implements FSConstants {
 
       boolean success = false;
       while (!success && clientRunning) {
+        DatanodeInfo[] newnodes = null;
         if (nodes == null) {
           lastException = new IOException("Could not get block locations. " +
                                           "Aborting...");
           closed = true;
-          streamer.close();
+          if (streamer != null) streamer.close();
           return false;
         }
         StringBuilder pipelineMsg = new StringBuilder();
@@ -2164,32 +2200,33 @@ public class DFSClient implements FSConstants {
             pipelineMsg.append(", ");
           }
         }
-        String pipeline = pipelineMsg.toString();
-        if (nodes.length <= 1) {
-          lastException = new IOException("All datanodes " +
-                                          pipeline + " are bad. Aborting...");
-          closed = true;
-          streamer.close();
-          return false;
-        }
-        LOG.warn("Error Recovery for block " + block +
-                 " in pipeline " + pipeline + 
-                 ": bad datanode " + nodes[errorIndex].getName());
-
         // remove bad datanode from list of datanodes.
-        //
-        DatanodeInfo[] newnodes =  new DatanodeInfo[nodes.length-1];
-        for (int i = 0; i < errorIndex; i++) {
-          newnodes[i] = nodes[i];
-        }
-        for (int i = errorIndex; i < (nodes.length-1); i++) {
-          newnodes[i] = nodes[i+1];
+        // If errorIndex was not set (i.e. appends), then do not remove 
+        // any datanodes
+        // 
+        if (errorIndex < 0) {
+          newnodes = nodes;
+        } else {
+          if (nodes.length <= 1) {
+            lastException = new IOException("All datanodes " + pipelineMsg + 
+                                            " are bad. Aborting...");
+            closed = true;
+            if (streamer != null) streamer.close();
+            return false;
+          }
+          LOG.warn("Error Recovery for block " + block +
+                   " in pipeline " + pipelineMsg + 
+                   ": bad datanode " + nodes[errorIndex].getName());
+          newnodes =  new DatanodeInfo[nodes.length-1];
+          System.arraycopy(nodes, 0, newnodes, 0, errorIndex);
+          System.arraycopy(nodes, errorIndex+1, newnodes, errorIndex,
+              newnodes.length-errorIndex);
         }
 
         // Tell the primary datanode to do error recovery 
         // by stamping appropriate generation stamps.
         //
-        Block newBlock = null;
+        LocatedBlock newBlock = null;
         ClientDatanodeProtocol primary =  null;
         try {
           // Pick the "least" datanode as the primary datanode to avoid deadlock.
@@ -2206,7 +2243,7 @@ public class DFSClient implements FSConstants {
             LOG.warn(emsg);
             lastException = new IOException(emsg);
             closed = true;
-            streamer.close();
+            if (streamer != null) streamer.close();
             return false;       // abort with IOexception
           } 
           LOG.warn("Error Recovery for block " + block + " failed " +
@@ -2220,15 +2257,14 @@ public class DFSClient implements FSConstants {
         recoveryErrorCount = 0; // block recovery successful
 
         // If the block recovery generated a new generation stamp, use that
-        // from now on.
+        // from now on.  Also, setup new pipeline
         //
         if (newBlock != null) {
-          block = newBlock;
+          block = newBlock.getBlock();
+          nodes = newBlock.getLocations();
         }
 
-        // setup new pipeline
-        nodes = newnodes;
-        hasError = false;
+        this.hasError = false;
         errorIndex = 0;
         success = createBlockOutputStream(nodes, src, true);
       }
@@ -2265,17 +2301,10 @@ public class DFSClient implements FSConstants {
     }
 
     private Progressable progress;
-    /**
-     * Create a new output stream to the given DataNode.
-     * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
-     */
-    public DFSOutputStream(String src, FsPermission masked,
-                           boolean overwrite,
-                           short replication, long blockSize,
-                           Progressable progress,
-                           int buffersize
-                           ) throws IOException {
-      super(new CRC32(), conf.getInt("io.bytes.per.checksum", 512), 4);
+
+    private DFSOutputStream(String src, long blockSize, Progressable progress,
+        int bytesPerChecksum) throws IOException {
+      super(new CRC32(), bytesPerChecksum, 4);
       this.src = src;
       this.blockSize = blockSize;
       this.progress = progress;
@@ -2283,7 +2312,6 @@ public class DFSClient implements FSConstants {
         LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
       }
       
-      int bytesPerChecksum = conf.getInt( "io.bytes.per.checksum", 512); 
       if ( bytesPerChecksum < 1 || blockSize % bytesPerChecksum != 0) {
         throw new IOException("io.bytes.per.checksum(" + bytesPerChecksum +
                               ") and blockSize(" + blockSize + 
@@ -2293,11 +2321,18 @@ public class DFSClient implements FSConstants {
       }
       checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
                                               bytesPerChecksum);
-      int chunkSize = bytesPerChecksum + checksum.getChecksumSize();
-      chunksPerPacket = Math.max((writePacketSize - DataNode.PKT_HEADER_LEN - 
-                                  SIZE_OF_INTEGER + chunkSize-1)/chunkSize, 1);
-      packetSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER + 
-                   chunkSize * chunksPerPacket; 
+    }
+
+    /**
+     * Create a new output stream to the given DataNode.
+     * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
+     */
+    DFSOutputStream(String src, FsPermission masked, boolean overwrite,
+        short replication, long blockSize, Progressable progress,
+        int buffersize, int bytesPerChecksum) throws IOException {
+      this(src, blockSize, progress, bytesPerChecksum);
+
+      computePacketChunkSize(writePacketSize, bytesPerChecksum);
 
       try {
         namenode.create(
@@ -2306,11 +2341,89 @@ public class DFSClient implements FSConstants {
         throw re.unwrapRemoteException(AccessControlException.class,
                                        QuotaExceededException.class);
       }
-      streamer = new DataStreamer();
-      streamer.setDaemon(true);
       streamer.start();
     }
   
+    /**
+     * Create a new output stream to the given DataNode.
+     * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
+     */
+    DFSOutputStream(String src, int buffersize, Progressable progress,
+        LocatedBlock lastBlock, DFSFileInfo stat,
+        int bytesPerChecksum) throws IOException {
+      this(src, stat.getBlockSize(), progress, bytesPerChecksum);
+
+      //
+      // The last partial block of the file has to be filled.
+      //
+      if (lastBlock != null) {
+        block = lastBlock.getBlock();
+        long usedInLastBlock = stat.getLen() % blockSize;
+        int freeInLastBlock = (int)(blockSize - usedInLastBlock);
+
+        // calculate the amount of free space in the pre-existing 
+        // last crc chunk
+        int usedInCksum = (int)(stat.getLen() % bytesPerChecksum);
+        int freeInCksum = bytesPerChecksum - usedInCksum;
+
+        // if there is space in the last block, then we have to 
+        // append to that block
+        if (freeInLastBlock > blockSize) {
+          throw new IOException("The last block for file " + 
+                                src + " is full.");
+        }
+
+        // indicate that we are appending to an existing block
+        bytesCurBlock = lastBlock.getBlockSize();
+
+        if (usedInCksum > 0 && freeInCksum > 0) {
+          // if there is space in the last partial chunk, then 
+          // setup in such a way that the next packet will have only 
+          // one chunk that fills up the partial chunk.
+          //
+          computePacketChunkSize(0, freeInCksum);
+          resetChecksumChunk(freeInCksum);
+          this.appendChunk = true;
+        } else {
+          // if the remaining space in the block is smaller than 
+          // that expected size of of a packet, then create 
+          // smaller size packet.
+          //
+          computePacketChunkSize(Math.min(writePacketSize, freeInLastBlock), 
+                                 bytesPerChecksum);
+        }
+
+        // setup pipeline to append to the last block XXX retries??
+        nodes = lastBlock.getLocations();
+        errorIndex = -1;   // no errors yet.
+        if (nodes.length < 1) {
+          throw new IOException("Unable to retrieve blocks locations " +
+                                " for last block " + block +
+                                "of file " + src);
+                        
+        }
+        processDatanodeError(true);
+        streamer.start();
+      }
+      else {
+        computePacketChunkSize(writePacketSize, bytesPerChecksum);
+        streamer.start();
+      }
+    }
+
+    private void computePacketChunkSize(int psize, int csize) {
+      int chunkSize = csize + checksum.getChecksumSize();
+      int n = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER;
+      chunksPerPacket = Math.max((psize - n + chunkSize-1)/chunkSize, 1);
+      packetSize = n + chunkSize*chunksPerPacket;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("computePacketChunkSize: src=" + src +
+                  ", chunkSize=" + chunkSize +
+                  ", chunksPerPacket=" + chunksPerPacket +
+                  ", packetSize=" + packetSize);
+      }
+    }
+
     /**
      * Open a DataOutputStream to a DataNode so that it can be written to.
      * This happens when a file is created and each time a new block is allocated.
@@ -2508,8 +2621,14 @@ public class DFSClient implements FSConstants {
         if (currentPacket == null) {
           currentPacket = new Packet(packetSize, chunksPerPacket, 
                                      bytesCurBlock);
-          LOG.debug("DFSClient writeChunk allocating new packet " + 
-                    currentPacket.seqno);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("DFSClient writeChunk allocating new packet seqno=" + 
+                      currentPacket.seqno +
+                      ", src=" + src +
+                      ", packetSize=" + packetSize +
+                      ", chunksPerPacket=" + chunksPerPacket +
+                      ", bytesCurBlock=" + bytesCurBlock);
+          }
         }
 
         currentPacket.writeChecksum(checksum, 0, cklen);
@@ -2519,9 +2638,16 @@ public class DFSClient implements FSConstants {
 
         // If packet is full, enqueue it for transmission
         //
-        if (currentPacket.numChunks == chunksPerPacket ||
+        if (currentPacket.numChunks == currentPacket.maxChunks ||
             bytesCurBlock == blockSize) {
-          LOG.debug("DFSClient writeChunk packet full seqno " + currentPacket.seqno);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("DFSClient writeChunk packet full seqno=" +
+                      currentPacket.seqno +
+                      ", src=" + src +
+                      ", bytesCurBlock=" + bytesCurBlock +
+                      ", blockSize=" + blockSize +
+                      ", appendChunk=" + appendChunk);
+          }
           //
           // if we allocated a new packet because we encountered a block
           // boundary, reset bytesCurBlock.
@@ -2534,6 +2660,16 @@ public class DFSClient implements FSConstants {
           dataQueue.addLast(currentPacket);
           dataQueue.notifyAll();
           currentPacket = null;
+ 
+          // If this was the first write after reopening a file, then the above
+          // write filled up any partial chunk. Tell the summer to generate full 
+          // crc chunks from now on.
+          if (appendChunk) {
+            appendChunk = false;
+            resetChecksumChunk(bytesPerChecksum);
+          }
+          int psize = Math.min((int)(blockSize-bytesCurBlock), writePacketSize);
+          computePacketChunkSize(psize, bytesPerChecksum);
         }
       }
       //LOG.debug("DFSClient writeChunk done length " + len +

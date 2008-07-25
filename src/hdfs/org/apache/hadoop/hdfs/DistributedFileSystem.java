@@ -157,7 +157,9 @@ public class DistributedFileSystem extends FileSystem {
   /** This optional operation is not yet supported. */
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
-    throw new IOException("Not supported");
+
+    return new FSDataOutputStream(
+        dfs.append(getPathName(f), bufferSize, progress), statistics);
   }
 
   public FSDataOutputStream create(Path f, FsPermission permission,

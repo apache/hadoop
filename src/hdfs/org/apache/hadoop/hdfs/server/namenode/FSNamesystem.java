@@ -54,6 +54,7 @@ import org.apache.hadoop.io.IOUtils;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.DataOutputStream;
@@ -912,7 +913,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                  String holder, String clientMachine,
                  boolean overwrite, short replication, long blockSize
                 ) throws IOException {
-    startFileInternal(src, permissions, holder, clientMachine, overwrite,
+    startFileInternal(src, permissions, holder, clientMachine, overwrite, false,
                       replication, blockSize);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
@@ -928,18 +929,26 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                               String holder, 
                                               String clientMachine, 
                                               boolean overwrite,
+                                              boolean append,
                                               short replication,
                                               long blockSize
                                               ) throws IOException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: file "
-                                  +src+" for "+holder+" at "+clientMachine);
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
+          + ", holder=" + holder
+          + ", clientMachine=" + clientMachine
+          + ", replication=" + replication
+          + ", overwrite=" + overwrite
+          + ", append=" + append);
+    }
+
     if (isInSafeMode())
       throw new SafeModeException("Cannot create file" + src, safeMode);
     if (!DFSUtil.isValidName(src)) {
       throw new IOException("Invalid file name: " + src);
     }
     if (isPermissionEnabled) {
-      if (overwrite && dir.exists(src)) {
+      if (append || (overwrite && dir.exists(src))) {
         checkPathAccess(src, FsAction.WRITE);
       }
       else {
@@ -996,7 +1005,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       } catch(IOException e) {
         throw new IOException("failed to create "+e.getMessage());
       }
-      if (!dir.isValidToCreate(src)) {
+      if (append) {
+        if (myFile == null) {
+          throw new FileNotFoundException("failed to append to non-existent file "
+              + src + " on client " + clientMachine);
+        } else if (myFile.isDirectory()) {
+          throw new IOException("failed to append to directory " + src 
+                                +" on client " + clientMachine);
+        }
+      } else if (!dir.isValidToCreate(src)) {
         if (overwrite) {
           delete(src, true);
         } else {
@@ -1009,71 +1026,116 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       DatanodeDescriptor clientNode = 
         host2DataNodeMap.getDatanodeByHost(clientMachine);
 
-      //
-      // Now we can add the name to the filesystem. This file has no
-      // blocks associated with it.
-      //
-      checkFsObjectLimit();
+      if (append) {
+        //
+        // Replace current node with a INodeUnderConstruction.
+        // Recreate in-memory lease record.
+        //
+        INodeFile node = (INodeFile) myFile;
+        INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                        node.getLocalNameBytes(),
+                                        node.getReplication(),
+                                        node.getModificationTime(),
+                                        node.getPreferredBlockSize(),
+                                        node.getBlocks(),
+                                        node.getPermissionStatus(),
+                                        holder,
+                                        clientMachine,
+                                        clientNode);
+        dir.replaceNode(src, node, cons);
+        leaseManager.addLease(cons.clientName, src);
 
-      // increment global generation stamp
-      long genstamp = nextGenerationStamp();
-      INodeFileUnderConstruction newNode = dir.addFile(src, permissions,
-          replication, blockSize, holder, clientMachine, clientNode, genstamp);
-      if (newNode == null) {
-        throw new IOException("DIR* NameSystem.startFile: " +
-                              "Unable to add file to namespace.");
+      } else {
+       // Now we can add the name to the filesystem. This file has no
+       // blocks associated with it.
+       //
+       checkFsObjectLimit();
+
+        // increment global generation stamp
+        long genstamp = nextGenerationStamp();
+        INodeFileUnderConstruction newNode = dir.addFile(src, permissions,
+            replication, blockSize, holder, clientMachine, clientNode, genstamp);
+        if (newNode == null) {
+          throw new IOException("DIR* NameSystem.startFile: " +
+                                "Unable to add file to namespace.");
+        }
+        leaseManager.addLease(newNode.clientName, src);
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
+                                     +"add "+src+" to namespace for "+holder);
+        }
       }
-      leaseManager.addLease(newNode.clientName, src);
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
                                    +ie.getMessage());
       throw ie;
     }
-
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
-                                  +"add "+src+" to namespace for "+holder);
-    }
   }
 
-  /** append is not yet ready.  This method is for testing. */
-  void appendFileInternal(String src, String holder, String clientMachine
+  /**
+   * Append to an existing file in the namespace.
+   */
+  LocatedBlock appendFile(String src, String holder, String clientMachine
       ) throws IOException {
+
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
           +src+" for "+holder+" at "+clientMachine);
     }
-    if (isInSafeMode())
-      throw new SafeModeException("Cannot append file" + src, safeMode);
-    if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
+    startFileInternal(src, null, holder, clientMachine, false, true, 
+                      (short)maxReplication, (long)0);
+    getEditLog().logSync();
+
+    //
+    // Create a LocatedBlock object for the last block of the file
+    // to be returned to the client. Return null if the file does not
+    // have a partial block at the end.
+    //
+    LocatedBlock lb = null;
+    synchronized (this) {
+      INodeFile file = dir.getFileINode(src);
+
+      Block[] blocks = file.getBlocks();
+      if (blocks != null && blocks.length > 0) {
+        Block last = blocks[blocks.length-1];
+        BlockInfo storedBlock = blocksMap.getStoredBlock(last);
+        if (file.getPreferredBlockSize() > storedBlock.getNumBytes()) {
+          long fileLength = file.computeContentSummary().getLength();
+          DatanodeDescriptor[] targets = new DatanodeDescriptor[blocksMap.numNodes(last)];
+          Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(last);
+          for (int i = 0; it != null && it.hasNext(); i++) {
+            targets[i] = it.next();
+          }
+          lb = new LocatedBlock(last, targets, 
+                                fileLength-storedBlock.getNumBytes());
+
+          // Remove block from replication queue.
+          updateNeededReplications(last, 0, 0);
+
+          // remove this block from the list of pending blocks to be deleted. 
+          // This reduces the possibility of triggering HADOOP-1349.
+          //
+          for(Collection<Block> v : recentInvalidateSets.values()) {
+            v.remove(last);
+          }
+        }
+      }
     }
-    if (isPermissionEnabled) {
-      checkPathAccess(src, FsAction.WRITE);
+    if (lb != null) {
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
+            +src+" for "+holder+" at "+clientMachine
+            +" block " + lb.getBlock()
+            +" block size " + lb.getBlock().getNumBytes());
+      }
     }
 
-    try {
-      INodeFile f = dir.getFileINode(src);
-      //assume f != null && !f.isUnderConstruction() && lease does not exist
-      //TODO: remove the assumption 
-
-      DatanodeDescriptor clientNode = host2DataNodeMap.getDatanodeByHost(
-          clientMachine);
-      INodeFileUnderConstruction newnode = f.toINodeFileUnderConstruction(
-          holder, clientMachine, clientNode);
-
-      dir.replaceNode(src, f, newnode);
-      leaseManager.addLease(newnode.clientName, src);
-
-    } catch (IOException ie) {
-      NameNode.stateChangeLog.warn("DIR* NameSystem.appendFile: ", ie);
-      throw ie;
+    if (auditLog.isInfoEnabled()) {
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "append", src, null, null);
     }
-
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: "
-          +"add "+src+" to namespace for "+holder);
-    }
+    return lb;
   }
 
   /**
@@ -2284,7 +2346,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
         // block should belong to a file
         INodeFile fileINode = blocksMap.getINode(block);
-        if(fileINode == null) { // abandoned block 
+        // abandoned block or block reopened for append
+        if(fileINode == null || fileINode.isUnderConstruction()) { 
           neededReplicationsIterator.remove(); // remove from neededReplications
           replIndex--;
           continue;

@@ -26,7 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -425,7 +427,7 @@ public class LeaseManager {
   }
 
   /** Recover a block */
-  public static Block recoverBlock(Block block, DatanodeID[] datanodeids,
+  public static LocatedBlock recoverBlock(Block block, DatanodeID[] datanodeids,
       DataNode primary, DatanodeProtocol namenode, Configuration conf,
       boolean closeFile) throws IOException {
 
@@ -485,7 +487,7 @@ public class LeaseManager {
   }
 
   /** Block synchronization */
-  private static Block syncBlock(Block block, long minlength,
+  private static LocatedBlock syncBlock(Block block, long minlength,
       List<BlockRecord> syncList, DatanodeProtocol namenode,
       boolean closeFile) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -517,10 +519,16 @@ public class LeaseManager {
     }
 
     if (!successList.isEmpty()) {
+      DatanodeID[] nlist = successList.toArray(new DatanodeID[successList.size()]);
+
       namenode.commitBlockSynchronization(block,
           newblock.getGenerationStamp(), newblock.getNumBytes(), closeFile, false,
-          successList.toArray(new DatanodeID[successList.size()]));
-      return newblock; // success
+          nlist);
+      DatanodeInfo[] info = new DatanodeInfo[nlist.length];
+      for (int i = 0; i < nlist.length; i++) {
+        info[i] = new DatanodeInfo(nlist[i]);
+      }
+      return new LocatedBlock(newblock, info); // success
     }
     return null; // failed
   }

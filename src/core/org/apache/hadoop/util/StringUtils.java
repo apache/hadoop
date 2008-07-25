@@ -132,15 +132,24 @@ public class StringUtils {
    * Given an array of bytes it will convert the bytes to a hex string
    * representation of the bytes
    * @param bytes
+   * @param start start index, inclusively
+   * @param end end index, exclusively
    * @return hex string representation of the byte array
    */
-  public static String byteToHexString(byte bytes[]) {
-    StringBuffer retString = new StringBuffer();
-    for (int i = 0; i < bytes.length; ++i) {
-      retString.append(Integer.toHexString(0x0100 + (bytes[i] & 0x00FF))
-                       .substring(1));
+  public static String byteToHexString(byte[] bytes, int start, int end) {
+    if (bytes == null) {
+      throw new IllegalArgumentException("bytes == null");
     }
-    return retString.toString();
+    StringBuilder s = new StringBuilder(); 
+    for(int i = start; i < end; i++) {
+      s.append(String.format("%02x", bytes[i]));
+    }
+    return s.toString();
+  }
+
+  /** Same as byteToHexString(bytes, 0, bytes.length). */
+  public static String byteToHexString(byte bytes[]) {
+    return byteToHexString(bytes, 0, bytes.length);
   }
 
   /**

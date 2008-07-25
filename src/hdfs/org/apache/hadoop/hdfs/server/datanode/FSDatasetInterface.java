@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 
+import java.io.Closeable;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +29,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -115,6 +117,19 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public InputStream getBlockInputStream(Block b, long seekOffset)
             throws IOException;
 
+  /**
+   * Returns an input stream at specified offset of the specified block
+   * The block is still in the tmp directory and is not finalized
+   * @param b
+   * @param blkoff
+   * @param ckoff
+   * @return an input stream to read the contents of the specified block,
+   *  starting at the offset
+   * @throws IOException
+   */
+  public BlockInputStreams getTmpInputStreams(Block b, long blkoff, long ckoff)
+            throws IOException;
+
      /**
       * 
       * This class contains the output streams for the data and checksum
@@ -130,6 +145,26 @@ public interface FSDatasetInterface extends FSDatasetMBean {
       }
       
     }
+
+  /**
+   * This class contains the input streams for the data and checksum
+   * of a block
+   */
+  static class BlockInputStreams implements Closeable {
+    final InputStream dataIn;
+    final InputStream checksumIn;
+
+    BlockInputStreams(InputStream dataIn, InputStream checksumIn) {
+      this.dataIn = dataIn;
+      this.checksumIn = checksumIn;
+    }
+
+    /** {@inheritDoc} */
+    public void close() {
+      IOUtils.closeStream(dataIn);
+      IOUtils.closeStream(checksumIn);
+    }
+  }
     
   /**
    * Creates the block and returns output streams to write data and CRC
@@ -222,4 +257,11 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void setChannelPosition(Block b, BlockWriteStreams stream, long dataOffset,
                                  long ckOffset) throws IOException;
 
+  /**
+   * Validate that the contents in the Block matches
+   * the file on disk. Returns true if everything is fine.
+   * @param b The block to be verified.
+   * @throws IOException
+   */
+  public void validateBlockMetadata(Block b) throws IOException;
 }

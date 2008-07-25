@@ -243,7 +243,8 @@ abstract public class FSInputChecker extends FSInputStream {
         } 
         retry = false;
       } catch (ChecksumException ce) {
-          LOG.info("Found checksum error: "+StringUtils.stringifyException(ce));
+          LOG.info("Found checksum error: b[" + off + ", " + (off+read) + "]="
+              + StringUtils.byteToHexString(b, off, off + read), ce);
           if (retriesLeft == 0) {
             throw ce;
           }
@@ -282,6 +283,11 @@ abstract public class FSInputChecker extends FSInputStream {
   
   /* calculate checksum value */
   private long getChecksum() {
+    return checksum2long(checksum);
+  }
+
+  /** Convert a checksum byte array to a long */
+  static public long checksum2long(byte[] checksum) {
     long crc = 0L;
     for(int i=0; i<checksum.length; i++) {
       crc |= (0xffL&(long)checksum[i])<<((checksum.length-i-1)*8);

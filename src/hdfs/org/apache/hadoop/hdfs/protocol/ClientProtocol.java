@@ -39,10 +39,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 35 : Quota-related RPCs are introduced: getQuota, clearQuota;
-   * Besides, getContentSummary also returns the quota of the directory.
+   * 36 : Added append(...).
    */
-  public static final long versionID = 35L;
+  public static final long versionID = 36L;
   
   ///////////////////////////////////////
   // File contents
@@ -107,6 +106,18 @@ public interface ClientProtocol extends VersionedProtocol {
                              short replication,
                              long blockSize
                              ) throws IOException;
+
+  /**
+   * Append to the end of the file. 
+   * @param src path of the file being created.
+   * @param clientName name of the current client.
+   * @return information about the last partial block if any.
+   * @throws AccessControlException if permission to append file is 
+   * denied by the system. As usually on the client side the exception will 
+   * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * @throws IOException if other errors occur.
+   */
+  public LocatedBlock append(String src, String clientName) throws IOException;
 
   /**
    * Set replication for an existing file.

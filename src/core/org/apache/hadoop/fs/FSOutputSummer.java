@@ -87,18 +87,18 @@ abstract public class FSOutputSummer extends OutputStream {
     }
   }
   
-  /*
+  /**
    * Write a portion of an array, flushing to the underlying
    * stream at most once if necessary.
    */
-
   private int write1(byte b[], int off, int len) throws IOException {
     if(count==0 && len>=buf.length) {
       // local buffer is empty and user data has one chunk
       // checksum and output data
-      sum.update(b, off, buf.length);
-      writeChecksumChunk(b, off, buf.length, false);
-      return buf.length;
+      final int length = buf.length;
+      sum.update(b, off, length);
+      writeChecksumChunk(b, off, length, false);
+      return length;
     }
     
     // copy user data to local buffer
@@ -136,9 +136,9 @@ abstract public class FSOutputSummer extends OutputStream {
     }
   }
   
-  /* Generate checksum for the data chunk and output data chunk & checksum
+  /** Generate checksum for the data chunk and output data chunk & checksum
    * to the underlying output stream. If keep is true then keep the
-   * current ckecksum intact, do not reset it.
+   * current checksum intact, do not reset it.
    */
   private void writeChecksumChunk(byte b[], int off, int len, boolean keep)
   throws IOException {
@@ -146,12 +146,31 @@ abstract public class FSOutputSummer extends OutputStream {
     if (!keep) {
       sum.reset();
     }
-    
-    checksum[0] = (byte)((tempChecksum >>> 24) & 0xFF);
-    checksum[1] = (byte)((tempChecksum >>> 16) & 0xFF);
-    checksum[2] = (byte)((tempChecksum >>>  8) & 0xFF);
-    checksum[3] = (byte)((tempChecksum >>>  0) & 0xFF);
-
+    int2byte(tempChecksum, checksum);
     writeChunk(b, off, len, checksum);
+  }
+
+  /**
+   * Converts a checksum integer value to a byte stream
+   */
+  static public byte[] convertToByteStream(Checksum sum, int checksumSize) {
+    return int2byte((int)sum.getValue(), new byte[checksumSize]);
+  }
+
+  static byte[] int2byte(int integer, byte[] bytes) {
+    bytes[0] = (byte)((integer >>> 24) & 0xFF);
+    bytes[1] = (byte)((integer >>> 16) & 0xFF);
+    bytes[2] = (byte)((integer >>>  8) & 0xFF);
+    bytes[3] = (byte)((integer >>>  0) & 0xFF);
+    return bytes;
+  }
+
+  /**
+   * Resets existing buffer with a new one of the specified size.
+   */
+  protected synchronized void resetChecksumChunk(int size) {
+    sum.reset();
+    this.buf = new byte[size];
+    this.count = 0;
   }
 }

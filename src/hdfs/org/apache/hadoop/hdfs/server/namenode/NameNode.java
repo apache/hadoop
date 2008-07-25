@@ -104,6 +104,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private Server server;
   private Thread emptier;
   private int handlerCount = 2;
+  private boolean supportAppends = true; // allow appending to hdfs files
     
   private InetSocketAddress nameNodeAddress = null;
     
@@ -144,6 +145,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   private void initialize(String address, Configuration conf) throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(address);
+    this.supportAppends = conf.getBoolean("dfs.support.append", true);
     this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
     this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf);
@@ -285,8 +287,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                              long blockSize
                              ) throws IOException {
     String clientMachine = getClientMachine();
-    stateChangeLog.debug("*DIR* NameNode.create: file "
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.create: file "
                          +src+" for "+clientName+" at "+clientMachine);
+    }
     if (!checkPathLength(src)) {
       throw new IOException("create: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -299,17 +303,21 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     myMetrics.numCreateFileOps.inc();
   }
 
-  /** Coming in a future release.... */
-  public void append(String src, String clientName) throws IOException {
+  /** {@inheritDoc} */
+  public LocatedBlock append(String src, String clientName) throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.append: file "
           +src+" for "+clientName+" at "+clientMachine);
     }
-    //TODO: add namesystem.appendFile(...), which calls appendFileInternal(...)
-    namesystem.appendFileInternal(src, clientName, clientMachine);
+    if (supportAppends == false) {
+      throw new IOException("Append to hdfs not supported." +
+                            " Please refer to dfs.support.append configuration parameter.");
+    }
 
-    //TODO: inc myMetrics;
+    LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
+    myMetrics.numFilesAppended.inc();
+    return info;
   }
 
   /** {@inheritDoc} */

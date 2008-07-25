@@ -394,6 +394,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return result;
   }
 
+  /** Not supported */
+  public BlockInputStreams getTmpInputStreams(Block b, long blkoff, long ckoff
+      ) throws IOException {
+    throw new IOException("Not supported");
+  }
+
+  /** No-op */
+  public void validateBlockMetadata(Block b) {
+  }
+
   /**
    * Returns metaData of block b as an input stream
    * @param b - the block for which the metadata is desired
