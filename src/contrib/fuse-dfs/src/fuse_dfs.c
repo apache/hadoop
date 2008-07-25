@@ -64,6 +64,9 @@ struct options {
 }options;
 
 
+static const char *const TrashPrefixDir = "/Trash";
+static const char *const TrashDir = "/Trash/Current";
+
 typedef struct dfs_fh_struct {
   hdfsFile hdfsFH;
   char *buf;
@@ -85,6 +88,7 @@ static void print_usage(const char *pname)
   fprintf(stdout,"NOTE: debugging option for fuse is -debug\n");
 }
 
+static char **protectedpaths;
 
 #define OPTIMIZED_READS 1
 
@@ -160,6 +164,96 @@ typedef struct dfs_context_struct {
   int dfs_uri_len;
 } dfs_context;
 
+#define TRASH_RENAME_TRIES  100
+
+//
+// Some forward declarations
+//
+static int dfs_mkdir(const char *path, mode_t mode);
+static int dfs_rename(const char *from, const char *to);
+
+
+//
+// NOTE: this function is a c implementation of org.apache.hadoop.fs.Trash.moveToTrash(Path path).
+//
+
+int move_to_trash(const char *item) {
+
+  // retrieve dfs specific data
+  dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+
+  // check params and the context var
+  assert(item);
+  assert(dfs);
+  assert('/' == *item);
+  assert(rindex(item,'/') >= 0);
+
+  // if not connected, try to connect and fail out if we can't.
+  if (NULL == dfs->fs && NULL == (dfs->fs = hdfsConnect(dfs->nn_hostname,dfs->nn_port))) {
+    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    return -EIO;
+  }
+
+  char fname[4096]; // or last element of the directory path
+  char parent_directory[4096]; // the directory the fname resides in
+
+  if (strlen(item) > sizeof(fname) - strlen(TrashDir)) {
+    syslog(LOG_ERR, "ERROR: internal buffer too small to accomodate path of length %d %s:%d\n", (int)strlen(item), __FILE__, __LINE__);
+    return -EIO;
+  }
+
+  // separate the file name and the parent directory of the item to be deleted
+  {
+    int length_of_parent_dir = rindex(item, '/') - item ;
+    int length_of_fname = strlen(item) - length_of_parent_dir - 1; // the '/'
+
+    // note - the below strncpys should be safe from overflow because of the check on item's string length above.
+    strncpy(parent_directory, item, length_of_parent_dir);
+    parent_directory[length_of_parent_dir ] = 0;
+    strncpy(fname, item + length_of_parent_dir + 1, strlen(item));
+    fname[length_of_fname + 1] = 0;
+  }
+
+  // create the target trash directory
+  char trash_dir[4096];
+  if(snprintf(trash_dir, sizeof(trash_dir), "%s%s",TrashDir,parent_directory) >= sizeof trash_dir) {
+    syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+    return -EIO;
+  }
+
+  // create the target trash directory in trash (if needed)
+  if ( hdfsExists(dfs->fs, trash_dir)) {
+    int status;
+    // make the directory to put it in in the Trash - NOTE
+    // dfs_mkdir also creates parents, so Current will be created if it does not exist.
+    if ((status = dfs_mkdir(trash_dir,0)) != 0) {
+      return status;
+    }
+  }
+
+  //
+  // if the target path in Trash already exists, then append with
+  // a number. Start from 1.
+  //
+  char target[4096];
+  int j ;
+  if( snprintf(target, sizeof target,"%s/%s",trash_dir, fname) >= sizeof target) {
+    syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+    return -EIO;
+  }
+
+  // NOTE: this loop differs from the java version by capping the #of tries
+  for (j = 1; ! hdfsExists(dfs->fs, target) && j < TRASH_RENAME_TRIES ; j++) {
+    if(snprintf(target, sizeof target,"%s/%s.%d",trash_dir, fname, j) >= sizeof target) {
+      syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+      return -EIO;
+    }
+  }
+
+  return dfs_rename(item,target);
+}
+
+
 
 //
 // Start of read-only functions
@@ -169,6 +263,8 @@ static int dfs_getattr(const char *path, struct stat *st)
 {
   // retrieve dfs specific data
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+
+  syslog(LOG_ERR, "starting dfs_getattr for %s\n",path);
 
   // check params and the context var
   assert(dfs);
@@ -227,6 +323,8 @@ static int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 {
   (void) offset;
   (void) fi;
+
+  syslog(LOG_ERR, "starting dfs_readdir for %s\n",path);
 
   // retrieve dfs specific data
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
@@ -326,6 +424,7 @@ static int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
   // free the info pointers
   hdfsFreeFileInfo(info,numEntries);
+  syslog(LOG_ERR, "returning dfs_readdir for %s\n",path);
 
   return 0;
 }
@@ -471,7 +570,6 @@ static int dfs_access(const char *path, int mask)
 //
 
 
-static char **protectedpaths;
 
 
 static int dfs_mkdir(const char *path, mode_t mode)
@@ -500,7 +598,12 @@ static int dfs_mkdir(const char *path, mode_t mode)
   }
 
 
-  if (dfs->nowrites || hdfsCreateDirectory(dfs->fs, path)) {
+  if (dfs->nowrites) {
+    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot create the directory %s\n",path);
+    return -EACCES;
+  }
+
+  if (hdfsCreateDirectory(dfs->fs, path)) {
     syslog(LOG_ERR,"ERROR: hdfs trying to create directory %s",path);
     return -EIO;
   }
@@ -540,7 +643,12 @@ static int dfs_rename(const char *from, const char *to)
     }
   }
 
-  if (dfs->nowrites ||  hdfsRename(dfs->fs, from, to)) {
+  if (dfs->nowrites) {
+    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot rename the directory %s\n",from);
+    return -EACCES;
+  }
+
+  if (hdfsRename(dfs->fs, from, to)) {
     syslog(LOG_ERR,"ERROR: hdfs trying to rename %s to %s",from, to);
     return -EIO;
   }
@@ -548,6 +656,15 @@ static int dfs_rename(const char *from, const char *to)
 
 }
 
+static int is_protected(const char *path) {
+  int i ;
+  for (i = 0; protectedpaths[i]; i++) {
+    if (strcmp(path, protectedpaths[i]) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
 
 static int dfs_rmdir(const char *path)
 {
@@ -566,12 +683,9 @@ static int dfs_rmdir(const char *path)
 
   assert('/' == *path);
 
-  int i ;
-  for (i = 0; protectedpaths[i]; i++) {
-    if (strcmp(path, protectedpaths[i]) == 0) {
-      syslog(LOG_ERR,"ERROR: hdfs trying to delete the directory: %s ",path);
-      return -EACCES;
-    }
+  if(is_protected(path)) {
+    syslog(LOG_ERR,"ERROR: hdfs trying to delete a protected directory: %s ",path);
+    return -EACCES;
   }
 
   int numEntries = 0;
@@ -584,56 +698,21 @@ static int dfs_rmdir(const char *path)
     return -ENOTEMPTY;
   }
 
-
-
-  // since these commands go through the programmatic hadoop API, there is no
-  // trash feature. So, force it here.
-  // But make sure the person isn't deleting from Trash itself :)
-  // NOTE: /Trash is in protectedpaths so they cannot delete all of trash
-  if (!dfs->no_trash && strncmp(path, "/Trash", strlen("/Trash")) != 0) {
-
-    char target[4096];
-    char dir[4096];
-    int status;
-
-    {
-      // find the directory and full targets in Trash
-
-      sprintf(target, "/Trash/Current%s",path);
-
-      // strip off the actual file or directory name from the fullpath
-      char *name = rindex(path, '/');
-      assert(name);
-      *name = 0;
-
-      // use that path to ensure the directory exists in the Trash dir
-      // prepend Trash to the directory
-      sprintf(dir,"/Trash/Current%s/",path);
-
-      // repair the path not used again but in case the caller expects it.
-      *name = '/';
-    }
-
-    // if the directory doesn't already exist in the Trash
-    // then we go through with the rename
-    if ( hdfsExists(dfs->fs, target) != 0) { // 0 means it exists. weird
-      // make the directory to put it in in the Trash
-      if ((status = dfs_mkdir(dir,0)) != 0) {
-        return status;
-      }
-
-      // do the rename
-      return dfs_rename(path,target);
-
-    }
-    // if the directory exists in the Trash, then we don't bother doing the rename
-    // and just delete the existing one by falling though.
+  if (!dfs->no_trash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
+    return move_to_trash(path);
   }
 
-  if (dfs->nowrites ||  hdfsDelete(dfs->fs, path)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to delete the directory %s",path);
+
+  if (dfs->nowrites) {
+    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot delete the directory %s\n",path);
+    return -EACCES;
+  }
+
+  if(hdfsDelete(dfs->fs, path)) {
+    syslog(LOG_ERR,"ERROR: hdfs error trying to delete the directory %s\n",path);
     return -EIO;
   }
+
   return 0;
 }
 
@@ -655,61 +734,22 @@ static int dfs_unlink(const char *path)
 
   assert('/' == *path);
 
-  int i ;
-  for (i = 0; protectedpaths[i]; i++) {
-    if (strcmp(path, protectedpaths[i]) == 0) {
-      syslog(LOG_ERR,"ERROR: hdfs trying to delete the directory: %s ",path);
-      return -EACCES;
-    }
+  if(is_protected(path)) {
+    syslog(LOG_ERR,"ERROR: hdfs trying to delete a protected directory: %s ",path);
+    return -EACCES;
   }
 
-
-
-  // since these commands go through the programmatic hadoop API, there is no
-  // trash feature. So, force it here.
-  // But make sure the person isn't deleting from Trash itself :)
-  // NOTE: /Trash is in protectedpaths so they cannot delete all of trash
-  if (!dfs->no_trash && strncmp(path, "/Trash", strlen("/Trash")) != 0) {
-
-    char target[4096];
-    char dir[4096];
-    int status;
-
-    {
-      // find the directory and full targets in Trash
-
-      sprintf(target, "/Trash/Current%s",path);
-
-      // strip off the actual file or directory name from the fullpath
-      char *name = rindex(path, '/');
-      assert(name);
-      *name = 0;
-
-      // use that path to ensure the directory exists in the Trash dir
-      // prepend Trash to the directory
-      sprintf(dir,"/Trash/Current%s/",path);
-
-      // repair the path not used again but in case the caller expects it.
-      *name = '/';
-    }
-
-    // if this is a file and it's already got a copy in the Trash, to be conservative, we
-    // don't do the delete.
-    if (hdfsExists(dfs->fs, target) == 0) {
-      syslog(LOG_ERR,"ERROR: hdfs trying to delete a file that was already deleted so cannot back it to Trash: %s",target);
-      return -EIO;
-    }
-
-    // make the directory to put it in in the Trash
-    if ((status = dfs_mkdir(dir,0)) != 0) {
-      return status;
-    }
-
-    // do the rename
-    return dfs_rename(path,target);
+  // move the file to the trash if this is enabled and its not actually in the trash.
+  if (!dfs->no_trash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
+    return move_to_trash(path);
   }
 
-  if (dfs->nowrites ||  hdfsDelete(dfs->fs, path)) {
+  if (dfs->nowrites) {
+    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot create the directory %s\n",path);
+    return -EACCES;
+  }
+
+  if (hdfsDelete(dfs->fs, path)) {
     syslog(LOG_ERR,"ERROR: hdfs trying to delete the file %s",path);
     return -EIO;
   }

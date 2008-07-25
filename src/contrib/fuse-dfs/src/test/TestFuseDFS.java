@@ -17,6 +17,7 @@
  */
 
 import org.apache.hadoop.dfs.*;
+import org.apache.hadoop.hdfs.*;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +52,8 @@ public class TestFuseDFS extends TestCase {
     Runtime r = Runtime.getRuntime();
     fuse_cmd = System.getProperty("build.test") + "/../fuse_dfs";
     String libhdfs = System.getProperty("build.test") + "/../../../libhdfs/";
-    String jvm = System.getProperty("java.home") + "/lib/amd64/server";
+    String arch = System.getProperty("os.arch");
+    String jvm = System.getProperty("java.home") + "/lib/" + arch + "/server";
     String lp = System.getProperty("LD_LIBRARY_PATH") + ":" + "/usr/local/lib:" + libhdfs + ":" + jvm;
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] = new String[4];
@@ -233,6 +235,26 @@ public class TestFuseDFS extends TestCase {
 
       // check it is not there
       assertFalse(fileSys.exists(myPath));
+
+      Path trashPath = new Path("/Trash/Current/test/mkdirs");
+      assertTrue(fileSys.exists(trashPath));
+
+      // make it again to test trashing same thing twice
+      p = r.exec("mkdir -p " + mpoint + "/test/mkdirs");
+      assertTrue(p.waitFor() == 0);
+
+      assertTrue(fileSys.exists(myPath));
+
+      // remove it
+      p = r.exec("rmdir " + mpoint + "/test/mkdirs");
+      assertTrue(p.waitFor() == 0);
+
+      // check it is not there
+      assertFalse(fileSys.exists(myPath));
+
+      trashPath = new Path("/Trash/Current/test/mkdirs.1");
+      assertTrue(fileSys.exists(trashPath));
+
     } catch(Exception e) {
       e.printStackTrace();
     }

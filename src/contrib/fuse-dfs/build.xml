@@ -37,7 +37,6 @@
     <exec executable="/bin/sh" failonerror="true">
       <arg value="${root}/bootstrap.sh"/>
     </exec>
-
     <exec executable="make" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
@@ -50,6 +49,7 @@
     <exec executable="cp" failonerror="true">
     <arg line="${root}/src/fuse_dfs ${build.dir}"/>
     </exec>
+    <mkdir dir="${build.dir}/test"/>
     <exec executable="cp" failonerror="true">
     <arg line="${root}/src/fuse_dfs_wrapper.sh ${build.dir}"/>
     </exec>
@@ -73,6 +73,10 @@
     </exec>
   </target>
 
+ <target name="test-unix">
+   <antcall target="hadoopbuildcontrib.test">
+   </antcall>
+ </target>
 
   <!-- override clean target !-->
   <target name="clean" depends="check-libhdfs-fuse" if="libhdfs-fuse">

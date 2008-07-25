@@ -171,6 +171,10 @@ Trunk (unreleased changes)
     HADOOP-3778. DFSInputStream.seek() did not retry in case of some errors.
     (LN via rangadi)
 
+    HADOOP-3661. The handling of moving files deleted through fuse-dfs to
+    Trash made similar to the behaviour from dfs shell.
+    (Pete Wyckoff via dhruba)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
