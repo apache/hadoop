@@ -112,6 +112,9 @@ Trunk (unreleased changes)
     HADOOP-3747. Adds counter suport for MultipleOutputs. 
     (Alejandro Abdelnur via ddas)
 
+    HADOOP-3169. LeaseChecker daemon should not be started in DFSClient
+    constructor. (TszWo (Nicholas), SZE via hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
@@ -855,7 +858,7 @@ Release 0.18.0 - Unreleased
   
     HADOOP-3588. Fixed usability issues with archives. (mahadev)
 
-    HADOOP-3536. Uncaught exception in DataBlockScanner.
+    HADOOP-3635. Uncaught exception in DataBlockScanner.
     (Tsz Wo (Nicholas), SZE via hairong)
 
     HADOOP-3539. Exception when closing DFSClient while multiple files are

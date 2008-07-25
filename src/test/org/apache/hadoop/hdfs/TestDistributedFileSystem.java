@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -65,4 +67,47 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     }
   }
 
+  public void testDFSClient() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final Path filepath = new Path("/test/LeaseChecker/foo");
+      final long millis = System.currentTimeMillis();
+
+      {
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+  
+        //create a file
+        FSDataOutputStream out = dfs.create(filepath);
+        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+  
+        //write something and close
+        out.writeLong(millis);
+        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        out.close();
+        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        dfs.close();
+      }
+
+      {
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+
+        //open and check the file
+        FSDataInputStream in = dfs.open(filepath);
+        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertEquals(millis, in.readLong());
+        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        in.close();
+        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        dfs.close();
+      }
+    }
+    finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
 }
