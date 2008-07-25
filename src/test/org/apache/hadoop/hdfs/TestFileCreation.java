@@ -75,7 +75,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   //
   // writes to file but does not close it
   //
-  private void writeFile(FSDataOutputStream stm) throws IOException {
+  static void writeFile(FSDataOutputStream stm) throws IOException {
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -131,16 +131,40 @@ public class TestFileCreation extends junit.framework.TestCase {
     // do a sanity check. Read the file
     byte[] actual = new byte[numBlocks * blockSize];
     stm.readFully(0, actual);
+    stm.close();
     checkData(actual, 0, expected, "Read 1");
   }
 
-  private void checkData(byte[] actual, int from, byte[] expected, String message) {
+  static private void checkData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
       assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                    expected[from+idx]+" actual "+actual[idx],
                    expected[from+idx], actual[idx]);
       actual[idx] = 0;
     }
+  }
+
+  static void checkFullFile(FileSystem fs, Path name) throws IOException {
+    FileStatus stat = fs.getFileStatus(name);
+    BlockLocation[] locations = fs.getFileBlockLocations(stat, 0, 
+                                                         fileSize);
+    for (int idx = 0; idx < locations.length; idx++) {
+      String[] hosts = locations[idx].getNames();
+      for (int i = 0; i < hosts.length; i++) {
+        System.out.print( hosts[i] + " ");
+      }
+      System.out.println(" off " + locations[idx].getOffset() +
+                         " len " + locations[idx].getLength());
+    }
+
+    byte[] expected = new byte[fileSize];
+    Random rand = new Random(seed);
+    rand.nextBytes(expected);
+    FSDataInputStream stm = fs.open(name);
+    byte[] actual = new byte[fileSize];
+    stm.readFully(0, actual);
+    checkData(actual, 0, expected, "Read 2");
+    stm.close();
   }
 
   /**

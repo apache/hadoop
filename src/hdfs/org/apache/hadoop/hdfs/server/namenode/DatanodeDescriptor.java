@@ -385,7 +385,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
         continue;
       }
       if(storedBlock.findDatanode(this) < 0) {// Known block, but not on the DN
-        toAdd.add(storedBlock);
+        // if the size differs from what is in the blockmap, then return
+        // the new block. addStoredBlock will then pick up the right size of this
+        // block and will update the block object in the BlocksMap
+        if (storedBlock.getNumBytes() != iblk.getNumBytes()) {
+          toAdd.add(new Block(iblk));
+        } else {
+          toAdd.add(storedBlock);
+        }
         continue;
       }
       // move block to the head of the list

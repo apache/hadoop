@@ -941,6 +941,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3820. Fixes two problems in the gridmix-env - a syntax error, and a 
     wrong definition of USE_REAL_DATASET by default. (Arun Murthy via ddas)
 
+    HADOOP-3724. Fixes two problems related to storing and recovering lease
+    in the fsimage. (dhruba)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

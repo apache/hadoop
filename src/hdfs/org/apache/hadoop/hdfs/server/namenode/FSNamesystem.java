@@ -1459,8 +1459,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkAncestorAccess(actualdst, FsAction.WRITE);
     }
 
+    DFSFileInfo dinfo = dir.getFileInfo(dst);
     if (dir.renameTo(src, dst)) {
-      changeLease(src, dst);     // update lease with new filename
+      changeLease(src, dst, dinfo);     // update lease with new filename
       return true;
     }
     return false;
@@ -4366,12 +4367,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
   //
-  void changeLease(String src, String dst) throws IOException {
+  void changeLease(String src, String dst, DFSFileInfo dinfo) 
+                   throws IOException {
     String overwrite;
     String replaceBy;
 
-    DFSFileInfo dinfo = dir.getFileInfo(dst);
-    if (dinfo.isDir()) {
+    boolean destinationExisted = true;
+    if (dinfo == null) {
+      destinationExisted = false;
+    }
+
+    if (destinationExisted && dinfo.isDir()) {
       Path spath = new Path(src);
       overwrite = spath.getParent().toString() + Path.SEPARATOR;
       replaceBy = dst + Path.SEPARATOR;

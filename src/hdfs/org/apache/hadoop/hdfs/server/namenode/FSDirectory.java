@@ -635,8 +635,11 @@ class FSDirectory implements FSConstants, Closeable {
                               "failed to remove " + path);
       } 
       rootDir.addNode(path, newnode); 
+      int index = 0;
       for (Block b : newnode.getBlocks()) {
-        namesystem.blocksMap.addINode(b, newnode);
+        BlockInfo info = namesystem.blocksMap.addINode(b, newnode);
+        newnode.setBlock(index, info); // inode refers to the block in BlocksMap
+        index++;
       }
     }
   }
