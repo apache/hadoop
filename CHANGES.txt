@@ -949,6 +949,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3724. Fixes two problems related to storing and recovering lease
     in the fsimage. (dhruba)
+    
+    HADOOP-3827.  Fixed compression of empty map-outputs. 
 
 Release 0.17.2 - Unreleased
 

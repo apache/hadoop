@@ -1057,7 +1057,7 @@ class MapTask extends Task {
         for (int i = 0; i < partitions; i++) {
           long segmentStart = finalOut.getPos();
           Writer<K, V> writer = new Writer<K, V>(job, finalOut, 
-                                                 keyClass, valClass, null);
+                                                 keyClass, valClass, codec);
           writer.close();
           writeIndexRecord(finalIndexOut, finalOut, segmentStart, writer);
         }
