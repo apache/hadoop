@@ -34,6 +34,7 @@ import java.nio.channels.FileChannel;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.dfs.DFSFileInfo;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -557,8 +558,9 @@ class FSEditLog {
             String s = FSImage.readString(in);
             String d = FSImage.readString(in);
             timestamp = readLong(in);
+            DFSFileInfo dinfo = fsDir.getFileInfo(d);
             fsDir.unprotectedRenameTo(s, d, timestamp);
-            fsNamesys.changeLease(s, d);
+            fsNamesys.changeLease(s, d, dinfo);
             break;
           }
           case OP_DELETE: {
