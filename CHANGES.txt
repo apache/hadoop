@@ -321,6 +321,7 @@ Release 0.2.0
                (LN via Stack)
    HBASE-746   Batching row mutations via thrift (Tim Sell via Stack)
    HBASE-772   Up default lease period from 60 to 120 seconds
+   HBASE-779   Test changing hbase.hregion.memcache.block.multiplier to 2
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

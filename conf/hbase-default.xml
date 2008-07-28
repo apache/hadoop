@@ -210,7 +210,7 @@
   </property>
   <property>
     <name>hbase.hregion.memcache.block.multiplier</name>
-    <value>1</value>
+    <value>2</value>
     <description>
     Block updates if memcache has hbase.hregion.block.memcache
     time hbase.hregion.flush.size bytes.  Useful preventing
