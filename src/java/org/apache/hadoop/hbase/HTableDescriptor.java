@@ -88,7 +88,7 @@ public class HTableDescriptor implements WritableComparable {
    * Private constructor used internally creating table descriptors for 
    * catalog tables: e.g. .META. and -ROOT-.
    */
-  private HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
+  protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
     this.name = name.clone();
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {

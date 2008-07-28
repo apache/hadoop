@@ -36,10 +36,21 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @param desc
    */
   UnmodifyableHTableDescriptor(final HTableDescriptor desc) {
-    super(desc.getName());
+    super(desc.getName(), getUnmodifyableFamilies(desc));
+  }
+  
+  /*
+   * @param desc
+   * @return Families as unmodifiable array.
+   */
+  private static HColumnDescriptor[] getUnmodifyableFamilies(
+      final HTableDescriptor desc) {
+    HColumnDescriptor [] f = new HColumnDescriptor[desc.getFamilies().size()];
+    int i = 0;
     for (HColumnDescriptor c: desc.getFamilies()) {
-      super.addFamily(new UnmodifyableHColumnDescriptor(c));
+      f[i++] = c;
     }
+    return f;
   }
 
   /**
