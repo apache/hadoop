@@ -217,6 +217,7 @@ Release 0.2.0
    HBASE-766   FileNotFoundException trying to load HStoreFile 'data'
    HBASE-770   Update HBaseRPC to match hadoop 0.17 RPC
    HBASE-780   Can't scan '.META.' from new shell
+   HBASE-424   Should be able to enable/disable .META. table
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

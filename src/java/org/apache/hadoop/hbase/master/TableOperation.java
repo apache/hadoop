@@ -55,11 +55,14 @@ abstract class TableOperation implements HConstants {
     }
     this.tableName = tableName;
 
-    // We can not access any meta region if they have not already been
-    // assigned and scanned.
-    if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
-      // We're shutting down. Forget it.
-      throw new MasterNotRunningException(); 
+    // Don't wait for META table to come on line if we're enabling it
+    if (!Bytes.equals(HConstants.META_TABLE_NAME, this.tableName)) {
+      // We can not access any meta region if they have not already been
+      // assigned and scanned.
+      if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
+        // We're shutting down. Forget it.
+        throw new MasterNotRunningException(); 
+      }
     }
     this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
   }
