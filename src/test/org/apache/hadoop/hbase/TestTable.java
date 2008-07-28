@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** Tests table creation restrictions*/
 public class TestTable extends HBaseClusterTestCase {
@@ -127,23 +128,53 @@ public class TestTable extends HBaseClusterTestCase {
 
   /**
    * Test read only tables
+   * @throws Exception
    */
   public void testReadOnlyTable() throws Exception {
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor desc = new HTableDescriptor(getName());
-    byte[] colName = "test:".getBytes();
+    byte[] colName = Bytes.toBytes("test:");
     desc.addFamily(new HColumnDescriptor(colName));
     desc.setReadOnly(true);
     admin.createTable(desc);
     HTable table = new HTable(conf, getName());
     try {
-      byte[] value = "somedata".getBytes();
+      byte[] value = Bytes.toBytes("somedata");
       BatchUpdate update = new BatchUpdate();
       update.put(colName, value);
       table.commit(update);
       fail("BatchUpdate on read only table succeeded");  
     } catch (Exception e) {
       // expected
+    }
+  }
+  
+  /**
+   * Test that user table names can contain '-' and '.' so long as they do not
+   * start with same. HBASE-771
+   */
+  public void testTableNames() {
+    byte[][] illegalNames = new byte[][] {
+        Bytes.toBytes("-bad"),
+        Bytes.toBytes(".bad"),
+        HConstants.ROOT_TABLE_NAME,
+        HConstants.META_TABLE_NAME
+    };
+    for (int i = 0; i < illegalNames.length; i++) {
+      try {
+        new HTableDescriptor(illegalNames[i]);
+        fail("Did not detect '" + Bytes.toString(illegalNames[i]) +
+            "' as an illegal user table name");
+      } catch (IllegalArgumentException e) {
+        // expected
+      }
+    }
+    byte[] legalName = Bytes.toBytes("g-oo.d");
+    try {
+      new HTableDescriptor(legalName);
+    } catch (IllegalArgumentException e) {
+      fail("Legal user table name: '" + Bytes.toString(legalName) +
+          "' caused IllegalArgumentException: " + e.getMessage());
     }
   }
 }

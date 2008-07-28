@@ -122,7 +122,7 @@ public class HTableDescriptor implements WritableComparable {
    * @param name Table name.
    * @throws IllegalArgumentException if passed a table name
    * that is made of other than 'word' characters, underscore or period: i.e.
-   * <code>[a-zA-Z_0-9.].
+   * <code>[a-zA-Z_0-9-.].
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
   public HTableDescriptor(final byte [] name) {
@@ -213,13 +213,19 @@ public class HTableDescriptor implements WritableComparable {
     if (b == null || b.length <= 0) {
       throw new IllegalArgumentException("Name is null or empty");
     }
+    if (b[0] == '.' || b[0] == '-') {
+      throw new IllegalArgumentException("Illegal first character <" + b[0] +
+          ">. " + "User-space table names can only start with 'word " +
+          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(b));
+    }
     for (int i = 0; i < b.length; i++) {
-      if (Character.isLetterOrDigit(b[i]) || b[i] == '_') {
+      if (Character.isLetterOrDigit(b[i]) || b[i] == '_' || b[i] == '-' ||
+          b[i] == '.') {
         continue;
       }
       throw new IllegalArgumentException("Illegal character <" + b[i] + ">. " +
         "User-space table names can only contain 'word characters':" +
-        "i.e. [a-zA-Z_0-9]: " + Bytes.toString(b));
+        "i.e. [a-zA-Z_0-9-.]: " + Bytes.toString(b));
     }
     return b;
   }
