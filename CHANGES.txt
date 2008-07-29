@@ -118,6 +118,9 @@ Trunk (unreleased changes)
     HADOOP-3824. Move base functionality of StatusHttpServer to a core
     package. (TszWo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3646. Add a bzip2 compatible codec, so bzip compressed data
+    may be processed by map/reduce. (Abdul Qadeer via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

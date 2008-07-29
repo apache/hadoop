@@ -63,6 +63,10 @@ public class TestCodec extends TestCase {
       codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
     }
   }
+  
+  public void testBZip2Codec() throws IOException {    
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");    
+  }
 
   private static void codecTest(Configuration conf, int seed, int count, 
                                 String codecClass) 
@@ -104,6 +108,8 @@ public class TestCodec extends TestCase {
     deflateOut.write(data.getData(), 0, data.getLength());
     deflateOut.flush();
     deflateFilter.finish();
+    //Necessary to close the stream for BZip2 Codec to write its final output.  Flush is not enough.
+    deflateOut.close();
     LOG.info("Finished compressing data");
     
     // De-compress data

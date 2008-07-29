@@ -131,7 +131,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>io.compression.codecs</name>
-  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.LzopCodec</value>
+  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.LzopCodec,org.apache.hadoop.io.compress.BZip2Codec</value>
   <description>A list of the compression codec classes that can be used 
                for compression/decompression.</description>
 </property>
