@@ -20,7 +20,7 @@ package org.apache.hadoop.log;
 import java.io.*;
 import java.net.*;
 
-import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.http.HttpServer;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -42,8 +42,7 @@ public class TestLogLevel extends TestCase {
       log.error("log.error1");
       assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
 
-      StatusHttpServer server = new StatusHttpServer("..",
-          "localhost", 22222, true);
+      HttpServer server = new HttpServer("..", "localhost", 22222, true);
       server.start();
       int port = server.getPort();
 

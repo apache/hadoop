@@ -32,7 +32,7 @@ import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -143,7 +143,7 @@ public class DataNode extends Configured
   long lastHeartbeat = 0;
   long heartBeatInterval;
   private DataStorage storage = null;
-  private StatusHttpServer infoServer = null;
+  private HttpServer infoServer = null;
   private DataNodeMetrics myMetrics;
   private static InetSocketAddress nameNodeAddr;
   private InetSocketAddress selfAddr;
@@ -349,7 +349,7 @@ public class DataNode extends Configured
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    this.infoServer = new StatusHttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0);
+    this.infoServer = new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.https.address", infoHost + ":" + 0));
     Configuration sslConf = new Configuration(conf);

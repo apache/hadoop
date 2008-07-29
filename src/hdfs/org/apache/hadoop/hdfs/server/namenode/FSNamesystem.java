@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
-import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -187,7 +187,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   //
   // For the HTTP browsing interface
   //
-  StatusHttpServer infoServer;
+  HttpServer infoServer;
   int infoPort;
   Date startTime;
     
@@ -339,7 +339,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    this.infoServer = new StatusHttpServer("dfs", infoHost, tmpInfoPort, 
+    this.infoServer = new HttpServer("dfs", infoHost, tmpInfoPort, 
                                             tmpInfoPort == 0);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
         conf.get("dfs.https.address", infoHost + ":" + 0));

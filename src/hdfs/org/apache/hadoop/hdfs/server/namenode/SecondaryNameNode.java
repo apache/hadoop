@@ -27,7 +27,7 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 
 import java.io.*;
@@ -61,7 +61,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   private Configuration conf;
   private InetSocketAddress nameNodeAddr;
   private boolean shouldRun;
-  private StatusHttpServer infoServer;
+  private HttpServer infoServer;
   private int infoPort;
   private String infoBindAddress;
 
@@ -151,7 +151,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    infoServer = new StatusHttpServer("secondary", infoBindAddress, tmpInfoPort, 
+    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort, 
                                       tmpInfoPort == 0);
     infoServer.setAttribute("name.system.image", checkpointImage);
     this.infoServer.setAttribute("name.conf", conf);

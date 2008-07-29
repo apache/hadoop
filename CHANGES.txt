@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     HADOOP-3169. LeaseChecker daemon should not be started in DFSClient
     constructor. (TszWo (Nicholas), SZE via hairong)
 
+    HADOOP-3824. Move base functionality of StatusHttpServer to a core
+    package. (TszWo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
