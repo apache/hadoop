@@ -112,11 +112,11 @@
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>5</value>
+    <value>10</value>
     <description>Maximum retries.  Used as maximum for all retryable
     operations such as fetching of the root region from root region
     server, getting a cell's value, starting a row update, etc.
-    Default: 5.
+    Default: 10.
     </description>
   </property>
   <property>

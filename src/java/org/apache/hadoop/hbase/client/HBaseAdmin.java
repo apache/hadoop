@@ -126,6 +126,12 @@ public class HBaseAdmin {
     return this.connection.listTables();
   }
 
+  private long getPauseTime(int tries) {
+    if (tries >= HConstants.RETRY_BACKOFF.length)
+      tries = HConstants.RETRY_BACKOFF.length - 1;
+    return this.pause * HConstants.RETRY_BACKOFF[tries];
+  }
+
   /**
    * Creates a new table
    * 
@@ -155,7 +161,7 @@ public class HBaseAdmin {
         }
       }
       try {
-        Thread.sleep(pause);
+        Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         // continue
       }
@@ -274,7 +280,7 @@ public class HBaseAdmin {
       }
 
       try {
-        Thread.sleep(pause);
+        Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         // continue
       }
@@ -320,14 +326,15 @@ public class HBaseAdmin {
 
     // Wait until all regions are enabled
     
-    while (!isTableEnabled(tableName)) {
+    for (int tries = 0;
+        (tries < numRetries) && (!isTableEnabled(tableName));
+        tries++) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be enabled from " +
           Bytes.toString(tableName));
       }
       try {
-        Thread.sleep(pause);
-        
+        Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         // continue
       }
@@ -336,6 +343,9 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
+    if (!isTableEnabled(tableName))
+      throw new IOException("unable to enable table " +
+        Bytes.toString(tableName));
     LOG.info("Enabled table " + Bytes.toString(tableName));
   }
 
@@ -379,13 +389,15 @@ public class HBaseAdmin {
     }
 
     // Wait until all regions are disabled
-    while (isTableEnabled(tableName)) {
+    for (int tries = 0;
+        (tries < numRetries) && (isTableEnabled(tableName));
+        tries++) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
           Bytes.toString(tableName));
       }
       try {
-        Thread.sleep(pause);
+        Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
         // continue
       }
@@ -394,6 +406,9 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
+    if (isTableEnabled(tableName))
+      throw new IOException("unable to disable table " +
+        Bytes.toString(tableName));
     LOG.info("Disabled " + Bytes.toString(tableName));
   }
   

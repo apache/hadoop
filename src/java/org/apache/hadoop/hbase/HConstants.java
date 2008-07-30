@@ -226,4 +226,10 @@ public interface HConstants {
   public static final String NAME = "NAME";
   public static final String VERSIONS = "VERSIONS";
   public static final String IN_MEMORY = "IN_MEMORY";
+  
+  /**
+   * This is a retry backoff multiplier table similar to the BSD TCP syn
+   * backoff table, a bit more aggressive than simple exponential backoff.
+   */ 
+  public static int RETRY_BACKOFF[] = { 1, 1, 1, 1, 2, 4, 8, 16, 32, 64 };
 }

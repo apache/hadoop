@@ -344,6 +344,7 @@ Release 0.2.0
                Cryans via JimK)
    HBASE-733   Enhance Cell so that it can contain multiple values at multiple
                timestamps
+   HBASE-511   Do exponential backoff in clients on NSRE, WRE, ISE, etc.
    
   OPTIMIZATIONS
    HBASE-430   Performance: Scanners and getRow return maps with duplicate data

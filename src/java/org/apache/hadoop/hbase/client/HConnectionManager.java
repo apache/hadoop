@@ -163,14 +163,20 @@ public class HConnectionManager implements HConstants {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
-      this.numRetries = conf.getInt("hbase.client.retries.number", 5);
+      this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
+      this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       
       this.master = null;
       this.masterChecked = false;
     }
-    
+
+    private long getPauseTime(int tries) {
+      if (tries >= HConstants.RETRY_BACKOFF.length)
+        tries = HConstants.RETRY_BACKOFF.length - 1;
+      return this.pause * HConstants.RETRY_BACKOFF[tries];
+    }
+
     /** {@inheritDoc} */
     public HMasterInterface getMaster() throws MasterNotRunningException {
       HServerAddress masterLocation = null;
@@ -199,13 +205,14 @@ public class HConnectionManager implements HConstants {
               break;
             }
             LOG.info("Attempt " + tries + " of " + this.numRetries +
-              " failed with <" + e + ">. Retrying after sleep of " + this.pause);
+              " failed with <" + e + ">. Retrying after sleep of " +
+              getPauseTime(tries));
           }
 
           // We either cannot connect to master or it is not running. Sleep & retry
           
           try {
-            Thread.sleep(this.pause);
+            Thread.sleep(getPauseTime(tries));
           } catch (InterruptedException e) {
             // continue
           }
@@ -578,7 +585,7 @@ public class HConnectionManager implements HConstants {
         }
       
         try{
-          Thread.sleep(pause);              
+          Thread.sleep(getPauseTime(tries));              
         } catch (InterruptedException e){
           // continue
         }
@@ -795,7 +802,7 @@ public class HConnectionManager implements HConstants {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Sleeping. Waiting for root region.");
               }
-              Thread.sleep(pause);
+              Thread.sleep(getPauseTime(tries));
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Wake. Retry finding root region.");
               }
@@ -837,7 +844,7 @@ public class HConnectionManager implements HConstants {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Root region location changed. Sleeping.");
             }
-            Thread.sleep(pause);
+            Thread.sleep(getPauseTime(tries));
             if (LOG.isDebugEnabled()) {
               LOG.debug("Wake. Retry finding root region.");
             }
@@ -890,7 +897,7 @@ public class HConnectionManager implements HConstants {
           }
         }
         try {
-          Thread.sleep(pause);
+          Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e) {
           // continue
         }
