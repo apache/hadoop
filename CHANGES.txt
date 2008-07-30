@@ -190,6 +190,9 @@ Trunk (unreleased changes)
     HADOOP-3819. Unset LANG and LC_CTYPE in saveVersion.sh to make it
     compatible with non-English locales. (Rong-En Fan via cdouglas)
 
+    HADOOP-3848. Cache calls to getSystemDir in the TaskTracker instead of
+    calling it for each task start. (acmurthy via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

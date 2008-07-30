@@ -121,7 +121,13 @@ public class TaskTracker
    * again.
    */
   TaskTrackerStatus status = null;
-    
+  
+  // The system-directory on HDFS where job files are stored 
+  Path systemDirectory = null;
+  
+  // The filesystem where job files are stored
+  FileSystem systemFS = null;
+  
   StatusHttpServer server = null;
     
   volatile boolean shuttingDown = false;
@@ -633,12 +639,10 @@ public class TaskTracker
     Path jobFile = new Path(t.getJobFile());
     // Get sizes of JobFile and JarFile
     // sizes are -1 if they are not present.
-    Path systemDir = new Path(jobClient.getSystemDir());
-    FileSystem fs = systemDir.getFileSystem(fConf);
     FileStatus status = null;
     long jobFileSize = -1;
     try {
-      status = fs.getFileStatus(jobFile);
+      status = systemFS.getFileStatus(jobFile);
       jobFileSize = status.getLen();
     } catch(FileNotFoundException fe) {
       jobFileSize = -1;
@@ -664,7 +668,7 @@ public class TaskTracker
             throw new IOException("Not able to create job directory "
                                   + jobDir.toString());
         }
-        fs.copyToLocalFile(jobFile, localJobFile);
+        systemFS.copyToLocalFile(jobFile, localJobFile);
         JobConf localJobConf = new JobConf(localJobFile);
         
         // create the 'work' directory
@@ -685,7 +689,7 @@ public class TaskTracker
         if (jarFile != null) {
           Path jarFilePath = new Path(jarFile);
           try {
-            status = fs.getFileStatus(jarFilePath);
+            status = systemFS.getFileStatus(jarFilePath);
             jarFileSize = status.getLen();
           } catch(FileNotFoundException fe) {
             jarFileSize = -1;
@@ -700,7 +704,7 @@ public class TaskTracker
           if (!localFs.mkdirs(localJarFile.getParent())) {
             throw new IOException("Mkdirs failed to create jars directory "); 
           }
-          fs.copyToLocalFile(jarFilePath, localJarFile);
+          systemFS.copyToLocalFile(jarFilePath, localJarFile);
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
           try {
@@ -906,7 +910,9 @@ public class TaskTracker
           }
         }
 
-        //verify the buildVersion if justStarted
+        // If the TaskTracker is just starting up:
+        // 1. Verify the buildVersion
+        // 2. Get the system directory & filesystem
         if(justStarted){
           String jobTrackerBV = jobClient.getBuildVersion();
           if(!VersionInfo.getBuildVersion().equals(jobTrackerBV)) {
@@ -921,6 +927,13 @@ public class TaskTracker
             }
             return State.DENIED;
           }
+          
+          String dir = jobClient.getSystemDir();
+          if (dir == null) {
+            throw new IOException("Failed to get system directory");
+          }
+          systemDirectory = new Path(dir);
+          systemFS = systemDirectory.getFileSystem(fConf);
         }
         
         // Send the heartbeat and process the jobtracker's directives
