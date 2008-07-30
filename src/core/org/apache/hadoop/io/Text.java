@@ -47,15 +47,24 @@ import org.apache.commons.logging.LogFactory;
 public class Text implements WritableComparable {
   private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.Text");
   
-  private static final CharsetDecoder DECODER = 
-    Charset.forName("UTF-8").newDecoder().
-    onMalformedInput(CodingErrorAction.REPORT).
-    onUnmappableCharacter(CodingErrorAction.REPORT);
-  private static final CharsetEncoder ENCODER = 
-    Charset.forName("UTF-8").newEncoder().
-    onMalformedInput(CodingErrorAction.REPORT).
-    onUnmappableCharacter(CodingErrorAction.REPORT);
-
+  private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
+    new ThreadLocal<CharsetEncoder>() {
+      protected CharsetEncoder initialValue() {
+        return Charset.forName("UTF-8").newEncoder().
+               onMalformedInput(CodingErrorAction.REPORT).
+               onUnmappableCharacter(CodingErrorAction.REPORT);
+    }
+  };
+  
+  private static ThreadLocal<CharsetDecoder> DECODER_FACTORY =
+    new ThreadLocal<CharsetDecoder>() {
+    protected CharsetDecoder initialValue() {
+      return Charset.forName("UTF-8").newDecoder().
+             onMalformedInput(CodingErrorAction.REPORT).
+             onUnmappableCharacter(CodingErrorAction.REPORT);
+    }
+  };
+  
   private static final byte [] EMPTY_BYTES = new byte[0];
   
   private byte[] bytes;
@@ -349,21 +358,19 @@ public class Text implements WritableComparable {
   
   private static String decode(ByteBuffer utf8, boolean replace) 
     throws CharacterCodingException {
-    synchronized(DECODER) {
-      if (replace) {
-        DECODER.onMalformedInput(
-                                 java.nio.charset.CodingErrorAction.REPLACE);
-        DECODER.onUnmappableCharacter(CodingErrorAction.REPLACE);
-      }
-      String str = DECODER.decode(utf8).toString();
-      // set decoder back to its default value: REPORT
-      if (replace) {
-        DECODER.onMalformedInput(CodingErrorAction.REPORT);
-        DECODER.onUnmappableCharacter(CodingErrorAction.REPORT);
-      }
-      return str;
+    CharsetDecoder decoder = DECODER_FACTORY.get();
+    if (replace) {
+      decoder.onMalformedInput(
+          java.nio.charset.CodingErrorAction.REPLACE);
+      decoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
     }
-
+    String str = decoder.decode(utf8).toString();
+    // set decoder back to its default value: REPORT
+    if (replace) {
+      decoder.onMalformedInput(CodingErrorAction.REPORT);
+      decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+    }
+    return str;
   }
 
   /**
@@ -390,18 +397,18 @@ public class Text implements WritableComparable {
    */
   public static ByteBuffer encode(String string, boolean replace)
     throws CharacterCodingException {
-    synchronized(ENCODER) {
-      if (replace) {
-        ENCODER.onMalformedInput(CodingErrorAction.REPLACE);
-        ENCODER.onUnmappableCharacter(CodingErrorAction.REPLACE);
-      }
-      ByteBuffer bytes=ENCODER.encode(CharBuffer.wrap(string.toCharArray()));
-      if (replace) {
-        ENCODER.onMalformedInput(CodingErrorAction.REPORT);
-        ENCODER.onUnmappableCharacter(CodingErrorAction.REPORT);
-      }
-      return bytes;
+    CharsetEncoder encoder = ENCODER_FACTORY.get();
+    if (replace) {
+      encoder.onMalformedInput(CodingErrorAction.REPLACE);
+      encoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
     }
+    ByteBuffer bytes = 
+      encoder.encode(CharBuffer.wrap(string.toCharArray()));
+    if (replace) {
+      encoder.onMalformedInput(CodingErrorAction.REPORT);
+      encoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+    }
+    return bytes;
   }
 
   /** Read a UTF8 encoded string from in

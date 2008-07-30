@@ -216,6 +216,42 @@ public class TestText extends TestCase {
     assertEquals("modified aliased string", "abc", b.toString());
     assertEquals("appended string incorrectly", "abcdefg", a.toString());
   }
+  
+  private class ConcurrentEncodeDecodeThread extends Thread {
+    public ConcurrentEncodeDecodeThread(String name) {
+      super(name);
+    }
+
+    public void run() {
+      String name = this.getName();
+      DataOutputBuffer out = new DataOutputBuffer();
+      DataInputBuffer in = new DataInputBuffer();
+      for (int i=0; i < 1000; ++i) {
+        try {
+          out.reset();
+          WritableUtils.writeString(out, name);
+          
+          in.reset(out.getData(), out.getLength());
+          String s = WritableUtils.readString(in);
+          
+          assertEquals(name, s);
+        } catch (Exception ioe) {
+          throw new RuntimeException(ioe);
+        }
+      }
+    }
+  }
+  
+  public void testConcurrentEncodeDecode() throws Exception{
+    Thread thread1 = new ConcurrentEncodeDecodeThread("apache");
+    Thread thread2 = new ConcurrentEncodeDecodeThread("hadoop");
+    
+    thread1.start();
+    thread2.start();
+    
+    thread2.join();
+    thread2.join();
+  }
 
   public static void main(String[] args)  throws Exception
   {

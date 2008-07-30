@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     datanode in the pipeline needs to verify the checksum. Saves around
     30% CPU on intermediate datanodes. (rangadi)
 
+    HADOOP-3863. Use a thread-local string encoder rather than a static one
+    that is protected by a lock. (acmurthy via omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 
