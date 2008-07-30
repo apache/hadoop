@@ -184,6 +184,9 @@ Trunk (unreleased changes)
     Trash made similar to the behaviour from dfs shell.
     (Pete Wyckoff via dhruba)
 
+    HADOOP-3819. Unset LANG and LC_CTYPE in saveVersion.sh to make it
+    compatible with non-English locales. (Rong-En Fan via cdouglas)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
