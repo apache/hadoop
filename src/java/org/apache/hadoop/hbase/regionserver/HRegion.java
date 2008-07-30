@@ -1181,23 +1181,40 @@ public class HRegion implements HConstants {
     }
     HStoreKey key = new HStoreKey(row, ts);
     Integer lid = obtainRowLock(row);
+    HashSet<HStore> storeSet = new HashSet<HStore>();
     try {
       TreeMap<byte [], Cell> result =
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      for (HStore targetStore: stores.values()) {
-        targetStore.getFull(key, columns, result);
+      // Get the concerned columns or all of them
+      if (columns != null) {
+        for (byte[] bs : columns) {
+          HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
+          if (store != null) {
+            storeSet.add(store);
+          }
+        }
       }
-      // Previous step won't fetch whole families: HBASE-631.
+      else
+        storeSet.addAll(stores.values());
+      
       // For each column name that is just a column family, open the store
-      // related to it and fetch everything for that row. 
+      // related to it and fetch everything for that row. HBASE-631
+      // Also remove each store from storeSet so that these stores
+      // won't be opened for no reason. HBASE-783
       if (columns != null) {
         for (byte[] bs : columns) {
           if (HStoreKey.getFamilyDelimiterIndex(bs) == (bs.length - 1)) {
             HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
             store.getFull(key, null, result);
+            storeSet.remove(store);
           }
         }
       }
+      
+      for (HStore targetStore: storeSet) {
+        targetStore.getFull(key, columns, result);
+      }
+      
       return result;
     } finally {
       releaseRowLock(lid);

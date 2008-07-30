@@ -752,7 +752,8 @@ public class HStore implements HConstants {
         // last key of storefiles.
         maxId = this.storefiles.lastKey().longValue();
       }
-      if (!force && filesToCompact.size() < compactionThreshold) {
+      if (!force && !hasReferences(filesToCompact) &&
+          filesToCompact.size() < compactionThreshold) {
         return checkSplit();
       }
       if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {

@@ -324,6 +324,8 @@ Release 0.2.0
    HBASE-746   Batching row mutations via thrift (Tim Sell via Stack)
    HBASE-772   Up default lease period from 60 to 120 seconds
    HBASE-779   Test changing hbase.hregion.memcache.block.multiplier to 2
+   HBASE-783   For single row, single family retrieval, getRow() works half
+               as fast as getScanner().next() (Jean-Daniel Cryans via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase
