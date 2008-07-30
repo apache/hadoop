@@ -124,10 +124,10 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
    * @return the PathFilter instance set for the job, NULL if none has been set.
    */
   public static PathFilter getInputPathFilter(JobConf conf) {
-    Class<?> filterClass = conf.getClass("mapred.input.pathFilter.class", null,
-        PathFilter.class);
+    Class<? extends PathFilter> filterClass = conf.getClass(
+	"mapred.input.pathFilter.class", null, PathFilter.class);
     return (filterClass != null) ?
-        (PathFilter) ReflectionUtils.newInstance(filterClass, conf) : null;
+        ReflectionUtils.newInstance(filterClass, conf) : null;
   }
 
   /** List input directories.

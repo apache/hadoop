@@ -36,14 +36,14 @@ public class ArrayFile extends MapFile {
 
     /** Create the named file for values of the named class. */
     public Writer(Configuration conf, FileSystem fs,
-                  String file, Class valClass)
+                  String file, Class<? extends Writable> valClass)
       throws IOException {
       super(conf, fs, file, LongWritable.class, valClass);
     }
 
     /** Create the named file for values of the named class. */
     public Writer(Configuration conf, FileSystem fs,
-                  String file, Class valClass,
+                  String file, Class<? extends Writable> valClass,
                   CompressionType compress, Progressable progress)
       throws IOException {
       super(conf, fs, file, LongWritable.class, valClass, compress, progress);

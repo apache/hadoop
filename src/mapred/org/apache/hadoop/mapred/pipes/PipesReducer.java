@@ -62,13 +62,14 @@ class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
     isOk = true;
   }
 
+  @SuppressWarnings("unchecked")
   private void startApplication(OutputCollector<K3, V3> output, Reporter reporter) throws IOException {
     if (application == null) {
       try {
         LOG.info("starting application");
         application = new Application<K2, V2, K3, V3>(job, output, reporter, 
-                                      job.getOutputKeyClass(), 
-                                      job.getOutputValueClass());
+                                      (Class<? extends K3>) job.getOutputKeyClass(), 
+                                      (Class<? extends V3>) job.getOutputValueClass());
         downlink = application.getDownlink();
       } catch (InterruptedException ie) {
         throw new RuntimeException("interrupted", ie);

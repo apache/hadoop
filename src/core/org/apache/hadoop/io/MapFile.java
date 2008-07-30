@@ -77,7 +77,7 @@ public class MapFile {
 
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
-                  Class keyClass, Class valClass)
+                  Class<? extends WritableComparable> keyClass, Class valClass)
       throws IOException {
       this(conf, fs, dirName,
            WritableComparator.get(keyClass), valClass,
@@ -86,7 +86,7 @@ public class MapFile {
 
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
-                  Class keyClass, Class valClass,
+                  Class<? extends WritableComparable> keyClass, Class valClass,
                   CompressionType compress, Progressable progress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass,
@@ -95,7 +95,7 @@ public class MapFile {
 
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
-                  Class keyClass, Class valClass,
+                  Class<? extends WritableComparable> keyClass, Class valClass,
                   CompressionType compress, CompressionCodec codec,
                   Progressable progress)
       throws IOException {
@@ -105,7 +105,8 @@ public class MapFile {
 
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
-                  Class keyClass, Class valClass, CompressionType compress)
+                  Class<? extends WritableComparable> keyClass, Class valClass,
+                  CompressionType compress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass, compress);
     }
@@ -242,10 +243,10 @@ public class MapFile {
     private long[] positions;
 
     /** Returns the class of keys in this file. */
-    public Class getKeyClass() { return data.getKeyClass(); }
+    public Class<?> getKeyClass() { return data.getKeyClass(); }
 
     /** Returns the class of values in this file. */
-    public Class getValueClass() { return data.getValueClass(); }
+    public Class<?> getValueClass() { return data.getValueClass(); }
 
     /** Construct a map reader for the named map.*/
     public Reader(FileSystem fs, String dirName, Configuration conf) throws IOException {
@@ -284,7 +285,7 @@ public class MapFile {
       this.firstPosition = data.getPosition();
 
       if (comparator == null)
-        this.comparator = WritableComparator.get(data.getKeyClass());
+        this.comparator = WritableComparator.get(data.getKeyClass().asSubclass(WritableComparable.class));
       else
         this.comparator = comparator;
 
@@ -611,7 +612,9 @@ public class MapFile {
    * @throws Exception
    */
   public static long fix(FileSystem fs, Path dir,
-                         Class keyClass, Class valueClass, boolean dryrun, Configuration conf) throws Exception {
+                         Class<? extends Writable> keyClass,
+                         Class<? extends Writable> valueClass, boolean dryrun,
+                         Configuration conf) throws Exception {
     String dr = (dryrun ? "[DRY RUN ] " : "");
     Path data = new Path(dir, DATA_FILE_NAME);
     Path index = new Path(dir, INDEX_FILE_NAME);
@@ -634,8 +637,8 @@ public class MapFile {
                           ", got " + dataReader.getValueClass().getName());
     }
     long cnt = 0L;
-    Writable key = (Writable)ReflectionUtils.newInstance(keyClass, conf);
-    Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
+    Writable key = ReflectionUtils.newInstance(keyClass, conf);
+    Writable value = ReflectionUtils.newInstance(valueClass, conf);
     SequenceFile.Writer indexWriter = null;
     if (!dryrun) indexWriter = SequenceFile.createWriter(fs, conf, index, keyClass, LongWritable.class);
     try {
@@ -673,11 +676,14 @@ public class MapFile {
     FileSystem fs = FileSystem.getLocal(conf);
     MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
     MapFile.Writer writer =
-      new MapFile.Writer(conf, fs, out, reader.getKeyClass(), reader.getValueClass());
+      new MapFile.Writer(conf, fs, out,
+          reader.getKeyClass().asSubclass(WritableComparable.class),
+          reader.getValueClass());
 
     WritableComparable key =
-      (WritableComparable)ReflectionUtils.newInstance(reader.getKeyClass(), conf);
-    Writable value = (Writable)ReflectionUtils.newInstance(reader.getValueClass(), conf);
+      ReflectionUtils.newInstance(reader.getKeyClass().asSubclass(WritableComparable.class), conf);
+    Writable value =
+      ReflectionUtils.newInstance(reader.getValueClass().asSubclass(Writable.class), conf);
 
     while (reader.next(key, value))               // copy all entries
       writer.append(key, value);

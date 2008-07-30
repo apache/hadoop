@@ -160,7 +160,7 @@ public class DistributedPentomino extends Configured implements Tool {
     int depth = 5;
     int width = 9;
     int height = 10;
-    Class pentClass;
+    Class<? extends Pentomino> pentClass;
     if (args.length == 0) {
       System.out.println("pentomino <output>");
       ToolRunner.printGenericCommandUsage(System.out);
@@ -171,7 +171,7 @@ public class DistributedPentomino extends Configured implements Tool {
     width = conf.getInt("pent.width", width);
     height = conf.getInt("pent.height", height);
     depth = conf.getInt("pent.depth", depth);
-    pentClass = conf.getClass("pent.class", OneSidedPentomino.class);
+    pentClass = conf.getClass("pent.class", OneSidedPentomino.class, Pentomino.class);
     
     Path output = new Path(args[0]);
     Path input = new Path(output + "_input");
@@ -182,7 +182,7 @@ public class DistributedPentomino extends Configured implements Tool {
       conf.setJarByClass(PentMap.class);
       
       conf.setJobName("dancingElephant");
-      Pentomino pent = (Pentomino) ReflectionUtils.newInstance(pentClass, conf);
+      Pentomino pent = ReflectionUtils.newInstance(pentClass, conf);
       pent.initialize(width, height);
       createInputDirectory(fileSys, input, pent, depth);
    

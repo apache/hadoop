@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -160,7 +159,7 @@ class ReduceTask extends Task {
     if (conf.getCompressMapOutput()) {
       Class<? extends CompressionCodec> codecClass =
         conf.getMapOutputCompressorClass(DefaultCodec.class);
-      return (CompressionCodec) ReflectionUtils.newInstance(codecClass, conf);
+      return ReflectionUtils.newInstance(codecClass, conf);
     } 
 
     return null;
@@ -246,8 +245,7 @@ class ReduceTask extends Task {
   @SuppressWarnings("unchecked")
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
-    Reducer reducer = (Reducer)ReflectionUtils.newInstance(
-                                                           job.getReducerClass(), job);
+    Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
 
     // start thread that will handle communication with parent
     startCommunicationThread(umbilical);
@@ -303,7 +301,6 @@ class ReduceTask extends Task {
       job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);  
     
     OutputCollector collector = new OutputCollector() {
-        @SuppressWarnings("unchecked")
         public void collect(Object key, Object value)
           throws IOException {
           out.write(key, value);
@@ -892,8 +889,7 @@ class ReduceTask extends Task {
         if (job.getCompressMapOutput()) {
           Class<? extends CompressionCodec> codecClass =
             job.getMapOutputCompressorClass(DefaultCodec.class);
-          codec = (CompressionCodec)
-            ReflectionUtils.newInstance(codecClass, job);
+          codec = ReflectionUtils.newInstance(codecClass, job);
           decompressor = CodecPool.getDecompressor(codec);
         }
       }
@@ -1461,7 +1457,6 @@ class ReduceTask extends Task {
       return numInFlight > maxInFlight;
     }
     
-    @SuppressWarnings("unchecked")
     public boolean fetchOutputs() throws IOException {
       //The map for (Hosts, List of MapIds from this Host)
       HashMap<String, List<MapOutputLocation>> mapLocations = 
@@ -2136,7 +2131,6 @@ class ReduceTask extends Task {
         setDaemon(true);
       }
       
-      @SuppressWarnings("unchecked")
       public void run() {
         LOG.info(reduceTask.getTaskID() + " Thread started: " + getName());
         try {
@@ -2229,8 +2223,7 @@ class ReduceTask extends Task {
         RawKeyValueIterator kvIter,
         Counters.Counter inCounter) throws IOException {
       JobConf job = (JobConf)getConf();
-      Reducer combiner =
-        (Reducer)ReflectionUtils.newInstance(combinerClass, job);
+      Reducer combiner = ReflectionUtils.newInstance(combinerClass, job);
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
       RawComparator comparator = job.getOutputKeyComparator();

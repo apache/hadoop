@@ -66,10 +66,11 @@ public class ReflectionUtils {
    * @param conf Configuration
    * @return a new object
    */
-  public static Object newInstance(Class<?> theClass, Configuration conf) {
-    Object result;
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(Class<T> theClass, Configuration conf) {
+    T result;
     try {
-      Constructor meth = CONSTRUCTOR_CACHE.get(theClass);
+      Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
         meth = theClass.getDeclaredConstructor(emptyArray);
         meth.setAccessible(true);

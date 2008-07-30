@@ -1489,9 +1489,9 @@ public class SequenceFile {
         if (version >= CUSTOM_COMPRESS_VERSION) {
           String codecClassname = Text.readString(in);
           try {
-            Class codecClass = conf.getClassByName(codecClassname);
-            this.codec = (CompressionCodec)
-              ReflectionUtils.newInstance(codecClass, conf);
+            Class<? extends CompressionCodec> codecClass
+              = conf.getClassByName(codecClassname).asSubclass(CompressionCodec.class);
+            this.codec = ReflectionUtils.newInstance(codecClass, conf);
           } catch (ClassNotFoundException cnfe) {
             throw new IllegalArgumentException("Unknown codec: " + 
                                                codecClassname, cnfe);
@@ -1587,7 +1587,7 @@ public class SequenceFile {
     }
 
     /** Returns the class of keys in this file. */
-    public synchronized Class getKeyClass() {
+    public synchronized Class<?> getKeyClass() {
       if (null == keyClass) {
         try {
           keyClass = WritableName.getClass(getKeyClassName(), conf);
@@ -1604,7 +1604,7 @@ public class SequenceFile {
     }
 
     /** Returns the class of values in this file. */
-    public synchronized Class getValueClass() {
+    public synchronized Class<?> getValueClass() {
       if (null == valClass) {
         try {
           valClass = WritableName.getClass(getValueClassName(), conf);
@@ -2228,7 +2228,8 @@ public class SequenceFile {
     private Progressable progressable = null;
 
     /** Sort and merge files containing the named classes. */
-    public Sorter(FileSystem fs, Class keyClass, Class valClass, Configuration conf)  {
+    public Sorter(FileSystem fs, Class<? extends WritableComparable> keyClass,
+                  Class valClass, Configuration conf)  {
       this(fs, WritableComparator.get(keyClass), keyClass, valClass, conf);
     }
 
@@ -2753,6 +2754,7 @@ public class SequenceFile {
       private Map<SegmentDescriptor, Void> sortedSegmentSizes =
         new TreeMap<SegmentDescriptor, Void>();
             
+      @SuppressWarnings("unchecked")
       public void put(SegmentDescriptor stream) throws IOException {
         if (size() == 0) {
           compress = stream.in.isCompressed();

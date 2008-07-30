@@ -23,7 +23,6 @@ import java.util.Iterator;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapred.JobConf;
 
 /**
  * This class provides an implementation of ResetableIterator. The
@@ -51,12 +50,11 @@ public class ArrayListBackedIterator<X extends Writable>
     return iter.hasNext();
   }
 
-  @SuppressWarnings("unchecked")
   public boolean next(X val) throws IOException {
     if (iter.hasNext()) {
       WritableUtils.cloneInto(val, iter.next());
       if (null == hold) {
-        hold = (X) WritableUtils.clone(val, null);
+        hold = WritableUtils.clone(val, null);
       } else {
         WritableUtils.cloneInto(hold, val);
       }
@@ -74,9 +72,8 @@ public class ArrayListBackedIterator<X extends Writable>
     iter = data.iterator();
   }
 
-  @SuppressWarnings("unchecked")
   public void add(X item) throws IOException {
-    data.add((X) WritableUtils.clone(item, null));
+    data.add(WritableUtils.clone(item, null));
   }
 
   public void close() throws IOException {

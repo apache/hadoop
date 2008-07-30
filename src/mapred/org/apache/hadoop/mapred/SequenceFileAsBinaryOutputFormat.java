@@ -107,9 +107,10 @@ public class SequenceFileAsBinaryOutputFormat
    * 
    * @return the key class of the {@link SequenceFile}
    */
-  static public Class<?> getSequenceFileOutputKeyClass(JobConf conf) { 
+  static public Class<? extends WritableComparable> getSequenceFileOutputKeyClass(JobConf conf) { 
     return conf.getClass("mapred.seqbinary.output.key.class", 
-                         conf.getOutputKeyClass(), Object.class);
+                         conf.getOutputKeyClass().asSubclass(WritableComparable.class),
+                         WritableComparable.class);
   }
 
   /**
@@ -117,13 +118,11 @@ public class SequenceFileAsBinaryOutputFormat
    * 
    * @return the value class of the {@link SequenceFile}
    */
-  static public Class<?> getSequenceFileOutputValueClass(JobConf conf) { 
+  static public Class<? extends Writable> getSequenceFileOutputValueClass(JobConf conf) { 
     return conf.getClass("mapred.seqbinary.output.value.class", 
-                         conf.getOutputValueClass(), Object.class);
+                         conf.getOutputValueClass().asSubclass(Writable.class),
+                         Writable.class);
   }
-
-
-
   
   @Override 
   public RecordWriter <BytesWritable, BytesWritable> 
@@ -141,9 +140,9 @@ public class SequenceFileAsBinaryOutputFormat
       compressionType = getOutputCompressionType(job);
 
       // find the right codec
-      Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
-      codec = (CompressionCodec) 
-        ReflectionUtils.newInstance(codecClass, job);
+      Class<? extends CompressionCodec> codecClass = getOutputCompressorClass(job,
+	  DefaultCodec.class);
+      codec = ReflectionUtils.newInstance(codecClass, job);
     }
     final SequenceFile.Writer out = 
       SequenceFile.createWriter(fs, job, file,

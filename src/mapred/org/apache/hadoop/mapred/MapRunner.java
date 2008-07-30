@@ -30,8 +30,7 @@ public class MapRunner<K1, V1, K2, V2>
 
   @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
-    this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
-                                                      job);
+    this.mapper = ReflectionUtils.newInstance(job.getMapperClass(), job);
   }
 
   public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,

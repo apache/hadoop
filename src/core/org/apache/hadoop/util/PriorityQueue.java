@@ -21,8 +21,8 @@ package org.apache.hadoop.util;
 /** A PriorityQueue maintains a partial ordering of its elements such that the
   least element can always be found in constant time.  Put()'s and pop()'s
   require log(size) time. */
-public abstract class PriorityQueue {
-  private Object[] heap;
+public abstract class PriorityQueue<T> {
+  private T[] heap;
   private int size;
   private int maxSize;
 
@@ -31,10 +31,11 @@ public abstract class PriorityQueue {
   protected abstract boolean lessThan(Object a, Object b);
 
   /** Subclass constructors must call this. */
+  @SuppressWarnings("unchecked")
   protected final void initialize(int maxSize) {
     size = 0;
     int heapSize = maxSize + 1;
-    heap = new Object[heapSize];
+    heap = (T[]) new Object[heapSize];
     this.maxSize = maxSize;
   }
 
@@ -43,7 +44,7 @@ public abstract class PriorityQueue {
    * If one tries to add more objects than maxSize from initialize
    * a RuntimeException (ArrayIndexOutOfBound) is thrown.
    */
-  public final void put(Object element) {
+  public final void put(T element) {
     size++;
     heap[size] = element;
     upHeap();
@@ -55,7 +56,7 @@ public abstract class PriorityQueue {
    * @param element
    * @return true if element is added, false otherwise.
    */
-  public boolean insert(Object element){
+  public boolean insert(T element){
     if (size < maxSize){
       put(element);
       return true;
@@ -70,7 +71,7 @@ public abstract class PriorityQueue {
   }
 
   /** Returns the least element of the PriorityQueue in constant time. */
-  public final Object top() {
+  public final T top() {
     if (size > 0)
       return heap[1];
     else
@@ -79,9 +80,9 @@ public abstract class PriorityQueue {
 
   /** Removes and returns the least element of the PriorityQueue in log(size)
       time. */
-  public final Object pop() {
+  public final T pop() {
     if (size > 0) {
-      Object result = heap[1];			  // save first value
+      T result = heap[1];			  // save first value
       heap[1] = heap[size];			  // move last to first
       heap[size] = null;			  // permit GC of objects
       size--;
@@ -117,7 +118,7 @@ public abstract class PriorityQueue {
 
   private final void upHeap() {
     int i = size;
-    Object node = heap[i];			  // save bottom node
+    T node = heap[i];			  // save bottom node
     int j = i >>> 1;
     while (j > 0 && lessThan(node, heap[j])) {
       heap[i] = heap[j];			  // shift parents down
@@ -129,7 +130,7 @@ public abstract class PriorityQueue {
 
   private final void downHeap() {
     int i = 1;
-    Object node = heap[i];			  // save top node
+    T node = heap[i];			  // save top node
     int j = i << 1;				  // find smaller child
     int k = j + 1;
     if (k <= size && lessThan(heap[k], heap[j])) {

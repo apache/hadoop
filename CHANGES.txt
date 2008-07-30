@@ -124,6 +124,9 @@ Trunk (unreleased changes)
     HADOOP-3861. MapFile.Reader and Writer should implement Closeable.
     (tomwhite via omalley)
 
+    HADOOP-3791. Introduce generics into ReflectionUtils. (Chris Smith via
+    cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

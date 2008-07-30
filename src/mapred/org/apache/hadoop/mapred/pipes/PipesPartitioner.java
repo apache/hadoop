@@ -37,7 +37,7 @@ class PipesPartitioner<K extends WritableComparable,
   
   @SuppressWarnings("unchecked")
   public void configure(JobConf conf) {
-    part = (Partitioner) 
+    part =
       ReflectionUtils.newInstance(Submitter.getJavaPartitioner(conf), conf);
   }
 

@@ -642,7 +642,6 @@ abstract class Task implements Writable, Configurable {
     private DataInputBuffer keyIn = new DataInputBuffer();
     private DataInputBuffer valueIn = new DataInputBuffer();
     
-    @SuppressWarnings("unchecked")
     public ValuesIterator (RawKeyValueIterator in, 
                            RawComparator<KEY> comparator, 
                            Class<KEY> keyClass,

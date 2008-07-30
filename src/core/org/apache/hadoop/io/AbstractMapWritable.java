@@ -43,11 +43,9 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   private AtomicReference<Configuration> conf;
   
   /* Class to id mappings */
-  @SuppressWarnings("unchecked")
   private Map<Class, Byte> classToIdMap = new ConcurrentHashMap<Class, Byte>();
   
   /* Id to Class mappings */
-  @SuppressWarnings("unchecked")
   private Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
   
   /* The number of new classes (those not established by the constructor) */
@@ -61,7 +59,6 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   /**
    * Used to add "predefined" classes and by Writable to copy "new" classes.
    */
-  @SuppressWarnings("unchecked")
   private synchronized void addToMap(Class clazz, byte id) {
     if (classToIdMap.containsKey(clazz)) {
       byte b = classToIdMap.get(clazz);
@@ -82,7 +79,6 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   }
   
   /** Add a Class to the maps if it is not already present. */ 
-  @SuppressWarnings("unchecked")
   protected synchronized void addToMap(Class clazz) {
     if (classToIdMap.containsKey(clazz)) {
       return;
@@ -96,13 +92,11 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   }
 
   /** @return the Class class for the specified id */
-  @SuppressWarnings("unchecked")
   protected Class getClass(byte id) {
     return idToClassMap.get(id);
   }
 
   /** @return the id for the specified Class */
-  @SuppressWarnings("unchecked")
   protected byte getId(Class clazz) {
     return classToIdMap.containsKey(clazz) ? classToIdMap.get(clazz) : -1;
   }

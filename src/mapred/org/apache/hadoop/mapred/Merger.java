@@ -144,7 +144,7 @@ class Merger {
   }
   
   private static class MergeQueue<K extends Object, V extends Object> 
-  extends PriorityQueue implements RawKeyValueIterator {
+  extends PriorityQueue<Segment<K, V>> implements RawKeyValueIterator {
     Configuration conf;
     FileSystem fs;
     CompressionCodec codec;
@@ -205,10 +205,9 @@ class Merger {
       this.reporter = reporter;
     }
 
-    @SuppressWarnings("unchecked")
     public void close() throws IOException {
       Segment<K, V> segment;
-      while((segment = (Segment<K, V>)pop()) != null) {
+      while((segment = pop()) != null) {
         segment.close();
       }
     }
@@ -230,7 +229,6 @@ class Merger {
       }
     }
 
-    @SuppressWarnings("unchecked")
     public boolean next() throws IOException {
       if (size() == 0)
         return false;
@@ -245,7 +243,7 @@ class Merger {
           return false;
         }
       }
-      minSegment = (Segment<K, V>)top();
+      minSegment = top();
       
       key = minSegment.getKey();
       value = minSegment.getValue();

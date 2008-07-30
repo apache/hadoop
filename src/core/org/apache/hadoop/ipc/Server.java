@@ -119,7 +119,7 @@ public abstract class Server {
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
-  private Class<?> paramClass;                    // class of call parameters
+  private Class<? extends Writable> paramClass;   // class of call parameters
   private int maxIdleTime;                        // the maximum idle time after 
                                                   // which a client may be disconnected
   private int thresholdIdleConnections;           // the number of idle connections
@@ -837,7 +837,7 @@ public abstract class Server {
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
             
-      Writable param = (Writable)ReflectionUtils.newInstance(paramClass, conf);           // read param
+      Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);        
         
       Call call = new Call(id, param, this);
@@ -922,7 +922,9 @@ public abstract class Server {
 
   }
   
-  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf)
+  protected Server(String bindAddress, int port,
+                  Class<? extends Writable> paramClass, int handlerCount, 
+                  Configuration conf)
     throws IOException 
   {
     this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port));
@@ -932,8 +934,9 @@ public abstract class Server {
    * the number of handler threads that will be used to process calls.
    * 
    */
-  protected Server(String bindAddress, int port, Class<?> paramClass, int handlerCount, Configuration conf,
-                  String serverName) 
+  protected Server(String bindAddress, int port, 
+                  Class<? extends Writable> paramClass, int handlerCount, 
+                  Configuration conf, String serverName) 
     throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;

@@ -329,7 +329,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.dnthread = new Daemon(new DecommissionedMonitor());
     dnthread.start();
 
-    this.dnsToSwitchMapping = (DNSToSwitchMapping)ReflectionUtils.newInstance(
+    this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
             DNSToSwitchMapping.class), conf);
 

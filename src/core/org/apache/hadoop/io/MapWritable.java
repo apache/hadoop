@@ -140,6 +140,7 @@ public class MapWritable extends AbstractMapWritable
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("unchecked")
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);

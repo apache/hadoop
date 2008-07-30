@@ -42,6 +42,7 @@ public class TestReflectionUtils extends TestCase {
   }
     
     
+  @SuppressWarnings("unchecked")
   private void doTestCache() {
     for (int i=0; i<toConstruct.length; i++) {
       Class cl = toConstruct[i];
@@ -88,6 +89,7 @@ public class TestReflectionUtils extends TestCase {
     }
   }
     
+  @SuppressWarnings("unchecked")
   public void testCacheDoesntLeak() throws Exception {
     int iterations=9999; // very fast, but a bit less reliable - bigger numbers force GC
     for (int i=0; i<iterations; i++) {

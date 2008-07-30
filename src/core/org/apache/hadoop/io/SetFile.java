@@ -22,7 +22,6 @@ import java.io.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** A file-based set of keys. */
 public class SetFile extends MapFile {
@@ -37,13 +36,15 @@ public class SetFile extends MapFile {
     /** Create the named set for keys of the named class. 
      *  @deprecated pass a Configuration too
      */
-    public Writer(FileSystem fs, String dirName, Class keyClass) throws IOException {
+    public Writer(FileSystem fs, String dirName,
+	Class<? extends WritableComparable> keyClass) throws IOException {
       super(new Configuration(), fs, dirName, keyClass, NullWritable.class);
     }
 
     /** Create a set naming the element class and compression type. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
-                  Class keyClass, SequenceFile.CompressionType compress)
+                  Class<? extends WritableComparable> keyClass,
+                  SequenceFile.CompressionType compress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), compress);
     }

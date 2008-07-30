@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.record;
 
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 
 /**
@@ -27,7 +28,7 @@ public abstract class RecordComparator extends WritableComparator {
   
   /**
    * Construct a raw {@link Record} comparison implementation. */
-  protected RecordComparator(Class recordClass) {
+  protected RecordComparator(Class<? extends WritableComparable> recordClass) {
     super(recordClass);
   }
   

@@ -53,16 +53,16 @@ extends FileOutputFormat<WritableComparable, Writable> {
       compressionType = SequenceFileOutputFormat.getOutputCompressionType(job);
 
       // find the right codec
-      Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
-      codec = (CompressionCodec) 
-        ReflectionUtils.newInstance(codecClass, job);
+      Class<? extends CompressionCodec> codecClass = getOutputCompressorClass(job,
+	  DefaultCodec.class);
+      codec = ReflectionUtils.newInstance(codecClass, job);
     }
     
     // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
       new MapFile.Writer(job, fs, file.toString(),
-                         job.getOutputKeyClass(),
-                         job.getOutputValueClass(),
+                         job.getOutputKeyClass().asSubclass(WritableComparable.class),
+                         job.getOutputValueClass().asSubclass(Writable.class),
                          compressionType, codec,
                          progress);
 

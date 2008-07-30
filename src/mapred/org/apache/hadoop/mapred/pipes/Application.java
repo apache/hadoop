@@ -66,9 +66,9 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
    * @throws IOException
    * @throws InterruptedException
    */
-  @SuppressWarnings("unchecked")
   Application(JobConf conf, OutputCollector<K2, V2> output, Reporter reporter,
-              Class outputKeyClass, Class outputValueClass
+              Class<? extends K2> outputKeyClass,
+              Class<? extends V2> outputValueClass
               ) throws IOException, InterruptedException {
     serverSocket = new ServerSocket(0);
     Map<String, String> env = new HashMap<String,String>();

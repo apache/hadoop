@@ -76,21 +76,22 @@ public class CompressionCodecFactory {
    * @return a list of the Configuration classes or null if the attribute
    *         was not set
    */
-  public static List<Class> getCodecClasses(Configuration conf) {
+  public static List<Class<? extends CompressionCodec>> getCodecClasses(Configuration conf) {
     String codecsString = conf.get("io.compression.codecs");
     if (codecsString != null) {
-      List<Class> result = new ArrayList<Class>();
+      List<Class<? extends CompressionCodec>> result
+        = new ArrayList<Class<? extends CompressionCodec>>();
       StringTokenizer codecSplit = new StringTokenizer(codecsString, ",");
       while (codecSplit.hasMoreElements()) {
         String codecSubstring = codecSplit.nextToken();
         if (codecSubstring.length() != 0) {
           try {
-            Class cls = conf.getClassByName(codecSubstring);
+            Class<?> cls = conf.getClassByName(codecSubstring);
             if (!CompressionCodec.class.isAssignableFrom(cls)) {
               throw new IllegalArgumentException("Class " + codecSubstring +
                                                  " is not a CompressionCodec");
             }
-            result.add(cls);
+            result.add(cls.asSubclass(CompressionCodec.class));
           } catch (ClassNotFoundException ex) {
             throw new IllegalArgumentException("Compression codec " + 
                                                codecSubstring + " not found.",
@@ -130,15 +131,14 @@ public class CompressionCodecFactory {
    */
   public CompressionCodecFactory(Configuration conf) {
     codecs = new TreeMap<String, CompressionCodec>();
-    List<Class> codecClasses = getCodecClasses(conf);
+    List<Class<? extends CompressionCodec>> codecClasses = getCodecClasses(conf);
     if (codecClasses == null) {
       addCodec(new GzipCodec());
       addCodec(new DefaultCodec());      
     } else {
-      Iterator<Class> itr = codecClasses.iterator();
+      Iterator<Class<? extends CompressionCodec>> itr = codecClasses.iterator();
       while (itr.hasNext()) {
-        CompressionCodec codec = 
-          (CompressionCodec) ReflectionUtils.newInstance(itr.next(), conf);
+        CompressionCodec codec = ReflectionUtils.newInstance(itr.next(), conf);
         addCodec(codec);     
       }
     }

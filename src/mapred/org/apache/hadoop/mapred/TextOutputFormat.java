@@ -120,8 +120,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       Class<? extends CompressionCodec> codecClass =
         getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
-      CompressionCodec codec = (CompressionCodec)
-        ReflectionUtils.newInstance(codecClass, job);
+      CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job);
       // build the filename including the extension
       Path file = 
         FileOutputFormat.getTaskOutputPath(job, 

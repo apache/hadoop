@@ -27,10 +27,10 @@ import org.apache.hadoop.conf.Configuration;
  * invalidiating files that contain their class name.
  */
 public class WritableName {
-  private static HashMap<String, Class> NAME_TO_CLASS =
-    new HashMap<String, Class>();
-  private static HashMap<Class, String> CLASS_TO_NAME =
-    new HashMap<Class, String>();
+  private static HashMap<String, Class<?>> NAME_TO_CLASS =
+    new HashMap<String, Class<?>>();
+  private static HashMap<Class<?>, String> CLASS_TO_NAME =
+    new HashMap<Class<?>, String>();
 
   static {                                        // define important types
     WritableName.setName(NullWritable.class, "null");
@@ -62,12 +62,11 @@ public class WritableName {
   }
 
   /** Return the class for a name.  Default is {@link Class#forName(String)}.*/
-  public static synchronized Class getClass(String name,
-                                            Configuration conf
+  public static synchronized Class<?> getClass(String name, Configuration conf
                                             ) throws IOException {
-    Class writableClass = NAME_TO_CLASS.get(name);
+    Class<?> writableClass = NAME_TO_CLASS.get(name);
     if (writableClass != null)
-      return writableClass;
+      return writableClass.asSubclass(Writable.class);
     try {
       return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {

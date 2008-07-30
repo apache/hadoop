@@ -363,10 +363,10 @@ public class FsShell extends Configured implements Tool {
 
     public TextRecordInputStream(FileStatus f) throws IOException {
       r = new SequenceFile.Reader(fs, f.getPath(), getConf());
-      key = (WritableComparable)ReflectionUtils.newInstance(
-          r.getKeyClass(), getConf());
-      val = (Writable)ReflectionUtils.newInstance(
-          r.getValueClass(), getConf());
+      key = ReflectionUtils.newInstance(r.getKeyClass().asSubclass(WritableComparable.class),
+                                        getConf());
+      val = ReflectionUtils.newInstance(r.getValueClass().asSubclass(Writable.class),
+                                        getConf());
       inbuf = new DataInputBuffer();
       outbuf = new DataOutputBuffer();
     }

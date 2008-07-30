@@ -62,8 +62,7 @@ public class SequenceFileRecordReader<K, V> implements RecordReader<K, V> {
   
   @SuppressWarnings("unchecked")
   public K createKey() {
-    return (K) ReflectionUtils.newInstance(getKeyClass(), 
-                                                            conf);
+    return (K) ReflectionUtils.newInstance(getKeyClass(), conf);
   }
   
   @SuppressWarnings("unchecked")

@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 public class IsolationRunner {
   private static final Log LOG = 
@@ -120,8 +122,10 @@ public class IsolationRunner {
                                               TaskAttemptID taskId,
                                               int numMaps,
                                               JobConf conf) throws IOException {
-    Class keyClass = conf.getMapOutputKeyClass();
-    Class valueClass = conf.getMapOutputValueClass();
+    Class<? extends WritableComparable> keyClass
+        = conf.getMapOutputKeyClass().asSubclass(WritableComparable.class);
+    Class<? extends Writable> valueClass
+        = conf.getMapOutputValueClass().asSubclass(Writable.class);
     MapOutputFile namer = new MapOutputFile(taskId.getJobID());
     namer.setConf(conf);
     for(int i=0; i<numMaps; i++) {

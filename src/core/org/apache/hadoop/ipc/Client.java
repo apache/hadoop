@@ -65,7 +65,7 @@ public class Client {
   private Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 
-  private Class<?> valueClass;                       // class of call values
+  private Class<? extends Writable> valueClass;   // class of call values
   private int counter;                            // counter for call ids
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final private Configuration conf;
@@ -508,7 +508,7 @@ public class Client {
           call.setException(new RemoteException( WritableUtils.readString(in),
               WritableUtils.readString(in)));
         } else {
-          Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
+          Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setValue(value);
         }
@@ -622,7 +622,7 @@ public class Client {
 
   /** Construct an IPC client whose values are of the given {@link Writable}
    * class. */
-  public Client(Class valueClass, Configuration conf, 
+  public Client(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
     this.maxIdleTime = 
@@ -642,7 +642,7 @@ public class Client {
    * @param valueClass
    * @param conf
    */
-  public Client(Class<?> valueClass, Configuration conf) {
+  public Client(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
   }
  

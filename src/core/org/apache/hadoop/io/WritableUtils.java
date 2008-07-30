@@ -224,10 +224,10 @@ public final class WritableUtils  {
    * @param orig The object to copy
    * @return The copied object
    */
-  public static Writable clone(Writable orig, Configuration conf) {
+  public static <T extends Writable> T clone(T orig, Configuration conf) {
     try {
-      Writable newInst =
-        (Writable)ReflectionUtils.newInstance(orig.getClass(), conf);
+      @SuppressWarnings("unchecked") // Unchecked cast from Class to Class<T>
+      T newInst = ReflectionUtils.newInstance((Class<T>) orig.getClass(), conf);
       cloneInto(newInst, orig);
       return newInst;
     } catch (IOException e) {

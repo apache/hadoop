@@ -68,7 +68,7 @@ public abstract class CompositeRecordReader<
     assert capacity > 0 : "Invalid capacity";
     this.id = id;
     if (null != cmpcl) {
-      cmp = (WritableComparator)ReflectionUtils.newInstance(cmpcl, null);
+      cmp = ReflectionUtils.newInstance(cmpcl, null);
       q = new PriorityQueue<ComposableRecordReader<K,?>>(3,
           new Comparator<ComposableRecordReader<K,?>>() {
             public int compare(ComposableRecordReader<K,?> o1,

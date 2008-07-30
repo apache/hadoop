@@ -69,7 +69,7 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
     }
 
     this.job = jobConf;
-    this.mapper = (Mapper)ReflectionUtils.newInstance(jobConf.getMapperClass(),
+    this.mapper = ReflectionUtils.newInstance(jobConf.getMapperClass(),
         jobConf);
 
     // Creating a threadpool of the configured size to execute the Mapper

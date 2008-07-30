@@ -38,7 +38,7 @@ public class WritableComparator implements RawComparator {
     new HashMap<Class, WritableComparator>(); // registry
 
   /** Get a comparator for a {@link WritableComparable} implementation. */
-  public static synchronized WritableComparator get(Class c) {
+  public static synchronized WritableComparator get(Class<? extends WritableComparable> c) {
     WritableComparator comparator = comparators.get(c);
     if (comparator == null)
       comparator = new WritableComparator(c, true);
@@ -53,17 +53,18 @@ public class WritableComparator implements RawComparator {
   }
 
 
-  private final Class keyClass;
+  private final Class<? extends WritableComparable> keyClass;
   private final WritableComparable key1;
   private final WritableComparable key2;
   private final DataInputBuffer buffer;
 
   /** Construct for a {@link WritableComparable} implementation. */
-  protected WritableComparator(Class keyClass) {
+  protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, false);
   }
 
-  private WritableComparator(Class keyClass, boolean createInstances) {
+  private WritableComparator(Class<? extends WritableComparable> keyClass,
+      boolean createInstances) {
     this.keyClass = keyClass;
     if (createInstances) {
       key1 = newKey();
@@ -76,12 +77,11 @@ public class WritableComparator implements RawComparator {
   }
 
   /** Returns the WritableComparable implementation class. */
-  public Class getKeyClass() { return keyClass; }
+  public Class<? extends WritableComparable> getKeyClass() { return keyClass; }
 
   /** Construct a new {@link WritableComparable} instance. */
   public WritableComparable newKey() {
-    return (WritableComparable)
-      ReflectionUtils.newInstance(keyClass, null);
+    return ReflectionUtils.newInstance(keyClass, null);
   }
 
   /** Optimization hook.  Override this to make SequenceFile.Sorter's scream.

@@ -125,7 +125,7 @@ public class CompositeInputSplit implements InputSplit {
    * @throws IOException If the child InputSplit cannot be read, typically
    *                     for faliing access checks.
    */
-  @SuppressWarnings("unchecked")  // Explicit check for split class agreement
+  @SuppressWarnings("unchecked")  // Generic array assignment
   public void readFields(DataInput in) throws IOException {
     int card = WritableUtils.readVInt(in);
     if (splits == null || splits.length != card) {
@@ -138,7 +138,7 @@ public class CompositeInputSplit implements InputSplit {
           Class.forName(Text.readString(in)).asSubclass(InputSplit.class);
       }
       for (int i = 0; i < card; ++i) {
-        splits[i] = (InputSplit) ReflectionUtils.newInstance(cls[i], null);
+        splits[i] = ReflectionUtils.newInstance(cls[i], null);
         splits[i].readFields(in);
       }
     } catch (ClassNotFoundException e) {

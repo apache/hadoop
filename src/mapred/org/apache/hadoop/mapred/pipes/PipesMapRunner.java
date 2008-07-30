@@ -50,13 +50,14 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
    * @param output the object to collect the outputs of the map
    * @param reporter the object to update with status
    */
+  @SuppressWarnings("unchecked")
   public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
                   Reporter reporter) throws IOException {
     Application<K1, V1, K2, V2> application = null;
     try {
       application = new Application<K1, V1, K2, V2>(job, output, reporter,
-                                    job.getMapOutputKeyClass(),
-                                    job.getMapOutputValueClass());
+          (Class<? extends K2>) job.getOutputKeyClass(), 
+          (Class<? extends V2>) job.getOutputValueClass());
     } catch (InterruptedException ie) {
       throw new RuntimeException("interrupted", ie);
     }

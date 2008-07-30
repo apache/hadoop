@@ -713,7 +713,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       infoServer.setAttribute("fileSys", historyFS);
     }
 
-    this.dnsToSwitchMapping = (DNSToSwitchMapping)ReflectionUtils.newInstance(
+    this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
             DNSToSwitchMapping.class), conf);
     this.numTaskCacheLevels = conf.getInt("mapred.task.cache.levels", 

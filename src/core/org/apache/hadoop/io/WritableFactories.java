@@ -41,7 +41,7 @@ public class WritableFactories {
   }
 
   /** Create a new instance of a class with a defined factory. */
-  public static Writable newInstance(Class c, Configuration conf) {
+  public static Writable newInstance(Class<? extends Writable> c, Configuration conf) {
     WritableFactory factory = WritableFactories.getFactory(c);
     if (factory != null) {
       Writable result = factory.newInstance();
@@ -50,12 +50,12 @@ public class WritableFactories {
       }
       return result;
     } else {
-      return (Writable)ReflectionUtils.newInstance(c, conf);
+      return ReflectionUtils.newInstance(c, conf);
     }
   }
   
   /** Create a new instance of a class with a defined factory. */
-  public static Writable newInstance(Class c) {
+  public static Writable newInstance(Class<? extends Writable> c) {
     return newInstance(c, null);
   }
 

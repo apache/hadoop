@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred.lib;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
@@ -38,7 +36,6 @@ extends MultipleOutputFormat<K, V> {
     private SequenceFileOutputFormat<K,V> theSequenceFileOutputFormat = null;
   
   @Override
-  @SuppressWarnings("unchecked") 
   protected RecordWriter<K, V> getBaseRecordWriter(FileSystem fs,
                                                    JobConf job,
                                                    String name,

@@ -119,7 +119,7 @@ public abstract class GenericWritable implements Writable, Configurable {
     type = in.readByte();
     Class<? extends Writable> clazz = getTypes()[type & 0xff];
     try {
-      instance = (Writable)ReflectionUtils.newInstance(clazz, conf);
+      instance = ReflectionUtils.newInstance(clazz, conf);
     } catch (Exception e) {
       e.printStackTrace();
       throw new IOException("Cannot initialize the class: " + clazz);

@@ -318,7 +318,7 @@ public class JobConf extends Configuration {
    * @return the {@link InputFormat} implementation for the map-reduce job.
    */
   public InputFormat getInputFormat() {
-    return (InputFormat)ReflectionUtils.newInstance(getClass("mapred.input.format.class",
+    return ReflectionUtils.newInstance(getClass("mapred.input.format.class",
                                                              TextInputFormat.class,
                                                              InputFormat.class),
                                                     this);
@@ -341,7 +341,7 @@ public class JobConf extends Configuration {
    * @return the {@link OutputFormat} implementation for the map-reduce job.
    */
   public OutputFormat getOutputFormat() {
-    return (OutputFormat)ReflectionUtils.newInstance(getClass("mapred.output.format.class",
+    return ReflectionUtils.newInstance(getClass("mapred.output.format.class",
                                                               TextOutputFormat.class,
                                                               OutputFormat.class),
                                                      this);
@@ -491,11 +491,11 @@ public class JobConf extends Configuration {
    * @return the {@link RawComparator} comparator used to compare keys.
    */
   public RawComparator getOutputKeyComparator() {
-    Class theClass = getClass("mapred.output.key.comparator.class", null,
-    		RawComparator.class);
+    Class<? extends RawComparator> theClass = getClass("mapred.output.key.comparator.class",
+	        null, RawComparator.class);
     if (theClass != null)
-      return (RawComparator)ReflectionUtils.newInstance(theClass, this);
-    return WritableComparator.get(getMapOutputKeyClass());
+      return ReflectionUtils.newInstance(theClass, this);
+    return WritableComparator.get(getMapOutputKeyClass().asSubclass(WritableComparable.class));
   }
 
   /**
@@ -518,13 +518,13 @@ public class JobConf extends Configuration {
    * @see #setOutputValueGroupingComparator(Class) for details.  
    */
   public RawComparator getOutputValueGroupingComparator() {
-    Class theClass = getClass("mapred.output.value.groupfn.class", null,
+    Class<? extends RawComparator> theClass = getClass("mapred.output.value.groupfn.class", null,
         RawComparator.class);
     if (theClass == null) {
       return getOutputKeyComparator();
     }
     
-    return (RawComparator)ReflectionUtils.newInstance(theClass, this);
+    return ReflectionUtils.newInstance(theClass, this);
   }
 
   /** 

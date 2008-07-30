@@ -221,7 +221,7 @@ class MapTask extends Task {
     RecordReader in = new TrackedRecordReader(rawIn, getCounters());
 
     MapRunnable runner =
-      (MapRunnable)ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
+      ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
 
     try {
       runner.run(in, collector, reporter);      
@@ -349,8 +349,7 @@ class MapTask extends Task {
       this.reporter = reporter;
       localFs = FileSystem.getLocal(job);
       partitions = job.getNumReduceTasks();
-      partitioner = (Partitioner)
-        ReflectionUtils.newInstance(job.getPartitionerClass(), job);
+      partitioner = ReflectionUtils.newInstance(job.getPartitionerClass(), job);
       // sanity checks
       final float spillper = job.getFloat("io.sort.spill.percent",(float)0.8);
       final float recper = job.getFloat("io.sort.record.percent",(float)0.05);
@@ -364,9 +363,8 @@ class MapTask extends Task {
       if ((sortmb & 0x7FF) != sortmb) {
         throw new IOException("Invalid \"io.sort.mb\": " + sortmb);
       }
-      sorter = (IndexedSorter)
-        ReflectionUtils.newInstance(
-            job.getClass("map.sort.class", QuickSort.class), job);
+      sorter = ReflectionUtils.newInstance(
+            job.getClass("map.sort.class", QuickSort.class, IndexedSorter.class), job);
       LOG.info("io.sort.mb = " + sortmb);
       // buffers and accounting
       int maxMemUsage = sortmb << 20;
@@ -400,13 +398,12 @@ class MapTask extends Task {
       if (job.getCompressMapOutput()) {
         Class<? extends CompressionCodec> codecClass =
           job.getMapOutputCompressorClass(DefaultCodec.class);
-        codec = (CompressionCodec)
-          ReflectionUtils.newInstance(codecClass, job);
+        codec = ReflectionUtils.newInstance(codecClass, job);
       }
       // combiner
       combinerClass = job.getCombinerClass();
       combineCollector = (null != combinerClass)
-        ? new CombineOutputCollector(combineOutputCounter)
+        ? new CombineOutputCollector<K,V>(combineOutputCounter)
         : null;
       minSpillsForCombine = job.getInt("min.num.spills.for.combine", 3);
       spillThread.setDaemon(true);
@@ -429,7 +426,6 @@ class MapTask extends Task {
       }
     }
 
-    @SuppressWarnings("unchecked")
     public synchronized void collect(K key, V value)
         throws IOException {
       reporter.progress();
@@ -877,7 +873,6 @@ class MapTask extends Task {
      * the in-memory buffer, so we must spill the record from collect
      * directly to a spill file. Consider this "losing".
      */
-    @SuppressWarnings("unchecked")
     private void spillSingleRecord(final K key, final V value) 
         throws IOException {
       long size = kvbuffer.length + partitions * APPROX_HEADER_LENGTH;
@@ -896,11 +891,11 @@ class MapTask extends Task {
         indexOut = localFs.create(indexFilename);
         // we don't run the combiner for a single record
         for (int i = 0; i < partitions; ++i) {
-          IFile.Writer writer = null;
+          IFile.Writer<K, V> writer = null;
           try {
             long segmentStart = out.getPos();
             // Create a new codec, don't care!
-            writer = new IFile.Writer(job, out, keyClass, valClass, codec);
+            writer = new IFile.Writer<K, V>(job, out, keyClass, valClass, codec);
 
             if (i == partition) {
               final long recordStart = out.getPos();
@@ -943,10 +938,9 @@ class MapTask extends Task {
     @SuppressWarnings("unchecked")
     private void combineAndSpill(RawKeyValueIterator kvIter,
         Counters.Counter inCounter) throws IOException {
-      Reducer combiner =
-        (Reducer)ReflectionUtils.newInstance(combinerClass, job);
+      Reducer combiner = ReflectionUtils.newInstance(combinerClass, job);
       try {
-        CombineValuesIterator values = new CombineValuesIterator(
+        CombineValuesIterator<K, V> values = new CombineValuesIterator<K, V>(
             kvIter, comparator, keyClass, valClass, job, reporter,
             inCounter);
         while (values.more()) {

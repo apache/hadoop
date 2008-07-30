@@ -173,7 +173,7 @@ public class Submitter {
    * @param conf the configuration to look in
    * @return the class that the user submitted
    */
-  static Class getJavaPartitioner(JobConf conf) {
+  static Class<? extends Partitioner> getJavaPartitioner(JobConf conf) {
     return conf.getClass("hadoop.pipes.partitioner", 
                          HashPartitioner.class,
                          Partitioner.class);

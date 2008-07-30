@@ -37,17 +37,17 @@ import java.lang.reflect.Array;
  * </code>
  */
 public class ArrayWritable implements Writable {
-  private Class valueClass;
+  private Class<? extends Writable> valueClass;
   private Writable[] values;
 
-  public ArrayWritable(Class valueClass) {
+  public ArrayWritable(Class<? extends Writable> valueClass) {
     if (valueClass == null) { 
       throw new IllegalArgumentException("null valueClass"); 
     }    
     this.valueClass = valueClass;
   }
 
-  public ArrayWritable(Class valueClass, Writable[] values) {
+  public ArrayWritable(Class<? extends Writable> valueClass, Writable[] values) {
     this(valueClass);
     this.values = values;
   }

@@ -50,12 +50,15 @@ public class FakeIF<K,V>
     job.setClass("test.fakeif.valclass", v, Writable.class);
   }
 
-  private Class<?> keyclass;
-  private Class<?> valclass;
+  private Class<? extends K> keyclass;
+  private Class<? extends V> valclass;
 
+  @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
-    keyclass = job.getClass("test.fakeif.keyclass", IncomparableKey.class, WritableComparable.class);
-    valclass = job.getClass("test.fakeif.valclass", NullWritable.class, WritableComparable.class);
+    keyclass = (Class<? extends K>) job.getClass("test.fakeif.keyclass",
+	IncomparableKey.class, WritableComparable.class);
+    valclass = (Class<? extends V>) job.getClass("test.fakeif.valclass",
+	NullWritable.class, WritableComparable.class);
   }
 
   public FakeIF() { }
@@ -70,13 +73,11 @@ public class FakeIF<K,V>
       InputSplit ignored, JobConf conf, Reporter reporter) {
     return new RecordReader<K,V>() {
       public boolean next(K key, V value) throws IOException { return false; }
-      @SuppressWarnings("unchecked")
       public K createKey() {
-        return (K)ReflectionUtils.newInstance(keyclass, null);
+        return ReflectionUtils.newInstance(keyclass, null);
       }
-      @SuppressWarnings("unchecked")
       public V createValue() {
-        return (V)ReflectionUtils.newInstance(valclass, null);
+        return ReflectionUtils.newInstance(valclass, null);
       }
       public long getPos() throws IOException { return 0L; }
       public void close() throws IOException { }
