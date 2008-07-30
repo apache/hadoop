@@ -58,7 +58,7 @@ public class MapFile {
   protected MapFile() {}                          // no public ctor
 
   /** Writes a new map. */
-  public static class Writer {
+  public static class Writer implements java.io.Closeable {
     private SequenceFile.Writer data;
     private SequenceFile.Writer index;
 
@@ -215,7 +215,7 @@ public class MapFile {
   }
   
   /** Provide access to an existing map. */
-  public static class Reader {
+  public static class Reader implements java.io.Closeable {
       
     /** Number of index entries to skip between each entry.  Zero by default.
      * Setting this to values larger than zero can facilitate opening large map
