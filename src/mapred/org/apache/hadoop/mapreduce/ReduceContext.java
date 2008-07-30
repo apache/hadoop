@@ -37,7 +37,9 @@ public abstract class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   }
 
   /**
-   * Iterate through the values for the current key.
+   * Iterate through the values for the current key, reusing the same value 
+   * object, which is stored in the context.
+   * @return the series of values associated with the current key
    */
   public abstract 
   Iterable<VALUEIN> getValues() throws IOException, InterruptedException;

@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
  * 
  * @see RecordWriter
  */
-public interface OutputFormat<K, V> {
+public abstract class OutputFormat<K, V> {
 
   /** 
    * Get the {@link RecordWriter} for the given task.
@@ -50,8 +50,9 @@ public interface OutputFormat<K, V> {
    * @return a {@link RecordWriter} to write the output for the job.
    * @throws IOException
    */
-  RecordWriter<K, V> getRecordWriter(TaskAttemptContext context)
-  throws IOException, InterruptedException;
+  public abstract RecordWriter<K, V> 
+    getRecordWriter(TaskAttemptContext context
+                    ) throws IOException, InterruptedException;
 
   /** 
    * Check for validity of the output-specification for the job.
@@ -64,7 +65,8 @@ public interface OutputFormat<K, V> {
    * @param context information about the job
    * @throws IOException when output should not be attempted
    */
-  void checkOutputSpecs(JobContext context
-                        ) throws IOException, InterruptedException;
+  public abstract void checkOutputSpecs(JobContext context
+                                        ) throws IOException, 
+                                                 InterruptedException;
 }
 

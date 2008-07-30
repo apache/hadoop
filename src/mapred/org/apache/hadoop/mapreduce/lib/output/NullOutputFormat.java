@@ -26,7 +26,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 /**
  * Consume all outputs and put them in /dev/null. 
  */
-public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
+public class NullOutputFormat<K, V> extends OutputFormat<K, V> {
   
   public RecordWriter<K, V> getRecordWriter(TaskAttemptContext context) {
     return new RecordWriter<K, V>(){

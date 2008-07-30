@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /** A base class for {@link OutputFormat}s that read from {@link FileSystem}s.*/
-public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
+public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
 
   private static final String TEMP_DIR_NAME = "_temp";
   /**

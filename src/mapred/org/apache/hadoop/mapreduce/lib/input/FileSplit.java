@@ -27,11 +27,12 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 /** A section of an input file.  Returned by {@link
  * InputFormat#getSplits(JobContext)} and passed to
  * {@link InputFormat#createRecordReader(InputSplit,TaskAttemptContext)}. */
-public class FileSplit extends InputSplit {
+public class FileSplit extends InputSplit implements Writable {
   private Path file;
   private long start;
   private long length;
@@ -60,20 +61,24 @@ public class FileSplit extends InputSplit {
   public long getStart() { return start; }
   
   /** The number of bytes in the file to process. */
+  @Override
   public long getLength() { return length; }
 
+  @Override
   public String toString() { return file + ":" + start + "+" + length; }
 
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
 
+  @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, file.toString());
     out.writeLong(start);
     out.writeLong(length);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     file = new Path(Text.readString(in));
     start = in.readLong();
@@ -81,6 +86,7 @@ public class FileSplit extends InputSplit {
     hosts = null;
   }
 
+  @Override
   public String[] getLocations() throws IOException {
     if (this.hosts == null) {
       return new String[]{};

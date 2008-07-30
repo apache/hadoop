@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -255,7 +254,7 @@ public class JobContext {
   }
 
   /** 
-   * Get the user defined {@link WritableComparable} comparator for 
+   * Get the user defined {@link RawComparator} comparator for 
    * grouping keys of inputs to the reduce.
    * 
    * @return comparator set by the user for grouping values.

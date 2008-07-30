@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -31,12 +30,12 @@ import org.apache.hadoop.mapreduce.RecordReader;
  *
  * <p>Typically, it presents a byte-oriented view on the input and is the 
  * responsibility of {@link RecordReader} of the job to process this and present
- * a record-oriented view. Although the type is Writable, only the InputFormat
+ * a record-oriented view.
  * 
  * @see InputFormat
  * @see RecordReader
  */
-public abstract class InputSplit implements Writable {
+public abstract class InputSplit {
   /**
    * Get the size of the split, so that the input splits can be sorted by size.
    * @return the number of bytes in the split
@@ -47,8 +46,7 @@ public abstract class InputSplit implements Writable {
 
   /**
    * Get the list of nodes by name where the data for the split would be local.
-   * The locations do not need to be serialized by calls to 
-   * {@link Writable#write(java.io.DataOutput)}
+   * The locations do not need to be serialized.
    * @return a new array of the node nodes.
    * @throws IOException
    * @throws InterruptedException

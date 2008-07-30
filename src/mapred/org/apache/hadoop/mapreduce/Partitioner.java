@@ -30,7 +30,7 @@ package org.apache.hadoop.mapreduce;
  * 
  * @see Reducer
  */
-public interface Partitioner<KEY, VALUE> {
+public abstract class Partitioner<KEY, VALUE> {
   
   /** 
    * Get the partition number for a given key (hence record) given the total 
@@ -43,5 +43,5 @@ public interface Partitioner<KEY, VALUE> {
    * @param numPartitions the total number of partitions.
    * @return the partition number for the <code>key</code>.
    */
-  int getPartition(KEY key, VALUE value, int numPartitions);
+  public abstract int getPartition(KEY key, VALUE value, int numPartitions);
 }
