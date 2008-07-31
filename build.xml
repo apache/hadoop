@@ -28,7 +28,7 @@
   <property name="name" value="hadoop"/>
   <property name="version" value="0.19.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
-  <property name="year" value="2006"/>
+  <property name="year" value="2008"/>
   <property name="libhdfs.version" value="1"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
