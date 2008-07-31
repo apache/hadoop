@@ -127,6 +127,9 @@ Trunk (unreleased changes)
     HADOOP-3791. Introduce generics into ReflectionUtils. (Chris Smith via
     cdouglas)
 
+    HADOOP-3694. Improve unit test performance by changing
+    MiniDFSCluster to listen only on 127.0.0.1.  (cutting)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

@@ -743,6 +743,8 @@ public class TestFileCreation extends junit.framework.TestCase {
           slowwriters[i].start();
         }
 
+        Thread.sleep(1000);                       // let writers get started
+
         //stop a datanode, it should have least recover.
         cluster.stopDataNode(new Random().nextInt(REPLICATION));
         
@@ -753,6 +755,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       finally {
         for(int i = 0; i < slowwriters.length; i++) {
           if (slowwriters[i] != null) {
+            slowwriters[i].running = false;
             slowwriters[i].interrupt();
           }
         }
@@ -787,6 +790,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   static class SlowWriter extends Thread {
     final FileSystem fs;
     final Path filepath;
+    boolean running = true;
     
     SlowWriter(FileSystem fs, Path filepath) {
       super(SlowWriter.class.getSimpleName() + ":" + filepath);
@@ -799,7 +803,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       int i = 0;
       try {
         out = fs.create(filepath);
-        for(; ; i++) {
+        for(; running; i++) {
           System.out.println(getName() + " writes " + i);
           out.write(i);
           out.sync();
