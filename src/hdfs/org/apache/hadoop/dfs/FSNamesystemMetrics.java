@@ -21,10 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics.*;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
  * 
@@ -52,9 +49,8 @@ public class FSNamesystemMetrics implements Updater {
   public MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks");
   public MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks");
   public MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks");
-  FSNamesystemMetrics(Configuration conf, FSNamesystem fsNameSystem) {
+  FSNamesystemMetrics(Configuration conf) {
     String sessionId = conf.get("session.id");
-    this.fsNameSystem = fsNameSystem;
      
     // Create a record for FSNamesystem metrics
     MetricsContext metricsContext = MetricsUtil.getContext("dfs");
@@ -63,10 +59,6 @@ public class FSNamesystemMetrics implements Updater {
     metricsContext.registerUpdater(this);
     log.info("Initializing FSNamesystemMeterics using context object:" +
               metricsContext.getClass().getName());
-  }
-  public void shutdown() {
-    if (fsNameSystem != null) 
-      fsNameSystem.shutdown();
   }
 
   private int roundBytesToGBytes(long bytes) {
@@ -88,6 +80,7 @@ public class FSNamesystemMetrics implements Updater {
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
+      FSNamesystem fsNameSystem = FSNamesystem.getFSNamesystem();
       filesTotal.set((int)fsNameSystem.getFilesTotal());
       filesTotal.pushMetric(metricsRecord);
 

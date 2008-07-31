@@ -776,6 +776,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3855. Fixes an import problem introduced by HADOOP-3827.
     (Arun Murthy via ddas)
 
+    HADOOP-3865. Remove reference to FSNamesystem from metrics preventing
+    garbage collection. (Lohit Vijayarenu via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
