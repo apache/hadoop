@@ -17,6 +17,9 @@
   Map<String, HServerInfo> serverToServerInfos =
     master.getServersToServerInfo();
   int interval = conf.getInt("hbase.regionserver.msginterval", 3000)/1000;
+  if (interval == 0) {
+      interval = 1;
+  }
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 

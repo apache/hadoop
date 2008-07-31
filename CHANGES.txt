@@ -219,6 +219,7 @@ Release 0.2.0
    HBASE-780   Can't scan '.META.' from new shell
    HBASE-424   Should be able to enable/disable .META. table
    HBASE-771   Names legal in 0.1 are not in 0.2; breaks migration
+   HBASE-788   Div by zero in Master.jsp (Clint Morgan via Jim Kellerman)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
