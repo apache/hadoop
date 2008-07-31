@@ -24,10 +24,10 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -73,11 +73,12 @@ public class TestReduceTask extends TestCase {
     };
   
   public void runValueIterator(Path tmpDir, Pair[] vals, 
-                               Configuration conf) throws IOException {
+                               Configuration conf, 
+                               CompressionCodec codec) throws IOException {
     FileSystem fs = tmpDir.getFileSystem(conf);
     Path path = new Path(tmpDir, "data.in");
     IFile.Writer<Text, Text> writer = 
-      new IFile.Writer<Text, Text>(conf, fs, path, Text.class, Text.class, null);
+      new IFile.Writer<Text, Text>(conf, fs, path, Text.class, Text.class, codec);
     for(Pair p: vals) {
       writer.append(new Text(p.key), new Text(p.value));
     }
@@ -85,7 +86,7 @@ public class TestReduceTask extends TestCase {
     
     @SuppressWarnings("unchecked")
     RawKeyValueIterator rawItr = 
-      Merger.merge(conf, fs, Text.class, Text.class, null, new Path[]{path}, 
+      Merger.merge(conf, fs, Text.class, Text.class, codec, new Path[]{path}, 
                    false, conf.getInt("io.sort.factor", 100), tmpDir, 
                    new Text.Comparator(), new NullProgress());
     @SuppressWarnings("unchecked") // WritableComparators are not generic
@@ -114,13 +115,25 @@ public class TestReduceTask extends TestCase {
       valItr.nextKey();
     }
     assertEquals(vals.length, i);
+    // make sure we have progress equal to 1.0
+    assertEquals(1.0f, rawItr.getProgress().get());
   }
 
   public void testValueIterator() throws Exception {
     Path tmpDir = new Path("build/test/test.reduce.task");
     Configuration conf = new Configuration();
     for (Pair[] testCase: testCases) {
-      runValueIterator(tmpDir, testCase, conf);
+      runValueIterator(tmpDir, testCase, conf, null);
+    }
+  }
+  
+  public void testValueIteratorWithCompression() throws Exception {
+    Path tmpDir = new Path("build/test/test.reduce.task.compression");
+    Configuration conf = new Configuration();
+    DefaultCodec codec = new DefaultCodec();
+    codec.setConf(conf);
+    for (Pair[] testCase: testCases) {
+      runValueIterator(tmpDir, testCase, conf, codec);
     }
   }
 }

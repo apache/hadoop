@@ -199,6 +199,9 @@ Trunk (unreleased changes)
     HADOOP-3848. Cache calls to getSystemDir in the TaskTracker instead of
     calling it for each task start. (acmurthy via omalley)
 
+    HADOOP-3131. Fix reduce progress reporting for compressed intermediate
+    data. (Matei Zaharia via acmurthy) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

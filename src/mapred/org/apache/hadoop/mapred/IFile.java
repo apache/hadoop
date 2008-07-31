@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -214,7 +215,8 @@ class IFile {
     private static final int DEFAULT_BUFFER_SIZE = 128*1024;
     private static final int MAX_VINT_SIZE = 9;
 
-    InputStream in;
+    FSDataInputStream rawIn;   // Raw InputStream from file
+    InputStream in;            // Possibly decompressed stream that we read
     Decompressor decompressor;
     long bytesRead = 0;
     long fileLength = 0;
@@ -233,8 +235,9 @@ class IFile {
     
     protected Reader() {}
     
-    public Reader(Configuration conf, InputStream in, long length, 
+    public Reader(Configuration conf, FSDataInputStream in, long length, 
                   CompressionCodec codec) throws IOException {
+      this.rawIn = in;
       if (codec != null) {
         decompressor = CodecPool.getDecompressor(codec);
         this.in = codec.createInputStream(in, decompressor);
@@ -247,6 +250,8 @@ class IFile {
     }
     
     public long getLength() { return fileLength; }
+    
+    public long getPosition() throws IOException { return rawIn.getPos(); }
     
     /**
      * Read upto len bytes into buf starting at offset off.
@@ -397,6 +402,14 @@ class IFile {
       buffer = data;
       fileLength = bufferSize = (length - start);
       dataIn.reset(buffer, start, length);
+    }
+    
+    @Override
+    public long getPosition() throws IOException {
+      // InMemoryReader does not initialize streams like Reader, so in.getPos()
+      // would not work. Instead, return the number of uncompressed bytes read,
+      // which will be correct since in-memory data is not compressed.
+      return bytesRead;
     }
     
     private void dumpOnError() {

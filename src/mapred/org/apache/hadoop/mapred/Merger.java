@@ -141,6 +141,10 @@ class Merger {
         fs.delete(file, false);
       }
     }
+
+    public long getPosition() throws IOException {
+      return reader.getPosition();
+    }
   }
   
   private static class MergeQueue<K extends Object, V extends Object> 
@@ -221,7 +225,12 @@ class Merger {
     }
 
     private void adjustPriorityQueue(Segment<K, V> reader) throws IOException{
-      if (reader.next()) {
+      long startPos = reader.getPosition();
+      boolean hasNext = reader.next();
+      long endPos = reader.getPosition();
+      totalBytesProcessed += endPos - startPos;
+      mergeProgress.set(totalBytesProcessed * progPerByte);
+      if (hasNext) {
         adjustTop();
       } else {
         pop();
@@ -247,10 +256,6 @@ class Merger {
       
       key = minSegment.getKey();
       value = minSegment.getValue();
-
-      totalBytesProcessed += (key.getLength()-key.getPosition()) + 
-                             (value.getLength()-value.getPosition());
-      mergeProgress.set(totalBytesProcessed * progPerByte);
 
       return true;
     }
@@ -293,8 +298,12 @@ class Merger {
             // Initialize the segment at the last possible moment;
             // this helps in ensuring we don't use buffers until we need them
             segment.init();
-            
-            if (segment.next()) {
+            long startPos = segment.getPosition();
+            boolean hasNext = segment.next();
+            long endPos = segment.getPosition();
+            totalBytesProcessed += endPos - startPos;
+            mergeProgress.set(totalBytesProcessed * progPerByte);
+            if (hasNext) {
               segmentsToMerge.add(segment);
               segmentsConsidered++;
             }
@@ -330,9 +339,11 @@ class Merger {
           }
           if (totalBytes != 0) //being paranoid
             progPerByte = 1.0f / (float)totalBytes;
-
-          // Reset bytes-processed to track the progress of the final merge
-          totalBytesProcessed = 0;
+          
+          if (totalBytes != 0)
+            mergeProgress.set(totalBytesProcessed * progPerByte);
+          else
+            mergeProgress.set(1.0f); // Last pass and no segments left - we're done
           
           LOG.info("Down to the last merge-pass, with " + numSegments + 
                    " segments left of total size: " + totalBytes + " bytes");

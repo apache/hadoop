@@ -2808,7 +2808,6 @@ public class SequenceFile {
       public boolean next() throws IOException {
         if (size() == 0)
           return false;
-        int valLength;
         if (minSegment != null) {
           //minSegment is non-null for all invocations of next except the first
           //one. For the first invocation, the priority queue is ready for use
@@ -2820,17 +2819,16 @@ public class SequenceFile {
           }
         }
         minSegment = (SegmentDescriptor)top();
+        long startPos = minSegment.in.getPosition(); // Current position in stream
         //save the raw key reference
         rawKey = minSegment.getKey();
         //load the raw value. Re-use the existing rawValue buffer
         if (rawValue == null) {
           rawValue = minSegment.in.createValueBytes();
         }
-        valLength = minSegment.nextRawValue(rawValue);
-        if (progPerByte > 0) {
-          totalBytesProcessed += rawKey.getLength() + valLength;
-          mergeProgress.set(totalBytesProcessed * progPerByte);
-        }
+        minSegment.nextRawValue(rawValue);
+        long endPos = minSegment.in.getPosition(); // End position after reading value
+        updateProgress(endPos - startPos);
         return true;
       }
       
@@ -2839,13 +2837,25 @@ public class SequenceFile {
       }
 
       private void adjustPriorityQueue(SegmentDescriptor ms) throws IOException{
-        if (ms.nextRawKey()) {
+        long startPos = ms.in.getPosition(); // Current position in stream
+        boolean hasNext = ms.nextRawKey();
+        long endPos = ms.in.getPosition(); // End position after reading key
+        updateProgress(endPos - startPos);
+        if (hasNext) {
           adjustTop();
         } else {
           pop();
           ms.cleanup();
         }
       }
+
+      private void updateProgress(long bytesProcessed) {
+        totalBytesProcessed += bytesProcessed;
+        if (progPerByte > 0) {
+          mergeProgress.set(totalBytesProcessed * progPerByte);
+        }
+      }
+      
       /** This is the single level merge that is called multiple times 
        * depending on the factor size and the number of segments
        * @return RawKeyValueIterator
@@ -2874,6 +2884,8 @@ public class SequenceFile {
               if (mStream[i].nextRawKey()) {
                 segmentsToMerge.add(mStream[i]);
                 segmentsConsidered++;
+                // Count the fact that we read some bytes in calling nextRawKey()
+                updateProgress(mStream[i].in.getPosition());
               }
               else {
                 mStream[i].cleanup();
