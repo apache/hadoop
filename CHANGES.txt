@@ -982,6 +982,9 @@ Release 0.18.0 - Unreleased
     
     HADOOP-3827.  Fixed compression of empty map-outputs. (acmurthy) 
 
+    HADOOP-3865. Remove reference to FSNamesystem from metrics preventing
+    garbage collection. (Lohit Vijayarenu via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

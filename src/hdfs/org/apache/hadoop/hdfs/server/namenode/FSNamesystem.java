@@ -388,7 +388,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
     setConfigurationParameters(conf);
-    this.registerMBean(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
   }
 
@@ -4322,7 +4321,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // package naming for mbeans and their impl.
     StandardMBean bean;
     try {
-      myFSMetrics = new FSNamesystemMetrics(conf, this);
+      myFSMetrics = new FSNamesystemMetrics(conf);
       bean = new StandardMBean(this,FSNamesystemMBean.class);
       mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemStatus", bean);
     } catch (NotCompliantMBeanException e) {
