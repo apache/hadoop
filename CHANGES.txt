@@ -208,6 +208,9 @@ Trunk (unreleased changes)
     HADOOP-3796. fuse-dfs configuration is implemented as file system
     mount options. (Pete Wyckoff via dhruba)
 
+    HADOOP-3836. Fix TestMultipleOutputs to correctly clean up. (Alejandro 
+    Abdelnur via acmurthy)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -45,27 +45,48 @@ public class TestMultipleOutputs extends HadoopTestCase {
     _testMultipleOutputs(true);
   }
 
-  @SuppressWarnings({"unchecked"})
-  protected void _testMultipleOutputs(boolean withCounters) throws Exception {
-    Path inDir = new Path("testing/mo/input");
-    Path outDir = new Path("testing/mo/output");
+  private static final Path ROOT_DIR = new Path("testing/mo");
+  private static final Path IN_DIR = new Path(ROOT_DIR, "input");
+  private static final Path OUT_DIR = new Path(ROOT_DIR, "output");
 
+  private Path getDir(Path dir) {
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data", "/tmp")
         .replace(' ', '+');
-      inDir = new Path(localPathRoot, inDir);
-      outDir = new Path(localPathRoot, outDir);
+      dir = new Path(localPathRoot, dir);
     }
+    return dir;
+  }
 
+  public void setUp() throws Exception {
+    super.setUp();
+    Path rootDir = getDir(ROOT_DIR);
+    Path inDir = getDir(IN_DIR);
 
     JobConf conf = createJobConf();
     FileSystem fs = FileSystem.get(conf);
-
-    fs.delete(outDir, true);
+    fs.delete(rootDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
+  }
+
+  public void tearDown() throws Exception {
+    Path rootDir = getDir(ROOT_DIR);
+
+    JobConf conf = createJobConf();
+    FileSystem fs = FileSystem.get(conf);
+    fs.delete(rootDir, true);
+    super.tearDown();
+  }
+
+  protected void _testMultipleOutputs(boolean withCounters) throws Exception {
+    Path inDir = getDir(IN_DIR);
+    Path outDir = getDir(OUT_DIR);
+
+    JobConf conf = createJobConf();
+    FileSystem fs = FileSystem.get(conf);
 
     DataOutputStream file = fs.create(new Path(inDir, "part-0"));
     file.writeBytes("a\nb\n\nc\nd\ne");
@@ -154,7 +175,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
       assertEquals("sequence", value.toString());
       count++;
     }
-    reader.close();
+    seqReader.close();
     assertFalse(count == 0);
 
     Counters.Group counters =
