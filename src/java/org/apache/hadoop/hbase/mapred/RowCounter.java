@@ -25,9 +25,11 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -47,7 +49,8 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
   static final String NAME = "rowcounter";
   
   private Configuration conf;
-  private final RowResult EMPTY_RESULT_VALUE = new RowResult();
+  private final RowResult EMPTY_RESULT_VALUE = 
+        new RowResult(Bytes.toBytes("dummy"),new HbaseMapWritable<byte [], Cell>());
   private static enum Counters {ROWS}
   
   @Override
@@ -119,7 +122,6 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
 
   public static void main(String[] args) throws Exception {
     HBaseConfiguration c = new HBaseConfiguration();
-    c.set("hbase.master", args[0]);
     int errCode = ToolRunner.run(c, new RowCounter(), args);
     System.exit(errCode);
   }
