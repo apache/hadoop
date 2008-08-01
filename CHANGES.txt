@@ -988,6 +988,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3865. Remove reference to FSNamesystem from metrics preventing
     garbage collection. (Lohit Vijayarenu via cdouglas)
 
+    HADOOP-3884.  Fix so that Eclipse plugin builds against recent
+    Eclipse releases.  (cutting)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

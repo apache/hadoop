@@ -103,9 +103,10 @@ public class HadoopServer {
 
         } catch (IOException ioe) {
           client = null;
-          return new Status(Status.ERROR, Activator.PLUGIN_ID,
+          return new Status(Status.ERROR, Activator.PLUGIN_ID, 0,
               "Cannot connect to the Map/Reduce location: "
-                  + HadoopServer.this.getLocationName());
+                            + HadoopServer.this.getLocationName(),
+                            ioe);
         }
       }
 
@@ -145,9 +146,9 @@ public class HadoopServer {
 
       } catch (IOException ioe) {
         client = null;
-        return new Status(Status.ERROR, Activator.PLUGIN_ID,
+        return new Status(Status.ERROR, Activator.PLUGIN_ID, 0,
             "Cannot retrieve running Jobs on location: "
-                + HadoopServer.this.getLocationName());
+                          + HadoopServer.this.getLocationName(), ioe);
       }
 
       // Schedule the next observation
