@@ -91,7 +91,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       batchUpdate.delete(COLUMNS[0]);
       region.batchUpdate(batchUpdate);
       
-      results = region.getClosestRowBefore(Bytes.toBytes(T10));
+      results = region.getClosestRowBefore(Bytes.toBytes(T20));
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T30);

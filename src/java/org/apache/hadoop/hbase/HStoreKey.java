@@ -263,8 +263,8 @@ public class HStoreKey implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public int hashCode() {
-    int result = this.row.hashCode();
-    result ^= this.column.hashCode();
+    int result = Bytes.hashCode(this.row);
+    result ^= Bytes.hashCode(this.column);
     result ^= this.timestamp;
     return result;
   }

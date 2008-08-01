@@ -608,16 +608,10 @@ public class HStore implements HConstants {
           HStoreKey curkey = es.getKey();
           byte[] bytes = es.getValue();
           if (HStoreKey.matchingFamily(this.family.getName(), curkey.getColumn())) {
-            if (ttl == HConstants.FOREVER ||
-                  now < curkey.getTimestamp() + ttl) {
+            if (!isExpired(curkey, ttl, now)) {
               entries++;
               out.append(curkey, new ImmutableBytesWritable(bytes));
               flushed += curkey.getSize() + (bytes == null ? 0 : bytes.length);
-            } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("internalFlushCache: " + curkey +
-                  ": expired, skipped");
-              }
             }
           }
         }
@@ -930,12 +924,8 @@ public class HStore implements HConstants {
           if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
             // Only write out objects which have a non-zero length key and
             // value
-            if (ttl == HConstants.FOREVER || now < sk.getTimestamp() + ttl) {
+            if (!isExpired(sk, ttl, now)) {
               compactedOut.append(sk, vals[smallestKey]);
-            } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("compactHStoreFiles: " + sk + ": expired, deleted");
-              }
             }
           }
         }
@@ -1197,17 +1187,12 @@ public class HStore implements HConstants {
             // there aren't any pending deletes.
             if (!(deletes.containsKey(readcol) &&
                 deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
-              if (ttl == HConstants.FOREVER ||
-                      now < readkey.getTimestamp() + ttl) {
+              if (!isExpired(readkey, ttl, now)) {
                 results.put(readcol, 
                   new Cell(readval.get(), readkey.getTimestamp()));
                 // need to reinstantiate the readval so we can reuse it, 
                 // otherwise next iteration will destroy our result
                 readval = new ImmutableBytesWritable();
-              } else {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("getFullFromMapFile: " + readkey + ": expired, skipped");
-                }
               }
             }
           }
@@ -1259,7 +1244,7 @@ public class HStore implements HConstants {
       // the old non-delete cell value in a later store file. If we don't keep
       // around the fact that the cell was deleted in a newer record, we end up
       // returning the old value if user is asking for more than one version.
-      // This List of deletes should not large since we are only keeping rows
+      // This List of deletes should not be large since we are only keeping rows
       // and columns that match those set on the scanner and which have delete
       // values.  If memory usage becomes an issue, could redo as bloom filter.
       Map<byte [], List<Long>> deletes =
@@ -1283,13 +1268,8 @@ public class HStore implements HConstants {
             continue;
           }
           if (!isDeleted(readkey, readval.get(), true, deletes)) {
-            if (ttl == HConstants.FOREVER ||
-                    now < readkey.getTimestamp() + ttl) {
+            if (!isExpired(readkey, ttl, now)) {
               results.add(new Cell(readval.get(), readkey.getTimestamp()));
-            } else {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("get: " + readkey + ": expired, skipped");
-              }
             }
             // Perhaps only one version is wanted.  I could let this
             // test happen later in the for loop test but it would cost
@@ -1304,13 +1284,8 @@ public class HStore implements HConstants {
               !hasEnoughVersions(numVersions, results);
               readval = new ImmutableBytesWritable()) {
             if (!isDeleted(readkey, readval.get(), true, deletes)) {
-              if (ttl == HConstants.FOREVER ||
-                    now < readkey.getTimestamp() + ttl) {
+              if (!isExpired(readkey, ttl, now)) {
                 results.add(new Cell(readval.get(), readkey.getTimestamp()));
-              } else {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("get: " + readkey + ": expired, skipped");
-                }
               }
             }
           }
@@ -1393,14 +1368,8 @@ public class HStore implements HConstants {
                 // in the memcache
                 if (!isDeleted(readkey, readval.get(), false, null) &&
                     !keys.contains(readkey)) {
-                  if (ttl == HConstants.FOREVER ||
-                        now < readkey.getTimestamp() + ttl) {
+                  if (!isExpired(readkey, ttl, now)) {
                     keys.add(new HStoreKey(readkey));
-                  } else {
-                    if (LOG.isDebugEnabled()) {
-                      LOG.debug("getKeys: " + readkey +
-                          ": expired, skipped");
-                    }
                   }
 
                   // if we've collected enough versions, then exit the loop.
@@ -1439,24 +1408,34 @@ public class HStore implements HConstants {
   byte [] getRowKeyAtOrBefore(final byte [] row)
   throws IOException{
     // Map of HStoreKeys that are candidates for holding the row key that
-    // most closely matches what we're looking for. We'll have to update it 
-    // deletes found all over the place as we go along before finally reading
-    // the best key out of it at the end.
+    // most closely matches what we're looking for. We'll have to update it as
+    // deletes are found all over the place as we go along before finally
+    // reading the best key out of it at the end.
     SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>();
-    // Obtain read lock
+    
+    // Keep a list of deleted cell keys.  We need this because as we go through
+    // the store files, the cell with the delete marker may be in one file and
+    // the old non-delete cell value in a later store file. If we don't keep
+    // around the fact that the cell was deleted in a newer record, we end up
+    // returning the old value if user is asking for more than one version.
+    // This List of deletes should not be large since we are only keeping rows
+    // and columns that match those set on the scanner and which have delete
+    // values.  If memory usage becomes an issue, could redo as bloom filter.
+    Set<HStoreKey> deletes = new HashSet<HStoreKey>();
+    
+    
     this.lock.readLock().lock();
     try {
-      // Process each store file.  Run through from oldest to newest so deletes
-      // have chance to overshadow deleted cells
+      // First go to the memcache.  Pick up deletes and candidates.
+      this.memcache.getRowKeyAtOrBefore(row, candidateKeys, deletes);
+      
+      // Process each store file.  Run through from newest to oldest.
+      // This code below is very close to the body of the getKeys method.
       MapFile.Reader[] maparray = getReaders();
-      for (int i = 0; i < maparray.length; i++) {
+      for(int i = maparray.length - 1; i >= 0; i--) {
         // Update the candidate keys from the current map file
-        rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys);
+        rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys, deletes);
       }
-      
-      // Finally, check the memcache
-      this.memcache.getRowKeyAtOrBefore(row, candidateKeys);
-      
       // Return the best key from candidateKeys
       return candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
     } finally {
@@ -1472,8 +1451,9 @@ public class HStore implements HConstants {
    * @param candidateKeys
    * @throws IOException
    */
-  private void rowAtOrBeforeFromMapFile(MapFile.Reader map, final byte [] row, 
-    SortedMap<HStoreKey, Long> candidateKeys)
+  private void rowAtOrBeforeFromMapFile(final MapFile.Reader map,
+    final byte [] row, final SortedMap<HStoreKey, Long> candidateKeys,
+    final Set<HStoreKey> deletes)
   throws IOException {
     HStoreKey startKey = new HStoreKey();
     ImmutableBytesWritable startValue = new ImmutableBytesWritable();
@@ -1491,9 +1471,9 @@ public class HStore implements HConstants {
       long now = System.currentTimeMillis();
       // if there aren't any candidate keys yet, we'll do some things different 
       if (candidateKeys.isEmpty()) {
-        rowAtOrBeforeCandidate(startKey, map, row, candidateKeys, now);
+        rowAtOrBeforeCandidate(startKey, map, row, candidateKeys, deletes, now);
       } else {
-        rowAtOrBeforeWithCandidates(startKey, map, row, candidateKeys,
+        rowAtOrBeforeWithCandidates(startKey, map, row, candidateKeys, deletes,
           now);
       }
     }
@@ -1510,7 +1490,8 @@ public class HStore implements HConstants {
    */
   private void rowAtOrBeforeCandidate(final HStoreKey startKey,
     final MapFile.Reader map, final byte[] row,
-    final SortedMap<HStoreKey, Long> candidateKeys, final long now) 
+    final SortedMap<HStoreKey, Long> candidateKeys,
+    final Set<HStoreKey> deletes, final long now) 
   throws IOException {
     // if the row we're looking for is past the end of this mapfile, set the
     // search key to be the last key.  If its a deleted key, then we'll back
@@ -1525,9 +1506,31 @@ public class HStore implements HConstants {
         searchKey = startKey;
       }
     }
-    rowAtOrBeforeCandidate(map, searchKey, candidateKeys, now);
+    rowAtOrBeforeCandidate(map, searchKey, candidateKeys, deletes, now);
+  }
+
+  /* 
+   * @param ttlSetting
+   * @param hsk
+   * @param now
+   * @param deletes
+   * @return True if key has not expired and is not in passed set of deletes.
+   */
+  static boolean notExpiredAndNotInDeletes(final long ttl,
+      final HStoreKey hsk, final long now, final Set<HStoreKey> deletes) {
+    return !isExpired(hsk, ttl, now) && !deletes.contains(hsk);
   }
   
+  private static boolean isExpired(final HStoreKey hsk, final long ttl,
+      final long now) {
+    boolean result = ttl != HConstants.FOREVER && now > hsk.getTimestamp() + ttl;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("rowAtOrBeforeCandidate 1:" + hsk +
+        ": expired, skipped");
+    }
+    return result;
+  }
+
   /* Find a candidate for row that is at or before passed key, sk, in mapfile.
    * @param map
    * @param sk Key to go search the mapfile with.
@@ -1538,7 +1541,7 @@ public class HStore implements HConstants {
    */
   private void rowAtOrBeforeCandidate(final MapFile.Reader map,
     final HStoreKey sk, final SortedMap<HStoreKey, Long> candidateKeys,
-    final long now)
+    final Set<HStoreKey> deletes, final long now)
   throws IOException {
     HStoreKey searchKey = sk;
     HStoreKey readkey = new HStoreKey();
@@ -1557,19 +1560,16 @@ public class HStore implements HConstants {
         // as a candidate key
         if (Bytes.equals(readkey.getRow(), searchKey.getRow())) {
           if (!HLogEdit.isDeleted(readval.get())) {
-            if (ttl == HConstants.FOREVER ||
-                now < readkey.getTimestamp() + ttl) {
+            if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
               candidateKeys.put(stripTimestamp(readkey), 
                   new Long(readkey.getTimestamp()));
               foundCandidate = true;
+              // NOTE! Continue.
               continue;
-            }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("rowAtOrBeforeCandidate 1:" + readkey +
-                ": expired, skipped");
             }
           }
           // Deleted value.
+          deletes.add(readkey);
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = new HStoreKey(readkey);
           }
@@ -1582,18 +1582,14 @@ public class HStore implements HConstants {
           // we're seeking yet, so this row is a candidate for closest
           // (assuming that it isn't a delete).
           if (!HLogEdit.isDeleted(readval.get())) {
-            if (ttl == HConstants.FOREVER || 
-                now < readkey.getTimestamp() + ttl) {
+            if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
               candidateKeys.put(stripTimestamp(readkey), 
                   new Long(readkey.getTimestamp()));
               foundCandidate = true;
               continue;
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("rowAtOrBeforeCandidate 2:" + readkey +
-                ": expired, skipped");
-            }
           }
+          deletes.add(readkey);
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = new HStoreKey(readkey);
           }
@@ -1619,7 +1615,8 @@ public class HStore implements HConstants {
   
   private void rowAtOrBeforeWithCandidates(final HStoreKey startKey,
     final MapFile.Reader map, final byte[] row,
-    final SortedMap<HStoreKey, Long> candidateKeys, final long now) 
+    final SortedMap<HStoreKey, Long> candidateKeys,
+    final Set<HStoreKey> deletes, final long now) 
   throws IOException {
     HStoreKey readkey = new HStoreKey();
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
@@ -1650,15 +1647,9 @@ public class HStore implements HConstants {
       if (Bytes.equals(readkey.getRow(), row)) {
         strippedKey = stripTimestamp(readkey);
         if (!HLogEdit.isDeleted(readval.get())) {
-          if (ttl == HConstants.FOREVER || 
-              now < readkey.getTimestamp() + ttl) {
+          if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
             candidateKeys.put(strippedKey,
                 new Long(readkey.getTimestamp()));
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("rowAtOrBeforeWithCandidates 1: " + readkey +
-                  ": expired, skipped");
-            }
           }
         } else {
           // If the candidate keys contain any that might match by timestamp,
@@ -1682,14 +1673,8 @@ public class HStore implements HConstants {
         // we're seeking yet, so this row is a candidate for closest 
         // (assuming that it isn't a delete).
         if (!HLogEdit.isDeleted(readval.get())) {
-          if (ttl == HConstants.FOREVER || 
-              now < readkey.getTimestamp() + ttl) {
+          if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
             candidateKeys.put(strippedKey, Long.valueOf(readkey.getTimestamp()));
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("rowAtOrBeforeWithCandidates 2: " + readkey +
-                  ": expired, skipped");
-            }
           }
         } else {
           // If the candidate keys contain any that might match by timestamp,

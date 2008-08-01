@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -327,24 +328,38 @@ class Memcache {
    * @param row Row to look for.
    * @param candidateKeys Map of candidate keys (Accumulation over lots of
    * lookup over stores and memcaches)
+   * @param deletes Deletes collected so far.
    */
-  void getRowKeyAtOrBefore(final byte [] row, 
-    SortedMap<HStoreKey, Long> candidateKeys) {
+  void getRowKeyAtOrBefore(final byte [] row,
+      final SortedMap<HStoreKey, Long> candidateKeys) {
+    getRowKeyAtOrBefore(row, candidateKeys, new HashSet<HStoreKey>());
+  }
+  
+  /**
+   * @param row Row to look for.
+   * @param candidateKeys Map of candidate keys (Accumulation over lots of
+   * lookup over stores and memcaches)
+   * @param deletes Deletes collected so far.
+   */
+  void getRowKeyAtOrBefore(final byte [] row,
+      final SortedMap<HStoreKey, Long> candidateKeys, 
+      final Set<HStoreKey> deletes) {
     this.lock.readLock().lock();
     try {
       synchronized (memcache) {
-        internalGetRowKeyAtOrBefore(memcache, row, candidateKeys);
+        getRowKeyAtOrBefore(memcache, row, candidateKeys, deletes);
       }
       synchronized (snapshot) {
-        internalGetRowKeyAtOrBefore(snapshot, row, candidateKeys);
+        getRowKeyAtOrBefore(snapshot, row, candidateKeys, deletes);
       }
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
-  private void internalGetRowKeyAtOrBefore(SortedMap<HStoreKey, byte []> map,
-      byte [] row, SortedMap<HStoreKey, Long> candidateKeys) {
+  private void getRowKeyAtOrBefore(final SortedMap<HStoreKey, byte []> map,
+      final byte [] row, final SortedMap<HStoreKey, Long> candidateKeys,
+      final Set<HStoreKey> deletes) {
     // We want the earliest possible to start searching from.  Start before
     // the candidate key in case it turns out a delete came in later.
     HStoreKey search_key = candidateKeys.isEmpty()? new HStoreKey(row):
@@ -371,13 +386,12 @@ class Memcache {
         found_key = key_iterator.next();
         if (Bytes.compareTo(found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
-            handleDeleted(found_key, candidateKeys);
+            handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {
               deletedOrExpiredRow = found_key;
             }
           } else {
-            if (ttl == HConstants.FOREVER ||
-                now < found_key.getTimestamp() + ttl) {
+            if (HStore.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
               HStoreKey strippedKey = stripTimestamp(found_key);
               candidateKeys.put(strippedKey,
                 new Long(found_key.getTimestamp()));
@@ -395,12 +409,13 @@ class Memcache {
         }
       }
       if (candidateKeys.isEmpty() && deletedOrExpiredRow != null) {
-        getRowKeyBefore(map, deletedOrExpiredRow, candidateKeys, victims, now);
+        getRowKeyBefore(map, deletedOrExpiredRow, candidateKeys, victims,
+          deletes, now);
       }
     } else {
       // The tail didn't contain any keys that matched our criteria, or was 
       // empty. Examine all the keys that proceed our splitting point.
-      getRowKeyBefore(map, search_key, candidateKeys, victims, now);
+      getRowKeyBefore(map, search_key, candidateKeys, victims, deletes, now);
     }
     // Remove expired victims from the map.
     for (HStoreKey victim: victims) {
@@ -419,7 +434,8 @@ class Memcache {
    */
   private void getRowKeyBefore(SortedMap<HStoreKey, byte []> map,
       HStoreKey search_key, SortedMap<HStoreKey, Long> candidateKeys,
-      List<HStoreKey> victims, final long now) {
+      final List<HStoreKey> expires, final Set<HStoreKey> deletes,
+      final long now) {
     SortedMap<HStoreKey, byte []> headMap = map.headMap(search_key);
     // If we tried to create a headMap and got an empty map, then there are
     // no keys at or before the search key, so we're done.
@@ -429,35 +445,36 @@ class Memcache {
     
     // If there aren't any candidate keys at this point, we need to search
     // backwards until we find at least one candidate or run out of headMap.
-    HStoreKey found_key = null;
     if (candidateKeys.isEmpty()) {
       Set<HStoreKey> keys = headMap.keySet();
       HStoreKey [] cells = keys.toArray(new HStoreKey[keys.size()]);
       byte [] lastRowFound = null;
       for (int i = cells.length - 1; i >= 0; i--) {
-        HStoreKey thisKey = cells[i];
+        HStoreKey found_key = cells[i];
         // if the last row we found a candidate key for is different than
         // the row of the current candidate, we can stop looking -- if its
         // not a delete record.
-        boolean deleted = HLogEdit.isDeleted(headMap.get(thisKey));
+        boolean deleted = HLogEdit.isDeleted(headMap.get(found_key));
         if (lastRowFound != null &&
-            !Bytes.equals(lastRowFound, thisKey.getRow()) && !deleted) {
+            !Bytes.equals(lastRowFound, found_key.getRow()) && !deleted) {
           break;
         }
         // If this isn't a delete, record it as a candidate key. Also 
         // take note of the row of this candidate so that we'll know when
         // we cross the row boundary into the previous row.
         if (!deleted) {
-          if (ttl == HConstants.FOREVER || now < thisKey.getTimestamp() + ttl) {
-            lastRowFound = thisKey.getRow();
-            candidateKeys.put(stripTimestamp(thisKey), 
-              new Long(thisKey.getTimestamp()));
+          if (HStore.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
+            lastRowFound = found_key.getRow();
+            candidateKeys.put(stripTimestamp(found_key), 
+              new Long(found_key.getTimestamp()));
           } else {
-            victims.add(found_key);
+            expires.add(found_key);
             if (LOG.isDebugEnabled()) {
               LOG.debug("getRowKeyBefore: " + found_key + ": expired, skipped");
             }
           }
+        } else {
+          deletes.add(found_key);
         }
       }
     } else {
@@ -469,16 +486,17 @@ class Memcache {
         headMap.tailMap(new HStoreKey(headMap.lastKey().getRow()));
       Iterator<HStoreKey> key_iterator = thisRowTailMap.keySet().iterator();
       do {
-        found_key = key_iterator.next();
+        HStoreKey found_key = key_iterator.next();
         if (HLogEdit.isDeleted(thisRowTailMap.get(found_key))) {
-          handleDeleted(found_key, candidateKeys);
+          handleDeleted(found_key, candidateKeys, deletes);
         } else {
           if (ttl == HConstants.FOREVER ||
-              now < found_key.getTimestamp() + ttl) {
+              now < found_key.getTimestamp() + ttl ||
+              !deletes.contains(found_key)) {
             candidateKeys.put(stripTimestamp(found_key), 
               Long.valueOf(found_key.getTimestamp()));
           } else {
-            victims.add(found_key);
+            expires.add(found_key);
             if (LOG.isDebugEnabled()) {
               LOG.debug("internalGetRowKeyAtOrBefore: " + found_key +
                 ": expired, skipped");
@@ -490,7 +508,9 @@ class Memcache {
   }
 
   private void handleDeleted(final HStoreKey k,
-      final SortedMap<HStoreKey, Long> candidateKeys) {
+      final SortedMap<HStoreKey, Long> candidateKeys,
+      final Set<HStoreKey> deletes) {
+    deletes.add(k);
     HStoreKey strippedKey = stripTimestamp(k);
     if (candidateKeys.containsKey(strippedKey)) {
       long bestCandidateTs = 

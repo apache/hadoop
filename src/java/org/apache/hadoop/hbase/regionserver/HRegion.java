@@ -317,7 +317,7 @@ public class HRegion implements HConstants {
     new ConcurrentHashMap<Integer, byte []>();
   private final Map<Integer, TreeMap<HStoreKey, byte []>> targetColumns =
       new ConcurrentHashMap<Integer, TreeMap<HStoreKey, byte []>>();
-  private volatile boolean flushRequested;
+  private volatile boolean flushRequested = false;
   // Default access because read by tests.
   final Map<Integer, HStore> stores = new ConcurrentHashMap<Integer, HStore>();
   final AtomicLong memcacheSize = new AtomicLong(0);
@@ -439,7 +439,6 @@ public class HRegion implements HConstants {
     this.conf = conf;
     this.regionInfo = regionInfo;
     this.flushListener = flushListener;
-    this.flushRequested = false;
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
@@ -1193,10 +1192,9 @@ public class HRegion implements HConstants {
             storeSet.add(store);
           }
         }
-      }
-      else
+      } else {
         storeSet.addAll(stores.values());
-      
+      }
       // For each column name that is just a column family, open the store
       // related to it and fetch everything for that row. HBASE-631
       // Also remove each store from storeSet so that these stores
@@ -1427,8 +1425,8 @@ public class HRegion implements HConstants {
    */
   private synchronized void checkResources() {
     boolean blocked = false;
-
-    while (this.memcacheSize.get() >= this.blockingMemcacheSize) {
+    while (this.memcacheSize.get() > this.blockingMemcacheSize) {
+      requestFlush();
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
             "' on region " + Bytes.toString(getRegionName()) + ": Memcache size " +
@@ -1436,7 +1434,6 @@ public class HRegion implements HConstants {
             " is >= than blocking " +
             StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
       }
-
       blocked = true;
       try {
         wait(threadWakeFrequency);
@@ -1610,15 +1607,33 @@ public class HRegion implements HConstants {
             getStore(key.getColumn()).add(key, e.getValue()));
       }
       flush = this.flushListener != null && !this.flushRequested &&
-        size > this.memcacheFlushSize;
+        isFlushSize(size);
     } finally {
       this.updatesLock.readLock().unlock();
     }
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
-      this.flushListener.request(this);
-      this.flushRequested = true;
+      requestFlush();
     }
+  }
+
+  private void requestFlush() {
+    if (this.flushListener == null || this.flushRequested) {
+      return;
+    }
+    this.flushListener.request(this);
+    this.flushRequested = true;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Flush requested on " + this);
+    }
+  }
+
+  /*
+   * @param size
+   * @return True if size is over the flush threshold
+   */
+  private boolean isFlushSize(final long size) {
+    return size > this.memcacheFlushSize;
   }
   
   // Do any reconstruction needed from the log
