@@ -311,7 +311,7 @@ public class DFSFile extends DFSPath implements DFSContent {
 
       } catch (IOException ioe) {
         throw new CoreException(new Status(Status.ERROR,
-            Activator.PLUGIN_ID, "Unable to open file \""
+                Activator.PLUGIN_ID, 0, "Unable to open file \""
                 + DFSFile.this.path + "\"", ioe));
       }
     }
