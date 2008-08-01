@@ -503,7 +503,9 @@ public class HRegion implements HConstants {
                       HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
     }
     this.memcacheFlushSize = flushSize;
-    this.blockingMemcacheSize = this.memcacheFlushSize * flushSize;
+
+    this.blockingMemcacheSize = this.memcacheFlushSize *
+      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
 
     // See if region is meant to run read-only.
     if (this.regionInfo.getTableDesc().isReadOnly()) {
