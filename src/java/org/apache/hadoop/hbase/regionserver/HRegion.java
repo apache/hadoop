@@ -503,9 +503,7 @@ public class HRegion implements HConstants {
                       HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
     }
     this.memcacheFlushSize = flushSize;
-
-    this.blockingMemcacheSize = this.memcacheFlushSize *
-      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
+    this.blockingMemcacheSize = this.memcacheFlushSize * flushSize;
 
     // See if region is meant to run read-only.
     if (this.regionInfo.getTableDesc().isReadOnly()) {
@@ -1426,7 +1424,6 @@ public class HRegion implements HConstants {
   private synchronized void checkResources() {
     boolean blocked = false;
     while (this.memcacheSize.get() > this.blockingMemcacheSize) {
-      requestFlush();
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
             "' on region " + Bytes.toString(getRegionName()) + ": Memcache size " +
