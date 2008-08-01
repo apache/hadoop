@@ -1524,7 +1524,7 @@ public class HStore implements HConstants {
   private static boolean isExpired(final HStoreKey hsk, final long ttl,
       final long now) {
     boolean result = ttl != HConstants.FOREVER && now > hsk.getTimestamp() + ttl;
-    if (LOG.isDebugEnabled()) {
+    if (result && LOG.isDebugEnabled()) {
       LOG.debug("rowAtOrBeforeCandidate 1:" + hsk +
         ": expired, skipped");
     }
