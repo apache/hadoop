@@ -92,7 +92,7 @@ class CompactSplitThread extends Thread implements HConstants {
       } catch (InterruptedException ex) {
         continue;
       } catch (IOException ex) {
-        LOG.error("Compaction failed" +
+        LOG.error("Compaction/Split failed" +
             (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
             RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {

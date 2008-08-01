@@ -21,20 +21,19 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.HashSet;
-import java.util.TreeMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.filter.StopRowFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,6 +42,14 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestGet2 extends HBaseTestCase implements HConstants {
   private MiniDFSCluster miniHdfs;
+  
+  private static final String T00 = "000";
+  private static final String T10 = "010";
+  private static final String T11 = "011";
+  private static final String T12 = "012";
+  private static final String T20 = "020";
+  private static final String T30 = "030";
+  private static final String T31 = "031";
 
   @Override
   protected void setUp() throws Exception {
@@ -52,7 +59,118 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
     this.conf.set(HConstants.HBASE_DIR,
       this.miniHdfs.getFileSystem().getHomeDirectory().toString());
   }
-  
+
+  /**
+   * Test file of multiple deletes and with deletes as final key.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>
+   */
+  public void testGetClosestRowBefore3() throws IOException{
+    HRegion region = null;
+    BatchUpdate batchUpdate = null;
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+      
+      batchUpdate = new BatchUpdate(T00);
+      batchUpdate.put(COLUMNS[0], T00.getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      batchUpdate = new BatchUpdate(T10);
+      batchUpdate.put(COLUMNS[0], T10.getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      batchUpdate = new BatchUpdate(T20);
+      batchUpdate.put(COLUMNS[0], T20.getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      Map<byte [], Cell> results =
+        region.getClosestRowBefore(Bytes.toBytes(T20));
+      assertEquals(T20, new String(results.get(COLUMNS[0]).getValue()));
+      
+      batchUpdate = new BatchUpdate(T20);
+      batchUpdate.delete(COLUMNS[0]);
+      region.batchUpdate(batchUpdate);
+      
+      results = region.getClosestRowBefore(Bytes.toBytes(T10));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      
+      batchUpdate = new BatchUpdate(T30);
+      batchUpdate.put(COLUMNS[0], T30.getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T30, new String(results.get(COLUMNS[0]).getValue()));
+      
+      batchUpdate = new BatchUpdate(T30);
+      batchUpdate.delete(COLUMNS[0]);
+      region.batchUpdate(batchUpdate);
+
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+
+      region.flushcache();
+
+      // try finding "010" after flush
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      
+      // Put into a different column family.  Should make it so I get 
+      // and answer of t20.
+      batchUpdate = new BatchUpdate(T20);
+      batchUpdate.put(COLUMNS[1], T20.getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      region.flushcache();
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      
+      // Now try combo of memcache and mapfiles.  Delete the t20 COLUMS[1]
+      // in memory; make sure we get back t10 again.
+      batchUpdate = new BatchUpdate(T20);
+      batchUpdate.delete(COLUMNS[1]);
+      region.batchUpdate(batchUpdate);
+      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      
+      // Ask for a value off the end of the file.  Should return t10.
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      region.flushcache();
+      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      
+      // Ok.  Let the candidate come out of mapfiles but have delete of
+      // the candidate be in memory.
+      batchUpdate = new BatchUpdate(T11);
+      batchUpdate.put(COLUMNS[0], T11.getBytes());
+      region.batchUpdate(batchUpdate);
+      batchUpdate = new BatchUpdate(T10);
+      batchUpdate.delete(COLUMNS[0]);
+      region.batchUpdate(batchUpdate);
+      results = region.getClosestRowBefore(Bytes.toBytes(T12));
+      assertEquals(T11, new String(results.get(COLUMNS[0]).getValue()));
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }
+  }
+
   /**
    * Tests for HADOOP-2161.
    * @throws Exception

@@ -221,6 +221,7 @@ Release 0.2.0
    HBASE-771   Names legal in 0.1 are not in 0.2; breaks migration
    HBASE-788   Div by zero in Master.jsp (Clint Morgan via Jim Kellerman)
    HBASE-791   RowCount doesn't work (Jean-Daniel Cryans via Stack)
+   HBASE-751   dfs exception and regionserver stuck during heavy write load
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

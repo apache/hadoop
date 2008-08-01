@@ -1182,7 +1182,7 @@ public class HTable {
    */ 
   public synchronized void commit(final List<BatchUpdate> batchUpdates) 
   throws IOException {
-    for(BatchUpdate batchUpdate : batchUpdates) 
+    for (BatchUpdate batchUpdate : batchUpdates) 
       commit(batchUpdate);
   }
 

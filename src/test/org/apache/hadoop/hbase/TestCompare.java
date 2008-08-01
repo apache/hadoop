@@ -42,6 +42,15 @@ public class TestCompare extends TestCase {
     assertTrue(past.compareTo(now) > 0);
     assertTrue(now.compareTo(now) == 0);
     assertTrue(future.compareTo(now) < 0);
+    // Check that empty column comes before one with a column
+    HStoreKey nocolumn = new HStoreKey(a, timestamp);
+    HStoreKey withcolumn = new HStoreKey(a, a, timestamp);
+    assertTrue(nocolumn.compareTo(withcolumn) < 0);
+    // Check that empty column comes and LATEST comes before one with a column
+    // and old timestamp.
+    nocolumn = new HStoreKey(a, HConstants.LATEST_TIMESTAMP);
+    withcolumn = new HStoreKey(a, a, timestamp);
+    assertTrue(nocolumn.compareTo(withcolumn) < 0);
   }
   
   /**

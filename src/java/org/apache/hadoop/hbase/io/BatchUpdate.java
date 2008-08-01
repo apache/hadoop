@@ -49,7 +49,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   
   /**
-   * Default constructor used serializing.
+   * Default constructor used serializing.  Do not use directly.
    */
   public BatchUpdate() {
     this ((byte [])null);
