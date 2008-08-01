@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
-import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -475,7 +474,7 @@ class JobInProgress {
   ////////////////////////////////////////////////////
   public synchronized void updateTaskStatus(TaskInProgress tip, 
                                             TaskStatus status,
-                                            JobTrackerMetrics metrics) {
+                                            JobTrackerInstrumentation metrics) {
 
     double oldProgress = tip.getProgress();   // save old progress
     boolean wasRunning = tip.isRunning();
@@ -1306,7 +1305,7 @@ class JobInProgress {
    */
   public synchronized boolean completedTask(TaskInProgress tip, 
                                          TaskStatus status,
-                                         JobTrackerMetrics metrics) 
+                                         JobTrackerInstrumentation metrics) 
   {
     TaskAttemptID taskid = status.getTaskID();
         
@@ -1359,13 +1358,13 @@ class JobInProgress {
     if (tip.isMapTask()){
       runningMapTasks -= 1;
       finishedMapTasks += 1;
-      metrics.completeMap();
+      metrics.completeMap(taskid);
       // remove the completed map from the resp running caches
       retireMap(tip);
     } else{
       runningReduceTasks -= 1;
       finishedReduceTasks += 1;
-      metrics.completeReduce();
+      metrics.completeReduce(taskid);
       // remove the completed reduces from the running reducers set
       retireReduce(tip);
     }
@@ -1393,7 +1392,7 @@ class JobInProgress {
    * @param metrics job-tracker metrics
    * @return
    */
-  private boolean isJobComplete(TaskInProgress tip, JobTrackerMetrics metrics) {
+  private boolean isJobComplete(TaskInProgress tip, JobTrackerInstrumentation metrics) {
     // Job is complete if total-tips = finished-tips + failed-tips
     boolean allDone = 
       ((finishedMapTasks + failedMapTIPs) == numMapTasks);
@@ -1467,7 +1466,7 @@ class JobInProgress {
                           TaskStatus status, 
                           TaskTrackerStatus taskTrackerStatus,
                           boolean wasRunning, boolean wasComplete,
-                          JobTrackerMetrics metrics) {
+                          JobTrackerInstrumentation metrics) {
     // check if the TIP is already failed
     boolean wasFailed = tip.isFailed();
 
@@ -1611,7 +1610,7 @@ class JobInProgress {
    */
   public void failedTask(TaskInProgress tip, TaskAttemptID taskid, String reason, 
                          TaskStatus.Phase phase, TaskStatus.State state, 
-                         String trackerName, JobTrackerMetrics metrics) {
+                         String trackerName, JobTrackerInstrumentation metrics) {
     TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), 
                                                     taskid,
                                                     0.0f,
@@ -1733,7 +1732,7 @@ class JobInProgress {
   synchronized void fetchFailureNotification(TaskInProgress tip, 
                                              TaskAttemptID mapTaskId, 
                                              String trackerName, 
-                                             JobTrackerMetrics metrics) {
+                                             JobTrackerInstrumentation metrics) {
     Integer fetchFailures = mapTaskIdToFetchFailuresMap.get(mapTaskId);
     fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
     mapTaskIdToFetchFailuresMap.put(mapTaskId, fetchFailures);
@@ -1763,9 +1762,9 @@ class JobInProgress {
     private JobInProgress job;
     private TaskInProgress tip;
     private TaskAttemptID taskId;
-    private JobTrackerMetrics metrics;
+    private JobTrackerInstrumentation metrics;
     JobWithTaskContext(JobInProgress job, TaskInProgress tip, 
-        TaskAttemptID taskId, JobTrackerMetrics metrics) {
+        TaskAttemptID taskId, JobTrackerInstrumentation metrics) {
       this.job = job;
       this.tip = tip;
       this.taskId = taskId;
@@ -1780,7 +1779,7 @@ class JobInProgress {
     TaskAttemptID getTaskID() {
       return taskId;
     }
-    JobTrackerMetrics getJobTrackerMetrics() {
+    JobTrackerInstrumentation getJobTrackerMetrics() {
       return metrics;
     }
   }

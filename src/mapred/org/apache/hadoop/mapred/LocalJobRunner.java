@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
+import org.apache.hadoop.mapred.JobTrackerMetricsInst;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
@@ -42,7 +42,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private int map_tasks = 0;
   private int reduce_tasks = 0;
 
-  private JobTrackerMetrics myMetrics = null;
+  private JobTrackerInstrumentation myMetrics = null;
 
   private static final String jobDir =  "localRunner/";
   
@@ -153,10 +153,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
           map.localizeConfiguration(localConf);
           map.setConf(localConf);
           map_tasks += 1;
-          myMetrics.launchMap();
+          myMetrics.launchMap(mapId);
           map.run(localConf, this);
           map.saveTaskOutput();
-          myMetrics.completeMap();
+          myMetrics.completeMap(mapId);
           map_tasks -= 1;
           updateCounters(map);
         }
@@ -197,10 +197,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
-              myMetrics.launchReduce();
+              myMetrics.launchReduce(reduce.getTaskID());
               reduce.run(localConf, this);
               reduce.saveTaskOutput();
-              myMetrics.completeReduce();
+              myMetrics.completeReduce(reduce.getTaskID());
               reduce_tasks -= 1;
               updateCounters(reduce);
             }
@@ -310,7 +310,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public LocalJobRunner(JobConf conf) throws IOException {
     this.fs = FileSystem.get(conf);
     this.conf = conf;
-    myMetrics = new JobTrackerMetrics(null, new JobConf(conf));
+    myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
   }
 
   // JobSubmissionProtocol methods

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -49,6 +50,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -230,64 +232,15 @@ public class TaskTracker
       shuffleMetricsRecord.update();
     }
   }
-  public class TaskTrackerMetrics implements Updater {
-    private MetricsRecord metricsRecord = null;
-    private int numCompletedTasks = 0;
-    private int timedoutTasks = 0;
-    private int tasksFailedPing = 0;
-      
-    TaskTrackerMetrics() {
-      JobConf conf = getJobConf();
-      String sessionId = conf.getSessionId();
-      // Initiate Java VM Metrics
-      JvmMetrics.init("TaskTracker", sessionId);
-      // Create a record for Task Tracker metrics
-      MetricsContext context = MetricsUtil.getContext("mapred");
-      metricsRecord = MetricsUtil.createRecord(context, "tasktracker");
-      metricsRecord.setTag("sessionId", sessionId);
-      context.registerUpdater(this);
-    }
-      
-    synchronized void completeTask() {
-      ++numCompletedTasks;
-    }
-    
-    synchronized void timedoutTask() {
-      ++timedoutTasks;
-    }
-    
-    synchronized void taskFailedPing() {
-      ++tasksFailedPing;
-    }
-    
-    /**
-     * Since this object is a registered updater, this method will be called
-     * periodically, e.g. every 5 seconds.
-     */  
-    public void doUpdates(MetricsContext unused) {
-      synchronized (this) {
-        if (metricsRecord != null) {
-          metricsRecord.setMetric("maps_running", mapTotal);
-          metricsRecord.setMetric("reduces_running", reduceTotal);
-          metricsRecord.setMetric("mapTaskSlots", (short)maxCurrentMapTasks);
-          metricsRecord.setMetric("reduceTaskSlots", 
-                                       (short)maxCurrentReduceTasks);
-          metricsRecord.incrMetric("tasks_completed", numCompletedTasks);
-          metricsRecord.incrMetric("tasks_failed_timeout", timedoutTasks);
-          metricsRecord.incrMetric("tasks_failed_ping", tasksFailedPing);
-        }
-        numCompletedTasks = 0;
-        timedoutTasks = 0;
-        tasksFailedPing = 0;
-      }
-      metricsRecord.update();
-    }
-  }
-    
-  private TaskTrackerMetrics myMetrics = null;
+  
 
-  public TaskTrackerMetrics getTaskTrackerMetrics() {
-    return myMetrics;
+  
+  
+    
+  private TaskTrackerInstrumentation myInstrumentation = null;
+
+  public TaskTrackerInstrumentation getTaskTrackerInstrumentation() {
+    return myInstrumentation;
   }
   
   /**
@@ -416,8 +369,17 @@ public class TaskTracker
     //tweak the probe sample size (make it a function of numCopiers)
     probe_sample_size = this.fConf.getInt("mapred.tasktracker.events.batchsize", 500);
     
-    
-    this.myMetrics = new TaskTrackerMetrics();
+    Class<? extends TaskTrackerInstrumentation> metricsInst = getInstrumentationClass(fConf);
+    try {
+      java.lang.reflect.Constructor<? extends TaskTrackerInstrumentation> c =
+        metricsInst.getConstructor(new Class[] {TaskTracker.class} );
+      this.myInstrumentation = c.newInstance(this);
+    } catch(Exception e) {
+      //Reflection can throw lots of exceptions -- handle them all by 
+      //falling back on the default.
+      LOG.error("failed to initialize taskTracker metrics", e);
+      this.myInstrumentation = new TaskTrackerMetricsInst(this);
+    }
     
     // bind address
     String address = 
@@ -462,6 +424,16 @@ public class TaskTracker
                              "Map-events fetcher for all reduce tasks " + "on " + 
                              taskTrackerName);
     mapEventsFetcher.start();
+  }
+  
+  public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
+    return conf.getClass("mapred.tasktracker.instrumentation",
+        TaskTrackerMetricsInst.class, TaskTrackerInstrumentation.class);
+  }
+  
+  public static void setInstrumentationClass(Configuration conf, Class<? extends TaskTrackerInstrumentation> t) {
+    conf.setClass("mapred.tasktracker.instrumentation",
+        t, TaskTrackerInstrumentation.class);
   }
   
   /** 
@@ -1072,7 +1044,7 @@ public class TaskTracker
             reduceTotal--;
           }
           try {
-            myMetrics.completeTask();
+            myInstrumentation.completeTask(taskStatus.getTaskID());
           } catch (MetricsException me) {
             LOG.warn("Caught: " + StringUtils.stringifyException(me));
           }
@@ -1137,7 +1109,7 @@ public class TaskTracker
           LOG.info(tip.getTask().getTaskID() + ": " + msg);
           ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
           tip.reportDiagnosticInfo(msg);
-          myMetrics.timedoutTask();
+          myInstrumentation.timedoutTask(tip.getTask().getTaskID());
           purgeTask(tip, true);
         }
       }
@@ -2530,4 +2502,13 @@ public class TaskTracker
       }
     }
   }
+
+  int getMaxCurrentMapTasks() {
+    return maxCurrentMapTasks;
+  }
+  
+  int getMaxCurrentReduceTasks() {
+    return maxCurrentReduceTasks;
+  }
+
 }

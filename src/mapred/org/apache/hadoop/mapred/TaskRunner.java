@@ -387,6 +387,7 @@ abstract class TaskRunner extends Thread {
       File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
       File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
       stdout.getParentFile().mkdirs();
+      tracker.getTaskTrackerInstrumentation().reportTaskLaunch(taskid, stdout, stderr);
       List<String> wrappedCommand = 
         TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize);
       Map<String, String> env = new HashMap<String, String>();
@@ -454,10 +455,10 @@ abstract class TaskRunner extends Thread {
       // error and output are appropriately redirected
     } finally { // handle the exit code
       int exit_code = shexec.getExitCode();
-     
+      tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
       if (!killed && exit_code != 0) {
         if (exit_code == 65) {
-          tracker.getTaskTrackerMetrics().taskFailedPing();
+          tracker.getTaskTrackerInstrumentation().taskFailedPing(t.getTaskID());
         }
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");

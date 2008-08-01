@@ -60,6 +60,10 @@ Trunk (unreleased changes)
     HADOOP-3730. Adds a new JobConf constructor that disables loading
     default configurations. (Alejandro Abdelnur via ddas)
 
+    HADOOP-3772. Add a new Hadoop Instrumentation api for the JobTracker and
+    the TaskTracker, refactor Hadoop Metrics as an implementation of the api.
+    (Ari Rabkin via acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

@@ -676,6 +676,13 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.tasktracker.instrumentation</name>
+  <value>org.apache.hadoop.mapred.TaskTrackerMetricsInst</value>
+  <description>Expert: The instrumentation class to associate with each TaskTracker.
+  </description>
+</property>
+
+<property>
   <name>mapred.map.tasks</name>
   <value>2</value>
   <description>The default number of map tasks per job.  Typically set
@@ -770,6 +777,13 @@ creations/deletions), or "all".</description>
   <name>mapred.jobtracker.completeuserjobs.maximum</name>
   <value>100</value>
   <description>The maximum number of complete jobs per user to keep around before delegating them to the job history.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.instrumentation</name>
+  <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
+  <description>Expert: The instrumentation class to associate with each TaskTracker.
   </description>
 </property>
 
