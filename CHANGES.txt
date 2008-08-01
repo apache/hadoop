@@ -205,6 +205,9 @@ Trunk (unreleased changes)
     HADOOP-3131. Fix reduce progress reporting for compressed intermediate
     data. (Matei Zaharia via acmurthy) 
 
+    HADOOP-3796. fuse-dfs configuration is implemented as file system
+    mount options. (Pete Wyckoff via dhruba)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

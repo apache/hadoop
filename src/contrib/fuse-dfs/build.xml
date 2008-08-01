@@ -41,7 +41,6 @@
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="HADOOP_HOME" value="${hadoop.root}"/>
-      <env key="PROTECTED_PATHS" value="/,/Trash,/user"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
     </exec>
     <mkdir dir="${build.dir}"/>
@@ -73,10 +72,11 @@
     </exec>
   </target>
 
- <target name="test-unix">
-   <antcall target="hadoopbuildcontrib.test">
+  <target name="test" if="libhdfs-fuse">
+    <echo message="testing FuseDFS ..."/>
+   <antcall target="hadoopbuildcontrib.test"> 
    </antcall>
- </target>
+  </target>  
 
   <!-- override clean target !-->
   <target name="clean" depends="check-libhdfs-fuse" if="libhdfs-fuse">

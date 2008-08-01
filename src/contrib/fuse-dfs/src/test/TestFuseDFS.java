@@ -56,13 +56,8 @@ public class TestFuseDFS extends TestCase {
     String jvm = System.getProperty("java.home") + "/lib/" + arch + "/server";
     String lp = System.getProperty("LD_LIBRARY_PATH") + ":" + "/usr/local/lib:" + libhdfs + ":" + jvm;
     System.err.println("LD_LIBRARY_PATH=" + lp);
-    String cmd[] = new String[4];
-    int index = 0;
-
-    cmd[index++] = fuse_cmd;
-    cmd[index++] = "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort());
-    cmd[index++] = mountpoint;
-    cmd[index++] = "-d";
+    String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
+		       mountpoint, "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw" };
     final String [] envp = {
       "CLASSPATH="+  cp,
       "LD_LIBRARY_PATH=" + lp,
@@ -151,7 +146,6 @@ public class TestFuseDFS extends TestCase {
       p = r.exec(lsCmd);
       assertTrue(p.waitFor() == 0);
     } catch(Exception e) {
-      System.err.println("e=" + e);
       e.printStackTrace();
       throw e;
     }
@@ -226,6 +220,8 @@ public class TestFuseDFS extends TestCase {
 
       Runtime r = Runtime.getRuntime();
       Process p = r.exec("mkdir -p " + mpoint + "/test/mkdirs");
+      assertTrue(p.waitFor() == 0);
+
       Path myPath = new Path("/test/mkdirs");
       assertTrue(fileSys.exists(myPath));
 
@@ -275,25 +271,19 @@ public class TestFuseDFS extends TestCase {
       Path myPath = new Path("/test/hello");
       FSDataOutputStream s = fileSys.create(myPath);
       String hello = "hello world!";
-      s.write(hello.getBytes());
+      s.writeUTF(hello);
+      s.writeInt(1033);
       s.close();
 
       // check it exists
       assertTrue(fileSys.exists(myPath));
 
       // cat the file
-      p = r.exec("cat " + mpoint + "/test/hello");
-      assertTrue(p != null);
-      assertTrue(p.waitFor() == 0);
-
-      // check the data is the same
-      {
-        InputStream i = p.getInputStream();
-        byte b[] = new byte[1024];
-        int length = i.read(b);
-        String s2 = new String(b,0,length);
-        assertTrue(s2.equals(hello));
-      }
+      DataInputStream is = new DataInputStream(new FileInputStream(mpoint + "/test/hello"));
+      String s2 = DataInputStream.readUTF(is);
+      int s3 = is.readInt();
+      assertTrue(s2.equals(hello));
+      assertTrue(s3 == 1033);
 
     } catch(Exception e) {
       e.printStackTrace();

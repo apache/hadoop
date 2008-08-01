@@ -35,6 +35,5 @@ fi
 if [ "$LD_LIBRARY_PATH" = "" ]; then
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$OS_ARCH/server:/usr/local/share/hdfs/libhdfs/:/usr/local/lib
 fi
-echo $LD_LIBRARY_PATH
 
-./fuse_dfs $@  -o-o allow_other
+./fuse_dfs $@

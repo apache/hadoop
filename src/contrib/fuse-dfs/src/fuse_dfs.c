@@ -46,26 +46,46 @@
 #include <strings.h>
 
 #include <hdfs.h>
+#include <stddef.h>
 
 // Constants
 //
 static const int default_id       = 99; // nobody  - not configurable since soon uids in dfs, yeah!
-static const size_t rd_buf_size   = 128 * 1024;
 static const int blksize = 512;
-static const size_t rd_cache_buf_size = 10*1024*1024;//how much of reads to buffer here
+static const char *const TrashPrefixDir = "/Trash";
+static const char *const TrashDir = "/Trash/Current";
+#define OPTIMIZED_READS 1
+static const char *program;
+
 
 /** options for fuse_opt.h */
 struct options {
+  char* protected;
   char* server;
   int port;
   int debug;
-  int nowrites;
-  int no_trash;
-}options;
+  int read_only;
+  int usetrash;
+  int entry_timeout;
+  int attribute_timeout;
+  int private;
+  size_t rdbuffer_size;
+} options;
 
+void print_options() {
+  fprintf(stderr,"options:\n");
+  fprintf(stderr, "\tprotected=%s\n",options.protected);
+  fprintf(stderr, "\tserver=%s\n",options.server);
+  fprintf(stderr, "\tport=%d\n",options.port);
+  fprintf(stderr, "\tdebug=%d\n",options.debug);
+  fprintf(stderr, "\tread_only=%d\n",options.read_only);
+  fprintf(stderr, "\tusetrash=%d\n",options.usetrash);
+  fprintf(stderr, "\tentry_timeout=%d\n",options.entry_timeout);
+  fprintf(stderr, "\tattribute_timeout=%d\n",options.attribute_timeout);
+  fprintf(stderr, "\tprivate=%d\n",options.private);
+  fprintf(stderr, "\trdbuffer_size=%d (KBs)\n",(int)options.rdbuffer_size/1024);
+}
 
-static const char *const TrashPrefixDir = "/Trash";
-static const char *const TrashDir = "/Trash/Current";
 
 typedef struct dfs_fh_struct {
   hdfsFile hdfsFH;
@@ -74,7 +94,6 @@ typedef struct dfs_fh_struct {
   off_t startOffset; //where the buffer starts in the file
 } dfs_fh;
 
-#include <stddef.h>
 
 /** macro to define options */
 #define DFSFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
@@ -82,30 +101,38 @@ typedef struct dfs_fh_struct {
 /** keys for FUSE_OPT_ options */
 static void print_usage(const char *pname)
 {
-  fprintf(stdout,"USAGE: %s [--debug] [--help] [--version] [--nowrites] [--notrash] --server=<hadoop_servername> --port=<hadoop_port> <mntpoint> [fuse options]\n",pname);
-  fprintf(stdout,"NOTE: a useful fuse option is -o allow_others and -o default_permissions\n");
-  fprintf(stdout,"NOTE: optimizations include -o entry_timeout=500 -o attr_timeout=500\n");
+  fprintf(stdout,"USAGE: %s [debug] [--help] [--version] [protected=<colon_seped_list_of_paths] [rw] [notrash] [usetrash] [private (single user)] [ro] server=<hadoop_servername> port=<hadoop_port> [entry_timeout=<secs>] [attribute_timeout=<secs>] <mntpoint> [fuse options]\n",pname);
   fprintf(stdout,"NOTE: debugging option for fuse is -debug\n");
 }
 
-static char **protectedpaths;
-
-#define OPTIMIZED_READS 1
 
 enum
   {
     KEY_VERSION,
     KEY_HELP,
+    KEY_USETRASH,
+    KEY_NOTRASH,
+    KEY_RO,
+    KEY_RW,
+    KEY_PRIVATE,
+    KEY_DEBUG,
   };
 
 static struct fuse_opt dfs_opts[] =
   {
-    DFSFS_OPT_KEY("--server=%s", server, 0),
-    DFSFS_OPT_KEY("--port=%d", port, 0),
-    DFSFS_OPT_KEY("--debug", debug, 1),
-    DFSFS_OPT_KEY("--nowrites", nowrites, 1),
-    DFSFS_OPT_KEY("--notrash", no_trash, 1),
+    DFSFS_OPT_KEY("server=%s", server, 0),
+    DFSFS_OPT_KEY("entry_timeout=%d", entry_timeout, 0),
+    DFSFS_OPT_KEY("attribute_timeout=%d", attribute_timeout, 0),
+    DFSFS_OPT_KEY("protected=%s", protected, 0),
+    DFSFS_OPT_KEY("port=%d", port, 0),
+    DFSFS_OPT_KEY("rdbuffer=%d", rdbuffer_size,0),
 
+    FUSE_OPT_KEY("private", KEY_PRIVATE),
+    FUSE_OPT_KEY("ro", KEY_RO),
+    FUSE_OPT_KEY("debug", KEY_DEBUG),
+    FUSE_OPT_KEY("rw", KEY_RW),
+    FUSE_OPT_KEY("usetrash", KEY_USETRASH),
+    FUSE_OPT_KEY("notrash", KEY_NOTRASH),
     FUSE_OPT_KEY("-v",             KEY_VERSION),
     FUSE_OPT_KEY("--version",      KEY_VERSION),
     FUSE_OPT_KEY("-h",             KEY_HELP),
@@ -113,29 +140,62 @@ static struct fuse_opt dfs_opts[] =
     FUSE_OPT_END
   };
 
-static const char *program;
+
 
 int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs)
 {
+  (void) data;
 
-  if (key == KEY_VERSION) {
+  switch (key) {
+  case FUSE_OPT_KEY_OPT:
+    fprintf(stderr,"fuse-dfs ignoring option %s\n",arg);
+    return 1;
+  case  KEY_VERSION:
     fprintf(stdout,"%s %s\n",program,_FUSE_DFS_VERSION);
     exit(0);
-  } else if (key == KEY_HELP) {
+  case KEY_HELP:
     print_usage(program);
     exit(0);
-  } else {
+  case KEY_USETRASH:
+    options.usetrash = 1;
+    break;
+  case KEY_NOTRASH:
+    options.usetrash = 1;
+    break;
+  case KEY_RO:
+    options.read_only = 1;
+    break;
+  case KEY_RW:
+    options.read_only = 0;
+    break;
+  case KEY_PRIVATE:
+    options.private = 1;
+    break;
+  case KEY_DEBUG:
+    fuse_opt_add_arg(outargs, "-d");
+    options.debug = 1;
+    break;
+  default: {
     // try and see if the arg is a URI for DFS
     int tmp_port;
     char tmp_server[1024];
 
     if (!sscanf(arg,"dfs://%1024[a-zA-Z0-9_.-]:%d",tmp_server,&tmp_port)) {
-      printf("didn't recognize %s\n",arg);
-      fuse_opt_add_arg(outargs,arg);
+      if(strcmp(arg,"ro") == 0) {
+	options.read_only = 1;
+      } else if(strcmp(arg,"rw") == 0) {
+	options.read_only = 0;
+      } else {
+	fprintf(stderr,"fuse-dfs didn't recognize %s,%d\n",arg,key);
+	//      fuse_opt_add_arg(outargs,arg);
+	return 1;
+      }
     } else {
       options.port = tmp_port;
       options.server = strdup(tmp_server);
+      fprintf(stderr, "port=%d,server=%s\n", options.port, options.server);
     }
+  }
   }
   return 0;
 }
@@ -152,9 +212,10 @@ typedef struct dfs_context_struct {
   char *nn_hostname;
   int nn_port;
   hdfsFS fs;
-  int nowrites;
-  int no_trash;
-
+  int read_only;
+  int usetrash;
+  char **protectedpaths;
+  size_t rdbuffer_size;
   // todo:
   // total hack city - use this to strip off the dfs url from the filenames
   // that the dfs API is now providing in 0.14.5
@@ -451,20 +512,20 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,
   dfs_fh *fh = (dfs_fh*)fi->fh;
   //fprintf(stderr, "Cache bounds for %s: %llu -> %llu (%d bytes). Check for offset %llu\n", path, fh->startOffset, fh->startOffset + fh->sizeBuffer, fh->sizeBuffer, offset);
   if (fh->sizeBuffer == 0  || offset < fh->startOffset || offset > (fh->startOffset + fh->sizeBuffer)  )
-  {
-    // do the actual read
-    //fprintf (stderr,"Reading %s from HDFS, offset %llu, amount %d\n", path, offset, rd_cache_buf_size);
-    const tSize num_read = hdfsPread(dfs->fs, fh->hdfsFH, offset, fh->buf, rd_cache_buf_size);
-    if (num_read < 0) {
-      syslog(LOG_ERR, "Read error - pread failed for %s with return code %d %s:%d", path, num_read, __FILE__, __LINE__);
-      hdfsDisconnect(dfs->fs);
-      dfs->fs = NULL;
-      return -EIO;
+    {
+      // do the actual read
+      //fprintf (stderr,"Reading %s from HDFS, offset %llu, amount %d\n", path, offset, dfs->rdbuffer_size);
+      const tSize num_read = hdfsPread(dfs->fs, fh->hdfsFH, offset, fh->buf, dfs->rdbuffer_size);
+      if (num_read < 0) {
+	syslog(LOG_ERR, "Read error - pread failed for %s with return code %d %s:%d", path, num_read, __FILE__, __LINE__);
+	hdfsDisconnect(dfs->fs);
+	dfs->fs = NULL;
+	return -EIO;
+      }
+      fh->sizeBuffer = num_read;
+      fh->startOffset = offset;
+      //fprintf (stderr,"Read %d bytes of %s from HDFS\n", num_read, path);
     }
-    fh->sizeBuffer = num_read;
-    fh->startOffset = offset;
-    //fprintf (stderr,"Read %d bytes of %s from HDFS\n", num_read, path);
-  }
 
   char* local_buf = fh->buf;
   const tSize cacheLookupOffset = offset - fh->startOffset;
@@ -590,15 +651,15 @@ static int dfs_mkdir(const char *path, mode_t mode)
   assert('/' == *path);
 
   int i ;
-  for (i = 0; protectedpaths[i]; i++) {
-    if (strcmp(path, protectedpaths[i]) == 0) {
+  for (i = 0; dfs->protectedpaths[i]; i++) {
+    if (strcmp(path, dfs->protectedpaths[i]) == 0) {
       syslog(LOG_ERR,"ERROR: hdfs trying to create the directory: %s", path);
       return -EACCES;
     }
   }
 
 
-  if (dfs->nowrites) {
+  if (dfs->read_only) {
     syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot create the directory %s\n",path);
     return -EACCES;
   }
@@ -632,18 +693,18 @@ static int dfs_rename(const char *from, const char *to)
   assert('/' == *to);
 
   int i ;
-  for (i = 0; protectedpaths[i] != NULL; i++) {
-    if (strcmp(from, protectedpaths[i]) == 0) {
+  for (i = 0; dfs->protectedpaths[i] != NULL; i++) {
+    if (strcmp(from, dfs->protectedpaths[i]) == 0) {
       syslog(LOG_ERR,"ERROR: hdfs trying to rename directories %s to %s",from,to);
       return -EACCES;
     }
-    if (strcmp(to, protectedpaths[i]) == 0) {
+    if (strcmp(to,dfs->protectedpaths[i]) == 0) {
       syslog(LOG_ERR,"ERROR: hdfs trying to rename directories %s to %s",from,to);
       return -EACCES;
     }
   }
 
-  if (dfs->nowrites) {
+  if (dfs->read_only) {
     syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot rename the directory %s\n",from);
     return -EACCES;
   }
@@ -657,9 +718,12 @@ static int dfs_rename(const char *from, const char *to)
 }
 
 static int is_protected(const char *path) {
+  dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  assert(dfs != NULL);
+
   int i ;
-  for (i = 0; protectedpaths[i]; i++) {
-    if (strcmp(path, protectedpaths[i]) == 0) {
+  for (i = 0; dfs->protectedpaths[i]; i++) {
+    if (strcmp(path, dfs->protectedpaths[i]) == 0) {
       return 1;
     }
   }
@@ -698,12 +762,12 @@ static int dfs_rmdir(const char *path)
     return -ENOTEMPTY;
   }
 
-  if (!dfs->no_trash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
+  if (dfs->usetrash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
     return move_to_trash(path);
   }
 
 
-  if (dfs->nowrites) {
+  if (dfs->read_only) {
     syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot delete the directory %s\n",path);
     return -EACCES;
   }
@@ -740,11 +804,11 @@ static int dfs_unlink(const char *path)
   }
 
   // move the file to the trash if this is enabled and its not actually in the trash.
-  if (!dfs->no_trash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
+  if (dfs->usetrash && strncmp(path, TrashPrefixDir, strlen(TrashPrefixDir)) != 0) {
     return move_to_trash(path);
   }
 
-  if (dfs->nowrites) {
+  if (dfs->read_only) {
     syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot create the directory %s\n",path);
     return -EACCES;
   }
@@ -809,7 +873,8 @@ static int dfs_open(const char *path, struct fuse_file_info *fi)
   dfs_fh *fh = (dfs_fh*)malloc(sizeof (dfs_fh));
   fi->fh = (uint64_t)fh;
   fh->hdfsFH = (hdfsFile)hdfsOpenFile(dfs->fs, path, flags,  0, 3, 0);
-  fh->buf = (char*)malloc(rd_cache_buf_size*sizeof (char));
+  assert(dfs->rdbuffer_size > 0);
+  fh->buf = (char*)malloc(dfs->rdbuffer_size*sizeof (char));
 
   fh->startOffset = 0;
   fh->sizeBuffer = 0;
@@ -936,7 +1001,7 @@ int dfs_release (const char *path, struct fuse_file_info *fi) {
 
   if (NULL == file_handle) {
     return 0;
- }
+  }
 
   if (hdfsCloseFile(dfs->fs, file_handle) != 0) {
     syslog(LOG_ERR, "ERROR: dfs problem - could not close file_handle(%ld) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
@@ -991,7 +1056,7 @@ int dfs_flush(const char *path, struct fuse_file_info *fi) {
 #endif
 
     if (hdfsFlush(dfs->fs, file_handle) != 0) {
-      syslog(LOG_ERR, "ERROR: dfs problem - could not flush file_handle(%x) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
+      syslog(LOG_ERR, "ERROR: dfs problem - could not flush file_handle(%lx) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
       return -EIO;
     }
   }
@@ -1014,45 +1079,47 @@ void dfs_destroy (void *ptr)
 
 
 // Hacked up function to basically do:
-//  protectedpaths = split(PROTECTED_PATHS,',');
+//  protectedpaths = split(options.protected,':');
 
-static void init_protectedpaths() {
-  // PROTECTED_PATHS should be a #defined value from autoconf
-  // set it with configure --with-protectedpaths=/,/user,/user/foo
-  // note , seped with no other spaces and no quotes around it
-  char *tmp = PROTECTED_PATHS;
+static void init_protectedpaths(dfs_context *dfs) {
 
-  assert(tmp);
+  char *tmp = options.protected;
+
 
   // handle degenerate case up front.
-  if (0 == *tmp) {
-    protectedpaths = (char**)malloc(sizeof(char*));
-    protectedpaths[0] = NULL;
+  if (tmp == NULL || 0 == *tmp) {
+    dfs->protectedpaths = (char**)malloc(sizeof(char*));
+    dfs->protectedpaths[0] = NULL;
     return;
   }
+  assert(tmp);
+
+  if(options.debug) {
+    print_options();
+  }
+
 
   int i = 0;
-  while (tmp && (NULL != (tmp = index(tmp,',')))) {
+  while (tmp && (NULL != (tmp = index(tmp,':')))) {
     tmp++; // pass the ,
     i++;
   }
   i++; // for the last entry
   i++; // for the final NULL
-  protectedpaths = (char**)malloc(sizeof(char*)*i);
-  printf("i=%d\n",i);
-  tmp = PROTECTED_PATHS;
+  dfs->protectedpaths = (char**)malloc(sizeof(char*)*i);
+  tmp = options.protected;
   int j  = 0;
   while (NULL != tmp && j < i) {
     int length;
-    char *eos = index(tmp,',');
+    char *eos = index(tmp,':');
     if (NULL != eos) {
       length = eos - tmp; // length of this value
     } else {
       length = strlen(tmp);
     }
-    protectedpaths[j] = (char*)malloc(sizeof(char)*length+1);
-    strncpy(protectedpaths[j], tmp, length);
-    protectedpaths[j][length] = '\0';
+    dfs->protectedpaths[j] = (char*)malloc(sizeof(char)*length+1);
+    strncpy(dfs->protectedpaths[j], tmp, length);
+    dfs->protectedpaths[j][length] = '\0';
     if (eos) {
       tmp = eos + 1;
     } else {
@@ -1060,15 +1127,16 @@ static void init_protectedpaths() {
     }
     j++;
   }
-  protectedpaths[j] = NULL;
+  dfs->protectedpaths[j] = NULL;
+
   /*
-  j  = 0;
-  while (protectedpaths[j]) {
-    printf("protectedpaths[%d]=%s\n",j,protectedpaths[j]);
+    j  = 0;
+    while (dfs->protectedpaths[j]) {
+    printf("dfs->protectedpaths[%d]=%s\n",j,dfs->protectedpaths[j]);
     fflush(stdout);
     j++;
-  }
-  exit(1);
+    }
+    exit(1);
   */
 }
 
@@ -1093,9 +1161,10 @@ void *dfs_init()
   dfs->nn_hostname           = options.server;
   dfs->nn_port               = options.port;
   dfs->fs                    = NULL;
-  dfs->nowrites              = options.nowrites;
-  dfs->no_trash              = options.no_trash;
-
+  dfs->read_only             = options.read_only;
+  dfs->usetrash              = options.usetrash;
+  dfs->protectedpaths        = NULL;
+  dfs->rdbuffer_size         = options.rdbuffer_size;
   bzero(dfs->dfs_uri,0);
   sprintf(dfs->dfs_uri,"dfs://%s:%d/",dfs->nn_hostname,dfs->nn_port);
   dfs->dfs_uri_len = strlen(dfs->dfs_uri);
@@ -1103,7 +1172,9 @@ void *dfs_init()
   // use ERR level to ensure it makes it into the log.
   syslog(LOG_ERR, "mounting %s", dfs->dfs_uri);
 
-  init_protectedpaths();
+  init_protectedpaths(dfs);
+  assert(dfs->protectedpaths != NULL);
+
 
   return (void*)dfs;
 }
@@ -1127,7 +1198,7 @@ static struct fuse_operations dfs_oper = {
   .write	= dfs_write,
   .flush        = dfs_flush,
   //.xsetattr      = dfs_setattr,
-    .mknod        = dfs_mknod,
+  .mknod        = dfs_mknod,
   .chmod	= dfs_chmod,
   .chown	= dfs_chown,
   //  .truncate	= dfs_truncate,
@@ -1145,10 +1216,30 @@ int main(int argc, char *argv[])
   /* clear structure that holds our options */
   memset(&options, 0, sizeof(struct options));
 
+  // some defaults
+  options.rdbuffer_size = 10*1024*1024; 
+  options.attribute_timeout = 60; 
+  options.entry_timeout = 60;
+
   if (fuse_opt_parse(&args, &options, dfs_opts, dfs_options) == -1)
     /** error parsing options */
     return -1;
 
+
+  // Some fuse options we set
+  if(! options.private) {
+    fuse_opt_add_arg(&args, "-oallow_other");
+  }
+  {
+    char buf[1024];
+
+    snprintf(buf, sizeof buf, "-oattr_timeout=%d",options.attribute_timeout);
+    fuse_opt_add_arg(&args, buf);
+
+    snprintf(buf, sizeof buf, "-oentry_timeout=%d",options.entry_timeout);
+    fuse_opt_add_arg(&args, buf);
+
+  }
 
   if (options.server == NULL || options.port == 0) {
     print_usage(argv[0]);

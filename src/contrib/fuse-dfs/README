@@ -13,13 +13,9 @@ This is a FUSE module for Hadoop's HDFS.
 It allows one to mount HDFS as a Unix filesystem and optionally export
 that mount point to other machines.
 
-For now, writes are disabled as this requires Hadoop-1700 - file
-appends which I guess won't be ready till 0.18 ish ??.
-
-rmdir, mv, mkdir, rm are all supported. just not cp, touch, ...
+cp, write, rmdir, mv, mkdir, rm are all supported. But permissions are not.
 
 BUILDING:
-
 
 Requirements:
 
@@ -72,11 +68,36 @@ in a root shell do the following:
 
 1. add the following to /etc/fstab -
   fuse_dfs#dfs://hadoop_server.foo.com:9000 /mnt/dfs fuse
-  allow_other,rw 0 0
+  -oallow_other,rw,-ousetrash 0 0
 
 2. mount /mnt/dfs Expect problems with not finding fuse_dfs. You will
    need to probably add this to /sbin and then problems finding the
    above 3 libraries. Add these using ldconfig.
+
+
+Fuse DFS takes the following mount options (i.e., on the command line or the comma separated list of options in /etc/fstab:
+
+-oserver=%s  (optional place to specify the server but in fstab use the format above)
+-oport=%d (optional port see comment on server option)
+-oentry_timeout=%d (how long directory entries are cached by fuse in seconds - see fuse docs)
+-oattribute_timeout=%d (how long attributes are cached by fuse in seconds - see fuse docs)
+-oprotected=%s (a colon separated list of directories that fuse-dfs should not allow to be deleted or moved - e.g., /user:/tmp)
+-oprivate (not often used but means only the person who does the mount can use the filesystem - aka ! allow_others in fuse speak)
+-ordbuffer=%d (in KBs how large a buffer should fuse-dfs use when doing hdfs reads)
+ro 
+rw
+-ousetrash (should fuse dfs throw things in /Trash when deleting them)
+-onotrash (opposite of usetrash)
+-odebug (do not daemonize - aka -d in fuse speak)
+
+The defaults are:
+
+entry,attribute_timeouts = 60 seconds
+rdbuffer = 10 MB
+protected = null
+debug = 0
+notrash
+private = 0
 
 --------------------------------------------------------------------------------
 
@@ -96,3 +117,22 @@ ADVANCED:
 you may want to ensure certain directories cannot be deleted from the
 shell until the FS has permissions. You can set this in the build.xml
 file in src/contrib/fuse-dfs/build.xml
+
+--------------------------------------------------------------------------------
+
+RECOMMENDATIONS:
+
+1. From /bin, ln -s $HADOOP_HOME/contrib/fuse-dfs/fuse_dfs* .
+2. Always start with debug on so you can see if you are missing a classpath or something like that.
+
+
+--------------------------------------------------------------------------------
+
+PERFORMANCE:
+
+1. if you alias ls to ls --color=auto and try listing a directory with lots (over thousands) of files, expect it to be slow and at 10s of thousands, expect it to be very very slow.  This is because --color=auto causes ls to stat every file in the directory. Since fuse-dfs does not cache attribute entries when doing a readdir, this is very slow. see https://issues.apache.org/jira/browse/HADOOP-3797 
+
+2. Writes are approximately 33% slower than the DFSClient. TBD how to optimize this. see: https://issues.apache.org/jira/browse/HADOOP-3805
+
+3. Reads are ~20-30% slower even with the read buffering. 
+
