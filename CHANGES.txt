@@ -782,6 +782,8 @@ Release 0.18.0 - 2008-08-06
     HADOOP-3884.  Fix so that Eclipse plugin builds against recent
     Eclipse releases.  (cutting)
 
+    HADOOP-3837. Streaming jobs report progress status. (dhruba)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES
