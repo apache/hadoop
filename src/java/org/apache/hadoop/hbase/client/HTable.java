@@ -262,9 +262,10 @@ public class HTable {
       public boolean processRow(RowResult rowResult) throws IOException {
         HRegionInfo info = Writables.getHRegionInfo(
             rowResult.get(HConstants.COL_REGIONINFO));
-
-        if (!(info.isOffline() || info.isSplit())) {
-          keyList.add(info.getStartKey());
+        if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
+          if (!(info.isOffline() || info.isSplit())) {
+            keyList.add(info.getStartKey());
+          }
         }
         return true;
       }
