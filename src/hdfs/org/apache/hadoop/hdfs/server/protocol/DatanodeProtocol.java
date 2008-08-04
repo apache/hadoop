@@ -35,9 +35,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 16: Block parameter added to nextGenerationStamp().
+   * 17: Remove the request for block report.
    */
-  public static final long versionID = 16L;
+  public static final long versionID = 17L;
   
   // error code
   final static int NOTIFY = 0;
@@ -54,8 +54,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_SHUTDOWN = 3;   // shutdown node
   final static int DNA_REGISTER = 4;   // re-register
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
-  final static int DNA_BLOCKREPORT = 6;   // request a block report
-  final static int DNA_RECOVERBLOCK = 7;  // request a block recovery
+  final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
 
   /** 
    * Register Datanode.

@@ -1257,7 +1257,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>topology.script.number.args</name>
-  <value>20</value>
+  <value>100</value>
   <description> The max number of args that the script configured with 
     topology.script.file.name should be run with. Each arg is an
     IP address.

@@ -38,7 +38,6 @@ import org.apache.commons.logging.LogFactory;
  */
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
-  public final static String UNRESOLVED = "";
   public final static int DEFAULT_HOST_LEVEL = 2;
   public static final Log LOG = 
     LogFactory.getLog("org.apache.hadoop.net.NetworkTopology");
@@ -344,11 +343,6 @@ public class NetworkTopology {
    */ 
   public void remove(Node node) {
     if (node==null) return;
-    if (NetworkTopology.UNRESOLVED.equals(node.getNetworkLocation())) {
-      // the node's network location has not resolved yet; 
-      // so it is not in the network topology
-      return;  
-    }
     if( node instanceof InnerNode ) {
       throw new IllegalArgumentException(
         "Not allow to remove an inner node: "+NodeBase.getPath(node));

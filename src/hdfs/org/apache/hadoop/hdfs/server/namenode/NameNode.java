@@ -136,7 +136,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     String portString = port == DEFAULT_PORT ? "" : (":"+port);
     return URI.create("hdfs://"+ namenode.getHostName()+portString);
   }
-
+  
   /**
    * Initialize the server
    * 

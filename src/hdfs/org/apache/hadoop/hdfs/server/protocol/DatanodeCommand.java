@@ -28,12 +28,6 @@ public abstract class DatanodeCommand implements Writable {
     public void write(DataOutput out) {}
   }
 
-  static class BlockReport extends DatanodeCommand {
-    private BlockReport() {super(DatanodeProtocol.DNA_BLOCKREPORT);}
-    public void readFields(DataInput in) {}
-    public void write(DataOutput out) {}
-  }
-
   static class Finalize extends DatanodeCommand {
     private Finalize() {super(DatanodeProtocol.DNA_FINALIZE);}
     public void readFields(DataInput in) {}
@@ -45,10 +39,6 @@ public abstract class DatanodeCommand implements Writable {
         new WritableFactory() {
           public Writable newInstance() {return new Register();}
         });
-    WritableFactories.setFactory(BlockReport.class,
-        new WritableFactory() {
-          public Writable newInstance() {return new BlockReport();}
-        });
     WritableFactories.setFactory(Finalize.class,
         new WritableFactory() {
           public Writable newInstance() {return new Finalize();}
@@ -56,7 +46,6 @@ public abstract class DatanodeCommand implements Writable {
   }
 
   public static final DatanodeCommand REGISTER = new Register();
-  public static final DatanodeCommand BLOCKREPORT = new BlockReport();
   public static final DatanodeCommand FINALIZE = new Finalize();
 
   private int action;

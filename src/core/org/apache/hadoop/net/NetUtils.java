@@ -20,9 +20,11 @@ package org.apache.hadoop.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.Map.Entry;
 import java.util.*;
 
@@ -365,5 +367,42 @@ public class NetUtils {
                                              throws IOException {
     return (socket.getChannel() == null) ? 
             socket.getOutputStream() : new SocketOutputStream(socket, timeout);            
+  }
+  
+  /** 
+   * Given a string representation of a host, return its ip address
+   * in textual presentation.
+   * 
+   * @param name a string representation of a host:
+   *             either a textual representation its IP address or its host name
+   * @return its IP address in the string format
+   */
+  public static String normalizeHostName(String name) {
+    if (Character.digit(name.charAt(0), 16) != -1) { // it is an IP
+      return name;
+    } else {
+      try {
+        InetAddress ipAddress = InetAddress.getByName(name);
+        return ipAddress.getHostAddress();
+      } catch (UnknownHostException e) {
+        return name;
+      }
+    }
+  }
+  
+  /** 
+   * Given a collection of string representation of hosts, return a list of
+   * corresponding IP addresses in the textual representation.
+   * 
+   * @param names a collection of string representations of hosts
+   * @return a list of corresponding IP addresses in the string format
+   * @see #normalizeHostName(String)
+   */
+  public static List<String> normalizeHostNames(Collection<String> names) {
+    List<String> hostNames = new ArrayList<String>(names.size());
+    for (String name : names) {
+      hostNames.add(normalizeHostName(name));
+    }
+    return hostNames;
   }
 }

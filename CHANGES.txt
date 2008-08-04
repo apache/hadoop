@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-3694. Improve unit test performance by changing
     MiniDFSCluster to listen only on 127.0.0.1.  (cutting)
 
+    HADOOP-3620. Namenode should synchronously resolve a datanode's network
+    location when the datanode registers. (hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

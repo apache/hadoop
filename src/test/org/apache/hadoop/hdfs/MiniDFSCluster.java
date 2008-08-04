@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.nio.channels.FileChannel;
-import java.nio.ByteBuffer;
 import java.util.Random;
 import java.io.RandomAccessFile;
 
@@ -72,7 +71,6 @@ public class MiniDFSCluster {
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;
-  private DNSToSwitchMapping dnsToSwitchMapping;
   
   
   /**
@@ -400,7 +398,8 @@ public class MiniDFSCluster {
         String name = hosts[i - curDatanodesNum];
         System.out.println("Adding node with hostname : " + name + " to rack "+
                             racks[i-curDatanodesNum]);
-        StaticMapping.addNodeToRack(name, racks[i-curDatanodesNum]);
+        StaticMapping.addNodeToRack(name,
+                                    racks[i-curDatanodesNum]);
       }
       Configuration newconf = new Configuration(dnConf); // save config
       if (hosts != null) {
@@ -713,22 +712,6 @@ public class MiniDFSCluster {
       } catch (Exception e) {
       }
     }
-    int numResolved = 0;
-    do {
-      numResolved = 0;
-      for (DatanodeInfo info : dnInfos) {
-        if (!info.getNetworkLocation().equals(NetworkTopology.UNRESOLVED)) {
-          numResolved++;
-        } else {
-          try {
-            Thread.sleep(500);
-          } catch (Exception e) {
-          }
-          dnInfos = client.datanodeReport(DatanodeReportType.LIVE);
-          break;
-        }
-      }
-    } while (numResolved != numDataNodes);
 
     client.close();
   }

@@ -97,8 +97,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A set of blocks to be invalidated by this datanode */
   private Set<Block> invalidateBlocks = new TreeSet<Block>();
 
-  boolean processedBlockReport = false;
-  
   /* Variables for maintaning number of blocks scheduled to be written to
    * this datanode. This count is approximate and might be slightly higger
    * in case of errors (e.g. datanode does not report if an error occurs 
@@ -307,21 +305,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
   
-  /**
-   * Set the bit signifying that the first block report from this datanode has been 
-   * processed
-   */
-  void setBlockReportProcessed(boolean val) {
-    processedBlockReport = val;
-  }
-  
-  /**
-   * Have we processed any block report from this datanode yet
-   */
-  boolean getBlockReportProcessed() {
-    return processedBlockReport;
-  }
-
   BlockCommand getReplicationCommand(int maxTransfers) {
     List<BlockTargetPair> blocktargetlist = replicateBlocks.poll(maxTransfers);
     return blocktargetlist == null? null:

@@ -136,10 +136,9 @@ public class DataNode extends Configured
   ThreadGroup threadGroup = null;
   long blockReportInterval;
   //disallow the sending of BR before instructed to do so
-  long lastBlockReport = Long.MAX_VALUE;
+  long lastBlockReport = 0;
   boolean resetBlockReportTime = true;
   long initialBlockReportDelay = BLOCKREPORT_INITIAL_DELAY * 1000L;
-  private boolean waitForFirstBlockReportRequest = false;
   long lastHeartbeat = 0;
   long heartBeatInterval;
   private DataStorage storage = null;
@@ -533,7 +532,9 @@ public class DataNode extends Configured
           + dnRegistration.getStorageID() 
           + ". Expecting " + storage.getStorageID());
     }
-    waitForFirstBlockReportRequest = true;
+    
+    // random short delay - helps scatter the BR from all DNs
+    scheduleBlockReport(initialBlockReportDelay);
   }
 
   /**
@@ -833,19 +834,6 @@ public class DataNode extends Configured
     case UpgradeCommand.UC_ACTION_START_UPGRADE:
       // start distributed upgrade here
       processDistributedUpgradeCommand((UpgradeCommand)cmd);
-      break;
-    case DatanodeProtocol.DNA_BLOCKREPORT:
-      // only send BR when receive request the 1st time
-      if (waitForFirstBlockReportRequest) {
-        LOG.info("DatanodeCommand action: DNA_BLOCKREPORT - scheduled");
-        // dropping all following BR requests
-        waitForFirstBlockReportRequest = false;
-        // random short delay - helps scatter the BR from all DNs
-        scheduleBlockReport(initialBlockReportDelay);
-      } else {
-        LOG.info("DatanodeCommand action: DNA_BLOCKREPORT" +
-            "- ignored becaused one is already scheduled");
-      }
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
       recoverBlocks(bcmd.getBlocks(), bcmd.getTargets());

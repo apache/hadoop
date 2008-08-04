@@ -699,23 +699,6 @@ public class NNThroughputBenchmark implements FSConstants {
         datanodes[idx].sendHeartbeat();
         prevDNName = datanodes[idx].getName();
       }
-      int numResolved = 0;
-      DatanodeInfo[] dnInfos = nameNode.getDatanodeReport(DatanodeReportType.ALL);
-      do {
-        numResolved = 0;
-        for (DatanodeInfo info : dnInfos) {
-          if (!info.getNetworkLocation().equals(NetworkTopology.UNRESOLVED)) {
-            numResolved++;
-          } else {
-            try {
-              Thread.sleep(2);
-            } catch (Exception e) {
-            }
-            dnInfos = nameNode.getDatanodeReport(DatanodeReportType.LIVE);
-            break;
-          }
-        }
-      } while (numResolved != nrDatanodes);
 
       // create files 
       LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");

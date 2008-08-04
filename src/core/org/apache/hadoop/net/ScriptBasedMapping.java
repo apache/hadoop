@@ -20,7 +20,6 @@ package org.apache.hadoop.net;
 
 import java.util.*;
 import java.io.*;
-import java.net.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,66 +31,70 @@ import org.apache.hadoop.conf.*;
  * This class implements the {@link DNSToSwitchMapping} interface using a 
  * script configured via topology.script.file.name .
  */
-public final class ScriptBasedMapping implements Configurable, 
-DNSToSwitchMapping
+public final class ScriptBasedMapping extends CachedDNSToSwitchMapping 
+implements Configurable
 {
+  public ScriptBasedMapping() {
+    super(new RawScriptBasedMapping());
+  }
+  
+  public ScriptBasedMapping(Configuration conf) {
+    this();
+    setConf(conf);
+  }
+  
+  public Configuration getConf() {
+    return ((RawScriptBasedMapping)rawMapping).getConf();
+  }
+  
+  public void setConf(Configuration conf) {
+    ((RawScriptBasedMapping)rawMapping).setConf(conf);
+  }
+  
+  private static final class RawScriptBasedMapping
+  implements DNSToSwitchMapping {
   private String scriptName;
   private Configuration conf;
   private int maxArgs; //max hostnames per call of the script
-  private Map<String, String> cache = new TreeMap<String, String>();
   private static Log LOG = 
     LogFactory.getLog("org.apache.hadoop.net.ScriptBasedMapping");
   public void setConf (Configuration conf) {
     this.scriptName = conf.get("topology.script.file.name");
-    this.maxArgs = conf.getInt("topology.script.number.args", 20);
+    this.maxArgs = conf.getInt("topology.script.number.args", 100);
     this.conf = conf;
   }
   public Configuration getConf () {
     return conf;
   }
-
-  public ScriptBasedMapping() {}
+  
+  public RawScriptBasedMapping() {}
   
   public List<String> resolve(List<String> names) {
     List <String> m = new ArrayList<String>(names.size());
     
+    if (names.isEmpty()) {
+      return m;
+    }
+
     if (scriptName == null) {
       for (int i = 0; i < names.size(); i++) {
         m.add(NetworkTopology.DEFAULT_RACK);
       }
       return m;
     }
-    List<String> hosts = new ArrayList<String>(names.size());
-    for (String name : names) {
-      name = getHostName(name);
-      if (cache.get(name) == null) {
-        hosts.add(name);
-      } 
-    }
     
-    int i = 0;
-    String output = runResolveCommand(hosts);
+    String output = runResolveCommand(names);
     if (output != null) {
       StringTokenizer allSwitchInfo = new StringTokenizer(output);
       while (allSwitchInfo.hasMoreTokens()) {
         String switchInfo = allSwitchInfo.nextToken();
-        cache.put(hosts.get(i++), switchInfo);
-      }
-    }
-    for (String name : names) {
-      //now everything is in the cache
-      name = getHostName(name);
-      if (cache.get(name) != null) {
-        m.add(cache.get(name));
-      } else { //resolve all or nothing
-        return null;
+        m.add(switchInfo);
       }
     }
     return m;
   }
   
   private String runResolveCommand(List<String> args) {
-    InetAddress ipaddr = null;
     int loopCount = 0;
     if (args.size() == 0) {
       return null;
@@ -104,12 +107,7 @@ DNSToSwitchMapping
       cmdList.add(scriptName);
       for (numProcessed = start; numProcessed < (start + maxArgs) && 
            numProcessed < args.size(); numProcessed++) {
-        try {
-          ipaddr = InetAddress.getByName(args.get(numProcessed));
-        } catch (UnknownHostException uh) {
-          return null;
-        }
-        cmdList.add(ipaddr.getHostAddress()); 
+        cmdList.add(args.get(numProcessed)); 
       }
       File dir = null;
       String userDir;
@@ -129,11 +127,5 @@ DNSToSwitchMapping
     }
     return allOutput.toString();
   }
-  private String getHostName(String hostWithPort) {
-    int j;
-    if ((j = hostWithPort.indexOf(':')) != -1) {
-      hostWithPort = hostWithPort.substring(0, j);
-    }
-    return hostWithPort;
   }
 }
