@@ -331,6 +331,7 @@ Release 0.2.0
    HBASE-779   Test changing hbase.hregion.memcache.block.multiplier to 2
    HBASE-783   For single row, single family retrieval, getRow() works half
                as fast as getScanner().next() (Jean-Daniel Cryans via Stack)
+   HBASE-789   add clover coverage report targets (Rong-en Fan via Stack)
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase
