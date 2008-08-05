@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HADOOP-3620. Namenode should synchronously resolve a datanode's network
     location when the datanode registers. (hairong)
 
+    HADOOP-3860. NNThroughputBenchmark is extended with rename and delete 
+    benchmarks. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.util.Arrays;
+
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,6 +34,7 @@ public class TestNNThroughputBenchmark extends TestCase {
     FileSystem.setDefaultUri(conf, "hdfs://localhost:" + 0);
     conf.set("dfs.http.address", "0.0.0.0:0");
     NameNode.format(conf);
-    NNThroughputBenchmark.runBenchmark(conf, new String[] {"-op", "all"});
+    String[] args = new String[] {"-op", "all"};
+    NNThroughputBenchmark.runBenchmark(conf, Arrays.asList(args));
   }
 }

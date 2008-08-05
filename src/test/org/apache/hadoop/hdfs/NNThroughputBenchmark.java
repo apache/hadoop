@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -102,8 +103,8 @@ public class NNThroughputBenchmark implements FSConstants {
     }
     new FileOutputStream(excludeFile).close();
     // Start the NameNode
-    String[] args = new String[] {};
-    nameNode = NameNode.createNameNode(args, config);
+    String[] argv = new String[] {};
+    nameNode = NameNode.createNameNode(argv, config);
   }
 
   void close() throws IOException {
@@ -116,6 +117,8 @@ public class NNThroughputBenchmark implements FSConstants {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ERROR);
     ((Log4JLogger)NetworkTopology.LOG).getLogger().setLevel(Level.ERROR);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ERROR);
+    ((Log4JLogger)FSNamesystem.auditLog).getLogger().setLevel(Level.ERROR);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ERROR);
   }
 
   /**
@@ -127,7 +130,8 @@ public class NNThroughputBenchmark implements FSConstants {
   abstract class OperationStatsBase {
     protected static final String BASE_DIR_NAME = "/nnThroughputBenchmark";
     protected static final String OP_ALL_NAME = "all";
-    protected static final String OP_ALL_USAGE = "-op all <other ops options>";
+    protected static final String OP_ALL_USAGE = "-op all " +
+                                  "<other ops options> [-keepResults]";
 
     protected String baseDir;
     protected short replication;
@@ -136,6 +140,7 @@ public class NNThroughputBenchmark implements FSConstants {
     protected int  numOpsExecuted = 0;    // number of operations executed
     protected long cumulativeTime = 0;    // sum of times for each op
     protected long elapsedTime = 0;       // time from start to finish
+    protected boolean keepResults = false;// don't clean base directory on exit
 
     protected List<StatsDaemon> daemons;
 
@@ -150,7 +155,7 @@ public class NNThroughputBenchmark implements FSConstants {
      * @param args arguments
      * @throws IOException
      */
-    abstract void parseArguments(String[] args) throws IOException;
+    abstract void parseArguments(List<String> args) throws IOException;
 
     /**
      * Generate inputs for each daemon thread.
@@ -242,7 +247,8 @@ public class NNThroughputBenchmark implements FSConstants {
 
     void cleanUp() throws IOException {
       nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
-      nameNode.delete(getBaseDir(), true);
+      if(!keepResults)
+        nameNode.delete(getBaseDir(), true);
     }
 
     int getNumOpsExecuted() {
@@ -287,10 +293,15 @@ public class NNThroughputBenchmark implements FSConstants {
      * that usage should be printed when an unrelated option is encountered.
      * @throws IOException
      */
-    protected boolean verifyOpArgument(String[] args) {
-      if(args.length < 2 || ! args[0].startsWith("-op"))
+    protected boolean verifyOpArgument(List<String> args) {
+      if(args.size() < 2 || ! args.get(0).startsWith("-op"))
         printUsage();
-      String type = args[1];
+      int krIndex = args.indexOf("-keepResults");
+      keepResults = (krIndex >= 0);
+      if(keepResults) {
+        args.remove(krIndex);
+      }
+      String type = args.get(1);
       if(OP_ALL_NAME.equals(type)) {
         type = getOpName();
         return true;
@@ -365,6 +376,62 @@ public class NNThroughputBenchmark implements FSConstants {
   }
 
   /**
+   * Clean all benchmark result directories.
+   */
+  class CleanAllStats extends OperationStatsBase {
+    // Operation types
+    static final String OP_CLEAN_NAME = "clean";
+    static final String OP_CLEAN_USAGE = "-op clean";
+
+    CleanAllStats(List<String> args) {
+      super();
+      parseArguments(args);
+      numOpsRequired = 1;
+      numThreads = 1;
+      keepResults = true;
+    }
+
+    String getOpName() {
+      return OP_CLEAN_NAME;
+    }
+
+    void parseArguments(List<String> args) {
+      boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+      if(args.size() > 2 && !ignoreUnrelatedOptions)
+        printUsage();
+    }
+
+    void generateInputs(int[] opsPerThread) throws IOException {
+      // do nothing
+    }
+
+    /**
+     * Does not require the argument
+     */
+    String getExecutionArgument(int daemonId) {
+      return null;
+    }
+
+    /**
+     * Remove entire benchmark directory.
+     */
+    long executeOp(int daemonId, int inputIdx, String ignore) 
+    throws IOException {
+      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      long start = System.currentTimeMillis();
+      nameNode.delete(BASE_DIR_NAME, true);
+      long end = System.currentTimeMillis();
+      return end-start;
+    }
+
+    void printResults() {
+      LOG.info("--- " + getOpName() + " inputs ---");
+      LOG.info("Remove directory " + BASE_DIR_NAME);
+      printStats();
+    }
+  }
+
+  /**
    * File creation statistics.
    * 
    * Each thread creates the same (+ or -1) number of files.
@@ -375,12 +442,13 @@ public class NNThroughputBenchmark implements FSConstants {
     // Operation types
     static final String OP_CREATE_NAME = "create";
     static final String OP_CREATE_USAGE = 
-      "-op create [-threads T] [-files N] [-filesPerDir P]";
+      "-op create [-threads T] [-files N] [-filesPerDir P] [-close]";
 
     protected FileNameGenerator nameGenerator;
     protected String[][] fileNames;
+    private boolean closeUponCreate;
 
-    CreateFileStats(String[] args) {
+    CreateFileStats(List<String> args) {
       super();
       parseArguments(args);
     }
@@ -389,19 +457,22 @@ public class NNThroughputBenchmark implements FSConstants {
       return OP_CREATE_NAME;
     }
 
-    void parseArguments(String[] args) {
+    void parseArguments(List<String> args) {
       boolean ignoreUnrelatedOptions = verifyOpArgument(args);
       int nrFilesPerDir = 4;
-      for (int i = 2; i < args.length; i++) {       // parse command line
-        if(args[i].equals("-files")) {
-          if(i+1 == args.length)  printUsage();
-          numOpsRequired = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-threads")) {
-          if(i+1 == args.length)  printUsage();
-          numThreads = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-filesPerDir")) {
-          if(i+1 == args.length)  printUsage();
-          nrFilesPerDir = Integer.parseInt(args[++i]);
+      closeUponCreate = false;
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-files")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-threads")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-filesPerDir")) {
+          if(i+1 == args.size())  printUsage();
+          nrFilesPerDir = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-close")) {
+          closeUponCreate = true;
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -445,6 +516,8 @@ public class NNThroughputBenchmark implements FSConstants {
       nameNode.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
                       clientName, true, replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
+      for(boolean written = !closeUponCreate; !written; 
+        written = nameNode.complete(fileNames[daemonId][inputIdx], clientName));
       return end-start;
     }
 
@@ -460,22 +533,34 @@ public class NNThroughputBenchmark implements FSConstants {
   /**
    * Open file statistics.
    * 
-   * Each thread creates the same (+ or -1) number of files.
-   * File names are pre-generated during initialization.
-   * The created files do not have blocks.
+   * Measure how many open calls (getBlockLocations()) 
+   * the name-node can handle per second.
    */
   class OpenFileStats extends CreateFileStats {
     // Operation types
     static final String OP_OPEN_NAME = "open";
+    static final String OP_USAGE_ARGS = 
+      " [-threads T] [-files N] [-filesPerDir P] [-useExisting]";
     static final String OP_OPEN_USAGE = 
-      "-op open [-threads T] [-files N] [-filesPerDir P]";
+      "-op " + OP_OPEN_NAME + OP_USAGE_ARGS;
 
-    OpenFileStats(String[] args) {
+    private boolean useExisting;  // do not generate files, use existing ones
+
+    OpenFileStats(List<String> args) {
       super(args);
     }
 
     String getOpName() {
       return OP_OPEN_NAME;
+    }
+
+    void parseArguments(List<String> args) {
+      int ueIndex = args.indexOf("-useExisting");
+      useExisting = (ueIndex >= 0);
+      if(useExisting) {
+        args.remove(ueIndex);
+      }
+      super.parseArguments(args);
     }
 
     void generateInputs(int[] opsPerThread) throws IOException {
@@ -485,13 +570,26 @@ public class NNThroughputBenchmark implements FSConstants {
               "-threads", String.valueOf(this.numThreads), 
               "-files", String.valueOf(numOpsRequired),
               "-filesPerDir", 
-              String.valueOf(nameGenerator.getFilesPerDirectory())};
-      CreateFileStats opCreate =  new CreateFileStats(createArgs);
-      opCreate.benchmark();
-      LOG.info("Created " + numOpsRequired + " files.");
-      nameNode.rename(opCreate.getBaseDir(), getBaseDir());
+              String.valueOf(nameGenerator.getFilesPerDirectory()),
+              "-close"};
+      CreateFileStats opCreate =  new CreateFileStats(Arrays.asList(createArgs));
+
+      if(!useExisting) {  // create files if they were not created before
+        opCreate.benchmark();
+        LOG.info("Created " + numOpsRequired + " files.");
+      } else {
+        LOG.info("useExisting = true. Assuming " 
+            + numOpsRequired + " files have been created before.");
+      }
       // use the same files for open
       super.generateInputs(opsPerThread);
+      if(nameNode.getFileInfo(opCreate.getBaseDir()) != null
+          && nameNode.getFileInfo(getBaseDir()) == null) {
+        nameNode.rename(opCreate.getBaseDir(), getBaseDir());
+      }
+      if(nameNode.getFileInfo(getBaseDir()) == null) {
+        throw new IOException(getBaseDir() + " does not exist.");
+      }
     }
 
     /**
@@ -507,7 +605,77 @@ public class NNThroughputBenchmark implements FSConstants {
   }
 
   /**
-   * Minimal datanode simulator.
+   * Delete file statistics.
+   * 
+   * Measure how many delete calls the name-node can handle per second.
+   */
+  class DeleteFileStats extends OpenFileStats {
+    // Operation types
+    static final String OP_DELETE_NAME = "delete";
+    static final String OP_DELETE_USAGE = 
+      "-op " + OP_DELETE_NAME + OP_USAGE_ARGS;
+
+    DeleteFileStats(List<String> args) {
+      super(args);
+    }
+
+    String getOpName() {
+      return OP_DELETE_NAME;
+    }
+
+    long executeOp(int daemonId, int inputIdx, String ignore) 
+    throws IOException {
+      long start = System.currentTimeMillis();
+      nameNode.delete(fileNames[daemonId][inputIdx], false);
+      long end = System.currentTimeMillis();
+      return end-start;
+    }
+  }
+
+  /**
+   * Rename file statistics.
+   * 
+   * Measure how many rename calls the name-node can handle per second.
+   */
+  class RenameFileStats extends OpenFileStats {
+    // Operation types
+    static final String OP_RENAME_NAME = "rename";
+    static final String OP_RENAME_USAGE = 
+      "-op " + OP_RENAME_NAME + OP_USAGE_ARGS;
+
+    protected String[][] destNames;
+
+    RenameFileStats(List<String> args) {
+      super(args);
+    }
+
+    String getOpName() {
+      return OP_RENAME_NAME;
+    }
+
+    void generateInputs(int[] opsPerThread) throws IOException {
+      super.generateInputs(opsPerThread);
+      destNames = new String[fileNames.length][];
+      for(int idx=0; idx < numThreads; idx++) {
+        int nrNames = fileNames[idx].length;
+        destNames[idx] = new String[nrNames];
+        for(int jdx=0; jdx < nrNames; jdx++)
+          destNames[idx][jdx] = fileNames[idx][jdx] + ".r";
+      }
+    }
+
+    long executeOp(int daemonId, int inputIdx, String ignore) 
+    throws IOException {
+      long start = System.currentTimeMillis();
+      nameNode.rename(fileNames[daemonId][inputIdx],
+                      destNames[daemonId][inputIdx]);
+      long end = System.currentTimeMillis();
+      return end-start;
+    }
+  }
+
+  /**
+   * Minimal data-node simulator.
    */
   private static class TinyDatanode implements Comparable<String> {
     private static final long DF_CAPACITY = 100*1024*1024;
@@ -641,7 +809,7 @@ public class NNThroughputBenchmark implements FSConstants {
     private int blocksPerFile;
     private TinyDatanode[] datanodes; // array of data-nodes sorted by name
 
-    BlockReportStats(String[] args) {
+    BlockReportStats(List<String> args) {
       super();
       this.blocksPerReport = 100;
       this.blocksPerFile = 10;
@@ -663,21 +831,21 @@ public class NNThroughputBenchmark implements FSConstants {
       return OP_BLOCK_REPORT_NAME;
     }
 
-    void parseArguments(String[] args) {
+    void parseArguments(List<String> args) {
       boolean ignoreUnrelatedOptions = verifyOpArgument(args);
-      for (int i = 2; i < args.length; i++) {       // parse command line
-        if(args[i].equals("-reports")) {
-          if(i+1 == args.length)  printUsage();
-          numOpsRequired = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-datanodes")) {
-          if(i+1 == args.length)  printUsage();
-          numThreads = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-blocksPerReport")) {
-          if(i+1 == args.length)  printUsage();
-          blocksPerReport = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-blocksPerFile")) {
-          if(i+1 == args.length)  printUsage();
-          blocksPerFile = Integer.parseInt(args[++i]);
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-reports")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-datanodes")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-blocksPerReport")) {
+          if(i+1 == args.size())  printUsage();
+          blocksPerReport = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-blocksPerFile")) {
+          if(i+1 == args.size())  printUsage();
+          blocksPerFile = Integer.parseInt(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -786,7 +954,7 @@ public class NNThroughputBenchmark implements FSConstants {
     private int numDecommissionedBlocks;
     private int numPendingBlocks;
 
-    ReplicationStats(String[] args) {
+    ReplicationStats(List<String> args) {
       super();
       numThreads = 1;
       numDatanodes = 3;
@@ -805,7 +973,7 @@ public class NNThroughputBenchmark implements FSConstants {
         "-datanodes", String.valueOf(numDatanodes),
         "-blocksPerReport", String.valueOf(totalBlocks*replication/numDatanodes),
         "-blocksPerFile", String.valueOf(numDatanodes)};
-      blockReportObject = new BlockReportStats(blkReportArgs);
+      blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
       numPendingBlocks = 0;
     }
@@ -814,24 +982,24 @@ public class NNThroughputBenchmark implements FSConstants {
       return OP_REPLICATION_NAME;
     }
 
-    void parseArguments(String[] args) {
+    void parseArguments(List<String> args) {
       boolean ignoreUnrelatedOptions = verifyOpArgument(args);
-      for (int i = 2; i < args.length; i++) {       // parse command line
-        if(args[i].equals("-datanodes")) {
-          if(i+1 == args.length)  printUsage();
-          numDatanodes = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-nodesToDecommission")) {
-          if(i+1 == args.length)  printUsage();
-          nodesToDecommission = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-nodeReplicationLimit")) {
-          if(i+1 == args.length)  printUsage();
-          nodeReplicationLimit = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-totalBlocks")) {
-          if(i+1 == args.length)  printUsage();
-          totalBlocks = Integer.parseInt(args[++i]);
-        } else if(args[i].equals("-replication")) {
-          if(i+1 == args.length)  printUsage();
-          replication = Short.parseShort(args[++i]);
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-datanodes")) {
+          if(i+1 == args.size())  printUsage();
+          numDatanodes = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-nodesToDecommission")) {
+          if(i+1 == args.size())  printUsage();
+          nodesToDecommission = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-nodeReplicationLimit")) {
+          if(i+1 == args.size())  printUsage();
+          nodeReplicationLimit = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-totalBlocks")) {
+          if(i+1 == args.size())  printUsage();
+          totalBlocks = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-replication")) {
+          if(i+1 == args.size())  printUsage();
+          replication = Short.parseShort(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -885,7 +1053,7 @@ public class NNThroughputBenchmark implements FSConstants {
     long executeOp(int daemonId, int inputIdx, String ignore) throws IOException {
       assert daemonId < numThreads : "Wrong daemonId.";
       long start = System.currentTimeMillis();
-      // compute datanode work
+      // compute data-node work
       int work = nameNode.namesystem.computeDatanodeWork();
       long end = System.currentTimeMillis();
       numPendingBlocks += work;
@@ -927,8 +1095,11 @@ public class NNThroughputBenchmark implements FSConstants {
         + "\n\t"    + OperationStatsBase.OP_ALL_USAGE
         + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
+        + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
+        + " | \n\t" + RenameFileStats.OP_RENAME_USAGE
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
         + " | \n\t" + ReplicationStats.OP_REPLICATION_USAGE
+        + " | \n\t" + CleanAllStats.OP_CLEAN_USAGE
     );
     System.exit(-1);
   }
@@ -937,11 +1108,11 @@ public class NNThroughputBenchmark implements FSConstants {
    * Main method of the benchmark.
    * @param args command line parameters
    */
-  public static void runBenchmark(Configuration conf, String[] args) throws Exception {
-    if(args.length < 2 || ! args[0].startsWith("-op"))
+  public static void runBenchmark(Configuration conf, List<String> args) throws Exception {
+    if(args.size() < 2 || ! args.get(0).startsWith("-op"))
       printUsage();
 
-    String type = args[1];
+    String type = args.get(1);
     boolean runAll = OperationStatsBase.OP_ALL_NAME.equals(type);
 
     NNThroughputBenchmark bench = null;
@@ -957,6 +1128,14 @@ public class NNThroughputBenchmark implements FSConstants {
         opStat = bench.new OpenFileStats(args);
         ops.add(opStat);
       }
+      if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
+        opStat = bench.new DeleteFileStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || RenameFileStats.OP_RENAME_NAME.equals(type)) {
+        opStat = bench.new RenameFileStats(args);
+        ops.add(opStat);
+      }
       if(runAll || BlockReportStats.OP_BLOCK_REPORT_NAME.equals(type)) {
         opStat = bench.new BlockReportStats(args);
         ops.add(opStat);
@@ -965,9 +1144,13 @@ public class NNThroughputBenchmark implements FSConstants {
         opStat = bench.new ReplicationStats(args);
         ops.add(opStat);
       }
+      if(runAll || CleanAllStats.OP_CLEAN_NAME.equals(type)) {
+        opStat = bench.new CleanAllStats(args);
+        ops.add(opStat);
+      }
       if(ops.size() == 0)
         printUsage();
-      // run each bencmark
+      // run each benchmark
       for(OperationStatsBase op : ops) {
         LOG.info("Starting benchmark: " + op.getOpName());
         op.benchmark();
@@ -988,6 +1171,7 @@ public class NNThroughputBenchmark implements FSConstants {
   }
 
   public static void main(String[] args) throws Exception {
-    runBenchmark(new Configuration(), args);
+    runBenchmark(new Configuration(), 
+                  new ArrayList<String>(Arrays.asList(args)));
   }
 }
