@@ -237,7 +237,6 @@ class Flusher extends Thread implements FlushRequester {
       if (!regionsInQueue.contains(r)) {
         regionsInQueue.add(r);
         flushQueue.add(r);
-        r.setLastFlushTime(now);
       }
     }
   }

@@ -317,7 +317,6 @@ public class HRegion implements HConstants {
     new ConcurrentHashMap<Integer, byte []>();
   private final Map<Integer, TreeMap<HStoreKey, byte []>> targetColumns =
       new ConcurrentHashMap<Integer, TreeMap<HStoreKey, byte []>>();
-  private volatile boolean flushRequested = false;
   // Default access because read by tests.
   final Map<Integer, HStore> stores = new ConcurrentHashMap<Integer, HStore>();
   final AtomicLong memcacheSize = new AtomicLong(0);
@@ -337,6 +336,8 @@ public class HRegion implements HConstants {
   static class WriteState {
     // Set while a memcache flush is happening.
     volatile boolean flushing = false;
+    // Set when a flush has been requested.
+    volatile boolean flushRequested = false;
     // Set while a compaction is running.
     volatile boolean compacting = false;
     // Gets set in close. If set, cannot compact or flush again.
@@ -354,6 +355,10 @@ public class HRegion implements HConstants {
     
     boolean isReadOnly() {
       return this.readOnly;
+    }
+
+    boolean isFlushRequested() {
+      return this.flushRequested;
     }
   }
 
@@ -689,11 +694,6 @@ public class HRegion implements HConstants {
     return this.lastFlushTime;
   }
   
-  /** @param t the lastFlushTime */
-  void setLastFlushTime(long t) {
-    this.lastFlushTime = t;
-  }
-  
   //////////////////////////////////////////////////////////////////////////////
   // HRegion maintenance.  
   //
@@ -946,7 +946,7 @@ public class HRegion implements HConstants {
     }
     synchronized (writestate) {
       if (!writestate.flushing && writestate.writesEnabled) {
-        writestate.flushing = true;
+        this.writestate.flushing = true;
       } else {
         if(LOG.isDebugEnabled()) {
           LOG.debug("NOT flushing memcache for region " + this +
@@ -968,6 +968,7 @@ public class HRegion implements HConstants {
     } finally {
       synchronized (writestate) {
         writestate.flushing = false;
+        this.writestate.flushRequested = false;
         writestate.notifyAll();
       }
     }
@@ -1008,7 +1009,6 @@ public class HRegion implements HConstants {
   private boolean internalFlushcache() throws IOException {
     final long startTime = System.currentTimeMillis();
     // Clear flush flag.
-    this.flushRequested = false;
     // Record latest flush time
     this.lastFlushTime = startTime;
     // If nothing to flush, return and avoid logging start/stop flush.
@@ -1411,7 +1411,7 @@ public class HRegion implements HConstants {
       releaseRowLock(lid);
     }
   }
-  
+
   /*
    * Check if resources to support an update.
    * 
@@ -1605,8 +1605,7 @@ public class HRegion implements HConstants {
         size = this.memcacheSize.addAndGet(
             getStore(key.getColumn()).add(key, e.getValue()));
       }
-      flush = this.flushListener != null && !this.flushRequested &&
-        isFlushSize(size);
+      flush = isFlushSize(size);
     } finally {
       this.updatesLock.readLock().unlock();
     }
@@ -1617,11 +1616,16 @@ public class HRegion implements HConstants {
   }
 
   private void requestFlush() {
-    if (this.flushListener == null || this.flushRequested) {
+    if (this.flushListener == null) {
       return;
     }
-    this.flushListener.request(this);
-    this.flushRequested = true;
+    synchronized (writestate) {
+      if (this.writestate.isFlushRequested()) {
+        return;
+      }
+      writestate.flushRequested = true;
+      this.flushListener.request(this);
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Flush requested on " + this);
     }

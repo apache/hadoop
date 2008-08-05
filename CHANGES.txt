@@ -224,6 +224,9 @@ Release 0.2.0
    HBASE-751   dfs exception and regionserver stuck during heavy write load
    HBASE-793   HTable.getStartKeys() ignores table names when matching columns
                (Andrew Purtell and Dru Jensen via Stack)
+   HBASE-790   During import, single region blocks requests for >10 minutes,
+               thread dumps, throws out pending requests, and continues
+               (Jonathan Gray via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
