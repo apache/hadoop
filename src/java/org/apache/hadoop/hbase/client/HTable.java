@@ -58,6 +58,7 @@ public class HTable {
    *
    * @param tableName name of the table
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public HTable(final Text tableName)
   throws IOException {
@@ -92,6 +93,7 @@ public class HTable {
    * @param conf configuration object
    * @param tableName name of the table
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public HTable(HBaseConfiguration conf, final Text tableName)
   throws IOException {
@@ -129,6 +131,7 @@ public class HTable {
    * @param tableName name of table to check
    * @return true if table is on-line
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public static boolean isTableEnabled(Text tableName) throws IOException {
     return isTableEnabled(tableName.getBytes());
@@ -155,6 +158,7 @@ public class HTable {
    * @param tableName name of table to check
    * @return true if table is on-line
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public static boolean isTableEnabled(HBaseConfiguration conf, Text tableName)
   throws IOException {
@@ -188,6 +192,7 @@ public class HTable {
    * @param row Row to find.
    * @return Location of row.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public HRegionLocation getRegionLocation(final Text row)
   throws IOException {
@@ -319,6 +324,7 @@ public class HTable {
    * @param column column name
    * @return value for specified row/column
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Cell get(final Text row, final Text column)
   throws IOException {
@@ -333,6 +339,7 @@ public class HTable {
    * @param numVersions - number of versions to retrieve
    * @return value for specified row/column
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Cell[] get(final Text row, final Text column, int numVersions)
   throws IOException {
@@ -417,6 +424,7 @@ public class HTable {
    * @param numVersions - number of versions to retrieve
    * @return            - array of values that match the above criteria
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Cell[] get(final Text row, final Text column,
     final long timestamp, final int numVersions)
@@ -481,6 +489,7 @@ public class HTable {
    * @param row row key
    * @return RowResult is empty if row does not exist.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public RowResult getRow(final Text row) throws IOException {
     return getRow(row.getBytes());
@@ -515,6 +524,7 @@ public class HTable {
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public RowResult getRow(final Text row, final long ts) 
   throws IOException {
@@ -561,6 +571,7 @@ public class HTable {
    * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is empty if row does not exist.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public RowResult getRow(final Text row, final Text[] columns) 
   throws IOException {
@@ -601,6 +612,7 @@ public class HTable {
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public RowResult getRow(final Text row, final Text [] columns, 
     final long ts) 
@@ -656,6 +668,7 @@ public class HTable {
    * <code>\+|^&*$[]]}{)(</code>.
    * @return scanner
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Scanner getScanner(final Text [] columns)
   throws IOException {
@@ -691,6 +704,7 @@ public class HTable {
    * @param startRow starting row in table to scan
    * @return scanner
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Scanner getScanner(final Text [] columns, final Text startRow)
   throws IOException {
@@ -832,6 +846,7 @@ public class HTable {
    * @param timestamp only return results whose timestamp <= this value
    * @return scanner
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Scanner getScanner(final Text[] columns,
     final Text startRow, final Text stopRow, final long timestamp)
@@ -904,6 +919,7 @@ public class HTable {
    * @param filter a row filter using row-key regexp and/or column data filter.
    * @return scanner
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public Scanner getScanner(Text[] columns,
     Text startRow, long timestamp, RowFilterInterface filter)
@@ -970,6 +986,7 @@ public class HTable {
    *
    * @param row Key of the row you want to completely delete.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteAll(final Text row) throws IOException {
     deleteAll(row, null);
@@ -1027,6 +1044,7 @@ public class HTable {
    * @param row Key of the row you want to completely delete.
    * @param ts Delete all cells of the same timestamp or older.
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteAll(final Text row, final long ts)
   throws IOException {
@@ -1038,6 +1056,7 @@ public class HTable {
    * @param row Row to update
    * @param column name of column whose value is to be deleted
    * @throws IOException 
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteAll(final Text row, final Text column) throws IOException {
     deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
@@ -1061,6 +1080,7 @@ public class HTable {
    * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
    * @throws IOException 
+   * @deprecated Use String or byte [] overload instead
    */
   public void deleteAll(final Text row, final Text column, final long ts)
   throws IOException {
@@ -1114,6 +1134,7 @@ public class HTable {
    * @param family The column family to match
    * @param timestamp Timestamp to match
    * @throws IOException
+   * @deprecated Use String or byte [] overload instead
    */  
   public void deleteFamily(final Text row, final Text family,
       final long timestamp)

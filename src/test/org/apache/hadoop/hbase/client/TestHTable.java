@@ -191,7 +191,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     */
   public void testTableNotFoundExceptionWithoutAnyTables() {
     try {
-      new HTable(conf, new Text("notATable"));
+      new HTable(conf, "notATable");
       fail("Should have thrown a TableNotFoundException");
     } catch (TableNotFoundException e) {
       // expected
@@ -214,7 +214,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       admin.createTable(testTableADesc);
 
       // This should throw a TableNotFoundException, it has not been created
-      new HTable(conf, new Text("notATable"));
+      new HTable(conf, "notATable");
       
       fail("Should have thrown a TableNotFoundException");
     } catch (TableNotFoundException e) {

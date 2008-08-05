@@ -16,6 +16,8 @@ Release 0.2.0
                0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
    HBASE-696   Make bloomfilter true/false and self-sizing
    HBASE-720   clean up inconsistencies around deletes (Izaak Rubin via Stack)
+   HBASE-796   Deprecates Text methods from HTable
+               (Michael Gottesman via Stack)
 
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
