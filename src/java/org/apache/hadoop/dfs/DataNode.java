@@ -128,6 +128,14 @@ public class DataNode implements FSConstants, Runnable {
   private static final Random R = new Random();
 
   /**
+   * Maximal number of concurrent xceivers per node.
+   * Enforcing the limit is required in order to avoid data-node
+   * running out of memory.
+   */
+  private static final int MAX_XCEIVER_COUNT = 256;
+  private int maxXceiverCount = MAX_XCEIVER_COUNT;
+  
+  /**
    * We need an estimate for block size to check if the disk partition has
    * enough space. For now we set it to be the default block size set
    * in the server side configuration, which is not ideal because the
@@ -267,6 +275,7 @@ public class DataNode implements FSConstants, Runnable {
     this.dnRegistration.setName(machineName + ":" + tmpPort);
     LOG.info("Opened server at " + tmpPort);
       
+    this.maxXceiverCount = conf.getInt("dfs.datanode.max.xcievers", MAX_XCEIVER_COUNT);
     this.threadGroup = new ThreadGroup("dataXceiveServer");
     this.dataXceiveServer = new Daemon(threadGroup, new DataXceiveServer(ss));
     this.threadGroup.setDaemon(true); // auto destroy when empty
@@ -569,13 +578,6 @@ public class DataNode implements FSConstants, Runnable {
     shutdown();
   }
     
-  /**
-   * Maximal number of concurrent xceivers per node.
-   * Enforcing the limit is required in order to avoid data-node
-   * running out of memory.
-   */
-  private final static int MAX_XCEIVER_COUNT = 256;
-
   /** Number of concurrent xceivers per node. */
   int getXceiverCount() {
     return threadGroup == null ? 0 : threadGroup.activeCount();
@@ -973,10 +975,10 @@ public class DataNode implements FSConstants, Runnable {
         byte op = in.readByte();
         // Make sure the xciver count is not exceeded
         int curXceiverCount = getXceiverCount();
-        if(curXceiverCount > MAX_XCEIVER_COUNT) {
+        if (curXceiverCount > maxXceiverCount) {
           throw new IOException("xceiverCount " + curXceiverCount
                                 + " exceeds the limit of concurrent xcievers "
-                                + MAX_XCEIVER_COUNT);
+                                + maxXceiverCount);
         }
         long startTime = now();
         switch ( op ) {
