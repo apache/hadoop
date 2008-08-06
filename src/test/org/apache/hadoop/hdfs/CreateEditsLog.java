@@ -36,15 +36,15 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
  * 
  * CreateEditsLog
  *   Synopsis: CreateEditsLog -f numFiles StartingBlockId numBlocksPerFile
- *        [-d editsLogDirectory]
+ *        [-r replicafactor] [-d editsLogDirectory]
  *             Default replication factor is 1
  *             Default edits log directory is /tmp/EditsLogOut
  *   
- *   Create an name node's fsimage edits log in /tmp/EditsLogOut.
+ *   Create a name node's edits log in /tmp/EditsLogOut.
  *   The file /tmp/EditsLogOut/current/edits can be copied to a name node's
- *   fsimage directory and the name node can be started off it.
+ *   dfs.name.dir/current direcotry and the name node can be started as usual.
  *   
- *   The file are created in /createdViaInjectingInEditsLog
+ *   The files are created in /createdViaInjectingInEditsLog
  *   The file names contain the starting and ending blockIds; hence once can 
  *   create multiple edits logs using this command using non overlapping 
  *   block ids and feed the files to a single name node.
@@ -87,9 +87,12 @@ public class CreateEditsLog {
 
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
                       null, replication, 0, blockSize, blocks, p, "", "", null);
-        String path = iF + "_B" + blocks[0].getBlockId() + 
+        // Append path to filename with information about blockIDs 
+        String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
                       "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
-        String filePath = nameGenerator.getNextFileName(path);
+        String filePath = nameGenerator.getNextFileName("");
+        filePath = filePath + path;
+        // Log the new sub directory in edits
         if ((iF % nameGenerator.getFilesPerDirectory())  == 0) {
           String currentDir = nameGenerator.getCurrentDir();
           dirInode = new INodeDirectory(p, 0L);
