@@ -1006,7 +1006,11 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3837. Streaming jobs report progress status. (dhruba)
 
-    HADOOP-3897. Fix a NPE in secondary namenode. (Lohit Vijayarenu via cdouglas)
+    HADOOP-3897. Fix a NPE in secondary namenode. (Lohit Vijayarenu via 
+    cdouglas)
+
+    HADOOP-3901. Fix bin/hadoop to correctly set classpath under cygwin.
+    (Tsz Wo (Nicholas) Sze via omalley)
 
 Release 0.17.2 - Unreleased
 

@@ -162,36 +162,6 @@ if [ "$HADOOP_LOGFILE" = "" ]; then
   HADOOP_LOGFILE='hadoop.log'
 fi
 
-# cygwin path translation
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
-  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
-  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
-fi
-# setup 'java.library.path' for native-hadoop code if necessary
-JAVA_LIBRARY_PATH=''
-if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
-  
-  if [ -d "$HADOOP_HOME/build/native" ]; then
-    JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
-  fi
-  
-  if [ -d "${HADOOP_HOME}/lib/native" ]; then
-    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
-    else
-      JAVA_LIBRARY_PATH=${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
-    fi
-  fi
-fi
-
-# cygwin path translation
-if $cygwin; then
-  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
-fi
- 
 # restore ordinary behaviour
 unset IFS
 
@@ -251,6 +221,35 @@ else
   CLASS=$COMMAND
 fi
 
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
+  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
+  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
+fi
+# setup 'java.library.path' for native-hadoop code if necessary
+JAVA_LIBRARY_PATH=''
+if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
+  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+  
+  if [ -d "$HADOOP_HOME/build/native" ]; then
+    JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
+  fi
+  
+  if [ -d "${HADOOP_HOME}/lib/native" ]; then
+    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
+    else
+      JAVA_LIBRARY_PATH=${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
+    fi
+  fi
+fi
+
+# cygwin path translation
+if $cygwin; then
+  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
+fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
