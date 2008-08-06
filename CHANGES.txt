@@ -34,6 +34,9 @@ Trunk (unreleased changes)
 
     HADOOP-1700.  Support appending to file in HDFS. (dhruba)
 
+    HADOOP-3792. Make FsShell -test consistent with unix semantics, returning
+    zero for true and non-zero for false. (Ben Slusky via cdouglas)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

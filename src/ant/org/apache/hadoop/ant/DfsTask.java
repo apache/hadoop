@@ -158,7 +158,7 @@ public class DfsTask extends Task {
 
   // in case DfsTask is overridden
   protected int postCmd(int exit_code) {
-    if ("-test".equals(cmd) && exit_code == 0)
+    if ("-test".equals(cmd) && exit_code != 0)
       outprop = null;
     return exit_code;
   }

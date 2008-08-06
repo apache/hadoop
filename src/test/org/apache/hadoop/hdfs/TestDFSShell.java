@@ -1017,9 +1017,13 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
 
+        args = new String[3];
         args[0] = "-test";
-        args[1] = "-e " + args[1];
+        args[1] = "-e";
+        args[2] = "/test/mkdirs/noFileHere";
+        val = -1;
         try {
+          val = shell.run(args);
         } catch (Exception e) {
           System.err.println("Exception raised from DFSShell.run " +
                              e.getLocalizedMessage());

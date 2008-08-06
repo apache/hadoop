@@ -746,11 +746,11 @@ public class FsShell extends Configured implements Tool {
     FileSystem srcFs = f.getFileSystem(getConf());
     switch(flag) {
       case 'e':
-        return srcFs.exists(f) ? 1 : 0;
+        return srcFs.exists(f) ? 0 : 1;
       case 'z':
-        return srcFs.getFileStatus(f).getLen() == 0 ? 1 : 0;
+        return srcFs.getFileStatus(f).getLen() == 0 ? 0 : 1;
       case 'd':
-        return srcFs.getFileStatus(f).isDir() ? 1 : 0;
+        return srcFs.getFileStatus(f).isDir() ? 0 : 1;
       default:
         throw new IOException("Unknown flag: " + flag);
     }
@@ -1356,7 +1356,7 @@ public class FsShell extends Configured implements Tool {
       "\t\tin a file at <path>. An error is returned if the file exists with non-zero length\n";
 
     String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
-      "\t\tthen return 1, else return 0.\n";
+      "\t\tthen return 0, else return 1.\n";
 
     String stat = "-stat [format] <path>: Print statistics about the file/directory at <path>\n" +
       "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
