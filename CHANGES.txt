@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     HADOOP-3836. Fix TestMultipleOutputs to correctly clean up. (Alejandro 
     Abdelnur via acmurthy)
 
+    HADOOP-3805. Improve fuse-dfs write performance.
+    (Pete Wyckoff via zshao)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

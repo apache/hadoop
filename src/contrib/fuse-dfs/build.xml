@@ -72,7 +72,7 @@
     </exec>
   </target>
 
-  <target name="test" if="libhdfs-fuse">
+  <target name="test" if="fusedfs">
     <echo message="testing FuseDFS ..."/>
    <antcall target="hadoopbuildcontrib.test"> 
    </antcall>

@@ -15,6 +15,7 @@
 #
 bin_PROGRAMS = fuse_dfs
 fuse_dfs_SOURCES = fuse_dfs.c
-AM_CPPFLAGS= -D_FILE_OFFSET_BITS=64 -I$(JAVA_HOME)/include -I$(HADOOP_HOME)/src/c++/libhdfs/ -I$(JAVA_HOME)/include/linux/ -D_FUSE_DFS_VERSION=\"$(PACKAGE_VERSION)\" -DPROTECTED_PATHS=\"$(PROTECTED_PATHS)\"
+AM_CPPFLAGS=  -D_FILE_OFFSET_BITS=64 -I$(JAVA_HOME)/include -I$(HADOOP_HOME)/src/c++/libhdfs/ -I$(JAVA_HOME)/include/linux/ -I$(FUSE_HOME)/include
+AM_CPPFLAGS+= -D_FUSE_DFS_VERSION=\"$(PACKAGE_VERSION)\"
 AM_LDFLAGS= -L$(HADOOP_HOME)/build/libhdfs -lhdfs -L$(FUSE_HOME)/lib -lfuse -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm
 

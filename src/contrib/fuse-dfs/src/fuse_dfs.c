@@ -101,7 +101,7 @@ typedef struct dfs_fh_struct {
 /** keys for FUSE_OPT_ options */
 static void print_usage(const char *pname)
 {
-  fprintf(stdout,"USAGE: %s [debug] [--help] [--version] [protected=<colon_seped_list_of_paths] [rw] [notrash] [usetrash] [private (single user)] [ro] server=<hadoop_servername> port=<hadoop_port> [entry_timeout=<secs>] [attribute_timeout=<secs>] <mntpoint> [fuse options]\n",pname);
+  fprintf(stdout,"USAGE: %s [debug] [--help] [--version] [-oprotected=<colon_seped_list_of_paths] [rw] [-onotrash] [-ousetrash] [-obig_writes] [-oprivate (single user)] [ro] [-oserver=<hadoop_servername>] [-oport=<hadoop_port>] [-oentry_timeout=<secs>] [-oattribute_timeout=<secs>] <mntpoint> [fuse options]\n",pname);
   fprintf(stdout,"NOTE: debugging option for fuse is -debug\n");
 }
 
@@ -115,6 +115,7 @@ enum
     KEY_RO,
     KEY_RW,
     KEY_PRIVATE,
+    KEY_BIGWRITES,
     KEY_DEBUG,
   };
 
@@ -130,6 +131,7 @@ static struct fuse_opt dfs_opts[] =
     FUSE_OPT_KEY("private", KEY_PRIVATE),
     FUSE_OPT_KEY("ro", KEY_RO),
     FUSE_OPT_KEY("debug", KEY_DEBUG),
+    FUSE_OPT_KEY("big_writes", KEY_BIGWRITES),
     FUSE_OPT_KEY("rw", KEY_RW),
     FUSE_OPT_KEY("usetrash", KEY_USETRASH),
     FUSE_OPT_KEY("notrash", KEY_NOTRASH),
@@ -174,6 +176,11 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
   case KEY_DEBUG:
     fuse_opt_add_arg(outargs, "-d");
     options.debug = 1;
+    break;
+  case KEY_BIGWRITES:
+#ifdef FUSE_CAP_BIG_WRITES
+    fuse_opt_add_arg(outargs, "-obig_writes");
+#endif
     break;
   default: {
     // try and see if the arg is a URI for DFS

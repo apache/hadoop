@@ -89,6 +89,7 @@ rw
 -ousetrash (should fuse dfs throw things in /Trash when deleting them)
 -onotrash (opposite of usetrash)
 -odebug (do not daemonize - aka -d in fuse speak)
+-obig_writes (use fuse big_writes option so as to allow better performance of writes on kernels >= 2.6.26)
 
 The defaults are:
 
@@ -124,7 +125,7 @@ RECOMMENDATIONS:
 
 1. From /bin, ln -s $HADOOP_HOME/contrib/fuse-dfs/fuse_dfs* .
 2. Always start with debug on so you can see if you are missing a classpath or something like that.
-
+3. use -obig_writes
 
 --------------------------------------------------------------------------------
 
@@ -132,7 +133,7 @@ PERFORMANCE:
 
 1. if you alias ls to ls --color=auto and try listing a directory with lots (over thousands) of files, expect it to be slow and at 10s of thousands, expect it to be very very slow.  This is because --color=auto causes ls to stat every file in the directory. Since fuse-dfs does not cache attribute entries when doing a readdir, this is very slow. see https://issues.apache.org/jira/browse/HADOOP-3797 
 
-2. Writes are approximately 33% slower than the DFSClient. TBD how to optimize this. see: https://issues.apache.org/jira/browse/HADOOP-3805
+2. Writes are approximately 33% slower than the DFSClient. TBD how to optimize this. see: https://issues.apache.org/jira/browse/HADOOP-3805 - try using -obig_writes and if on a >2.6.26 kernel, should perform much better since bigger writes implies less context switching.
 
 3. Reads are ~20-30% slower even with the read buffering. 
 
