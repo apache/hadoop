@@ -1006,6 +1006,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3837. Streaming jobs report progress status. (dhruba)
 
+    HADOOP-3897. Fix a NPE in secondary namenode. (Lohit Vijayarenu via cdouglas)
+
 Release 0.17.2 - Unreleased
 
   BUG FIXES

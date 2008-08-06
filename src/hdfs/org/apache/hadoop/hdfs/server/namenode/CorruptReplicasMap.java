@@ -61,8 +61,10 @@ public class CorruptReplicasMap{
                                    "on " + dn.getName() +
                                    " by " + Server.getRemoteIp());
     }
-    NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
+    if (NameNode.getNameNodeMetrics() != null) {
+      NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
         corruptReplicasMap.size());
+    }
   }
 
   /**
@@ -73,8 +75,10 @@ public class CorruptReplicasMap{
   void removeFromCorruptReplicasMap(Block blk) {
     if (corruptReplicasMap != null) {
       corruptReplicasMap.remove(blk);
-      NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
+      if (NameNode.getNameNodeMetrics() != null) {
+        NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
           corruptReplicasMap.size());
+      }
     }
   }
 
