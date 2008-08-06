@@ -904,7 +904,7 @@ Release 0.18.0 - Unreleased
     HADOOP-3635. Uncaught exception in DataBlockScanner.
     (Tsz Wo (Nicholas), SZE via hairong)
 
-    HADOOP-3539. Exception when closing DFSClient while multiple files are
+    HADOOP-3639. Exception when closing DFSClient while multiple files are
     open. (Benjamin Gufler via hairong)
 
     HADOOP-3572. SetQuotas usage interface has some minor bugs. (hairong)
