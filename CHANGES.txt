@@ -1043,6 +1043,9 @@ Release 0.17.2 - Unreleased
     FileSystem.delete rather than the FileUtil.fullyDelete. (Amareshwari
     Sri Ramadasu via acmurthy)  
 
+    HADOOP-3859. Allow the maximum number of xceivers in the data node to
+    be configurable. (Johan Oskarsson via omalley)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
