@@ -39,6 +39,8 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
+import org.apache.hadoop.mapred.lib.KeyFieldBasedComparator;
+import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -508,6 +510,58 @@ public class JobConf extends Configuration {
   public void setOutputKeyComparatorClass(Class<? extends RawComparator> theClass) {
     setClass("mapred.output.key.comparator.class",
              theClass, RawComparator.class);
+  }
+
+  /**
+   * Set the {@link KeyFieldBasedComparator} options used to compare keys.
+   * 
+   * @param keySpec the key specification of the form -k pos1[,pos2], where,
+   *  pos is of the form f[.c][opts], where f is the number
+   *  of the key field to use, and c is the number of the first character from
+   *  the beginning of the field. Fields and character posns are numbered 
+   *  starting with 1; a character position of zero in pos2 indicates the
+   *  field's last character. If '.c' is omitted from pos1, it defaults to 1
+   *  (the beginning of the field); if omitted from pos2, it defaults to 0 
+   *  (the end of the field). opts are ordering options. The supported options
+   *  are:
+   *    -n, (Sort numerically)
+   *    -r, (Reverse the result of comparison)                 
+   */
+  public void setKeyFieldComparatorOptions(String keySpec) {
+    setOutputKeyComparatorClass(KeyFieldBasedComparator.class);
+    set("mapred.text.key.comparator.options", keySpec);
+  }
+  
+  /**
+   * Get the {@link KeyFieldBasedComparator} options
+   */
+  public String getKeyFieldComparatorOption() {
+    return get("mapred.text.key.comparator.options");
+  }
+
+  /**
+   * Set the {@link KeyFieldBasedPartitioner} options used for 
+   * {@link Partitioner}
+   * 
+   * @param keySpec the key specification of the form -k pos1[,pos2], where,
+   *  pos is of the form f[.c][opts], where f is the number
+   *  of the key field to use, and c is the number of the first character from
+   *  the beginning of the field. Fields and character posns are numbered 
+   *  starting with 1; a character position of zero in pos2 indicates the
+   *  field's last character. If '.c' is omitted from pos1, it defaults to 1
+   *  (the beginning of the field); if omitted from pos2, it defaults to 0 
+   *  (the end of the field).
+   */
+  public void setKeyFieldPartitionerOptions(String keySpec) {
+    setPartitionerClass(KeyFieldBasedPartitioner.class);
+    set("mapred.text.key.partitioner.options", keySpec);
+  }
+  
+  /**
+   * Get the {@link KeyFieldBasedPartitioner} options
+   */
+  public String getKeyFieldPartitionerOption() {
+    return get("mapred.text.key.partitioner.options");
   }
 
   /** 
@@ -1261,6 +1315,5 @@ public class JobConf extends Configuration {
     }
     return null;
   }
-
 }
 

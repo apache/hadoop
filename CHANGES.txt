@@ -67,6 +67,9 @@ Trunk (unreleased changes)
     the TaskTracker, refactor Hadoop Metrics as an implementation of the api.
     (Ari Rabkin via acmurthy) 
 
+    HADOOP-2302. Provides a comparator for numerical sorting of key fields.
+    (ddas)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

@@ -21,103 +21,33 @@ package org.apache.hadoop.streaming;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.LineRecordReader;
 import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 
-/**
- * General utils for byte array containing UTF-8 encoded strings
- * @deprecated use {@link org.apache.hadoop.util.UTF8ByteArrayUtils} and
- * {@link StreamKeyValUtil} instead
- */
+public class StreamKeyValUtil {
 
-public class UTF8ByteArrayUtils {
   /**
    * Find the first occured tab in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
    * @param start starting offset
    * @param length no. of bytes
    * @return position that first tab occures otherwise -1
-   * @deprecated use {@link StreamKeyValUtil#findTab(byte[], int, int)}
    */
-  @Deprecated
   public static int findTab(byte [] utf, int start, int length) {
-    return StreamKeyValUtil.findTab(utf, start, length);      
+    for(int i=start; i<(start+length); i++) {
+      if (utf[i]==(byte)'\t') {
+        return i;
+      }
+    }
+    return -1;      
   }
-  
-  /**
-   * Find the first occurrence of the given byte b in a UTF-8 encoded string
-   * @param utf a byte array containing a UTF-8 encoded string
-   * @param start starting offset
-   * @param end ending position
-   * @param b the byte to find
-   * @return position that first byte occures otherwise -1
-   * @deprecated use 
-   * {@link org.apache.hadoop.util.UTF8ByteArrayUtils#findByte(byte[], int,
-   *  int, byte)}
-   */
-  @Deprecated
-  public static int findByte(byte [] utf, int start, int end, byte b) {
-    return org.apache.hadoop.util.UTF8ByteArrayUtils.findByte(utf, start, end, b);
-  }
-
-  /**
-   * Find the first occurrence of the given bytes b in a UTF-8 encoded string
-   * @param utf a byte array containing a UTF-8 encoded string
-   * @param start starting offset
-   * @param end ending position
-   * @param b the bytes to find
-   * @return position that first byte occures otherwise -1
-   * @deprecated use 
-   * {@link org.apache.hadoop.util.UTF8ByteArrayUtils#findBytes(byte[], int, 
-   * int, byte[])}
-   */
-  @Deprecated
-  public static int findBytes(byte [] utf, int start, int end, byte[] b) {
-    return org.apache.hadoop.util.UTF8ByteArrayUtils.findBytes(utf, start, end, b);      
-  }
-    
-  /**
-   * Find the nth occurrence of the given byte b in a UTF-8 encoded string
-   * @param utf a byte array containing a UTF-8 encoded string
-   * @param start starting offset
-   * @param length the length of byte array
-   * @param b the byte to find
-   * @param n the desired occurrence of the given byte
-   * @return position that nth occurrence of the given byte if exists; otherwise -1
-   * @deprecated use 
-   * {@link org.apache.hadoop.util.UTF8ByteArrayUtils#findNthByte(byte[], int, 
-   * int, byte, int)}
-   */
-  @Deprecated
-  public static int findNthByte(byte [] utf, int start, int length, byte b, int n) {
-    return org.apache.hadoop.util.UTF8ByteArrayUtils.findNthByte(utf, start,
-        length, b, n);
-  }
-  
-  /**
-   * Find the nth occurrence of the given byte b in a UTF-8 encoded string
-   * @param utf a byte array containing a UTF-8 encoded string
-   * @param b the byte to find
-   * @param n the desired occurrence of the given byte
-   * @return position that nth occurrence of the given byte if exists; otherwise -1
-   * @deprecated use 
-   * {@link org.apache.hadoop.util.UTF8ByteArrayUtils#findNthByte(byte[], 
-   * byte, int)}
-   */
-  @Deprecated
-  public static int findNthByte(byte [] utf, byte b, int n) {
-    return org.apache.hadoop.util.UTF8ByteArrayUtils.findNthByte(utf, b, n);      
-  }
-    
   /**
    * Find the first occured tab in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
    * @return position that first tab occures otherwise -1
-   * @deprecated use {@link StreamKeyValUtil#findTab(byte[])}
    */
-  @Deprecated
   public static int findTab(byte [] utf) {
-    return StreamKeyValUtil.findTab(utf);
+    return org.apache.hadoop.util.UTF8ByteArrayUtils.findNthByte(utf, 0, 
+        utf.length, (byte)'\t', 1);
   }
 
   /**
@@ -130,17 +60,22 @@ public class UTF8ByteArrayUtils {
    * @param val contains value upon the method is returned
    * @param splitPos the split pos
    * @param separatorLength the length of the separator between key and value
-   * @deprecated use 
-   * {@link StreamKeyValUtil#splitKeyVal(byte[], int, int, Text, Text, 
-   * int, int)}
    * @throws IOException
    */
-  @Deprecated
   public static void splitKeyVal(byte[] utf, int start, int length, 
                                  Text key, Text val, int splitPos,
                                  int separatorLength) throws IOException {
-    StreamKeyValUtil.splitKeyVal(utf, start, 
-        length, key, val, splitPos, separatorLength);
+    if (splitPos<start || splitPos >= (start+length))
+      throw new IllegalArgumentException("splitPos must be in the range " +
+                                         "[" + start + ", " + (start+length) + "]: " + splitPos);
+    int keyLen = (splitPos-start);
+    byte [] keyBytes = new byte[keyLen];
+    System.arraycopy(utf, start, keyBytes, 0, keyLen);
+    int valLen = (start+length)-splitPos-separatorLength;
+    byte [] valBytes = new byte[valLen];
+    System.arraycopy(utf, splitPos+separatorLength, valBytes, 0, valLen);
+    key.set(keyBytes);
+    val.set(valBytes);
   }
 
   /**
@@ -152,14 +87,11 @@ public class UTF8ByteArrayUtils {
    * @param key contains key upon the method is returned
    * @param val contains value upon the method is returned
    * @param splitPos the split pos
-   * @deprecated use 
-   * {@link StreamKeyValUtil#splitKeyVal(byte[], int, int, Text, Text, int)}
    * @throws IOException
    */
-  @Deprecated
   public static void splitKeyVal(byte[] utf, int start, int length, 
                                  Text key, Text val, int splitPos) throws IOException {
-    StreamKeyValUtil.splitKeyVal(utf, start, length, key, val, splitPos);
+    splitKeyVal(utf, start, length, key, val, splitPos, 1);
   }
   
 
@@ -171,15 +103,12 @@ public class UTF8ByteArrayUtils {
    * @param val contains value upon the method is returned
    * @param splitPos the split pos
    * @param separatorLength the length of the separator between key and value
-   * @deprecated use 
-   * {@link StreamKeyValUtil#splitKeyVal(byte[], Text, Text, int, int)}
    * @throws IOException
    */
-  @Deprecated
   public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos, 
                                  int separatorLength) 
     throws IOException {
-    StreamKeyValUtil.splitKeyVal(utf, key, val, splitPos, separatorLength);
+    splitKeyVal(utf, 0, utf.length, key, val, splitPos, separatorLength);
   }
 
   /**
@@ -189,28 +118,24 @@ public class UTF8ByteArrayUtils {
    * @param key contains key upon the method is returned
    * @param val contains value upon the method is returned
    * @param splitPos the split pos
-   * @deprecated use 
-   * {@link StreamKeyValUtil#splitKeyVal(byte[], Text, Text, int)}
    * @throws IOException
    */
-  @Deprecated
   public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos) 
     throws IOException {
-    StreamKeyValUtil.splitKeyVal(utf, key, val, splitPos);
+    splitKeyVal(utf, 0, utf.length, key, val, splitPos, 1);
   }
   
   /**
    * Read a utf8 encoded line from a data input stream. 
    * @param lineReader LineReader to read the line from.
    * @param out Text to read into
-   * @return number of bytes read
-   * @deprecated use 
-   * {@link StreamKeyValUtil#readLine(LineRecordReader.LineReader, Text)} 
+   * @return number of bytes read 
    * @throws IOException
    */
-  @Deprecated
   public static int readLine(LineReader lineReader, Text out) 
   throws IOException {
-    return StreamKeyValUtil.readLine(lineReader, out);
+    out.clear();
+    return lineReader.readLine(out);
   }
+
 }

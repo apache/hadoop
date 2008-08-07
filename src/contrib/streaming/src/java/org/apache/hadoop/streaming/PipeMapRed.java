@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.UTF8ByteArrayUtils;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.BytesWritable;
@@ -332,7 +333,7 @@ public abstract class PipeMapRed {
         key.set(line, 0, length);
         val.set("");
       } else {
-        UTF8ByteArrayUtils.splitKeyVal(line, 0, length, key, val, pos, separator.length);
+        StreamKeyValUtil.splitKeyVal(line, 0, length, key, val, pos, separator.length);
       }
     } catch (CharacterCodingException e) {
       LOG.warn(StringUtils.stringifyException(e));
