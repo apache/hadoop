@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-3904. Fix unit tests using the old dfs package name.
     (TszWo (Nicholas), SZE via johan)
 
+    HADOOP-3319. Fix some HOD error messages to go stderr instead of
+    stdout. (Vinod Kumar Vavilapalli via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
