@@ -241,6 +241,9 @@ Trunk (unreleased changes)
     HADOOP-3319. Fix some HOD error messages to go stderr instead of
     stdout. (Vinod Kumar Vavilapalli via omalley)
 
+    HADOOP-3907. Move INodeDirectoryWithQuota to its own .java file.
+    (Tsz Wo (Nicholas), SZE via hairong)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
