@@ -669,6 +669,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
     // Set the user's name and working directory
     job.setUser(ugi.getUserName());
+    if (ugi.getGroupNames().length > 0) {
+      job.set("group.name", ugi.getGroupNames()[0]);
+    }
     if (job.getWorkingDirectory() == null) {
       job.setWorkingDirectory(fs.getWorkingDirectory());          
     }

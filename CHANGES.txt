@@ -145,6 +145,8 @@ Trunk (unreleased changes)
 
     HADOOP-3860. NNThroughputBenchmark is extended with rename and delete 
     benchmarks. (shv)
+    
+    HADOOP-3892. Include unix group name in JobConf. (Matei Zaharia via johan)
 
   OPTIMIZATIONS
 
