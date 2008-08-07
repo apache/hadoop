@@ -36,8 +36,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 /**
  */
 public class TestDistributedUpgrade extends TestCase {
-  private static final Log LOG = LogFactory.getLog(
-                             "org.apache.hadoop.dfs.TestDistributedUpgrade");
+  private static final Log LOG = LogFactory.getLog(TestDistributedUpgrade.class);
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;

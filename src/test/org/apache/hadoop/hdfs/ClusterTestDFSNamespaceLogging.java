@@ -45,8 +45,7 @@ import java.util.ArrayList;
  * make sure that any namespace mutations are logged.
  */
 public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConstants {
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.hdfs.ClusterTestDFS");
+  private static final Log LOG = LogFactory.getLog(ClusterTestDFS.class);
 
   private static Configuration conf = new Configuration();
 
@@ -455,12 +454,13 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
   }
 
   public static void main(String[] args) throws Exception {
-    String usage = "Usage: ClusterTestDFSNameSpaceChangeLogging (no args)";
+    String classname = ClusterTestDFSNamespaceLogging.class.getClass().getName();
+    String usage = "Usage: " + classname + " (no args)";
     if (args.length != 0) {
       System.err.println(usage);
       System.exit(-1);
     }
-    String[] testargs = {"org.apache.hadoop.dfs.ClusterTestDFSNameSpaceChangeLogging"};
+    String[] testargs = {classname};
     junit.textui.TestRunner.main(testargs);
   }
 

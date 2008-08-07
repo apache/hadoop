@@ -234,6 +234,9 @@ Trunk (unreleased changes)
 
     HADOOP-3846. Fix unit test CreateEditsLog to generate paths correctly. 
     (Lohit Vjayarenu via cdouglas)
+    
+    HADOOP-3904. Fix unit tests using the old dfs package name.
+    (TszWo (Nicholas), SZE via johan)
 
 Release 0.18.0 - Unreleased
 

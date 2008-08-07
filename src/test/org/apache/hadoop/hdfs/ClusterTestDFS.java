@@ -75,8 +75,7 @@ import java.lang.reflect.InvocationTargetException;
  * (HadoopFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
  */
 public class ClusterTestDFS extends TestCase implements FSConstants {
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.hdfs.ClusterTestDFS");
+  private static final Log LOG = LogFactory.getLog(ClusterTestDFS.class);
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE =
@@ -520,12 +519,13 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
   }
 
   public static void main(String[] args) throws Exception {
-    String usage = "Usage: ClusterTestDFS (no args)";
+    String classname = ClusterTestDFS.class.getClass().getName();
+    String usage = "Usage: " + classname + " (no args)";
     if (args.length != 0) {
       System.err.println(usage);
       System.exit(-1);
     }
-    String[] testargs = {"org.apache.hadoop.dfs.ClusterTestDFS"};
+    String[] testargs = {classname};
     junit.textui.TestRunner.main(testargs);
   }
 
