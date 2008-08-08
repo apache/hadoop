@@ -554,14 +554,7 @@ public class HTable {
    */
   public RowResult getRow(final byte [] row, final long ts) 
   throws IOException {
-    return connection.getRegionServerWithRetries(
-        new ServerCallable<RowResult>(connection, tableName, row) {
-          public RowResult call() throws IOException {
-            return server.getRow(location.getRegionInfo().getRegionName(), row,
-                ts);
-          }
-        }
-    );
+    return getRow(row,null,ts);
   }
 
   /** 

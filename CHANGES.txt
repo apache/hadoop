@@ -4,6 +4,9 @@ Release 0.3.0 - Unreleased
 
   INCOMPATIBLE CHANGES
   BUG FIXES
+   HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
+               Jim Kellerman)
+
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
               friendly" way.

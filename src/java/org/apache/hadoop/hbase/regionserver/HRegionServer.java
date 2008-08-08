@@ -1047,20 +1047,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public RowResult getRow(final byte [] regionName, final byte [] row,
-    final long ts)
-  throws IOException {
-    return getRow(regionName, row, null, ts);
-  }
-
-  /** {@inheritDoc} */
-  public RowResult getRow(final byte [] regionName, final byte [] row, 
-    final byte [][] columns)
-  throws IOException {
-    return getRow(regionName, row, columns, HConstants.LATEST_TIMESTAMP);
-  }
-
-  /** {@inheritDoc} */
   public RowResult getRow(final byte [] regionName, final byte [] row, 
     final byte [][] columns, final long ts)
   throws IOException {
