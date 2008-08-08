@@ -244,6 +244,9 @@ Trunk (unreleased changes)
     HADOOP-3907. Move INodeDirectoryWithQuota to its own .java file.
     (Tsz Wo (Nicholas), SZE via hairong)
 
+    HADOOP-3919. Fix attribute name in hadoop-default for 
+    mapred.jobtracker.instrumentation. (Ari Rabkin via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

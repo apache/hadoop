@@ -781,9 +781,9 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.job.instrumentation</name>
+  <name>mapred.jobtracker.instrumentation</name>
   <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
-  <description>Expert: The instrumentation class to associate with each TaskTracker.
+  <description>Expert: The instrumentation class to associate with each JobTracker.
   </description>
 </property>
 
