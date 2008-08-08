@@ -1,5 +1,13 @@
 Hbase Change Log
 
+Release 0.3.0 - Unreleased
+
+  INCOMPATIBLE CHANGES
+  BUG FIXES
+  IMPROVEMENTS
+  NEW FEATURES
+  OPTIMIZATIONS
+
 Release 0.2.0 - August 8, 2008.
 
   INCOMPATIBLE CHANGES
