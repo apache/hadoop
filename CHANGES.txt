@@ -1,6 +1,6 @@
 Hbase Change Log
 
-Release 0.2.0
+Release 0.2.0 - August 8, 2008.
 
   INCOMPATIBLE CHANGES
    HBASE-584   Names in the filter interface are confusing (Clint Morgan via
