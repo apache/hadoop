@@ -148,6 +148,10 @@ Trunk (unreleased changes)
     
     HADOOP-3892. Include unix group name in JobConf. (Matei Zaharia via johan)
 
+    HADOOP-3875. Change the time period between heartbeats to be relative to
+    the end of the heartbeat rpc, rather than the start. This causes better
+    behavior if the JobTracker is overloaded. (acmurthy via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

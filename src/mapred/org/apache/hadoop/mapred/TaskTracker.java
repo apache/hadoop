@@ -909,7 +909,12 @@ public class TaskTracker
         }
         
         // Send the heartbeat and process the jobtracker's directives
-        HeartbeatResponse heartbeatResponse = transmitHeartBeat();
+        HeartbeatResponse heartbeatResponse = transmitHeartBeat(now);
+
+        // Note the time when the heartbeat returned, use this to decide when to send the
+        // next heartbeat   
+        lastHeartbeat = System.currentTimeMillis();
+        
         TaskTrackerAction[] actions = heartbeatResponse.getActions();
         if(LOG.isDebugEnabled()) {
           LOG.debug("Got heartbeatResponse from JobTracker with responseId: " + 
@@ -920,7 +925,6 @@ public class TaskTracker
           return State.STALE;
         }
             
-        lastHeartbeat = now;
         // resetting heartbeat interval from the response.
         heartbeatInterval = heartbeatResponse.getHeartbeatInterval();
         justStarted = false;
@@ -972,12 +976,12 @@ public class TaskTracker
 
   /**
    * Build and transmit the heart beat to the JobTracker
+   * @param now current time
    * @return false if the tracker was unknown
    * @throws IOException
    */
-  private HeartbeatResponse transmitHeartBeat() throws IOException {
+  private HeartbeatResponse transmitHeartBeat(long now) throws IOException {
     // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
-    long now = System.currentTimeMillis();
     boolean sendCounters;
     if (now > (previousUpdate + COUNTER_UPDATE_INTERVAL)) {
       sendCounters = true;
