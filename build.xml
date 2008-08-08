@@ -206,7 +206,7 @@
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
-    <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
+    <mkdir dir="${build.webapps}/hdfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
@@ -297,16 +297,16 @@
     </jsp-compile>
 
     <jsp-compile
-     uriroot="${src.webapps}/dfs"
+     uriroot="${src.webapps}/hdfs"
      outputdir="${build.src}"
-     package="org.apache.hadoop.dfs"
-     webxml="${build.webapps}/dfs/WEB-INF/web.xml">
+     package="org.apache.hadoop.hdfs.server.namenode"
+     webxml="${build.webapps}/hdfs/WEB-INF/web.xml">
     </jsp-compile>
 
     <jsp-compile
      uriroot="${src.webapps}/datanode"
      outputdir="${build.src}"
-     package="org.apache.hadoop.dfs"
+     package="org.apache.hadoop.hdfs.server.datanode"
      webxml="${build.webapps}/datanode/WEB-INF/web.xml">
     </jsp-compile>
 
@@ -1039,7 +1039,7 @@
     <delete dir="${libhdfs.test.dir}"/>
     <mkdir dir="${libhdfs.test.dir}"/>
     <mkdir dir="${libhdfs.test.dir}/logs"/>
-    <mkdir dir="${libhdfs.test.dir}/dfs/name"/>
+    <mkdir dir="${libhdfs.test.dir}/hdfs/name"/>
 
     <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
         <env key="OS_NAME" value="${os.name}"/>

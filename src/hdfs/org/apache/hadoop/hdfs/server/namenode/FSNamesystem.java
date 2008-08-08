@@ -343,7 +343,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    this.infoServer = new HttpServer("dfs", infoHost, tmpInfoPort, 
+    this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
                                             tmpInfoPort == 0);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
         conf.get("dfs.https.address", infoHost + ":" + 0));

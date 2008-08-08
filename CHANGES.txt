@@ -247,6 +247,9 @@ Trunk (unreleased changes)
     HADOOP-3919. Fix attribute name in hadoop-default for 
     mapred.jobtracker.instrumentation. (Ari Rabkin via omalley)
 
+    HADOOP-3903. Change the package name for the servlets to be hdfs instead of
+    dfs. (Tsz Wo (Nicholas) Sze via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
