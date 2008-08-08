@@ -89,8 +89,12 @@ module HBase
 
     def drop(tableName)
       now = Time.now 
-      @admin.deleteTable(tableName)
       @formatter.header()
+      if @admin.isTableEnabled(tableName)
+        raise IOError.new("Table " + tableName + " is enabled. Disable it first")
+      else
+        @admin.deleteTable(tableName)
+      end
       @formatter.footer(now)
     end
 
