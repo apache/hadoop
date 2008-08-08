@@ -165,6 +165,9 @@ Trunk (unreleased changes)
     HADOOP-3863. Use a thread-local string encoder rather than a static one
     that is protected by a lock. (acmurthy via omalley)
 
+    HADOOP-3864. Prevent the JobTracker from locking up when a job is being
+    initialized. (acmurthy via omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

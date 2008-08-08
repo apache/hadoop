@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -122,7 +123,7 @@ class JobInProgress {
   long finishTime;
 
   private JobConf conf;
-  boolean tasksInited = false;
+  AtomicBoolean tasksInited = new AtomicBoolean(false);
 
   private LocalFileSystem localFs;
   private JobID jobId;
@@ -297,12 +298,22 @@ class JobInProgress {
     }
     return cache;
   }
+  
+  /**
+   * Check if the job has been initialized.
+   * @return <code>true</code> if the job has been initialized, 
+   *         <code>false</code> otherwise
+   */
+  public boolean inited() {
+    return tasksInited.get();
+  }
+  
   /**
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
    */
   public synchronized void initTasks() throws IOException {
-    if (tasksInited) {
+    if (tasksInited.get()) {
       return;
     }
 
@@ -341,7 +352,7 @@ class JobInProgress {
       status.setMapProgress(1.0f);
       status.setReduceProgress(1.0f);
       status.setRunState(JobStatus.SUCCEEDED);
-      tasksInited = true;
+      tasksInited.set(true);
       JobHistory.JobInfo.logStarted(profile.getJobID(), 
                                     System.currentTimeMillis(), 0, 0);
       JobHistory.JobInfo.logFinished(profile.getJobID(), 
@@ -375,7 +386,7 @@ class JobInProgress {
     }
 
     this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, JobStatus.RUNNING);
-    tasksInited = true;
+    tasksInited.set(true);
         
     JobHistory.JobInfo.logStarted(profile.getJobID(), System.currentTimeMillis(), numMapTasks, numReduceTasks);
   }
@@ -663,7 +674,7 @@ class JobInProgress {
                                             int clusterSize, 
                                             int numUniqueHosts
                                            ) throws IOException {
-    if (!tasksInited) {
+    if (!tasksInited.get()) {
       LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
@@ -698,7 +709,7 @@ class JobInProgress {
                                                int clusterSize,
                                                int numUniqueHosts
                                               ) throws IOException {
-    if (!tasksInited) {
+    if (!tasksInited.get()) {
       LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }

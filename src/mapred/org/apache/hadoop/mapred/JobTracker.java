@@ -1584,7 +1584,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
   public synchronized void killJob(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
-    job.kill();
+    if (job.inited()) {
+      job.kill();
+    }
   }
 
   public synchronized JobProfile getJobProfile(JobID jobid) {
@@ -1653,6 +1655,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
     
+  TaskCompletionEvent[] EMPTY_EVENTS = new TaskCompletionEvent[0];
+  
   /* 
    * Returns a list of TaskCompletionEvent for the given job, 
    * starting from fromEventId.
@@ -1660,11 +1664,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
       JobID jobid, int fromEventId, int maxEvents) throws IOException{
-    TaskCompletionEvent[] events;
+    TaskCompletionEvent[] events = EMPTY_EVENTS;
 
     JobInProgress job = this.jobs.get(jobid);
     if (null != job) {
-      events = job.getTaskCompletionEvents(fromEventId, maxEvents);
+      if (job.inited()) {
+        events = job.getTaskCompletionEvents(fromEventId, maxEvents);
+      }
     }
     else {
       events = completedJobStatusStore.readJobTaskCompletionEvents(jobid, fromEventId, maxEvents);
