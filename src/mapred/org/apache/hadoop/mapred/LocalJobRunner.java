@@ -277,6 +277,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) {
       // Ignore for now
     }
+    
+    public void reportNextRecordRange(TaskAttemptID taskid, 
+        SortedRanges.Range range) throws IOException {
+      LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
+    }
 
     public boolean ping(TaskAttemptID taskid) throws IOException {
       return true;

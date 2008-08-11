@@ -77,6 +77,8 @@ class TaskInProgress {
   private int completes = 0;
   private boolean failed = false;
   private boolean killed = false;
+  private volatile SortedRanges failedRanges = new SortedRanges();
+  private volatile boolean skipping = false;
    
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
@@ -485,6 +487,12 @@ class TaskInProgress {
     if (taskState == TaskStatus.State.FAILED) {
       numTaskFailures++;
       machinesWhereFailed.add(trackerHostName);
+      LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
+      failedRanges.add(status.getNextRecordRange());
+      if(SkipBadRecords.getEnabled(conf) && 
+          numTaskFailures>=SkipBadRecords.getAttemptsToStartSkipping(conf)) {
+        skipping = true;
+      }
     } else {
       numKilledTasks++;
     }
@@ -677,7 +685,7 @@ class TaskInProgress {
     // in more depth eventually...
     //
       
-    if (activeTasks.size() <= MAX_TASK_EXECS &&
+    if (!skipping && activeTasks.size() <= MAX_TASK_EXECS &&
         (averageProgress - progress >= SPECULATIVE_GAP) &&
         (currentTime - startTime >= SPECULATIVE_LAG) 
         && completes == 0 && !isOnlyCommitPending()) {
@@ -709,12 +717,16 @@ class TaskInProgress {
     }
 
     if (isMapTask()) {
+      LOG.debug("attemdpt "+  numTaskFailures   +
+          " sending skippedRecords "+failedRanges.getIndicesCount());
       t = new MapTask(jobFile, taskid, partition, 
           rawSplit.getClassName(), rawSplit.getBytes());
     } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps);
     }
     t.setConf(conf);
+    t.setFailedRanges(failedRanges);
+    t.setSkipping(skipping);
     tasks.put(taskid, t);
 
     activeTasks.put(taskid, taskTracker);

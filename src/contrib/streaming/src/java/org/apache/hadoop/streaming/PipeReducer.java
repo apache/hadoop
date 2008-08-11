@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.Writable;
@@ -39,6 +40,7 @@ public class PipeReducer extends PipeMapRed implements Reducer {
   private byte[] reduceOutFieldSeparator;
   private byte[] reduceInputFieldSeparator;
   private int numOfReduceOutputKeyFields = 1;
+  private boolean skipping = false;
   
   String getPipeCommand(JobConf job) {
     String str = job.get("stream.reduce.streamprocessor");
@@ -61,6 +63,11 @@ public class PipeReducer extends PipeMapRed implements Reducer {
 
   public void configure(JobConf job) {
     super.configure(job);
+    //disable the auto increment of the counter. For streaming, no of 
+    //processed records could be different(equal or less) than the no of 
+    //records input.
+    SkipBadRecords.setAutoIncrReducerProcCount(job, false);
+    skipping = job.getBoolean("mapred.skip.on", false);
 
     try {
       reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t").getBytes("UTF-8");
@@ -98,6 +105,11 @@ public class PipeReducer extends PipeMapRed implements Reducer {
           // "identity reduce"
           output.collect(key, val);
         }
+      }
+      if(doPipe_ && skipping) {
+        //flush the streams on every record input if running in skip mode
+        //so that we don't buffer other records surrounding a bad record. 
+        clientOut_.flush();
       }
     } catch (IOException io) {
       // a common reason to get here is failure of the subprocess.

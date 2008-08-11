@@ -27,10 +27,13 @@ public class MapRunner<K1, V1, K2, V2>
     implements MapRunnable<K1, V1, K2, V2> {
   
   private Mapper<K1, V1, K2, V2> mapper;
+  private boolean incrProcCount;
 
   @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
     this.mapper = ReflectionUtils.newInstance(job.getMapperClass(), job);
+    this.incrProcCount = job.getBoolean("mapred.skip.on", false) && 
+      SkipBadRecords.getAutoIncrMapperProcCount(job);
   }
 
   public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
@@ -44,6 +47,10 @@ public class MapRunner<K1, V1, K2, V2>
       while (input.next(key, value)) {
         // map pair to output
         mapper.map(key, value, output, reporter);
+        if(incrProcCount) {
+          reporter.incrCounter(Counters.Application.GROUP, 
+              Counters.Application.MAP_PROCESSED_RECORDS, 1);
+        }
       }
     } finally {
       mapper.close();

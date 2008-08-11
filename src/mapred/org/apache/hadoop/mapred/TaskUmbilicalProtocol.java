@@ -43,9 +43,11 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 8 changes {job|tip|task}id's to use their corresponding 
    * objects rather than strings.
    * Version 9 changes the counter representation for HADOOP-1915
+   * Version 10 changed the TaskStatus format and added reportNextRecordRange
+   *            for HADOOP-153
    * */
 
-  public static final long versionID = 9L;
+  public static final long versionID = 10L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(TaskAttemptID taskid) throws IOException;
@@ -68,6 +70,15 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *  @param trace the text to report
    */
   void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException;
+  
+  /**
+   * Report the record range which is going to process next by the Task.
+   * @param taskid the id of the task involved
+   * @param range the range of record sequence nos
+   * @throws IOException
+   */
+  void reportNextRecordRange(TaskAttemptID taskid, SortedRanges.Range range) 
+    throws IOException;
 
   /** Periodically called by child to check if parent is still alive. 
    * @return True if the task is known

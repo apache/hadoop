@@ -1574,6 +1574,10 @@ public class TaskTracker
     public synchronized void reportDiagnosticInfo(String info) {
       this.diagnosticInfo.append(info);
     }
+    
+    public synchronized void reportNextRecordRange(SortedRanges.Range range) {
+      this.taskStatus.setNextRecordRange(range);
+    }
 
     /**
      * The task is reporting that it's done running
@@ -1975,6 +1979,17 @@ public class TaskTracker
       tip.reportDiagnosticInfo(info);
     } else {
       LOG.warn("Error from unknown child task: "+taskid+". Ignored.");
+    }
+  }
+  
+  public synchronized void reportNextRecordRange(TaskAttemptID taskid, 
+      SortedRanges.Range range) throws IOException {
+    TaskInProgress tip = tasks.get(taskid);
+    if (tip != null) {
+      tip.reportNextRecordRange(range);
+    } else {
+      LOG.warn("reportNextRecordRange from unknown child task: "+taskid+". " +
+      		"Ignored.");
     }
   }
 

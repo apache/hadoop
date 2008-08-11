@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.MapRunner;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SkipBadRecords;
 
 /**
  * An adaptor to run a C++ mapper.
@@ -42,6 +43,9 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
    */
   public void configure(JobConf job) {
     this.job = job;
+    //disable the auto increment of the counter. For pipes, no of processed 
+    //records could be different(equal or less) than the no of records input.
+    SkipBadRecords.setAutoIncrMapperProcCount(job, false);
   }
 
   /**
@@ -65,6 +69,7 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
     boolean isJavaInput = Submitter.getIsJavaRecordReader(job);
     downlink.runMap(reporter.getInputSplit(), 
                     job.getNumReduceTasks(), isJavaInput);
+    boolean skipping = job.getBoolean("mapred.skip.on", false);
     try {
       if (isJavaInput) {
         // allocate key & value instances that are re-used for all entries
@@ -76,6 +81,11 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
         while (input.next(key, value)) {
           // map pair to output
           downlink.mapItem(key, value);
+          if(skipping) {
+            //flush the streams on every record input if running in skip mode
+            //so that we don't buffer other records surrounding a bad record.
+            downlink.flush();
+          }
         }
         downlink.endOfInput();
       }

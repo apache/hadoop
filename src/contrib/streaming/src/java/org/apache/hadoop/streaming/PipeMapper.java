@@ -25,6 +25,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.util.StringUtils;
 public class PipeMapper extends PipeMapRed implements Mapper {
 
   private boolean ignoreKey = false;
+  private boolean skipping = false;
 
   private byte[] mapOutputFieldSeparator;
   private byte[] mapInputFieldSeparator;
@@ -59,6 +61,11 @@ public class PipeMapper extends PipeMapRed implements Mapper {
   
   public void configure(JobConf job) {
     super.configure(job);
+    //disable the auto increment of the counter. For streaming, no of 
+    //processed records could be different(equal or less) than the no of 
+    //records input.
+    SkipBadRecords.setAutoIncrMapperProcCount(job, false);
+    skipping = job.getBoolean("mapred.skip.on", false);
     String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
     ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
 
@@ -101,6 +108,11 @@ public class PipeMapper extends PipeMapRed implements Mapper {
         }
         write(value);
         clientOut_.write('\n');
+        if(skipping) {
+          //flush the streams on every record input if running in skip mode
+          //so that we don't buffer other records surrounding a bad record. 
+          clientOut_.flush();
+        }
       } else {
         numRecSkipped_++;
       }

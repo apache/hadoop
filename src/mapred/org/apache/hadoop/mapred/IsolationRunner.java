@@ -91,6 +91,11 @@ public class IsolationRunner {
                                                         int fromEventId, int maxLocs) throws IOException {
       return TaskCompletionEvent.EMPTY_ARRAY;
     }
+
+    public void reportNextRecordRange(TaskAttemptID taskid, 
+        SortedRanges.Range range) throws IOException {
+      LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
+    }
   }
   
   private static ClassLoader makeClassLoader(JobConf conf, 

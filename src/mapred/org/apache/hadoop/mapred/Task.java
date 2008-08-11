@@ -64,13 +64,15 @@ abstract class Task implements Writable, Configurable {
   protected static enum Counter { 
     MAP_INPUT_RECORDS, 
     MAP_OUTPUT_RECORDS,
+    MAP_SKIPPED_RECORDS,
     MAP_INPUT_BYTES, 
     MAP_OUTPUT_BYTES,
     COMBINE_INPUT_RECORDS,
     COMBINE_OUTPUT_RECORDS,
     REDUCE_INPUT_GROUPS,
     REDUCE_INPUT_RECORDS,
-    REDUCE_OUTPUT_RECORDS
+    REDUCE_OUTPUT_RECORDS,
+    REDUCE_SKIPPED_RECORDS
   }
   
   /**
@@ -108,6 +110,15 @@ abstract class Task implements Writable, Configurable {
   private int partition;                          // id within job
   TaskStatus taskStatus; 										      // current status of the task
   private Path taskOutputPath;                    // task-specific output dir
+  
+  //failed ranges from previous attempts
+  private SortedRanges failedRanges = new SortedRanges();
+  private boolean skipping = false;
+  
+  //currently processing record start index
+  private volatile long currentRecStartIndex; 
+  private Iterator<Long> currentRecIndexIterator = 
+    failedRanges.skipRangeIterator();
   
   protected JobConf conf;
   protected MapOutputFile mapOutputFile = new MapOutputFile();
@@ -175,6 +186,37 @@ abstract class Task implements Writable, Configurable {
   protected synchronized void setPhase(TaskStatus.Phase phase){
     this.taskStatus.setPhase(phase); 
   }
+  
+  /**
+   * Get failed ranges.
+   * @return recordsToSkip
+   */
+  public SortedRanges getFailedRanges() {
+    return failedRanges;
+  }
+
+  /**
+   * Set failed ranges.
+   * @param recordsToSkip
+   */
+  public void setFailedRanges(SortedRanges failedRanges) {
+    this.failedRanges = failedRanges;
+  }
+
+  /**
+   * Is Task in skipping mode.
+   */
+  public boolean isSkipping() {
+    return skipping;
+  }
+
+  /**
+   * Sets whether to run Task in skipping mode.
+   * @param skipping
+   */
+  public void setSkipping(boolean skipping) {
+    this.skipping = skipping;
+  }
 
   ////////////////////////////////////////////
   // Writable methods
@@ -190,6 +232,8 @@ abstract class Task implements Writable, Configurable {
       Text.writeString(out, "");
     }
     taskStatus.write(out);
+    failedRanges.write(out);
+    out.writeBoolean(skipping);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
@@ -203,6 +247,10 @@ abstract class Task implements Writable, Configurable {
     }
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 
+    failedRanges.readFields(in);
+    currentRecIndexIterator = failedRanges.skipRangeIterator();
+    currentRecStartIndex = currentRecIndexIterator.next();
+    skipping = in.readBoolean();
   }
 
   @Override
@@ -370,12 +418,42 @@ abstract class Task implements Writable, Configurable {
           if (counters != null) {
             counters.incrCounter(group, counter, amount);
           }
+          if(skipping && Counters.Application.GROUP.equals(group) && (
+              Counters.Application.MAP_PROCESSED_RECORDS.equals(counter) ||
+              Counters.Application.REDUCE_PROCESSED_RECORDS.equals(counter))) {
+            //if application reports the processed records, move the 
+            //currentRecStartIndex to the next.
+            //currentRecStartIndex is the start index which has not yet been 
+            //finished and is still in task's stomach.
+            for(int i=0;i<amount;i++) {
+              currentRecStartIndex = currentRecIndexIterator.next();
+            }
+          }
           setProgressFlag();
         }
         public InputSplit getInputSplit() throws UnsupportedOperationException {
           return Task.this.getInputSplit();
         }
       };
+  }
+  
+  /**
+   *  Reports the next executing record range to TaskTracker.
+   *  
+   * @param umbilical
+   * @param nextRecIndex the record index which would be fed next.
+   * @throws IOException
+   */
+  protected void reportNextRecordRange(final TaskUmbilicalProtocol umbilical, 
+      long nextRecIndex) throws IOException{
+    //currentRecStartIndex is the start index which has not yet been finished 
+    //and is still in task's stomach.
+    long len = nextRecIndex - currentRecStartIndex +1;
+    SortedRanges.Range range = 
+      new SortedRanges.Range(currentRecStartIndex, len);
+    taskStatus.setNextRecordRange(range);
+    LOG.debug("sending reportNextRecordRange " + range);
+    umbilical.reportNextRecordRange(taskId, range);
   }
 
   public void setProgress(float progress) {

@@ -241,10 +241,45 @@ class ReduceTask extends Task {
     }
   }
 
+  private class SkippingReduceValuesIterator<KEY,VALUE> 
+     extends ReduceValuesIterator<KEY,VALUE> {
+     private Iterator<Long> skipFailedRecIndexIterator;
+     private TaskUmbilicalProtocol umbilical;
+     private long recIndex = -1;
+     
+     public SkippingReduceValuesIterator(RawKeyValueIterator in,
+         RawComparator<KEY> comparator, Class<KEY> keyClass,
+         Class<VALUE> valClass, Configuration conf, Progressable reporter,
+         TaskUmbilicalProtocol umbilical) throws IOException {
+       super(in, comparator, keyClass, valClass, conf, reporter);
+       this.umbilical = umbilical;
+       skipFailedRecIndexIterator = getFailedRanges().skipRangeIterator();
+       mayBeSkip();
+     }
+     
+     void nextKey() throws IOException {
+       super.nextKey();
+       mayBeSkip();
+     }
+     
+     private void mayBeSkip() throws IOException {
+       recIndex++;
+       long nextRecIndex = skipFailedRecIndexIterator.next();
+       long skip = nextRecIndex - recIndex;
+       for(int i=0;i<skip && super.more();i++) {
+         super.nextKey();
+         recIndex++;
+       }
+       getCounters().incrCounter(Counter.REDUCE_SKIPPED_RECORDS, skip);
+       reportNextRecordRange(umbilical, nextRecIndex);
+     }
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
+    job.setBoolean("mapred.skip.on", isSkipping());
     Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
 
     // start thread that will handle communication with parent
@@ -314,14 +349,24 @@ class ReduceTask extends Task {
     try {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
+      boolean incrProcCount = isSkipping() &&
+        SkipBadRecords.getAutoIncrReducerProcCount(job);
       
-      ReduceValuesIterator values = new ReduceValuesIterator(rIter, 
+      ReduceValuesIterator values = isSkipping() ? 
+          new SkippingReduceValuesIterator(rIter, 
+              job.getOutputValueGroupingComparator(), keyClass, valClass, 
+              job, reporter, umbilical) :
+          new ReduceValuesIterator(rIter, 
           job.getOutputValueGroupingComparator(), keyClass, valClass, 
           job, reporter);
       values.informReduceProgress();
       while (values.more()) {
         reduceInputKeyCounter.increment(1);
         reducer.reduce(values.getKey(), values, collector, reporter);
+        if(incrProcCount) {
+          reporter.incrCounter(Counters.Application.GROUP, 
+              Counters.Application.REDUCE_PROCESSED_RECORDS, 1);
+        }
         values.nextKey();
         values.informReduceProgress();
       }

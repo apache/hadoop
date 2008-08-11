@@ -26,6 +26,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SkipBadRecords;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -41,9 +42,14 @@ class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
   private Application<K2, V2, K3, V3> application = null;
   private DownwardProtocol<K2, V2> downlink = null;
   private boolean isOk = true;
+  private boolean skipping = false;
 
   public void configure(JobConf job) {
     this.job = job;
+    //disable the auto increment of the counter. For pipes, no of processed 
+    //records could be different(equal or less) than the no of records input.
+    SkipBadRecords.setAutoIncrReducerProcCount(job, false);
+    skipping = job.getBoolean("mapred.skip.on", false);
   }
 
   /**
@@ -58,6 +64,11 @@ class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
     downlink.reduceKey(key);
     while (values.hasNext()) {
       downlink.reduceValue(values.next());
+    }
+    if(skipping) {
+      //flush the streams on every record input if running in skip mode
+      //so that we don't buffer other records surrounding a bad record.
+      downlink.flush();
     }
     isOk = true;
   }

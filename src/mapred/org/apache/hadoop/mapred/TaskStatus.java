@@ -56,6 +56,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   private Phase phase = Phase.STARTING; 
   private Counters counters;
   private boolean includeCounters;
+  private SortedRanges.Range nextRecordRange = new SortedRanges.Range();
 
   public TaskStatus() {}
 
@@ -89,6 +90,23 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
   public String getStateString() { return stateString; }
   public void setStateString(String stateString) { this.stateString = stateString; }
+  
+  /**
+   * Get the next record range which is going to be processed by Task.
+   * @return nextRecordRange
+   */
+  public SortedRanges.Range getNextRecordRange() {
+    return nextRecordRange;
+  }
+
+  /**
+   * Set the next record range which is going to be processed by Task.
+   * @param nextRecordRange
+   */
+  public void setNextRecordRange(SortedRanges.Range nextRecordRange) {
+    this.nextRecordRange = nextRecordRange;
+  }
+  
   /**
    * Get task finish time. if shuffleFinishTime and sortFinishTime 
    * are not set before, these are set to finishTime. It takes care of 
@@ -247,6 +265,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.progress = status.getProgress();
     this.runState = status.getRunState();
     this.stateString = status.getStateString();
+    this.nextRecordRange = status.getNextRecordRange();
 
     setDiagnosticInfo(status.getDiagnosticInfo());
     
@@ -297,6 +316,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     if (includeCounters) {
       counters.write(out);
     }
+    nextRecordRange.write(out);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -313,6 +333,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     if (includeCounters) {
       counters.readFields(in);
     }
+    nextRecordRange.readFields(in);
   }
   
   //////////////////////////////////////////////////////////////////////////////

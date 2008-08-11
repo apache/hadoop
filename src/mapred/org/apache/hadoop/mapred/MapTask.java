@@ -31,6 +31,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -142,11 +143,19 @@ class MapTask extends Task {
     private RecordReader<K,V> rawIn;
     private Counters.Counter inputByteCounter;
     private Counters.Counter inputRecordCounter;
+    private Iterator<Long> skipFailedRecIndexIterator;
+    private TaskUmbilicalProtocol umbilical;
+    private long recIndex = -1;
+    private long beforePos = -1;
+    private long afterPos = -1;
     
-    TrackedRecordReader(RecordReader<K,V> raw, Counters counters) {
+    TrackedRecordReader(RecordReader<K,V> raw, Counters counters, 
+        TaskUmbilicalProtocol umbilical) {
       rawIn = raw;
+      this.umbilical = umbilical;
       inputRecordCounter = counters.findCounter(MAP_INPUT_RECORDS);
       inputByteCounter = counters.findCounter(MAP_INPUT_BYTES);
+      skipFailedRecIndexIterator = getFailedRanges().skipRangeIterator();
     }
 
     public K createKey() {
@@ -158,17 +167,34 @@ class MapTask extends Task {
     }
      
     public synchronized boolean next(K key, V value)
-      throws IOException {
-
-      setProgress(getProgress());
-      long beforePos = getPos();
-      boolean ret = rawIn.next(key, value);
+    throws IOException {
+      boolean ret = moveToNext(key, value);
+      if(isSkipping() && ret) {
+        long nextRecIndex = skipFailedRecIndexIterator.next();
+        long skip = nextRecIndex - recIndex;
+        for(int i=0;i<skip && ret;i++) {
+          ret = moveToNext(key, value);
+        }
+        getCounters().incrCounter(Counter.MAP_SKIPPED_RECORDS, skip);
+        reportNextRecordRange(umbilical, nextRecIndex);
+      }
       if (ret) {
         inputRecordCounter.increment(1);
-        inputByteCounter.increment(getPos() - beforePos);
+        inputByteCounter.increment(afterPos - beforePos);
       }
       return ret;
     }
+     
+    private synchronized boolean moveToNext(K key, V value)
+      throws IOException {
+      setProgress(getProgress());
+      beforePos = getPos();
+      boolean ret = rawIn.next(key, value);
+      recIndex++;
+      afterPos = getPos();
+      return ret;
+    }
+    
     public long getPos() throws IOException { return rawIn.getPos(); }
     public void close() throws IOException { rawIn.close(); }
     public float getProgress() throws IOException {
@@ -218,7 +244,8 @@ class MapTask extends Task {
       
     RecordReader rawIn =                  // open input
       job.getInputFormat().getRecordReader(instantiatedSplit, job, reporter);
-    RecordReader in = new TrackedRecordReader(rawIn, getCounters());
+    RecordReader in = new TrackedRecordReader(rawIn, getCounters(), umbilical);
+    job.setBoolean("mapred.skip.on", isSkipping());
 
     MapRunnable runner =
       ReflectionUtils.newInstance(job.getMapRunnerClass(), job);

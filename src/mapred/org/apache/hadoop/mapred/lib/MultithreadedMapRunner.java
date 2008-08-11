@@ -19,12 +19,14 @@
 package org.apache.hadoop.mapred.lib;
 
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.MapRunnable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,6 +60,7 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
   private ExecutorService executorService;
   private volatile IOException ioException;
   private volatile RuntimeException runtimeException;
+  private boolean incrProcCount;
 
   @SuppressWarnings("unchecked")
   public void configure(JobConf jobConf) {
@@ -69,6 +72,8 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
     }
 
     this.job = jobConf;
+    this.incrProcCount = job.getBoolean("mapred.skip.on", false) && 
+      SkipBadRecords.getAutoIncrMapperProcCount(job);
     this.mapper = ReflectionUtils.newInstance(jobConf.getMapperClass(),
         jobConf);
 
@@ -222,6 +227,10 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
       try {
         // map pair to output
         MultithreadedMapRunner.this.mapper.map(key, value, output, reporter);
+        if(incrProcCount) {
+          reporter.incrCounter(Counters.Application.GROUP, 
+              Counters.Application.MAP_PROCESSED_RECORDS, 1);
+        }
       } catch (IOException ex) {
         // If there is an IOException during the call it is set in an instance
         // variable of the MultithreadedMapRunner from where it will be

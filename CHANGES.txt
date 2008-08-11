@@ -70,6 +70,8 @@ Trunk (unreleased changes)
     HADOOP-2302. Provides a comparator for numerical sorting of key fields.
     (ddas)
 
+    HADOOP-153. Provides a way to skip bad records. (Sharad Agarwal via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

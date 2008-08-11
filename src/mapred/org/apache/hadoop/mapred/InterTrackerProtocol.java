@@ -44,8 +44,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 12 changes the counters representation for HADOOP-1915
    * version 13 added call getBuildVersion() for HADOOP-236
    * Version 14: replaced getFilesystemName with getSystemDir for HADOOP-3135
+   * Version 15: Changed format of Task and TaskStatus for HADOOP-153
    */
-  public static final long versionID = 14L;
+  public static final long versionID = 15L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
