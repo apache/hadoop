@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -286,6 +287,13 @@ public class HColumnDescriptor implements WritableComparable {
     if (value == null)
       return null;
     return Bytes.toString(value);
+  }
+
+  /**
+   * @return All values.
+   */
+  public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+    return Collections.unmodifiableMap(values);
   }
 
   /**

@@ -97,6 +97,23 @@ public class HTableDescriptor implements WritableComparable {
   }
 
   /**
+   * Private constructor used internally creating table descriptors for 
+   * catalog tables: e.g. .META. and -ROOT-.
+   */
+  protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
+       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
+    this.name = name.clone();
+    setMetaFlags(name);
+    for(HColumnDescriptor descriptor : families) {
+      this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
+    }
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
+        values.entrySet()) {
+      this.values.put(entry.getKey(), entry.getValue());
+    }
+  }
+
+  /**
    * Constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
    * @see #HTableDescriptor(byte[])
@@ -250,6 +267,13 @@ public class HTableDescriptor implements WritableComparable {
     if (value == null)
       return null;
     return Bytes.toString(value);
+  }
+
+  /**
+   * @return All values.
+   */
+  public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+     return Collections.unmodifiableMap(values);
   }
 
   /**

@@ -36,7 +36,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @param desc
    */
   UnmodifyableHTableDescriptor(final HTableDescriptor desc) {
-    super(desc.getName(), getUnmodifyableFamilies(desc));
+    super(desc.getName(), getUnmodifyableFamilies(desc), desc.getValues());
   }
   
   /*
