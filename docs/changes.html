@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.17.1_-_2008-06-23_' && list.id != 'release_0.17.0_-_2008-05-18_') {
+        if (list.id != 'release_0.17.2_-_2008-08-11_' && list.id != 'release_0.17.1_-_2008-06-23_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,40 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('release_0.17.2_-_2008-08-11_')">Release 0.17.2 - 2008-08-11
+</a></h2>
+<ul id="release_0.17.2_-_2008-08-11_">
+  <li><a href="javascript:toggleList('release_0.17.2_-_2008-08-11_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(12)
+    <ol id="release_0.17.2_-_2008-08-11_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3678">HADOOP-3678</a>. Avoid spurious exceptions logged at DataNode when clients
+read from DFS.<br />(rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3760">HADOOP-3760</a>. Fix a bug with HDFS file close() mistakenly introduced
+by <a href="http://issues.apache.org/jira/browse/HADOOP-3681">HADOOP-3681</a>.<br />(Lohit Vijayarenu via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3707">HADOOP-3707</a>. NameNode keeps a count of number of blocks scheduled
+to be written to a datanode and uses it to avoid allocating more
+blocks than a datanode can hold.<br />(rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3681">HADOOP-3681</a>. DFSClient can get into an infinite loop while closing
+a file if there are some errors.<br />(Lohit Vijayarenu via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3002">HADOOP-3002</a>. Hold off block removal while in safe mode.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3685">HADOOP-3685</a>. Unbalanced replication target.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3758">HADOOP-3758</a>. Shutdown datanode on version mismatch instead of retrying
+continuously, preventing excessive logging at the namenode.<br />(lohit vijayarenu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3633">HADOOP-3633</a>. Correct exception handling in DataXceiveServer, and throttle
+the number of xceiver threads in a data-node.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3370">HADOOP-3370</a>. Ensure that the TaskTracker.runningJobs data-structure is
+correctly cleaned-up on task completion.<br />(Zheng Shao via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3813">HADOOP-3813</a>. Fix task-output clean-up on HDFS to use the recursive
+FileSystem.delete rather than the FileUtil.fullyDelete.<br />(Amareshwari
+Sri Ramadasu via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3859">HADOOP-3859</a>. Allow the maximum number of xceivers in the data node to
+be configurable.<br />(Johan Oskarsson via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3931">HADOOP-3931</a>. Fix corner case in the map-side sort that causes some values
+to be counted as too large and cause pre-mature spills to disk. Some values
+will also bypass the combiner incorrectly.<br />(cdouglas via omalley)</li>
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_')">Release 0.17.1 - 2008-06-23
 </a></h2>
 <ul id="release_0.17.1_-_2008-06-23_">
@@ -63,10 +97,12 @@ default, to clear the state of the serializer between objects.<br />(tomwhite vi
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="release_0.17.1_-_2008-06-23_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3522">HADOOP-3522</a>. Improve documentation on reduce pointing out that
 input keys and values will be reused.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3487">HADOOP-3487</a>. Balancer uses thread pools for managing its threads;
+therefore provides better resource management.<br />(hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._bug_fixes_')">  BUG FIXES
@@ -92,8 +128,10 @@ Vijaya Renu via omalley)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
+</a></h3>
 <ul id="release_0.17.0_-_2008-05-18_">
   <li><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(26)
@@ -461,8 +499,6 @@ mukund)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.16.4_-_2008-05-05_')">Release 0.16.4 - 2008-05-05
 </a></h3>
 <ul id="release_0.16.4_-_2008-05-05_">

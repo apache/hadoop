@@ -1,8 +1,50 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-    <title>Hadoop 0.17.1 Release Notes</title></head>
+    <title>Hadoop 0.17.2 Release Notes</title></head>
 <body>
 <font face="sans-serif">
+    <h1>Hadoop 0.17.2 Release Notes</h1>
+The bug fixes are listed below.
+<ul><a name="changes">
+    <h2>Changes Since Hadoop 0.17.1</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3678'>HADOOP-3678</a>] - Avoid spurious exceptions logged at DataNode when clients
+    read from DFS.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3760'>HADOOP-3760</a>] - Fix a bug with HDFS file close()</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3707'>HADOOP-3707</a>] - NameNode keeps a count of number of blocks scheduled 
+    to be written to a datanode and uses it to avoid allocating more
+    blocks than a datanode can hold.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3681'>HADOOP-3681</a>] - DFSClient can get into an infinite loop while closing
+    a file if there are some errors.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3002'>HADOOP-3002</a>] - Hold off block removal while in safe mode.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3685'>HADOOP-3685</a>] - Unbalanced replication target.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3758'>HADOOP-3758</a>] - Shutdown datanode on version mismatch instead of retrying
+    continuously, preventing excessive logging at the namenode.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3633'>HADOOP-3633</a>] - Correct exception handling in DataXceiveServer, and throttle
+    the number of xceiver threads in a data-node.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3370'>HADOOP-3370</a>] - Ensure that the TaskTracker.runningJobs data-structure is
+    correctly cleaned-up on task completion.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3813'>HADOOP-3813</a>] - Fix task-output clean-up on HDFS to use the recursive 
+    FileSystem.delete rather than the FileUtil.fullyDelete.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3859'>HADOOP-3859</a>] - Allow the maximum number of xceivers in the data node to
+    be configurable.</li>
+
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3931'>HADOOP-3931</a>] - Fix corner case in the map-side sort that causes some values 
+    to be counted as too large and cause pre-mature spills to disk. Some values
+    will also bypass the combiner incorrectly.</li>
+</ul>
+</ul>
+
     <h1>Hadoop 0.17.1 Release Notes</h1>
 The bug fixes are listed below.
 <ul><a name="changes">

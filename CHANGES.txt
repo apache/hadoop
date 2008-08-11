@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.17.2 - Unreleased
+Release 0.17.2 - 2008-08-11
 
   BUG FIXES
 
