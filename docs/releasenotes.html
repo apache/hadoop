@@ -1,1 +1,612 @@
-TODO
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+    <title>Hadoop 0.18.0 Release Notes</title></head>
+<body>
+<font face="sans-serif">
+    <h1>Hadoop 0.18.0 Release Notes</h1>
+
+These release notes include new developer and user facing incompatibilities, features, and major improvements.
+The table below is sorted by Component.
+<ul><a name="changes">
+<h2>Changes Since Hadoop 0.17.2</h2>
+  <table border="1""100%" cellpadding="4">
+   <tbody><tr>
+    <td><b>Issue</b></td>
+    <td><b>Component</b></td>
+    <td><b>Notes</b></td>
+   </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3355">HADOOP-3355</a></td>
+  <td>conf</td>
+  <td>Added support for hexadecimal values in
+  Configuration</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-1702">HADOOP-1702</a></td>
+  <td>dfs</td>
+  <td>Reduced buffer copies as data is written to HDFS.
+  The order of sending data bytes and control information has changed, but this
+  will not be observed by client applications.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2065">HADOOP-2065</a></td>
+  <td>dfs</td>
+  <td>Added &quot;corrupt&quot; flag to LocatedBlock to
+  indicate that all replicas of the block thought to be corrupt.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a></td>
+  <td>dfs</td>
+  <td>Improved management of replicas of the name space
+  image. If all replicas on the Name Node are lost, the latest check point can
+  be loaded from the secondary Name Node. Use parameter
+  &quot;-importCheckpoint&quot; and specify the location with &quot;fs.checkpoint.dir.&quot;
+  The directory structure on the secondary Name Node has changed to match the
+  primary Name Node.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2656">HADOOP-2656</a></td>
+  <td>dfs</td>
+  <td>Associated a generation stamp with each block. On
+  data nodes, the generation stamp is stored as part of the file name of the
+  block's meta-data file.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a></td>
+  <td>dfs</td>
+  <td>Changed fsck to ignore files opened for writing.
+  Introduced new option &quot;-openforwrite&quot; to explicitly show open
+  files.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2797">HADOOP-2797</a></td>
+  <td>dfs</td>
+  <td>Withdrew the upgrade-to-CRC facility. HDFS will no
+  longer support upgrades from versions without CRCs for block data. Users
+  upgrading from version 0.13 or earlier must first upgrade to an intermediate
+  (0.14, 0.15, 0.16, 0.17) version before doing upgrade to version 0.18 or
+  later.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2865">HADOOP-2865</a></td>
+  <td>dfs</td>
+  <td>Changed the output of the &quot;fs -ls&quot; command
+  to more closely match familiar Linux format. Additional changes were made by
+  HADOOP-3459. Applications that parse the command output should be reviewed.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3035">HADOOP-3035</a></td>
+  <td>dfs</td>
+  <td>Changed protocol for transferring blocks between
+  data nodes to report corrupt blocks to data node for re-replication from a
+  good replica.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3113">HADOOP-3113</a></td>
+  <td>dfs</td>
+  <td>Added sync() method to FSDataOutputStream to really,
+  really persist data in HDFS. InterDatanodeProtocol to implement this feature.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3164">HADOOP-3164</a></td>
+  <td>dfs</td>
+  <td>Changed data node to use FileChannel.tranferTo() to
+  transfer block data. <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3177">HADOOP-3177</a></td>
+  <td>dfs</td>
+  <td>Added a new public interface Syncable which declares
+  the sync() operation. FSDataOutputStream implements Syncable. If the
+  wrappedStream in FSDataOutputStream is Syncalbe, calling
+  FSDataOutputStream.sync() is equivalent to call wrappedStream.sync(). Otherwise,
+  FSDataOutputStream.sync() is a no-op. Both DistributedFileSystem and
+  LocalFileSystem support the sync() operation.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3187">HADOOP-3187</a></td>
+  <td>dfs</td>
+  <td>Introduced directory quota as hard limits on the
+  number of names in the tree rooted at that directory. An administrator may
+  set quotas on individual directories explicitly. Newly created directories
+  have no associated quota. File/directory creations fault if the quota would
+  be exceeded. The attempt to set a quota faults if the directory would be in
+  violation of the new quota.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3193">HADOOP-3193</a></td>
+  <td>dfs</td>
+  <td>Added reporter to FSNamesystem stateChangeLog, and a
+  new metric to track the number of corrupted replicas.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3232">HADOOP-3232</a></td>
+  <td>dfs</td>
+  <td>Changed 'du' command to run in a seperate thread so
+  that it does not block user.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3310">HADOOP-3310</a></td>
+  <td>dfs</td>
+  <td>Implemented Lease Recovery to sync the last bock of
+  a file. Added ClientDatanodeProtocol for client trigging block recovery.
+  Changed DatanodeProtocol to support block synchronization. Changed
+  InterDatanodeProtocol to support block update.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3317">HADOOP-3317</a></td>
+  <td>dfs</td>
+  <td>Changed the default port for &quot;hdfs:&quot; URIs
+  to be 8020, so that one may simply use URIs of the form
+  &quot;hdfs://example.com/dir/file&quot;.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3329">HADOOP-3329</a></td>
+  <td>dfs</td>
+  <td>Changed format of file system image to not store
+  locations of last block.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3336">HADOOP-3336</a></td>
+  <td>dfs</td>
+  <td>Added a log4j appender that emits events from
+  FSNamesystem for audit logging</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3339">HADOOP-3339</a></td>
+  <td>dfs</td>
+  <td>Improved failure handling of last Data Node in write
+  pipeline. <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3390">HADOOP-3390</a></td>
+  <td>dfs</td>
+  <td>Removed deprecated
+  ClientProtocol.abandonFileInProgress().</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3452">HADOOP-3452</a></td>
+  <td>dfs</td>
+  <td>Changed exit status of fsck to report whether the
+  files system is healthy or corrupt.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3459">HADOOP-3459</a></td>
+  <td>dfs</td>
+  <td>Changed the output of the &quot;fs -ls&quot; command
+  to more closely match familiar Linux format. Applications that parse the
+  command output should be reviewed.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3486">HADOOP-3486</a></td>
+  <td>dfs</td>
+  <td>Changed the default value of
+  dfs.blockreport.initialDelay to be 0 seconds.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3677">HADOOP-3677</a></td>
+  <td>dfs</td>
+  <td>Simplify generation stamp upgrade by making is a
+  local upgrade on datandodes. Deleted distributed upgrade.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2188">HADOOP-2188</a></td>
+  <td>dfs <br>
+  ipc</td>
+  <td>Replaced timeouts with pings to check that client
+  connection is alive. Removed the property ipc.client.timeout from the default
+  Hadoop configuration. Removed the metric RpcOpsDiscardedOPsNum. <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3283">HADOOP-3283</a></td>
+  <td>dfs <br>
+  ipc</td>
+  <td>Added an IPC server in DataNode and a new IPC
+  protocol InterDatanodeProtocol. Added conf properties
+  dfs.datanode.ipc.address and dfs.datanode.handler.count with defaults
+  &quot;0.0.0.0:50020&quot; and 3, respectively. <br>
+  Changed the serialization in DatanodeRegistration
+  and DatanodeInfo, and therefore, updated the versionID in ClientProtocol,
+  DatanodeProtocol, NamenodeProtocol.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3058">HADOOP-3058</a></td>
+  <td>dfs <br>
+  metrics</td>
+  <td>Added FSNamesystem status metrics.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3683">HADOOP-3683</a></td>
+  <td>dfs <br>
+  metrics</td>
+  <td>Change FileListed to getNumGetListingOps and add
+  CreateFileOps, DeleteFileOps and AddBlockOps metrics.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3265">HADOOP-3265</a></td>
+  <td>fs</td>
+  <td>Removed deprecated API getFileCacheHints</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3307">HADOOP-3307</a></td>
+  <td>fs</td>
+  <td>Introduced archive feature to Hadoop. A Map/Reduce
+  job can be run to create an archive with indexes. A FileSystem abstraction is
+  provided over the archive.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-930">HADOOP-930</a></td>
+  <td>fs</td>
+  <td>Added support for reading and writing native S3
+  files. Native S3 files are referenced using s3n URIs. See
+  http://wiki.apache.org/hadoop/AmazonS3 for more details.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3095">HADOOP-3095</a></td>
+  <td>fs <br>
+  fs/s3</td>
+  <td>Added overloaded method
+  getFileBlockLocations(FileStatus, long, long). This is an incompatible change
+  for FileSystem implementations which override getFileBlockLocations(Path,
+  long, long). They should have the signature of this method changed to
+  getFileBlockLocations(FileStatus, long, long) to work correctly.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-4">HADOOP-4</a></td>
+  <td>fuse-dfs</td>
+  <td>Introduced FUSE module for HDFS. Module allows mount
+  of HDFS as a Unix filesystem, and optionally the export of that mount point
+  to other machines. Writes are disabled. rmdir, mv, mkdir, rm are supported,
+  but not cp, touch, and the like. Usage information is attached to the Jira
+  record. <br>
+  <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3184">HADOOP-3184</a></td>
+  <td>hod</td>
+  <td>Modified HOD to handle master (NameNode or
+  JobTracker) failures on bad nodes by trying to bring them up on another node
+  in the ring. Introduced new property ringmaster.max-master-failures to
+  specify the maximum number of times a master is allowed to fail.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3266">HADOOP-3266</a></td>
+  <td>hod</td>
+  <td>Moved HOD change items from CHANGES.txt to a new
+  file src/contrib/hod/CHANGES.txt.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3376">HADOOP-3376</a></td>
+  <td>hod</td>
+  <td>Modified HOD client to look for specific messages
+  related to resource limit overruns and take appropriate actions - such as
+  either failing to allocate the cluster, or issuing a warning to the user. A
+  tool is provided, specific to Maui and Torque, that will set these specific
+  messages.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3464">HADOOP-3464</a></td>
+  <td>hod</td>
+  <td>Implemented a mechanism to transfer HOD errors that
+  occur on compute nodes to the submit node running the HOD client, so users
+  have good feedback on why an allocation failed.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3483">HADOOP-3483</a></td>
+  <td>hod</td>
+  <td>Modified HOD to create a cluster directory if one
+  does not exist and to auto-deallocate a cluster while reallocating it, if it
+  is already dead.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3564">HADOOP-3564</a></td>
+  <td>hod</td>
+  <td>Modifed HOD to generate the dfs.datanode.ipc.address
+  parameter in the hadoop-site.xml of datanodes that it launches.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3610">HADOOP-3610</a></td>
+  <td>hod</td>
+  <td>Modified HOD to automatically create a cluster
+  directory if the one specified with the script command does not exist.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3703">HADOOP-3703</a></td>
+  <td>hod</td>
+  <td>Modified logcondense.py to use the new format of
+  hadoop dfs -lsr output. This version of logcondense would not work with
+  previous versions of Hadoop and hence is incompatible.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3061">HADOOP-3061</a></td>
+  <td>io</td>
+  <td>Introduced ByteWritable and DoubleWritable
+  (implementing WritableComparable) implementations for Byte and Double.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3299">HADOOP-3299</a></td>
+  <td>io <br>
+  mapred</td>
+  <td>Changed the TextInputFormat and KeyValueTextInput
+  classes to initialize the compressionCodecs member variable before
+  dereferencing it.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2909">HADOOP-2909</a></td>
+  <td>ipc</td>
+  <td>Removed property ipc.client.maxidletime from the
+  default configuration. The allowed idle time is twice
+  ipc.client.connection.maxidletime. <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3569">HADOOP-3569</a></td>
+  <td>KFS</td>
+  <td>Fixed KFS to have read() read and return 1 byte
+  instead of 4.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-1915">HADOOP-1915</a></td>
+  <td>mapred</td>
+  <td>Provided a new method to update counters.
+  &quot;incrCounter(String group, String counter, long amount)&quot;</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2019">HADOOP-2019</a></td>
+  <td>mapred</td>
+  <td>Added support for .tar, .tgz and .tar.gz files in
+  DistributedCache. File sizes are limited to 2GB.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2095">HADOOP-2095</a></td>
+  <td>mapred</td>
+  <td>Reduced in-memory copies of keys and values as they
+  flow through the Map-Reduce framework. Changed the storage of intermediate
+  map outputs to use new IFile instead of SequenceFile for better compression.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2132">HADOOP-2132</a></td>
+  <td>mapred</td>
+  <td>Changed &quot;job -kill&quot; to only allow a job
+  that is in the RUNNING or PREP state to be killed.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2181">HADOOP-2181</a></td>
+  <td>mapred</td>
+  <td>Added logging for input splits in job tracker log
+  and job history log. Added web UI for viewing input splits in the job UI and
+  history UI.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-236">HADOOP-236</a></td>
+  <td>mapred</td>
+  <td>Changed connection protocol job tracker and task
+  tracker so that task tracker will not connect to a job tracker with a
+  different build version.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2427">HADOOP-2427</a></td>
+  <td>mapred</td>
+  <td>The current working directory of a task, i.e.
+  ${mapred.local.dir}/taskTracker/jobcache/&lt;jobid&gt;/&lt;task_dir&gt;/work
+  is cleanedup, as soon as the task is finished.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-2867">HADOOP-2867</a></td>
+  <td>mapred</td>
+  <td>Added task's cwd to its LD_LIBRARY_PATH.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3135">HADOOP-3135</a></td>
+  <td>mapred</td>
+  <td>Changed job submission protocol to not allow
+  submission if the client's value of mapred.system.dir does not match the job
+  tracker's. Deprecated JobConf.getSystemDir(); use JobClient.getSystemDir().</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3221">HADOOP-3221</a></td>
+  <td>mapred</td>
+  <td>Added org.apache.hadoop.mapred.lib.NLineInputFormat,
+  which splits N lines of input as one split. N can be specified by
+  configuration property &quot;mapred.line.input.format.linespermap&quot;,
+  which defaults to 1.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3226">HADOOP-3226</a></td>
+  <td>mapred</td>
+  <td>Changed policy for running combiner. The combiner
+  may be run multiple times as the map's output is sorted and merged.
+  Additionally, it may be run on the reduce side as data is merged. The old
+  semantics are available in Hadoop 0.18 if the user calls: <br>
+  job.setCombineOnlyOnce(true); <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3326">HADOOP-3326</a></td>
+  <td>mapred</td>
+  <td>Changed fetchOutputs() so that LocalFSMerger and
+  InMemFSMergeThread threads are spawned only once. The thread gets notified
+  when something is ready for merge. The merge happens when thresholds are met.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3366">HADOOP-3366</a></td>
+  <td>mapred</td>
+  <td>Improved shuffle so that all fetched map-outputs are
+  kept in-memory before being merged by stalling the shuffle so that the
+  in-memory merge executes and frees up memory for the shuffle.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3405">HADOOP-3405</a></td>
+  <td>mapred</td>
+  <td>Refactored previously public classes MapTaskStatus,
+  ReduceTaskStatus, JobSubmissionProtocol, CompletedJobStatusStore to be
+  package local.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3417">HADOOP-3417</a></td>
+  <td>mapred</td>
+  <td>Removed the public class
+  org.apache.hadoop.mapred.JobShell. <br>
+  Command line options -libjars, -files and -archives are moved to
+  GenericCommands. Thus applications have to implement
+  org.apache.hadoop.util.Tool to use the options.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3427">HADOOP-3427</a></td>
+  <td>mapred</td>
+  <td>Changed shuffle scheduler policy to wait for
+  notifications from shuffle threads before scheduling more.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3460">HADOOP-3460</a></td>
+  <td>mapred</td>
+  <td>Created SequenceFileAsBinaryOutputFormat to write
+  raw bytes as keys and values to a SequenceFile.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3512">HADOOP-3512</a></td>
+  <td>mapred</td>
+  <td>Separated Distcp, Logalyzer and Archiver into a
+  tools jar.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3565">HADOOP-3565</a></td>
+  <td>mapred</td>
+  <td>Change the Java serialization framework, which is
+  not enabled by default, to correctly make the objects independent of the
+  previous objects.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3598">HADOOP-3598</a></td>
+  <td>mapred</td>
+  <td>Changed Map-Reduce framework to no longer create
+  temporary task output directories for staging outputs if staging outputs
+  isn't necessary. ${mapred.out.dir}/_temporary/_${taskid}</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-544">HADOOP-544</a></td>
+  <td>mapred</td>
+  <td>Introduced new classes JobID, TaskID and
+  TaskAttemptID, which should be used instead of their string counterparts.
+  Deprecated functions in JobClient, TaskReport, RunningJob, jobcontrol.Job and
+  TaskCompletionEvent that use string arguments. Applications can use
+  xxxID.toString() and xxxID.forName() methods to convert/restore objects
+  to/from strings. <br>
+  </td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3230">HADOOP-3230</a></td>
+  <td>scripts</td>
+  <td>Added command line tool &quot;job -counter
+  &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;&quot; to access
+  counters.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-1328">HADOOP-1328</a></td>
+  <td>streaming</td>
+  <td>Introduced a way for a streaming process to update
+  global counters and status using stderr stream to emit information. Use
+  &quot;reporter:counter:&lt;group&gt;,&lt;counter&gt;,&lt;amount&gt; &quot; to
+  update a counter. Use &quot;reporter:status:&lt;message&gt;&quot; to update
+  status.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3429">HADOOP-3429</a></td>
+  <td>streaming</td>
+  <td>Increased the size of the buffer used in the
+  communication between the Java task and the Streaming process to 128KB.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3379">HADOOP-3379</a></td>
+  <td>streaming <br>
+  documentation</td>
+  <td>Set default value for configuration property
+  &quot;stream.non.zero.exit.status.is.failure&quot; to be &quot;true&quot;.</td>
+ </tr>
+ <tr>
+  <td><a
+  href="https://issues.apache.org/jira/browse/HADOOP-3246">HADOOP-3246</a></td>
+  <td>util</td>
+  <td>Introduced an FTPFileSystem backed by Apache Commons
+  FTPClient to directly store data into HDFS.</td>
+ </tr>
+</tbody></table>
+</ul>
+</body>
+</html>
+
