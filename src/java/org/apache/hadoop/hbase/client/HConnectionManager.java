@@ -371,61 +371,42 @@ public class HConnectionManager implements HConstants {
       return rowsScanned > 0 && result;
     }
     
+    private class HTableDescriptorFinder 
+    implements MetaScanner.MetaScannerVisitor {
+        byte[] tableName;
+        HTableDescriptor result;
+        public HTableDescriptorFinder(byte[] tableName) {
+          this.tableName = tableName;
+        }
+        public boolean processRow(RowResult rowResult) throws IOException {
+          HRegionInfo info = Writables.getHRegionInfo(
+            rowResult.get(HConstants.COL_REGIONINFO));
+          HTableDescriptor desc = info.getTableDesc();
+          if (Bytes.compareTo(desc.getName(), tableName) == 0) {
+            result = desc;
+            return false;
+          }
+          return true;
+        }
+        HTableDescriptor getResult() {
+          return result;
+        }
+    }
+
     /** {@inheritDoc} */
-    public HTableDescriptor getHTableDescriptor(byte[] tableName)
+    public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
       }
-      if (!tableExists(tableName)) {
-        throw new TableNotFoundException(Bytes.toString(tableName));
+      if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+        return new UnmodifyableHTableDescriptor(HTableDescriptor.META_TABLEDESC);
       }
-      byte[] startKey =
-        HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES);
-      
-      HTableDescriptor result = null;
-      HRegionInfo currentRegion = null;
-      ScannerCallable s = null;
-      while (result == null) {
-        if (currentRegion != null) {
-          byte[] endKey = currentRegion.getEndKey();
-          if (endKey == null ||
-              Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)) {
-            // We have reached the end of the table and we're done
-            break;
-          }
-        }
-        HRegionInfo oldRegion = currentRegion;
-        if (oldRegion != null) {
-          startKey = oldRegion.getEndKey();
-        }
-        s = new ScannerCallable(this, 
-            (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
-                HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME),
-            HConstants.COL_REGIONINFO_ARRAY, startKey,
-            HConstants.LATEST_TIMESTAMP, null
-        );
-        // Open scanner
-        getRegionServerWithRetries(s);
-        currentRegion = s.getHRegionInfo();
-        try {
-          RowResult r = null;
-          while ((r = getRegionServerWithRetries(s)) != null) {
-            Cell c = r.get(HConstants.COL_REGIONINFO);
-            if (c != null) {
-              HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
-              if (info != null) {
-                if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-                  result = new UnmodifyableHTableDescriptor(info.getTableDesc());
-                  break;
-                }
-              }
-            }
-          }
-        } finally {
-          s.setClose();
-          getRegionServerWithRetries(s);
-        }
+      HTableDescriptorFinder finder = new HTableDescriptorFinder(tableName);
+      MetaScanner.metaScan(conf, finder);
+      HTableDescriptor result = finder.getResult();
+      if (result == null) {
+        throw new TableNotFoundException(Bytes.toString(tableName));
       }
       return result;
     }

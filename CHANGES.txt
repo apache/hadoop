@@ -7,6 +7,8 @@ Release 0.3.0 - Unreleased
    HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
                Jim Kellerman) (Fix whitespace diffs in HRegionServer)
    HBASE-811   HTD is not fully copyable (Andrew Purtell via Jim Kellerman)
+   HBASE-729   Client region/metadata cache should have a public method for
+               invalidating entries (Andrew Purtell via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

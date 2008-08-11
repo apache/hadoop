@@ -150,36 +150,25 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       // enable the table
       admin.enableTable(tableAname);
 
-      // Use a metascanner to avoid client API caching (HConnection has a
-      // metadata cache)
-      MetaScanner.MetaScannerVisitor visitor =
-        new MetaScanner.MetaScannerVisitor() {
-          public boolean processRow(RowResult rowResult) throws IOException {
-            HRegionInfo info = Writables.getHRegionInfo(
-                rowResult.get(HConstants.COL_REGIONINFO));
+      // test that attribute changes were applied
+      desc = a.getTableDescriptor();
+      if (Bytes.compareTo(desc.getName(), tableAname) != 0)
+        fail("wrong table descriptor returned");
+      // check HTD attribute
+      value = desc.getValue(attrName);
+      if (value == null)
+        fail("missing HTD attribute value");
+      if (Bytes.compareTo(value, attrValue) != 0)
+        fail("HTD attribute value is incorrect");
+      // check HCD attribute
+      for (HColumnDescriptor c: desc.getFamilies()) {
+        value = c.getValue(attrName);
+        if (value == null)
+          fail("missing HCD attribute value");
+        if (Bytes.compareTo(value, attrValue) != 0)
+          fail("HCD attribute value is incorrect");
+      }
 
-            LOG.info("visiting " + info.toString());
-            HTableDescriptor desc = info.getTableDesc();
-            if (Bytes.compareTo(desc.getName(), tableAname) == 0) {
-              // check HTD attribute
-              byte[] value = desc.getValue(attrName);
-              if (value == null)
-                fail("missing HTD attribute value");
-              if (Bytes.compareTo(value, attrValue) != 0)
-                fail("HTD attribute value is incorrect");
-              // check HCD attribute
-              for (HColumnDescriptor c: desc.getFamilies()) {
-                value = c.getValue(attrName);
-                if (value == null)
-                  fail("missing HCD attribute value");
-                if (Bytes.compareTo(value, attrValue) != 0)
-                  fail("HCD attribute value is incorrect");
-              }
-            }
-            return true;
-          }
-        };
-        MetaScanner.metaScan(conf, visitor);
     } catch (Exception e) {
       e.printStackTrace();
       fail();
