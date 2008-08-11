@@ -10,6 +10,7 @@ Release 0.3.0 - Unreleased
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
               friendly" way.
+   HBASE-816  TableMap should survive USE (Andrew Purtell via Stack)
 
   NEW FEATURES
   OPTIMIZATIONS
