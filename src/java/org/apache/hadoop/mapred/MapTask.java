@@ -435,7 +435,7 @@ class MapTask extends Task {
       try {
         int keystart = bufindex;
         keySerializer.serialize(key);
-        if (bufindex < keystart || bufindex == bufvoid) {
+        if (bufindex < keystart) {
           // wrapped the key; reset required
           bb.reset();
           keystart = 0;
