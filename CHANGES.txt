@@ -1088,6 +1088,10 @@ Release 0.17.2 - Unreleased
     HADOOP-3859. Allow the maximum number of xceivers in the data node to
     be configurable. (Johan Oskarsson via omalley)
 
+    HADOOP-3931. Fix corner case in the map-side sort that causes some values 
+    to be counted as too large and cause pre-mature spills to disk. Some values
+    will also bypass the combiner incorrectly. (cdouglas via omalley)
+
 Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
