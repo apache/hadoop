@@ -23,6 +23,8 @@ Release 0.3.0 - Unreleased
               friendly" way.
    HBASE-816  TableMap should survive USE (Andrew Purtell via Stack)
    HBASE-812  Compaction needs little better skip algo (Daniel Leffel via Stack)
+   HBASE-806  Change HbaseMapWritable and RowResult to implement SortedMap
+              instead of Map (Jonathan Gray via Stack)
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
