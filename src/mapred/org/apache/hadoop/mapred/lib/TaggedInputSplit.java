@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapred.lib;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -25,13 +25,16 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * An {@link InputSplit} that tags another InputSplit with extra data for use by
  * {@link DelegatingInputFormat}s and {@link DelegatingMapper}s.
  */
-public class TaggedInputSplit implements Configurable, InputSplit {
+class TaggedInputSplit implements Configurable, InputSplit {
 
   private Class<? extends InputSplit> inputSplitClass;
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapred.lib;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,20 +27,27 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * An {@link InputFormat} that delegates behaviour of paths to multiple other
  * InputFormats.
  * 
- * @see FileInputFormat#addInputPath(JobConf, Path, Class, Class)
+ * @see MultipleInputs#addInputPath(JobConf, Path, Class, Class)
  */
 public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
 
   @Deprecated
   public void validateInput(JobConf conf) throws IOException {
     JobConf confCopy = new JobConf(conf);
-    Map<Path, InputFormat> formatMap = FileInputFormat.getInputFormatMap(conf);
+    Map<Path, InputFormat> formatMap = MultipleInputs.getInputFormatMap(conf);
     for (Entry<Path, InputFormat> entry : formatMap.entrySet()) {
       Path path = entry.getKey();
       InputFormat format = entry.getValue();
@@ -53,8 +60,8 @@ public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
 
     JobConf confCopy = new JobConf(conf);
     List<InputSplit> splits = new ArrayList<InputSplit>();
-    Map<Path, InputFormat> formatMap = FileInputFormat.getInputFormatMap(conf);
-    Map<Path, Class<? extends Mapper>> mapperMap = FileInputFormat
+    Map<Path, InputFormat> formatMap = MultipleInputs.getInputFormatMap(conf);
+    Map<Path, Class<? extends Mapper>> mapperMap = MultipleInputs
        .getMapperTypeMap(conf);
     Map<Class<? extends InputFormat>, List<Path>> formatPaths
         = new HashMap<Class<? extends InputFormat>, List<Path>>();

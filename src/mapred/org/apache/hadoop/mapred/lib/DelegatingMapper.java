@@ -16,17 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapred.lib;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * An {@link Mapper} that delegates behaviour of paths to multiple other
  * mappers.
  * 
- * @see FileInputFormat#addInputPath(JobConf, Path, Class, Class)
+ * @see MultipleInputs#addInputPath(JobConf, Path, Class, Class)
  */
 public class DelegatingMapper<K1, V1, K2, V2> implements Mapper<K1, V1, K2, V2> {
 

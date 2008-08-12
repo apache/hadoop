@@ -15,16 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapred.lib;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import junit.framework.TestCase;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.KeyValueTextInputFormat;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
 
 public class TestDelegatingInputFormat extends TestCase {
 
@@ -46,13 +53,13 @@ public class TestDelegatingInputFormat extends TestCase {
 
       final int numSplits = 100;
 
-      FileInputFormat.addInputPath(conf, path, TextInputFormat.class,
+      MultipleInputs.addInputPath(conf, path, TextInputFormat.class,
          MapClass.class);
-      FileInputFormat.addInputPath(conf, path2, TextInputFormat.class,
+      MultipleInputs.addInputPath(conf, path2, TextInputFormat.class,
          MapClass2.class);
-      FileInputFormat.addInputPath(conf, path3, KeyValueTextInputFormat.class,
+      MultipleInputs.addInputPath(conf, path3, KeyValueTextInputFormat.class,
          MapClass.class);
-      FileInputFormat.addInputPath(conf, path4, TextInputFormat.class,
+      MultipleInputs.addInputPath(conf, path4, TextInputFormat.class,
          MapClass2.class);
       DelegatingInputFormat inFormat = new DelegatingInputFormat();
       InputSplit[] splits = inFormat.getSplits(conf, numSplits);

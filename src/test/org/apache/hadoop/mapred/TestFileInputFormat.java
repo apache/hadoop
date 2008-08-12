@@ -18,8 +18,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.BlockLocation;
@@ -84,53 +82,6 @@ public class TestFileInputFormat extends TestCase {
         dfs.shutdown();
       }
     }
-  }
-  
-  public void testAddInputPathWithFormat() {
-    final JobConf conf = new JobConf();
-    FileInputFormat.addInputPath(conf, new Path("/foo"), TextInputFormat.class);
-    FileInputFormat.addInputPath(conf, new Path("/bar"),
-        KeyValueTextInputFormat.class);
-    final Map<Path, InputFormat> inputs = FileInputFormat
-       .getInputFormatMap(conf);
-    assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
-    assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
-  }
-
-  public void testAddInputPathWithMapper() {
-    final JobConf conf = new JobConf();
-    FileInputFormat.addInputPath(conf, new Path("/foo"), TextInputFormat.class,
-       MapClass.class);
-    FileInputFormat.addInputPath(conf, new Path("/bar"),
-       KeyValueTextInputFormat.class, MapClass2.class);
-    final Map<Path, InputFormat> inputs = FileInputFormat
-       .getInputFormatMap(conf);
-    final Map<Path, Class<? extends Mapper>> maps = FileInputFormat
-       .getMapperTypeMap(conf);
-
-    assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
-    assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
-    assertEquals(MapClass.class, maps.get(new Path("/foo")));
-    assertEquals(MapClass2.class, maps.get(new Path("/bar")));
-  }
-
-  static class MapClass implements Mapper<String, String, String, String> {
-
-    public void map(String key, String value,
-       OutputCollector<String, String> output, Reporter reporter)
-       throws IOException {
-    }
-
-    public void configure(JobConf job) {
-    }
-
-    public void close() throws IOException {
-    }
-  }
-
-  static class MapClass2 extends MapClass {
   }
 
 }
