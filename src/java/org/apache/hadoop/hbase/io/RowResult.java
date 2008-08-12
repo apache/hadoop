@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -37,7 +39,7 @@ import org.apache.hadoop.io.Writable;
 /**
  * Holds row name and then a map of columns to cells.
  */
-public class RowResult implements Writable, Map<byte [], Cell> {
+public class RowResult implements Writable, SortedMap<byte [], Cell> {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
@@ -135,6 +137,31 @@ public class RowResult implements Writable, Map<byte [], Cell> {
    */
   public Cell get(String key) {
     return get(Bytes.toBytes(key));
+  }
+  
+
+  public Comparator<? super byte[]> comparator() {
+    return this.cells.comparator();
+  }
+
+  public byte[] firstKey() {
+    return this.cells.firstKey();
+  }
+
+  public SortedMap<byte[], Cell> headMap(byte[] toKey) {
+    return this.cells.headMap(toKey);
+  }
+
+  public byte[] lastKey() {
+    return this.cells.lastKey();
+  }
+
+  public SortedMap<byte[], Cell> subMap(byte[] fromKey, byte[] toKey) {
+    return this.cells.subMap(fromKey, toKey);
+  }
+
+  public SortedMap<byte[], Cell> tailMap(byte[] fromKey) {
+    return this.cells.tailMap(fromKey);
   }
 
   /**

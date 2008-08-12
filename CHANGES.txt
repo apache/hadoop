@@ -25,6 +25,8 @@ Release 0.3.0 - Unreleased
    HBASE-812  Compaction needs little better skip algo (Daniel Leffel via Stack)
 
   NEW FEATURES
+   HBASE-787  Postgresql to HBase table replication example
+
   OPTIMIZATIONS
 
 Release 0.2.0 - August 8, 2008.

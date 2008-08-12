@@ -23,9 +23,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,7 +49,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * only.
  */
 public class HbaseMapWritable <K, V>
-implements Map<byte [], V>, Writable, Configurable {
+implements SortedMap<byte [], V>, Writable, Configurable {
   private AtomicReference<Configuration> conf =
     new AtomicReference<Configuration>();
   
@@ -74,7 +76,7 @@ implements Map<byte [], V>, Writable, Configurable {
     CODE_TO_CLASS.put(code, clazz);
   }
   
-  private Map<byte [], V> instance =
+  private SortedMap<byte [], V> instance =
     new TreeMap<byte [], V>(Bytes.BYTES_COMPARATOR);
 
   /** @return the conf */
@@ -131,6 +133,42 @@ implements Map<byte [], V>, Writable, Configurable {
   public Collection<V> values() {
     return instance.values();
   }
+
+  public void putAll(Map<? extends byte [], ? extends V> m) {
+    this.instance.putAll(m);
+  }
+
+  public V remove(Object key) {
+    return this.instance.remove(key);
+  }
+
+  public V put(byte [] key, V value) {
+    return this.instance.put(key, value);
+  }
+
+  public Comparator<? super byte[]> comparator() {
+    return this.instance.comparator();
+  }
+
+  public byte[] firstKey() {
+    return this.instance.firstKey();
+  }
+
+  public SortedMap<byte[], V> headMap(byte[] toKey) {
+    return this.instance.headMap(toKey);
+  }
+
+  public byte[] lastKey() {
+    return this.instance.lastKey();
+  }
+
+  public SortedMap<byte[], V> subMap(byte[] fromKey, byte[] toKey) {
+    return this.instance.subMap(fromKey, toKey);
+  }
+
+  public SortedMap<byte[], V> tailMap(byte[] fromKey) {
+    return this.instance.tailMap(fromKey);
+  }
   
   // Writable
 
@@ -186,17 +224,5 @@ implements Map<byte [], V>, Writable, Configurable {
       V v = (V)value;
       this.instance.put(key, v);
     }
-  }
-
-  public void putAll(Map<? extends byte [], ? extends V> m) {
-    this.instance.putAll(m);
-  }
-
-  public V remove(Object key) {
-    return this.instance.remove(key);
-  }
-
-  public V put(byte [] key, V value) {
-    return this.instance.put(key, value);
   }
 }
