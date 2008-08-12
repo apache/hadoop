@@ -1,0 +1,96 @@
+WHAT CHUKWA IS
+
+Chukwa is a data collection system being built to monitor and analyze large
+distributed systems. Chukwa is built on top of Hadoop, an open source 
+Map-Reduce and distributed filesystem implementation, and inherits Hadoop's
+scalability and robustness. Chukwa also includes a flexible and powerful
+toolkit for displaying monitoring and analysis results, in order to make the
+best use of this collected data.
+
+Chukwa is currently in early stages of implementation. It runs, but documentation
+is still sketchy, and many rough edges remain.
+
+Chukwa is being developed as an open source project by Yahoo!, inc.
+The Chukwa development team consists of: Jerome Boulon, Andy Konwinski, Runping Qi,
+Ari Rabkin, Eric Yang, and Mac Yang.
+  
+Questions should be addressed to Mac Yang: macyang@yahoo-inc.com
+
+
+RUNNING CHUKWA -- LOCAL QUICKSTART
+
+
+The Chukwa monitoring system has a number of components.   
+This section gives guidance on starting each of them on your local machine. 
+
+You should start the collector first, then the agent, and finally any adaptors.
+
+*  Compiling and installing Chukwa
+
+   - If Chukwa is in the hadoop contrib directory, you should be able to just
+     say ``ant'' in the project root directory.
+   
+   - Otherwise, 
+
+*  Configuring and starting the Collector
+
+   - Copy conf/chukwa-collector-conf.xml.template to conf/chukwa-collector-conf.xml
+      
+   - Edit the writer.hdfs.filesystem property to point to a real filesystem.
+   
+   - If you are running hadoop, this should be the path to the namenode.
+   
+   - If you are not running hadoop, you can just juse a local path, of the form
+    file:///tmp/chukwa.
+    
+   - Copy conf/chukwa-env.sh-template to conf/chukwa-env.sh.  Set JAVA_HOME in file.
+    
+   - In the chukwa root directory, say ``bash bin/jettyCollector.sh''
+
+*  Configuring and starting the Local Agent
+ 
+  - Copy conf/chukwa-agent-conf.xml.template to conf/chukwa-agent-conf.xml
+  
+  - Copy conf/collectors.template to conf/collectors
+
+  - In the chukwa root directory, say ``bash bin/agent.sh''
+
+*  Starting Adaptors
+  The local agent speaks a simple text-based protocol, by default over port 9093.
+Suppose you want Chukwa to start tailing a file /path/to/file of type MyFileType 
+on localhost:
+
+  - Telnet to localhost 9093
+  
+  - Type [without quotation marks] "ADD CharFileTailerUTF8 MyFileType /path/to/file 0"
+
+  - Chukwa internal Namenode's type is NameNodeType so for namenode log
+  Type [without quotation marks] "ADD CharFileTailerUTF8 NameNodeType /path/to/nameNodeFie 0"
+  
+  - Type "list" -- you should see the adaptor you just started, listed as running. 
+  
+  - Type  "close" to break the connection.
+  
+  If you don't have telnet, you can get the same effect with netcat (``nc''). 
+    
+*  Configuring and starting the demux job
+
+  - Edit bin/chukwa-config.sh to match your system configuration
+  
+  - In the chukwa root directory, say ``bash bin/processSinkFiles.sh'' 
+  
+*  Configuring and starting HICC
+
+  - Download Apache Tomcat from http://tomcat.apache.org/download-60.cgi
+  
+  - Configure CHUKWA_HOME environment variable pointing to the Chukwa home directory.
+
+  - Copy hicc.war into Apache Tomcat webapps directory.
+
+  - Startup Tomcat.
+
+RUNNING CHUKWA -- NETWORKED
+
+Running Chukwa in a networked context is essentially similar to the single-machine
+deployment discussed above.  However, in a network context, you would also need to
+tell the local agent where the collector[s] live, by listing them in conf/collectors.

@@ -78,6 +78,10 @@ Trunk (unreleased changes)
     HADOOP-657. Free disk space should be modelled and used by the scheduler
     to make scheduling decisions. (Ari Rabkin via omalley)
 
+    HADOOP-3719. Initial checkin of Chukwa, which is a data collection and 
+    analysis framework. (Jerome Boulon, Andy Konwinski, Ari Rabkin, 
+    and Eric Yang)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

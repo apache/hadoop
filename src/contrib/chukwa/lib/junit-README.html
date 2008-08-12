@@ -1,0 +1,570 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+   <meta name="Author" content="Erich Gamma, Kent Beck, and David Saff">
+   <title>JUnit 4.5</title>
+</head>
+<body>
+
+<h1>
+<b><font color="#00CC00">J</font><font color="#FF0000">U</font><font color="#000000">nit
+4.5</b></h1> 
+<br>Brought to you by <a href="http://www.threeriversinstitute.org">Kent Beck</a>, Erich 
+Gamma, and <a href="http://david.saff.net">David Saff</a>. 
+<br>FAQ edited by <a href="http://www.clarkware.com">Mike Clark</a>. Web mastering by Erik 
+Meade.
+<br>(see also <a href="http://www.junit.org">JUnit.org</a>)
+
+<hr WIDTH="100%">
+<br>8 August 2008
+<p>JUnit is a simple framework to write repeatable tests. It is an instance
+of the xUnit architecture for unit testing frameworks.
+<ul>
+<li>
+<a href="#Summary of">Summary of Changes</a></li>
+
+<li>
+<a href="#Contents">Contents</a></li>
+
+<li>
+<a href="#Installation">Installation</a></li>
+
+<li>
+<a href="#Getting">Getting Started</a></li>
+
+<li>
+<a href="#Documentation">Documentation</a></li>
+<li>
+<a href="#Known Defects">Known Defects</a></li>
+</ul>
+
+<a NAME="Summary of">
+<h2>Summary of Changes in version 4.5</h2>
+
+<h3>Installation</h3>
+
+<ul>
+<li>We are releasing <code>junit-4.5.jar</code>, which contains all the classes
+necessary to run JUnit, and <code>junit-dep-4.5.jar</code>, which leaves out
+hamcrest classes, for developers who already use hamcrest outside of
+JUnit.</li>
+</ul>
+
+<h3>Basic JUnit operation</h3>
+
+<ul>
+<li><p>JUnitCore now more often exits with the correct exit code (0 for
+success, 1 for failure)</p></li>
+<li><p>Badly formed test classes (exceptions in constructors, classes
+without tests, multiple constructors, Suite without @SuiteClasses)
+produce more helpful error messages</p></li>
+<li><p>Test classes whose only test methods are inherited from superclasses
+now run.</p></li>
+<li><p>Optimization to annotation processing can cut JUnit overhead by more than half
+on large test classes, especially when using Theories.  [Bug 1796847]</p></li>
+<li><p>A failing assumption in a constructor ignores the class</p></li>
+<li><p>Correct results when comparing the string "null" with potentially
+null values.  [Bug 1857283]</p></li>
+<li><p>Annotating a class with <code>@RunWith(JUnit4.class)</code> will always invoke the
+default JUnit 4 runner in the current version of JUnit.  This default changed
+from <code>JUnit4ClassRunner</code> in 4.4 to <code>BlockJUnit4ClassRunner</code> in 4.5 (see below),
+and may change again.</p></li>
+</ul>
+
+<h3>Extension</h3>
+
+<ul>
+<li><p><code>BlockJUnit4Runner</code> is a new implementation of the standard JUnit 4
+test class functionality.  In contrast to <code>JUnit4ClassRunner</code> (the old
+implementation):</p>
+
+<ul>
+<li><p><code>BlockJUnit4Runner</code> has a much simpler implementation based on
+Statements, allowing new operations to be inserted into the
+appropriate point in the execution flow.</p></li>
+<li><p><code>BlockJUnit4Runner</code> is published, and extension and reuse are
+encouraged, whereas <code>JUnit4ClassRunner</code> was in an internal package,
+and is now deprecated.</p></li>
+</ul></li>
+<li><p><code>ParentRunner</code> is a base class for runners that iterate over
+a list of "children", each an object representing a test or suite to run.
+<code>ParentRunner</code> provides filtering, sorting, <code>@BeforeClass</code>, <code>@AfterClass</code>,
+and method validation to subclasses.</p></li>
+<li><p><code>TestClass</code> wraps a class to be run, providing efficient, repeated access
+to all methods with a given annotation.</p></li>
+<li><p>The new <code>RunnerBuilder</code> API allows extending the behavior of
+Suite-like custom runners.</p></li>
+<li><p><code>AssumptionViolatedException.toString()</code> is more informative</p></li>
+</ul>
+
+<h3>Extra Runners</h3>
+
+<ul>
+<li><p><code>Parameterized.eachOne()</code> has been removed</p></li>
+<li><p>New runner <code>Enclosed</code> runs all static inner classes of an outer class.</p></li>
+</ul>
+
+<h3>Theories</h3>
+
+<ul>
+<li><p><code>@Before</code> and <code>@After</code> methods are run before and after each set of attempted parameters
+on a Theory, and each set of parameters is run on a new instance of the test class.</p></li>
+<li><p>Exposed API's <code>ParameterSignature.getType()</code> and <code>ParameterSignature.getAnnotations()</code></p></li>
+<li><p>An array of data points can be introduced by a field or method
+marked with the new annotation <code>@DataPoints</code></p></li>
+<li><p>The Theories custom runner has been refactored to make it faster and
+easier to extend</p></li>
+</ul>
+
+<h3>Development</h3>
+
+<ul>
+<li><p>Source has been split into directories <code>src/main/java</code> and
+<code>src/test/java</code>, making it easier to exclude tests from builds, and
+making JUnit more maven-friendly</p></li>
+<li><p>Test classes in <code>org.junit.tests</code> have been organized into
+subpackages, hopefully making finding tests easier.</p></li>
+<li><p><code>ResultMatchers</code> has more informative descriptions.</p></li>
+<li><p><code>TestSystem</code> allows testing return codes and other system-level interactions.</p></li>
+</ul>
+
+<h2>Summary of Changes in version 4.4</h2>
+
+<p>JUnit is designed to efficiently capture developers' intentions about
+their code, and quickly check their code matches those intentions.
+Over the last year, we've been talking about what things developers
+would like to say about their code that have been difficult in the
+past, and how we can make them easier.</p>
+
+<h3>assertThat</h3>
+
+<p>Two years ago, Joe Walnes built a <a href="http://joe.truemesh.com/blog/000511.html">new assertion mechanism</a> on top of what was 
+then <a href="http://www.jmock.org/download.html">JMock 1</a>.  The method name was <code>assertThat</code>, and the syntax looked like this:</p>
+
+<pre><code>assertThat(x, is(3));
+assertThat(x, is(not(4)));
+assertThat(responseString, either(containsString("color")).or(containsString("colour")));
+assertThat(myList, hasItem("3"));
+</code></pre>
+
+<p>More generally:</p>
+
+<pre><code>assertThat([value], [matcher statement]);
+</code></pre>
+
+<p>Advantages of this assertion syntax include:</p>
+
+<ul>
+<li><p>More readable and typeable: this syntax allows you to think in terms of subject, verb, object
+(assert "x is 3") rathern than <code>assertEquals</code>, which uses verb, object, subject (assert "equals 3 x")</p></li>
+<li><p>Combinations: any matcher statement <code>s</code> can be negated (<code>not(s)</code>), combined (<code>either(s).or(t)</code>),
+mapped to a collection (<code>each(s)</code>), or used in custom combinations (<code>afterFiveSeconds(s)</code>)</p></li>
+<li><p>Readable failure messages.  Compare</p>
+
+<pre><code>assertTrue(responseString.contains("color") || responseString.contains("colour"));
+// ==&gt; failure message: 
+// java.lang.AssertionError:
+
+
+assertThat(responseString, anyOf(containsString("color"), containsString("colour")));
+// ==&gt; failure message:
+// java.lang.AssertionError: 
+// Expected: (a string containing "color" or a string containing "colour")
+//      got: "Please choose a font"
+</code></pre></li>
+<li><p>Custom Matchers.  By implementing the <code>Matcher</code> interface yourself, you can get all of the
+above benefits for your own custom assertions.</p></li>
+<li><p>For a more thorough description of these points, see <a href="http://joe.truemesh.com/blog/000511.html">Joe Walnes's
+original post</a>.:</p></li>
+</ul>
+
+<p>We have decided to include this API directly in JUnit.
+It's an extensible and readable syntax, and because it enables
+new features, like <a href="#assumptions">assumptions</a> and <a href="#theories">theories</a>.</p>
+
+<p>Some notes:</p>
+
+<ul>
+<li>The old assert methods are never, ever, going away. <br />
+Developers may continue using the old <code>assertEquals</code>, <code>assertTrue</code>, and
+so on.</li>
+<li><p>The second parameter of an <code>assertThat</code> statement is a <code>Matcher</code>.
+We include the Matchers we want as static imports, like this:</p>
+
+<pre><code>import static org.hamcrest.CoreMatchers.is;
+</code></pre>
+
+<p>or:</p>
+
+<pre><code>import static org.hamcrest.CoreMatchers.*;
+</code></pre></li>
+<li><p>Manually importing <code>Matcher</code> methods can be frustrating.  [Eclipse
+3.3][] includes the ability to 
+define
+"Favorite" classes to import static methods from, which makes it easier 
+(Search for "Favorites" in the Preferences dialog).
+We expect that support for static imports will improve in all Java IDEs in the future.</p></li>
+<li><p>To allow compatibility with a wide variety of possible matchers, 
+we have decided to include the classes from hamcrest-core,
+from the <a href="http://code.google.com/p/hamcrest/">Hamcrest</a> project.  This is the first time that
+third-party classes have been included in JUnit.  </p></li>
+<li><p>To allow developers to maintain full control of the classpath contents, the JUnit distribution also provides an unbundled junit-dep jar,
+ie without hamcrest-core classes included.  This is intended for situations when using other libraries that also depend on hamcrest-core, to
+avoid classloading conflicts or issues.  Developers using junit-dep should ensure a compatible version of hamcrest-core jar (ie 1.1+) is present in the classpath.</p></li>
+<li><p>JUnit currently ships with a few matchers, defined in 
+<code>org.hamcrest.CoreMatchers</code> and <code>org.junit.matchers.JUnitMatchers</code>. <br />
+To use many, many more, consider downloading the <a href="http://hamcrest.googlecode.com/files/hamcrest-all-1.1.jar">full hamcrest package</a>.</p></li>
+<li><p>JUnit contains special support for comparing string and array
+values, giving specific information on how they differ.  This is not
+yet available using the <code>assertThat</code> syntax, but we hope to bring
+the two assert methods into closer alignment in future releases.</p></li>
+</ul>
+
+<h3>assumeThat</h3>
+
+<p><a name="assumptions" />
+Ideally, the developer writing a test has control of all of the forces that might cause a test to fail.
+If this isn't immediately possible, making dependencies explicit can often improve a design. <br />
+For example, if a test fails when run in a different locale than the developer intended,
+it can be fixed by explicitly passing a locale to the domain code.</p>
+
+<p>However, sometimes this is not desirable or possible. <br />
+It's good to be able to run a test against the code as it is currently written, 
+implicit assumptions and all, or to write a test that exposes a known bug.
+For these situations, JUnit now includes the ability to express "assumptions":</p>
+
+<pre><code>import static org.junit.Assume.*
+
+@Test public void filenameIncludesUsername() {
+   assumeThat(File.separatorChar, is('/'));
+   assertThat(new User("optimus").configFileName(), is("configfiles/optimus.cfg"));
+}
+
+@Test public void correctBehaviorWhenFilenameIsNull() {
+   assumeTrue(bugFixed("13356"));  // bugFixed is not included in JUnit
+   assertThat(parse(null), is(new NullDocument()));
+}
+</code></pre>
+
+<p>With this beta release, a failed assumption will lead to the test being marked as passing,
+regardless of what the code below the assumption may assert.
+In the future, this may change, and a failed assumption may lead to the test being ignored:
+however, third-party runners do not currently allow this option.</p>
+
+<p>We have included <code>assumeTrue</code> for convenience, but thanks to the
+inclusion of Hamcrest, we do not need to create <code>assumeEquals</code>,
+<code>assumeSame</code>, and other analogues to the <code>assert*</code> methods.  All of
+those functionalities are subsumed in assumeThat, with the appropriate
+matcher.</p>
+
+<p>A failing assumption in a <code>@Before</code> or <code>@BeforeClass</code> method will have the same effect
+as a failing assumption in each <code>@Test</code> method of the class.</p>
+
+<h3>Theories</h3>
+
+<p><a name="theories" />
+More flexible and expressive assertions, combined with the ability to
+state assumptions clearly, lead to a new kind of statement of intent, 
+which we call a "Theory".  A test captures the intended behavior in
+one particular scenario.  A theory allows a developer to be
+as precise as desired about the behavior of the code in possibly
+infinite numbers of possible scenarios.  For example:</p>
+
+<pre><code>@RunWith(Theories.class)
+public class UserTest {
+  @DataPoint public static String GOOD_USERNAME = "optimus";
+  @DataPoint public static String USERNAME_WITH_SLASH = "optimus/prime";
+
+  @Theory public void filenameIncludesUsername(String username) {
+    assumeThat(username, not(containsString("/")));
+    assertThat(new User(username).configFileName(), containsString(username));
+  }
+}
+</code></pre>
+
+<p>This makes it clear that the user's filename should be included in the
+config file name, only if it doesn't contain a slash.  Another test
+or theory might define what happens when a username does contain a slash.</p>
+
+<p><code>UserTest</code> will attempt to run <code>filenameIncludesUsername</code> on 
+every compatible <code>DataPoint</code> defined in the class.  If any of the
+assumptions fail, the data point is silently ignored.  If all of the
+assumptions pass, but an assertion fails, the test fails.</p>
+
+<p>The support for Theories has been absorbed from the <a href="http://popper.tigris.org">Popper</a>
+project, and <a href="http://popper.tigris.org/tutorial.html">more complete documentation</a> can be found
+there.</p>
+
+<p>Defining general statements in this way can jog the developer's memory
+about other potential data points and tests, also allows <a href="http://www.junitfactory.org">automated
+tools</a> to <a href="http://shareandenjoy.saff.net/2007/04/popper-and-junitfactory.html">search</a> for new, unexpected data
+points that expose bugs.</p>
+
+<h3>Other changes</h3>
+
+<p>This release contains other bug fixes and new features.  Among them:</p>
+
+<ul>
+<li><p>Annotated descriptions</p>
+
+<p>Runner UIs, Filters, and Sorters operate on Descriptions of test
+methods and test classes.  These Descriptions now include the
+annotations on the original Java source element, allowing for richer
+display of test results, and easier development of annotation-based
+filters.</p></li>
+<li><p>Bug fix (1715326): assertEquals now compares all Numbers using their
+native implementation of <code>equals</code>.  This assertion, which passed in
+4.3, will now fail:</p>
+
+<p>assertEquals(new Integer(1), new Long(1));</p>
+
+<p>Non-integer Numbers (Floats, Doubles, BigDecimals, etc),
+which were compared incorrectly in 4.3, are now fixed.</p></li>
+<li><p><code>assertEquals(long, long)</code> and <code>assertEquals(double, double)</code> have
+been re-introduced to the <code>Assert</code> class, to take advantage of
+Java's native widening conversions.  Therefore, this still passes:</p>
+
+<p>assertEquals(1, 1L);</p></li>
+<li><p>The default runner for JUnit 4 test classes has been refactored.
+The old version was named <code>TestClassRunner</code>, and the new is named
+<code>JUnit4ClassRunner</code>.  Likewise, <code>OldTestClassRunner</code> is now
+<code>JUnit3ClassRunner</code>.  The new design allows variations in running
+individual test classes to be expressed with fewer custom classes.
+For a good example, see the source to
+<code>org.junit.experimental.theories.Theories</code>.</p></li>
+<li><p>The rules for determining which runner is applied by default to a
+test class have been simplified:</p>
+
+<ol>
+<li><p>If the class has a <code>@RunWith</code> annotation, the annotated runner
+class is used.</p></li>
+<li><p>If the class can be run with the JUnit 3 test runner (it
+subclasses <code>TestCase</code>, or contains a <code>public static Test suite()</code>
+method), JUnit38ClassRunner is used.</p></li>
+<li><p>Otherwise, JUnit4ClassRunner is used.</p></li>
+</ol>
+
+<p>This default guess can always be overridden by an explicit
+<code>@RunWith(JUnit4ClassRunner.class)</code> or
+<code>@RunWith(JUnit38ClassRunner.class)</code> annotation.</p>
+
+<p>The old class names <code>TestClassRunner</code> and <code>OldTestClassRunner</code>
+remain as deprecated.</p></li>
+<li><p>Bug fix (1739095): Filters and Sorters work correctly on test
+classes that contain a <code>suite</code> method like:</p>
+
+<p>public static junit.framework.Test suite() {
+  return new JUnit4TestAdapter(MyTest.class);
+}</p></li>
+<li><p>Bug fix (1745048): @After methods are now correctly called 
+after a test method times out.</p></li>
+</ul>
+
+<h2>
+<a NAME="Summary of"></a>Summary of Changes in version 4.3.1</h2>
+<p>
+<ul>
+<li>Bug fix: 4.3 introduced a 
+<a href="https://sourceforge.net/tracker/?func=detail&atid=115278&aid=1684562&group_id=15278">bug</a>
+that caused a NullPointerException
+when comparing a null reference to a non-null reference in <tt>assertEquals</tt>.
+This has been fixed.
+<li>Bug fix: The binary jar for 4.3 <a href="https://sourceforge.net/tracker/?func=detail&atid=115278&aid=1686931&group_id=15278">accidentally</a> included the tests and sample code,
+which are now removed for a smaller download, but, as always, available from the
+full zip.
+</ul>
+</p>
+
+<h2>
+<a NAME="Summary of"></a>Summary of Changes with version 4.3</h2>
+<p>
+<ul>
+<li>Changes in array equality.  Using <tt>assertEquals</tt> to compare array contents is now deprecated.
+In the future, <tt>assertEquals</tt> will revert to its pre-4.0 meaning of comparing objects based on
+Java's <tt>Object.equals</tt> semantics.  To compare array contents, use the new, more reliable 
+<tt>Assert.assertArrayEquals</tt> methods.
+<li>The <tt>@Ignore</tt> annotation can now be applied to classes, to ignore the entire class, instead of
+individual methods.
+<li>Originally, developers who wanted to use a static <tt>suite()</tt> method from JUnit 3.x with a JUnit 4.x
+runner had to annotate the class with <tt>@RunWith(AllTests.class)</tt>.  In the common case, this requirement
+has been removed.  However, when such a class is wrapped with a JUnit4TestAdapter (which we believe is rare), the
+results may not be as expected.
+<li>Improved error messages for array comparison("arrays first differed at element [1][0]")
+<li>Bug fix: Inaccessible base class is caught at test construction time.
+<li>Bug fix: Circular suites are caught at test construction time.
+<li>Bug fix: Test constructors that throw exceptions are reported correctly.
+<li><b>For committers and extenders</b>
+<ul>
+<li>Sources now are in a separate "src" directory (this means a big break in the CVS history)
+<li>Improved documentation in <tt>Request</tt>, <tt>RunWith</tt>
+</ul>
+</ul>
+</p>
+
+<h2>
+<a NAME="Summary of"></a>Summary of Changes with version 4.2</h2>
+<p>
+<ul>
+<li>Bug fix: Inaccessible base class is caught at test construction time.
+<li>Bug fix: Circular suites are caught at test construction time.
+<li>Improved error messages for array comparison("arrays first differed at element [1][0]")
+<li>Test constructors that throw exceptions are reported correctly.
+</ul>
+</p>
+
+
+<h2>
+<a NAME="Summary of"></a>Summary of Changes with version 4.1</h2>
+<p>
+<ul>
+<li>Bug fix: listeners now get a correct test running time, rather than always being told 0 secs.
+<li>The @RunWith annotation is now inherited by subclasses: 
+all subclasses of an abstract test class will be run by the same runner.
+<li>The build script fails if the JUnit unit tests fail
+<li>The faq has been updated
+<li>Javadoc has been improved, with more internal links, and package descriptions added (Thanks, Matthias Schmidt!)
+<li>An acknowledgements.txt file has been created to credit outside contributions
+<li>The <tt>Enclosed</tt> runner, which runs all of the static inner classes of a given class, has been added
+to <tt>org.junit.runners</tt>.
+</ul>
+</p>
+
+<h2>Summary of Changes with version 4.0</h2>
+<p>
+The architecture of JUnit 4.0 is a substantial departure from that of earlier releases. 
+Instead of 
+tagging test classes by subclassing junit.framework.TestCase and tagging test methods by 
+starting their name with "test", you now tag test methods with the @Test annotation.
+</p>
+
+
+<h2>
+<a NAME="Contents"></a>Contents of the Release</h2>
+
+<table CELLSPACING=0 CELLPADDING=0 >
+<tr>
+<td><tt>README.html&nbsp;</tt></td>
+
+<td>this file</td>
+</tr>
+
+<tr>
+<td><tt>junit-4.5.jar</tt></td>
+
+<td>a jar file with the JUnit framework, bundled with the hamcrest-core-1.1 dependency.</td>
+</tr>
+
+<tr>
+<td><tt>junit-dep-4.5.jar</tt></td>
+
+<td>a jar file with the JUnit framework, unbundled from any external dependencies.  
+Choosing to use this jar developers will need to also provide in the classpath a compatible version of external dependencies (ie hamcrest-core-1.1+)</td>
+</tr>
+
+<tr>
+<td><tt>junit-4.5-src.jar</tt></td>
+
+<td>a jar file with the source code of the JUnit framework</td>
+</tr>
+
+<tr>
+<td><tt>org/junit</tt></td>
+
+<td>the source code of the basic JUnit annotations and classes</td>
+</tr>
+
+<tr>
+<td><tt>&nbsp;&nbsp;&nbsp; samples</tt></td>
+
+<td>sample test cases</td>
+</tr>
+
+<tr>
+<td><tt>&nbsp;&nbsp;&nbsp; tests</tt></td>
+
+<td>test cases for JUnit itself</td>
+</tr>
+
+<tr>
+<td><tt>javadoc</tt></td>
+
+<td>javadoc generated documentation</td>
+</tr>
+
+<tr>
+<td><tt>doc</tt></td>
+
+<td>documentation and articles</td>
+</tr>
+</table>
+
+<h2>
+<a NAME="Installation"></a>Installation</h2>
+Below are the installation steps for installing JUnit:
+<ol>
+<li>
+unzip the junit4.5.zip file</li>
+
+<li>
+add<i> </i><b>junit-4.5.jar</b> to the CLASSPATH. For example: 
+<tt> set classpath=%classpath%;INSTALL_DIR\junit-4.5.jar;INSTALL_DIR</tt></li>
+
+<li>
+test the installation by running <tt>java org.junit.runner.JUnitCore org.junit.tests.AllTests.</tt></li>
+
+<br><b><font color="#FF0000">Notice</font></b>: that the tests are not
+contained in the junit-4.5.jar but in the installation directory directly.
+Therefore make sure that the installation directory is on the class path
+</ol>
+<b><font color="#FF0000">Important</font></b>: don't install junit-4.5.jar
+into the extension directory of your JDK installation. If you do so the
+test class on the files system will not be found.
+<h2>
+<a NAME="Getting"></a>Getting Started</h2>
+To get started with unit testing and JUnit read the article:
+<a href="doc/cookbook/cookbook.htm">JUnit Cookbook</a>.
+<br>This article describes basic test writing using JUnit 4.
+<p>You find additional samples in the org.junit.samples package:
+<ul>
+<li>
+SimpleTest.java - some simple test cases</li>
+
+<li>
+VectorTest.java - test cases for java.util.Vector</li>
+</ul>
+
+<h2>
+<a NAME="Documentation"></a>Documentation</h2>
+
+<blockquote><a href="doc/cookbook/cookbook.htm">JUnit Cookbook</a>
+<br>&nbsp;&nbsp;&nbsp; A cookbook for implementing tests with JUnit.
+<br><a href="javadoc/index.html">Javadoc</a>
+<br>&nbsp;&nbsp;&nbsp; API documentation generated with javadoc.
+<br><a href="doc/faq/faq.htm">Frequently asked questions</a>
+<br>&nbsp;&nbsp;&nbsp; Some frequently asked questions about using JUnit.
+<br><a href="cpl-v10.html">License</a>
+<br>&nbsp;&nbsp;&nbsp; The terms of the common public license used for JUnit.<br>
+</blockquote>
+The following documents still describe JUnit 3.8.
+<blockquote>
+<br><a href="doc/testinfected/testing.htm">Test Infected - Programmers
+Love Writing Tests</a>
+<br>&nbsp;&nbsp;&nbsp; An article demonstrating the development process
+with JUnit.
+<br><a href="doc/cookstour/cookstour.htm">JUnit - A cooks tour</a>
+</blockquote>
+
+<h2><a NAME="Known Defects"></a>Known Defects</h2>
+<ul>
+<li>Multi-dimensional arrays are not processed correctly by assertEquals.</li>
+</ul>
+
+<hr WIDTH="100%">
+<!--webbot bot="HTMLMarkup" startspan --><a href="http://sourceforge.net"><IMG
+                  src="http://sourceforge.net/sflogo.php?group_id=15278"
+                  width="88" height="31" border="0" alt="SourceForge Logo"></a><!--webbot
+bot="HTMLMarkup" endspan -->
+</body>
+</html>
