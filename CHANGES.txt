@@ -166,6 +166,9 @@ Trunk (unreleased changes)
     HADOOP-3202. Use recursive delete rather than FileUtil.fullyDelete.
     (Amareshwari Sriramadasu via omalley)
 
+    HADOOP-3368. Remove common-logging.properties from conf. (Steve Loughran 
+    via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
