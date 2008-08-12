@@ -143,9 +143,9 @@
   </property>
   <property>
     <name>hbase.regionserver.lease.period</name>
-    <value>30000</value>
+    <value>60000</value>
     <description>HRegion server lease period in milliseconds. Default is
-    30 seconds. Clients must report in within this period else they are
+    60 seconds. Clients must report in within this period else they are
     considered dead.</description>
   </property>
   <property>
@@ -280,15 +280,6 @@
     <description>The size of each block in any block caches.
     </description>
   </property>
-
-  <!-- HbaseShell Configurations -->
-  <property>
- 	<name>hbaseshell.jline.bell.enabled</name>
-  	<value>true</value>
-  	<description>
-  		if true, enable audible keyboard bells if an alert is required.
-  	</description>
-  </property>  
   <property>
     <name>hbase.regionserver.globalMemcacheLimit</name>
     <value>536870912</value>

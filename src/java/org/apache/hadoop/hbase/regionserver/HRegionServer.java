@@ -263,7 +263,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       conf.getInt("hbase.regionserver.numregionstoreport", 10);      
       
     this.leases = new Leases(
-      conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
+      conf.getInt("hbase.regionserver.lease.period", 60 * 1000),
       this.threadWakeFrequency);
     
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
