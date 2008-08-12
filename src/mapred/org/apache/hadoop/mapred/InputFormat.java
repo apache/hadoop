@@ -64,21 +64,6 @@ import org.apache.hadoop.fs.FileSystem;
  */
 public interface InputFormat<K, V> {
 
-  /**
-   * Check for validity of the input-specification for the job. 
-   * 
-   * <p>This method is used to validate the input directories when a job is 
-   * submitted so that the {@link JobClient} can fail early, with an useful 
-   * error message, in case of errors. For e.g. input directory does not exist.
-   * </p>
-   * 
-   * @param job job configuration.
-   * @throws InvalidInputException if the job does not have valid input
-   * @deprecated getSplits is called in the client and can perform any
-   * necessary validation of the input 
-   */
-  void validateInput(JobConf job) throws IOException;
-  
   /** 
    * Logically split the set of input files for the job.  
    * 

@@ -143,33 +143,6 @@ public class TestDatanodeDeath extends TestCase {
     stm.write(buffer, mid, fileSize - mid);
   }
 
-
-  // wait till this block is confirmed by the datanodes. 
-  private void waitBlockConfirmation(FileSystem fileSys, Path name, 
-                                     int repl, int blockNumber) 
-                                     throws IOException {
-    boolean done = false;
-    long start = blockSize * blockNumber;
-    long end = blockSize * (blockNumber + 1) -1;
-
-    while (!done) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {}
-      done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(name, start, 
-                                                                end);
-      if (locations.length < 1) {
-        done = false;
-        continue;
-      }
-      if (locations[0].getHosts().length < repl) {
-        done = false;
-        continue;
-      }
-    }
-  }
-
   /**
    * For blocks that reside on the nodes that are down, verify that their
    * replication factor is 1 more than the specified one.
@@ -224,8 +197,8 @@ public class TestDatanodeDeath extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                                filesize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(
+          fileSys.getFileStatus(name), 0, filesize);
 
       if (locations.length < numblocks) {
         if (attempt > 100) {

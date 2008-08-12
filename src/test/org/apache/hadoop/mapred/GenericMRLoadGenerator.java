@@ -192,8 +192,6 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
 
   static class RandomInputFormat implements InputFormat {
 
-    public void validateInput(JobConf conf) { }
-
     public InputSplit[] getSplits(JobConf conf, int numSplits) {
       InputSplit[] splits = new InputSplit[numSplits];
       for (int i = 0; i < numSplits; ++i) {
@@ -376,12 +374,6 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
    * reading input from arbitrary locations (&quot;indirect&quot; reads).
    */
   static class IndirectInputFormat implements InputFormat {
-    public void validateInput(JobConf job) throws IOException {
-      InputFormat indirIF = (InputFormat)ReflectionUtils.newInstance(
-          job.getClass("mapred.indirect.input.format",
-            SequenceFileInputFormat.class), job);
-      indirIF.validateInput(job);
-    }
 
     static class IndirectSplit implements InputSplit {
       Path file;

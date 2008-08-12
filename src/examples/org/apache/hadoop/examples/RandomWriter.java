@@ -94,10 +94,6 @@ public class RandomWriter extends Configured implements Tool {
    * for each map.
    */
   static class RandomInputFormat implements InputFormat<Text, Text> {
-    
-    /** Accept all job confs */
-    public void validateInput(JobConf job) throws IOException {
-    }
 
     /** 
      * Generate the requested number of file splits, with the filename

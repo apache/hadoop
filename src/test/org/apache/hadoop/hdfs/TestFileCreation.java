@@ -105,8 +105,8 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                                fileSize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(
+          fileSys.getFileStatus(name), 0, fileSize);
       if (locations.length < numBlocks) {
         done = false;
         continue;

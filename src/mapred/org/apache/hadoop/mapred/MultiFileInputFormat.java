@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -41,7 +42,7 @@ public abstract class MultiFileInputFormat<K, V>
   public InputSplit[] getSplits(JobConf job, int numSplits) 
     throws IOException {
     
-    Path[] paths = listPaths(job);
+    Path[] paths = FileUtil.stat2Paths(listStatus(job));
     List<MultiFileSplit> splits = new ArrayList<MultiFileSplit>(Math.min(numSplits, paths.length));
     if (paths.length != 0) {
       // HADOOP-1818: Manage splits only if there are paths

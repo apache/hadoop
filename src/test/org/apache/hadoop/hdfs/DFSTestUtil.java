@@ -206,8 +206,8 @@ public class DFSTestUtil extends TestCase {
     boolean good;
     do {
       good = true;
-      BlockLocation locs[] = fs.getFileBlockLocations(fileName, 0,
-                                                      Long.MAX_VALUE);
+      BlockLocation locs[] = fs.getFileBlockLocations(
+        fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
       for (int j = 0; j < locs.length; j++) {
         String[] loc = locs[j].getHosts();
         if (loc.length != replFactor) {

@@ -203,9 +203,6 @@ public class TestMiniMRLocalFS extends TestCase {
       }
     }
     
-    public void validateInput(JobConf job) throws IOException {
-    }
-    
     public InputSplit[] getSplits(JobConf job, 
                                   int numSplits) throws IOException {
       return new MySplit[]{new MySplit(0, 1), new MySplit(1, 3),

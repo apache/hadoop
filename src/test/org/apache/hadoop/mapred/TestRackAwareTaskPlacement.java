@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.BytesWritable;
@@ -175,27 +176,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
     writer.append(new BytesWritable(), new BytesWritable());
     writer.close();
     fileSys.setReplication(name, replication);
-    waitForReplication(fileSys, namenode, name, replication);
-  }
-  static void waitForReplication(FileSystem fileSys, NameNode namenode, 
-      Path name, short replication) throws IOException {
-    //wait for the replication to happen
-    boolean isReplicationDone;
-    
-    do {
-      BlockLocation[] hints = fileSys.getFileBlockLocations(name, 0, 
-                                                            Long.MAX_VALUE);
-      if (hints[0].getHosts().length == replication) {
-        isReplicationDone = true;
-      } else {
-        isReplicationDone = false;  
-      }
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException ie) {
-        return;
-      }
-    } while(!isReplicationDone);
+    DFSTestUtil.waitReplication(fileSys, name, replication);
   }
 
   static RunningJob launchJob(JobConf jobConf, Path inDir, Path outputPath, 

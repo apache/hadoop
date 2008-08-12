@@ -340,14 +340,6 @@ public class TestDatamerge extends TestCase {
 
   }
 
-  public void testConfiguredInputFormat() throws Exception {
-    JobConf conf = new JobConf();
-    conf.set("mapred.join.expr", CompositeInputFormat.compose(
-          ConfigurableInputFormat.class, "/dingos"));
-    CompositeInputFormat cif = new CompositeInputFormat();
-    cif.validateInput(conf);
-  }
-
   public void testEmptyJoin() throws Exception {
     JobConf job = new JobConf();
     Path base = cluster.getFileSystem().makeQualified(new Path("/empty"));

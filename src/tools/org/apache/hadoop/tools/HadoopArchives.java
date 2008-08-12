@@ -144,7 +144,6 @@ public class HadoopArchives implements Tool {
    */
 
   static class HArchiveInputFormat implements InputFormat<LongWritable, Text> {
-    public void validateInput(JobConf jconf) throws IOException{};
 
     //generate input splits from the src file lists
     public InputSplit[] getSplits(JobConf jconf, int numSplits)

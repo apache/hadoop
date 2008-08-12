@@ -37,6 +37,9 @@ Trunk (unreleased changes)
     HADOOP-3792. Make FsShell -test consistent with unix semantics, returning
     zero for true and non-zero for false. (Ben Slusky via cdouglas)
 
+    HADOOP-3664. Remove the deprecated method InputFormat.validateInput,
+    which is no longer needed. (tomwhite via omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

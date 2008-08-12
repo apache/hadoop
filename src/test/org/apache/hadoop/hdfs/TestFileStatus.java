@@ -58,21 +58,7 @@ public class TestFileStatus extends TestCase {
 
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
-    boolean done = false;
-    while (!done) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {}
-      done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                                fileSize);
-      for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].getHosts().length < repl) {
-          done = false;
-          break;
-        }
-      }
-    }
+    DFSTestUtil.waitReplication(fileSys, name, (short) repl);
   }
 
 

@@ -63,8 +63,6 @@ public class FakeIF<K,V>
 
   public FakeIF() { }
 
-  public void validateInput(JobConf conf) { }
-
   public InputSplit[] getSplits(JobConf conf, int splits) {
     return new InputSplit[] { new FakeSplit() };
   }

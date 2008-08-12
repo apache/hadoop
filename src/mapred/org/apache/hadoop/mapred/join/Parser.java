@@ -296,10 +296,6 @@ public class Parser {
       return conf;
     }
 
-    public void validateInput(JobConf job) throws IOException {
-      inf.validateInput(getConf(job));
-    }
-
     public InputSplit[] getSplits(JobConf job, int numSplits)
         throws IOException {
       return inf.getSplits(getConf(job), numSplits);
@@ -352,15 +348,6 @@ public class Parser {
       super.setKeyComparator(cmpcl);
       for (Node n : kids) {
         n.setKeyComparator(cmpcl);
-      }
-    }
-
-    public void validateInput(JobConf job) throws IOException {
-      if (0 == kids.size()) {
-        throw new IOException("Childless composite");
-      }
-      for (Node n : kids) {
-        n.validateInput(job);
       }
     }
 

@@ -66,10 +66,6 @@ public abstract class StreamBaseRecordReader implements RecordReader<Text, Text>
    */
   public abstract boolean next(Text key, Text value) throws IOException;
 
-  /** This implementation always returns true. */
-  public void validateInput(JobConf job) throws IOException {
-  }
-
   /** Returns the current position in the input. */
   public synchronized long getPos() throws IOException {
     return in_.getPos();

@@ -732,18 +732,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     configureCommandLineOptions(job, submitJobDir, submitJarFile);
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     
-    
-    // Check the input specification 
-    InputFormat inFormat = job.getInputFormat();
-    inFormat.validateInput(job);
-
     // Check the output specification
     job.getOutputFormat().checkOutputSpecs(fs, job);
 
     // Create the splits for the job
     LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
     InputSplit[] splits = 
-      inFormat.getSplits(job, job.getNumMapTasks());
+      job.getInputFormat().getSplits(job, job.getNumMapTasks());
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(splits, new Comparator<InputSplit>() {

@@ -44,18 +44,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
 
-  @Deprecated
-  public void validateInput(JobConf conf) throws IOException {
-    JobConf confCopy = new JobConf(conf);
-    Map<Path, InputFormat> formatMap = MultipleInputs.getInputFormatMap(conf);
-    for (Entry<Path, InputFormat> entry : formatMap.entrySet()) {
-      Path path = entry.getKey();
-      InputFormat format = entry.getValue();
-      FileInputFormat.setInputPaths(confCopy, path);
-      format.validateInput(confCopy);
-    }
-  }
-
   public InputSplit[] getSplits(JobConf conf, int numSplits) throws IOException {
 
     JobConf confCopy = new JobConf(conf);

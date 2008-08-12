@@ -105,7 +105,8 @@ public class KFSEmulationImpl implements IFSImpl {
     }
     public String[][] getDataLocation(String path, long start, long len) throws IOException {
         BlockLocation[] blkLocations = 
-          localFS.getFileBlockLocations(new Path(path), start, len);
+          localFS.getFileBlockLocations(localFS.getFileStatus(new Path(path)),
+              start, len);
           if ((blkLocations == null) || (blkLocations.length == 0)) {
             return new String[0][];     
           }

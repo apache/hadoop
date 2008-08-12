@@ -89,27 +89,13 @@ public class TestDecommission extends TestCase {
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
-    boolean done = false;
-    while (!done) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {}
-      done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                                fileSize);
-      for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].getHosts().length < repl) {
-          done = false;
-          break;
-        }
-      }
-    }
+    DFSTestUtil.waitReplication(fileSys, name, (short) repl);
   }
 
   private void printFileLocations(FileSystem fileSys, Path name)
   throws IOException {
-    BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                              fileSize);
+    BlockLocation[] locations = fileSys.getFileBlockLocations(
+        fileSys.getFileStatus(name), 0, fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
       String[] loc = locations[idx].getHosts();
       System.out.print("Block[" + idx + "] : ");

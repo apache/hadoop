@@ -206,11 +206,6 @@ public class DistCp implements Tool {
   static class CopyInputFormat implements InputFormat<Text, Text> {
 
     /**
-     * Does nothing.
-     */
-    public void validateInput(JobConf job) throws IOException { }
-
-    /**
      * Produce splits such that each is no greater than the quotient of the
      * total size and the number of splits requested.
      * @param job The handle to the JobConf object

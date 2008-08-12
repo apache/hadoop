@@ -60,7 +60,6 @@ public class WordCountInputFormat
     }
     return result.toArray(new InputSplit[result.size()]);
   }
-  public void validateInput(JobConf conf) { }
   public RecordReader<IntWritable, Text> getRecordReader(InputSplit split,
                                                          JobConf conf, 
                                                          Reporter reporter) {

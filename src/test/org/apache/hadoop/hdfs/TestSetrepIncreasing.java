@@ -56,8 +56,9 @@ public class TestSetrepIncreasing extends TestCase {
 
       //get fs again since the old one may be closed
       fs = cluster.getFileSystem();
-      long len = fs.getFileStatus(f).getLen();
-      for(BlockLocation locations : fs.getFileBlockLocations(f, 0, len)) {
+      FileStatus file = fs.getFileStatus(f);
+      long len = file.getLen();
+      for(BlockLocation locations : fs.getFileBlockLocations(file, 0, len)) {
         assertTrue(locations.getHosts().length == toREP);
       }
       TestDFSShell.show("done setrep waiting: " + root);

@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import junit.framework.TestCase;
+
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -35,10 +37,6 @@ public class TestFileInputFormatPathFilter extends TestCase {
     public RecordReader getRecordReader(InputSplit split, JobConf job,
                                         Reporter reporter) throws IOException {
       return null;
-    }
-
-    public Path[] listPaths(JobConf job) throws IOException {
-      return super.listPaths(job);
     }
 
   }
@@ -110,10 +108,9 @@ public class TestFileInputFormatPathFilter extends TestCase {
 
     DummyFileInputFormat inputFormat =
         (DummyFileInputFormat) conf.getInputFormat();
-    Path[] listPaths = inputFormat.listPaths(conf);
     Set<Path> computedFiles = new HashSet<Path>();
-    for (Path path : listPaths) {
-      computedFiles.add(path);
+    for (FileStatus file : inputFormat.listStatus(conf)) {
+      computedFiles.add(file.getPath());
     }
 
     createdFiles.remove(localFs.makeQualified(new Path(workDir, "_hello")));

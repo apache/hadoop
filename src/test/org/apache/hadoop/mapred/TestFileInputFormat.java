@@ -19,12 +19,13 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import junit.framework.TestCase;
+
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 public class TestFileInputFormat extends TestCase {
 
@@ -54,8 +55,9 @@ public class TestFileInputFormat extends TestCase {
       TextInputFormat inFormat = new TextInputFormat();
       inFormat.configure(conf);
       InputSplit[] splits = inFormat.getSplits(conf, 1);
+      FileStatus fileStatus = fs.getFileStatus(path);
       BlockLocation[] locations = 
-        fs.getFileBlockLocations(path, 0, fs.getFileStatus(path).getLen());
+        fs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
       System.out.println("Made splits");
 
       // make sure that each split is a block and the locations match

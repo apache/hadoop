@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
@@ -31,15 +32,19 @@ public class SequenceFileInputFormat<K, V> extends FileInputFormat<K, V> {
   public SequenceFileInputFormat() {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);
   }
-
-  protected Path[] listPaths(JobConf job)
-    throws IOException {
-
-    Path[] files = super.listPaths(job);
+  
+  @Override
+  protected FileStatus[] listStatus(JobConf job) throws IOException {
+    FileStatus[] files = super.listStatus(job);
     for (int i = 0; i < files.length; i++) {
-      Path file = files[i];
-      if (file.getFileSystem(job).isDirectory(file)) {     // it's a MapFile
-        files[i] = new Path(file, MapFile.DATA_FILE_NAME); // use the data file
+      FileStatus file = files[i];
+      if (file.isDir()) {     // it's a MapFile
+        files[i] = new FileStatus(file.getLen(), file.isDir(), 
+            file.getReplication(), file.getBlockSize(),
+            file.getModificationTime(), file.getPermission(),
+            file.getOwner(), file.getGroup(),
+            // use the data file
+            new Path(file.getPath(), MapFile.DATA_FILE_NAME));
       }
     }
     return files;

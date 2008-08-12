@@ -60,8 +60,8 @@ public class TestSmallBlock extends TestCase {
   }
   
   private void checkFile(FileSystem fileSys, Path name) throws IOException {
-    BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
-                                                              fileSize);
+    BlockLocation[] locations = fileSys.getFileBlockLocations(
+        fileSys.getFileStatus(name), 0, fileSize);
     assertEquals("Number of blocks", fileSize, locations.length);
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[fileSize];

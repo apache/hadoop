@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.FileSystem;
   */
 public class EmptyInputFormat<K, V> implements InputFormat<K, V> {
 
-  public void validateInput(JobConf job) { }
-
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     return new InputSplit[0];
   }

@@ -173,9 +173,6 @@ public class TeraGen extends Configured implements Tool {
       return splits;
     }
 
-    public void validateInput(JobConf job) throws IOException {
-      // NOTHING
-    }
   }
   
   static long getNumberOfRows(JobConf job) {

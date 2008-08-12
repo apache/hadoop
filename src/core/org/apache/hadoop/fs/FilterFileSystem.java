@@ -87,21 +87,6 @@ public class FilterFileSystem extends FileSystem {
     fs.checkPath(path);
   }
 
-  /**
-   * Return an array containing hostnames, offset and size of 
-   * portions of the given file.  For a nonexistent 
-   * file or regions, null will be returned.
-   *
-   * This call is most helpful with DFS, where it returns 
-   * hostnames of machines that contain the given file.
-   *
-   * The FileSystem will simply return an elt containing 'localhost'.
-   */
-  public BlockLocation[] getFileBlockLocations(Path f, long start,  
-    long len) throws IOException {
-      return fs.getFileBlockLocations(f, start, len);
-  }
-
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
     long len) throws IOException {
       return fs.getFileBlockLocations(file, start, len);

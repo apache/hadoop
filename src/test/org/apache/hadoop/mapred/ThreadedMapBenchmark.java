@@ -72,9 +72,6 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
    */
   public static class RandomInputFormat implements InputFormat<Text, Text> {
     
-    public void validateInput(JobConf job) throws IOException {
-    }
-
     public InputSplit[] getSplits(JobConf job, 
                                   int numSplits) throws IOException {
       InputSplit[] result = new InputSplit[numSplits];

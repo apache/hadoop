@@ -108,15 +108,6 @@ public class CompositeInputFormat<K extends WritableComparable>
   }
 
   /**
-   * Verify that this composite has children and that all its children
-   * can validate their input.
-   */
-  public void validateInput(JobConf job) throws IOException {
-    setFormat(job);
-    root.validateInput(job);
-  }
-
-  /**
    * Build a CompositeInputSplit from the child InputFormats by assigning the
    * ith split from each child to the ith composite split.
    */

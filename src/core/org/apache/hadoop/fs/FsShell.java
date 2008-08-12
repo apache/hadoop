@@ -470,10 +470,11 @@ public class FsShell extends Configured implements Tool {
       System.out.flush();
 
       boolean printWarning = false;
-      long len = fs.getFileStatus(f).getLen();
+      FileStatus status = fs.getFileStatus(f);
+      long len = status.getLen();
 
       for(boolean done = false; !done; ) {
-        BlockLocation[] locations = fs.getFileBlockLocations(f, 0, len);
+        BlockLocation[] locations = fs.getFileBlockLocations(status, 0, len);
         int i = 0;
         for(; i < locations.length && 
           locations[i].getHosts().length == rep; i++)

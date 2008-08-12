@@ -66,7 +66,6 @@ public class SleepJob extends Configured implements Tool,
 
   public static class SleepInputFormat extends Configured
       implements InputFormat<IntWritable,IntWritable> {
-    public void validateInput(JobConf conf) { }
     public InputSplit[] getSplits(JobConf conf, int numSplits) {
       InputSplit[] ret = new InputSplit[numSplits];
       for (int i = 0; i < numSplits; ++i) {
