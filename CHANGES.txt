@@ -178,6 +178,9 @@ Trunk (unreleased changes)
     HADOOP-3852. Add ShellCommandExecutor.toString method to make nicer
     error messages. (Steve Loughran via omalley)
 
+    HADOOP-3844. Include message of local exception in RPC client failures.
+    (Steve Loughran via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

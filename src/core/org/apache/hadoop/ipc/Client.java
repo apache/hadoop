@@ -708,7 +708,9 @@ public class Client {
           throw call.error;
         } else { // local exception
           throw (IOException)new IOException(
-              "Call failed on local exception").initCause(call.error);
+              "Call to "+ addr + " failed on local exception: "
+                      + call.error.getMessage())
+                  .initCause(call.error);
         }
       } else {
         return call.value;

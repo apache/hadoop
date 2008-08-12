@@ -211,15 +211,24 @@ public class TestIPC extends TestCase {
   public void testStandAloneClient() throws Exception {
     testParallel(10, false, 2, 4, 2, 4, 100);
     Client client = new Client(LongWritable.class, conf);
-    boolean hasException = false;
+    InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
-      client.call(new LongWritable(RANDOM.nextLong()), 
-          new InetSocketAddress("127.0.0.1", 10));
+      client.call(new LongWritable(RANDOM.nextLong()),
+              address);
+      fail("Expected an exception to have been thrown");
     } catch (IOException e) {
-      hasException = true;
+      String message = e.getMessage();
+      String addressText = address.toString();
+      assertTrue("Did not find "+addressText+" in "+message,
+              message.contains(addressText));
+      Throwable cause=e.getCause();
+      assertNotNull("No nested exception in "+e,cause);
+      String causeText=cause.getMessage();
+      assertTrue("Did not find " + causeText + " in " + message,
+              message.contains(causeText));
     }
-    assertTrue (hasException);
   }
+
 
   public static void main(String[] args) throws Exception {
 
