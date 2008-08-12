@@ -1624,8 +1624,9 @@ public class HRegion implements HConstants {
         return;
       }
       writestate.flushRequested = true;
-      this.flushListener.request(this);
     }
+    // Make request outside of synchronize block; HBASE-818.
+    this.flushListener.request(this);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Flush requested on " + this);
     }

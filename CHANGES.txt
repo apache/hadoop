@@ -11,6 +11,7 @@ Release 0.3.0 - Unreleased
                invalidating entries (Andrew Purtell via Stack)
    HBASE-819   Remove DOS-style ^M carriage returns from all code where found
                (Jonathan Gray via Jim Kellerman)
+   HBASE-818   Deadlock running 'flushSomeRegions' (Andrew Purtell via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
