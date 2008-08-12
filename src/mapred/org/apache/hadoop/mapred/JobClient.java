@@ -800,7 +800,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     private String splitClass;
     private BytesWritable bytes = new BytesWritable();
     private String[] locations;
-      
+    long dataLength;
+
     public void setBytes(byte[] data, int offset, int length) {
       bytes.set(data, offset, length);
     }
@@ -831,6 +832,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       
     public void readFields(DataInput in) throws IOException {
       splitClass = Text.readString(in);
+      dataLength = in.readLong();
       bytes.readFields(in);
       int len = WritableUtils.readVInt(in);
       locations = new String[len];
@@ -841,12 +843,21 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       
     public void write(DataOutput out) throws IOException {
       Text.writeString(out, splitClass);
+      out.writeLong(dataLength);
       bytes.write(out);
       WritableUtils.writeVInt(out, locations.length);
       for(int i = 0; i < locations.length; i++) {
         Text.writeString(out, locations[i]);
       }        
     }
+
+    public long getDataLength() {
+      return dataLength;
+    }
+    public void setDataLength(long l) {
+      dataLength = l;
+    }
+    
   }
     
   private static final int CURRENT_SPLIT_FILE_VERSION = 0;
@@ -871,6 +882,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       rawSplit.setClassName(split.getClass().getName());
       buffer.reset();
       split.write(buffer);
+      rawSplit.setDataLength(split.getLength());
       rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
       rawSplit.setLocations(split.getLocations());
       rawSplit.write(out);

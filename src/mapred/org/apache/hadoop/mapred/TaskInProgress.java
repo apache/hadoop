@@ -820,6 +820,14 @@ class TaskInProgress {
     return ret.toString();
   }
 
+  public long getMapInputSize() {
+    if(isMapTask()) {
+      return rawSplit.getDataLength();
+    } else {
+      return 0;
+    }
+  }
+  
   public void clearSplit() {
     rawSplit.clearBytes();
   }

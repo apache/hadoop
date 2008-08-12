@@ -1025,6 +1025,7 @@ public class TaskTracker
     if (askForNewTask) {
       checkLocalDirs(fConf.getLocalDirs());
       askForNewTask = enoughFreeSpace(localMinSpaceStart);
+      status.setAvailableSpace( getFreeSpace() );
     }
       
     //
@@ -1243,8 +1244,8 @@ public class TaskTracker
   }
     
   /**
-   * Check if all of the local directories have enough
-   * free space
+   * Check if any of the local directories has enough
+   * free space  (more than minSpace)
    * 
    * If not, do not try to get a new task assigned 
    * @return
@@ -1254,6 +1255,11 @@ public class TaskTracker
     if (minSpace == 0) {
       return true;
     }
+    return minSpace < getFreeSpace();
+  }
+  
+  private long getFreeSpace() throws IOException {
+    long biggestSeenSoFar = 0;
     String[] localDirs = fConf.getLocalDirs();
     for (int i = 0; i < localDirs.length; i++) {
       DF df = null;
@@ -1264,13 +1270,51 @@ public class TaskTracker
         localDirsDf.put(localDirs[i], df);
       }
 
-      if (df.getAvailable() > minSpace)
-        return true;
+      long availOnThisVol = df.getAvailable();
+      if (availOnThisVol > biggestSeenSoFar) {
+        biggestSeenSoFar = availOnThisVol;
+      }
     }
-
-    return false;
+    
+    //Should ultimately hold back the space we expect running tasks to use but 
+    //that estimate isn't currently being passed down to the TaskTrackers    
+    return biggestSeenSoFar;
   }
     
+  /**
+   * Try to get the size of output for this task.
+   * Returns -1 if it can't be found.
+   * @return
+   */
+  long tryToGetOutputSize(TaskAttemptID taskId, JobConf conf) {
+    
+    try{
+      TaskInProgress tip;
+      synchronized(this) {
+        tip = tasks.get(taskId);
+      }
+      if(tip == null)
+         return -1;
+      
+      MapOutputFile mapOutputFile = new MapOutputFile();
+      mapOutputFile.setJobId(taskId.getJobID());
+      mapOutputFile.setConf(conf);
+      
+      Path tmp_output =  mapOutputFile.getOutputFile(taskId);
+      if(tmp_output == null)
+        return 0;
+      FileSystem localFS = FileSystem.getLocal(conf);
+      FileStatus stat = localFS.getFileStatus(tmp_output);
+      if(stat == null)
+        return 0;
+      else
+        return stat.getLen();
+    } catch(IOException e) {
+      LOG.info(e);
+      return -1;
+    }
+  }
+  
   /**
    * Start a new task.
    * All exceptions are handled locally, so that we don't mess up the
@@ -1596,6 +1640,8 @@ public class TaskTracker
       this.done = true;
       
       LOG.info("Task " + task.getTaskID() + " is done.");
+      LOG.info("reported output size for " + task.getTaskID() +  "  was " + taskStatus.getOutputSize());
+
     }
 
     /**
@@ -1660,7 +1706,7 @@ public class TaskTracker
                                      localJobConf). toString());
               } catch (IOException e) {
                 LOG.warn("Working Directory of the task " + task.getTaskID() +
-                		 "doesnt exist. Throws expetion " +
+                		 "doesnt exist. Caught exception " +
                           StringUtils.stringifyException(e));
               }
               // Build the command  
@@ -2195,6 +2241,7 @@ public class TaskTracker
     for(TaskInProgress tip: runningTasks.values()) {
       TaskStatus status = tip.getStatus();
       status.setIncludeCounters(sendCounters);
+      status.setOutputSize(tryToGetOutputSize(status.getTaskID(), fConf));
       // send counters for finished or failed tasks.
       if (status.getRunState() != TaskStatus.State.RUNNING) {
         status.setIncludeCounters(true);

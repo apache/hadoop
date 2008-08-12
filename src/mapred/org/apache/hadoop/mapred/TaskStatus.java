@@ -52,6 +52,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     
   private long startTime; 
   private long finishTime; 
+  private long outputSize;
     
   private Phase phase = Phase.STARTING; 
   private Counters counters;
@@ -225,6 +226,21 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
   
   /**
+   * Returns the number of bytes of output from this map.
+   */
+  public long getOutputSize() {
+    return outputSize;
+  }
+  
+  /**
+   * Set the size on disk of this task's output.
+   * @param l the number of map output bytes
+   */
+  void setOutputSize(long l)  {
+    outputSize = l;
+  }
+  
+  /**
    * Get the list of maps from which output-fetches failed.
    * 
    * @return the list of maps from which output-fetches failed.
@@ -278,6 +294,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     
     this.phase = status.getPhase();
     this.counters = status.getCounters();
+    this.outputSize = status.outputSize;
   }
   
   /**
@@ -313,6 +330,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     out.writeLong(startTime);
     out.writeLong(finishTime);
     out.writeBoolean(includeCounters);
+    out.writeLong(outputSize);
     if (includeCounters) {
       counters.write(out);
     }
@@ -330,6 +348,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.finishTime = in.readLong(); 
     counters = new Counters();
     this.includeCounters = in.readBoolean();
+    this.outputSize = in.readLong();
     if (includeCounters) {
       counters.readFields(in);
     }

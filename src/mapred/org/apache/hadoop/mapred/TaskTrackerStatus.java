@@ -48,11 +48,13 @@ class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
+  long availableSpace; //space available on this node
     
   /**
    */
   public TaskTrackerStatus() {
     taskReports = new ArrayList<TaskStatus>();
+    this.availableSpace = Long.MAX_VALUE; //not measured by default.
   }
 
   /**
@@ -69,6 +71,7 @@ class TaskTrackerStatus implements Writable {
     this.failures = failures;
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
+    this.availableSpace = Long.MAX_VALUE; //not measured by default.
   }
 
   /**
@@ -166,6 +169,20 @@ class TaskTrackerStatus implements Writable {
   public int getMaxReduceTasks() {
     return maxReduceTasks;
   }  
+  
+  /**
+   * Will return LONG_MAX if space hasn't been measured yet.
+   * @return bytes of available local disk space on this tasktracker.
+   */
+  public long getAvailableSpace() {
+    return availableSpace;
+  }
+  
+  public void setAvailableSpace(long a) {
+    availableSpace = a;
+  }
+  
+  
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
@@ -177,6 +194,7 @@ class TaskTrackerStatus implements Writable {
     out.writeInt(maxMapTasks);
     out.writeInt(maxReduceTasks);
     out.writeInt(taskReports.size());
+    out.writeLong(availableSpace);
     for (TaskStatus taskStatus : taskReports) {
       TaskStatus.writeTaskStatus(out, taskStatus);
     }
@@ -191,6 +209,7 @@ class TaskTrackerStatus implements Writable {
     this.maxReduceTasks = in.readInt();
     taskReports.clear();
     int numTasks = in.readInt();
+    this.availableSpace = in.readLong();
     for (int i = 0; i < numTasks; i++) {
       taskReports.add(TaskStatus.readTaskStatus(in));
     }

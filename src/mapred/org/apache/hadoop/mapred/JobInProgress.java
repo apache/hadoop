@@ -119,6 +119,9 @@ class JobInProgress {
   private Map<String, Integer> trackerToFailuresMap = 
     new TreeMap<String, Integer>();
     
+  //Confine estimation algorithms to an "oracle" class that JIP queries.
+  private ResourceEstimator resourceEstimator; 
+  
   long startTime;
   long finishTime;
 
@@ -129,6 +132,7 @@ class JobInProgress {
   private JobID jobId;
   private boolean hasSpeculativeMaps;
   private boolean hasSpeculativeReduces;
+  private long inputLength = 0;
 
   // Per-job counters
   public static enum Counter { 
@@ -220,6 +224,7 @@ class JobInProgress {
     this.runningMapCache = new IdentityHashMap<Node, Set<TaskInProgress>>();
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
+    this.resourceEstimator = new ResourceEstimator(this);
   }
 
   /**
@@ -335,10 +340,12 @@ class JobInProgress {
     numMapTasks = splits.length;
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
+      inputLength += splits[i].getDataLength();
       maps[i] = new TaskInProgress(jobId, jobFile, 
                                    splits[i], 
                                    jobtracker, conf, this, i);
     }
+    LOG.info("Input size for job "+ jobId + " = " + inputLength);
     if (numMapTasks > 0) { 
       LOG.info("Split info for job:" + jobId);
       nonRunningMapCache = createCache(splits, maxLevel);
@@ -433,6 +440,10 @@ class JobInProgress {
     } else {
       this.priority = priority;
     }
+  }
+  
+  long getInputLength() {
+    return inputLength;
   }
  
   /**
@@ -1076,6 +1087,17 @@ class JobInProgress {
     Node node = jobtracker.getNode(tts.getHost());
     Node nodeParentAtMaxLevel = null;
     
+
+    long outSize = resourceEstimator.getEstimatedMapOutputSize();
+    if(tts.getAvailableSpace() < outSize) {
+      LOG.warn("No room for map task. Node " + node + 
+               " has " + tts.getAvailableSpace() + 
+               " bytes free; but we expect map to take " + outSize);
+
+      return -1; //see if a different TIP might work better. 
+    }
+    
+    
     // For scheduling a map task, we have two caches and a list (optional)
     //  I)   one for non-running task
     //  II)  one for running task (this is for handling speculation)
@@ -1272,6 +1294,15 @@ class JobInProgress {
       return -1;
     }
 
+    long outSize = resourceEstimator.getEstimatedReduceInputSize();
+    if(tts.getAvailableSpace() < outSize) {
+      LOG.warn("No room for reduce task. Node " + taskTracker + " has " +
+               tts.getAvailableSpace() + 
+               " bytes free; but we expect reduce input to take " + outSize);
+
+      return -1; //see if a different TIP might work better. 
+    }
+    
     // 1. check for a never-executed reduce tip
     // reducers don't have a cache and so pass -1 to explicitly call that out
     tip = findTaskFromList(nonRunningReduces, tts, numUniqueHosts, false);
@@ -1342,6 +1373,7 @@ class JobInProgress {
 
     // Mark the TIP as complete
     tip.completed(taskid);
+    resourceEstimator.updateWithCompletedTask(status, tip);
 
     // Update jobhistory 
     String taskTrackerName = jobtracker.getNode(jobtracker.getTaskTracker(
