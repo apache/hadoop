@@ -25,7 +25,6 @@ import java.util.HashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -217,7 +216,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         try {
           if (outputFs != null) {
             if (outputFs.exists(tmpDir)) {
-              FileUtil.fullyDelete(outputFs, tmpDir);
+              outputFs.delete(tmpDir, true);
             }
           }
         } catch (IOException e) {

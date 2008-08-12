@@ -46,7 +46,7 @@ public class TestPipes extends TestCase {
     LogFactory.getLog(TestPipes.class.getName());
 
   static void cleanup(FileSystem fs, Path p) throws IOException {
-    FileUtil.fullyDelete(fs, p);
+    fs.delete(p, true);
     assertFalse("output not cleaned up", fs.exists(p));
   }
 
@@ -142,7 +142,7 @@ public class TestPipes extends TestCase {
     job.setNumReduceTasks(numReduces);
     {
       FileSystem fs = dfs.getFileSystem();
-      FileUtil.fullyDelete(fs, wordExec.getParent());
+      fs.delete(wordExec.getParent(), true);
       fs.copyFromLocalFile(program, wordExec);                                         
       Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
       Submitter.setIsJavaRecordReader(job, true);
@@ -187,7 +187,7 @@ public class TestPipes extends TestCase {
     Path jobXml = new Path(testDir, "job.xml");
     {
       FileSystem fs = dfs.getFileSystem();
-      FileUtil.fullyDelete(fs, wordExec.getParent());
+      fs.delete(wordExec.getParent(), true);
       fs.copyFromLocalFile(program, wordExec);
     }
     DataOutputStream out = local.create(new Path(inDir, "part0"));
@@ -197,7 +197,7 @@ public class TestPipes extends TestCase {
     out = local.create(new Path(inDir, "part1"));
     out.writeBytes("all silly things drink java\n");
     out.close();
-    FileUtil.fullyDelete(local, outDir);
+    local.delete(outDir, true);
     local.mkdirs(outDir);
     out = local.create(jobXml);
     job.write(out);

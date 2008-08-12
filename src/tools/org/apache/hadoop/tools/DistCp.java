@@ -836,7 +836,7 @@ public class DistCp implements Tool {
   static void fullyDelete(String dir, Configuration conf) throws IOException {
     if (dir != null) {
       Path tmp = new Path(dir);
-      FileUtil.fullyDelete(tmp.getFileSystem(conf), tmp);
+      tmp.getFileSystem(conf).delete(tmp, true);
     }
   }
 

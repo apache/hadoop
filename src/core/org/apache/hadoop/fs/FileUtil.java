@@ -103,19 +103,11 @@ public class FileUtil {
    * @param fs {@link FileSystem} on which the path is present
    * @param dir directory to recursively delete 
    * @throws IOException
+   * @deprecated Use {@link FileSystem#delete(Path, boolean)}
    */
+  @Deprecated
   public static void fullyDelete(FileSystem fs, Path dir) 
   throws IOException {
-    FileStatus[] paths = fs.listStatus(dir);
-    if (paths != null) {
-      for (FileStatus p : paths) {
-        if (!p.isDir())  {
-          fs.delete(p.getPath(), true);
-        } else {
-          fullyDelete(fs, p.getPath());
-        }
-      }
-    }
     fs.delete(dir, true);
   }
 

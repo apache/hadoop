@@ -20,16 +20,12 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
-import org.apache.hadoop.util.*;
 
 import junit.framework.TestCase;
 
@@ -88,7 +84,7 @@ public class TestUlimit extends TestCase {
       writeInputFile(fs, inputPath);
       map = StreamUtil.makeJavaCommand(UlimitApp.class, new String[]{});  
       runProgram(SET_MEMORY_LIMIT);
-      FileUtil.fullyDelete(fs, outputPath);
+      fs.delete(outputPath, true);
       assertFalse("output not cleaned up", fs.exists(outputPath));
       mr.waitUntilIdle();
     } catch(IOException e) {

@@ -163,6 +163,9 @@ Trunk (unreleased changes)
     HADOOP-9. Use roulette scheduling for temporary space when the size
     is not known. (Ari Rabkin via omalley)
 
+    HADOOP-3202. Use recursive delete rather than FileUtil.fullyDelete.
+    (Amareshwari Sriramadasu via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
