@@ -97,12 +97,15 @@ module Formatter
       @out.printf(spec, str)
     end
 
-    def footer(startTime = nil)
+    def footer(startTime = nil, rowCount = nil)
+      if not rowCount
+        rowCount = @rowCount
+      end
       if not startTime
         return
       end
       # Only output elapsed time and row count if startTime passed
-      @out.puts("%d row(s) in %.4f seconds" % [@rowCount, Time.now - startTime])
+      @out.puts("%d row(s) in %.4f seconds" % [rowCount, Time.now - startTime])
     end
   end
      

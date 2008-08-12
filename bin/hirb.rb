@@ -113,6 +113,14 @@ HBASE SHELL COMMANDS:
            cell VERSIONS, do:
 
            hbase> alter 't1', {NAME => 'f1', VERSIONS => 5}
+           
+ count     Count the number of rows in a table. This operation may take a LONG
+           time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a
+           counting mapreduce job). Current count is shown every 1000 rows by
+           default. Count interval may be optionally specified. Examples:
+           
+           hbase> count 't1'
+           hbase> count 't1', 100000
 
  create    Create table; pass table name, a dictionary of specifications per
            column family, and optionally a dictionary of table configuration.
@@ -271,6 +279,10 @@ end
 def deleteall(table, row, column = nil,
     timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
   table(table).deleteall(row, column, timestamp)
+end
+
+def count(table, interval = 1000)
+  table(table).count(interval)
 end
 
 # Output a banner message that tells users where to go for help

@@ -15,6 +15,7 @@ Release 0.3.0 - Unreleased
    HBASE-820   Need mainline to flush when 'Blocking updates' goes up.
                (Jean-Daniel Cryans via Stack)
    HBASE-821   UnknownScanner happens too often (Jean-Daniel Cryans via Stack)
+   HBASE-813   Add a row counter in the new shell (Jean-Daniel Cryans via Stack)
 
 
   IMPROVEMENTS

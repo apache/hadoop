@@ -346,6 +346,26 @@ module HBase
       end
       @formatter.footer(now)
     end
+    
+    def count(interval = 1000)
+      now = Time.now
+      columns = getAllColumns()
+      cs = columns.to_java(java.lang.String)
+      s = @table.getScanner(cs)
+      count = 0
+      i = s.iterator()
+      @formatter.header("Count may take a long time to complete!")
+      while i.hasNext()
+        r = i.next()
+        count += 1
+        if count % interval == 0
+          @formatter.row(["Current count: " + count.to_s + ", row: " + \
+            (String.from_java_bytes r.getRow())])
+        end
+      end
+      @formatter.footer(now, count)
+    end
+    
   end
 
   # Testing. To run this test, there needs to be an hbase cluster up and
