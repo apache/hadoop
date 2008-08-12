@@ -55,6 +55,7 @@ public abstract class GenericHandler {
   protected static final String CONTENT_TYPE = "content-type";
   protected static final String ROW = "row";
   protected static final String REGIONS = "regions";
+  protected static final String TABLES = "tables";
   
   protected final Log LOG = LogFactory.getLog(this.getClass());
 

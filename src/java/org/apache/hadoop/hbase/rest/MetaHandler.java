@@ -35,7 +35,7 @@ import org.znerd.xmlenc.XMLOutputter;
 
 /**
  * MetaHandler fields all requests for metadata at the instance level. At the
- * momment this is only GET requests to /.
+ * moment this is only GET requests to /.
  */
 public class MetaHandler extends GenericHandler {
 

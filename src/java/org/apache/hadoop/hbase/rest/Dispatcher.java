@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -63,8 +62,10 @@ implements javax.servlet.Servlet {
   private static final Log LOG = LogFactory.getLog(Dispatcher.class.getName());
   private MetaHandler metaHandler;
   private TableHandler tableHandler;
+  private RowHandler rowHandler;
   private ScannerHandler scannerHandler;
 
+  private static final String TABLES = "tables";
   private static final String SCANNER = "scanner";
   private static final String ROW = "row";
       
@@ -85,6 +86,7 @@ implements javax.servlet.Servlet {
       admin = new HBaseAdmin(conf);
       metaHandler = new MetaHandler(conf, admin);
       tableHandler = new TableHandler(conf, admin);
+      rowHandler = new RowHandler(conf, admin);
       scannerHandler = new ScannerHandler(conf, admin);
     } catch(Exception e){
       throw new ServletException(e);
@@ -100,9 +102,14 @@ implements javax.servlet.Servlet {
       // the entire instance.
       metaHandler.doGet(request, response, pathSegments);
     } else {
-      // otherwise, it must be a GET request suitable for the
-      // table handler.
-      tableHandler.doGet(request, response, pathSegments);
+      if (pathSegments.length >= 2 && pathSegments[0].length() > 0 && pathSegments[1].toLowerCase().equals(ROW)) {
+        // if it has table name and row path segments
+        rowHandler.doGet(request, response, pathSegments);
+      } else {
+        // otherwise, it must be a GET request suitable for the
+        // table handler.
+        tableHandler.doGet(request, response, pathSegments);
+      }
     }
   }
 
@@ -110,15 +117,26 @@ implements javax.servlet.Servlet {
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
     
-    // there should be at least two path segments (table name and row or scanner)
-    if (pathSegments.length >= 2 && pathSegments[0].length() > 0) {
-      if (pathSegments[1].toLowerCase().equals(SCANNER) &&
-          pathSegments.length >= 2) {
-        scannerHandler.doPost(request, response, pathSegments);
-        return;
-      } else if (pathSegments[1].toLowerCase().equals(ROW) && pathSegments.length >= 3) {
-        tableHandler.doPost(request, response, pathSegments);
-        return;
+    if (pathSegments.length == 1 && pathSegments[0].toLowerCase().equals(TABLES)) {
+      tableHandler.doPost(request, response, pathSegments);
+      return;
+    } else {
+      // there should be at least two path segments (table name and row or
+      // scanner)
+      if (pathSegments.length >= 2 && pathSegments[0].length() > 0) {
+        if (pathSegments[1].toLowerCase().equals(SCANNER)
+            && pathSegments.length >= 2) {
+          scannerHandler.doPost(request, response, pathSegments);
+          return;
+        } else if (pathSegments[1].toLowerCase().equals(ROW)
+            && pathSegments.length >= 3) {
+          rowHandler.doPost(request, response, pathSegments);
+          return;
+        } else if (pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0 
+            && (pathSegments[2].toLowerCase().equals(TableHandler.DISABLE) || pathSegments[2].toLowerCase().equals(TableHandler.ENABLE))) {
+          tableHandler.doPost(request, response, pathSegments);
+          return;
+        }
       }
     }
 
@@ -130,7 +148,13 @@ implements javax.servlet.Servlet {
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
   throws ServletException, IOException {
     // Equate PUT with a POST.
-    doPost(request, response);
+    String [] pathSegments = getPathSegments(request);
+    
+    if (pathSegments.length == 2 && pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0) {
+      tableHandler.doPut(request, response, pathSegments);
+    } else {
+      doPost(request, response);
+    }
   }
 
   protected void doDelete(HttpServletRequest request,
@@ -138,18 +162,21 @@ implements javax.servlet.Servlet {
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
     
-    // must be at least two path segments (table name and row or scanner)
-    if (pathSegments.length >= 2 && pathSegments[0].length() > 0) {
-      // DELETE to a scanner requires at least three path segments
+    if (pathSegments.length == 2 && pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0) {
+      tableHandler.doDelete(request, response, pathSegments);
+      return;
+    } else if (pathSegments.length >= 3 && pathSegments[0].length() > 0) {
+      // must be at least two path segments (table name and row or scanner)
       if (pathSegments[1].toLowerCase().equals(SCANNER) &&
           pathSegments.length == 3 && pathSegments[2].length() > 0) {
+        // DELETE to a scanner requires at least three path segments
         scannerHandler.doDelete(request, response, pathSegments);
         return;
       } else if (pathSegments[1].toLowerCase().equals(ROW) &&
           pathSegments.length >= 3) {
-        tableHandler.doDelete(request, response, pathSegments);
+        rowHandler.doDelete(request, response, pathSegments);
         return;
-      } 
+      }
     }
     
     // if we reach this point, then no handler exists for this request.
