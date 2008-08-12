@@ -1423,7 +1423,14 @@ public class HRegion implements HConstants {
    * this and the synchronize on 'this' inside in internalFlushCache to send
    * the notify.
    */
-  private synchronized void checkResources() {
+  private void checkResources() {
+    if (this.memcacheSize.get() > this.blockingMemcacheSize) {
+      requestFlush();
+      doBlocking();
+    }
+  }
+  
+  private synchronized void doBlocking() {
     boolean blocked = false;
     while (this.memcacheSize.get() > this.blockingMemcacheSize) {
       if (!blocked) {
