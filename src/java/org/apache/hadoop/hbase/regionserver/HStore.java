@@ -784,10 +784,19 @@ public class HStore implements HConstants {
         }
         filesToCompact = new ArrayList<HStoreFile>(filesToCompact.subList(point,
           countOfFiles));
+        if (filesToCompact.size() <= 1) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skipped compaction of 1 file; compaction size of " +
+              this.storeNameStr + ": " +
+              StringUtils.humanReadableInt(totalSize) + "; Skipped " + point +
+              " files, size: " + skipped);
+          }
+          return checkSplit();
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Compaction size of " + this.storeNameStr + ": " +
-            StringUtils.humanReadableInt(totalSize) + ", skipped " + point +
-            ", " + skipped);
+            StringUtils.humanReadableInt(totalSize) + "; Skipped " + point +
+            " files , size: " + skipped);
         }
       }
 
