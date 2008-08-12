@@ -303,6 +303,27 @@ abstract public class Shell {
     public String getOutput() {
       return (output == null) ? "" : output.toString();
     }
+
+    /**
+     * Returns the commands of this instance.
+     * Arguments with spaces in are presented with quotes round; other
+     * arguments are presented raw
+     *
+     * @return a string representation of the object.
+     */
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      String[] args = getExecString();
+      for (String s : args) {
+        if (s.indexOf(' ') >= 0) {
+          builder.append('"').append(s).append('"');
+        } else {
+          builder.append(s);
+        }
+        builder.append(' ');
+      }
+      return builder.toString();
+    }
   }
   
   /** 

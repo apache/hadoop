@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-3780. Remove asynchronous resolution of network topology in the 
     JobTracker (Amar Kamat via omalley)
 
+    HADOOP-3852. Add ShellCommandExecutor.toString method to make nicer
+    error messages. (Steve Loughran via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

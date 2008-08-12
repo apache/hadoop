@@ -447,8 +447,8 @@ abstract class TaskRunner extends Thread {
                         Map<String, String> env,
                         TaskAttemptID taskid) throws IOException {
 
+    shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir, env);
     try {
-      shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir, env);
       shexec.execute();
     } catch (IOException ioe) {
       // do nothing
@@ -461,7 +461,7 @@ abstract class TaskRunner extends Thread {
           tracker.getTaskTrackerInstrumentation().taskFailedPing(t.getTaskID());
         }
         throw new IOException("Task process exit with nonzero status of " +
-                              exit_code + ".");
+                              exit_code + ": "+ shexec);
       }
     }
   }

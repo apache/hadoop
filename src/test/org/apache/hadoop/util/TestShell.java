@@ -51,6 +51,27 @@ public class TestShell extends TestCase {
     testInterval(System.currentTimeMillis() / 60000 + 60); // test a very big interval
   }
 
+  /**
+   * Assert that a string has a substring in it
+   * @param string string to search
+   * @param search what to search for it
+   */
+  private void assertInString(String string, String search) {
+    assertNotNull("Empty String", string);
+    if (!string.contains(search)) {
+      fail("Did not find \"" + search + "\" in " + string);
+    }
+  }
+
+  public void testShellCommandExecutorToString() throws Throwable {
+    Shell.ShellCommandExecutor sce=new Shell.ShellCommandExecutor(
+            new String[] { "ls","..","arg 2"});
+    String command = sce.toString();
+    assertInString(command,"ls");
+    assertInString(command, " .. ");
+    assertInString(command, "\"arg 2\"");
+  }
+
   private void testInterval(long interval) throws IOException {
     Command command = new Command(interval);
 
