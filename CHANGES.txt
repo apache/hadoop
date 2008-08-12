@@ -16,6 +16,8 @@ Release 0.3.0 - Unreleased
                (Jean-Daniel Cryans via Stack)
    HBASE-821   UnknownScanner happens too often (Jean-Daniel Cryans via Stack)
    HBASE-813   Add a row counter in the new shell (Jean-Daniel Cryans via Stack)
+   HBASE-824   Bug in Hlog we print array of byes for region name
+               (Billy Pearson via Stack)
 
 
   IMPROVEMENTS

@@ -283,7 +283,8 @@ public class HLog implements HConstants {
                 LOG.debug("Found " + sequenceNumbers.size() +
                   " logs to remove " +
                   "using oldest outstanding seqnum of " +
-                  oldestOutstandingSeqNum + " from region " + oldestRegion);
+                  oldestOutstandingSeqNum + " from region " +
+                  Bytes.toString(oldestRegion));
               }
             }
             if (sequenceNumbers.size() > 0) {
