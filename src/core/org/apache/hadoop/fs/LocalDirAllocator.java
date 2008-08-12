@@ -267,18 +267,22 @@ public class LocalDirAllocator {
     }
     
     /** Get a path from the local FS. This method should be used if the size of 
-     *  the file is not known apriori. We go round-robin over the set of disks
-     *  (via the configured dirs) and return the first complete path where
-     *  we could create the parent directory of the passed path. 
+     *  the file is not known a priori. 
+     *  
+     *  It will use roulette selection, picking directories
+     *  with probability proportional to their available space. 
      */
     public synchronized Path getLocalPathForWrite(String path, 
         Configuration conf) throws IOException {
       return getLocalPathForWrite(path, -1, conf);
     }
 
-    /** Get a path from the local FS. Pass size as -1 if not known apriori. We
+    /** Get a path from the local FS. If size is known, we go
      *  round-robin over the set of disks (via the configured dirs) and return
-     *  the first complete path which has enough space 
+     *  the first complete path which has enough space.
+     *  
+     *  If size is not known, use roulette selection -- pick directories
+     *  with probability proportional to their available space.
      */
     public synchronized Path getLocalPathForWrite(String pathStr, long size, 
         Configuration conf) throws IOException {
@@ -291,20 +295,38 @@ public class LocalDirAllocator {
         pathStr = pathStr.substring(1);
       }
       Path returnPath = null;
-      while (numDirsSearched < numDirs && returnPath == null) {
-        if (size >= 0) {
+      
+      if(size == -1) {  //do roulette selection: pick dir with probability 
+                    //proportional to available size
+        long[] availableOnDisk = new long[dirDF.length];
+        long totalAvailable = 0;
+        
+            //build the "roulette wheel"
+        for(int i =0; i < dirDF.length; ++i) {
+          availableOnDisk[i] = dirDF[i].getAvailable();
+          totalAvailable += availableOnDisk[i];
+        }
+            // "roll the ball" -- pick a directory
+        Random r = new java.util.Random();
+        long randomPosition = Math.abs(r.nextLong()) % totalAvailable;
+        int dir=0;
+        while(randomPosition > availableOnDisk[dir]) {
+          randomPosition -= availableOnDisk[dir];
+          dir++;
+        }
+        dirNumLastAccessed = dir;
+        returnPath = createPath(pathStr);
+      } else {
+        while (numDirsSearched < numDirs && returnPath == null) {
           long capacity = dirDF[dirNumLastAccessed].getAvailable();
           if (capacity > size) {
             returnPath = createPath(pathStr);
           }
-        } else {
-          returnPath = createPath(pathStr);
-        }
-        dirNumLastAccessed++;
-        dirNumLastAccessed = dirNumLastAccessed % numDirs; 
-        numDirsSearched++;
-      } 
-
+          dirNumLastAccessed++;
+          dirNumLastAccessed = dirNumLastAccessed % numDirs; 
+          numDirsSearched++;
+        } 
+      }
       if (returnPath != null) {
         return returnPath;
       }

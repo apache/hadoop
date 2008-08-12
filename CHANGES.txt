@@ -157,8 +157,11 @@ Trunk (unreleased changes)
     the end of the heartbeat rpc, rather than the start. This causes better
     behavior if the JobTracker is overloaded. (acmurthy via omalley)
 
-		HADOOP-3853. Move multiple input format (HADOOP-372) extension to 
-		library package. (tomwhite via johan)
+    HADOOP-3853. Move multiple input format (HADOOP-372) extension to 
+    library package. (tomwhite via johan)
+
+    HADOOP-9. Use roulette scheduling for temporary space when the size
+    is not known. (Ari Rabkin via omalley)
 
   OPTIMIZATIONS
 

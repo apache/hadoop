@@ -39,10 +39,12 @@ public class TestLocalDirAllocator extends TestCase {
   final static private File BUFFER_ROOT = new File(BUFFER_DIR_ROOT);
   final static private String BUFFER_DIR[] = new String[] {
     BUFFER_DIR_ROOT+"/tmp0",  BUFFER_DIR_ROOT+"/tmp1", BUFFER_DIR_ROOT+"/tmp2",
-    BUFFER_DIR_ROOT+"/tmp3", BUFFER_DIR_ROOT+"/tmp4"};
+    BUFFER_DIR_ROOT+"/tmp3", BUFFER_DIR_ROOT+"/tmp4", BUFFER_DIR_ROOT+"/tmp5",
+    BUFFER_DIR_ROOT+"/tmp6"};
   final static private Path BUFFER_PATH[] = new Path[] {
     new Path(BUFFER_DIR[0]), new Path(BUFFER_DIR[1]), new Path(BUFFER_DIR[2]),
-    new Path(BUFFER_DIR[3]), new Path(BUFFER_DIR[4])};
+    new Path(BUFFER_DIR[3]), new Path(BUFFER_DIR[4]), new Path(BUFFER_DIR[5]),
+    new Path(BUFFER_DIR[6])};
   final static private String CONTEXT = "dfs.client.buffer.dir";
   final static private String FILENAME = "block";
   final static private LocalDirAllocator dirAllocator = 
@@ -50,7 +52,7 @@ public class TestLocalDirAllocator extends TestCase {
   static LocalFileSystem localFs;
   final static private boolean isWindows =
     System.getProperty("os.name").startsWith("Windows");
-  
+  final static int SMALL_FILE_SIZE = 100;
   static {
     try {
       localFs = FileSystem.getLocal(conf);
@@ -68,7 +70,7 @@ public class TestLocalDirAllocator extends TestCase {
   }
   
   private void validateTempDirCreation(int i) throws IOException {
-    File result = createTempFile();
+    File result = createTempFile(SMALL_FILE_SIZE);
     assertTrue("Checking for " + BUFFER_DIR[i] + " in " + result + " - FAILED!", 
         result.getPath().startsWith(new File(BUFFER_DIR[i], FILENAME).getPath()));
   }
@@ -78,6 +80,13 @@ public class TestLocalDirAllocator extends TestCase {
     result.delete();
     return result;
   }
+  
+  private File createTempFile(long size) throws IOException {
+    File result = dirAllocator.createTmpFileForWrite(FILENAME, size, conf);
+    result.delete();
+    return result;
+  }
+  
   /** Two buffer dirs. The first dir does not exist & is on a read-only disk; 
    * The second dir exists & is RW
    * @throws Exception
@@ -122,7 +131,7 @@ public class TestLocalDirAllocator extends TestCase {
       conf.set(CONTEXT, BUFFER_DIR[2]+","+BUFFER_DIR[3]);
 
       // create the first file, and then figure the round-robin sequence
-      createTempFile();
+      createTempFile(SMALL_FILE_SIZE);
       int firstDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 2 : 3;
       int secondDirIdx = (firstDirIdx == 2) ? 3 : 2;
       
@@ -146,8 +155,8 @@ public class TestLocalDirAllocator extends TestCase {
       assertTrue(localFs.mkdirs(BUFFER_PATH[3]));
       assertTrue(localFs.mkdirs(BUFFER_PATH[4]));
       
-      // create the first file, and then figure the round-robin sequence
-      createTempFile();
+      // create the first file with size, and then figure the round-robin sequence
+      createTempFile(SMALL_FILE_SIZE);
 
       int nextDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 3 : 4;
       validateTempDirCreation(nextDirIdx);
@@ -160,4 +169,43 @@ public class TestLocalDirAllocator extends TestCase {
       rmBufferDirs();
     }
   }
+  
+  /**
+   * Two buffer dirs, on read-write disk.
+   * 
+   * Try to create a whole bunch of files.
+   *  Verify that they do indeed all get created where they should.
+   *  
+   *  Would ideally check statistical properties of distribution, but
+   *  we don't have the nerve to risk false-positives here.
+   * 
+   * @throws Exception
+   */
+  static final int TRIALS = 100;
+  public void test4() throws Exception {
+    if (isWindows) return;
+    try {
+
+      conf.set(CONTEXT, BUFFER_DIR[5]+","+BUFFER_DIR[6]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[5]));
+      assertTrue(localFs.mkdirs(BUFFER_PATH[6]));
+        
+      int inDir5=0, inDir6=0;
+      for(int i = 0; i < TRIALS; ++i) {
+        File result = createTempFile();
+        if(result.getPath().startsWith(new File(BUFFER_DIR[5], FILENAME).getPath())) {
+          inDir5++;
+        } else  if(result.getPath().startsWith(new File(BUFFER_DIR[6], FILENAME).getPath())) {
+          inDir6++;
+        }
+        result.delete();
+      }
+      
+      assertTrue( inDir5 + inDir6 == TRIALS);
+        
+    } finally {
+      rmBufferDirs();
+    }
+  }
+  
 }
