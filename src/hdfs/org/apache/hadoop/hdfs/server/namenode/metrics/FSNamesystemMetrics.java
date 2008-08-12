@@ -57,7 +57,7 @@ public class FSNamesystemMetrics implements Updater {
     metricsRecord = MetricsUtil.createRecord(metricsContext, "FSNamesystem");
     metricsRecord.setTag("sessionId", sessionId);
     metricsContext.registerUpdater(this);
-    log.info("Initializing FSNamesystemMeterics using context object:" +
+    log.info("Initializing FSNamesystemMetrics using context object:" +
               metricsContext.getClass().getName());
   }
 
