@@ -426,13 +426,6 @@ public class MiniMRCluster {
       taskTrackerThread.start();
     }
 
-    // Wait till the MR cluster stabilizes
-    while(jobTracker.tracker.getNumResolvedTaskTrackers() != numTaskTrackers) {
-      try {
-        Thread.sleep(20);
-      } catch (InterruptedException ie) {
-      }
-    }
     waitUntilIdle();
   }
     
