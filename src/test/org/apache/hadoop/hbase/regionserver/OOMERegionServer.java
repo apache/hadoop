@@ -48,7 +48,7 @@ public class OOMERegionServer extends HRegionServer {
   
   public void batchUpdate(byte [] regionName, BatchUpdate b)
   throws IOException {
-    super.batchUpdate(regionName, b);
+    super.batchUpdate(regionName, b, -1L);
     for (int i = 0; i < 30; i++) {
       // Add the batch update 30 times to bring on the OOME faster.
       this.retainer.add(b);

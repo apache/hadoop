@@ -73,15 +73,15 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       
       batchUpdate = new BatchUpdate(T00);
       batchUpdate.put(COLUMNS[0], T00.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(T10);
       batchUpdate.put(COLUMNS[0], T10.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.put(COLUMNS[0], T20.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       Map<byte [], Cell> results =
         region.getClosestRowBefore(Bytes.toBytes(T20));
@@ -89,21 +89,21 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.delete(COLUMNS[0]);
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       results = region.getClosestRowBefore(Bytes.toBytes(T20));
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T30);
       batchUpdate.put(COLUMNS[0], T30.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       results = region.getClosestRowBefore(Bytes.toBytes(T30));
       assertEquals(T30, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T30);
       batchUpdate.delete(COLUMNS[0]);
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
 
       results = region.getClosestRowBefore(Bytes.toBytes(T30));
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
@@ -122,7 +122,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // and answer of t20.
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.put(COLUMNS[1], T20.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       results = region.getClosestRowBefore(Bytes.toBytes(T30));
       assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
@@ -138,7 +138,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // in memory; make sure we get back t10 again.
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.delete(COLUMNS[1]);
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       results = region.getClosestRowBefore(Bytes.toBytes(T30));
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
@@ -153,10 +153,10 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // the candidate be in memory.
       batchUpdate = new BatchUpdate(T11);
       batchUpdate.put(COLUMNS[0], T11.getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       batchUpdate = new BatchUpdate(T10);
       batchUpdate.delete(COLUMNS[0]);
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       results = region.getClosestRowBefore(Bytes.toBytes(T12));
       assertEquals(T11, new String(results.get(COLUMNS[0]).getValue()));
     } finally {
@@ -296,27 +296,27 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       
       batchUpdate = new BatchUpdate(t10);
       batchUpdate.put(COLUMNS[0], "t10 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t20);
       batchUpdate.put(COLUMNS[0], "t20 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t30);
       batchUpdate.put(COLUMNS[0], "t30 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t35);
       batchUpdate.put(COLUMNS[0], "t35 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t35);
       batchUpdate.delete(COLUMNS[0]);
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t40);
       batchUpdate.put(COLUMNS[0], "t40 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       // try finding "015"
       String t15 = "015";
@@ -386,15 +386,15 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       
       batchUpdate = new BatchUpdate(t10);
       batchUpdate.put(COLUMNS[0], "t10 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t30);
       batchUpdate.put(COLUMNS[0], "t30 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       batchUpdate = new BatchUpdate(t40);
       batchUpdate.put(COLUMNS[0], "t40 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
 
       // try finding "035"
       String t35 = "035";
@@ -410,7 +410,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
 
       batchUpdate = new BatchUpdate(t20);
       batchUpdate.put(COLUMNS[0], "t20 bytes".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       // try finding "035"
       results = region.getClosestRowBefore(Bytes.toBytes(t35));
@@ -450,7 +450,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       bu.put(COLUMNS[0], "column 0".getBytes());
       bu.put(COLUMNS[1], "column 1".getBytes());
       bu.put(COLUMNS[2], "column 2".getBytes());
-      region.batchUpdate(bu);
+      region.batchUpdate(bu, null);
       
       assertSpecifiedColumns(region, row);
       // try it again with a cache flush to involve the store, not just the 
@@ -483,25 +483,25 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
 
     // make sure we get all of them with standard getFull
     Map<byte [], Cell> result = region.getFull(row, null, 
-      HConstants.LATEST_TIMESTAMP);
+      HConstants.LATEST_TIMESTAMP, null);
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
     assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
           
     // try to get just one
-    result = region.getFull(row, one, HConstants.LATEST_TIMESTAMP);
+    result = region.getFull(row, one, HConstants.LATEST_TIMESTAMP, null);
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertNull(result.get(COLUMNS[1]));                                   
     assertNull(result.get(COLUMNS[2]));                                   
                                                                           
     // try to get all of them (specified)                                 
-    result = region.getFull(row, all, HConstants.LATEST_TIMESTAMP);       
+    result = region.getFull(row, all, HConstants.LATEST_TIMESTAMP, null);       
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
     assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
     
     // try to get none with empty column set
-    result = region.getFull(row, none, HConstants.LATEST_TIMESTAMP);
+    result = region.getFull(row, none, HConstants.LATEST_TIMESTAMP, null);
     assertNull(result.get(COLUMNS[0]));
     assertNull(result.get(COLUMNS[1]));
     assertNull(result.get(COLUMNS[2]));    
@@ -526,25 +526,25 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // write some data
       batchUpdate = new BatchUpdate(row);
       batchUpdate.put(COLUMNS[0], "olderValue".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
 
       // flush
       region.flushcache();
       
       // assert that getFull gives us the older value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP);
+      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, null);
       assertEquals("olderValue", new String(results.get(COLUMNS[0]).getValue()));
       
       // write a new value for the cell
       batchUpdate = new BatchUpdate(row);
       batchUpdate.put(COLUMNS[0], "newerValue".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       // flush
       region.flushcache();
       
       // assert that getFull gives us the later value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP);
+      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, null);
       assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
      
       //
@@ -559,13 +559,13 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       batchUpdate = new BatchUpdate(row2);
       batchUpdate.put(cell1, "column0 value".getBytes());
       batchUpdate.put(cell2, "column1 value".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       // flush
       region.flushcache();
       
       // assert i get both columns
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
       assertEquals("Should have two columns in the results map", 2, results.size());
       assertEquals("column0 value", new String(results.get(cell1).getValue()));
       assertEquals("column1 value", new String(results.get(cell2).getValue()));
@@ -574,13 +574,13 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       batchUpdate = new BatchUpdate(row2);
       batchUpdate.delete(cell1);
       batchUpdate.put(cell2, "column1 new value".getBytes());      
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
             
       // flush
       region.flushcache(); 
       
       // assert i get the second column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
       assertEquals("column1 new value", new String(results.get(cell2).getValue()));
@@ -591,10 +591,10 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       batchUpdate = new BatchUpdate(row2);
       batchUpdate.delete(cell2);      
       batchUpdate.put(cell3, "column2 value!".getBytes());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       
       // assert i get the third column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
       assertNull("column1 value", results.get(cell2));
@@ -614,7 +614,8 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
   
   private void assertColumnsPresent(final HRegion r, final byte [] row)
   throws IOException {
-    Map<byte [], Cell> result = r.getFull(row, null, HConstants.LATEST_TIMESTAMP);
+    Map<byte [], Cell> result = 
+      r.getFull(row, null, HConstants.LATEST_TIMESTAMP, null);
     int columnCount = 0;
     for (Map.Entry<byte [], Cell> e: result.entrySet()) {
       columnCount++;

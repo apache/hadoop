@@ -116,7 +116,7 @@ public class TestDeleteAll extends HBaseTestCase {
     if (flush) {region_incommon.flushcache();}
 
     // call delete all at a timestamp, make sure only the most recent stuff is left behind
-    region.deleteAll(row, t1);
+    region.deleteAll(row, t1, null);
     if (flush) {region_incommon.flushcache();}    
     assertCellEquals(region, row, colA, t0, cellData(0, flush));
     assertCellEquals(region, row, colA, t1, null);
@@ -126,7 +126,7 @@ public class TestDeleteAll extends HBaseTestCase {
     assertCellEquals(region, row, colD, t2, null);
 
     // call delete all w/o a timestamp, make sure nothing is left.
-    region.deleteAll(row, HConstants.LATEST_TIMESTAMP);
+    region.deleteAll(row, HConstants.LATEST_TIMESTAMP, null);
     if (flush) {region_incommon.flushcache();}    
     assertCellEquals(region, row, colA, t0, null);
     assertCellEquals(region, row, colA, t1, null);

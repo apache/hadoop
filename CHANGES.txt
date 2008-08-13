@@ -35,6 +35,10 @@ Release 0.3.0 - Unreleased
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
    HBASE-798  Provide Client API to explicitly lock and unlock rows (Jonathan
               Gray via Jim Kellerman)
+   HBASE-798  Add missing classes: UnknownRowLockException and RowLock which
+              were present in previous versions of the patches for this issue,
+              but not in the version that was committed. Also fix a number of
+              compilation problems that were introduced by patch.
 
   OPTIMIZATIONS
 

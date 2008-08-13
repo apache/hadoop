@@ -70,7 +70,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
       for (int j = 0; j < TIMESTAMPS.length; j++) {
         BatchUpdate b = new BatchUpdate(ROWS[i], TIMESTAMPS[j]);
         b.put(HConstants.COLUMN_FAMILY, Bytes.toBytes(TIMESTAMPS[j]));
-        REGIONS[i].batchUpdate(b);
+        REGIONS[i].batchUpdate(b, null);
       }
       // Insert the region we created into the meta
       HRegion.addRegionToMETA(meta, REGIONS[i]);

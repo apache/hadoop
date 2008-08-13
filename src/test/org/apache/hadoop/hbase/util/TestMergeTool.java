@@ -125,7 +125,7 @@ public class TestMergeTool extends HBaseTestCase {
           byte [] row = rows[i][j];
           BatchUpdate b = new BatchUpdate(row);
           b.put(COLUMN_NAME, new ImmutableBytesWritable(row).get());
-          regions[i].batchUpdate(b);
+          regions[i].batchUpdate(b, null);
         }
         HRegion.addRegionToMETA(meta, regions[i]);
       }

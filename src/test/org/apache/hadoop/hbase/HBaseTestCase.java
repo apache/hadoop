@@ -401,13 +401,13 @@ public abstract class HBaseTestCase extends TestCase {
     
     /** {@inheritDoc} */
     public void commit(BatchUpdate batchUpdate) throws IOException {
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
     };
     
     /** {@inheritDoc} */
     public void deleteAll(byte [] row, byte [] column, long ts)
     throws IOException {
-      this.region.deleteAll(row, column, ts);
+      this.region.deleteAll(row, column, ts, null);
     }
 
     /** {@inheritDoc} */
@@ -441,7 +441,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @throws IOException
      */
     public Map<byte [], Cell> getFull(byte [] row) throws IOException {
-      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP);
+      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP, null);
     }
 
     /** {@inheritDoc} */
@@ -569,7 +569,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected void assertCellEquals(final HRegion region, final byte [] row,
     final byte [] column, final long timestamp, final String value)
   throws IOException {
-    Map<byte [], Cell> result = region.getFull(row, null, timestamp);
+    Map<byte [], Cell> result = region.getFull(row, null, timestamp, null);
     Cell cell_value = result.get(column);
     if(value == null){
       assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);

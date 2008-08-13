@@ -110,7 +110,7 @@ public class TestDeleteFamily extends HBaseTestCase {
 
     // call delete family at a timestamp, make sure only the most recent stuff
     // for column c is left behind
-    region.deleteFamily(row, COLUMNS[0], t1);
+    region.deleteFamily(row, COLUMNS[0], t1, null);
     if (flush) {region_incommon.flushcache();}
     // most recent for A,B,C should be fine
     // A,B at older timestamps should be gone
@@ -127,7 +127,7 @@ public class TestDeleteFamily extends HBaseTestCase {
 
     // call delete family w/o a timestamp, make sure nothing is left except for
     // column C.
-    region.deleteFamily(row, COLUMNS[0], HConstants.LATEST_TIMESTAMP);
+    region.deleteFamily(row, COLUMNS[0], HConstants.LATEST_TIMESTAMP, null);
     if (flush) {region_incommon.flushcache();}
     // A,B for latest timestamp should be gone
     // C should still be fine

@@ -127,7 +127,7 @@ public class TestCompaction extends HBaseTestCase {
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis());
+    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis(),null);
     // Now, before compacting, remove all instances of the first row so can
     // verify that it is removed as we compact.
     // Assert all delted.

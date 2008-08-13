@@ -216,7 +216,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     BatchUpdate bu = new BatchUpdate(keyToWrite);
     bu.put(COLUMN_NAME, "test".getBytes());
 
-    region.batchUpdate(bu);
+    region.batchUpdate(bu, null);
 
     region.close();
     region.getLog().closeAndDelete();

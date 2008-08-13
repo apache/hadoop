@@ -123,7 +123,7 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
           + String.format("%1$05d", i)));
 
       batchUpdate.put(COLUMN_NAME, value.get());
-      region.batchUpdate(batchUpdate);
+      region.batchUpdate(batchUpdate, null);
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);
         r.flushcache();
