@@ -27,6 +27,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -60,6 +61,76 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       this.miniHdfs.getFileSystem().getHomeDirectory().toString());
   }
 
+  /**
+   * Test for HBASE-808 and HBASE-809.
+   * @throws Exception
+   */
+  public void testMaxVersionsAndDeleting() throws Exception {
+    HRegion region = null;
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+      
+      byte [] column = COLUMNS[0];
+      for (int i = 0; i < 100; i++) {
+        addToRow(region, T00, column, i, T00.getBytes());
+      }
+      checkVersions(region, T00, column);
+      // Flush and retry.
+      region.flushcache();
+      checkVersions(region, T00, column);
+      
+      // Now delete all then retry
+      region.deleteAll(Bytes.toBytes(T00), System.currentTimeMillis(), null);
+      Cell [] cells = region.get(Bytes.toBytes(T00), column,
+        HColumnDescriptor.DEFAULT_VERSIONS);
+      assertTrue(cells == null);
+      region.flushcache();
+      cells = region.get(Bytes.toBytes(T00), column,
+          HColumnDescriptor.DEFAULT_VERSIONS);
+      assertTrue(cells == null);
+      
+      // Now add back the rows
+      for (int i = 0; i < 100; i++) {
+        addToRow(region, T00, column, i, T00.getBytes());
+      }
+      // Run same verifications.
+      checkVersions(region, T00, column);
+      // Flush and retry.
+      region.flushcache();
+      checkVersions(region, T00, column);
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }
+  }
+  
+  private void addToRow(final HRegion r, final String row, final byte [] column,
+      final long ts, final byte [] bytes)
+  throws IOException {
+    BatchUpdate batchUpdate = new BatchUpdate(row, ts);
+    batchUpdate.put(column, bytes);
+    r.batchUpdate(batchUpdate, null);
+  }
+
+  private void checkVersions(final HRegion region, final String row,
+      final byte [] column)
+  throws IOException {
+    byte [] r = Bytes.toBytes(row);
+    Cell [] cells = region.get(r, column, 100);
+    assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
+    cells = region.get(r, column, 1);
+    assertTrue(cells.length == 1);
+    cells = region.get(r, column, HConstants.ALL_VERSIONS);
+    assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
+  }
+  
   /**
    * Test file of multiple deletes and with deletes as final key.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>

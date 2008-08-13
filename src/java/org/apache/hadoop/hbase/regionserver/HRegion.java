@@ -1144,7 +1144,6 @@ public class HRegion implements HConstants {
     if (this.closed.get()) {
       throw new IOException("Region " + this + " closed");
     }
-
     // Make sure this is a valid row and valid column
     checkRow(row);
     checkColumn(column);
@@ -1267,10 +1266,9 @@ public class HRegion implements HConstants {
     }
   }
 
-  /**
+  /*
    * Get <code>versions</code> keys matching the origin key's
-   * row/column/timestamp and those of an older vintage
-   * Default access so can be accessed out of {@link HRegionServer}.
+   * row/column/timestamp and those of an older vintage.
    * @param origin Where to start searching.
    * @param versions How many versions to return. Pass
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
@@ -1288,11 +1286,12 @@ public class HRegion implements HConstants {
       storesToCheck = new ArrayList<HStore>(1);
       storesToCheck.add(getStore(origin.getColumn()));
     }
+    long now = System.currentTimeMillis();
     for (HStore targetStore: storesToCheck) {
       if (targetStore != null) {
         // Pass versions without modification since in the store getKeys, it
         // includes the size of the passed <code>keys</code> array when counting.
-        List<HStoreKey> r = targetStore.getKeys(origin, versions);
+        List<HStoreKey> r = targetStore.getKeys(origin, versions, now);
         if (r != null) {
           keys.addAll(r);
         }
@@ -1469,6 +1468,9 @@ public class HRegion implements HConstants {
     checkReadOnly();
     Integer lid = getLock(lockid,row);
     try {
+      // Delete ALL verisons rather than MAX_VERSIONS.  If we just did
+      // MAX_VERSIONS, then if 2* MAX_VERSION cells, subsequent gets would
+      // get old stuff.
       deleteMultiple(row, column, ts, ALL_VERSIONS);
     } finally {
       if(lockid == null) releaseRowLock(lid);
@@ -1486,11 +1488,12 @@ public class HRegion implements HConstants {
       final Integer lockid)
   throws IOException {
     checkReadOnly();
-    Integer lid = getLock(lockid,row);
+    Integer lid = getLock(lockid, row);
+    long now = System.currentTimeMillis();
     try {
-      for (HStore store : stores.values()){
+      for (HStore store : stores.values()) {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
-          ALL_VERSIONS);
+          ALL_VERSIONS, now);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.deleteBytes.get());
@@ -1516,12 +1519,14 @@ public class HRegion implements HConstants {
       final Integer lockid)
   throws IOException{
     checkReadOnly();
-    Integer lid = getLock(lockid,row);
+    Integer lid = getLock(lockid, row);
+    long now = System.currentTimeMillis();
     try {
       // find the HStore for the column family
       HStore store = getStore(family);
       // find all the keys that match our criteria
-      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp), ALL_VERSIONS);
+      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
+        ALL_VERSIONS, now);
       // delete all the cells
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
       for (HStoreKey key: keys) {
@@ -1533,11 +1538,10 @@ public class HRegion implements HConstants {
     }
   }
   
-  /**
+  /*
    * Delete one or many cells.
    * Used to support {@link #deleteAll(byte [], byte [], long)} and deletion of
    * latest cell.
-   * 
    * @param row
    * @param column
    * @param ts Timestamp to start search on.
@@ -1809,7 +1813,7 @@ public class HRegion implements HConstants {
   private Integer getLock(Integer lockid, byte [] row) 
   throws IOException {
     Integer lid = null;
-    if(lockid == null) {
+    if (lockid == null) {
       lid = obtainRowLock(row);
     } else {
       if(!isRowLocked(lockid)) {

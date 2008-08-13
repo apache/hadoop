@@ -970,52 +970,6 @@ public class HStore implements HConstants {
   }
 
   /*
-   * Check if this is cell is deleted.
-   * If a memcache and a deletes, check key does not have an entry filled.
-   * Otherwise, check value is not the <code>HGlobals.deleteBytes</code> value.
-   * If passed value IS deleteBytes, then it is added to the passed
-   * deletes map.
-   * @param hsk
-   * @param value
-   * @param checkMemcache true if the memcache should be consulted
-   * @param deletes Map keyed by column with a value of timestamp. Can be null.
-   * If non-null and passed value is HGlobals.deleteBytes, then we add to this
-   * map.
-   * @return True if this is a deleted cell.  Adds the passed deletes map if
-   * passed value is HGlobals.deleteBytes.
-  */
-  private boolean isDeleted(final HStoreKey hsk, final byte [] value,
-      final boolean checkMemcache, final Map<byte [], List<Long>> deletes) {
-    if (checkMemcache && memcache.isDeleted(hsk)) {
-      return true;
-    }
-    List<Long> timestamps =
-      (deletes == null) ? null: deletes.get(hsk.getColumn());
-    if (timestamps != null &&
-        timestamps.contains(Long.valueOf(hsk.getTimestamp()))) {
-      return true;
-    }
-    if (value == null) {
-      // If a null value, shouldn't be in here.  Mark it as deleted cell.
-      return true;
-    }
-    if (!HLogEdit.isDeleted(value)) {
-      return false;
-    }
-    // Cell has delete value.  Save it into deletes.
-    if (deletes != null) {
-      if (timestamps == null) {
-        timestamps = new ArrayList<Long>();
-        deletes.put(hsk.getColumn(), timestamps);
-      }
-      // We know its not already in the deletes array else we'd have returned
-      // earlier so no need to test if timestamps already has this value.
-      timestamps.add(Long.valueOf(hsk.getTimestamp()));
-    }
-    return true;
-  }
-  
-  /*
    * It's assumed that the compactLock  will be acquired prior to calling this 
    * method!  Otherwise, it is not thread-safe!
    *
@@ -1223,6 +1177,19 @@ public class HStore implements HConstants {
       toArray(new MapFile.Reader[this.readers.size()]);
   }
 
+  /*
+   * @param wantedVersions How many versions were asked for.
+   * @return wantedVersions or this families' MAX_VERSIONS.
+   */
+  private int versionsToReturn(final int wantedVersions) {
+    if (wantedVersions <= 0) {
+      throw new IllegalArgumentException("Number of versions must be > 0");
+    }
+    // Make sure we do not return more than maximum versions for this store.
+    return wantedVersions > this.family.getMaxVersions()?
+      this.family.getMaxVersions(): wantedVersions;
+  }
+  
   /**
    * Get the value for the indicated HStoreKey.  Grab the target value and the 
    * previous <code>numVersions - 1</code> values, as well.
@@ -1233,37 +1200,38 @@ public class HStore implements HConstants {
    * @return values for the specified versions
    * @throws IOException
    */
-  Cell[] get(HStoreKey key, int numVersions) throws IOException {
-    if (numVersions <= 0) {
-      throw new IllegalArgumentException("Number of versions must be > 0");
-    }
-    
-    this.lock.readLock().lock();
+  Cell[] get(final HStoreKey key, final int numVersions) throws IOException {
+    // This code below is very close to the body of the getKeys method.  Any 
+    // changes in the flow below should also probably be done in getKeys.
+    // TODO: Refactor so same code used.
     long now = System.currentTimeMillis();
+    int versions = versionsToReturn(numVersions);
+    // Keep a list of deleted cell keys.  We need this because as we go through
+    // the memcache and store files, the cell with the delete marker may be
+    // in one store and the old non-delete cell value in a later store.
+    // If we don't keep around the fact that the cell was deleted in a newer
+    // record, we end up returning the old value if user is asking for more
+    // than one version. This List of deletes should not be large since we
+    // are only keeping rows and columns that match those set on the get and
+    // which have delete values.  If memory usage becomes an issue, could
+    // redo as bloom filter.
+    Set<HStoreKey> deletes = new HashSet<HStoreKey>();
+    this.lock.readLock().lock();
     try {
       // Check the memcache
-      List<Cell> results = this.memcache.get(key, numVersions);
+      List<Cell> results = this.memcache.get(key, versions, deletes, now);
       // If we got sufficient versions from memcache, return. 
-      if (results.size() == numVersions) {
+      if (results.size() == versions) {
         return results.toArray(new Cell[results.size()]);
       }
-
-      // Keep a list of deleted cell keys.  We need this because as we go through
-      // the store files, the cell with the delete marker may be in one file and
-      // the old non-delete cell value in a later store file. If we don't keep
-      // around the fact that the cell was deleted in a newer record, we end up
-      // returning the old value if user is asking for more than one version.
-      // This List of deletes should not be large since we are only keeping rows
-      // and columns that match those set on the scanner and which have delete
-      // values.  If memory usage becomes an issue, could redo as bloom filter.
-      Map<byte [], List<Long>> deletes =
-        new TreeMap<byte [], List<Long>>(Bytes.BYTES_COMPARATOR);
-      // This code below is very close to the body of the getKeys method.
       MapFile.Reader[] maparray = getReaders();
-      for(int i = maparray.length - 1; i >= 0; i--) {
+      // Returned array is sorted with the most recent addition last.
+      for(int i = maparray.length - 1;
+          i >= 0 && !hasEnoughVersions(versions, results); i--) {
         MapFile.Reader map = maparray[i];
         synchronized(map) {
           map.reset();
+          // Do the priming read
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
           if (readkey == null) {
@@ -1276,31 +1244,16 @@ public class HStore implements HConstants {
           if (!readkey.matchesRowCol(key)) {
             continue;
           }
-          if (!isDeleted(readkey, readval.get(), true, deletes)) {
-            if (!isExpired(readkey, ttl, now)) {
-              results.add(new Cell(readval.get(), readkey.getTimestamp()));
-            }
-            // Perhaps only one version is wanted.  I could let this
-            // test happen later in the for loop test but it would cost
-            // the allocation of an ImmutableBytesWritable.
-            if (hasEnoughVersions(numVersions, results)) {
+          if (get(readkey, readval.get(), versions, results, deletes, now)) {
+            break;
+          }
+          for (readval = new ImmutableBytesWritable();
+              map.next(readkey, readval) && readkey.matchesRowCol(key);
+              readval = new ImmutableBytesWritable()) {
+            if (get(readkey, readval.get(), versions, results, deletes, now)) {
               break;
             }
           }
-          for (readval = new ImmutableBytesWritable();
-              map.next(readkey, readval) &&
-              readkey.matchesRowCol(key) &&
-              !hasEnoughVersions(numVersions, results);
-              readval = new ImmutableBytesWritable()) {
-            if (!isDeleted(readkey, readval.get(), true, deletes)) {
-              if (!isExpired(readkey, ttl, now)) {
-                results.add(new Cell(readval.get(), readkey.getTimestamp()));
-              }
-            }
-          }
-        }
-        if (hasEnoughVersions(numVersions, results)) {
-          break;
         }
       }
       return results.size() == 0 ?
@@ -1310,54 +1263,83 @@ public class HStore implements HConstants {
     }
   }
   
-  /**
+  /*
+   * Look at one key/value.
+   * @param key
+   * @param value
+   * @param versions
+   * @param results
+   * @param deletes
+   * @param now
+   * @return True if we have enough versions.
+   */
+  private boolean get(final HStoreKey key, final byte [] value,
+      final int versions, final List<Cell> results,
+      final Set<HStoreKey> deletes, final long now) {
+    if (!HLogEdit.isDeleted(value)) {
+      if (notExpiredAndNotInDeletes(this.ttl, key, now, deletes)) {
+        results.add(new Cell(value, key.getTimestamp()));
+      }
+      // Perhaps only one version is wanted.  I could let this
+      // test happen later in the for loop test but it would cost
+      // the allocation of an ImmutableBytesWritable.
+      if (hasEnoughVersions(versions, results)) {
+        return true;
+      }
+    } else {
+      // Is this copy necessary?
+      deletes.add(new HStoreKey(key));
+    }
+    return false;
+  }
+
+  /*
    * Small method to check if we are over the max number of versions
    * or we acheived this family max versions. 
    * The later happens when we have the situation described in HBASE-621.
-   * @param numVersions
-   * @param results
+   * @param versions
+   * @param c
    * @return 
    */
-  private boolean hasEnoughVersions(final int numVersions,
-      final List<Cell> results) {
-    return (results.size() >= numVersions || results.size() >= family
-            .getMaxVersions());
+  private boolean hasEnoughVersions(final int versions, final List<Cell> c) {
+    return c.size() >= versions;
   }
 
   /**
    * Get <code>versions</code> keys matching the origin key's
-   * row/column/timestamp and those of an older vintage
+   * row/column/timestamp and those of an older vintage.
    * Default access so can be accessed out of {@link HRegionServer}.
    * @param origin Where to start searching.
-   * @param versions How many versions to return. Pass
-   * {@link HConstants.ALL_VERSIONS} to retrieve all. Versions will include
-   * size of passed <code>allKeys</code> in its count.
-   * @param allKeys List of keys prepopulated by keys we found in memcache.
-   * This method returns this passed list with all matching keys found in
-   * stores appended.
-   * @return The passed <code>allKeys</code> with <code>versions</code> of
-   * matching keys found in store files appended.
+   * @param numVersions How many versions to return. Pass
+   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @param now
+   * @return Matching keys.
    * @throws IOException
    */
-  List<HStoreKey> getKeys(final HStoreKey origin, final int versions)
+  List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
+    final long now)
   throws IOException {
-      
-    List<HStoreKey> keys = this.memcache.getKeys(origin, versions);
-    if (keys.size() >= versions) {
-      return keys;
-    }
-    
-    // This code below is very close to the body of the get method.
+    // This code below is very close to the body of the get method.  Any 
+    // changes in the flow below should also probably be done in get.  TODO:
+    // Refactor so same code used.
+    Set<HStoreKey> deletes = new HashSet<HStoreKey>();
     this.lock.readLock().lock();
-    long now = System.currentTimeMillis();
     try {
+      // Check the memcache
+      List<HStoreKey> keys =
+        this.memcache.getKeys(origin, versions, deletes, now);
+      // If we got sufficient versions from memcache, return. 
+      if (keys.size() >= versions) {
+        return keys;
+      }
       MapFile.Reader[] maparray = getReaders();
-      for(int i = maparray.length - 1; i >= 0; i--) {
+      // Returned array is sorted with the most recent addition last.
+      for(int i = maparray.length - 1;
+          i >= 0 && keys.size() < versions; i--) {
         MapFile.Reader map = maparray[i];
         synchronized(map) {
           map.reset();
-          
-          // do the priming read
+          // Do the priming read
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(origin, readval);
           if (readkey == null) {
@@ -1367,24 +1349,23 @@ public class HStore implements HConstants {
             // BEFORE.
             continue;
           }
-          
-          do{
+          do {
             // if the row matches, we might want this one.
             if (rowMatches(origin, readkey)) {
               // if the cell matches, then we definitely want this key.
               if (cellMatches(origin, readkey)) {
-                // store the key if it isn't deleted or superceeded by what's
+                // Store the key if it isn't deleted or superceeded by what's
                 // in the memcache
-                if (!isDeleted(readkey, readval.get(), false, null) &&
-                    !keys.contains(readkey)) {
-                  if (!isExpired(readkey, ttl, now)) {
+                if (!HLogEdit.isDeleted(readval.get())) {
+                  if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
                     keys.add(new HStoreKey(readkey));
                   }
-
-                  // if we've collected enough versions, then exit the loop.
                   if (keys.size() >= versions) {
                     break;
                   }
+                } else {
+                  // Is this copy necessary?
+                  deletes.add(new HStoreKey(readkey));
                 }
               } else {
                 // the cell doesn't match, but there might be more with different
@@ -1398,7 +1379,6 @@ public class HStore implements HConstants {
           } while (map.next(readkey, readval)); // advance to the next key
         }
       }
-      
       return keys;
     } finally {
       this.lock.readLock().unlock();
@@ -1446,7 +1426,8 @@ public class HStore implements HConstants {
         rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys, deletes);
       }
       // Return the best key from candidateKeys
-      return candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
+      byte [] result = candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
+      return result;
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1527,10 +1508,11 @@ public class HStore implements HConstants {
    */
   static boolean notExpiredAndNotInDeletes(final long ttl,
       final HStoreKey hsk, final long now, final Set<HStoreKey> deletes) {
-    return !isExpired(hsk, ttl, now) && !deletes.contains(hsk);
+    return !isExpired(hsk, ttl, now) &&
+      (deletes == null || !deletes.contains(hsk));
   }
   
-  private static boolean isExpired(final HStoreKey hsk, final long ttl,
+  static boolean isExpired(final HStoreKey hsk, final long ttl,
       final long now) {
     boolean result = ttl != HConstants.FOREVER && now > hsk.getTimestamp() + ttl;
     if (result && LOG.isDebugEnabled()) {

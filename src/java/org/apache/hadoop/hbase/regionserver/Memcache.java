@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 class Memcache {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
-  private long ttl;
+  private final long ttl;
 
   // Note that since these structures are always accessed with a lock held,
   // so no additional synchronization is required.
@@ -70,16 +70,15 @@ class Memcache {
   /**
    * Default constructor. Used for tests.
    */
-  public Memcache()
-  {
-    ttl = HConstants.FOREVER;
+  public Memcache() {
+    this.ttl = HConstants.FOREVER;
   }
 
   /**
    * Constructor.
    * @param ttl The TTL for cache entries, in milliseconds.
    */
-  public Memcache(long ttl) {
+  public Memcache(final long ttl) {
     this.ttl = ttl;
   }
 
@@ -180,16 +179,29 @@ class Memcache {
    * @return An array of byte arrays ordered by timestamp.
    */
   List<Cell> get(final HStoreKey key, final int numVersions) {
+    return get(key, numVersions, null, System.currentTimeMillis());
+  }
+  
+  /**
+   * Look back through all the backlog TreeMaps to find the target.
+   * @param key
+   * @param numVersions
+   * @param deletes
+   * @param now
+   * @return An array of byte arrays ordered by timestamp.
+   */
+  List<Cell> get(final HStoreKey key, final int numVersions,
+      final Set<HStoreKey> deletes, final long now) {
     this.lock.readLock().lock();
     try {
       List<Cell> results;
-      // The synchronizations here are because internalGet iterates
+      // The synchronizations here are because the below get iterates
       synchronized (this.memcache) {
-        results = internalGet(this.memcache, key, numVersions);
+        results = get(this.memcache, key, numVersions, deletes, now);
       }
       synchronized (this.snapshot) {
         results.addAll(results.size(),
-          internalGet(this.snapshot, key, numVersions - results.size()));
+          get(this.snapshot, key, numVersions - results.size(), deletes, now));
       }
       return results;
     } finally {
@@ -308,10 +320,7 @@ class Memcache {
                   now < itKey.getTimestamp() + ttl) {
               results.put(itCol, new Cell(val, itKey.getTimestamp()));
             } else {
-              victims.add(itKey);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("internalGetFull: " + itKey + ": expired, skipped");
-              }
+              addVictim(victims, itKey);
             }
           }
         }
@@ -399,11 +408,7 @@ class Memcache {
               if (deletedOrExpiredRow == null) {
                 deletedOrExpiredRow = new HStoreKey(found_key);
               }
-              victims.add(found_key);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("internalGetRowKeyAtOrBefore:" + found_key +
-                  " expired, skipped");
-              }
+              addVictim(victims, found_key);
             }
           }
         }
@@ -525,7 +530,7 @@ class Memcache {
     return new HStoreKey(key.getRow(), key.getColumn());
   }
   
-  /**
+  /*
    * Examine a single map for the desired key.
    *
    * TODO - This is kinda slow.  We need a data structure that allows for 
@@ -534,42 +539,51 @@ class Memcache {
    * @param map
    * @param key
    * @param numVersions
+   * @param deletes
    * @return Ordered list of items found in passed <code>map</code>.  If no
    * matching values, returns an empty list (does not return null).
    */
-  private ArrayList<Cell> internalGet(
-      final SortedMap<HStoreKey, byte []> map, final HStoreKey key,
-      final int numVersions) {
-
+  private ArrayList<Cell> get(final SortedMap<HStoreKey, byte []> map,
+      final HStoreKey key, final int numVersions, final Set<HStoreKey> deletes,
+      final long now) {
     ArrayList<Cell> result = new ArrayList<Cell>();
-    
-    // TODO: If get is of a particular version -- numVersions == 1 -- we
-    // should be able to avoid all of the tailmap creations and iterations
-    // below.
-    long now = System.currentTimeMillis();
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
-    SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
-    for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
-      HStoreKey itKey = es.getKey();
-      if (itKey.matchesRowCol(key)) {
-        if (!HLogEdit.isDeleted(es.getValue())) { 
-          // Filter out expired results
-          if (ttl == HConstants.FOREVER ||
-                now < itKey.getTimestamp() + ttl) {
-            result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
-            if (numVersions > 0 && result.size() >= numVersions) {
-              break;
-            }
-          } else {
-            victims.add(itKey);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("internalGet: " + itKey + ": expired, skipped");
-            }
-          }
+    // Handle special case where only one version wanted.
+    if (numVersions == 1) {
+      byte [] value = map.get(key);
+      if (!isDeleted(value)) {
+        // Filter out expired results
+        if (HStore.notExpiredAndNotInDeletes(ttl, key, now, deletes)) {
+          result.add(new Cell(value, key.getTimestamp()));
+        } else {
+          addVictim(victims, key);
         }
       } else {
-        // By L.N. HBASE-684, map is sorted, so we can't find match any more.
-        break;
+        deletes.add(key);
+      }
+    } else {
+      SortedMap<HStoreKey, byte[]> tailMap = map.tailMap(key);
+      for (Map.Entry<HStoreKey, byte[]> es : tailMap.entrySet()) {
+        HStoreKey itKey = es.getKey();
+        if (itKey.matchesRowCol(key)) {
+          if (!isDeleted(es.getValue())) {
+            // Filter out expired results
+            if (HStore.notExpiredAndNotInDeletes(ttl, itKey, now, deletes)) {
+              result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
+              if (numVersions > 0 && result.size() >= numVersions) {
+                break;
+              }
+            } else {
+              addVictim(victims, itKey);
+            }
+          } else {
+            // Cell holds a delete value.
+            deletes.add(itKey);
+          }
+        } else {
+          // By L.N. HBASE-684, map is sorted, so we can't find match any more.
+          break;
+        }
       }
     }
     // Remove expired victims from the map.
@@ -579,30 +593,43 @@ class Memcache {
     return result;
   }
 
+  /*
+   * Add <code>key</code> to the list of 'victims'.
+   * @param victims
+   * @param key
+   */
+  private void addVictim(final List<HStoreKey> victims, final HStoreKey key) {
+    victims.add(key);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(key + ": expired or in deletes, skipped");
+    }
+  }
+
   /**
    * Get <code>versions</code> keys matching the origin key's
-   * row/column/timestamp and those of an older vintage
-   * Default access so can be accessed out of {@link HRegionServer}.
+   * row/column/timestamp and those of an older vintage.
    * @param origin Where to start searching.
    * @param versions How many versions to return. Pass
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @param now
+   * @param deletes Accumulating list of deletes
    * @return Ordered list of <code>versions</code> keys going from newest back.
    * @throws IOException
    */
-  List<HStoreKey> getKeys(final HStoreKey origin, final int versions) {
+  List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
+      final Set<HStoreKey> deletes, final long now) {
     this.lock.readLock().lock();
     try {
       List<HStoreKey> results;
       synchronized (memcache) {
-        results = internalGetKeys(this.memcache, origin, versions);
+        results = getKeys(this.memcache, origin, versions, deletes, now);
       }
       synchronized (snapshot) {
-        results.addAll(results.size(), internalGetKeys(snapshot, origin,
+        results.addAll(results.size(), getKeys(snapshot, origin,
             versions == HConstants.ALL_VERSIONS ? versions :
-              (versions - results.size())));
+              (versions - results.size()), deletes, now));
       }
       return results;
-      
     } finally {
       this.lock.readLock().unlock();
     }
@@ -612,21 +639,20 @@ class Memcache {
    * @param origin Where to start searching.
    * @param versions How many versions to return. Pass
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @param now
+   * @param deletes
    * @return List of all keys that are of the same row and column and of
    * equal or older timestamp.  If no keys, returns an empty List. Does not
    * return null.
    */
-  private List<HStoreKey> internalGetKeys(
-      final SortedMap<HStoreKey, byte []> map, final HStoreKey origin,
-      final int versions) {
-
-    long now = System.currentTimeMillis();
+  private List<HStoreKey> getKeys(final SortedMap<HStoreKey,
+      byte []> map, final HStoreKey origin, final int versions,
+      final Set<HStoreKey> deletes, final long now) {
     List<HStoreKey> result = new ArrayList<HStoreKey>();
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey key = es.getKey();
-  
       // if there's no column name, then compare rows and timestamps
       if (origin.getColumn() != null && origin.getColumn().length == 0) {
         // if the current and origin row don't match, then we can jump
@@ -639,37 +665,33 @@ class Memcache {
         if (key.getTimestamp() > origin.getTimestamp()) {
           continue;
         }
-      }
-      else{ // compare rows and columns
+      } else { // compare rows and columns
         // if the key doesn't match the row and column, then we're done, since 
         // all the cells are ordered.
         if (!key.matchesRowCol(origin)) {
           break;
         }
       }
-      if (!HLogEdit.isDeleted(es.getValue())) {
-        if (ttl == HConstants.FOREVER || now < key.getTimestamp() + ttl) {
+      if (!isDeleted(es.getValue())) {
+        if (HStore.notExpiredAndNotInDeletes(this.ttl, key, now, deletes)) {
           result.add(key);
-        } else {
-          victims.add(key);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("internalGetKeys: " + key + ": expired, skipped");
+          if (versions > 0 && result.size() >= versions) {
+            break;
           }
+        } else {
+          addVictim(victims, key);
         }
-        if (result.size() >= versions) {
-          // We have enough results.  Return.
-          break;
-        }
+      } else {
+        // Delete
+        deletes.add(key);
       }
     }
-
     // Clean expired victims from the map.
-    for (HStoreKey v: victims)
+    for (HStoreKey v: victims) {
        map.remove(v);
-
+    }
     return result;
   }
-
 
   /**
    * @param key
@@ -678,7 +700,16 @@ class Memcache {
    * the cell has been deleted.
    */
   boolean isDeleted(final HStoreKey key) {
-    return HLogEdit.isDeleted(this.memcache.get(key));
+    return isDeleted(this.memcache.get(key)) ||
+      (this.snapshot != null && isDeleted(this.snapshot.get(key)));
+  }
+  
+  /*
+   * @param b Cell value.
+   * @return True if this is a delete value.
+   */
+  private boolean isDeleted(final byte [] b) {
+    return HLogEdit.isDeleted(b);
   }
 
   /**

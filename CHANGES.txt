@@ -20,6 +20,9 @@ Release 0.3.0 - Unreleased
                (Billy Pearson via Stack)
    HBASE-825   Master logs showing byte [] in place of string in logging
                (Billy Pearson via Stack)
+   HBASE-808,809 MAX_VERSIONS not respected, and Deletall doesn't and inserts
+               after delete don't work as expected
+               (Jean-Daniel Cryans via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
