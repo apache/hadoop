@@ -104,4 +104,18 @@ public class TestStringUtils extends TestCase {
     assertEquals(STR_WITH_BOTH2,
         StringUtils.unEscapeString(ESCAPED_STR_WITH_BOTH2));
   }
+  
+  public void testTraditionalBinaryPrefix() throws Exception {
+    String[] symbol = {"k", "m", "g", "t", "p", "e"};
+    long m = 1024;
+    for(String s : symbol) {
+      assertEquals(0, StringUtils.TraditionalBinaryPrefix.string2long(0 + s));
+      assertEquals(m, StringUtils.TraditionalBinaryPrefix.string2long(1 + s));
+      m *= 1024;
+    }
+    
+    assertEquals(0L, StringUtils.TraditionalBinaryPrefix.string2long("0"));
+    assertEquals(-1259520L, StringUtils.TraditionalBinaryPrefix.string2long("-1230k"));
+    assertEquals(956703965184L, StringUtils.TraditionalBinaryPrefix.string2long("891g"));
+  }
 }

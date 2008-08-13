@@ -18,15 +18,24 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.tools.DistCp;
@@ -37,9 +46,17 @@ import org.apache.hadoop.util.ToolRunner;
  * A JUnit test for copying files recursively.
  */
 public class TestCopyFiles extends TestCase {
+  {
+    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
+        ).getLogger().setLevel(Level.OFF);
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
+    ((Log4JLogger)DistCp.LOG).getLogger().setLevel(Level.ALL);
+  }
   
   static final URI LOCAL_FS = URI.create("file:///");
   
+  private static final Random RAN = new Random();
   private static final int NFILES = 20;
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
@@ -123,9 +140,15 @@ public class TestCopyFiles extends TestCase {
     return createFile(root, fs, -1);
   }
 
-  /** check if the files have been copied correctly. */
-  private static boolean checkFiles(String fsname, String topdir, MyFile[] files) 
+  /** Same as checkFiles(fsname, topdir, files, false); */
+  private static boolean checkFiles(String fsname, String topdir, MyFile[] files)
     throws IOException {
+    return checkFiles(fsname, topdir, files, false);
+  }
+
+  /** check if the files have been copied correctly. */
+  private static boolean checkFiles(String fsname, String topdir, MyFile[] files,
+      boolean existingOnly) throws IOException {
     
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
@@ -133,20 +156,28 @@ public class TestCopyFiles extends TestCase {
     
     for (int idx = 0; idx < files.length; idx++) {
       Path fPath = new Path(root, files[idx].getName());
-      FSDataInputStream in = fs.open(fPath);
-      byte[] toRead = new byte[files[idx].getSize()];
-      byte[] toCompare = new byte[files[idx].getSize()];
-      Random rb = new Random(files[idx].getSeed());
-      rb.nextBytes(toCompare);
-      assertEquals("Cannnot read file.", toRead.length, in.read(toRead));
-      in.close();
-      for (int i = 0; i < toRead.length; i++) {
-        if (toRead[i] != toCompare[i]) {
-          return false;
+      try {
+        fs.getFileStatus(fPath);
+        FSDataInputStream in = fs.open(fPath);
+        byte[] toRead = new byte[files[idx].getSize()];
+        byte[] toCompare = new byte[files[idx].getSize()];
+        Random rb = new Random(files[idx].getSeed());
+        rb.nextBytes(toCompare);
+        assertEquals("Cannnot read file.", toRead.length, in.read(toRead));
+        in.close();
+        for (int i = 0; i < toRead.length; i++) {
+          if (toRead[i] != toCompare[i]) {
+            return false;
+          }
+        }
+        toRead = null;
+        toCompare = null;
+      }
+      catch(FileNotFoundException fnfe) {
+        if (!existingOnly) {
+          throw fnfe;
         }
       }
-      toRead = null;
-      toCompare = null;
     }
     
     return true;
@@ -176,14 +207,24 @@ public class TestCopyFiles extends TestCase {
 
   private static FileStatus[] getFileStatus(String namenode,
       String topdir, MyFile[] files) throws IOException {
+    return getFileStatus(namenode, topdir, files, false);
+  }
+  private static FileStatus[] getFileStatus(String namenode,
+      String topdir, MyFile[] files, boolean existingOnly) throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(namenode, conf);
     Path root = new Path(topdir);
-    FileStatus[] ret = new FileStatus[NFILES];
+    List<FileStatus> statuses = new ArrayList<FileStatus>();
     for (int idx = 0; idx < NFILES; ++idx) {
-      ret[idx] = fs.getFileStatus(new Path(root, files[idx].getName()));
+      try {
+        statuses.add(fs.getFileStatus(new Path(root, files[idx].getName())));
+      } catch(FileNotFoundException fnfe) {
+        if (!existingOnly) {
+          throw fnfe;
+        }
+      }
     }
-    return ret;
+    return statuses.toArray(new FileStatus[statuses.size()]);
   }
 
   private static boolean checkUpdate(FileStatus[] old, String namenode,
@@ -567,4 +608,85 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  public void testLimits() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final String nnUri = FileSystem.getDefaultUri(conf).toString();
+      final FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
+      final DistCp distcp = new DistCp(conf);
+
+      final String srcrootdir =  "/src_root";
+      final Path srcrootpath = new Path(srcrootdir); 
+      final String dstrootdir =  "/dst_root";
+      final Path dstrootpath = new Path(dstrootdir); 
+
+      {//test -filelimit
+        MyFile[] files = createFiles(URI.create(nnUri), srcrootdir);
+        int filelimit = files.length / 2;
+        System.out.println("filelimit=" + filelimit);
+
+        ToolRunner.run(distcp,
+            new String[]{"-filelimit", ""+filelimit, nnUri+srcrootdir, nnUri+dstrootdir});
+        
+        FileStatus[] dststat = getFileStatus(nnUri, dstrootdir, files, true);
+        assertEquals(filelimit, dststat.length);
+        deldir(nnUri, dstrootdir);
+        deldir(nnUri, srcrootdir);
+      }
+
+      {//test -sizelimit
+        createFiles(URI.create(nnUri), srcrootdir);
+        long sizelimit = fs.getContentSummary(srcrootpath).getLength()/2;
+        System.out.println("sizelimit=" + sizelimit);
+
+        ToolRunner.run(distcp,
+            new String[]{"-sizelimit", ""+sizelimit, nnUri+srcrootdir, nnUri+dstrootdir});
+        
+        ContentSummary summary = fs.getContentSummary(dstrootpath);
+        System.out.println("summary=" + summary);
+        assertTrue(summary.getLength() <= sizelimit);
+        deldir(nnUri, dstrootdir);
+        deldir(nnUri, srcrootdir);
+      }
+
+      {//test update
+        final MyFile[] srcs = createFiles(URI.create(nnUri), srcrootdir);
+        final long totalsize = fs.getContentSummary(srcrootpath).getLength();
+        System.out.println("src.length=" + srcs.length);
+        System.out.println("totalsize =" + totalsize);
+        fs.mkdirs(dstrootpath);
+        final int parts = RAN.nextInt(NFILES/3 - 1) + 2;
+        final int filelimit = srcs.length/parts;
+        final long sizelimit = totalsize/parts;
+        System.out.println("filelimit=" + filelimit);
+        System.out.println("sizelimit=" + sizelimit);
+        System.out.println("parts    =" + parts);
+        final String[] args = {"-filelimit", ""+filelimit, "-sizelimit", ""+sizelimit,
+            "-update", nnUri+srcrootdir, nnUri+dstrootdir};
+
+        int dstfilecount = 0;
+        long dstsize = 0;
+        for(int i = 0; i <= parts; i++) {
+          ToolRunner.run(distcp, args);
+        
+          FileStatus[] dststat = getFileStatus(nnUri, dstrootdir, srcs, true);
+          System.out.println(i + ") dststat.length=" + dststat.length);
+          assertTrue(dststat.length - dstfilecount <= filelimit);
+          ContentSummary summary = fs.getContentSummary(dstrootpath);
+          System.out.println(i + ") summary.getLength()=" + summary.getLength());
+          assertTrue(summary.getLength() - dstsize <= sizelimit);
+          assertTrue(checkFiles(nnUri, dstrootdir, srcs, true));
+          dstfilecount = dststat.length;
+          dstsize = summary.getLength();
+        }
+
+        deldir(nnUri, dstrootdir);
+        deldir(nnUri, srcrootdir);
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
 }

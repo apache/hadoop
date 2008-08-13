@@ -466,7 +466,7 @@ public class StringUtils {
    * @param args arguments
    * @param LOG the target log object
    */
-  public static void startupShutdownMessage(Class clazz, String[] args,
+  public static void startupShutdownMessage(Class<?> clazz, String[] args,
                                      final org.apache.commons.logging.Log LOG) {
     final String hostname = getHostname();
     final String classname = clazz.getSimpleName();
@@ -489,5 +489,63 @@ public class StringUtils {
           "Shutting down " + classname + " at " + hostname}));
       }
     });
+  }
+
+  /**
+   * The traditional binary prefixes, kilo, mega, ..., exa,
+   * which can be represented by a 64-bit integer.
+   * TraditionalBinaryPrefix symbol are case insensitive. 
+   */
+  public static enum TraditionalBinaryPrefix {
+    KILO(1024),
+    MEGA(KILO.value << 10),
+    GIGA(MEGA.value << 10),
+    TERA(GIGA.value << 10),
+    PETA(TERA.value << 10),
+    EXA(PETA.value << 10);
+
+    public final long value;
+    public final long symbol;
+
+    TraditionalBinaryPrefix(long value) {
+      this.value = value;
+      this.symbol = toString().charAt(0);
+    }
+
+    /**
+     * @return The TraditionalBinaryPrefix object corresponding to the symbol.
+     */
+    public static TraditionalBinaryPrefix valueOf(char symbol) {
+      symbol = Character.toUpperCase(symbol);
+      for(TraditionalBinaryPrefix prefix : TraditionalBinaryPrefix.values()) {
+        if (symbol == prefix.symbol) {
+          return prefix;
+        }
+      }
+      throw new IllegalArgumentException("Unknown symbol '" + symbol + "'");
+    }
+
+    /**
+     * Convert a string to long.
+     * The input string is first be trimmed
+     * and then it is parsed with traditional binary prefix.
+     *
+     * For example,
+     * "-1230k" will be converted to -1230 * 1024 = -1259520;
+     * "891g" will be converted to 891 * 1024^3 = 956703965184;
+     *
+     * @param s input string
+     * @return a long value represented by the input string.
+     */
+    public static long string2long(String s) {
+      s = s.trim();
+      final int lastpos = s.length() - 1;
+      final char lastchar = s.charAt(lastpos);
+      if (Character.isDigit(lastchar))
+        return Long.parseLong(s);
+      else
+        return TraditionalBinaryPrefix.valueOf(lastchar).value
+               * Long.parseLong(s.substring(0, lastpos));
+    }
   }
 }

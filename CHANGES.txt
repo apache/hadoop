@@ -82,6 +82,10 @@ Trunk (unreleased changes)
     analysis framework. (Jerome Boulon, Andy Konwinski, Ari Rabkin, 
     and Eric Yang)
 
+    HADOOP-3873. Add -filelimit and -sizelimit options to distcp to cap the
+    number of files/bytes copied in a particular run to support incremental
+    updates and mirroring. (TszWo (Nicholas), SZE via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till
