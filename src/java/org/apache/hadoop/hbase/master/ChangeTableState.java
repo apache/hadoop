@@ -91,7 +91,7 @@ class ChangeTableState extends TableOperation {
       updateRegionInfo(b, i);
       b.delete(COL_SERVER);
       b.delete(COL_STARTCODE);
-      server.batchUpdate(m.getRegionName(), b);
+      server.batchUpdate(m.getRegionName(), b, -1L);
       if (LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + i.getRegionNameAsString());
       }

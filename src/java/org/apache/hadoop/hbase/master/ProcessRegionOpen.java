@@ -83,7 +83,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
           b.put(COL_SERVER, Bytes.toBytes(serverAddress.toString()));
           b.put(COL_STARTCODE, startCode);
-          server.batchUpdate(metaRegionName, b);
+          server.batchUpdate(metaRegionName, b, -1L);
           if (!this.historian.isOnline()) {
             // This is safest place to do the onlining of the historian in
             // the master.  When we get to here, we know there is a .META.

@@ -407,7 +407,7 @@ public class MetaUtils {
     }
     BatchUpdate b = new BatchUpdate(hri.getRegionName());
     b.put(HConstants.COL_REGIONINFO, Writables.getBytes(hri));
-    r.batchUpdate(b);
+    r.batchUpdate(b, null);
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(
           r.get(hri.getRegionName(), HConstants.COL_REGIONINFO).getValue());

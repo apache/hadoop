@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
@@ -1048,7 +1049,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public RowResult getRow(final byte [] regionName, final byte [] row, 
-    final byte [][] columns, final long ts)
+    final byte [][] columns, final long ts, final long lockId)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1061,7 +1062,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       
       HRegion region = getRegion(regionName);
-      Map<byte [], Cell> map = region.getFull(row, columnSet, ts);
+      Map<byte [], Cell> map = region.getFull(row, columnSet, ts,
+          getLockFromId(lockId));
       HbaseMapWritable<byte [], Cell> result =
         new HbaseMapWritable<byte [], Cell>();
       result.putAll(map);
@@ -1126,7 +1128,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public void batchUpdate(final byte [] regionName, BatchUpdate b)
+  public void batchUpdate(final byte [] regionName, BatchUpdate b, long lockId)
   throws IOException {
     checkOpen();
     this.requestCount.incrementAndGet();
@@ -1134,7 +1136,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
-      region.batchUpdate(b);
+      region.batchUpdate(b, getLockFromId(lockId));
     } catch (OutOfMemoryError error) {
       abort();
       LOG.fatal("Ran out of memory", error);
@@ -1239,7 +1241,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   Map<String, InternalScanner> scanners =
-    Collections.synchronizedMap(new HashMap<String, InternalScanner>());
+    new ConcurrentHashMap<String, InternalScanner>();
 
   /** 
    * Instantiated as a scanner lease.
@@ -1275,26 +1277,157 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   /** {@inheritDoc} */
   public void deleteAll(final byte [] regionName, final byte [] row,
-      final byte [] column, final long timestamp) 
+      final byte [] column, final long timestamp, final long lockId) 
   throws IOException {
     HRegion region = getRegion(regionName);
-    region.deleteAll(row, column, timestamp);
+    region.deleteAll(row, column, timestamp, getLockFromId(lockId));
   }
 
   /** {@inheritDoc} */
   public void deleteAll(final byte [] regionName, final byte [] row,
-      final long timestamp) 
+      final long timestamp, final long lockId) 
   throws IOException {
     HRegion region = getRegion(regionName);
-    region.deleteAll(row, timestamp);
+    region.deleteAll(row, timestamp, getLockFromId(lockId));
   }
 
   /** {@inheritDoc} */
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
-    long timestamp) throws IOException{
-    getRegion(regionName).deleteFamily(row, family, timestamp);
+    long timestamp, final long lockId)
+  throws IOException{
+    getRegion(regionName).deleteFamily(row, family, timestamp,
+        getLockFromId(lockId));
   }
 
+  /** {@inheritDoc} */
+  public long lockRow(byte [] regionName, byte [] row)
+  throws IOException {
+    checkOpen();
+    NullPointerException npe = null;
+    if(regionName == null) {
+      npe = new NullPointerException("regionName is null");
+    } else if(row == null) {
+      npe = new NullPointerException("row to lock is null");
+    }
+    if(npe != null) {
+      IOException io = new IOException("Invalid arguments to lockRow");
+      io.initCause(npe);
+      throw io;
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      Integer r = region.obtainRowLock(row);
+      long lockId = addRowLock(r,region);
+      LOG.debug("Row lock " + lockId + " explicitly acquired by client");
+      return lockId;
+    } catch (IOException e) {
+      LOG.error("Error obtaining row lock (fsOk: " + this.fsOk + ")",
+          RemoteExceptionHandler.checkIOException(e));
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+  protected long addRowLock(Integer r, HRegion region) throws LeaseStillHeldException {
+    long lockId = -1L;
+    lockId = rand.nextLong();
+    String lockName = String.valueOf(lockId);
+    synchronized(rowlocks) {
+      rowlocks.put(lockName, r);
+    }
+    this.leases.
+      createLease(lockName, new RowLockListener(lockName, region));
+    return lockId;
+  }
+
+  /**
+   * Method to get the Integer lock identifier used internally
+   * from the long lock identifier used by the client.
+   * @param lockId long row lock identifier from client
+   * @return intId Integer row lock used internally in HRegion
+   * @throws IOException Thrown if this is not a valid client lock id.
+   */
+  private Integer getLockFromId(long lockId)
+  throws IOException {
+    if(lockId == -1L) {
+      return null;
+    }
+    String lockName = String.valueOf(lockId);
+    Integer rl = null;
+    synchronized(rowlocks) {
+      rl = rowlocks.get(lockName);
+    }
+    if(rl == null) {
+      throw new IOException("Invalid row lock");
+    }
+    this.leases.renewLease(lockName);
+    return rl;
+  }
+
+  /** {@inheritDoc} */
+  public void unlockRow(byte [] regionName, long lockId)
+  throws IOException {
+    checkOpen();
+    NullPointerException npe = null;
+    if(regionName == null) {
+      npe = new NullPointerException("regionName is null");
+    } else if(lockId == -1L) {
+      npe = new NullPointerException("lockId is null");
+    }
+    if(npe != null) {
+      IOException io = new IOException("Invalid arguments to unlockRow");
+      io.initCause(npe);
+      throw io;
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      String lockName = String.valueOf(lockId);
+      Integer r = null;
+      synchronized(rowlocks) {
+        r = rowlocks.remove(lockName);
+      }
+      if(r == null) {
+        throw new UnknownRowLockException(lockName);
+      }
+      region.releaseRowLock(r);
+      this.leases.cancelLease(lockName);
+      LOG.debug("Row lock " + lockId + " has been explicitly released by client");
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+  Map<String, Integer> rowlocks =
+    new ConcurrentHashMap<String, Integer>();
+
+  /**
+   * Instantiated as a row lock lease.
+   * If the lease times out, the row lock is released
+   */
+  private class RowLockListener implements LeaseListener {
+    private final String lockName;
+    private final HRegion region;
+
+    RowLockListener(final String lockName, final HRegion region) {
+      this.lockName = lockName;
+      this.region = region;
+    }
+
+    /** {@inheritDoc} */
+    public void leaseExpired() {
+      LOG.info("Row Lock " + this.lockName + " lease expired");
+      Integer r = null;
+      synchronized(rowlocks) {
+        r = rowlocks.remove(this.lockName);
+      }
+      if(r != null) {
+        region.releaseRowLock(r);
+      }
+    }
+  }
 
   /**
    * @return Info on this server.

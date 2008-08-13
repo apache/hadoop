@@ -2050,7 +2050,8 @@ public class HRegion implements HConstants {
   public static void removeRegionFromMETA(final HRegionInterface srvr,
     final byte [] metaRegionName, final byte [] regionName)
   throws IOException {
-    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP);
+    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP, 
+        -1L);
   }
 
   /**
@@ -2071,7 +2072,7 @@ public class HRegion implements HConstants {
     b.delete(COL_STARTCODE);
     // If carrying splits, they'll be in place when we show up on new
     // server.
-    srvr.batchUpdate(metaRegionName, b);
+    srvr.batchUpdate(metaRegionName, b, -1L);
   }
 
   /**

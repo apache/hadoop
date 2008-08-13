@@ -1,4 +1,4 @@
-/**
+  /**
  * Copyright 2007 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -1170,7 +1170,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public Map<byte [], Cell> getFull(final byte [] row,
-      final Set<byte []> columns, final long ts) 
+      final Set<byte []> columns, final long ts, final Integer lockid) 
   throws IOException {
     // Check columns passed
     if (columns != null) {
@@ -1179,7 +1179,7 @@ public class HRegion implements HConstants {
       }
     }
     HStoreKey key = new HStoreKey(row, ts);
-    Integer lid = obtainRowLock(row);
+    Integer lid = getLock(lockid,row);
     HashSet<HStore> storeSet = new HashSet<HStore>();
     try {
       TreeMap<byte [], Cell> result =
@@ -1215,7 +1215,7 @@ public class HRegion implements HConstants {
       
       return result;
     } finally {
-      releaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
     }
   }
 
@@ -1347,7 +1347,7 @@ public class HRegion implements HConstants {
    * @param b
    * @throws IOException
    */
-  public void batchUpdate(BatchUpdate b)
+  public void batchUpdate(BatchUpdate b, Integer lockid)
   throws IOException {
     checkReadOnly();
 
@@ -1363,7 +1363,8 @@ public class HRegion implements HConstants {
     // See HRegionServer#RegionListener for how the expire on HRegionServer
     // invokes a HRegion#abort.
     byte [] row = b.getRow();
-    Integer lid = obtainRowLock(row);
+    // If we did not pass an existing row lock, obtain a new one
+    Integer lid = getLock(lockid,row);
     long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP) ?
       System.currentTimeMillis() : b.getTimestamp();
     try {
@@ -1408,7 +1409,7 @@ public class HRegion implements HConstants {
       this.targetColumns.remove(Long.valueOf(lid));
       throw e;
     } finally {
-      releaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
     }
   }
 
@@ -1458,17 +1459,19 @@ public class HRegion implements HConstants {
    * @param row
    * @param column
    * @param ts Delete all entries that have this timestamp or older
+   * @param lockid Row lock
    * @throws IOException
    */
-  public void deleteAll(final byte [] row, final byte [] column, final long ts)
+  public void deleteAll(final byte [] row, final byte [] column, final long ts,
+      final Integer lockid)
   throws IOException {
     checkColumn(column);
     checkReadOnly();
-    Integer lid = obtainRowLock(row);
+    Integer lid = getLock(lockid,row);
     try {
       deleteMultiple(row, column, ts, ALL_VERSIONS);
     } finally {
-      releaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
     }
   }
 
@@ -1476,12 +1479,14 @@ public class HRegion implements HConstants {
    * Delete all cells of the same age as the passed timestamp or older.
    * @param row
    * @param ts Delete all entries that have this timestamp or older
+   * @param lockid Row lock
    * @throws IOException
    */
-  public void deleteAll(final byte [] row, final long ts)
+  public void deleteAll(final byte [] row, final long ts,
+      final Integer lockid)
   throws IOException {
     checkReadOnly();
-    Integer lid = obtainRowLock(row);    
+    Integer lid = getLock(lockid,row);
     try {
       for (HStore store : stores.values()){
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
@@ -1493,7 +1498,7 @@ public class HRegion implements HConstants {
         update(edits);
       }
     } finally {
-      releaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
     }
   }
 
@@ -1504,12 +1509,14 @@ public class HRegion implements HConstants {
    * @param row The row to operate on
    * @param family The column family to match
    * @param timestamp Timestamp to match
+   * @param lockid Row lock
    * @throws IOException
    */
-  public void deleteFamily(byte [] row, byte [] family, long timestamp)
+  public void deleteFamily(byte [] row, byte [] family, long timestamp,
+      final Integer lockid)
   throws IOException{
     checkReadOnly();
-    Integer lid = obtainRowLock(row);    
+    Integer lid = getLock(lockid,row);
     try {
       // find the HStore for the column family
       HStore store = getStore(family);
@@ -1522,7 +1529,7 @@ public class HRegion implements HConstants {
       }
       update(edits);
     } finally {
-      releaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
     }
   }
   
@@ -1552,7 +1559,7 @@ public class HRegion implements HConstants {
       update(edits);
     }
   }
-  
+    
   /**
    * @throws IOException Throws exception if region is in read-only mode.
    */
@@ -1776,6 +1783,41 @@ public class HRegion implements HConstants {
       locksToRows.remove(lockid);
       locksToRows.notifyAll();
     }
+  }
+  
+  /**
+   * See if row is currently locked.
+   * @param lockid
+   * @return boolean
+   */
+  private boolean isRowLocked(final Integer lockid) {
+    synchronized (locksToRows) {
+      if(locksToRows.containsKey(lockid)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+  
+  /**
+   * Returns existing row lock if found, otherwise
+   * obtains a new row lock and returns it.
+   * @param lockid
+   * @return lockid
+   */
+  private Integer getLock(Integer lockid, byte [] row) 
+  throws IOException {
+    Integer lid = null;
+    if(lockid == null) {
+      lid = obtainRowLock(row);
+    } else {
+      if(!isRowLocked(lockid)) {
+        throw new IOException("Invalid row lock");
+      }
+      lid = lockid;
+    }
+    return lid;
   }
   
   private void waitOnRowLocks() {
@@ -2134,7 +2176,8 @@ public class HRegion implements HConstants {
   public static void removeRegionFromMETA(final HRegionInterface srvr,
     final byte [] metaRegionName, final byte [] regionName)
   throws IOException {
-    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP);
+    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP,
+        (long)-1L);
   }
 
   /**
@@ -2155,7 +2198,7 @@ public class HRegion implements HConstants {
     b.delete(COL_STARTCODE);
     // If carrying splits, they'll be in place when we show up on new
     // server.
-    srvr.batchUpdate(metaRegionName, b);
+    srvr.batchUpdate(metaRegionName, b, (long)-1L);
   }
 
   /**

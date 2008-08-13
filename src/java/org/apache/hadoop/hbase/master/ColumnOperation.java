@@ -52,7 +52,7 @@ abstract class ColumnOperation extends TableOperation {
   throws IOException {
     BatchUpdate b = new BatchUpdate(i.getRegionName());
     b.put(COL_REGIONINFO, Writables.getBytes(i));
-    server.batchUpdate(regionName, b);
+    server.batchUpdate(regionName, b, -1L);
     if (LOG.isDebugEnabled()) {
       LOG.debug("updated columns in row: " + i.getRegionNameAsString());
     }

@@ -373,7 +373,7 @@ class HMerge implements HConstants {
         b.delete(COL_STARTCODE);
         b.delete(COL_SPLITA);
         b.delete(COL_SPLITB);
-        root.batchUpdate(b);
+        root.batchUpdate(b,null);
 
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + regionsToDelete[r]);
@@ -383,7 +383,7 @@ class HMerge implements HConstants {
       newInfo.setOffline(true);
       BatchUpdate b = new BatchUpdate(newRegion.getRegionName());
       b.put(COL_REGIONINFO, Writables.getBytes(newInfo));
-      root.batchUpdate(b);
+      root.batchUpdate(b,null);
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + newRegion.getRegionName());
       }

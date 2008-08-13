@@ -52,7 +52,7 @@ class ModifyTableMeta extends TableOperation {
   throws IOException {
     BatchUpdate b = new BatchUpdate(i.getRegionName());
     b.put(COL_REGIONINFO, Writables.getBytes(i));
-    server.batchUpdate(regionName, b);
+    server.batchUpdate(regionName, b, -1L);
     LOG.debug("updated HTableDescriptor for region " + i.getRegionNameAsString());
   }
 

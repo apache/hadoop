@@ -308,7 +308,7 @@ public class Merge extends Configured implements Tool {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing region: " + regioninfo + " from " + meta);
     }
-    meta.deleteAll(regioninfo.getRegionName(), System.currentTimeMillis());
+    meta.deleteAll(regioninfo.getRegionName(), System.currentTimeMillis(), null);
   }
 
   /*

@@ -32,6 +32,8 @@ Release 0.3.0 - Unreleased
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
+   HBASE-798  Provide Client API to explicitly lock and unlock rows (Jonathan
+              Gray via Jim Kellerman)
 
   OPTIMIZATIONS
 

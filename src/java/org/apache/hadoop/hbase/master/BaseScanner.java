@@ -332,7 +332,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     
     BatchUpdate b = new BatchUpdate(parent);
     b.delete(splitColumn);
-    srvr.batchUpdate(metaRegionName, b);
+    srvr.batchUpdate(metaRegionName, b, -1L);
       
     return result;
   }

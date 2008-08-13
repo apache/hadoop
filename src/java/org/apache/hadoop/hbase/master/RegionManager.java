@@ -560,7 +560,7 @@ class RegionManager implements HConstants {
     byte [] regionName = region.getRegionName();
     BatchUpdate b = new BatchUpdate(regionName);
     b.put(COL_REGIONINFO, Writables.getBytes(info));
-    server.batchUpdate(metaRegionName, b);
+    server.batchUpdate(metaRegionName, b, -1L);
     
     // 4. Close the new region to flush it to disk.  Close its log file too.
     region.close();

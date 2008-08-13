@@ -111,11 +111,12 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param regionName region name
    * @param row row key
+   * @param lockId lock id
    * @return map of values
    * @throws IOException
    */
   public RowResult getRow(final byte [] regionName, final byte [] row, 
-    final byte[][] columns, final long ts)
+    final byte[][] columns, final long ts, final long lockId)
   throws IOException;
 
   /**
@@ -123,9 +124,11 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param regionName name of the region to update
    * @param b BatchUpdate
+   * @param lockId lock id
    * @throws IOException
    */
-  public void batchUpdate(final byte [] regionName, final BatchUpdate b)
+  public void batchUpdate(final byte [] regionName, final BatchUpdate b,
+      final long lockId)
   throws IOException;
   
   /**
@@ -136,10 +139,11 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param row row key
    * @param column column key
    * @param timestamp Delete all entries that have this timestamp or older
+   * @param lockId lock id
    * @throws IOException
    */
   public void deleteAll(byte [] regionName, byte [] row, byte [] column,
-    long timestamp)
+    long timestamp, long lockId)
   throws IOException;
 
   /**
@@ -149,9 +153,11 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param regionName region name
    * @param row row key
    * @param timestamp Delete all entries that have this timestamp or older
+   * @param lockId lock id
    * @throws IOException
    */
-  public void deleteAll(byte [] regionName, byte [] row, long timestamp)
+  public void deleteAll(byte [] regionName, byte [] row, long timestamp,
+      long lockId)
   throws IOException;
 
   /**
@@ -162,9 +168,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param row The row to operate on
    * @param family The column family to match
    * @param timestamp Timestamp to match
+   * @param lockId lock id
    */
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
-    long timestamp)
+    long timestamp, long lockId)
   throws IOException;
 
   
@@ -207,4 +214,24 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public void close(long scannerId) throws IOException;
+  
+  /**
+   * Opens a remote row lock.
+   *
+   * @param regionName name of region
+   * @param row row to lock
+   * @return lockId lock identifier
+   * @throws IOException
+   */
+  public long lockRow(final byte [] regionName, final byte [] row)
+  throws IOException;
+
+  /**
+   * Releases a remote row lock.
+   *
+   * @param lockId the lock id returned by lockRow
+   * @throws IOException
+   */
+  public void unlockRow(final byte [] regionName, final long lockId)
+  throws IOException;
 }

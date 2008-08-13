@@ -640,11 +640,32 @@ public class HTable {
   public RowResult getRow(final byte [] row, final byte [][] columns, 
     final long ts) 
   throws IOException {       
+    return getRow(row,columns,ts,null);
+  }
+
+  /** 
+   * Get selected columns for the specified row at a specified timestamp
+   * using existing row lock.
+   * 
+   * @param row row key
+   * @param columns Array of column names and families you want to retrieve.
+   * @param ts timestamp
+   * @param rl row lock
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte [] row, final byte [][] columns, 
+    final long ts, final RowLock rl) 
+  throws IOException {       
     return connection.getRegionServerWithRetries(
         new ServerCallable<RowResult>(connection, tableName, row) {
           public RowResult call() throws IOException {
+            long lockId = -1L;
+            if(rl != null) {
+              lockId = rl.getLockId();
+            }
             return server.getRow(location.getRegionInfo().getRegionName(), row, 
-                columns, ts);
+                columns, ts, lockId);
           }
         }
     );
@@ -1104,15 +1125,35 @@ public class HTable {
    */
   public void deleteAll(final byte [] row, final byte [] column, final long ts)
   throws IOException {
+    deleteAll(row,column,ts,null);
+  }
+
+  /** 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp, using an
+   * existing row lock.
+   * @param row Row to update
+   * @param column name of column whose value is to be deleted
+   * @param ts Delete all cells of the same timestamp or older.
+   * @param rl Existing row lock
+   * @throws IOException 
+   */
+  public void deleteAll(final byte [] row, final byte [] column, final long ts,
+      final RowLock rl)
+  throws IOException {
     connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, row) {
           public Boolean call() throws IOException {
+            long lockId = -1L;
+            if(rl != null) {
+              lockId = rl.getLockId();
+            }
             if (column != null) {
               this.server.deleteAll(location.getRegionInfo().getRegionName(),
-                row, column, ts);
+                row, column, ts, lockId);
             } else {
               this.server.deleteAll(location.getRegionInfo().getRegionName(),
-                  row, ts);
+                  row, ts, lockId);
             }
             return null;
           }
@@ -1161,11 +1202,31 @@ public class HTable {
   public void deleteFamily(final byte [] row, final byte [] family, 
     final long timestamp)
   throws IOException {
+    deleteFamily(row,family,timestamp,null);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family with timestamps
+   * less than or equal to <i>timestamp</i>, using existing row lock.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   * @param timestamp Timestamp to match
+   * @param rl Existing row lock
+   * @throws IOException
+   */
+  public void deleteFamily(final byte [] row, final byte [] family, 
+    final long timestamp, final RowLock rl)
+  throws IOException {
     connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, row) {
           public Boolean call() throws IOException {
+            long lockId = -1L;
+            if(rl != null) {
+              lockId = rl.getLockId();
+            }
             server.deleteFamily(location.getRegionInfo().getRegionName(), row, 
-                family, timestamp);
+                family, timestamp, lockId);
             return null;
           }
         }
@@ -1179,11 +1240,27 @@ public class HTable {
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate) 
   throws IOException {
+    commit(batchUpdate,null);
+  }
+  
+  /**
+   * Commit a BatchUpdate to the table using existing row lock.
+   * @param batchUpdate
+   * @param rl Existing row lock
+   * @throws IOException
+   */ 
+  public synchronized void commit(final BatchUpdate batchUpdate,
+      final RowLock rl) 
+  throws IOException {
     connection.getRegionServerWithRetries(
       new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
         public Boolean call() throws IOException {
+          long lockId = -1L;
+          if(rl != null) {
+            lockId = rl.getLockId();
+          }
           server.batchUpdate(location.getRegionInfo().getRegionName(), 
-            batchUpdate);
+            batchUpdate, lockId);
           return null;
         }
       }
@@ -1198,7 +1275,45 @@ public class HTable {
   public synchronized void commit(final List<BatchUpdate> batchUpdates) 
   throws IOException {
     for (BatchUpdate batchUpdate : batchUpdates) 
-      commit(batchUpdate);
+      commit(batchUpdate,null);
+  }
+
+  /**
+   * Obtain a row lock
+   * @param row The row to lock
+   * @return rowLock RowLock containing row and lock id
+   * @throws IOException
+   */
+  public RowLock lockRow(final byte [] row)
+  throws IOException {
+    return connection.getRegionServerWithRetries(
+      new ServerCallable<RowLock>(connection, tableName, row) {
+        public RowLock call() throws IOException {
+          long lockId =
+              server.lockRow(location.getRegionInfo().getRegionName(), row);
+          RowLock rowLock = new RowLock(row,lockId);
+          return rowLock;
+        }
+      }
+    );
+  }
+
+  /**
+   * Release a row lock
+   * @param rl The row lock to release
+   * @throws IOException
+   */
+  public void unlockRow(final RowLock rl)
+  throws IOException {
+    connection.getRegionServerWithRetries(
+      new ServerCallable<Boolean>(connection, tableName, rl.getRow()) {
+        public Boolean call() throws IOException {
+          server.unlockRow(location.getRegionInfo().getRegionName(),
+              rl.getLockId());
+          return null;
+        }
+      }
+    );
   }
 
   /**
