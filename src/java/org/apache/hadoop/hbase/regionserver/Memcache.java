@@ -548,42 +548,27 @@ class Memcache {
       final long now) {
     ArrayList<Cell> result = new ArrayList<Cell>();
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
-    // Handle special case where only one version wanted.
-    if (numVersions == 1) {
-      byte [] value = map.get(key);
-      if (!isDeleted(value)) {
-        // Filter out expired results
-        if (HStore.notExpiredAndNotInDeletes(ttl, key, now, deletes)) {
-          result.add(new Cell(value, key.getTimestamp()));
-        } else {
-          addVictim(victims, key);
-        }
-      } else {
-        deletes.add(key);
-      }
-    } else {
-      SortedMap<HStoreKey, byte[]> tailMap = map.tailMap(key);
-      for (Map.Entry<HStoreKey, byte[]> es : tailMap.entrySet()) {
-        HStoreKey itKey = es.getKey();
-        if (itKey.matchesRowCol(key)) {
-          if (!isDeleted(es.getValue())) {
-            // Filter out expired results
-            if (HStore.notExpiredAndNotInDeletes(ttl, itKey, now, deletes)) {
-              result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
-              if (numVersions > 0 && result.size() >= numVersions) {
-                break;
-              }
-            } else {
-              addVictim(victims, itKey);
+    SortedMap<HStoreKey, byte[]> tailMap = map.tailMap(key);
+    for (Map.Entry<HStoreKey, byte[]> es : tailMap.entrySet()) {
+      HStoreKey itKey = es.getKey();
+      if (itKey.matchesRowCol(key)) {
+        if (!isDeleted(es.getValue())) {
+          // Filter out expired results
+          if (HStore.notExpiredAndNotInDeletes(ttl, itKey, now, deletes)) {
+            result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
+            if (numVersions > 0 && result.size() >= numVersions) {
+              break;
             }
           } else {
-            // Cell holds a delete value.
-            deletes.add(itKey);
+            addVictim(victims, itKey);
           }
         } else {
-          // By L.N. HBASE-684, map is sorted, so we can't find match any more.
-          break;
+          // Cell holds a delete value.
+          deletes.add(itKey);
         }
+      } else {
+        // By L.N. HBASE-684, map is sorted, so we can't find match any more.
+        break;
       }
     }
     // Remove expired victims from the map.
