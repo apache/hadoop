@@ -18,7 +18,8 @@ Release 0.3.0 - Unreleased
    HBASE-813   Add a row counter in the new shell (Jean-Daniel Cryans via Stack)
    HBASE-824   Bug in Hlog we print array of byes for region name
                (Billy Pearson via Stack)
-
+   HBASE-825   Master logs showing byte [] in place of string in logging
+               (Billy Pearson via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

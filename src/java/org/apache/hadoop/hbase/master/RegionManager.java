@@ -418,7 +418,7 @@ class RegionManager implements HConstants {
       }
       
       if (isClosing(currentRegion.getRegionName())) {
-        LOG.info("Skipping region " + currentRegion.getRegionName() 
+        LOG.info("Skipping region " + currentRegion.getRegionNameAsString() 
           + " because it is already closing.");
         continue;
       }
