@@ -298,6 +298,8 @@ Trunk (unreleased changes)
     HADOOP-3773. Change Pipes to set the default map output key and value 
     types correctly. (Koji Noguchi via omalley)
 
+    HADOOP-3946. Fix TestMapRed after hadoop-3664. (tomwhite via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
