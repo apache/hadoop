@@ -204,6 +204,8 @@ Trunk (unreleased changes)
     HADOOP-3864. Prevent the JobTracker from locking up when a job is being
     initialized. (acmurthy via omalley)
 
+    HADOOP-3816. Faster directory listing in KFS. (Sriram Rao via omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

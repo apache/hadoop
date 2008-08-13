@@ -128,36 +128,13 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     public FileStatus[] listStatus(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
+        Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
 
-	if (kfsImpl.isFile(srep))
-	    return new FileStatus[] { getFileStatus(path) } ;
+        if (kfsImpl.isFile(srep))
+                return new FileStatus[] { getFileStatus(path) } ;
 
-	String[] entries = kfsImpl.readdir(srep);
-
-        if (entries == null)
-            return null;
-
-        // kfsreaddir() returns "." and ".."; strip them before
-        // passing back to hadoop fs.
-	int numEntries = 0;
-	for (int i = 0; i < entries.length; i++) {
-	    if ((entries[i].compareTo(".") == 0) || (entries[i].compareTo("..") == 0))
-		continue;
-	    numEntries++;
-	}
-
-	FileStatus[] pathEntries = new FileStatus[numEntries];
-	int j = 0;
-	for (int i = 0; i < entries.length; i++) {
-	    if ((entries[i].compareTo(".") == 0) || (entries[i].compareTo("..") == 0))
-		continue;
-
-	    pathEntries[j] = getFileStatus(new Path(path, entries[i]));
-	    j++;
-	}
-	return pathEntries;
+        return kfsImpl.readdirplus(absolute);
     }
 
     public FileStatus getFileStatus(Path path) throws IOException {

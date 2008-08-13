@@ -24,8 +24,11 @@ import java.io.*;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
+import org.kosmix.kosmosfs.access.KfsFileAttr;
 
 class KFSImpl implements IFSImpl {
     private KfsAccess kfsAccess = null;
@@ -58,6 +61,40 @@ class KFSImpl implements IFSImpl {
     public String[] readdir(String path) throws IOException {
         return kfsAccess.kfs_readdir(path);
     }
+
+    public FileStatus[] readdirplus(Path path) throws IOException {
+        String srep = path.toUri().getPath();
+        KfsFileAttr[] fattr = kfsAccess.kfs_readdirplus(srep);
+        if (fattr == null)
+            return null;
+        int numEntries = 0;
+        for (int i = 0; i < fattr.length; i++) {
+            if ((fattr[i].filename.compareTo(".") == 0) || (fattr[i].filename.compareTo("..") == 0))
+                continue;
+            numEntries++;
+        }
+        FileStatus[] fstatus = new FileStatus[numEntries];
+        int j = 0;
+        for (int i = 0; i < fattr.length; i++) {
+            if ((fattr[i].filename.compareTo(".") == 0) || (fattr[i].filename.compareTo("..") == 0))
+                continue;
+            Path fn = new Path(path, fattr[i].filename);
+
+            if (fattr[i].isDirectory)
+                fstatus[j] = new FileStatus(0, true, 1, 0, fattr[i].modificationTime, fn);
+            else
+                fstatus[j] = new FileStatus(fattr[i].filesize, fattr[i].isDirectory,
+                                            fattr[i].replication,
+                                            (long)
+                                            (1 << 26),
+                                            fattr[i].modificationTime,
+                                            fn);
+
+            j++;
+        }
+        return fstatus;
+    }
+
 
     public int mkdirs(String path) throws IOException {
         return kfsAccess.kfs_mkdirs(path);

@@ -65,6 +65,10 @@ public class KFSEmulationImpl implements IFSImpl {
         return entries;
     }
 
+    public FileStatus[] readdirplus(Path path) throws IOException {
+        return localFS.listStatus(path);
+    }
+
     public int mkdirs(String path) throws IOException {
         if (localFS.mkdirs(new Path(path)))
             return 0;

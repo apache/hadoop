@@ -31,12 +31,15 @@ import java.io.*;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 interface IFSImpl {
     public boolean exists(String path) throws IOException;
     public boolean isDirectory(String path) throws IOException;
     public boolean isFile(String path) throws IOException;
     public String[] readdir(String path) throws IOException;
+    public FileStatus[] readdirplus(Path path) throws IOException;
 
     public int mkdirs(String path) throws IOException;
     public int rename(String source, String dest) throws IOException;
