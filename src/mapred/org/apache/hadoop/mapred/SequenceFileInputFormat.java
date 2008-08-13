@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
@@ -40,10 +39,12 @@ public class SequenceFileInputFormat<K, V> extends FileInputFormat<K, V> {
     for (int i = 0; i < files.length; i++) {
       FileStatus file = files[i];
       if (file.isDir()) {     // it's a MapFile
-        Path dataFile = new Path(file.getPath(), MapFile.DATA_FILE_NAME);
-        FileSystem fs = file.getPath().getFileSystem(job);
-        // use the data file
-        files[i] = fs.getFileStatus(dataFile);
+        files[i] = new FileStatus(file.getLen(), file.isDir(), 
+            file.getReplication(), file.getBlockSize(),
+            file.getModificationTime(), file.getPermission(),
+            file.getOwner(), file.getGroup(),
+            // use the data file
+            new Path(file.getPath(), MapFile.DATA_FILE_NAME));
       }
     }
     return files;
