@@ -295,6 +295,9 @@ Trunk (unreleased changes)
     HADOOP-3903. Change the package name for the servlets to be hdfs instead of
     dfs. (Tsz Wo (Nicholas) Sze via omalley)
 
+    HADOOP-3773. Change Pipes to set the default map output key and value 
+    types correctly. (Koji Noguchi via omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

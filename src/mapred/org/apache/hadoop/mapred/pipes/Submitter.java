@@ -211,7 +211,7 @@ public class Submitter {
    * @throws IOException
    */
   public static RunningJob submitJob(JobConf conf) throws IOException {
-    // default map output types to BytesWritable
+    // default map output types to Text
     if (!getIsJavaMapper(conf)) {
       conf.setMapRunnerClass(PipesMapRunner.class);
       // Save the user's partitioner and hook in our's.
@@ -225,8 +225,8 @@ public class Submitter {
       }
     }
     String textClassname = Text.class.getName();
-    setIfUnset(conf, "mapred.output.key.class", textClassname);
-    setIfUnset(conf, "mapred.output.value.class", textClassname);
+    setIfUnset(conf, "mapred.mapoutput.key.class", textClassname);
+    setIfUnset(conf, "mapred.mapoutput.value.class", textClassname);
     setIfUnset(conf, "mapred.output.key.class", textClassname);
     setIfUnset(conf, "mapred.output.value.class", textClassname);
     String exec = getExecutable(conf);
