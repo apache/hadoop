@@ -1252,6 +1252,8 @@ public class HTable {
   public synchronized void commit(final BatchUpdate batchUpdate,
       final RowLock rl) 
   throws IOException {
+    if (batchUpdate.getRow() == null)
+      throw new IllegalArgumentException("update has null row");
     connection.getRegionServerWithRetries(
       new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
         public Boolean call() throws IOException {
