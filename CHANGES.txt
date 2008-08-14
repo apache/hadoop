@@ -306,6 +306,9 @@ Trunk (unreleased changes)
     outputs or when the final map outputs are being fetched without contention.
     (cdouglas)
 
+    HADOOP-3952. Fix compilation error in TestDataJoin referencing dfs package.
+    (omalley)
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
