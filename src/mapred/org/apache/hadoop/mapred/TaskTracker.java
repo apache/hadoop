@@ -456,6 +456,7 @@ public class TaskTracker
                              "Map-events fetcher for all reduce tasks " + "on " + 
                              taskTrackerName);
     mapEventsFetcher.start();
+    this.running = true;
   }
   
   /** 
@@ -1332,7 +1333,6 @@ public class TaskTracker
   public void run() {
     try {
       startCleanupThreads();
-      this.running = true;
       boolean denied = false;
       while (running && !shuttingDown && !denied) {
         boolean staleState = false;
