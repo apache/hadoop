@@ -113,7 +113,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   public static final Log auditLog = LogFactory.getLog(
-      FSNamesystem.class + ".audit");
+      FSNamesystem.class.getName() + ".audit");
 
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
