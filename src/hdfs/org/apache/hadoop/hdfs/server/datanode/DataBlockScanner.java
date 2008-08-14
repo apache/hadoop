@@ -49,7 +49,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BlockSender;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -95,7 +94,7 @@ public class DataBlockScanner implements Runnable {
   
   Random random = new Random();
   
-  DataNode.Throttler throttler = null;
+  BlockTransferThrottler throttler = null;
   
   private static enum ScanType {
     REMOTE_READ,           // Verified when a block read by a client etc
@@ -239,7 +238,7 @@ public class DataBlockScanner implements Runnable {
     }
     
     synchronized (this) {
-      throttler = new DataNode.Throttler(200, MAX_SCAN_RATE);
+      throttler = new BlockTransferThrottler(200, MAX_SCAN_RATE);
     }
   }
 
@@ -424,8 +423,8 @@ public class DataBlockScanner implements Runnable {
       try {
         adjustThrottler();
         
-        blockSender = datanode.new BlockSender(block, 0, -1, false, 
-                                               false, true);
+        blockSender = new BlockSender(block, 0, -1, false, 
+                                               false, true, datanode);
 
         DataOutputStream out = 
                 new DataOutputStream(new IOUtils.NullOutputStream());

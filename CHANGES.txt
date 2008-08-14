@@ -192,6 +192,8 @@ Trunk (unreleased changes)
     HADOOP-3844. Include message of local exception in RPC client failures.
     (Steve Loughran via omalley)
 
+    HADOOP-3935. Split out inner classes from DataNode.java. (johan)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
