@@ -1097,6 +1097,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3901. Fix bin/hadoop to correctly set classpath under cygwin.
     (Tsz Wo (Nicholas) Sze via omalley)
 
+    HADOOP-3947. Fix a problem in tasktracker reinitialization. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.2 - 2008-08-11
 
   BUG FIXES
