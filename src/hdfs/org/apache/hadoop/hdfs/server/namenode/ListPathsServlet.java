@@ -44,6 +44,9 @@ import javax.servlet.http.HttpServletResponse;
  * @see org.apache.hadoop.hdfs.HftpFileSystem
  */
 public class ListPathsServlet extends DfsServlet {
+  /** For java.io.Serializable */
+  private static final long serialVersionUID = 1L;
+
   public static final SimpleDateFormat df =
     new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
   static {
@@ -156,7 +159,7 @@ public class ListPathsServlet extends DfsServlet {
             writeInfo(i, doc);
           }
         }
-        catch(RemoteException re) {writeRemoteException(p, re, doc);}
+        catch(RemoteException re) {re.writeXml(p, doc);}
       }
     } catch (PatternSyntaxException e) {
       out.println(e.toString());

@@ -314,6 +314,9 @@ Trunk (unreleased changes)
     HADOOP-3951. Fix package name for FSNamesystem logs and modify other
     hard-coded Logs to use the class name. (cdouglas)
 
+    HADOOP-3889. Improve error reporting from HftpFileSystem, handling in
+    DistCp. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -103,6 +104,9 @@ public class HftpFileSystem extends FileSystem {
     try {
       final URL url = new URI("http", null, nnAddr.getHostName(),
           nnAddr.getPort(), path, query, null).toURL();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("url=" + url);
+      }
       return (HttpURLConnection)url.openConnection();
     } catch (URISyntaxException e) {
       throw (IOException)new IOException().initCause(e);
@@ -149,6 +153,9 @@ public class HftpFileSystem extends FileSystem {
                 Attributes attrs) throws SAXException {
       if ("listing".equals(qname)) return;
       if (!"file".equals(qname) && !"directory".equals(qname)) {
+        if (RemoteException.class.getSimpleName().equals(qname)) {
+          throw new SAXException(RemoteException.valueOf(attrs));
+        }
         throw new SAXException("Unrecognized entry: " + qname);
       }
       long modif;
@@ -183,10 +190,12 @@ public class HftpFileSystem extends FileSystem {
 
         InputStream resp = connection.getInputStream();
         xr.parse(new InputSource(resp));
-      } catch (SAXException e) { 
-        IOException ie = new IOException("invalid xml directory content");
-        ie.initCause(e);
-        throw ie;
+      } catch(SAXException e) {
+        final Exception embedded = e.getException();
+        if (embedded != null && embedded instanceof IOException) {
+          throw (IOException)embedded;
+        }
+        throw new IOException("invalid xml directory content", e);
       }
     }
 

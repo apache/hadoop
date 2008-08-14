@@ -39,14 +39,16 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AccessControlException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
@@ -820,7 +822,7 @@ public class DistCp implements Tool {
    * input files. The mapper actually copies the files allotted to it. The
    * reduce is empty.
    */
-  public int run(String[] args) throws Exception {
+  public int run(String[] args) {
     try {
       copy(conf, Arguments.valueOf(args, conf));
       return 0;
@@ -831,6 +833,13 @@ public class DistCp implements Tool {
     } catch (DuplicationException e) {
       System.err.println(StringUtils.stringifyException(e));
       return DuplicationException.ERROR_CODE;
+    } catch (RemoteException e) {
+      final IOException unwrapped = e.unwrapRemoteException(
+          FileNotFoundException.class, 
+          AccessControlException.class,
+          QuotaExceededException.class);
+      System.err.println(StringUtils.stringifyException(unwrapped));
+      return -3;
     } catch (Exception e) {
       System.err.println("With failures, global counters are inaccurate; " +
           "consider running with -i");

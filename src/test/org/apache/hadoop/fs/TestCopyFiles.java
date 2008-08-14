@@ -38,6 +38,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -52,6 +54,7 @@ public class TestCopyFiles extends TestCase {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)DistCp.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
   }
   
   static final URI LOCAL_FS = URI.create("file:///");
@@ -108,14 +111,17 @@ public class TestCopyFiles extends TestCase {
     long getSeed() { return seed; }
   }
 
+  private static MyFile[] createFiles(URI fsname, String topdir)
+    throws IOException {
+    return createFiles(FileSystem.get(fsname, new Configuration()), topdir);
+  }
+
   /** create NFILES with random names and directory hierarchies
    * with random (but reproducible) data in them.
    */
-  private static MyFile[] createFiles(URI fsname, String topdir)
+  private static MyFile[] createFiles(FileSystem fs, String topdir)
     throws IOException {
-    FileSystem fs = FileSystem.get(fsname, new Configuration());
     Path root = new Path(topdir);
-
     MyFile[] files = new MyFile[NFILES];
     for (int i = 0; i < NFILES; i++) {
       files[i] = createFile(root, fs);
@@ -149,9 +155,13 @@ public class TestCopyFiles extends TestCase {
   /** check if the files have been copied correctly. */
   private static boolean checkFiles(String fsname, String topdir, MyFile[] files,
       boolean existingOnly) throws IOException {
-    
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
+    return checkFiles(fs, topdir, files, existingOnly); 
+  }
+
+  private static boolean checkFiles(FileSystem fs, String topdir, MyFile[] files,
+      boolean existingOnly) throws IOException {
     Path root = new Path(topdir);
     
     for (int idx = 0; idx < files.length; idx++) {
@@ -684,6 +694,66 @@ public class TestCopyFiles extends TestCase {
 
         deldir(nnUri, dstrootdir);
         deldir(nnUri, srcrootdir);
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  static final long now = System.currentTimeMillis();
+
+  static UnixUserGroupInformation createUGI(String name, boolean issuper) {
+    String username = name + now;
+    String group = issuper? "supergroup": username;
+    return UnixUserGroupInformation.createImmutable(
+        new String[]{username, group});
+  }
+
+  static Path createHomeDirectory(FileSystem fs, UserGroupInformation ugi
+      ) throws IOException {
+    final Path home = new Path("/user/" + ugi.getUserName());
+    fs.mkdirs(home);
+    fs.setOwner(home, ugi.getUserName(), ugi.getGroupNames()[0]);
+    fs.setPermission(home, new FsPermission((short)0700));
+    return home;
+  }
+
+  public void testHftpAccessControl() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      final UnixUserGroupInformation DFS_UGI = createUGI("dfs", true); 
+      final UnixUserGroupInformation USER_UGI = createUGI("user", false); 
+
+      //start cluster by DFS_UGI
+      final Configuration dfsConf = new Configuration();
+      UnixUserGroupInformation.saveToConf(dfsConf,
+          UnixUserGroupInformation.UGI_PROPERTY_NAME, DFS_UGI);
+      cluster = new MiniDFSCluster(dfsConf, 2, true, null);
+      cluster.waitActive();
+
+      final String httpAdd = dfsConf.get("dfs.http.address");
+      final URI nnURI = FileSystem.getDefaultUri(dfsConf);
+      final String nnUri = nnURI.toString();
+      final Path home = createHomeDirectory(FileSystem.get(nnURI, dfsConf), USER_UGI);
+      
+      //now, login as USER_UGI
+      final Configuration userConf = new Configuration();
+      UnixUserGroupInformation.saveToConf(userConf,
+          UnixUserGroupInformation.UGI_PROPERTY_NAME, USER_UGI);
+      final FileSystem fs = FileSystem.get(nnURI, userConf);
+
+      final Path srcrootpath = new Path(home, "src_root"); 
+      final String srcrootdir =  srcrootpath.toString();
+      final Path dstrootpath = new Path(home, "dst_root"); 
+      final String dstrootdir =  dstrootpath.toString();
+      final DistCp distcp = new DistCp(userConf);
+
+      FileSystem.mkdirs(fs, srcrootpath, new FsPermission((short)0700));
+      final String[] args = {"hftp://"+httpAdd+srcrootdir, nnUri+dstrootdir};
+
+      { //copy with permission 000, should fail
+        fs.setPermission(srcrootpath, new FsPermission((short)0));
+        assertEquals(-3, ToolRunner.run(distcp, args));
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }

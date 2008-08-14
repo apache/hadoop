@@ -20,21 +20,24 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import javax.servlet.ServletContext;
-import javax.servlet.http.*;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.*;
-import org.znerd.xmlenc.XMLOutputter;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * A base class for the servlets in DFS.
  */
 abstract class DfsServlet extends HttpServlet {
+  /** For java.io.Serializable */
+  private static final long serialVersionUID = 1L;
+
   static final Log LOG = LogFactory.getLog(DfsServlet.class.getCanonicalName());
 
   /** Get {@link UserGroupInformation} from request */
@@ -61,19 +64,5 @@ abstract class DfsServlet extends HttpServlet {
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
     return DFSClient.createNamenode(nn.getNameNodeAddress(), conf);
-  }
-
-  static void writeRemoteException(String path, RemoteException re,
-      XMLOutputter doc) throws IOException {
-    doc.startTag("RemoteException");
-    doc.attribute("path", path);
-    doc.attribute("class", re.getClassName());
-    String msg = re.getLocalizedMessage();
-    int i = msg.indexOf("\n");
-    if (i >= 0) {
-      msg = msg.substring(0, i);
-    }
-    doc.attribute("message", msg.substring(msg.indexOf(":") + 1).trim());
-    doc.endTag();
   }
 }
