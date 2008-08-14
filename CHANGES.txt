@@ -311,7 +311,7 @@ Trunk (unreleased changes)
     HADOOP-3952. Fix compilation error in TestDataJoin referencing dfs package.
     (omalley)
 
-Release 0.18.0 - Unreleased
+Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
 
