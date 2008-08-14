@@ -189,7 +189,7 @@ public class LocalDirAllocator {
   private static class AllocatorPerContext {
 
     private final Log LOG =
-      LogFactory.getLog("org.apache.hadoop.fs.AllocatorPerContext");
+      LogFactory.getLog(AllocatorPerContext.class);
 
     private int dirNumLastAccessed;
     private Random dirIndexRandomizer = new Random();

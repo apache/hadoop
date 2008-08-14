@@ -92,7 +92,7 @@ public class Logalyzer {
   /** A WritableComparator optimized for UTF8 keys of the logs. */
   public static class LogComparator extends Text.Comparator implements Configurable {
     
-    private static Log LOG = LogFactory.getLog("org.apache.hadoop.tools.Logalyzer");
+    private static Log LOG = LogFactory.getLog(Logalyzer.class);
     private JobConf conf = null;
     private String[] sortSpec = null;
     private String columnSeparator = null;
@@ -237,7 +237,7 @@ public class Logalyzer {
   
   public static void main(String[] args) {
     
-    Log LOG = LogFactory.getLog("org.apache.hadoop.tools.Logalyzer");
+    Log LOG = LogFactory.getLog(Logalyzer.class);
     
     String version = "Logalyzer.0.0.1";
     String usage = "Usage: Logalyzer [-archive -logs <urlsFile>] " +

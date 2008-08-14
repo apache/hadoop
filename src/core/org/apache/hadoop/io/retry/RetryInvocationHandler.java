@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
 
 class RetryInvocationHandler implements InvocationHandler {
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.io.retry.RetryInvocationHandler");  
+  public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private Object implementation;
   
   private RetryPolicy defaultPolicy;

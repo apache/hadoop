@@ -97,7 +97,7 @@ public class TaskTracker
   static enum State {NORMAL, STALE, INTERRUPTED, DENIED}
 
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.TaskTracker");
+    LogFactory.getLog(TaskTracker.class);
 
   private boolean running = true;
 

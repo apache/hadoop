@@ -52,7 +52,7 @@ import org.apache.hadoop.net.Node;
  * ***********************************************************
  */
 class JobInProgress {
-  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobInProgress");
+  private static final Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
   JobStatus status;

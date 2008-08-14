@@ -38,7 +38,7 @@ import org.apache.hadoop.io.Writable;
 public class SortedRanges implements Writable{
   
   private static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.mapred.SortedRanges");
+    LogFactory.getLog(SortedRanges.class);
   
   private SortedSet<Range> ranges = new TreeSet<Range>();
   private int indicesCount;

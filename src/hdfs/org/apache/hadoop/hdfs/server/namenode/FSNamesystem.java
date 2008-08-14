@@ -82,7 +82,7 @@ import javax.security.auth.login.LoginException;
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
 public class FSNamesystem implements FSConstants, FSNamesystemMBean {
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
+  public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   public static final String AUDIT_FORMAT =
     "ugi=%s\t" +  // ugi
     "ip=%s\t" +   // remote IP
@@ -113,7 +113,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   public static final Log auditLog = LogFactory.getLog(
-      "org.apache.hadoop.fs.FSNamesystem.audit");
+      FSNamesystem.class + ".audit");
 
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;

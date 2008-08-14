@@ -114,7 +114,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   private int nextJobId = 1;
 
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobTracker");
+  public static final Log LOG = LogFactory.getLog(JobTracker.class);
     
   /**
    * Start the JobTracker with given configuration.

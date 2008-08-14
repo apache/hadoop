@@ -38,7 +38,7 @@ import org.apache.hadoop.net.NetUtils;
 public class TestIPCServerResponder extends TestCase {
 
   public static final Log LOG = 
-            LogFactory.getLog("org.apache.hadoop.ipc.TestIPCServerResponder");
+            LogFactory.getLog(TestIPCServerResponder.class);
 
   private static Configuration conf = new Configuration();
 

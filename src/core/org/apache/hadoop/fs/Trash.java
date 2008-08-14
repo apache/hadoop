@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class Trash extends Configured {
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.fs.Trash");
+    LogFactory.getLog(Trash.class);
 
   private static final Path CURRENT = new Path("Current");
   private static final Path TRASH = new Path(".Trash/");

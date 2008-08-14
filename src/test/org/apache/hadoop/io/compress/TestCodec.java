@@ -38,7 +38,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 public class TestCodec extends TestCase {
 
   private static final Log LOG= 
-    LogFactory.getLog("org.apache.hadoop.io.compress.TestCodec");
+    LogFactory.getLog(TestCodec.class);
 
   private Configuration conf = new Configuration();
   private int count = 10000;

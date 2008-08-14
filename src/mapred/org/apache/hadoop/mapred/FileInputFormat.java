@@ -47,7 +47,7 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.FileInputFormat");
+    LogFactory.getLog(FileInputFormat.class);
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
 

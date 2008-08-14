@@ -54,7 +54,7 @@ class TaskInProgress {
   static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
 
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.TaskInProgress");
+  public static final Log LOG = LogFactory.getLog(TaskInProgress.class);
 
   // Defines the TIP
   private String jobFile = null;

@@ -28,7 +28,7 @@ import java.util.Arrays;
 
 /** Unit tests for NonUTF8. */
 public class TestTextNonUTF8 extends TestCase {
-  private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.TestTextNonUTF8");
+  private static final Log LOG= LogFactory.getLog(TestTextNonUTF8.class);
 
   public void testNonUTF8() throws Exception{
     // this is a non UTF8 byte array

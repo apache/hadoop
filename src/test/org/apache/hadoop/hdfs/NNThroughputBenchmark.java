@@ -78,7 +78,7 @@ import org.apache.log4j.Level;
  * the specified number of threads and outputs the resulting stats.
  */
 public class NNThroughputBenchmark implements FSConstants {
-  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hdfs.NNThroughputBenchmark");
+  private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
 
   static Configuration config;

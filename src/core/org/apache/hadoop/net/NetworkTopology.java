@@ -40,7 +40,7 @@ public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
   public final static int DEFAULT_HOST_LEVEL = 2;
   public static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.net.NetworkTopology");
+    LogFactory.getLog(NetworkTopology.class);
     
   /* Inner Node represent a switch/router of a data center or rack.
    * Different from a leave node, it has non-null children.

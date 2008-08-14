@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 public class MetricsUtil {
     
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.util.MetricsUtil");
+    LogFactory.getLog(MetricsUtil.class);
 
   /**
    * Don't allow creation of a new instance of Metrics

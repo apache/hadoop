@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 
 public class TestSortedRanges extends TestCase {
   private static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.mapred.TestSortedRanges");
+    LogFactory.getLog(TestSortedRanges.class);
   
   public void testAdd() {
     SortedRanges sr = new SortedRanges();

@@ -40,7 +40,7 @@ public class TestRPC extends TestCase {
   private static final String ADDRESS = "0.0.0.0";
 
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.TestRPC");
+    LogFactory.getLog(TestRPC.class);
   
   private static Configuration conf = new Configuration();
 

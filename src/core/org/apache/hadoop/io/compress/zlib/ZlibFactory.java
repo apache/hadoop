@@ -32,7 +32,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  */
 public class ZlibFactory {
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.io.compress.zlib.ZlibFactory");
+    LogFactory.getLog(ZlibFactory.class);
 
   private static boolean nativeZlibLoaded = false;
   

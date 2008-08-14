@@ -81,7 +81,7 @@ public abstract class Server {
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
   
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.Server");
+    LogFactory.getLog(Server.class);
 
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 

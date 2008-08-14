@@ -95,7 +95,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    *******************************************************/
   private static class ChecksumFSInputChecker extends FSInputChecker {
     public static final Log LOG 
-      = LogFactory.getLog("org.apache.hadoop.fs.FSInputChecker");
+      = LogFactory.getLog(FSInputChecker.class);
     
     private ChecksumFileSystem fs;
     private FSDataInputStream datas;

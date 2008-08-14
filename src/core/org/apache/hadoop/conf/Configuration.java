@@ -127,7 +127,7 @@ import org.w3c.dom.Text;
  */
 public class Configuration implements Iterable<Map.Entry<String,String>> {
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.conf.Configuration");
+    LogFactory.getLog(Configuration.class);
 
   private boolean quietmode = true;
   

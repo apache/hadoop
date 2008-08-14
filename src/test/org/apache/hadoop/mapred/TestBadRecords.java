@@ -40,7 +40,7 @@ import org.apache.hadoop.io.Text;
 public class TestBadRecords extends ClusterMapReduceTestCase {
   
   private static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.mapred.TestBadRecords");
+    LogFactory.getLog(TestBadRecords.class);
   
   private static final List<String> MAPPER_BAD_RECORDS = 
     Arrays.asList("hello01","hello04","hello05");

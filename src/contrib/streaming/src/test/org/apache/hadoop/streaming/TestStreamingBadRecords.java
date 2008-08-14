@@ -45,7 +45,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
 
   private static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.mapred.TestStreamingBadRecords");
+    LogFactory.getLog(TestStreamingBadRecords.class);
   
   private static final List<String> MAPPER_BAD_RECORDS = 
     Arrays.asList("hey022","hey023","hey099");

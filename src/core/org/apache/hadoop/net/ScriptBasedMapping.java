@@ -57,7 +57,7 @@ implements Configurable
   private Configuration conf;
   private int maxArgs; //max hostnames per call of the script
   private static Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.net.ScriptBasedMapping");
+    LogFactory.getLog(ScriptBasedMapping.class);
   public void setConf (Configuration conf) {
     this.scriptName = conf.get("topology.script.file.name");
     this.maxArgs = conf.getInt("topology.script.number.args", 100);

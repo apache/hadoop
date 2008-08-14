@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.JobConf;
 public class NativeCodeLoader {
 
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.util.NativeCodeLoader");
+    LogFactory.getLog(NativeCodeLoader.class);
   
   private static boolean nativeCodeLoaded = false;
   

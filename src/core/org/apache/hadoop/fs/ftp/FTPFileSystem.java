@@ -46,7 +46,7 @@ import org.apache.hadoop.util.Progressable;
 public class FTPFileSystem extends FileSystem {
 
   public static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.util.FTPFileSystem");
+      .getLog(FTPFileSystem.class);
 
   public static final int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 

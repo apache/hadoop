@@ -311,6 +311,9 @@ Trunk (unreleased changes)
     HADOOP-3952. Fix compilation error in TestDataJoin referencing dfs package.
     (omalley)
 
+    HADOOP-3951. Fix package name for FSNamesystem logs and modify other
+    hard-coded Logs to use the class name. (cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

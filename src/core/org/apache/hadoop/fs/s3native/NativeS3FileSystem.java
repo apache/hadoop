@@ -67,7 +67,7 @@ import org.apache.hadoop.util.Progressable;
 public class NativeS3FileSystem extends FileSystem {
   
   public static final Log LOG = 
-    LogFactory.getLog("org.apache.hadoop.fs.s3native.NativeS3FileSystem");
+    LogFactory.getLog(NativeS3FileSystem.class);
   
   private static final String FOLDER_SUFFIX = "_$folder$";
   private static final long MAX_S3_FILE_SIZE = 5 * 1024 * 1024 * 1024L;

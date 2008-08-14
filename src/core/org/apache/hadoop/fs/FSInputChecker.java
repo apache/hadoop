@@ -32,7 +32,7 @@ import org.apache.hadoop.util.StringUtils;
 
 abstract public class FSInputChecker extends FSInputStream {
   public static final Log LOG 
-  = LogFactory.getLog("org.apache.hadoop.fs.FSInputChecker");
+  = LogFactory.getLog(FSInputChecker.class);
   
   /** The file name from which data is read from */
   protected Path file;

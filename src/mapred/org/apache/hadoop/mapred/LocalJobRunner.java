@@ -33,7 +33,7 @@ import org.apache.hadoop.mapred.JobTrackerMetricsInst;
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.LocalJobRunner");
+    LogFactory.getLog(LocalJobRunner.class);
 
   private FileSystem fs;
   private HashMap<JobID, Job> jobs = new HashMap<JobID, Job>();

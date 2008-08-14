@@ -62,7 +62,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class JobHistory {
   
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobHistory");
+  public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final String DELIMITER = " ";
   private static final String KEY = "(\\w+)";
   private static final String VALUE = "[[^\"]?]+"; // anything but a " in ""

@@ -61,7 +61,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class Client {
   
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.Client");
+    LogFactory.getLog(Client.class);
   private Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 

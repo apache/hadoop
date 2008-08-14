@@ -40,7 +40,7 @@ import java.net.URI;
  */
 abstract class TaskRunner extends Thread {
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
+    LogFactory.getLog(TaskRunner.class);
 
   volatile boolean killed = false;
   private ShellCommandExecutor shexec; // shell terminal for running the task

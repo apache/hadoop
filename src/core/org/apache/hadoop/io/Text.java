@@ -45,7 +45,7 @@ import org.apache.commons.logging.LogFactory;
  * string.
  */
 public class Text implements WritableComparable {
-  private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.Text");
+  private static final Log LOG= LogFactory.getLog(Text.class);
   
   private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
     new ThreadLocal<CharsetEncoder>() {

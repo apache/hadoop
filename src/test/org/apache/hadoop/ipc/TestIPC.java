@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 /** Unit tests for IPC. */
 public class TestIPC extends TestCase {
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.TestIPC");
+    LogFactory.getLog(TestIPC.class);
   
   final private static Configuration conf = new Configuration();
   final static private int PING_INTERVAL = 1000;

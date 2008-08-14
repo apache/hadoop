@@ -150,7 +150,7 @@ import org.apache.hadoop.util.ToolRunner;
  * @see DistributedCache
  */
 public class JobClient extends Configured implements MRConstants, Tool  {
-  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
+  private static final Log LOG = LogFactory.getLog(JobClient.class);
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
   private static Configuration commandLineConfig;

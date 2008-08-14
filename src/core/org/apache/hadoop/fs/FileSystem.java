@@ -56,7 +56,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 public abstract class FileSystem extends Configured implements Closeable {
   private static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
 
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FileSystem");
+  public static final Log LOG = LogFactory.getLog(FileSystem.class);
 
   /** FileSystem cache */
   private static final Cache CACHE = new Cache();
