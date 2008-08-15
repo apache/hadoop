@@ -161,7 +161,8 @@ HBASE SHELL COMMANDS:
            hbase> get 't1', 'r1', {COLUMN => 'c1'}
            hbase> get 't1', 'r1', {COLUMN => ['c1', 'c2', 'c3']}
            hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1}
-           hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, VERSIONS = 4}
+           hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, \
+             VERSIONS => 4}
 
  list      List all tables in hbase
 
