@@ -25,6 +25,7 @@ Release 0.3.0 - Unreleased
                (Jean-Daniel Cryans via Stack)
    HBASE-831   committing BatchUpdate with no row should complain
                (Andrew Purtell via Jim Kellerman)
+   HBASE-833   Doing an insert with an unknown family throws a NPE in HRS
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

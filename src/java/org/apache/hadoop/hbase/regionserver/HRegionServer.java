@@ -53,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1159,15 +1160,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       batchUpdate.iterator(); iter.hasNext();) {
       
       BatchOperation operation = iter.next();
-      int maxLength = 
-        desc.getFamily(HStoreKey.getFamily(operation.getColumn())).
-          getMaxValueLength();
-      if(operation.getValue() != null)
-        if(operation.getValue().length > maxLength) {
-          throw new IOException("Value in column " + 
-              Bytes.toString(operation.getColumn()) + " is too long. " + 
-              operation.getValue().length + " instead of " + maxLength);
+      if (operation.getValue() != null) {
+        HColumnDescriptor fam = 
+          desc.getFamily(HStoreKey.getFamily(operation.getColumn()));
+        if (fam != null) {
+          int maxLength = fam.getMaxValueLength();
+          if (operation.getValue().length > maxLength) {
+            throw new IOException("Value in column "
+                + Bytes.toString(operation.getColumn()) + " is too long. "
+                + operation.getValue().length + " instead of " + maxLength);
+          }
         }
+      }
     }
   }
   
