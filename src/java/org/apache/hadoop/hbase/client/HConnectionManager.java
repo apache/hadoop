@@ -163,7 +163,7 @@ public class HConnectionManager implements HConstants {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
+      this.pause = conf.getLong("hbase.client.pause", 2 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       
@@ -557,7 +557,9 @@ public class HConnectionManager implements HConstants {
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("reloading table servers because: " + e.getMessage());
+              LOG.debug("Attempt " + tries + " of " + this.numRetries +
+                " failed with <" + e + ">. Retrying after sleep of " +
+                getPauseTime(tries));
             }
             relocateRegion(parentTable, metaKey);
           } else {

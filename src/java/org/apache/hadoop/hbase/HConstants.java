@@ -231,5 +231,5 @@ public interface HConstants {
    * This is a retry backoff multiplier table similar to the BSD TCP syn
    * backoff table, a bit more aggressive than simple exponential backoff.
    */ 
-  public static int RETRY_BACKOFF[] = { 1, 1, 1, 1, 2, 4, 8, 16, 32, 64 };
+  public static int RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32 };
 }

@@ -35,6 +35,7 @@ Release 0.3.0 - Unreleased
               instead of Map (Jonathan Gray via Stack)
    HBASE-795  More Table operation in TableHandler for REST interface
               (Sishen Freecity via Stack)
+   HBASE-830  Debugging HCM.locateRegionInMeta is painful
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
