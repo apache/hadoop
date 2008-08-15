@@ -133,7 +133,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       offset = (startOffset - (startOffset % bytesPerChecksum));
       if (length >= 0) {
         // Make sure endOffset points to end of a checksumed chunk.
-        long tmpLen = startOffset + length + (startOffset - offset);
+        long tmpLen = startOffset + length;
         if (tmpLen % bytesPerChecksum != 0) {
           tmpLen += (bytesPerChecksum - tmpLen % bytesPerChecksum);
         }

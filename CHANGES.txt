@@ -324,6 +324,9 @@ Trunk (unreleased changes)
 
     HADOOP-3949. Remove duplicate jars from Chukwa. (Jerome Boulon via omalley)
 
+    HADOOP-3933. DataNode sometimes sends up to io.byte.per.checksum bytes 
+    more than required to client. (Ning Li via rangadi)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
