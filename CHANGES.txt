@@ -317,6 +317,8 @@ Trunk (unreleased changes)
     HADOOP-3889. Improve error reporting from HftpFileSystem, handling in
     DistCp. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3946. Fix TestMapRed after hadoop-3664. (tomwhite via omalley)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
