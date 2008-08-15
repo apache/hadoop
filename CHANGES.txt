@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     number of files/bytes copied in a particular run to support incremental
     updates and mirroring. (TszWo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3585. FailMon package for hardware failure monitoring and 
+    analysis of anomalies. (Ioannis Koltsidas via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till
