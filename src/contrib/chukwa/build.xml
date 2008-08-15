@@ -354,6 +354,10 @@
 			<include name="**/*.jar" />
 			<exclude name="**/excluded/" />
 		</fileset>
+		<fileset dir="${hadoop.root}/lib">
+			<include name="**/*.jar" />
+			<exclude name="**/excluded/" />
+		</fileset>
 	</path>
 
 </project>

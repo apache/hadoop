@@ -319,6 +319,8 @@ Trunk (unreleased changes)
 
     HADOOP-3946. Fix TestMapRed after hadoop-3664. (tomwhite via omalley)
 
+    HADOOP-3949. Remove duplicate jars from Chukwa. (Jerome Boulon via omalley)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
