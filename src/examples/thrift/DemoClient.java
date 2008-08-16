@@ -25,8 +25,9 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.text.NumberFormat;
-import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.SortedMap;
 
@@ -37,7 +38,9 @@ import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.NotFound;
-import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
+import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
 import com.facebook.thrift.protocol.TProtocol;
@@ -81,6 +84,7 @@ public class DemoClient {
   
   private void run() throws IOError, TException, NotFound, IllegalArgument,
       AlreadyExists {
+    
     TTransport transport = new TSocket("localhost", port);
     TProtocol protocol = new TBinaryProtocol(transport, true, true);
     Hbase.Client client = new Hbase.Client(protocol);
@@ -96,7 +100,10 @@ public class DemoClient {
     for (byte[] name : client.getTableNames()) {
       System.out.println("  found: " + utf8(name));
       if (utf8(name).equals(utf8(t))) {
-        System.out.println("    deleting table: " + utf8(name));  
+        System.out.println("    disabling table: " + utf8(name));
+        if (client.isTableEnabled(name))
+          client.disableTable(name);
+        System.out.println("    deleting table: " + utf8(name)); 
         client.deleteTable(name);
       }
     }
@@ -122,7 +129,7 @@ public class DemoClient {
     }
     
     System.out.println("column families in " + utf8(t) + ": ");
-    AbstractMap<byte[], ColumnDescriptor> columnMap = client.getColumnDescriptors(t);
+    Map<byte[], ColumnDescriptor> columnMap = client.getColumnDescriptors(t);
     for (ColumnDescriptor col2 : columnMap.values()) {
       System.out.println("  column: " + utf8(col2.name) + ", maxVer: " + Integer.toString(col2.maxVersions));
     }
@@ -133,18 +140,27 @@ public class DemoClient {
     byte[] invalid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1 };
     byte[] valid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83, (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3, (byte) 0x83, (byte) 0xAB};
 
+    ArrayList<Mutation> mutations;
     // non-utf8 is fine for data
-    client.put(t, bytes("foo"), bytes("entry:foo"), invalid);
+    mutations = new ArrayList<Mutation>();
+    mutations.add(new Mutation(false, bytes("entry:foo"), invalid));
+    client.mutateRow(t, bytes("foo"), mutations);
 
     // try empty strings
-    client.put(t, bytes(""), bytes("entry:"), bytes(""));
-    
+    mutations = new ArrayList<Mutation>();
+    mutations.add(new Mutation(false, bytes("entry:"), bytes("")));
+    client.mutateRow(t, bytes(""), mutations);
+
     // this row name is valid utf8
-    client.put(t, valid, bytes("entry:foo"), valid);
+    mutations = new ArrayList<Mutation>();
+    mutations.add(new Mutation(false, bytes("entry:foo"), valid));
+    client.mutateRow(t, bytes("foo"), mutations);
     
     // non-utf8 is not allowed in row names
     try {
-      client.put(t, invalid, bytes("entry:foo"), invalid);
+      mutations = new ArrayList<Mutation>();
+      mutations.add(new Mutation(false, bytes("entry:foo"), invalid));
+      client.mutateRow(t, invalid, mutations);
       System.out.println("FATAL: shouldn't get here");
       System.exit(-1);
     } catch (IOError e) {
@@ -156,12 +172,11 @@ public class DemoClient {
     columnNames.add(bytes("entry:"));
     
     System.out.println("Starting scanner...");
-    int scanner = client
-        .scannerOpen(t, bytes(""), columnNames);
+    int scanner = client.scannerOpen(t, bytes(""), columnNames);
     try {
       while (true) {
-        ScanEntry value = client.scannerGet(scanner);
-        printEntry(value);
+        TRowResult entry = client.scannerGet(scanner);
+        printRow(entry);
       }
     } catch (NotFound nf) {
       client.scannerClose(scanner);
@@ -178,16 +193,20 @@ public class DemoClient {
       nf.setGroupingUsed(false);
       byte[] row = bytes(nf.format(i));
       
-      client.put(t, row, bytes("unused:"), bytes("DELETE_ME"));
-      printRow(row, client.getRow(t, row));
+      mutations = new ArrayList<Mutation>();
+      mutations.add(new Mutation(false, bytes("unused:"), bytes("DELETE_ME")));
+      client.mutateRow(t, row, mutations);
+      printRow(client.getRow(t, row));
       client.deleteAllRow(t, row);
 
-      client.put(t, row, bytes("entry:num"), bytes("0"));
-      client.put(t, row, bytes("entry:foo"), bytes("FOO"));
-      printRow(row, client.getRow(t, row));
+      mutations = new ArrayList<Mutation>();
+      mutations.add(new Mutation(false, bytes("entry:num"), bytes("0")));
+      mutations.add(new Mutation(false, bytes("entry:foo"), bytes("FOO")));
+      client.mutateRow(t, row, mutations);
+      printRow(client.getRow(t, row));
 
-      Mutation m = null;      
-      ArrayList<Mutation> mutations = new ArrayList<Mutation>();
+      Mutation m = null;
+      mutations = new ArrayList<Mutation>();
       m = new Mutation();
       m.column = bytes("entry:foo");
       m.isDelete = true;
@@ -197,11 +216,13 @@ public class DemoClient {
       m.value = bytes("-1");
       mutations.add(m);
       client.mutateRow(t, row, mutations);
-      printRow(row, client.getRow(t, row));
+      printRow(client.getRow(t, row));
       
-      client.put(t, row, bytes("entry:num"), bytes(Integer.toString(i)));
-      client.put(t, row, bytes("entry:sqr"), bytes(Integer.toString(i * i)));
-      printRow(row, client.getRow(t, row));
+      mutations = new ArrayList<Mutation>();
+      mutations.add(new Mutation(false, bytes("entry:num"), bytes(Integer.toString(i))));
+      mutations.add(new Mutation(false, bytes("entry:sqr"), bytes(Integer.toString(i * i))));
+      client.mutateRow(t, row, mutations);
+      printRow(client.getRow(t, row));
 
       // sleep to force later timestamp 
       try {
@@ -219,9 +240,9 @@ public class DemoClient {
       m.column = bytes("entry:sqr");
       m.isDelete = true;
       client.mutateRowTs(t, row, mutations, 1); // shouldn't override latest
-      printRow(row, client.getRow(t, row));
+      printRow(client.getRow(t, row));
 
-      ArrayList<byte[]> versions = client.getVer(t, row, bytes("entry:num"), 10);
+      List<TCell> versions = client.getVer(t, row, bytes("entry:num"), 10);
       printVersions(row, versions);
       if (versions.size() != 4) {
         System.out.println("FATAL: wrong # of versions");
@@ -243,7 +264,9 @@ public class DemoClient {
     
     columnNames.clear();
     for (ColumnDescriptor col2 : client.getColumnDescriptors(t).values()) {
-      columnNames.add(col2.name);
+      System.out.println("column name is " + new String(col2.name));
+      System.out.println(col2.toString());
+      columnNames.add((utf8(col2.name) + ":").getBytes());
     }
     
     System.out.println("Starting scanner...");
@@ -251,8 +274,8 @@ public class DemoClient {
         columnNames);
     try {
       while (true) {
-        ScanEntry value = client.scannerGet(scanner);
-        printEntry(value);
+        TRowResult entry = client.scannerGet(scanner);
+        printRow(entry);
       }
     } catch (NotFound nf) {
       client.scannerClose(scanner);
@@ -262,34 +285,30 @@ public class DemoClient {
     transport.close();
   }
   
-  private final void printVersions(byte[] row, ArrayList<byte[]> values) {
+  private final void printVersions(byte[] row, List<TCell> versions) {
     StringBuilder rowStr = new StringBuilder();
-    for (byte[] value : values) {
-      rowStr.append(utf8(value));
+    for (TCell cell : versions) {
+      rowStr.append(utf8(cell.value));
       rowStr.append("; ");
     }
     System.out.println("row: " + utf8(row) + ", values: " + rowStr);
   }
   
-  private final void printEntry(ScanEntry entry) {
-    printRow(entry.row, entry.columns);
-  }
-  
-  private final void printRow(byte[] row, AbstractMap<byte[], byte[]> values) {
+  private final void printRow(TRowResult rowResult) {
     // copy values into a TreeMap to get them in sorted order
     
-    TreeMap<String,byte[]> sorted = new TreeMap<String,byte[]>();
-    for (AbstractMap.Entry<byte[], byte[]> entry : values.entrySet()) {
-      sorted.put(utf8(entry.getKey()), entry.getValue());
+    TreeMap<String,TCell> sorted = new TreeMap<String,TCell>();
+    for (Map.Entry<byte[], TCell> column : rowResult.columns.entrySet()) {
+      sorted.put(utf8(column.getKey()), column.getValue());
     }
     
     StringBuilder rowStr = new StringBuilder();
-    for (SortedMap.Entry<String, byte[]> entry : sorted.entrySet()) {
+    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
       rowStr.append(entry.getKey());
       rowStr.append(" => ");
-      rowStr.append(utf8(entry.getValue()));
+      rowStr.append(utf8(entry.getValue().value));
       rowStr.append("; ");
     }
-    System.out.println("row: " + utf8(row) + ", cols: " + rowStr);
+    System.out.println("row: " + utf8(rowResult.row) + ", cols: " + rowStr);
   }
 }

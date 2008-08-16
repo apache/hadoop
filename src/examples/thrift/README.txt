@@ -9,6 +9,6 @@ To run/compile this clients, you will first need to install the thrift package
 (from http://developers.facebook.com/thrift/) and then run thrift to generate
 the language files:
 
-thrift -cpp -java -rb -php \
+thrift --gen cpp --gen java --gen rb --gen php \
     ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
 
