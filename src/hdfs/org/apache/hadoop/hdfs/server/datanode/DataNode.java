@@ -484,7 +484,7 @@ public class DataNode extends Configured
    * 2) to receive a registrationID 
    * issued by the namenode to recognize registered datanodes.
    * 
-   * @see FSNamesystem#registerDatanode(DatanodeRegistration,String)
+   * @see FSNamesystem#registerDatanode(DatanodeRegistration)
    * @throws IOException
    */
   private void register() throws IOException {

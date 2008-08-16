@@ -53,6 +53,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -857,10 +858,16 @@ public class FSImage extends Storage {
    */
   int loadFSEdits(StorageDirectory sd) throws IOException {
     int numEdits = 0;
-    numEdits = editLog.loadFSEdits(getImageFile(sd, NameNodeFile.EDITS));
+    EditLogFileInputStream edits = 
+      new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
+    numEdits = FSEditLog.loadFSEdits(edits);
+    edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
-    if (editsNew.exists()) 
-      numEdits += editLog.loadFSEdits(editsNew);
+    if (editsNew.exists() && editsNew.length() > 0) {
+      edits = new EditLogFileInputStream(editsNew);
+      numEdits += FSEditLog.loadFSEdits(edits);
+      edits.close();
+    }
     return numEdits;
   }
 

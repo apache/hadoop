@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
-
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -139,7 +139,7 @@ public class TestEditLog extends TestCase {
     for (int i = 0; i < numdirs; i++) {
       File editFile = fsimage.getEditFile(i);
       System.out.println("Verifying file: " + editFile);
-      int numEdits = editLog.loadFSEdits(editFile);
+      int numEdits = FSEditLog.loadFSEdits(new EditLogFileInputStream(editFile));
       int numLeases = FSNamesystem.getFSNamesystem().leaseManager.countLease();
       System.out.println("Number of outstanding leases " + numLeases);
       assertEquals(0, numLeases);

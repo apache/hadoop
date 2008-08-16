@@ -44,7 +44,6 @@ public class DataOutputBuffer extends DataOutputStream {
   private static class Buffer extends ByteArrayOutputStream {
     public byte[] getData() { return buf; }
     public int getLength() { return count; }
-    public void reset() { count = 0; }
 
     public Buffer() {
       super();
@@ -100,5 +99,10 @@ public class DataOutputBuffer extends DataOutputStream {
   /** Writes bytes from a DataInput directly into the buffer. */
   public void write(DataInput in, int length) throws IOException {
     buffer.write(in, length);
+  }
+
+  /** Write to a file stream */
+  public void writeTo(OutputStream out) throws IOException {
+    buffer.writeTo(out);
   }
 }

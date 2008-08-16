@@ -197,6 +197,8 @@ Trunk (unreleased changes)
 
     HADOOP-3935. Split out inner classes from DataNode.java. (johan)
 
+    HADOOP-3905. Create generic interfaces for edit log streams. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
