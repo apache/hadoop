@@ -23,9 +23,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import java.util.List;
 import java.util.ArrayList;
-import java.util.AbstractMap;
+import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.HashSet;
 import com.facebook.thrift.*;
 
@@ -41,7 +43,7 @@ public class Mutation implements TBase, java.io.Serializable {
   public byte[] value;
 
   public final Isset __isset = new Isset();
-  public static final class Isset {
+  public static final class Isset implements java.io.Serializable {
     public boolean isDelete = false;
     public boolean column = false;
     public boolean value = false;
@@ -64,6 +66,52 @@ public class Mutation implements TBase, java.io.Serializable {
     this.__isset.column = true;
     this.value = value;
     this.__isset.value = true;
+  }
+
+  public boolean equals(Object that) {
+    if (that == null)
+      return false;
+    if (that instanceof Mutation)
+      return this.equals((Mutation)that);
+    return false;
+  }
+
+  public boolean equals(Mutation that) {
+    if (that == null)
+      return false;
+
+    boolean this_present_isDelete = true;
+    boolean that_present_isDelete = true;
+    if (this_present_isDelete || that_present_isDelete) {
+      if (!(this_present_isDelete && that_present_isDelete))
+        return false;
+      if (this.isDelete != that.isDelete)
+        return false;
+    }
+
+    boolean this_present_column = true && (this.column != null);
+    boolean that_present_column = true && (that.column != null);
+    if (this_present_column || that_present_column) {
+      if (!(this_present_column && that_present_column))
+        return false;
+      if (!java.util.Arrays.equals(this.column, that.column))
+        return false;
+    }
+
+    boolean this_present_value = true && (this.value != null);
+    boolean that_present_value = true && (that.value != null);
+    if (this_present_value || that_present_value) {
+      if (!(this_present_value && that_present_value))
+        return false;
+      if (!java.util.Arrays.equals(this.value, that.value))
+        return false;
+    }
+
+    return true;
+  }
+
+  public int hashCode() {
+    return 0;
   }
 
   public void read(TProtocol iprot) throws TException {

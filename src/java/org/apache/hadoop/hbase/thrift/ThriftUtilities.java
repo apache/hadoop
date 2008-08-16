@@ -18,10 +18,21 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
+import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
+import org.apache.hadoop.hbase.thrift.generated.NotFound;
+import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class ThriftUtilities {
   
@@ -71,4 +82,34 @@ public class ThriftUtilities {
     return col;
   }
   
+  /**
+   * This utility method creates a new Thrift TCell "struct" based on
+   * an Hbase Cell object.
+   * 
+   * @param in
+   *          Hbase Cell object
+   * @return Thrift TCell
+   */
+  static public TCell cellFromHBase(Cell in) {
+    return new TCell(in.getValue(), in.getTimestamp());
+  }
+  
+  /**
+   * This utility method creates a new Thrift TRowResult "struct" based on
+   * an Hbase RowResult object.
+   * 
+   * @param in
+   *          Hbase RowResult object
+   * @return Thrift TRowResult
+   */
+  static public TRowResult rowResultFromHBase(RowResult in) {
+    TRowResult result = new TRowResult();
+    result.row = in.getRow();
+    result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], Cell> entry : in.entrySet()){
+      result.columns.put(entry.getKey(), ThriftUtilities.cellFromHBase(entry.getValue()));
+    }
+    return result;
+  }
 }
+

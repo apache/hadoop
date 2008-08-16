@@ -31,9 +31,10 @@
 // used to generate the *.java files checked into the Hbase project.
 // ----------------------------------------------------------------
 
-java_package org.apache.hadoop.hbase.thrift.generated
-cpp_namespace apache.hadoop.hbase.thrift
-ruby_namespace Apache.Hadoop.Hbase.Thrift
+namespace java org.apache.hadoop.hbase.thrift.generated
+namespace cpp  apache.hadoop.hbase.thrift
+namespace rb Apache.Hadoop.Hbase.Thrift
+
 // note: other language namespaces tbd...
 
 //
@@ -50,6 +51,16 @@ typedef binary Text
 typedef binary Bytes
 typedef i32    ScannerID
 
+/**
+ * TCell - Used to transport a cell value (byte[]) and the timestamp it was 
+ * stored with together as a result for get and getRow methods. This promotes
+ * the timestamp of a cell to a first-class value, making it easy to take 
+ * note of temporal data. Cell is used all the way from HStore up to HTable.
+ */
+struct TCell{
+  1:Bytes value,
+  2:i64 timestamp
+}
 
 /**
  * An HColumnDescriptor contains information about a column family
@@ -70,11 +81,14 @@ struct ColumnDescriptor {
 }
 
 /**
- * A RegionDescriptor contains informationa about an HTable region.
- * Currently, this is just the startKey of the region.
+ * A TRegionInfo contains information about an HTable region.
  */
-struct RegionDescriptor {
+struct TRegionInfo {
   1:Text startKey,
+  2:Text endKey,
+  3:i64 id,
+  4:Text name,
+  5:byte version 
 }
 
 /**
@@ -97,12 +111,11 @@ struct BatchMutation {
 
 
 /**
- * A ScanEntry contains the row, column, and value information for a scanner's
- * current location.
+ * Holds row name and then a map of columns to cells. 
  */
-struct ScanEntry {
+struct TRowResult {
   1:Text row,
-  2:map<Text, Bytes> columns
+  2:map<Text, TCell> columns
 }
 
 //
@@ -146,7 +159,28 @@ exception AlreadyExists {
 //
 
 service Hbase {
+  /**
+   * Brings a table on-line (enables it)
+   * @param tableName name of the table
+   */
+  void enableTable(1:Bytes tableName)
+    throws (1:IOError io)
+    
+  /**
+   * Disables a table (takes it off-line) If it is being served, the master
+   * will tell the servers to stop serving it.
+   * @param tableName name of the table
+   */
+  void disableTable(1:Bytes tableName)
+    throws (1:IOError io)
 
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   */
+  bool isTableEnabled(1:Bytes tableName)
+    throws (1:IOError io)
+    
   /**
    * List all the userspace tables.
    * @return - returns a list of names
@@ -167,7 +201,7 @@ service Hbase {
    * @param tableName table name
    * @return list of region descriptors
    */
-  list<RegionDescriptor> getTableRegions(1:Text tableName) 
+  list<TRegionInfo> getTableRegions(1:Text tableName) 
     throws (1:IOError io)
 
   /**
@@ -194,7 +228,7 @@ service Hbase {
     throws (1:IOError io, 2:NotFound nf)
 
   /** 
-   * Get a single value for the specified table, row, and column at the
+   * Get a single TCell for the specified table, row, and column at the
    * latest timestamp.
    *
    * @param tableName name of table
@@ -202,7 +236,7 @@ service Hbase {
    * @param column column name
    * @return value for specified row/column
    */
-  Bytes get(1:Text tableName, 2:Text row, 3:Text column) 
+  TCell get(1:Text tableName, 2:Text row, 3:Text column) 
     throws (1:IOError io, 2:NotFound nf)
 
   /** 
@@ -213,9 +247,9 @@ service Hbase {
    * @param row row key
    * @param column column name
    * @param numVersions number of versions to retrieve
-   * @return list of values for specified row/column
+   * @return list of cells for specified row/column
    */
-  list<Bytes> getVer(1:Text tableName, 2:Text row, 3:Text column, 4:i32 numVersions) 
+  list<TCell> getVer(1:Text tableName, 2:Text row, 3:Text column, 4:i32 numVersions) 
     throws (1:IOError io, 2:NotFound nf)
 
   /** 
@@ -228,9 +262,9 @@ service Hbase {
    * @param column column name
    * @param timestamp timestamp
    * @param numVersions number of versions to retrieve
-   * @return list of values for specified row/column
+   * @return list of cells for specified row/column
    */
-  list<Bytes> getVerTs(1:Text tableName, 2:Text row, 3:Text column, 4:i64 timestamp,  5:i32 numVersions)
+  list<TCell> getVerTs(1:Text tableName, 2:Text row, 3:Text column, 4:i64 timestamp,  5:i32 numVersions)
     throws (1:IOError io, 2:NotFound nf)
 
   /** 
@@ -239,9 +273,9 @@ service Hbase {
    * 
    * @param tableName name of table
    * @param row row key
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
    */
-  map<Text, Bytes> getRow(1:Text tableName, 2:Text row)
+  TRowResult getRow(1:Text tableName, 2:Text row)
     throws (1:IOError io)
 
   /** 
@@ -251,23 +285,10 @@ service Hbase {
    * @param tableName of table
    * @param row row key
    * @param timestamp timestamp
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
    */
-  map<Text, Bytes> getRowTs(1:Text tableName, 2:Text row, 3:i64 timestamp)
+  TRowResult getRowTs(1:Text tableName, 2:Text row, 3:i64 timestamp)
     throws (1:IOError io)
-
-  /** 
-   * Put a single value at the specified table, row, and column.
-   * To put muliple values in a single transaction, or to specify 
-   * a non-default timestamp, use {@link #mutateRow} and/or
-   * {@link #mutateRowTs}
-   *
-   * @param tableName name of table
-   * @param row row key
-   * @param column column name
-   */
-  void put(1:Text tableName, 2:Text row, 3:Text column, 4:Bytes value)
-    throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
    * Apply a series of mutations (updates/deletes) to a row in a
@@ -456,11 +477,11 @@ service Hbase {
    * a NotFound exception is returned.
    *
    * @param id id of a scanner returned by scannerOpen
-   * @return a ScanEntry object representing the current row's values
+   * @return a TRowResult containing the current row and a map of the columns to TCells.
    * @throws IllegalArgument if ScannerID is invalid
    * @throws NotFound when the scanner reaches the end
    */
-  ScanEntry scannerGet(1:ScannerID id)
+  TRowResult scannerGet(1:ScannerID id)
     throws (1:IOError io, 2:IllegalArgument ia, 3:NotFound nf)
 
   /**

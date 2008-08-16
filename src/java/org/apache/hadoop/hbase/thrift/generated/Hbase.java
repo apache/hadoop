@@ -23,9 +23,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import java.util.List;
 import java.util.ArrayList;
-import java.util.AbstractMap;
+import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.HashSet;
 import com.facebook.thrift.*;
 
@@ -37,24 +39,43 @@ public class Hbase {
   public interface Iface {
 
     /**
+     * Brings a table on-line (enables it)
+     * @param tableName name of the table
+     */
+    public void enableTable(byte[] tableName) throws IOError, TException;
+
+    /**
+     * Disables a table (takes it off-line) If it is being served, the master
+     * will tell the servers to stop serving it.
+     * @param tableName name of the table
+     */
+    public void disableTable(byte[] tableName) throws IOError, TException;
+
+    /**
+     * @param tableName name of table to check
+     * @return true if table is on-line
+     */
+    public boolean isTableEnabled(byte[] tableName) throws IOError, TException;
+
+    /**
      * List all the userspace tables.
      * @return - returns a list of names
      */
-    public ArrayList<byte[]> getTableNames() throws IOError, TException;
+    public List<byte[]> getTableNames() throws IOError, TException;
 
     /**
      * List all the column families assoicated with a table.
      * @param tableName table name
      * @return list of column family descriptors
      */
-    public AbstractMap<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException;
+    public Map<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException;
 
     /**
      * List the regions associated with a table.
      * @param tableName table name
      * @return list of region descriptors
      */
-    public ArrayList<RegionDescriptor> getTableRegions(byte[] tableName) throws IOError, TException;
+    public List<TRegionInfo> getTableRegions(byte[] tableName) throws IOError, TException;
 
     /**
      * Create a table with the specified column families.  The name
@@ -68,7 +89,7 @@ public class Hbase {
      * @throws IllegalArgument if an input parameter is invalid
      * @throws AlreadyExists if the table name already exists
      */
-    public void createTable(byte[] tableName, ArrayList<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException;
+    public void createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException;
 
     /**
      * Deletes a table
@@ -78,7 +99,7 @@ public class Hbase {
     public void deleteTable(byte[] tableName) throws IOError, NotFound, TException;
 
     /**
-     * Get a single value for the specified table, row, and column at the
+     * Get a single TCell for the specified table, row, and column at the
      * latest timestamp.
      * 
      * @param tableName name of table
@@ -86,7 +107,7 @@ public class Hbase {
      * @param column column name
      * @return value for specified row/column
      */
-    public byte[] get(byte[] tableName, byte[] row, byte[] column) throws IOError, NotFound, TException;
+    public TCell get(byte[] tableName, byte[] row, byte[] column) throws IOError, NotFound, TException;
 
     /**
      * Get the specified number of versions for the specified table,
@@ -96,9 +117,9 @@ public class Hbase {
      * @param row row key
      * @param column column name
      * @param numVersions number of versions to retrieve
-     * @return list of values for specified row/column
+     * @return list of cells for specified row/column
      */
-    public ArrayList<byte[]> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, NotFound, TException;
+    public List<TCell> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, NotFound, TException;
 
     /**
      * Get the specified number of versions for the specified table,
@@ -110,9 +131,9 @@ public class Hbase {
      * @param column column name
      * @param timestamp timestamp
      * @param numVersions number of versions to retrieve
-     * @return list of values for specified row/column
+     * @return list of cells for specified row/column
      */
-    public ArrayList<byte[]> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, NotFound, TException;
+    public List<TCell> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, NotFound, TException;
 
     /**
      * Get all the data for the specified table and row at the latest
@@ -120,9 +141,9 @@ public class Hbase {
      * 
      * @param tableName name of table
      * @param row row key
-     * @return Map of columns to values.  Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
      */
-    public AbstractMap<byte[],byte[]> getRow(byte[] tableName, byte[] row) throws IOError, TException;
+    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, TException;
 
     /**
      * Get all the data for the specified table and row at the specified
@@ -131,21 +152,9 @@ public class Hbase {
      * @param tableName of table
      * @param row row key
      * @param timestamp timestamp
-     * @return Map of columns to values.  Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
      */
-    public AbstractMap<byte[],byte[]> getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
-
-    /**
-     * Put a single value at the specified table, row, and column.
-     * To put muliple values in a single transaction, or to specify
-     * a non-default timestamp, use {@link #mutateRow} and/or
-     * {@link #mutateRowTs}
-     * 
-     * @param tableName name of table
-     * @param row row key
-     * @param column column name
-     */
-    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, IllegalArgument, TException;
+    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -157,7 +166,7 @@ public class Hbase {
      * @param row row key
      * @param mutations list of mutation commands
      */
-    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, IllegalArgument, TException;
+    public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -170,7 +179,7 @@ public class Hbase {
      * @param mutations list of mutation commands
      * @param timestamp timestamp
      */
-    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
+    public void mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Apply a series of batches (each a series of mutations on a single row)
@@ -181,7 +190,7 @@ public class Hbase {
      * @param tableName name of table
      * @param rowBatches list of row batches
      */
-    public void mutateRows(byte[] tableName, ArrayList<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException;
+    public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException;
 
     /**
      * Apply a series of batches (each a series of mutations on a single row)
@@ -193,7 +202,7 @@ public class Hbase {
      * @param rowBatches list of row batches
      * @param timestamp timestamp
      */
-    public void mutateRowsTs(byte[] tableName, ArrayList<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
+    public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Delete all cells that match the passed row and column.
@@ -246,7 +255,7 @@ public class Hbase {
      * 
      * @return scanner id to be used with other scanner procedures
      */
-    public int scannerOpen(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns) throws IOError, TException;
+    public int scannerOpen(byte[] tableName, byte[] startRow, List<byte[]> columns) throws IOError, TException;
 
     /**
      * Get a scanner on the current table starting and stopping at the
@@ -264,7 +273,7 @@ public class Hbase {
      * 
      * @return scanner id to be used with other scanner procedures
      */
-    public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns) throws IOError, TException;
+    public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns) throws IOError, TException;
 
     /**
      * Get a scanner on the current table starting at the specified row and
@@ -281,7 +290,7 @@ public class Hbase {
      * 
      * @return scanner id to be used with other scanner procedures
      */
-    public int scannerOpenTs(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns, long timestamp) throws IOError, TException;
+    public int scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
     /**
      * Get a scanner on the current table starting and stopping at the
@@ -301,7 +310,7 @@ public class Hbase {
      * 
      * @return scanner id to be used with other scanner procedures
      */
-    public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns, long timestamp) throws IOError, TException;
+    public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
     /**
      * Returns the scanner's current row value and advances to the next
@@ -310,11 +319,11 @@ public class Hbase {
      * a NotFound exception is returned.
      * 
      * @param id id of a scanner returned by scannerOpen
-     * @return a ScanEntry object representing the current row's values
+     * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
      */
-    public ScanEntry scannerGet(int id) throws IOError, IllegalArgument, NotFound, TException;
+    public TRowResult scannerGet(int id) throws IOError, IllegalArgument, NotFound, TException;
 
     /**
      * Closes the server-state associated with an open scanner.
@@ -343,7 +352,119 @@ public class Hbase {
 
     protected int seqid_;
 
-    public ArrayList<byte[]> getTableNames() throws IOError, TException
+    public TProtocol getInputProtocol()
+    {
+      return this.iprot_;
+    }
+
+    public TProtocol getOutputProtocol()
+    {
+      return this.oprot_;
+    }
+
+    public void enableTable(byte[] tableName) throws IOError, TException
+    {
+      send_enableTable(tableName);
+      recv_enableTable();
+    }
+
+    public void send_enableTable(byte[] tableName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("enableTable", TMessageType.CALL, seqid_));
+      enableTable_args args = new enableTable_args();
+      args.tableName = tableName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public void recv_enableTable() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      enableTable_result result = new enableTable_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      return;
+    }
+
+    public void disableTable(byte[] tableName) throws IOError, TException
+    {
+      send_disableTable(tableName);
+      recv_disableTable();
+    }
+
+    public void send_disableTable(byte[] tableName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("disableTable", TMessageType.CALL, seqid_));
+      disableTable_args args = new disableTable_args();
+      args.tableName = tableName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public void recv_disableTable() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      disableTable_result result = new disableTable_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      return;
+    }
+
+    public boolean isTableEnabled(byte[] tableName) throws IOError, TException
+    {
+      send_isTableEnabled(tableName);
+      return recv_isTableEnabled();
+    }
+
+    public void send_isTableEnabled(byte[] tableName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("isTableEnabled", TMessageType.CALL, seqid_));
+      isTableEnabled_args args = new isTableEnabled_args();
+      args.tableName = tableName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public boolean recv_isTableEnabled() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      isTableEnabled_result result = new isTableEnabled_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "isTableEnabled failed: unknown result");
+    }
+
+    public List<byte[]> getTableNames() throws IOError, TException
     {
       send_getTableNames();
       return recv_getTableNames();
@@ -358,7 +479,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public ArrayList<byte[]> recv_getTableNames() throws IOError, TException
+    public List<byte[]> recv_getTableNames() throws IOError, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -378,7 +499,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getTableNames failed: unknown result");
     }
 
-    public AbstractMap<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException
+    public Map<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException
     {
       send_getColumnDescriptors(tableName);
       return recv_getColumnDescriptors();
@@ -394,7 +515,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public AbstractMap<byte[],ColumnDescriptor> recv_getColumnDescriptors() throws IOError, TException
+    public Map<byte[],ColumnDescriptor> recv_getColumnDescriptors() throws IOError, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -414,7 +535,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getColumnDescriptors failed: unknown result");
     }
 
-    public ArrayList<RegionDescriptor> getTableRegions(byte[] tableName) throws IOError, TException
+    public List<TRegionInfo> getTableRegions(byte[] tableName) throws IOError, TException
     {
       send_getTableRegions(tableName);
       return recv_getTableRegions();
@@ -430,7 +551,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public ArrayList<RegionDescriptor> recv_getTableRegions() throws IOError, TException
+    public List<TRegionInfo> recv_getTableRegions() throws IOError, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -450,13 +571,13 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getTableRegions failed: unknown result");
     }
 
-    public void createTable(byte[] tableName, ArrayList<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException
+    public void createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException
     {
       send_createTable(tableName, columnFamilies);
       recv_createTable();
     }
 
-    public void send_createTable(byte[] tableName, ArrayList<ColumnDescriptor> columnFamilies) throws TException
+    public void send_createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("createTable", TMessageType.CALL, seqid_));
       createTable_args args = new createTable_args();
@@ -526,7 +647,7 @@ public class Hbase {
       return;
     }
 
-    public byte[] get(byte[] tableName, byte[] row, byte[] column) throws IOError, NotFound, TException
+    public TCell get(byte[] tableName, byte[] row, byte[] column) throws IOError, NotFound, TException
     {
       send_get(tableName, row, column);
       return recv_get();
@@ -544,7 +665,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public byte[] recv_get() throws IOError, NotFound, TException
+    public TCell recv_get() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -567,7 +688,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get failed: unknown result");
     }
 
-    public ArrayList<byte[]> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, NotFound, TException
+    public List<TCell> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, NotFound, TException
     {
       send_getVer(tableName, row, column, numVersions);
       return recv_getVer();
@@ -586,7 +707,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public ArrayList<byte[]> recv_getVer() throws IOError, NotFound, TException
+    public List<TCell> recv_getVer() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -609,7 +730,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getVer failed: unknown result");
     }
 
-    public ArrayList<byte[]> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, NotFound, TException
+    public List<TCell> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, NotFound, TException
     {
       send_getVerTs(tableName, row, column, timestamp, numVersions);
       return recv_getVerTs();
@@ -629,7 +750,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public ArrayList<byte[]> recv_getVerTs() throws IOError, NotFound, TException
+    public List<TCell> recv_getVerTs() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -652,7 +773,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getVerTs failed: unknown result");
     }
 
-    public AbstractMap<byte[],byte[]> getRow(byte[] tableName, byte[] row) throws IOError, TException
+    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, TException
     {
       send_getRow(tableName, row);
       return recv_getRow();
@@ -669,7 +790,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public AbstractMap<byte[],byte[]> recv_getRow() throws IOError, TException
+    public TRowResult recv_getRow() throws IOError, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -689,7 +810,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRow failed: unknown result");
     }
 
-    public AbstractMap<byte[],byte[]> getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException
+    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException
     {
       send_getRowTs(tableName, row, timestamp);
       return recv_getRowTs();
@@ -707,7 +828,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public AbstractMap<byte[],byte[]> recv_getRowTs() throws IOError, TException
+    public TRowResult recv_getRowTs() throws IOError, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -727,52 +848,13 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowTs failed: unknown result");
     }
 
-    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, IllegalArgument, TException
-    {
-      send_put(tableName, row, column, value);
-      recv_put();
-    }
-
-    public void send_put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws TException
-    {
-      oprot_.writeMessageBegin(new TMessage("put", TMessageType.CALL, seqid_));
-      put_args args = new put_args();
-      args.tableName = tableName;
-      args.row = row;
-      args.column = column;
-      args.value = value;
-      args.write(oprot_);
-      oprot_.writeMessageEnd();
-      oprot_.getTransport().flush();
-    }
-
-    public void recv_put() throws IOError, IllegalArgument, TException
-    {
-      TMessage msg = iprot_.readMessageBegin();
-      if (msg.type == TMessageType.EXCEPTION) {
-        TApplicationException x = TApplicationException.read(iprot_);
-        iprot_.readMessageEnd();
-        throw x;
-      }
-      put_result result = new put_result();
-      result.read(iprot_);
-      iprot_.readMessageEnd();
-      if (result.__isset.io) {
-        throw result.io;
-      }
-      if (result.__isset.ia) {
-        throw result.ia;
-      }
-      return;
-    }
-
-    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, IllegalArgument, TException
+    public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException
     {
       send_mutateRow(tableName, row, mutations);
       recv_mutateRow();
     }
 
-    public void send_mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws TException
+    public void send_mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("mutateRow", TMessageType.CALL, seqid_));
       mutateRow_args args = new mutateRow_args();
@@ -804,13 +886,13 @@ public class Hbase {
       return;
     }
 
-    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException
+    public void mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException
     {
       send_mutateRowTs(tableName, row, mutations, timestamp);
       recv_mutateRowTs();
     }
 
-    public void send_mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws TException
+    public void send_mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("mutateRowTs", TMessageType.CALL, seqid_));
       mutateRowTs_args args = new mutateRowTs_args();
@@ -843,13 +925,13 @@ public class Hbase {
       return;
     }
 
-    public void mutateRows(byte[] tableName, ArrayList<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException
+    public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException
     {
       send_mutateRows(tableName, rowBatches);
       recv_mutateRows();
     }
 
-    public void send_mutateRows(byte[] tableName, ArrayList<BatchMutation> rowBatches) throws TException
+    public void send_mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("mutateRows", TMessageType.CALL, seqid_));
       mutateRows_args args = new mutateRows_args();
@@ -880,13 +962,13 @@ public class Hbase {
       return;
     }
 
-    public void mutateRowsTs(byte[] tableName, ArrayList<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException
+    public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException
     {
       send_mutateRowsTs(tableName, rowBatches, timestamp);
       recv_mutateRowsTs();
     }
 
-    public void send_mutateRowsTs(byte[] tableName, ArrayList<BatchMutation> rowBatches, long timestamp) throws TException
+    public void send_mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("mutateRowsTs", TMessageType.CALL, seqid_));
       mutateRowsTs_args args = new mutateRowsTs_args();
@@ -1058,13 +1140,13 @@ public class Hbase {
       return;
     }
 
-    public int scannerOpen(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns) throws IOError, TException
+    public int scannerOpen(byte[] tableName, byte[] startRow, List<byte[]> columns) throws IOError, TException
     {
       send_scannerOpen(tableName, startRow, columns);
       return recv_scannerOpen();
     }
 
-    public void send_scannerOpen(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns) throws TException
+    public void send_scannerOpen(byte[] tableName, byte[] startRow, List<byte[]> columns) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("scannerOpen", TMessageType.CALL, seqid_));
       scannerOpen_args args = new scannerOpen_args();
@@ -1096,13 +1178,13 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerOpen failed: unknown result");
     }
 
-    public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns) throws IOError, TException
+    public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns) throws IOError, TException
     {
       send_scannerOpenWithStop(tableName, startRow, stopRow, columns);
       return recv_scannerOpenWithStop();
     }
 
-    public void send_scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns) throws TException
+    public void send_scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("scannerOpenWithStop", TMessageType.CALL, seqid_));
       scannerOpenWithStop_args args = new scannerOpenWithStop_args();
@@ -1135,13 +1217,13 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerOpenWithStop failed: unknown result");
     }
 
-    public int scannerOpenTs(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns, long timestamp) throws IOError, TException
+    public int scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws IOError, TException
     {
       send_scannerOpenTs(tableName, startRow, columns, timestamp);
       return recv_scannerOpenTs();
     }
 
-    public void send_scannerOpenTs(byte[] tableName, byte[] startRow, ArrayList<byte[]> columns, long timestamp) throws TException
+    public void send_scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("scannerOpenTs", TMessageType.CALL, seqid_));
       scannerOpenTs_args args = new scannerOpenTs_args();
@@ -1174,13 +1256,13 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerOpenTs failed: unknown result");
     }
 
-    public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns, long timestamp) throws IOError, TException
+    public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws IOError, TException
     {
       send_scannerOpenWithStopTs(tableName, startRow, stopRow, columns, timestamp);
       return recv_scannerOpenWithStopTs();
     }
 
-    public void send_scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, ArrayList<byte[]> columns, long timestamp) throws TException
+    public void send_scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("scannerOpenWithStopTs", TMessageType.CALL, seqid_));
       scannerOpenWithStopTs_args args = new scannerOpenWithStopTs_args();
@@ -1214,7 +1296,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerOpenWithStopTs failed: unknown result");
     }
 
-    public ScanEntry scannerGet(int id) throws IOError, IllegalArgument, NotFound, TException
+    public TRowResult scannerGet(int id) throws IOError, IllegalArgument, NotFound, TException
     {
       send_scannerGet(id);
       return recv_scannerGet();
@@ -1230,7 +1312,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public ScanEntry recv_scannerGet() throws IOError, IllegalArgument, NotFound, TException
+    public TRowResult recv_scannerGet() throws IOError, IllegalArgument, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -1297,6 +1379,9 @@ public class Hbase {
     public Processor(Iface iface)
     {
       iface_ = iface;
+      processMap_.put("enableTable", new enableTable());
+      processMap_.put("disableTable", new disableTable());
+      processMap_.put("isTableEnabled", new isTableEnabled());
       processMap_.put("getTableNames", new getTableNames());
       processMap_.put("getColumnDescriptors", new getColumnDescriptors());
       processMap_.put("getTableRegions", new getTableRegions());
@@ -1307,7 +1392,6 @@ public class Hbase {
       processMap_.put("getVerTs", new getVerTs());
       processMap_.put("getRow", new getRow());
       processMap_.put("getRowTs", new getRowTs());
-      processMap_.put("put", new put());
       processMap_.put("mutateRow", new mutateRow());
       processMap_.put("mutateRowTs", new mutateRowTs());
       processMap_.put("mutateRows", new mutateRows());
@@ -1347,6 +1431,70 @@ public class Hbase {
       }
       fn.process(msg.seqid, iprot, oprot);
       return true;
+    }
+
+    private class enableTable implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        enableTable_args args = new enableTable_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        enableTable_result result = new enableTable_result();
+        try {
+          iface_.enableTable(args.tableName);
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("enableTable", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class disableTable implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        disableTable_args args = new disableTable_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        disableTable_result result = new disableTable_result();
+        try {
+          iface_.disableTable(args.tableName);
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("disableTable", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class isTableEnabled implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        isTableEnabled_args args = new isTableEnabled_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        isTableEnabled_result result = new isTableEnabled_result();
+        try {
+          result.success = iface_.isTableEnabled(args.tableName);
+          result.__isset.success = true;
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("isTableEnabled", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
     }
 
     private class getTableNames implements ProcessFunction {
@@ -1578,30 +1726,6 @@ public class Hbase {
           result.__isset.io = true;
         }
         oprot.writeMessageBegin(new TMessage("getRowTs", TMessageType.REPLY, seqid));
-        result.write(oprot);
-        oprot.writeMessageEnd();
-        oprot.getTransport().flush();
-      }
-
-    }
-
-    private class put implements ProcessFunction {
-      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-      {
-        put_args args = new put_args();
-        args.read(iprot);
-        iprot.readMessageEnd();
-        put_result result = new put_result();
-        try {
-          iface_.put(args.tableName, args.row, args.column, args.value);
-        } catch (IOError io) {
-          result.io = io;
-          result.__isset.io = true;
-        } catch (IllegalArgument ia) {
-          result.ia = ia;
-          result.__isset.ia = true;
-        }
-        oprot.writeMessageBegin(new TMessage("put", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -1931,8 +2055,676 @@ public class Hbase {
 
   }
 
+  public static class enableTable_args implements TBase, java.io.Serializable   {
+    public byte[] tableName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+    }
+
+    public enableTable_args() {
+    }
+
+    public enableTable_args(
+      byte[] tableName)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof enableTable_args)
+        return this.equals((enableTable_args)that);
+      return false;
+    }
+
+    public boolean equals(enableTable_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readBinary();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("enableTable_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("enableTable_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class enableTable_result implements TBase, java.io.Serializable   {
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean io = false;
+    }
+
+    public enableTable_result() {
+    }
+
+    public enableTable_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof enableTable_result)
+        return this.equals((enableTable_result)that);
+      return false;
+    }
+
+    public boolean equals(enableTable_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("enableTable_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("enableTable_result(");
+      sb.append("io:");
+      sb.append(this.io.toString());
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class disableTable_args implements TBase, java.io.Serializable   {
+    public byte[] tableName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+    }
+
+    public disableTable_args() {
+    }
+
+    public disableTable_args(
+      byte[] tableName)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof disableTable_args)
+        return this.equals((disableTable_args)that);
+      return false;
+    }
+
+    public boolean equals(disableTable_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readBinary();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("disableTable_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("disableTable_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class disableTable_result implements TBase, java.io.Serializable   {
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean io = false;
+    }
+
+    public disableTable_result() {
+    }
+
+    public disableTable_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof disableTable_result)
+        return this.equals((disableTable_result)that);
+      return false;
+    }
+
+    public boolean equals(disableTable_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("disableTable_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("disableTable_result(");
+      sb.append("io:");
+      sb.append(this.io.toString());
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class isTableEnabled_args implements TBase, java.io.Serializable   {
+    public byte[] tableName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+    }
+
+    public isTableEnabled_args() {
+    }
+
+    public isTableEnabled_args(
+      byte[] tableName)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof isTableEnabled_args)
+        return this.equals((isTableEnabled_args)that);
+      return false;
+    }
+
+    public boolean equals(isTableEnabled_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readBinary();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("isTableEnabled_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("isTableEnabled_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class isTableEnabled_result implements TBase, java.io.Serializable   {
+    public boolean success;
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+      public boolean io = false;
+    }
+
+    public isTableEnabled_result() {
+    }
+
+    public isTableEnabled_result(
+      boolean success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof isTableEnabled_result)
+        return this.equals((isTableEnabled_result)that);
+      return false;
+    }
+
+    public boolean equals(isTableEnabled_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.BOOL) {
+              this.success = iprot.readBool();
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("isTableEnabled_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        field.name = "success";
+        field.type = TType.BOOL;
+        field.id = 0;
+        oprot.writeFieldBegin(field);
+        oprot.writeBool(this.success);
+        oprot.writeFieldEnd();
+      } else if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("isTableEnabled_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",io:");
+      sb.append(this.io.toString());
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
   public static class getTableNames_args implements TBase, java.io.Serializable   {
     public getTableNames_args() {
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getTableNames_args)
+        return this.equals((getTableNames_args)that);
+      return false;
+    }
+
+    public boolean equals(getTableNames_args that) {
+      if (that == null)
+        return false;
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -1971,11 +2763,11 @@ public class Hbase {
   }
 
   public static class getTableNames_result implements TBase, java.io.Serializable   {
-    public ArrayList<byte[]> success;
+    public List<byte[]> success;
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -1984,7 +2776,7 @@ public class Hbase {
     }
 
     public getTableNames_result(
-      ArrayList<byte[]> success,
+      List<byte[]> success,
       IOError io)
     {
       this();
@@ -1992,6 +2784,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getTableNames_result)
+        return this.equals((getTableNames_result)that);
+      return false;
+    }
+
+    public boolean equals(getTableNames_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2091,7 +2920,7 @@ public class Hbase {
     public byte[] tableName;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
     }
 
@@ -2104,6 +2933,34 @@ public class Hbase {
       this();
       this.tableName = tableName;
       this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getColumnDescriptors_args)
+        return this.equals((getColumnDescriptors_args)that);
+      return false;
+    }
+
+    public boolean equals(getColumnDescriptors_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2161,11 +3018,11 @@ public class Hbase {
   }
 
   public static class getColumnDescriptors_result implements TBase, java.io.Serializable   {
-    public AbstractMap<byte[],ColumnDescriptor> success;
+    public Map<byte[],ColumnDescriptor> success;
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -2174,7 +3031,7 @@ public class Hbase {
     }
 
     public getColumnDescriptors_result(
-      AbstractMap<byte[],ColumnDescriptor> success,
+      Map<byte[],ColumnDescriptor> success,
       IOError io)
     {
       this();
@@ -2182,6 +3039,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getColumnDescriptors_result)
+        return this.equals((getColumnDescriptors_result)that);
+      return false;
+    }
+
+    public boolean equals(getColumnDescriptors_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2285,7 +3179,7 @@ public class Hbase {
     public byte[] tableName;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
     }
 
@@ -2298,6 +3192,34 @@ public class Hbase {
       this();
       this.tableName = tableName;
       this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getTableRegions_args)
+        return this.equals((getTableRegions_args)that);
+      return false;
+    }
+
+    public boolean equals(getTableRegions_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2355,11 +3277,11 @@ public class Hbase {
   }
 
   public static class getTableRegions_result implements TBase, java.io.Serializable   {
-    public ArrayList<RegionDescriptor> success;
+    public List<TRegionInfo> success;
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -2368,7 +3290,7 @@ public class Hbase {
     }
 
     public getTableRegions_result(
-      ArrayList<RegionDescriptor> success,
+      List<TRegionInfo> success,
       IOError io)
     {
       this();
@@ -2376,6 +3298,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getTableRegions_result)
+        return this.equals((getTableRegions_result)that);
+      return false;
+    }
+
+    public boolean equals(getTableRegions_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2393,11 +3352,11 @@ public class Hbase {
             if (field.type == TType.LIST) {
               {
                 TList _list18 = iprot.readListBegin();
-                this.success = new ArrayList<RegionDescriptor>(_list18.size);
+                this.success = new ArrayList<TRegionInfo>(_list18.size);
                 for (int _i19 = 0; _i19 < _list18.size; ++_i19)
                 {
-                  RegionDescriptor _elem20 = new RegionDescriptor();
-                  _elem20 = new RegionDescriptor();
+                  TRegionInfo _elem20 = new TRegionInfo();
+                  _elem20 = new TRegionInfo();
                   _elem20.read(iprot);
                   this.success.add(_elem20);
                 }
@@ -2439,7 +3398,7 @@ public class Hbase {
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (RegionDescriptor _iter21 : this.success)            {
+            for (TRegionInfo _iter21 : this.success)            {
               _iter21.write(oprot);
             }
             oprot.writeListEnd();
@@ -2474,10 +3433,10 @@ public class Hbase {
 
   public static class createTable_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
-    public ArrayList<ColumnDescriptor> columnFamilies;
+    public List<ColumnDescriptor> columnFamilies;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean columnFamilies = false;
     }
@@ -2487,13 +3446,50 @@ public class Hbase {
 
     public createTable_args(
       byte[] tableName,
-      ArrayList<ColumnDescriptor> columnFamilies)
+      List<ColumnDescriptor> columnFamilies)
     {
       this();
       this.tableName = tableName;
       this.__isset.tableName = true;
       this.columnFamilies = columnFamilies;
       this.__isset.columnFamilies = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof createTable_args)
+        return this.equals((createTable_args)that);
+      return false;
+    }
+
+    public boolean equals(createTable_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_columnFamilies = true && (this.columnFamilies != null);
+      boolean that_present_columnFamilies = true && (that.columnFamilies != null);
+      if (this_present_columnFamilies || that_present_columnFamilies) {
+        if (!(this_present_columnFamilies && that_present_columnFamilies))
+          return false;
+        if (!this.columnFamilies.equals(that.columnFamilies))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2591,7 +3587,7 @@ public class Hbase {
     public AlreadyExists exist;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
       public boolean exist = false;
@@ -2612,6 +3608,52 @@ public class Hbase {
       this.__isset.ia = true;
       this.exist = exist;
       this.__isset.exist = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof createTable_result)
+        return this.equals((createTable_result)that);
+      return false;
+    }
+
+    public boolean equals(createTable_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      boolean this_present_exist = true && (this.exist != null);
+      boolean that_present_exist = true && (that.exist != null);
+      if (this_present_exist || that_present_exist) {
+        if (!(this_present_exist && that_present_exist))
+          return false;
+        if (!this.exist.equals(that.exist))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2716,7 +3758,7 @@ public class Hbase {
     public byte[] tableName;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
     }
 
@@ -2729,6 +3771,34 @@ public class Hbase {
       this();
       this.tableName = tableName;
       this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteTable_args)
+        return this.equals((deleteTable_args)that);
+      return false;
+    }
+
+    public boolean equals(deleteTable_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2790,7 +3860,7 @@ public class Hbase {
     public NotFound nf;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean nf = false;
     }
@@ -2807,6 +3877,43 @@ public class Hbase {
       this.__isset.io = true;
       this.nf = nf;
       this.__isset.nf = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteTable_result)
+        return this.equals((deleteTable_result)that);
+      return false;
+    }
+
+    public boolean equals(deleteTable_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -2893,7 +4000,7 @@ public class Hbase {
     public byte[] column;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean column = false;
@@ -2914,6 +4021,52 @@ public class Hbase {
       this.__isset.row = true;
       this.column = column;
       this.__isset.column = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_args)
+        return this.equals((get_args)that);
+      return false;
+    }
+
+    public boolean equals(get_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_column = true && (this.column != null);
+      boolean that_present_column = true && (that.column != null);
+      if (this_present_column || that_present_column) {
+        if (!(this_present_column && that_present_column))
+          return false;
+        if (!java.util.Arrays.equals(this.column, that.column))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3007,12 +4160,12 @@ public class Hbase {
   }
 
   public static class get_result implements TBase, java.io.Serializable   {
-    public byte[] success;
+    public TCell success;
     public IOError io;
     public NotFound nf;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
       public boolean nf = false;
@@ -3022,7 +4175,7 @@ public class Hbase {
     }
 
     public get_result(
-      byte[] success,
+      TCell success,
       IOError io,
       NotFound nf)
     {
@@ -3033,6 +4186,52 @@ public class Hbase {
       this.__isset.io = true;
       this.nf = nf;
       this.__isset.nf = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_result)
+        return this.equals((get_result)that);
+      return false;
+    }
+
+    public boolean equals(get_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3047,8 +4246,9 @@ public class Hbase {
         switch (field.id)
         {
           case 0:
-            if (field.type == TType.STRING) {
-              this.success = iprot.readBinary();
+            if (field.type == TType.STRUCT) {
+              this.success = new TCell();
+              this.success.read(iprot);
               this.__isset.success = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
@@ -3089,10 +4289,10 @@ public class Hbase {
       if (this.__isset.success) {
         if (this.success != null) {
           field.name = "success";
-          field.type = TType.STRING;
+          field.type = TType.STRUCT;
           field.id = 0;
           oprot.writeFieldBegin(field);
-          oprot.writeBinary(this.success);
+          this.success.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.io) {
@@ -3121,7 +4321,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("get_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
       sb.append(",nf:");
@@ -3139,7 +4339,7 @@ public class Hbase {
     public int numVersions;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean column = false;
@@ -3164,6 +4364,61 @@ public class Hbase {
       this.__isset.column = true;
       this.numVersions = numVersions;
       this.__isset.numVersions = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getVer_args)
+        return this.equals((getVer_args)that);
+      return false;
+    }
+
+    public boolean equals(getVer_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_column = true && (this.column != null);
+      boolean that_present_column = true && (that.column != null);
+      if (this_present_column || that_present_column) {
+        if (!(this_present_column && that_present_column))
+          return false;
+        if (!java.util.Arrays.equals(this.column, that.column))
+          return false;
+      }
+
+      boolean this_present_numVersions = true;
+      boolean that_present_numVersions = true;
+      if (this_present_numVersions || that_present_numVersions) {
+        if (!(this_present_numVersions && that_present_numVersions))
+          return false;
+        if (this.numVersions != that.numVersions)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3273,12 +4528,12 @@ public class Hbase {
   }
 
   public static class getVer_result implements TBase, java.io.Serializable   {
-    public ArrayList<byte[]> success;
+    public List<TCell> success;
     public IOError io;
     public NotFound nf;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
       public boolean nf = false;
@@ -3288,7 +4543,7 @@ public class Hbase {
     }
 
     public getVer_result(
-      ArrayList<byte[]> success,
+      List<TCell> success,
       IOError io,
       NotFound nf)
     {
@@ -3299,6 +4554,52 @@ public class Hbase {
       this.__isset.io = true;
       this.nf = nf;
       this.__isset.nf = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getVer_result)
+        return this.equals((getVer_result)that);
+      return false;
+    }
+
+    public boolean equals(getVer_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3316,11 +4617,12 @@ public class Hbase {
             if (field.type == TType.LIST) {
               {
                 TList _list26 = iprot.readListBegin();
-                this.success = new ArrayList<byte[]>(_list26.size);
+                this.success = new ArrayList<TCell>(_list26.size);
                 for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                 {
-                  byte[] _elem28 = null;
-                  _elem28 = iprot.readBinary();
+                  TCell _elem28 = new TCell();
+                  _elem28 = new TCell();
+                  _elem28.read(iprot);
                   this.success.add(_elem28);
                 }
                 iprot.readListEnd();
@@ -3369,9 +4671,9 @@ public class Hbase {
           field.id = 0;
           oprot.writeFieldBegin(field);
           {
-            oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-            for (byte[] _iter29 : this.success)            {
-              oprot.writeBinary(_iter29);
+            oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+            for (TCell _iter29 : this.success)            {
+              _iter29.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -3422,7 +4724,7 @@ public class Hbase {
     public int numVersions;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean column = false;
@@ -3451,6 +4753,70 @@ public class Hbase {
       this.__isset.timestamp = true;
       this.numVersions = numVersions;
       this.__isset.numVersions = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getVerTs_args)
+        return this.equals((getVerTs_args)that);
+      return false;
+    }
+
+    public boolean equals(getVerTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_column = true && (this.column != null);
+      boolean that_present_column = true && (that.column != null);
+      if (this_present_column || that_present_column) {
+        if (!(this_present_column && that_present_column))
+          return false;
+        if (!java.util.Arrays.equals(this.column, that.column))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_numVersions = true;
+      boolean that_present_numVersions = true;
+      if (this_present_numVersions || that_present_numVersions) {
+        if (!(this_present_numVersions && that_present_numVersions))
+          return false;
+        if (this.numVersions != that.numVersions)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3576,12 +4942,12 @@ public class Hbase {
   }
 
   public static class getVerTs_result implements TBase, java.io.Serializable   {
-    public ArrayList<byte[]> success;
+    public List<TCell> success;
     public IOError io;
     public NotFound nf;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
       public boolean nf = false;
@@ -3591,7 +4957,7 @@ public class Hbase {
     }
 
     public getVerTs_result(
-      ArrayList<byte[]> success,
+      List<TCell> success,
       IOError io,
       NotFound nf)
     {
@@ -3602,6 +4968,52 @@ public class Hbase {
       this.__isset.io = true;
       this.nf = nf;
       this.__isset.nf = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getVerTs_result)
+        return this.equals((getVerTs_result)that);
+      return false;
+    }
+
+    public boolean equals(getVerTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3619,11 +5031,12 @@ public class Hbase {
             if (field.type == TType.LIST) {
               {
                 TList _list30 = iprot.readListBegin();
-                this.success = new ArrayList<byte[]>(_list30.size);
+                this.success = new ArrayList<TCell>(_list30.size);
                 for (int _i31 = 0; _i31 < _list30.size; ++_i31)
                 {
-                  byte[] _elem32 = null;
-                  _elem32 = iprot.readBinary();
+                  TCell _elem32 = new TCell();
+                  _elem32 = new TCell();
+                  _elem32.read(iprot);
                   this.success.add(_elem32);
                 }
                 iprot.readListEnd();
@@ -3672,9 +5085,9 @@ public class Hbase {
           field.id = 0;
           oprot.writeFieldBegin(field);
           {
-            oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-            for (byte[] _iter33 : this.success)            {
-              oprot.writeBinary(_iter33);
+            oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+            for (TCell _iter33 : this.success)            {
+              _iter33.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -3722,7 +5135,7 @@ public class Hbase {
     public byte[] row;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
     }
@@ -3739,6 +5152,43 @@ public class Hbase {
       this.__isset.tableName = true;
       this.row = row;
       this.__isset.row = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRow_args)
+        return this.equals((getRow_args)that);
+      return false;
+    }
+
+    public boolean equals(getRow_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3814,11 +5264,11 @@ public class Hbase {
   }
 
   public static class getRow_result implements TBase, java.io.Serializable   {
-    public AbstractMap<byte[],byte[]> success;
+    public TRowResult success;
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -3827,7 +5277,7 @@ public class Hbase {
     }
 
     public getRow_result(
-      AbstractMap<byte[],byte[]> success,
+      TRowResult success,
       IOError io)
     {
       this();
@@ -3835,6 +5285,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRow_result)
+        return this.equals((getRow_result)that);
+      return false;
+    }
+
+    public boolean equals(getRow_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -3849,20 +5336,9 @@ public class Hbase {
         switch (field.id)
         {
           case 0:
-            if (field.type == TType.MAP) {
-              {
-                TMap _map34 = iprot.readMapBegin();
-                this.success = new HashMap<byte[],byte[]>(2*_map34.size);
-                for (int _i35 = 0; _i35 < _map34.size; ++_i35)
-                {
-                  byte[] _key36;
-                  byte[] _val37;
-                  _key36 = iprot.readBinary();
-                  _val37 = iprot.readBinary();
-                  this.success.put(_key36, _val37);
-                }
-                iprot.readMapEnd();
-              }
+            if (field.type == TType.STRUCT) {
+              this.success = new TRowResult();
+              this.success.read(iprot);
               this.__isset.success = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
@@ -3894,17 +5370,10 @@ public class Hbase {
       if (this.__isset.success) {
         if (this.success != null) {
           field.name = "success";
-          field.type = TType.MAP;
+          field.type = TType.STRUCT;
           field.id = 0;
           oprot.writeFieldBegin(field);
-          {
-            oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.success.size()));
-            for (byte[] _iter38 : this.success.keySet())            {
-              oprot.writeBinary(_iter38);
-              oprot.writeBinary(this.success.get(_iter38));
-            }
-            oprot.writeMapEnd();
-          }
+          this.success.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.io) {
@@ -3924,7 +5393,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRow_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
       sb.append(")");
@@ -3939,7 +5408,7 @@ public class Hbase {
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean timestamp = false;
@@ -3960,6 +5429,52 @@ public class Hbase {
       this.__isset.row = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowTs_args)
+        return this.equals((getRowTs_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4051,11 +5566,11 @@ public class Hbase {
   }
 
   public static class getRowTs_result implements TBase, java.io.Serializable   {
-    public AbstractMap<byte[],byte[]> success;
+    public TRowResult success;
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -4064,7 +5579,7 @@ public class Hbase {
     }
 
     public getRowTs_result(
-      AbstractMap<byte[],byte[]> success,
+      TRowResult success,
       IOError io)
     {
       this();
@@ -4072,6 +5587,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowTs_result)
+        return this.equals((getRowTs_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4086,20 +5638,9 @@ public class Hbase {
         switch (field.id)
         {
           case 0:
-            if (field.type == TType.MAP) {
-              {
-                TMap _map39 = iprot.readMapBegin();
-                this.success = new HashMap<byte[],byte[]>(2*_map39.size);
-                for (int _i40 = 0; _i40 < _map39.size; ++_i40)
-                {
-                  byte[] _key41;
-                  byte[] _val42;
-                  _key41 = iprot.readBinary();
-                  _val42 = iprot.readBinary();
-                  this.success.put(_key41, _val42);
-                }
-                iprot.readMapEnd();
-              }
+            if (field.type == TType.STRUCT) {
+              this.success = new TRowResult();
+              this.success.read(iprot);
               this.__isset.success = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
@@ -4131,17 +5672,10 @@ public class Hbase {
       if (this.__isset.success) {
         if (this.success != null) {
           field.name = "success";
-          field.type = TType.MAP;
+          field.type = TType.STRUCT;
           field.id = 0;
           oprot.writeFieldBegin(field);
-          {
-            oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.success.size()));
-            for (byte[] _iter43 : this.success.keySet())            {
-              oprot.writeBinary(_iter43);
-              oprot.writeBinary(this.success.get(_iter43));
-            }
-            oprot.writeMapEnd();
-          }
+          this.success.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.io) {
@@ -4161,253 +5695,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRowTs_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
-      sb.append(")");
-      return sb.toString();
-    }
-
-  }
-
-  public static class put_args implements TBase, java.io.Serializable   {
-    public byte[] tableName;
-    public byte[] row;
-    public byte[] column;
-    public byte[] value;
-
-    public final Isset __isset = new Isset();
-    public static final class Isset {
-      public boolean tableName = false;
-      public boolean row = false;
-      public boolean column = false;
-      public boolean value = false;
-    }
-
-    public put_args() {
-    }
-
-    public put_args(
-      byte[] tableName,
-      byte[] row,
-      byte[] column,
-      byte[] value)
-    {
-      this();
-      this.tableName = tableName;
-      this.__isset.tableName = true;
-      this.row = row;
-      this.__isset.row = true;
-      this.column = column;
-      this.__isset.column = true;
-      this.value = value;
-      this.__isset.value = true;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id)
-        {
-          case 1:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-              this.__isset.tableName = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 2:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-              this.__isset.row = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 3:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-              this.__isset.column = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 4:
-            if (field.type == TType.STRING) {
-              this.value = iprot.readBinary();
-              this.__isset.value = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("put_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
-      if (this.tableName != null) {
-        field.name = "tableName";
-        field.type = TType.STRING;
-        field.id = 1;
-        oprot.writeFieldBegin(field);
-        oprot.writeBinary(this.tableName);
-        oprot.writeFieldEnd();
-      }
-      if (this.row != null) {
-        field.name = "row";
-        field.type = TType.STRING;
-        field.id = 2;
-        oprot.writeFieldBegin(field);
-        oprot.writeBinary(this.row);
-        oprot.writeFieldEnd();
-      }
-      if (this.column != null) {
-        field.name = "column";
-        field.type = TType.STRING;
-        field.id = 3;
-        oprot.writeFieldBegin(field);
-        oprot.writeBinary(this.column);
-        oprot.writeFieldEnd();
-      }
-      if (this.value != null) {
-        field.name = "value";
-        field.type = TType.STRING;
-        field.id = 4;
-        oprot.writeFieldBegin(field);
-        oprot.writeBinary(this.value);
-        oprot.writeFieldEnd();
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    public String toString() {
-      StringBuilder sb = new StringBuilder("put_args(");
-      sb.append("tableName:");
-      sb.append(this.tableName);
-      sb.append(",row:");
-      sb.append(this.row);
-      sb.append(",column:");
-      sb.append(this.column);
-      sb.append(",value:");
-      sb.append(this.value);
-      sb.append(")");
-      return sb.toString();
-    }
-
-  }
-
-  public static class put_result implements TBase, java.io.Serializable   {
-    public IOError io;
-    public IllegalArgument ia;
-
-    public final Isset __isset = new Isset();
-    public static final class Isset {
-      public boolean io = false;
-      public boolean ia = false;
-    }
-
-    public put_result() {
-    }
-
-    public put_result(
-      IOError io,
-      IllegalArgument ia)
-    {
-      this();
-      this.io = io;
-      this.__isset.io = true;
-      this.ia = ia;
-      this.__isset.ia = true;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id)
-        {
-          case 1:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-              this.__isset.io = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 2:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-              this.__isset.ia = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("put_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
-
-      if (this.__isset.io) {
-        if (this.io != null) {
-          field.name = "io";
-          field.type = TType.STRUCT;
-          field.id = 1;
-          oprot.writeFieldBegin(field);
-          this.io.write(oprot);
-          oprot.writeFieldEnd();
-        }
-      } else if (this.__isset.ia) {
-        if (this.ia != null) {
-          field.name = "ia";
-          field.type = TType.STRUCT;
-          field.id = 2;
-          oprot.writeFieldBegin(field);
-          this.ia.write(oprot);
-          oprot.writeFieldEnd();
-        }
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    public String toString() {
-      StringBuilder sb = new StringBuilder("put_result(");
-      sb.append("io:");
-      sb.append(this.io.toString());
-      sb.append(",ia:");
-      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4417,10 +5707,10 @@ public class Hbase {
   public static class mutateRow_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
     public byte[] row;
-    public ArrayList<Mutation> mutations;
+    public List<Mutation> mutations;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean mutations = false;
@@ -4432,7 +5722,7 @@ public class Hbase {
     public mutateRow_args(
       byte[] tableName,
       byte[] row,
-      ArrayList<Mutation> mutations)
+      List<Mutation> mutations)
     {
       this();
       this.tableName = tableName;
@@ -4441,6 +5731,52 @@ public class Hbase {
       this.__isset.row = true;
       this.mutations = mutations;
       this.__isset.mutations = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRow_args)
+        return this.equals((mutateRow_args)that);
+      return false;
+    }
+
+    public boolean equals(mutateRow_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_mutations = true && (this.mutations != null);
+      boolean that_present_mutations = true && (that.mutations != null);
+      if (this_present_mutations || that_present_mutations) {
+        if (!(this_present_mutations && that_present_mutations))
+          return false;
+        if (!this.mutations.equals(that.mutations))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4473,14 +5809,14 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list44 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list44.size);
-                for (int _i45 = 0; _i45 < _list44.size; ++_i45)
+                TList _list34 = iprot.readListBegin();
+                this.mutations = new ArrayList<Mutation>(_list34.size);
+                for (int _i35 = 0; _i35 < _list34.size; ++_i35)
                 {
-                  Mutation _elem46 = new Mutation();
-                  _elem46 = new Mutation();
-                  _elem46.read(iprot);
-                  this.mutations.add(_elem46);
+                  Mutation _elem36 = new Mutation();
+                  _elem36 = new Mutation();
+                  _elem36.read(iprot);
+                  this.mutations.add(_elem36);
                 }
                 iprot.readListEnd();
               }
@@ -4525,8 +5861,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter47 : this.mutations)          {
-            _iter47.write(oprot);
+          for (Mutation _iter37 : this.mutations)          {
+            _iter37.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -4555,7 +5891,7 @@ public class Hbase {
     public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
     }
@@ -4572,6 +5908,43 @@ public class Hbase {
       this.__isset.io = true;
       this.ia = ia;
       this.__isset.ia = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRow_result)
+        return this.equals((mutateRow_result)that);
+      return false;
+    }
+
+    public boolean equals(mutateRow_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4655,11 +6028,11 @@ public class Hbase {
   public static class mutateRowTs_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
     public byte[] row;
-    public ArrayList<Mutation> mutations;
+    public List<Mutation> mutations;
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean mutations = false;
@@ -4672,7 +6045,7 @@ public class Hbase {
     public mutateRowTs_args(
       byte[] tableName,
       byte[] row,
-      ArrayList<Mutation> mutations,
+      List<Mutation> mutations,
       long timestamp)
     {
       this();
@@ -4684,6 +6057,61 @@ public class Hbase {
       this.__isset.mutations = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRowTs_args)
+        return this.equals((mutateRowTs_args)that);
+      return false;
+    }
+
+    public boolean equals(mutateRowTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_mutations = true && (this.mutations != null);
+      boolean that_present_mutations = true && (that.mutations != null);
+      if (this_present_mutations || that_present_mutations) {
+        if (!(this_present_mutations && that_present_mutations))
+          return false;
+        if (!this.mutations.equals(that.mutations))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4716,14 +6144,14 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list48 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list48.size);
-                for (int _i49 = 0; _i49 < _list48.size; ++_i49)
+                TList _list38 = iprot.readListBegin();
+                this.mutations = new ArrayList<Mutation>(_list38.size);
+                for (int _i39 = 0; _i39 < _list38.size; ++_i39)
                 {
-                  Mutation _elem50 = new Mutation();
-                  _elem50 = new Mutation();
-                  _elem50.read(iprot);
-                  this.mutations.add(_elem50);
+                  Mutation _elem40 = new Mutation();
+                  _elem40 = new Mutation();
+                  _elem40.read(iprot);
+                  this.mutations.add(_elem40);
                 }
                 iprot.readListEnd();
               }
@@ -4776,8 +6204,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter51 : this.mutations)          {
-            _iter51.write(oprot);
+          for (Mutation _iter41 : this.mutations)          {
+            _iter41.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -4814,7 +6242,7 @@ public class Hbase {
     public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
     }
@@ -4831,6 +6259,43 @@ public class Hbase {
       this.__isset.io = true;
       this.ia = ia;
       this.__isset.ia = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRowTs_result)
+        return this.equals((mutateRowTs_result)that);
+      return false;
+    }
+
+    public boolean equals(mutateRowTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4913,10 +6378,10 @@ public class Hbase {
 
   public static class mutateRows_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
-    public ArrayList<BatchMutation> rowBatches;
+    public List<BatchMutation> rowBatches;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean rowBatches = false;
     }
@@ -4926,13 +6391,50 @@ public class Hbase {
 
     public mutateRows_args(
       byte[] tableName,
-      ArrayList<BatchMutation> rowBatches)
+      List<BatchMutation> rowBatches)
     {
       this();
       this.tableName = tableName;
       this.__isset.tableName = true;
       this.rowBatches = rowBatches;
       this.__isset.rowBatches = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRows_args)
+        return this.equals((mutateRows_args)that);
+      return false;
+    }
+
+    public boolean equals(mutateRows_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rowBatches = true && (this.rowBatches != null);
+      boolean that_present_rowBatches = true && (that.rowBatches != null);
+      if (this_present_rowBatches || that_present_rowBatches) {
+        if (!(this_present_rowBatches && that_present_rowBatches))
+          return false;
+        if (!this.rowBatches.equals(that.rowBatches))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4957,14 +6459,14 @@ public class Hbase {
           case 2:
             if (field.type == TType.LIST) {
               {
-                TList _list52 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list52.size);
-                for (int _i53 = 0; _i53 < _list52.size; ++_i53)
+                TList _list42 = iprot.readListBegin();
+                this.rowBatches = new ArrayList<BatchMutation>(_list42.size);
+                for (int _i43 = 0; _i43 < _list42.size; ++_i43)
                 {
-                  BatchMutation _elem54 = new BatchMutation();
-                  _elem54 = new BatchMutation();
-                  _elem54.read(iprot);
-                  this.rowBatches.add(_elem54);
+                  BatchMutation _elem44 = new BatchMutation();
+                  _elem44 = new BatchMutation();
+                  _elem44.read(iprot);
+                  this.rowBatches.add(_elem44);
                 }
                 iprot.readListEnd();
               }
@@ -5001,8 +6503,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter55 : this.rowBatches)          {
-            _iter55.write(oprot);
+          for (BatchMutation _iter45 : this.rowBatches)          {
+            _iter45.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -5029,7 +6531,7 @@ public class Hbase {
     public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
     }
@@ -5046,6 +6548,43 @@ public class Hbase {
       this.__isset.io = true;
       this.ia = ia;
       this.__isset.ia = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRows_result)
+        return this.equals((mutateRows_result)that);
+      return false;
+    }
+
+    public boolean equals(mutateRows_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5128,11 +6667,11 @@ public class Hbase {
 
   public static class mutateRowsTs_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
-    public ArrayList<BatchMutation> rowBatches;
+    public List<BatchMutation> rowBatches;
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean rowBatches = false;
       public boolean timestamp = false;
@@ -5143,7 +6682,7 @@ public class Hbase {
 
     public mutateRowsTs_args(
       byte[] tableName,
-      ArrayList<BatchMutation> rowBatches,
+      List<BatchMutation> rowBatches,
       long timestamp)
     {
       this();
@@ -5153,6 +6692,52 @@ public class Hbase {
       this.__isset.rowBatches = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRowsTs_args)
+        return this.equals((mutateRowsTs_args)that);
+      return false;
+    }
+
+    public boolean equals(mutateRowsTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_rowBatches = true && (this.rowBatches != null);
+      boolean that_present_rowBatches = true && (that.rowBatches != null);
+      if (this_present_rowBatches || that_present_rowBatches) {
+        if (!(this_present_rowBatches && that_present_rowBatches))
+          return false;
+        if (!this.rowBatches.equals(that.rowBatches))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5177,14 +6762,14 @@ public class Hbase {
           case 2:
             if (field.type == TType.LIST) {
               {
-                TList _list56 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list56.size);
-                for (int _i57 = 0; _i57 < _list56.size; ++_i57)
+                TList _list46 = iprot.readListBegin();
+                this.rowBatches = new ArrayList<BatchMutation>(_list46.size);
+                for (int _i47 = 0; _i47 < _list46.size; ++_i47)
                 {
-                  BatchMutation _elem58 = new BatchMutation();
-                  _elem58 = new BatchMutation();
-                  _elem58.read(iprot);
-                  this.rowBatches.add(_elem58);
+                  BatchMutation _elem48 = new BatchMutation();
+                  _elem48 = new BatchMutation();
+                  _elem48.read(iprot);
+                  this.rowBatches.add(_elem48);
                 }
                 iprot.readListEnd();
               }
@@ -5229,8 +6814,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter59 : this.rowBatches)          {
-            _iter59.write(oprot);
+          for (BatchMutation _iter49 : this.rowBatches)          {
+            _iter49.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -5265,7 +6850,7 @@ public class Hbase {
     public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
     }
@@ -5282,6 +6867,43 @@ public class Hbase {
       this.__isset.io = true;
       this.ia = ia;
       this.__isset.ia = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof mutateRowsTs_result)
+        return this.equals((mutateRowsTs_result)that);
+      return false;
+    }
+
+    public boolean equals(mutateRowsTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5368,7 +6990,7 @@ public class Hbase {
     public byte[] column;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean column = false;
@@ -5389,6 +7011,52 @@ public class Hbase {
       this.__isset.row = true;
       this.column = column;
       this.__isset.column = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAll_args)
+        return this.equals((deleteAll_args)that);
+      return false;
+    }
+
+    public boolean equals(deleteAll_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_column = true && (this.column != null);
+      boolean that_present_column = true && (that.column != null);
+      if (this_present_column || that_present_column) {
+        if (!(this_present_column && that_present_column))
+          return false;
+        if (!java.util.Arrays.equals(this.column, that.column))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5485,7 +7153,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
     }
 
@@ -5498,6 +7166,34 @@ public class Hbase {
       this();
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAll_result)
+        return this.equals((deleteAll_result)that);
+      return false;
+    }
+
+    public boolean equals(deleteAll_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5565,7 +7261,7 @@ public class Hbase {
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean column = false;
@@ -5590,6 +7286,61 @@ public class Hbase {
       this.__isset.column = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllTs_args)
+        return this.equals((deleteAllTs_args)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_column = true && (this.column != null);
+      boolean that_present_column = true && (that.column != null);
+      if (this_present_column || that_present_column) {
+        if (!(this_present_column && that_present_column))
+          return false;
+        if (!java.util.Arrays.equals(this.column, that.column))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5702,7 +7453,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
     }
 
@@ -5715,6 +7466,34 @@ public class Hbase {
       this();
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllTs_result)
+        return this.equals((deleteAllTs_result)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5780,7 +7559,7 @@ public class Hbase {
     public byte[] row;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
     }
@@ -5797,6 +7576,43 @@ public class Hbase {
       this.__isset.tableName = true;
       this.row = row;
       this.__isset.row = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllRow_args)
+        return this.equals((deleteAllRow_args)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllRow_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5875,7 +7691,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
     }
 
@@ -5888,6 +7704,34 @@ public class Hbase {
       this();
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllRow_result)
+        return this.equals((deleteAllRow_result)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllRow_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5954,7 +7798,7 @@ public class Hbase {
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean row = false;
       public boolean timestamp = false;
@@ -5975,6 +7819,52 @@ public class Hbase {
       this.__isset.row = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllRowTs_args)
+        return this.equals((deleteAllRowTs_args)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllRowTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6069,7 +7959,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
     }
 
@@ -6082,6 +7972,34 @@ public class Hbase {
       this();
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof deleteAllRowTs_result)
+        return this.equals((deleteAllRowTs_result)that);
+      return false;
+    }
+
+    public boolean equals(deleteAllRowTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6145,10 +8063,10 @@ public class Hbase {
   public static class scannerOpen_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
     public byte[] startRow;
-    public ArrayList<byte[]> columns;
+    public List<byte[]> columns;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean startRow = false;
       public boolean columns = false;
@@ -6160,7 +8078,7 @@ public class Hbase {
     public scannerOpen_args(
       byte[] tableName,
       byte[] startRow,
-      ArrayList<byte[]> columns)
+      List<byte[]> columns)
     {
       this();
       this.tableName = tableName;
@@ -6169,6 +8087,52 @@ public class Hbase {
       this.__isset.startRow = true;
       this.columns = columns;
       this.__isset.columns = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpen_args)
+        return this.equals((scannerOpen_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpen_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_startRow = true && (this.startRow != null);
+      boolean that_present_startRow = true && (that.startRow != null);
+      if (this_present_startRow || that_present_startRow) {
+        if (!(this_present_startRow && that_present_startRow))
+          return false;
+        if (!java.util.Arrays.equals(this.startRow, that.startRow))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6201,13 +8165,13 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list60 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list60.size);
-                for (int _i61 = 0; _i61 < _list60.size; ++_i61)
+                TList _list50 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list50.size);
+                for (int _i51 = 0; _i51 < _list50.size; ++_i51)
                 {
-                  byte[] _elem62 = null;
-                  _elem62 = iprot.readBinary();
-                  this.columns.add(_elem62);
+                  byte[] _elem52 = null;
+                  _elem52 = iprot.readBinary();
+                  this.columns.add(_elem52);
                 }
                 iprot.readListEnd();
               }
@@ -6252,8 +8216,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter63 : this.columns)          {
-            oprot.writeBinary(_iter63);
+          for (byte[] _iter53 : this.columns)          {
+            oprot.writeBinary(_iter53);
           }
           oprot.writeListEnd();
         }
@@ -6282,7 +8246,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -6299,6 +8263,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpen_result)
+        return this.equals((scannerOpen_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpen_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6380,10 +8381,10 @@ public class Hbase {
     public byte[] tableName;
     public byte[] startRow;
     public byte[] stopRow;
-    public ArrayList<byte[]> columns;
+    public List<byte[]> columns;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean startRow = false;
       public boolean stopRow = false;
@@ -6397,7 +8398,7 @@ public class Hbase {
       byte[] tableName,
       byte[] startRow,
       byte[] stopRow,
-      ArrayList<byte[]> columns)
+      List<byte[]> columns)
     {
       this();
       this.tableName = tableName;
@@ -6408,6 +8409,61 @@ public class Hbase {
       this.__isset.stopRow = true;
       this.columns = columns;
       this.__isset.columns = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenWithStop_args)
+        return this.equals((scannerOpenWithStop_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenWithStop_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_startRow = true && (this.startRow != null);
+      boolean that_present_startRow = true && (that.startRow != null);
+      if (this_present_startRow || that_present_startRow) {
+        if (!(this_present_startRow && that_present_startRow))
+          return false;
+        if (!java.util.Arrays.equals(this.startRow, that.startRow))
+          return false;
+      }
+
+      boolean this_present_stopRow = true && (this.stopRow != null);
+      boolean that_present_stopRow = true && (that.stopRow != null);
+      if (this_present_stopRow || that_present_stopRow) {
+        if (!(this_present_stopRow && that_present_stopRow))
+          return false;
+        if (!java.util.Arrays.equals(this.stopRow, that.stopRow))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6448,13 +8504,13 @@ public class Hbase {
           case 4:
             if (field.type == TType.LIST) {
               {
-                TList _list64 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list64.size);
-                for (int _i65 = 0; _i65 < _list64.size; ++_i65)
+                TList _list54 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list54.size);
+                for (int _i55 = 0; _i55 < _list54.size; ++_i55)
                 {
-                  byte[] _elem66 = null;
-                  _elem66 = iprot.readBinary();
-                  this.columns.add(_elem66);
+                  byte[] _elem56 = null;
+                  _elem56 = iprot.readBinary();
+                  this.columns.add(_elem56);
                 }
                 iprot.readListEnd();
               }
@@ -6507,8 +8563,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter67 : this.columns)          {
-            oprot.writeBinary(_iter67);
+          for (byte[] _iter57 : this.columns)          {
+            oprot.writeBinary(_iter57);
           }
           oprot.writeListEnd();
         }
@@ -6539,7 +8595,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -6556,6 +8612,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenWithStop_result)
+        return this.equals((scannerOpenWithStop_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenWithStop_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6636,11 +8729,11 @@ public class Hbase {
   public static class scannerOpenTs_args implements TBase, java.io.Serializable   {
     public byte[] tableName;
     public byte[] startRow;
-    public ArrayList<byte[]> columns;
+    public List<byte[]> columns;
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean startRow = false;
       public boolean columns = false;
@@ -6653,7 +8746,7 @@ public class Hbase {
     public scannerOpenTs_args(
       byte[] tableName,
       byte[] startRow,
-      ArrayList<byte[]> columns,
+      List<byte[]> columns,
       long timestamp)
     {
       this();
@@ -6665,6 +8758,61 @@ public class Hbase {
       this.__isset.columns = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenTs_args)
+        return this.equals((scannerOpenTs_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_startRow = true && (this.startRow != null);
+      boolean that_present_startRow = true && (that.startRow != null);
+      if (this_present_startRow || that_present_startRow) {
+        if (!(this_present_startRow && that_present_startRow))
+          return false;
+        if (!java.util.Arrays.equals(this.startRow, that.startRow))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6697,13 +8845,13 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list68 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list68.size);
-                for (int _i69 = 0; _i69 < _list68.size; ++_i69)
+                TList _list58 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list58.size);
+                for (int _i59 = 0; _i59 < _list58.size; ++_i59)
                 {
-                  byte[] _elem70 = null;
-                  _elem70 = iprot.readBinary();
-                  this.columns.add(_elem70);
+                  byte[] _elem60 = null;
+                  _elem60 = iprot.readBinary();
+                  this.columns.add(_elem60);
                 }
                 iprot.readListEnd();
               }
@@ -6756,8 +8904,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter71 : this.columns)          {
-            oprot.writeBinary(_iter71);
+          for (byte[] _iter61 : this.columns)          {
+            oprot.writeBinary(_iter61);
           }
           oprot.writeListEnd();
         }
@@ -6794,7 +8942,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -6811,6 +8959,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenTs_result)
+        return this.equals((scannerOpenTs_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6892,11 +9077,11 @@ public class Hbase {
     public byte[] tableName;
     public byte[] startRow;
     public byte[] stopRow;
-    public ArrayList<byte[]> columns;
+    public List<byte[]> columns;
     public long timestamp;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean tableName = false;
       public boolean startRow = false;
       public boolean stopRow = false;
@@ -6911,7 +9096,7 @@ public class Hbase {
       byte[] tableName,
       byte[] startRow,
       byte[] stopRow,
-      ArrayList<byte[]> columns,
+      List<byte[]> columns,
       long timestamp)
     {
       this();
@@ -6925,6 +9110,70 @@ public class Hbase {
       this.__isset.columns = true;
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenWithStopTs_args)
+        return this.equals((scannerOpenWithStopTs_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenWithStopTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_startRow = true && (this.startRow != null);
+      boolean that_present_startRow = true && (that.startRow != null);
+      if (this_present_startRow || that_present_startRow) {
+        if (!(this_present_startRow && that_present_startRow))
+          return false;
+        if (!java.util.Arrays.equals(this.startRow, that.startRow))
+          return false;
+      }
+
+      boolean this_present_stopRow = true && (this.stopRow != null);
+      boolean that_present_stopRow = true && (that.stopRow != null);
+      if (this_present_stopRow || that_present_stopRow) {
+        if (!(this_present_stopRow && that_present_stopRow))
+          return false;
+        if (!java.util.Arrays.equals(this.stopRow, that.stopRow))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6965,13 +9214,13 @@ public class Hbase {
           case 4:
             if (field.type == TType.LIST) {
               {
-                TList _list72 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list72.size);
-                for (int _i73 = 0; _i73 < _list72.size; ++_i73)
+                TList _list62 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list62.size);
+                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
                 {
-                  byte[] _elem74 = null;
-                  _elem74 = iprot.readBinary();
-                  this.columns.add(_elem74);
+                  byte[] _elem64 = null;
+                  _elem64 = iprot.readBinary();
+                  this.columns.add(_elem64);
                 }
                 iprot.readListEnd();
               }
@@ -7032,8 +9281,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter75 : this.columns)          {
-            oprot.writeBinary(_iter75);
+          for (byte[] _iter65 : this.columns)          {
+            oprot.writeBinary(_iter65);
           }
           oprot.writeListEnd();
         }
@@ -7072,7 +9321,7 @@ public class Hbase {
     public IOError io;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
     }
@@ -7089,6 +9338,43 @@ public class Hbase {
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerOpenWithStopTs_result)
+        return this.equals((scannerOpenWithStopTs_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerOpenWithStopTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -7170,7 +9456,7 @@ public class Hbase {
     public int id;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean id = false;
     }
 
@@ -7183,6 +9469,34 @@ public class Hbase {
       this();
       this.id = id;
       this.__isset.id = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerGet_args)
+        return this.equals((scannerGet_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerGet_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_id = true;
+      boolean that_present_id = true;
+      if (this_present_id || that_present_id) {
+        if (!(this_present_id && that_present_id))
+          return false;
+        if (this.id != that.id)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -7238,13 +9552,13 @@ public class Hbase {
   }
 
   public static class scannerGet_result implements TBase, java.io.Serializable   {
-    public ScanEntry success;
+    public TRowResult success;
     public IOError io;
     public IllegalArgument ia;
     public NotFound nf;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
       public boolean ia = false;
@@ -7255,7 +9569,7 @@ public class Hbase {
     }
 
     public scannerGet_result(
-      ScanEntry success,
+      TRowResult success,
       IOError io,
       IllegalArgument ia,
       NotFound nf)
@@ -7271,6 +9585,61 @@ public class Hbase {
       this.__isset.nf = true;
     }
 
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerGet_result)
+        return this.equals((scannerGet_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerGet_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
     public void read(TProtocol iprot) throws TException {
       TField field;
       iprot.readStructBegin();
@@ -7284,7 +9653,7 @@ public class Hbase {
         {
           case 0:
             if (field.type == TType.STRUCT) {
-              this.success = new ScanEntry();
+              this.success = new TRowResult();
               this.success.read(iprot);
               this.__isset.success = true;
             } else { 
@@ -7393,7 +9762,7 @@ public class Hbase {
     public int id;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean id = false;
     }
 
@@ -7406,6 +9775,34 @@ public class Hbase {
       this();
       this.id = id;
       this.__isset.id = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerClose_args)
+        return this.equals((scannerClose_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerClose_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_id = true;
+      boolean that_present_id = true;
+      if (this_present_id || that_present_id) {
+        if (!(this_present_id && that_present_id))
+          return false;
+        if (this.id != that.id)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -7465,7 +9862,7 @@ public class Hbase {
     public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
-    public static final class Isset {
+    public static final class Isset implements java.io.Serializable {
       public boolean io = false;
       public boolean ia = false;
     }
@@ -7482,6 +9879,43 @@ public class Hbase {
       this.__isset.io = true;
       this.ia = ia;
       this.__isset.ia = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerClose_result)
+        return this.equals((scannerClose_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerClose_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && (this.ia != null);
+      boolean that_present_ia = true && (that.ia != null);
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
     }
 
     public void read(TProtocol iprot) throws TException {

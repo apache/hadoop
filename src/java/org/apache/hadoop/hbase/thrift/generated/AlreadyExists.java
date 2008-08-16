@@ -23,9 +23,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import java.util.List;
 import java.util.ArrayList;
-import java.util.AbstractMap;
+import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.HashSet;
 import com.facebook.thrift.*;
 
@@ -40,7 +42,7 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
   public String message;
 
   public final Isset __isset = new Isset();
-  public static final class Isset {
+  public static final class Isset implements java.io.Serializable {
     public boolean message = false;
   }
 
@@ -53,6 +55,34 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
     this();
     this.message = message;
     this.__isset.message = true;
+  }
+
+  public boolean equals(Object that) {
+    if (that == null)
+      return false;
+    if (that instanceof AlreadyExists)
+      return this.equals((AlreadyExists)that);
+    return false;
+  }
+
+  public boolean equals(AlreadyExists that) {
+    if (that == null)
+      return false;
+
+    boolean this_present_message = true && (this.message != null);
+    boolean that_present_message = true && (that.message != null);
+    if (this_present_message || that_present_message) {
+      if (!(this_present_message && that_present_message))
+        return false;
+      if (!this.message.equals(that.message))
+        return false;
+    }
+
+    return true;
+  }
+
+  public int hashCode() {
+    return 0;
   }
 
   public void read(TProtocol iprot) throws TException {

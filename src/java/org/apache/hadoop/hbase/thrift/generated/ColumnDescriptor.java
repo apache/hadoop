@@ -23,9 +23,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import java.util.List;
 import java.util.ArrayList;
-import java.util.AbstractMap;
+import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.HashSet;
 import com.facebook.thrift.*;
 
@@ -50,7 +52,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
   public int timeToLive;
 
   public final Isset __isset = new Isset();
-  public static final class Isset {
+  public static final class Isset implements java.io.Serializable {
     public boolean name = false;
     public boolean maxVersions = false;
     public boolean compression = false;
@@ -117,6 +119,115 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     this.__isset.blockCacheEnabled = true;
     this.timeToLive = timeToLive;
     this.__isset.timeToLive = true;
+  }
+
+  public boolean equals(Object that) {
+    if (that == null)
+      return false;
+    if (that instanceof ColumnDescriptor)
+      return this.equals((ColumnDescriptor)that);
+    return false;
+  }
+
+  public boolean equals(ColumnDescriptor that) {
+    if (that == null)
+      return false;
+
+    boolean this_present_name = true && (this.name != null);
+    boolean that_present_name = true && (that.name != null);
+    if (this_present_name || that_present_name) {
+      if (!(this_present_name && that_present_name))
+        return false;
+      if (!java.util.Arrays.equals(this.name, that.name))
+        return false;
+    }
+
+    boolean this_present_maxVersions = true;
+    boolean that_present_maxVersions = true;
+    if (this_present_maxVersions || that_present_maxVersions) {
+      if (!(this_present_maxVersions && that_present_maxVersions))
+        return false;
+      if (this.maxVersions != that.maxVersions)
+        return false;
+    }
+
+    boolean this_present_compression = true && (this.compression != null);
+    boolean that_present_compression = true && (that.compression != null);
+    if (this_present_compression || that_present_compression) {
+      if (!(this_present_compression && that_present_compression))
+        return false;
+      if (!this.compression.equals(that.compression))
+        return false;
+    }
+
+    boolean this_present_inMemory = true;
+    boolean that_present_inMemory = true;
+    if (this_present_inMemory || that_present_inMemory) {
+      if (!(this_present_inMemory && that_present_inMemory))
+        return false;
+      if (this.inMemory != that.inMemory)
+        return false;
+    }
+
+    boolean this_present_maxValueLength = true;
+    boolean that_present_maxValueLength = true;
+    if (this_present_maxValueLength || that_present_maxValueLength) {
+      if (!(this_present_maxValueLength && that_present_maxValueLength))
+        return false;
+      if (this.maxValueLength != that.maxValueLength)
+        return false;
+    }
+
+    boolean this_present_bloomFilterType = true && (this.bloomFilterType != null);
+    boolean that_present_bloomFilterType = true && (that.bloomFilterType != null);
+    if (this_present_bloomFilterType || that_present_bloomFilterType) {
+      if (!(this_present_bloomFilterType && that_present_bloomFilterType))
+        return false;
+      if (!this.bloomFilterType.equals(that.bloomFilterType))
+        return false;
+    }
+
+    boolean this_present_bloomFilterVectorSize = true;
+    boolean that_present_bloomFilterVectorSize = true;
+    if (this_present_bloomFilterVectorSize || that_present_bloomFilterVectorSize) {
+      if (!(this_present_bloomFilterVectorSize && that_present_bloomFilterVectorSize))
+        return false;
+      if (this.bloomFilterVectorSize != that.bloomFilterVectorSize)
+        return false;
+    }
+
+    boolean this_present_bloomFilterNbHashes = true;
+    boolean that_present_bloomFilterNbHashes = true;
+    if (this_present_bloomFilterNbHashes || that_present_bloomFilterNbHashes) {
+      if (!(this_present_bloomFilterNbHashes && that_present_bloomFilterNbHashes))
+        return false;
+      if (this.bloomFilterNbHashes != that.bloomFilterNbHashes)
+        return false;
+    }
+
+    boolean this_present_blockCacheEnabled = true;
+    boolean that_present_blockCacheEnabled = true;
+    if (this_present_blockCacheEnabled || that_present_blockCacheEnabled) {
+      if (!(this_present_blockCacheEnabled && that_present_blockCacheEnabled))
+        return false;
+      if (this.blockCacheEnabled != that.blockCacheEnabled)
+        return false;
+    }
+
+    boolean this_present_timeToLive = true;
+    boolean that_present_timeToLive = true;
+    if (this_present_timeToLive || that_present_timeToLive) {
+      if (!(this_present_timeToLive && that_present_timeToLive))
+        return false;
+      if (this.timeToLive != that.timeToLive)
+        return false;
+    }
+
+    return true;
+  }
+
+  public int hashCode() {
+    return 0;
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -203,13 +314,13 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
           }
           break;
         case 10:
-            if (field.type == TType.I32) {
-              this.timeToLive = iprot.readI32();
-              this.__isset.timeToLive = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
+          if (field.type == TType.I32) {
+            this.timeToLive = iprot.readI32();
+            this.__isset.timeToLive = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
           break;

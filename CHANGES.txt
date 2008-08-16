@@ -3,6 +3,9 @@ Hbase Change Log
 Release 0.3.0 - Unreleased
 
   INCOMPATIBLE CHANGES
+   HBASE-697   Thrift idl needs update/edit to match new 0.2 API (and to fix bugs)
+               (Tim Sell via Stack)
+
   BUG FIXES
    HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
                Jim Kellerman) (Fix whitespace diffs in HRegionServer)
