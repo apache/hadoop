@@ -37,7 +37,9 @@ Release 0.3.0 - Unreleased
    HBASE-812  Compaction needs little better skip algo (Daniel Leffel via Stack)
    HBASE-806  Change HbaseMapWritable and RowResult to implement SortedMap
               instead of Map (Jonathan Gray via Stack)
-   HBASE-795  More Table operation in TableHandler for REST interface
+   HBASE-795  More Table operation in TableHandler for REST interface: part 1
+              (Sishen Freecity via Stack)
+   HBASE-795  More Table operation in TableHandler for REST interface: part 2
               (Sishen Freecity via Stack)
    HBASE-830  Debugging HCM.locateRegionInMeta is painful
 

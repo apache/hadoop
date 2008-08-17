@@ -65,7 +65,6 @@ implements javax.servlet.Servlet {
   private RowHandler rowHandler;
   private ScannerHandler scannerHandler;
 
-  private static final String TABLES = "tables";
   private static final String SCANNER = "scanner";
   private static final String ROW = "row";
       
@@ -117,12 +116,13 @@ implements javax.servlet.Servlet {
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
     
-    if (pathSegments.length == 1 && pathSegments[0].toLowerCase().equals(TABLES)) {
+    if (pathSegments.length == 0 || pathSegments[0].length() <= 0) {
+      // if it was a root request, it must be a create table request
       tableHandler.doPost(request, response, pathSegments);
       return;
     } else {
       // there should be at least two path segments (table name and row or
-      // scanner)
+      // scanner or disable/enable operation)
       if (pathSegments.length >= 2 && pathSegments[0].length() > 0) {
         if (pathSegments[1].toLowerCase().equals(SCANNER)
             && pathSegments.length >= 2) {
@@ -132,8 +132,8 @@ implements javax.servlet.Servlet {
             && pathSegments.length >= 3) {
           rowHandler.doPost(request, response, pathSegments);
           return;
-        } else if (pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0 
-            && (pathSegments[2].toLowerCase().equals(TableHandler.DISABLE) || pathSegments[2].toLowerCase().equals(TableHandler.ENABLE))) {
+        } else if ((pathSegments[1].toLowerCase().equals(TableHandler.DISABLE) || pathSegments[1].toLowerCase().equals(TableHandler.ENABLE))
+            && pathSegments.length == 2) {
           tableHandler.doPost(request, response, pathSegments);
           return;
         }
@@ -147,12 +147,13 @@ implements javax.servlet.Servlet {
 
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
   throws ServletException, IOException {
-    // Equate PUT with a POST.
     String [] pathSegments = getPathSegments(request);
     
-    if (pathSegments.length == 2 && pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0) {
+    if (pathSegments.length == 1 && pathSegments[0].length() > 0) {
+      // if it has only table name
       tableHandler.doPut(request, response, pathSegments);
     } else {
+      // Equate PUT with a POST.
       doPost(request, response);
     }
   }
@@ -162,7 +163,8 @@ implements javax.servlet.Servlet {
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
     
-    if (pathSegments.length == 2 && pathSegments[0].toLowerCase().equals(TABLES) && pathSegments[1].length() > 0) {
+    if (pathSegments.length == 1 && pathSegments[0].length() > 0) {
+      // if it only has only table name
       tableHandler.doDelete(request, response, pathSegments);
       return;
     } else if (pathSegments.length >= 3 && pathSegments[0].length() > 0) {

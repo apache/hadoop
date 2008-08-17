@@ -78,15 +78,15 @@ public class TableHandler extends GenericHandler {
   public void doPost(HttpServletRequest request, HttpServletResponse response, 
     String[] pathSegments)
   throws ServletException, IOException {
-    if (pathSegments.length == 1) {
+    if (pathSegments.length == 0 || pathSegments[0].length() <= 0) {
       // if it's a creation operation
       putTable(request, response, pathSegments);
     } else {
       // if it's a disable operation or enable operation
-      String tableName = pathSegments[1];      
-      if (pathSegments[2].toLowerCase().equals(DISABLE)) {
+      String tableName = pathSegments[0];      
+      if (pathSegments[1].toLowerCase().equals(DISABLE)) {
         admin.disableTable(tableName);
-      } else if (pathSegments[2].toLowerCase().equals(ENABLE)) {
+      } else if (pathSegments[1].toLowerCase().equals(ENABLE)) {
         admin.enableTable(tableName);
       }
       response.setStatus(202);
@@ -240,7 +240,7 @@ public class TableHandler extends GenericHandler {
   
   private void deleteTable(HttpServletRequest request,
       HttpServletResponse response, String[] pathSegments) throws IOException {
-    String tableName = pathSegments[1];
+    String tableName = pathSegments[0];
     admin.deleteTable(tableName);
     response.setStatus(202);
   }  
@@ -302,7 +302,7 @@ public class TableHandler extends GenericHandler {
     }
 
     try {
-      String tableName = pathSegments[1];
+      String tableName = pathSegments[0];
 
       NodeList columnfamily_nodes = doc.getElementsByTagName("columnfamily");
       for (int i = 0; i < columnfamily_nodes.getLength(); i++) {
