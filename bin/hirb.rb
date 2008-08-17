@@ -131,7 +131,7 @@ HBASE SHELL COMMANDS:
            hbase> create 't1', {NAME => 'f1'}, {NAME => 'f2'}, {NAME => 'f3'}
            hbase> # The above in shorthand would be the following:
            hbase> create 't1', 'f1', 'f2', 'f3'
-           hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, \
+           hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, \\
              BLOCKCACHE => true}
 
  describe  Describe the named table: e.g. "hbase> describe 't1'"
@@ -161,7 +161,7 @@ HBASE SHELL COMMANDS:
            hbase> get 't1', 'r1', {COLUMN => 'c1'}
            hbase> get 't1', 'r1', {COLUMN => ['c1', 'c2', 'c3']}
            hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1}
-           hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, \
+           hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, \\
              VERSIONS => 4}
 
  list      List all tables in hbase

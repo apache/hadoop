@@ -268,9 +268,8 @@ module HBase
 
     def isMetaTable()
       tn = @table.getTableName()
-      return Bytes.equals(tn, HConstants::META_TABLE_NAME) or
-        Bytes.equals(tn, HConstants::META_TABLE_NAME)
-        
+      return Bytes.equals(tn, HConstants::META_TABLE_NAME) ||
+        Bytes.equals(tn, HConstants::ROOT_TABLE_NAME)
     end
 
     # Make a String of the passed cell.
