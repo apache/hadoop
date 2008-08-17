@@ -30,6 +30,8 @@ import java.io.*;
  * The log intermingles edits to many tables and rows, so each log entry 
  * identifies the appropriate table and row.  Within a table and row, they're 
  * also sorted.
+ * 
+ * Some Transactional edits (START, COMMIT, ABORT) will not have an associated row.
  */
 public class HLogKey implements WritableComparable {
   private byte [] regionName;
@@ -64,19 +66,19 @@ public class HLogKey implements WritableComparable {
   // A bunch of accessors
   //////////////////////////////////////////////////////////////////////////////
 
-  byte [] getRegionName() {
+  public byte [] getRegionName() {
     return regionName;
   }
   
-  byte [] getTablename() {
+  public byte [] getTablename() {
     return tablename;
   }
   
-  byte [] getRow() {
+  public byte [] getRow() {
     return row;
   }
   
-  long getLogSeqNum() {
+  public long getLogSeqNum() {
     return logSeqNum;
   }
   

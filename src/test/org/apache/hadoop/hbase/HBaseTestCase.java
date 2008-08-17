@@ -167,9 +167,11 @@ public abstract class HBaseTestCase extends TestCase {
   
   protected HRegion openClosedRegion(final HRegion closedRegion)
   throws IOException {
-    return new HRegion(closedRegion.getBaseDir(), closedRegion.getLog(),
-      closedRegion.getFilesystem(), closedRegion.getConf(),
-      closedRegion.getRegionInfo(), null, null);
+    HRegion r = new HRegion(closedRegion.getBaseDir(), closedRegion.getLog(),
+        closedRegion.getFilesystem(), closedRegion.getConf(),
+        closedRegion.getRegionInfo(), null);
+    r.initialize(null, null);
+    return r;
   }
   
   /**

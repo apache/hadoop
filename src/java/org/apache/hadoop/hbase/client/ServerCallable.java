@@ -60,11 +60,17 @@ public abstract class ServerCallable<T> implements Callable<T> {
 
   /** @return the server name */
   public String getServerName() {
+    if (location == null) {
+      return null;
+    }
     return location.getServerAddress().toString();
   }
   
   /** @return the region name */
-  public byte [] getRegionName() {
+  public byte[] getRegionName() {
+    if (location == null) {
+      return null;
+    }
     return location.getRegionInfo().getRegionName();
   }
   

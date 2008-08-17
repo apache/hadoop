@@ -243,8 +243,8 @@ public class HRegion implements HConstants {
       LOG.debug("Files for new region");
       listPaths(fs, newRegionDir);
     }
-    HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo,
-        null, null);
+    HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo, null);
+    dstRegion.initialize(null, null);
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
@@ -318,7 +318,7 @@ public class HRegion implements HConstants {
   private final Map<Integer, TreeMap<HStoreKey, byte []>> targetColumns =
       new ConcurrentHashMap<Integer, TreeMap<HStoreKey, byte []>>();
   // Default access because read by tests.
-  final Map<Integer, HStore> stores = new ConcurrentHashMap<Integer, HStore>();
+  protected final Map<Integer, HStore> stores = new ConcurrentHashMap<Integer, HStore>();
   final AtomicLong memcacheSize = new AtomicLong(0);
 
   final Path basedir;
@@ -376,7 +376,7 @@ public class HRegion implements HConstants {
   private final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
   private final Integer splitLock = new Integer(0);
-  private final long minSequenceId;
+  private long minSequenceId;
   final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
   //////////////////////////////////////////////////////////////////////////////
@@ -388,31 +388,6 @@ public class HRegion implements HConstants {
    *
    * @param basedir qualified path of directory where region should be located,
    * usually the table directory.
-   * @param log The HLog is the outbound log for any updates to the HRegion
-   * (There's a single HLog for all the HRegions on a single HRegionServer.)
-   * The log file is a logfile from the previous execution that's
-   * custom-computed for this HRegion. The HRegionServer computes and sorts the
-   * appropriate log info for this HRegion. If there is a previous log file
-   * (implying that the HRegion has been written-to before), then read it from
-   * the supplied path.
-   * @param fs is the filesystem.  
-   * @param conf is global configuration settings.
-   * @param regionInfo - HRegionInfo that describes the region
-   * @param initialFiles If there are initial files (implying that the HRegion
-   * is new), then read them from the supplied path.
-   * @param flushListener an object that implements CacheFlushListener or null
-   * or null
-   * @throws IOException
-   */
-  public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
-      HRegionInfo regionInfo, Path initialFiles,
-      FlushRequester flushListener) throws IOException {
-    this(basedir, log, fs, conf, regionInfo, initialFiles, flushListener, null);
-  }
-  
-  /**
-   * HRegion constructor.
-   *
    * @param log The HLog is the outbound log for any updates to the HRegion
    * (There's a single HLog for all the HRegions on a single HRegionServer.)
    * The log file is a logfile from the previous execution that's
@@ -434,10 +409,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
-      HRegionInfo regionInfo, Path initialFiles,
-      FlushRequester flushListener, final Progressable reporter)
-    throws IOException {
-    
+      HRegionInfo regionInfo,
+      FlushRequester flushListener) {
     this.basedir = basedir;
     this.log = log;
     this.fs = fs;
@@ -447,7 +420,6 @@ public class HRegion implements HConstants {
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
-    Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
     this.historian = RegionHistorian.getInstance();
     
     if (LOG.isDebugEnabled()) {
@@ -457,6 +429,27 @@ public class HRegion implements HConstants {
     
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
+   
+    int flushSize = regionInfo.getTableDesc().getMemcacheFlushSize();
+    if (flushSize == HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE) {
+      flushSize = conf.getInt("hbase.hregion.memcache.flush.size",
+                      HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
+    }
+    this.memcacheFlushSize = flushSize;
+
+    this.blockingMemcacheSize = this.memcacheFlushSize *
+      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
+  }
+  
+  /** Initialize this region and get it ready to roll.
+   * 
+   * @param initialFiles
+   * @param reporter
+   * @throws IOException
+   */
+  public void initialize( Path initialFiles,
+      final Progressable reporter) throws IOException {
+    Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
     // Move prefab HStore files into place (if any).  This picks up split files
     // and any merges from splits and merges dirs.
@@ -466,16 +459,20 @@ public class HRegion implements HConstants {
 
     // Load in all the HStores.
     long maxSeqId = -1;
+    long minSeqId = Integer.MAX_VALUE;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       HStore store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       stores.put(Bytes.mapKey(c.getName()), store);
       long storeSeqId = store.getMaxSequenceId();
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
+      } 
+      if (storeSeqId < minSeqId) {
+        minSeqId = storeSeqId;
       }
     }
     
-    doReconstructionLog(oldLogFile, maxSeqId, reporter);
+    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
     
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
@@ -501,17 +498,6 @@ public class HRegion implements HConstants {
     if (fs.exists(merges)) {
       fs.delete(merges, true);
     }
-
-    int flushSize = regionInfo.getTableDesc().getMemcacheFlushSize();
-    if (flushSize == HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE) {
-      flushSize = conf.getInt("hbase.hregion.memcache.flush.size",
-                      HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
-    }
-    this.memcacheFlushSize = flushSize;
-
-    this.blockingMemcacheSize = this.memcacheFlushSize *
-      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
-
     // See if region is meant to run read-only.
     if (this.regionInfo.getTableDesc().isReadOnly()) {
       this.writestate.setReadOnly(true);
@@ -797,10 +783,12 @@ public class HRegion implements HConstants {
       // Opening the region copies the splits files from the splits directory
       // under each region.
       HRegion regionA =
-        new HRegion(basedir, log, fs, conf, regionAInfo, dirA, null);
+        new HRegion(basedir, log, fs, conf, regionAInfo, null);
+      regionA.initialize(dirA, null);
       regionA.close();
       HRegion regionB =
-        new HRegion(basedir, log, fs, conf, regionBInfo, dirB, null);
+        new HRegion(basedir, log, fs, conf, regionBInfo, null);
+      regionB.initialize(dirB, null);
       regionB.close();
 
       // Cleanup
@@ -1029,12 +1017,14 @@ public class HRegion implements HConstants {
     // again so its value will represent the size of the updates received
     // during the flush
     long sequenceId = -1L;
+    long completeSequenceId = -1L;
     this.updatesLock.writeLock().lock();
     try {
       for (HStore s: stores.values()) {
         s.snapshot();
       }
       sequenceId = log.startCacheFlush();
+      completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
       this.memcacheSize.set(0);
     } finally {
       this.updatesLock.writeLock().unlock();
@@ -1050,7 +1040,7 @@ public class HRegion implements HConstants {
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
       for (HStore hstore: stores.values()) {
-        boolean needsCompaction = hstore.flushCache(sequenceId);
+        boolean needsCompaction = hstore.flushCache(completeSequenceId);
         if (needsCompaction) {
           compactionRequested = true;
         }
@@ -1077,7 +1067,7 @@ public class HRegion implements HConstants {
     //     and that all updates to the log for this regionName that have lower 
     //     log-sequence-ids can be safely ignored.
     this.log.completeCacheFlush(getRegionName(),
-        regionInfo.getTableDesc().getName(), sequenceId);
+        regionInfo.getTableDesc().getName(), completeSequenceId);
 
     // C. Finally notify anyone waiting on memcache to clear:
     // e.g. checkResources().
@@ -1097,6 +1087,18 @@ public class HRegion implements HConstants {
       }
     }
     return compactionRequested;
+  }
+  
+  /**
+   * Get the sequence number to be associated with this cache flush. Used by
+   * TransactionalRegion to not complete pending transactions.
+   * 
+   * 
+   * @param currentSequenceId
+   * @return sequence id to complete the cache flush with
+   */ 
+  protected long getCompleteCacheFlushSequenceId(long currentSequenceId) {
+    return currentSequenceId;
   }
   
   //////////////////////////////////////////////////////////////////////////////
@@ -1346,7 +1348,33 @@ public class HRegion implements HConstants {
    * @param b
    * @throws IOException
    */
-  public void batchUpdate(BatchUpdate b, Integer lockid)
+  public void batchUpdate(BatchUpdate b) throws IOException {
+    this.batchUpdate(b, null, true);
+  }
+  
+  /**
+   * @param b
+   * @throws IOException
+   */
+  public void batchUpdate(BatchUpdate b, boolean writeToWAL) throws IOException {
+    this.batchUpdate(b, null, writeToWAL);
+  }
+
+  
+  /**
+   * @param b
+   * @throws IOException
+   */
+  public void batchUpdate(BatchUpdate b, Integer lockid) throws IOException {
+    this.batchUpdate(b, lockid, true);
+  }
+  
+  /**
+   * @param b
+   * @param writeToWal if true, then we write this update to the log
+   * @throws IOException
+   */
+  public void batchUpdate(BatchUpdate b, Integer lockid, boolean writeToWAL)
   throws IOException {
     checkReadOnly();
 
@@ -1395,7 +1423,7 @@ public class HRegion implements HConstants {
         this.targetColumns.remove(lid);
 
       if (edits != null && edits.size() > 0) {
-        update(edits);
+        update(edits, writeToWAL);
       }
       
       if (deletes != null && deletes.size() > 0) {
@@ -1597,16 +1625,25 @@ public class HRegion implements HConstants {
     }
     targets.put(key, val);
   }
-
-  /* 
+  
+  /** 
    * Add updates first to the hlog and then add values to memcache.
    * Warning: Assumption is caller has lock on passed in row.
-   * @param row Row to update.
-   * @param timestamp Timestamp to record the updates against
    * @param updatesByColumn Cell updates by column
    * @throws IOException
    */
-  private void update(final TreeMap<HStoreKey, byte []> updatesByColumn)
+  private void update(final TreeMap<HStoreKey, byte []> updatesByColumn) throws IOException {
+    this.update(updatesByColumn, true);
+  }
+
+  /** 
+   * Add updates first to the hlog (if writeToWal) and then add values to memcache.
+   * Warning: Assumption is caller has lock on passed in row.
+   * @param writeToWAL if true, then we should write to the log
+   * @param updatesByColumn Cell updates by column
+   * @throws IOException
+   */
+  private void update(final TreeMap<HStoreKey, byte []> updatesByColumn, boolean writeToWAL)
   throws IOException {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
@@ -1615,8 +1652,10 @@ public class HRegion implements HConstants {
     boolean flush = false;
     this.updatesLock.readLock().lock();
     try {
-      this.log.append(regionInfo.getRegionName(),
-        regionInfo.getTableDesc().getName(), updatesByColumn);
+      if (writeToWAL) {
+        this.log.append(regionInfo.getRegionName(), regionInfo.getTableDesc()
+            .getName(), updatesByColumn);
+      }
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
@@ -1660,7 +1699,7 @@ public class HRegion implements HConstants {
   
   // Do any reconstruction needed from the log
   @SuppressWarnings("unused")
-  protected void doReconstructionLog(Path oldLogFile, long maxSeqId,
+  protected void doReconstructionLog(Path oldLogFile, long minSeqId, long maxSeqId,
     Progressable reporter)
   throws UnsupportedEncodingException, IOException {
     // Nothing to do (Replaying is done in HStores)
@@ -2105,9 +2144,11 @@ public class HRegion implements HConstants {
     if (!info.isMetaRegion()) {
       RegionHistorian.getInstance().addRegionCreation(info);
     }
-    return new HRegion(tableDir,
-      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
-      fs, conf, info, null, null);
+    HRegion region = new HRegion(tableDir,
+        new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
+        fs, conf, info, null);
+    region.initialize(null, null);
+    return region;
   }
   
   /**
@@ -2134,7 +2175,8 @@ public class HRegion implements HConstants {
     }
     HRegion r = new HRegion(
         HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
-        log, FileSystem.get(conf), conf, info, null, null);
+        log, FileSystem.get(conf), conf, info, null);
+    r.initialize(null, null);
     if (log != null) {
       log.setSequenceNumber(r.getMinSequenceId());
     }

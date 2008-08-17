@@ -900,13 +900,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
       throws IOException {
-    return new HRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
-        .getTableDesc().getName()), this.log, this.fs, conf, regionInfo, null,
-        this.cacheFlusher, new Progressable() {
-          public void progress() {
-            addProcessingMessage(regionInfo);
-          }
-        });
+    HRegion r = new HRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
+        .getTableDesc().getName()), this.log, this.fs, conf, regionInfo,
+        this.cacheFlusher);
+    r.initialize(null,  new Progressable() {
+      public void progress() {
+        addProcessingMessage(regionInfo);
+      }
+    });
+    return r; 
   }
   
   /*

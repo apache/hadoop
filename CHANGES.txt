@@ -49,6 +49,8 @@ Release 0.3.0 - Unreleased
               were present in previous versions of the patches for this issue,
               but not in the version that was committed. Also fix a number of
               compilation problems that were introduced by patch.
+   HBASE-669  MultiRegion transactions with Optimistic Concurrency Control
+              (Clint Morgan via Stack)
 
   OPTIMIZATIONS
 

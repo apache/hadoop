@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
@@ -62,11 +63,20 @@ public class HLogEdit implements Writable, HConstants {
   public static boolean isDeleted(final byte [] value) {
     return (value == null)? false: deleteBytes.compareTo(value) == 0;
   }
+  
+  public enum TransactionalOperation {
+    START, WRITE, COMMIT, ABORT
+  }
 
   private byte [] column;
   private byte [] val;
   private long timestamp;
   private static final int MAX_VALUE_LEN = 128;
+  
+  private boolean isTransactionEntry;
+  private Long transactionId = null;
+  private TransactionalOperation operation;
+
 
   /**
    * Default constructor used by Writable
@@ -85,6 +95,34 @@ public class HLogEdit implements Writable, HConstants {
     this.column = c;
     this.val = bval;
     this.timestamp = timestamp;
+    this.isTransactionEntry = false;
+  }
+  
+  /** Construct a WRITE transaction. 
+   * 
+   * @param transactionId
+   * @param op
+   * @param timestamp
+   */
+  public HLogEdit(long transactionId, BatchOperation op, long timestamp) {
+    this(op.getColumn(), op.getValue(), timestamp);
+    // This covers delete ops too...
+    this.transactionId = transactionId;
+    this.operation = TransactionalOperation.WRITE;
+    this.isTransactionEntry = true;
+  }
+
+  /** Construct a transactional operation (BEGIN, ABORT, or COMMIT). 
+   * 
+   * @param transactionId
+   * @param op
+   */
+  public HLogEdit(long transactionId, TransactionalOperation op) {
+    this.column = new byte[0];
+    this.val = new byte[0];
+    this.transactionId = transactionId;
+    this.operation = op;
+    this.isTransactionEntry = true;
   }
 
   /** @return the column */
@@ -100,6 +138,28 @@ public class HLogEdit implements Writable, HConstants {
   /** @return the timestamp */
   public long getTimestamp() {
     return this.timestamp;
+  }
+  
+  public boolean isTransactionEntry() {
+    return isTransactionEntry;
+  }
+  
+  /**
+   * Get the transactionId, or null if this is not a transactional edit.
+   * 
+   * @return Return the transactionId.
+   */
+  public Long getTransactionId() {
+    return transactionId;
+  }
+
+  /**
+   * Get the operation.
+   * 
+   * @return Return the operation.
+   */
+  public TransactionalOperation getOperation() {
+    return operation;
   }
 
   /**
@@ -117,8 +177,13 @@ public class HLogEdit implements Writable, HConstants {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("UTF8 encoding not present?", e);
     }
-    return "(" + Bytes.toString(getColumn()) + "/" + getTimestamp() + "/" +
-      value + ")";
+    return "("
+        + Bytes.toString(getColumn())
+        + "/"
+        + getTimestamp()
+        + "/"
+        + (isTransactionEntry ? "tran: " + transactionId + " op "
+            + operation.toString() +"/": "") + value + ")";
   }
   
   // Writable
@@ -126,9 +191,18 @@ public class HLogEdit implements Writable, HConstants {
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.column);
-    out.writeInt(this.val.length);
-    out.write(this.val);
+    if (this.val == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(this.val.length);
+      out.write(this.val);
+    }
     out.writeLong(timestamp);
+    out.writeBoolean(isTransactionEntry);
+    if (isTransactionEntry) {
+      out.writeLong(transactionId);
+      out.writeUTF(operation.name());
+    }
   }
   
   /** {@inheritDoc} */
@@ -137,5 +211,10 @@ public class HLogEdit implements Writable, HConstants {
     this.val = new byte[in.readInt()];
     in.readFully(this.val);
     this.timestamp = in.readLong();
+    isTransactionEntry = in.readBoolean();
+    if (isTransactionEntry) {
+      transactionId = in.readLong();
+      operation = TransactionalOperation.valueOf(in.readUTF());
+    }
   }
 }

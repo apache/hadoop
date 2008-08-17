@@ -171,7 +171,7 @@ public class HLog implements HConstants {
    * Accessor for tests.
    * @return Current state of the monotonically increasing file id.
    */
-  long getFilenum() {
+  public long getFilenum() {
     return this.filenum;
   }
 
@@ -203,6 +203,10 @@ public class HLog implements HConstants {
         logSeqNum = newvalue;
       }
     }
+  }
+  
+  public long getSequenceNumber() {
+    return logSeqNum;
   }
 
   /**
@@ -311,7 +315,7 @@ public class HLog implements HConstants {
    * This is a convenience method that computes a new filename with a given
    * file-number.
    */
-  Path computeFilename(final long fn) {
+  public Path computeFilename(final long fn) {
     return new Path(dir, HLOG_DATFILE + fn);
   }
 
@@ -330,7 +334,7 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  void close() throws IOException {
+  public void close() throws IOException {
     cacheFlushLock.lock();
     try {
       synchronized (updateLock) {
@@ -391,13 +395,8 @@ public class HLog implements HConstants {
           new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
         HLogEdit logEdit =
           new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
-        try {
-      	  this.writer.append(logKey, logEdit);
-      	} catch (IOException e) {
-          LOG.fatal("Could not append. Requesting close of log", e);
-          requestLogRoll();
-          throw e;
-      	}
+       doWrite(logKey, logEdit);
+
         this.numEntries++;
       }
     }
@@ -409,6 +408,63 @@ public class HLog implements HConstants {
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();
+    }
+  }
+  
+  private void doWrite(HLogKey logKey, HLogEdit logEdit) throws IOException {
+    try {
+      this.writer.append(logKey, logEdit);
+    } catch (IOException e) {
+      LOG.fatal("Could not append. Requesting close of log", e);
+      requestLogRoll();
+      throw e;
+    }
+  }
+  
+  /** Append an entry without a row to the log.
+   * 
+   * @param regionInfo
+   * @param logEdit
+   * @throws IOException
+   */
+  public void append(HRegionInfo regionInfo, HLogEdit logEdit) throws IOException {
+    this.append(regionInfo, new byte[0], logEdit);
+  }
+  
+  /** Append an entry to the log.
+   * 
+   * @param regionName
+   * @param tableName
+   * @param row
+   * @param logEdit
+   * @throws IOException
+   */
+  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit) throws IOException {
+    if (closed) {
+      throw new IOException("Cannot append; log is closed");
+    }
+    byte [] regionName = regionInfo.getRegionName();
+    byte [] tableName = regionInfo.getTableDesc().getName();
+    
+    synchronized (updateLock) {
+      long seqNum = obtainSeqNum();
+      // The 'lastSeqWritten' map holds the sequence number of the oldest
+      // write for each region. When the cache is flushed, the entry for the
+      // region being flushed is removed if the sequence number of the flush
+      // is greater than or equal to the value in lastSeqWritten.
+      if (!this.lastSeqWritten.containsKey(regionName)) {
+        this.lastSeqWritten.put(regionName, Long.valueOf(seqNum));
+      }
+
+      HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum);
+      doWrite(logKey, logEdit);
+      this.numEntries++;
+    }
+
+    if (this.numEntries > this.maxlogentries) {
+      if (listener != null) {
+        listener.logRollRequested();
+      }
     }
   }
 
@@ -508,6 +564,10 @@ public class HLog implements HConstants {
     this.cacheFlushLock.unlock();
   }
 
+  public static boolean isMetaColumn(byte [] column) {
+    return Bytes.equals(METACOLUMN, column);
+  }
+  
   /**
    * Split up a bunch of log files, that are no longer being written to, into
    * new files, one per region. Delete the old log files when finished.

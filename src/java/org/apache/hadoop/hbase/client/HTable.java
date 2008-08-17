@@ -982,7 +982,9 @@ public class HTable {
   public Scanner getScanner(final byte [][] columns,
     final byte [] startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
-    return new ClientScanner(columns, startRow, timestamp, filter);
+    ClientScanner s = new ClientScanner(columns, startRow, timestamp, filter);
+    s.initialize();
+    return s;
   }
   
   /**
@@ -1335,15 +1337,13 @@ public class HTable {
     protected RowFilterInterface filter;
     
     protected ClientScanner(final Text [] columns, final Text startRow,
-        long timestamp, RowFilterInterface filter)
-    throws IOException {
+        long timestamp, RowFilterInterface filter) {
       this(Bytes.toByteArrays(columns), startRow.getBytes(), timestamp,
         filter);
     }
 
     protected ClientScanner(final byte[][] columns, final byte [] startRow,
-        final long timestamp, final RowFilterInterface filter) 
-    throws IOException {
+        final long timestamp, final RowFilterInterface filter) {
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Creating scanner over " + Bytes.toString(getTableName()) +
           " starting at key '" + Bytes.toString(startRow) + "'");
@@ -1359,6 +1359,9 @@ public class HTable {
       if (filter != null) {
         filter.validate(columns);
       }
+    }
+   
+    public void initialize() throws IOException {
       nextScanner();
     }
     

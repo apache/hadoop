@@ -311,7 +311,7 @@ public class HStore implements HConstants {
         // Check this edit is for me. Also, guard against writing
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         byte [] column = val.getColumn();
-        if (Bytes.equals(column, HLog.METACOLUMN)
+        if (val.isTransactionEntry() || Bytes.equals(column, HLog.METACOLUMN)
             || !Bytes.equals(key.getRegionName(), info.getRegionName())
             || !HStoreKey.matchingFamily(family.getName(), column)) {
           continue;
@@ -1316,8 +1316,7 @@ public class HStore implements HConstants {
    * @return Matching keys.
    * @throws IOException
    */
-  List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
-    final long now)
+  public List<HStoreKey> getKeys(final HStoreKey origin, final int versions, final long now)
   throws IOException {
     // This code below is very close to the body of the get method.  Any 
     // changes in the flow below should also probably be done in get.  TODO:
