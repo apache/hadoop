@@ -72,4 +72,20 @@ interface UpwardProtocol<K extends WritableComparable, V extends Writable> {
    * @param e
    */
   void failed(Throwable e);
+  
+  /**
+   * Register a counter with the given id and group/name.
+   * @param group counter group
+   * @param name counter name
+   * @throws IOException
+   */
+  void registerCounter(int id, String group, String name) throws IOException;
+  
+  /**
+   * Increment the value of a registered counter.
+   * @param id counter id of the registered counter
+   * @param amount increment for the counter value
+   * @throws IOException
+   */
+  void incrementCounter(int id, long amount) throws IOException;
 }

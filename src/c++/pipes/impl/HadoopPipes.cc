@@ -99,6 +99,10 @@ namespace HadoopPipes {
     virtual void status(const string& message) = 0;
     virtual void progress(float progress) = 0;
     virtual void done() = 0;
+    virtual void registerCounter(int id, const string& group, 
+                                 const string& name) = 0;
+    virtual void 
+      incrementCounter(const TaskContext::Counter* counter, uint64_t amount) = 0;
     virtual ~UpwardProtocol() {}
   };
 
@@ -150,6 +154,19 @@ namespace HadoopPipes {
               lineSeparator);
     }
 
+    virtual void registerCounter(int id, const string& group, 
+                                 const string& name) {
+      fprintf(stream, "registerCounter%c%d%c%s%c%s%c", fieldSeparator, id,
+              fieldSeparator, group.c_str(), fieldSeparator, name.c_str(), 
+              lineSeparator);
+    }
+
+    virtual void incrementCounter(const TaskContext::Counter* counter, 
+                                  uint64_t amount) {
+      fprintf(stream, "incrCounter%c%d%c%ld%c", fieldSeparator, counter->getId(), 
+              fieldSeparator, (long)amount, lineSeparator);
+    }
+    
     virtual void done() {
       fprintf(stream, "done%c", lineSeparator);
     }
@@ -272,8 +289,9 @@ namespace HadoopPipes {
 
   enum MESSAGE_TYPE {START_MESSAGE, SET_JOB_CONF, SET_INPUT_TYPES, RUN_MAP, 
                      MAP_ITEM, RUN_REDUCE, REDUCE_KEY, REDUCE_VALUE, 
-                     CLOSE, ABORT,
-                     OUTPUT=50, PARTITIONED_OUTPUT, STATUS, PROGRESS, DONE};
+                     CLOSE, ABORT, 
+                     OUTPUT=50, PARTITIONED_OUTPUT, STATUS, PROGRESS, DONE,
+                     REGISTER_COUNTER, INCREMENT_COUNTER};
 
   class BinaryUpwardProtocol: public UpwardProtocol {
   private:
@@ -313,6 +331,21 @@ namespace HadoopPipes {
       serializeInt(DONE, *stream);
     }
 
+    virtual void registerCounter(int id, const string& group, 
+                                 const string& name) {
+      serializeInt(REGISTER_COUNTER, *stream);
+      serializeInt(id, *stream);
+      serializeString(group, *stream);
+      serializeString(name, *stream);
+    }
+
+    virtual void incrementCounter(const TaskContext::Counter* counter, 
+                                  uint64_t amount) {
+      serializeInt(INCREMENT_COUNTER, *stream);
+      serializeInt(counter->getId(), *stream);
+      serializeLong(amount, *stream);
+    }
+    
     ~BinaryUpwardProtocol() {
       delete stream;
     }
@@ -505,6 +538,14 @@ namespace HadoopPipes {
       return valueItr != endValueItr;
     }
     
+    virtual Counter* getCounter(const std::string& group, 
+                               const std::string& name) {
+      return baseContext->getCounter(group, name);
+    }
+
+    virtual void incrementCounter(const Counter* counter, uint64_t amount) {
+      baseContext->incrementCounter(counter, amount);
+    }
   };
 
   /**
@@ -586,6 +627,7 @@ namespace HadoopPipes {
     int numReduces;
     const Factory* factory;
     pthread_mutex_t mutexDone;
+    std::vector<int> registeredCounterIds;
 
   public:
 
@@ -836,6 +878,24 @@ namespace HadoopPipes {
       } else {
         uplink->output(key, value);
       }
+    }
+
+    /**
+     * Register a counter with the given group and name.
+     */
+    virtual Counter* getCounter(const std::string& group, 
+                               const std::string& name) {
+      int id = registeredCounterIds.size();
+      registeredCounterIds.push_back(id);
+      uplink->registerCounter(id, group, name);
+      return new Counter(id);
+    }
+
+    /**
+     * Increment the value of the counter with the given amount.
+     */
+    virtual void incrementCounter(const Counter* counter, uint64_t amount) {
+      uplink->incrementCounter(counter, amount); 
     }
 
     void closeAll() {

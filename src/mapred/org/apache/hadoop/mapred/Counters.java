@@ -319,6 +319,16 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   }
 
   /**
+   * Find a counter given the group and the name.
+   * @param group the name of the group
+   * @param name the internal name of the counter
+   * @return the counter for that name
+   */
+  public synchronized Counter findCounter(String group, String name) {
+    return getGroup(group).getCounterForName(name);
+  }
+
+  /**
    * Find a counter by using strings
    * @param group the name of the group
    * @param id the id of the counter within the group (0 to N-1)

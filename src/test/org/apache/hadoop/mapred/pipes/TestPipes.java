@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -37,6 +38,7 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputLogFilter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.util.StringUtils;
 
 import junit.framework.TestCase;
@@ -164,6 +166,15 @@ public class TestPipes extends TestCase {
         rJob = Submitter.runJob(job);
       }
       assertTrue("pipes job failed", rJob.isSuccessful());
+      
+      Counters counters = rJob.getCounters();
+      Counters.Group wordCountCounters = counters.getGroup("WORDCOUNT");
+      int numCounters = 0;
+      for (Counter c : wordCountCounters) {
+        System.out.println(c);
+        ++numCounters;
+      }
+      assertTrue("No counters found!", (numCounters > 0));
     }
 
     List<String> results = new ArrayList<String>();

@@ -92,6 +92,8 @@ Trunk (unreleased changes)
     HADOOP-3585. FailMon package for hardware failure monitoring and 
     analysis of anomalies. (Ioannis Koltsidas via dhruba)
 
+    HADOOP-1480. Add counters to the C++ Pipes API. (acmurthy via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

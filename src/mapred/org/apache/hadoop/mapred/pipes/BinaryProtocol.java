@@ -73,7 +73,9 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
                                     PARTITIONED_OUTPUT(51),
                                     STATUS(52),
                                     PROGRESS(53),
-                                    DONE(54);
+                                    DONE(54),
+                                    REGISTER_COUNTER(55),
+                                    INCREMENT_COUNTER(56);
     final int code;
     MessageType(int code) {
       this.code = code;
@@ -124,6 +126,15 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
             handler.status(Text.readString(inStream));
           } else if (cmd == MessageType.PROGRESS.code) {
             handler.progress(inStream.readFloat());
+          } else if (cmd == MessageType.REGISTER_COUNTER.code) {
+            int id = WritableUtils.readVInt(inStream);
+            String group = Text.readString(inStream);
+            String name = Text.readString(inStream);
+            handler.registerCounter(id, group, name);
+          } else if (cmd == MessageType.INCREMENT_COUNTER.code) {
+            int id = WritableUtils.readVInt(inStream);
+            long amount = WritableUtils.readVLong(inStream);
+            handler.incrementCounter(id, amount);
           } else if (cmd == MessageType.DONE.code) {
             LOG.debug("Pipe child done");
             handler.done();

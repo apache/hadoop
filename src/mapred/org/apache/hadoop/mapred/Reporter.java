@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.util.Progressable;
 
 /** 
@@ -46,6 +47,9 @@ public interface Reporter extends Progressable {
       }
       public void progress() {
       }
+      public Counter getCounter(String group, String name) {
+        return null;
+      }
       public void incrCounter(Enum key, long amount) {
       }
       public void incrCounter(String group, String counter, long amount) {
@@ -61,6 +65,15 @@ public interface Reporter extends Progressable {
    * @param status brief description of the current status.
    */
   public abstract void setStatus(String status);
+  
+  /**
+   * Get the {@link Counter} of the given group with the given name.
+   * 
+   * @param group counter group
+   * @param name counter name
+   * @return the <code>Counter</code> of the given group/name.
+   */
+  public abstract Counter getCounter(String group, String name);
   
   /**
    * Increments the counter identified by the key, which can be of

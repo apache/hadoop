@@ -48,6 +48,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
@@ -407,6 +408,13 @@ abstract class Task implements Writable, Configurable {
         public void progress() {
           // indicate that progress update needs to be sent
           setProgressFlag();
+        }
+        public Counters.Counter getCounter(String group, String name) {
+          Counters.Counter counter = null;
+          if (counters != null) {
+            counter = counters.findCounter(group, name);
+          }
+          return counter;
         }
         public void incrCounter(Enum key, long amount) {
           if (counters != null) {

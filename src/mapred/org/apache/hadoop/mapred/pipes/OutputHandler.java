@@ -19,9 +19,14 @@
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -37,7 +42,9 @@ class OutputHandler<K extends WritableComparable,
   private float progressValue = 0.0f;
   private boolean done = false;
   private Throwable exception = null;
-  
+  private Map<Integer, Counters.Counter> registeredCounters = 
+    new HashMap<Integer, Counters.Counter>();
+
   /**
    * Create a handler that will handle any records output from the application.
    * @param collector the "real" collector that takes the output
@@ -121,4 +128,19 @@ class OutputHandler<K extends WritableComparable,
     }
     return done;
   }
+
+  public void registerCounter(int id, String group, String name) throws IOException {
+    Counters.Counter counter = reporter.getCounter(group, name);
+    registeredCounters.put(id, counter);
+  }
+
+  public void incrementCounter(int id, long amount) throws IOException {
+    if (id < registeredCounters.size()) {
+      Counters.Counter counter = registeredCounters.get(id);
+      counter.increment(amount);
+    } else {
+      throw new IOException("Invalid counter with id: " + id);
+    }
+  }
+
 }

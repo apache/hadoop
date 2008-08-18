@@ -57,6 +57,19 @@ public:
 class TaskContext {
 public:
   /**
+   * Counter to keep track of a property and its value.
+   */
+  class Counter {
+  private:
+    int id;
+  public:
+    Counter(int counterId) : id(counterId) {}
+    Counter(const Counter& counter) : id(counter.id) {}
+
+    int getId() const { return id; }
+  };
+  
+  /**
    * Get the JobConf for the current task.
    */
   virtual const JobConf* getJobConf() = 0;
@@ -89,6 +102,17 @@ public:
    */
   virtual void setStatus(const std::string& status) = 0;
 
+  /**
+   * Register a counter with the given group and name.
+   */
+  virtual Counter* 
+    getCounter(const std::string& group, const std::string& name) = 0;
+
+  /**
+   * Increment the value of the counter with the given amount.
+   */
+  virtual void incrementCounter(const Counter* counter, uint64_t amount) = 0;
+  
   virtual ~TaskContext() {}
 };
 
