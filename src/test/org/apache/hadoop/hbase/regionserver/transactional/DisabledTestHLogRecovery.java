@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestHLogRecovery extends HBaseClusterTestCase {
-  private static final Log LOG = LogFactory.getLog(TestHLogRecovery.class);
+public class DisabledTestHLogRecovery extends HBaseClusterTestCase {
+  private static final Log LOG = LogFactory.getLog(DisabledTestHLogRecovery.class);
 
   private static final String TABLE_NAME = "table1";
 
@@ -63,7 +63,7 @@ public class TestHLogRecovery extends HBaseClusterTestCase {
   private TransactionalTable table;
 
   /** constructor */
-  public TestHLogRecovery() {
+  public DisabledTestHLogRecovery() {
     super(2, false);
 
     conf.set(HConstants.REGION_SERVER_CLASS, TransactionalRegionInterface.class
