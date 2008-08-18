@@ -80,7 +80,7 @@ static jobject constructNewObjectOfPath(JNIEnv *env, const char *path)
 
     //Construct the org.apache.hadoop.fs.Path object
     jobject jPath =
-        constructNewObjectOfClass(env, "org/apache/hadoop/fs/Path",
+        constructNewObjectOfClass(env, NULL, "org/apache/hadoop/fs/Path",
                                   "(Ljava/lang/String;)V", jPathString);
     if (jPath == NULL) {
         fprintf(stderr, "Can't construct instance of class "
@@ -96,9 +96,53 @@ static jobject constructNewObjectOfPath(JNIEnv *env, const char *path)
 }
 
 
+/**
+ * Helper function to translate an exception into a meaningful errno value.
+ * @param exc: The exception.
+ * @param env: The JNIEnv Pointer.
+ * @param method: The name of the method that threw the exception. This
+ * may be format string to be used in conjuction with additional arguments.
+ * @return Returns a meaningful errno value if possible, or EINTERNAL if not.
+ */
+static int errnoFromException(jthrowable exc, JNIEnv *env,
+                              const char *method, ...)
+{
+    va_list ap;
+    int errnum = 0;
+    char *excClass = NULL;
 
+    if (exc == NULL)
+        goto default_error;
 
+    excClass = classNameOfObject((jobject) exc, env);
+    if (!strcmp(excClass, "org.apache.hadoop.fs.permission."
+                "AccessControlException")) {
+        errnum = EACCES;
+        goto done;
+    }
 
+    //TODO: interpret more exceptions; maybe examine exc.getMessage()
+
+default_error:
+
+    //Can't tell what went wrong, so just punt
+    (*env)->ExceptionDescribe(env);
+    fprintf(stderr, "Call to ");
+    va_start(ap, method);
+    vfprintf(stderr, method, ap);
+    va_end(ap);
+    fprintf(stderr, " failed!\n");
+    errnum = EINTERNAL;
+
+done:
+
+    (*env)->ExceptionClear(env);
+
+    if (excClass != NULL)
+        free(excClass);
+
+    return errnum;
+}
 
 hdfsFS hdfsConnect(const char* host, tPort port)
 {
@@ -112,6 +156,7 @@ hdfsFS hdfsConnect(const char* host, tPort port)
     jobject jURI = NULL;
     jstring jURIString = NULL;
     jvalue  jVal;
+    jthrowable jExc = NULL;
     char    *cURI = 0;
     jobject gFsRef = NULL;
 
@@ -121,7 +166,7 @@ hdfsFS hdfsConnect(const char* host, tPort port)
 
     //Create the org.apache.hadoop.conf.Configuration object
     jConfiguration =
-        constructNewObjectOfClass(env, HADOOP_CONF, "()V");
+        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
 
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
@@ -133,27 +178,25 @@ hdfsFS hdfsConnect(const char* host, tPort port)
     //Check what type of FileSystem the caller wants...
     if (host == NULL) {
         // fs = FileSytem::getLocal(conf);
-        if (invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS, "getLocal",
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "getLocal",
                          JMETHOD1(JPARAM(HADOOP_CONF),
                                   JPARAM(HADOOP_LOCALFS)),
                          jConfiguration) != 0) {
-          fprintf(stderr, "Call to org.apache.hadoop.fs."
-                  "FileSystem::getLocal failed!\n");
-          errno = EINTERNAL;
-          goto done;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FileSystem::getLocal");
+            goto done;
         }
         jFS = jVal.l;
     }
     else if (!strcmp(host, "default") && port == 0) {
         //fs = FileSystem::get(conf); 
-        if (invokeMethod(env, &jVal, STATIC, NULL,
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL,
                          HADOOP_FS, "get",
                          JMETHOD1(JPARAM(HADOOP_CONF),
                                   JPARAM(HADOOP_FS)),
                          jConfiguration) != 0) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FileSystem::get failed!\n");
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FileSystem::get");
             goto done;
         }
         jFS = jVal.l;
@@ -164,23 +207,21 @@ hdfsFS hdfsConnect(const char* host, tPort port)
         sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
 
         jURIString = (*env)->NewStringUTF(env, cURI);
-        if (invokeMethod(env, &jVal, STATIC, NULL, JAVA_NET_URI,
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
                          "create", "(Ljava/lang/String;)Ljava/net/URI;",
                          jURIString) != 0) {
-          fprintf(stderr, "Call to java.net.URI::create failed!\n");
-          errno = EINTERNAL;
-          goto done;
+            errno = errnoFromException(jExc, env, "java.net.URI::create");
+            goto done;
         }
         jURI = jVal.l;
 
-        if (invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS, "get",
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "get",
                          JMETHOD2(JPARAM(JAVA_NET_URI),
                                   JPARAM(HADOOP_CONF), JPARAM(HADOOP_FS)),
                          jURI, jConfiguration) != 0) {
-          fprintf(stderr, "Call to org.apache.hadoop.fs."
-                  "FileSystem::get(URI, Configuration) failed!\n");
-          errno = EINTERNAL;
-          goto done;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "Filesystem::get(URI, Configuration)");
+            goto done;
         }
 
         jFS = jVal.l;
@@ -217,16 +258,18 @@ int hdfsDisconnect(hdfsFS fs)
     //Parameters
     jobject jFS = (jobject)fs;
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (fs == NULL) {
         errno = EBADF;
         return -1;
     }
 
-    if (invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "close", "()V") != 0) {
-        fprintf(stderr, "Call to FileSystem::close failed!\n"); 
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "Filesystem::close");
         return -1;
     }
 
@@ -278,11 +321,11 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     /* Get the Configuration object from the FileSystem object */
     jvalue  jVal;
     jobject jConfiguration = NULL;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "getConf", JMETHOD1("", JPARAM(HADOOP_CONF))) != 0) {
-        fprintf(stderr, "Failed to get configuration object from "
-                "filesystem\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "get configuration object "
+                                   "from filesystem");
         destroyLocalReference(env, jPath);
         return NULL;
     }
@@ -298,12 +341,11 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
 
     //bufferSize
     if (!bufferSize) {
-        if (invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
+        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration, 
                          HADOOP_CONF, "getInt", "(Ljava/lang/String;I)I",
                          jStrBufferSize, 4096) != 0) {
-            fprintf(stderr, "Call to org.apache.hadoop.conf."
-                    "Configuration::getInt failed!\n");
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                       "Configuration::getInt");
             goto done;
         }
         jBufferSize = jVal.i;
@@ -313,12 +355,11 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         //replication
 
         if (!replication) {
-            if (invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
+            if (invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration, 
                              HADOOP_CONF, "getInt", "(Ljava/lang/String;I)I",
                              jStrReplication, 1) != 0) {
-                fprintf(stderr, "Call to org.apache.hadoop.conf."
-                        "Configuration::getInt failed!\n");
-                errno = EINTERNAL;
+                errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                           "Configuration::getInt");
                 goto done;
             }
             jReplication = jVal.i;
@@ -326,12 +367,12 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         
         //blockSize
         if (!blockSize) {
-            if (invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
+            if (invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration, 
                              HADOOP_CONF, "getLong", "(Ljava/lang/String;J)J",
                              jStrBlockSize, 67108864)) {
-                fprintf(stderr, "Call to org.apache.hadoop.fs."
-                        "FileSystem::%s(%s) failed!\n", method, signature);
-                errno = EINTERNAL;
+                errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                           "FileSystem::%s(%s)", method,
+                                           signature);
                 goto done;
             }
             jBlockSize = jVal.j;
@@ -342,22 +383,22 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
        FSDataOutputStream references jobject jStream */
 
     if ((flags & O_WRONLY) == 0) {
-        if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                          method, signature, jPath, jBufferSize)) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FileSystem::%s(%s) failed!\n", method, signature);
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                       "FileSystem::%s(%s)", method,
+                                       signature);
             goto done;
         }
     }
     else {
         jboolean jOverWrite = 1;
-        if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                          method, signature, jPath, jOverWrite,
                          jBufferSize, jReplication, jBlockSize)) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FileSystem::%s(%s) failed!\n", method, signature);
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                       "FileSystem::%s(%s)", method,
+                                       signature);
             goto done;
         }
     }
@@ -397,6 +438,9 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     //Parameters
     jobject jStream = (jobject)(file ? file->file : NULL);
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (!file || file->type == UNINITIALIZED) {
         errno = EBADF;
@@ -407,10 +451,9 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     const char* interface = (file->type == INPUT) ? 
         HADOOP_ISTRM : HADOOP_OSTRM;
   
-    if (invokeMethod(env, NULL, INSTANCE, jStream, interface,
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jStream, interface,
                      "close", "()V") != 0) {
-        fprintf(stderr, "Call to %s::close failed!\n", interface); 
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "%s::close", interface);
         return -1;
     }
 
@@ -428,18 +471,18 @@ int hdfsExists(hdfsFS fs, const char *path)
     JNIEnv *env = getJNIEnv();
     jobject jPath = constructNewObjectOfPath(env, path);
     jvalue  jVal;
+    jthrowable jExc = NULL;
     jobject jFS = (jobject)fs;
 
     if (jPath == NULL) {
         return -1;
     }
 
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::exists failed!\n"); 
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::exists");
         return -1;
     }
 
@@ -463,6 +506,7 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     jbyteArray jbRarray;
     jint noReadBytes = 0;
     jvalue jVal;
+    jthrowable jExc = NULL;
 
     //Sanity check
     if (!f || f->type == UNINITIALIZED) {
@@ -479,11 +523,10 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 
     //Read the requisite bytes
     jbRarray = (*env)->NewByteArray(env, length);
-    if (invokeMethod(env, &jVal, INSTANCE, jInputStream, HADOOP_ISTRM,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream, HADOOP_ISTRM,
                      "read", "([B)I", jbRarray) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::read failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::read");
         noReadBytes = -1;
     }
     else {
@@ -520,6 +563,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
     jbyteArray jbRarray;
     jint noReadBytes = 0;
     jvalue jVal;
+    jthrowable jExc = NULL;
 
     //Sanity check
     if (!f || f->type == UNINITIALIZED) {
@@ -536,11 +580,10 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
 
     //Read the requisite bytes
     jbRarray = (*env)->NewByteArray(env, length);
-    if (invokeMethod(env, &jVal, INSTANCE, jInputStream, HADOOP_ISTRM,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream, HADOOP_ISTRM,
                      "read", "(J[BII)I", position, jbRarray, 0, length) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::read failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::read");
         noReadBytes = -1;
     }
     else {
@@ -573,6 +616,9 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
     jobject jOutputStream = (jobject)(f ? f->file : 0);
     jbyteArray jbWarray;
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (!f || f->type == UNINITIALIZED) {
         errno = EBADF;
@@ -596,12 +642,11 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
         //Write the requisite bytes into the file
         jbWarray = (*env)->NewByteArray(env, length);
         (*env)->SetByteArrayRegion(env, jbWarray, 0, length, buffer);
-        if (invokeMethod(env, NULL, INSTANCE, jOutputStream,
+        if (invokeMethod(env, NULL, &jExc, INSTANCE, jOutputStream,
                          HADOOP_OSTRM, "write",
                          "([B)V", jbWarray) != 0) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FSDataOutputStream::write failed!\n");
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FSDataOutputStream::write");
             length = -1;
         }
         destroyLocalReference(env, jbWarray);
@@ -625,17 +670,19 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : 0);
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (!f || f->type != INPUT) {
         errno = EBADF;
         return -1;
     }
 
-    if (invokeMethod(env, NULL, INSTANCE, jInputStream, HADOOP_ISTRM,
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jInputStream, HADOOP_ISTRM,
                      "seek", "(J)V", desiredPos) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::seek failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::seek");
         return -1;
     }
 
@@ -666,11 +713,11 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
 
     jlong currentPos  = -1;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jStream,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStream,
                      interface, "getPos", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::getPos failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::getPos");
         return -1;
     }
     currentPos = jVal.j;
@@ -691,17 +738,19 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
     //Parameters
     jobject jOutputStream = (jobject)(f ? f->file : 0);
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (!f || f->type != OUTPUT) {
         errno = EBADF;
         return -1;
     }
 
-    if (invokeMethod(env, NULL, INSTANCE, jOutputStream, 
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jOutputStream, 
                      HADOOP_OSTRM, "flush", "()V") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::flush failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::flush");
         return -1;
     }
 
@@ -721,6 +770,9 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : 0);
 
+    //Caught exception
+    jthrowable jExc = NULL;
+
     //Sanity check
     if (!f || f->type != INPUT) {
         errno = EBADF;
@@ -729,11 +781,10 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
 
     jint available = -1;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jInputStream, 
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream, 
                      HADOOP_ISTRM, "available", "()I") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FSDataInputStream::available failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FSDataInputStream::available");
         return -1;
     }
     available = jVal.i;
@@ -773,7 +824,7 @@ int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 
     //Create the org.apache.hadoop.conf.Configuration object
     jobject jConfiguration =
-        constructNewObjectOfClass(env, HADOOP_CONF, "()V");
+        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
@@ -786,14 +837,14 @@ int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
     //FileUtil::copy
     jboolean deleteSource = 0; //Only copy
     jvalue jVal;
-    if (invokeMethod(env, &jVal, STATIC, 
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, STATIC, 
                      NULL, "org/apache/hadoop/fs/FileUtil", "copy",
                      "(Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;ZLorg/apache/hadoop/conf/Configuration;)Z",
                      jSrcFS, jSrcPath, jDstFS, jDstPath, deleteSource, 
                      jConfiguration) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileUtil::copy failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileUtil::copy");
         retval = -1;
         goto done;
     }
@@ -841,7 +892,7 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 
     //Create the org.apache.hadoop.conf.Configuration object
     jobject jConfiguration =
-        constructNewObjectOfClass(env, HADOOP_CONF, "()V");
+        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
@@ -854,14 +905,14 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
     //FileUtil::copy
     jboolean deleteSource = 1; //Delete src after copy
     jvalue jVal;
-    if (invokeMethod(env, &jVal, STATIC, NULL,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, STATIC, NULL,
                      "org/apache/hadoop/fs/FileUtil", "copy",
                 "(Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;ZLorg/apache/hadoop/conf/Configuration;)Z",
                      jSrcFS, jSrcPath, jDstFS, jDstPath, deleteSource, 
                      jConfiguration) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileUtil::copy(move) failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileUtil::copy(move)");
         retval = -1;
         goto done;
     }
@@ -897,12 +948,12 @@ int hdfsDelete(hdfsFS fs, const char* path)
 
     //Delete the file
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "delete", "(Lorg/apache/hadoop/fs/Path;)Z",
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::delete failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::delete");
         return -1;
     }
 
@@ -943,12 +994,12 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
 
     //Rename the file
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS, "rename",
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS, "rename",
                      JMETHOD2(JPARAM(HADOOP_PATH), JPARAM(HADOOP_PATH), "Z"),
                      jOldPath, jNewPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::rename failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::rename");
         return -1;
     }
 
@@ -973,25 +1024,25 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
     jobject jFS = (jobject)fs;
     jobject jPath = NULL;
     jvalue jVal;
+    jthrowable jExc = NULL;
 
     //FileSystem::getWorkingDirectory()
-    if (invokeMethod(env, &jVal, INSTANCE, jFS,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS,
                      HADOOP_FS, "getWorkingDirectory",
                      "()Lorg/apache/hadoop/fs/Path;") != 0 ||
         jVal.l == NULL) {
-        fprintf(stderr, "Call to FileSystem::getWorkingDirectory failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "FileSystem::"
+                                   "getWorkingDirectory");
         return NULL;
     }
     jPath = jVal.l;
 
     //Path::toString()
     jstring jPathString;
-    if (invokeMethod(env, &jVal, INSTANCE, jPath, 
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jPath, 
                      "org/apache/hadoop/fs/Path", "toString",
                      "()Ljava/lang/String;") != 0) { 
-        fprintf(stderr, "Call to Path::toString failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "Path::toString");
         destroyLocalReference(env, jPath);
         return NULL;
     }
@@ -1024,6 +1075,7 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
 
     jobject jFS = (jobject)fs;
     int retval = 0;
+    jthrowable jExc = NULL;
 
     //Create an object of org.apache.hadoop.fs.Path
     jobject jPath = constructNewObjectOfPath(env, path);
@@ -1032,11 +1084,11 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
     }
 
     //FileSystem::setWorkingDirectory()
-    if (invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "setWorkingDirectory", 
                      "(Lorg/apache/hadoop/fs/Path;)V", jPath) != 0) {
-        fprintf(stderr, "Call to FileSystem::setWorkingDirectory failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "FileSystem::"
+                                   "setWorkingDirectory");
         retval = -1;
     }
 
@@ -1067,12 +1119,12 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
     //Create the directory
     jvalue jVal;
     jVal.z = 0;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "mkdirs", "(Lorg/apache/hadoop/fs/Path;)Z",
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs.FileSystem::"
-                "mkdirs failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::mkdirs");
         goto done;
     }
 
@@ -1103,12 +1155,12 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
 
     //Create the directory
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "setReplication", "(Lorg/apache/hadoop/fs/Path;S)Z",
                      jPath, replication) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs.FileSystem::"
-                "setReplication failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::setReplication");
         goto done;
     }
 
@@ -1143,14 +1195,14 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
     char*** blockHosts = NULL;
     jobjectArray jBlockLocations;;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS,
                      HADOOP_FS, "getFileBlockLocations", 
                      "(Lorg/apache/hadoop/fs/Path;JJ)"
                      "[Lorg/apache/hadoop/fs/BlockLocation;",
                      jPath, start, length) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getFileBlockLocations failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getFileCacheHints");
         destroyLocalReference(env, jPath);
         return NULL;
     }
@@ -1179,12 +1231,11 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
         
         jvalue jVal;
         jobjectArray jFileBlockHosts;
-        if (invokeMethod(env, &jVal, INSTANCE, jFileBlock, HADOOP_BLK_LOC,
+        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFileBlock, HADOOP_BLK_LOC,
                          "getHosts", "()[Ljava/lang/String;") ||
                 jVal.l == NULL) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs.BlockLocation::"
-                    "getHosts failed!\n");
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "BlockLocation::getHosts");
             destroyLocalReference(env, jPath);
             destroyLocalReference(env, jBlockLocations);
             return NULL;
@@ -1260,11 +1311,11 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
     //FileSystem::getDefaultBlockSize()
     tOffset blockSize = -1;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "getDefaultBlockSize", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getDefaultBlockSize failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getDefaultBlockSize");
         return -1;
     }
     blockSize = jVal.j;
@@ -1293,11 +1344,11 @@ tOffset hdfsGetCapacity(hdfsFS fs)
 
     //FileSystem::getRawCapacity()
     jvalue  jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_DFS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_DFS,
                      "getRawCapacity", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getRawCapacity failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getRawCapacity");
         return -1;
     }
 
@@ -1325,11 +1376,11 @@ tOffset hdfsGetUsed(hdfsFS fs)
 
     //FileSystem::getRawUsed()
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_DFS,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_DFS,
                      "getRawUsed", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getRawUsed failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getRawUsed");
         return -1;
     }
 
@@ -1342,71 +1393,65 @@ static int
 getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
 {
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "isDir", "()Z") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileStatus::isDir failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileStatus::isDir");
         return -1;
     }
     fileInfo->mKind = jVal.z ? kObjectKindDirectory : kObjectKindFile;
 
-    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "getReplication", "()S") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileStatus::getReplication failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileStatus::getReplication");
         return -1;
     }
     fileInfo->mReplication = jVal.s;
 
-    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "getBlockSize", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileStatus::getBlockSize failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileStatus::getBlockSize");
         return -1;
     }
     fileInfo->mBlockSize = jVal.j;
 
-    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "getModificationTime", "()J") != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileStatus::getModificationTime failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileStatus::getModificationTime");
         return -1;
     }
     fileInfo->mLastMod = (tTime) (jVal.j / 1000);
 
     if (fileInfo->mKind == kObjectKindFile) {
-        if (invokeMethod(env, &jVal, INSTANCE, jStat,
+        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                          HADOOP_STAT, "getLen", "()J") != 0) {
-            fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FileStatus::getLen failed!\n");
-            errno = EINTERNAL;
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FileStatus::getLen");
             return -1;
         }
         fileInfo->mSize = jVal.j;
     }
 
     jobject jPath;
-    if (invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat, HADOOP_STAT,
                      "getPath", "()Lorg/apache/hadoop/fs/Path;") ||
             jVal.l == NULL) { 
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileStatus::getPath failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "Path::getPath");
         return -1;
     }
     jPath = jVal.l;
 
     jstring     jPathName;
     const char *cPathName;
-    if (invokeMethod(env, &jVal, INSTANCE, jPath, HADOOP_PATH,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jPath, HADOOP_PATH,
                      "toString", "()Ljava/lang/String;")) { 
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "Path::toString failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "Path::toString");
         destroyLocalReference(env, jPath);
         return -1;
     }
@@ -1431,13 +1476,13 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
 
     jobject jStat;
     jvalue  jVal;
+    jthrowable jExc = NULL;
 
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::exists failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::exists");
         return -1;
     }
 
@@ -1446,12 +1491,11 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
       return -1;
     }
 
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "getFileStatus", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_STAT)),
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getFileStatus failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getFileStatus");
         return -1;
     }
     jStat = jVal.l;
@@ -1485,12 +1529,12 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
 
     jobjectArray jPathList = NULL;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_DFS, "listStatus",
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_DFS, "listStatus",
                      JMETHOD1(JPARAM(HADOOP_PATH), JARRPARAM(HADOOP_STAT)),
                      jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::listStatus failed!\n");
-        errno = EINTERNAL;
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::listStatus");
         destroyLocalReference(env, jPath);
         return NULL;
     }
@@ -1517,7 +1561,6 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
     for (i=0; i < jPathListSize; ++i) {
         tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
         if (getFileInfoFromStat(env, tmpStat, &pathList[i])) {
-            errno = EINTERNAL;
             hdfsFreeFileInfo(pathList, jPathListSize);
             destroyLocalReference(env, tmpStat);
             pathList = NULL;

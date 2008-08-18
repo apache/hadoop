@@ -40,6 +40,9 @@ Trunk (unreleased changes)
     HADOOP-3664. Remove the deprecated method InputFormat.validateInput,
     which is no longer needed. (tomwhite via omalley)
 
+    HADOOP-3549. Give more meaningful errno's in libhdfs. In particular, 
+    EACCES is returned for permission problems. (Ben Slusky via omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

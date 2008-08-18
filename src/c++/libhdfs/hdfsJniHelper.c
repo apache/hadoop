@@ -15,6 +15,7 @@
  */
 
 #include <string.h> 
+#include <error.h>
 #include "hdfsJniHelper.h"
 
 static pthread_mutex_t hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -43,14 +44,6 @@ static volatile int hashTableInited = 0;
  * It's set to 4096 to account for (classNames + No. of threads)
  */
 #define MAX_HASH_TABLE_ELEM 4096
-
-
-#define CHECK_EXCEPTION_IN_METH_INVOC \
-    if ((*env)->ExceptionCheck(env)) {\
-        (*env)->ExceptionDescribe(env);\
-        va_end(args);\
-        return -1;\
-    }\
 
 
 static void validateMethodType(MethType methType)
@@ -120,13 +113,14 @@ static void* searchEntryFromTable(const char *key)
 
 
 
-int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
+int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
                  jobject instObj, const char *className,
                  const char *methName, const char *methSignature, ...)
 {
     va_list args;
     jclass cls;
     jmethodID mid;
+    jthrowable jthr;
     const char *str; 
     char returnType;
     
@@ -152,7 +146,6 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             jobj = (*env)->CallObjectMethodV(env, instObj, mid, args);
         }
-        CHECK_EXCEPTION_IN_METH_INVOC
         retval->l = jobj;
     }
     else if (returnType == VOID) {
@@ -162,7 +155,6 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             (*env)->CallVoidMethodV(env, instObj, mid, args);
         }
-       CHECK_EXCEPTION_IN_METH_INVOC
     }
     else if (returnType == JBOOLEAN) {
         jboolean jbool = 0;
@@ -172,7 +164,6 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             jbool = (*env)->CallBooleanMethodV(env, instObj, mid, args);
         }
-        CHECK_EXCEPTION_IN_METH_INVOC
         retval->z = jbool;
     }
     else if (returnType == JSHORT) {
@@ -183,7 +174,6 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             js = (*env)->CallShortMethodV(env, instObj, mid, args);
         }
-        CHECK_EXCEPTION_IN_METH_INVOC
         retval->s = js;
     }
     else if (returnType == JLONG) {
@@ -194,7 +184,6 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             jl = (*env)->CallLongMethodV(env, instObj, mid, args);
         }
-        CHECK_EXCEPTION_IN_METH_INVOC
         retval->j = jl;
     }
     else if (returnType == JINT) {
@@ -205,21 +194,30 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         else if (methType == INSTANCE) {
             ji = (*env)->CallIntMethodV(env, instObj, mid, args);
         }
-        CHECK_EXCEPTION_IN_METH_INVOC
         retval->i = ji;
     }
     va_end(args);
+
+    jthr = (*env)->ExceptionOccurred(env);
+    if (jthr != NULL) {
+        if (exc != NULL)
+            *exc = jthr;
+        else
+            (*env)->ExceptionDescribe(env);
+        return -1;
+    }
     return 0;
 }
 
 
-jobject constructNewObjectOfClass(JNIEnv *env, const char *className, 
+jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className, 
                                   const char *ctorSignature, ...)
 {
     va_list args;
     jclass cls;
     jmethodID mid; 
     jobject jobj;
+    jthrowable jthr;
 
     cls = globalClassReference(className, env);
     mid = methodIdFromClass(className, "<init>", ctorSignature, 
@@ -231,8 +229,12 @@ jobject constructNewObjectOfClass(JNIEnv *env, const char *className,
     va_start(args, ctorSignature);
     jobj = (*env)->NewObjectV(env, cls, mid, args);
     va_end(args);
-    if ((*env)->ExceptionCheck(env)) {
-        (*env)->ExceptionDescribe(env);
+    jthr = (*env)->ExceptionOccurred(env);
+    if (jthr != NULL) {
+        if (exc != NULL)
+            *exc = jthr;
+        else
+            (*env)->ExceptionDescribe(env);
     }
     return jobj;
 }
@@ -278,6 +280,45 @@ jclass globalClassReference(const char *className, JNIEnv *env)
     (*env)->DeleteLocalRef(env, clsLocalRef);
     insertEntryIntoTable(className, cls);
     return cls;
+}
+
+
+char *classNameOfObject(jobject jobj, JNIEnv *env) {
+    jclass cls, clsClass;
+    jmethodID mid;
+    jstring str;
+    const char *cstr;
+    char *newstr;
+
+    cls = (*env)->GetObjectClass(env, jobj);
+    if (cls == NULL) {
+        (*env)->ExceptionDescribe(env);
+        exit(1);
+    }
+    clsClass = (*env)->FindClass(env, "java/lang/Class");
+    if (clsClass == NULL) {
+        (*env)->ExceptionDescribe(env);
+        exit(1);
+    }
+    mid = (*env)->GetMethodID(env, clsClass, "getName", "()Ljava/lang/String;");
+    if (mid == NULL) {
+        (*env)->ExceptionDescribe(env);
+        exit(1);
+    }
+    str = (*env)->CallObjectMethod(env, cls, mid);
+    if (str == NULL) {
+        (*env)->ExceptionDescribe(env);
+        exit(1);
+    }
+
+    cstr = (*env)->GetStringUTFChars(env, str, NULL);
+    newstr = strdup(cstr);
+    (*env)->ReleaseStringUTFChars(env, str, cstr);
+    if (newstr == NULL) {
+        perror("classNameOfObject: strdup");
+        exit(1);
+    }
+    return newstr;
 }
 
 
