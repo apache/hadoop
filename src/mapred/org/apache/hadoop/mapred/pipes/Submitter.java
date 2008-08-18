@@ -209,8 +209,40 @@ public class Submitter {
    * to the job to run under pipes are made to the configuration.
    * @param conf the job to submit to the cluster (MODIFIED)
    * @throws IOException
+   * @deprecated Use {@link Submitter#runJob(JobConf)}
    */
+  @Deprecated
   public static RunningJob submitJob(JobConf conf) throws IOException {
+    return runJob(conf);
+  }
+
+  /**
+   * Submit a job to the map/reduce cluster. All of the necessary modifications
+   * to the job to run under pipes are made to the configuration.
+   * @param conf the job to submit to the cluster (MODIFIED)
+   * @throws IOException
+   */
+  public static RunningJob runJob(JobConf conf) throws IOException {
+    setupPipesJob(conf);
+    return JobClient.runJob(conf);
+  }
+
+  /**
+   * Submit a job to the Map-Reduce framework.
+   * This returns a handle to the {@link RunningJob} which can be used to track
+   * the running-job.
+   * 
+   * @param conf the job configuration.
+   * @return a handle to the {@link RunningJob} which can be used to track the
+   *         running-job.
+   * @throws IOException
+   */
+  public static RunningJob jobSubmit(JobConf conf) throws IOException {
+    setupPipesJob(conf);
+    return new JobClient(conf).submitJob(conf);
+  }
+  
+  private static void setupPipesJob(JobConf conf) throws IOException {
     // default map output types to Text
     if (!getIsJavaMapper(conf)) {
       conf.setMapRunnerClass(PipesMapRunner.class);
@@ -258,7 +290,6 @@ public class Submitter {
       throw ie;
     }
     DistributedCache.setCacheFiles(fileCache, conf);
-    return JobClient.runJob(conf);
   }
 
   /**
@@ -414,7 +445,7 @@ public class Submitter {
                                         pathToFile(new Path(jarFile)).toURL()});
         conf.setClassLoader(loader);
       }
-      submitJob(conf);
+      runJob(conf);
     } catch (OptionException oe) {
       cli.printUsage();
     }

@@ -222,6 +222,9 @@ Trunk (unreleased changes)
 
     HADOOP-3816. Faster directory listing in KFS. (Sriram Rao via omalley)
 
+    HADOOP-2130. Pipes submit job should have both blocking and non-blocking
+    versions. (acmurthy via omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

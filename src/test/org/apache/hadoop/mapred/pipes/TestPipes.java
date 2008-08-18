@@ -149,8 +149,21 @@ public class TestPipes extends TestCase {
       Submitter.setIsJavaRecordWriter(job, true);
       FileInputFormat.setInputPaths(job, inputPath);
       FileOutputFormat.setOutputPath(job, outputPath);
-      RunningJob result = Submitter.submitJob(job);
-      assertTrue("pipes job failed", result.isSuccessful());
+      RunningJob rJob = null;
+      if (numReduces == 0) {
+        rJob = Submitter.jobSubmit(job);
+        
+        while (!rJob.isComplete()) {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ie) {
+            throw new RuntimeException(ie);
+          }
+        }
+      } else {
+        rJob = Submitter.runJob(job);
+      }
+      assertTrue("pipes job failed", rJob.isSuccessful());
     }
 
     List<String> results = new ArrayList<String>();
