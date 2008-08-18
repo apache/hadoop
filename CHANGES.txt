@@ -332,6 +332,9 @@ Trunk (unreleased changes)
     HADOOP-3962. Shell command "fs -count" should support paths with different
     file systems. (Tsz Wo (Nicholas), SZE via mahadev)
 
+    HADOOP-3957. Fix javac warnings in DistCp and TestCopyFiles. (Tsz Wo
+    (Nicholas), SZE via cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

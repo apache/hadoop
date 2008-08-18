@@ -299,7 +299,7 @@ public class DistCp implements Tool {
    * FSCopyFilesMapper: The mapper for copying files between FileSystems.
    */
   static class CopyFilesMapper
-      implements Mapper<LongWritable, FilePair, WritableComparable, Text> {
+      implements Mapper<LongWritable, FilePair, WritableComparable<?>, Text> {
     // config
     private int sizeBuf = 128 * 1024;
     private FileSystem destFileSys = null;
@@ -360,7 +360,7 @@ public class DistCp implements Tool {
      * @param reporter
      */
     private void copy(FileStatus srcstat, Path relativedst,
-        OutputCollector<WritableComparable, Text> outc, Reporter reporter)
+        OutputCollector<WritableComparable<?>, Text> outc, Reporter reporter)
         throws IOException {
       Path absdst = new Path(destPath, relativedst);
       int totfiles = job.getInt(SRC_COUNT_LABEL, -1);
@@ -520,7 +520,7 @@ public class DistCp implements Tool {
      */
     public void map(LongWritable key,
                     FilePair value,
-                    OutputCollector<WritableComparable, Text> out,
+                    OutputCollector<WritableComparable<?>, Text> out,
                     Reporter reporter) throws IOException {
       FileStatus srcstat = value.input;
       Path dstpath = new Path(value.output);

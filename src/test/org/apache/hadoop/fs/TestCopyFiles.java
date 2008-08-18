@@ -54,7 +54,7 @@ public class TestCopyFiles extends TestCase {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)DistCp.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
   }
   
   static final URI LOCAL_FS = URI.create("file:///");
@@ -146,18 +146,9 @@ public class TestCopyFiles extends TestCase {
     return createFile(root, fs, -1);
   }
 
-  /** Same as checkFiles(fsname, topdir, files, false); */
-  private static boolean checkFiles(String fsname, String topdir, MyFile[] files)
-    throws IOException {
-    return checkFiles(fsname, topdir, files, false);
-  }
-
-  /** check if the files have been copied correctly. */
-  private static boolean checkFiles(String fsname, String topdir, MyFile[] files,
-      boolean existingOnly) throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
-    return checkFiles(fs, topdir, files, existingOnly); 
+  private static boolean checkFiles(FileSystem fs, String topdir, MyFile[] files
+      ) throws IOException {
+    return checkFiles(fs, topdir, files, false);    
   }
 
   private static boolean checkFiles(FileSystem fs, String topdir, MyFile[] files,
@@ -193,12 +184,10 @@ public class TestCopyFiles extends TestCase {
     return true;
   }
 
-  private static void updateFiles(String fsname, String topdir, MyFile[] files,
+  private static void updateFiles(FileSystem fs, String topdir, MyFile[] files,
         int nupdate) throws IOException {
     assert nupdate <= NFILES;
 
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
 
     for (int idx = 0; idx < nupdate; ++idx) {
@@ -215,14 +204,12 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
-  private static FileStatus[] getFileStatus(String namenode,
+  private static FileStatus[] getFileStatus(FileSystem fs,
       String topdir, MyFile[] files) throws IOException {
-    return getFileStatus(namenode, topdir, files, false);
+    return getFileStatus(fs, topdir, files, false);
   }
-  private static FileStatus[] getFileStatus(String namenode,
+  private static FileStatus[] getFileStatus(FileSystem fs,
       String topdir, MyFile[] files, boolean existingOnly) throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(namenode, conf);
     Path root = new Path(topdir);
     List<FileStatus> statuses = new ArrayList<FileStatus>();
     for (int idx = 0; idx < NFILES; ++idx) {
@@ -237,11 +224,8 @@ public class TestCopyFiles extends TestCase {
     return statuses.toArray(new FileStatus[statuses.size()]);
   }
 
-  private static boolean checkUpdate(FileStatus[] old, String namenode,
+  private static boolean checkUpdate(FileSystem fs, FileStatus[] old,
       String topdir, MyFile[] upd, final int nupdate) throws IOException {
-
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(namenode, conf);
     Path root = new Path(topdir);
 
     // overwrote updated files
@@ -264,24 +248,22 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** delete directory and everything underneath it.*/
-  private static void deldir(String fsname, String topdir)
-    throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
-    Path root = new Path(topdir);
-    fs.delete(root, true);
+  private static void deldir(FileSystem fs, String topdir) throws IOException {
+    fs.delete(new Path(topdir), true);
   }
   
   /** copy files from local file system to local file system */
   public void testCopyFromLocalToLocal() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem localfs = FileSystem.get(LOCAL_FS, conf);
     MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
     ToolRunner.run(new DistCp(new Configuration()),
                            new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
     assertTrue("Source and destination directories do not match.",
-               checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
-    deldir("file:///", TEST_ROOT_DIR+"/destdat");
-    deldir("file:///", TEST_ROOT_DIR+"/srcdat");
+               checkFiles(localfs, TEST_ROOT_DIR+"/destdat", files));
+    deldir(localfs, TEST_ROOT_DIR+"/destdat");
+    deldir(localfs, TEST_ROOT_DIR+"/srcdat");
   }
   
   /** copy files from dfs file system to dfs file system */
@@ -291,6 +273,7 @@ public class TestCopyFiles extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
+      final FileSystem hdfs = cluster.getFileSystem();
       namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
@@ -300,13 +283,13 @@ public class TestCopyFiles extends TestCase {
                                          namenode+"/srcdat",
                                          namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(namenode, "/destdat", files));
+                   checkFiles(hdfs, "/destdat", files));
         FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
                    fs.exists(new Path(namenode+"/logs")));
-        deldir(namenode, "/destdat");
-        deldir(namenode, "/srcdat");
-        deldir(namenode, "/logs");
+        deldir(hdfs, "/destdat");
+        deldir(hdfs, "/srcdat");
+        deldir(hdfs, "/logs");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -315,12 +298,12 @@ public class TestCopyFiles extends TestCase {
   
   /** copy files from local file system to dfs file system */
   public void testCopyFromLocalToDfs() throws Exception {
-    String namenode = null;
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = FileSystem.getDefaultUri(conf).toString();
+      final FileSystem hdfs = cluster.getFileSystem();
+      final String namenode = hdfs.getUri().toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
         ToolRunner.run(new DistCp(conf), new String[] {
@@ -329,13 +312,12 @@ public class TestCopyFiles extends TestCase {
                                          "file:///"+TEST_ROOT_DIR+"/srcdat",
                                          namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(namenode, "/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
+                   checkFiles(cluster.getFileSystem(), "/destdat", files));
         assertTrue("Log directory does not exist.",
-                    fs.exists(new Path(namenode+"/logs")));
-        deldir(namenode, "/destdat");
-        deldir(namenode, "/logs");
-        deldir("file:///", TEST_ROOT_DIR+"/srcdat");
+                    hdfs.exists(new Path(namenode+"/logs")));
+        deldir(hdfs, "/destdat");
+        deldir(hdfs, "/logs");
+        deldir(FileSystem.get(LOCAL_FS, conf), TEST_ROOT_DIR+"/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -344,12 +326,13 @@ public class TestCopyFiles extends TestCase {
 
   /** copy files from dfs file system to local file system */
   public void testCopyFromDfsToLocal() throws Exception {
-    String namenode = null;
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
+      final FileSystem localfs = FileSystem.get(LOCAL_FS, conf);
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = FileSystem.getDefaultUri(conf).toString();
+      final FileSystem hdfs = cluster.getFileSystem();
+      final String namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
         ToolRunner.run(new DistCp(conf), new String[] {
@@ -358,13 +341,12 @@ public class TestCopyFiles extends TestCase {
                                          namenode+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
+                   checkFiles(localfs, TEST_ROOT_DIR+"/destdat", files));
         assertTrue("Log directory does not exist.",
-                    fs.exists(new Path("/logs")));
-        deldir("file:///", TEST_ROOT_DIR+"/destdat");
-        deldir(namenode, "/logs");
-        deldir(namenode, "/srcdat");
+                    hdfs.exists(new Path("/logs")));
+        deldir(localfs, TEST_ROOT_DIR+"/destdat");
+        deldir(hdfs, "/logs");
+        deldir(hdfs, "/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -372,12 +354,12 @@ public class TestCopyFiles extends TestCase {
   }
 
   public void testCopyDfsToDfsUpdateOverwrite() throws Exception {
-    String namenode = null;
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
-      namenode = FileSystem.getDefaultUri(conf).toString();
+      final FileSystem hdfs = cluster.getFileSystem();
+      final String namenode = hdfs.getUri().toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
         ToolRunner.run(new DistCp(conf), new String[] {
@@ -387,15 +369,15 @@ public class TestCopyFiles extends TestCase {
                                          namenode+"/srcdat",
                                          namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(namenode, "/destdat", files));
+                   checkFiles(hdfs, "/destdat", files));
         FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
                     fs.exists(new Path(namenode+"/logs")));
 
-        FileStatus[] dchkpoint = getFileStatus(namenode, "/destdat", files);
+        FileStatus[] dchkpoint = getFileStatus(hdfs, "/destdat", files);
         final int nupdate = NFILES>>2;
-        updateFiles(namenode, "/srcdat", files, nupdate);
-        deldir(namenode, "/logs");
+        updateFiles(cluster.getFileSystem(), "/srcdat", files, nupdate);
+        deldir(hdfs, "/logs");
 
         ToolRunner.run(new DistCp(conf), new String[] {
                                          "-p",
@@ -405,11 +387,11 @@ public class TestCopyFiles extends TestCase {
                                          namenode+"/srcdat",
                                          namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(namenode, "/destdat", files));
+                   checkFiles(hdfs, "/destdat", files));
         assertTrue("Update failed to replicate all changes in src",
-                 checkUpdate(dchkpoint, namenode, "/destdat", files, nupdate));
+                 checkUpdate(hdfs, dchkpoint, "/destdat", files, nupdate));
 
-        deldir(namenode, "/logs");
+        deldir(hdfs, "/logs");
         ToolRunner.run(new DistCp(conf), new String[] {
                                          "-p",
                                          "-overwrite",
@@ -418,13 +400,13 @@ public class TestCopyFiles extends TestCase {
                                          namenode+"/srcdat",
                                          namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(namenode, "/destdat", files));
+                   checkFiles(hdfs, "/destdat", files));
         assertTrue("-overwrite didn't.",
-                 checkUpdate(dchkpoint, namenode, "/destdat", files, NFILES));
+                 checkUpdate(hdfs, dchkpoint, "/destdat", files, NFILES));
 
-        deldir(namenode, "/destdat");
-        deldir(namenode, "/srcdat");
-        deldir(namenode, "/logs");
+        deldir(hdfs, "/destdat");
+        deldir(hdfs, "/srcdat");
+        deldir(hdfs, "/logs");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -432,13 +414,14 @@ public class TestCopyFiles extends TestCase {
   }
 
   public void testCopyDuplication() throws Exception {
+    final FileSystem localfs = FileSystem.get(LOCAL_FS, new Configuration());
     try {    
-      MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
+      MyFile[] files = createFiles(localfs, TEST_ROOT_DIR+"/srcdat");
       ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/src2/srcdat"});
       assertTrue("Source and destination directories do not match.",
-                 checkFiles("file:///", TEST_ROOT_DIR+"/src2/srcdat", files));
+                 checkFiles(localfs, TEST_ROOT_DIR+"/src2/srcdat", files));
   
       assertEquals(DistCp.DuplicationException.ERROR_CODE,
           ToolRunner.run(new DistCp(new Configuration()),
@@ -447,9 +430,9 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/destdat",}));
     }
     finally {
-      deldir("file:///", TEST_ROOT_DIR+"/destdat");
-      deldir("file:///", TEST_ROOT_DIR+"/srcdat");
-      deldir("file:///", TEST_ROOT_DIR+"/src2");
+      deldir(localfs, TEST_ROOT_DIR+"/destdat");
+      deldir(localfs, TEST_ROOT_DIR+"/srcdat");
+      deldir(localfs, TEST_ROOT_DIR+"/src2");
     }
   }
 
@@ -463,7 +446,7 @@ public class TestCopyFiles extends TestCase {
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/destdat"});
       assertTrue("Source and destination directories do not match.",
-                 checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
+                 checkFiles(fs, TEST_ROOT_DIR+"/destdat", files));
       
       //copy a single file
       String fname = files[0].getName();
@@ -473,9 +456,9 @@ public class TestCopyFiles extends TestCase {
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat/"+fname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files));     
+          checkFiles(fs, TEST_ROOT_DIR+"/dest2", files));     
       //copy single file to existing dir
-      deldir("file:///", TEST_ROOT_DIR+"/dest2");
+      deldir(fs, TEST_ROOT_DIR+"/dest2");
       fs.mkdirs(new Path(TEST_ROOT_DIR+"/dest2"));
       MyFile[] files2 = {createFile(root, fs, 0)};
       String sname = files2[0].getName();
@@ -484,20 +467,20 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files2));     
-      updateFiles("file:///", TEST_ROOT_DIR+"/srcdat", files2, 1);
+          checkFiles(fs, TEST_ROOT_DIR+"/dest2", files2));     
+      updateFiles(fs, TEST_ROOT_DIR+"/srcdat", files2, 1);
       //copy single file to existing dir w/ dst name conflict
       ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"-update",
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files2));     
+          checkFiles(fs, TEST_ROOT_DIR+"/dest2", files2));     
     }
     finally {
-      deldir("file:///", TEST_ROOT_DIR+"/destdat");
-      deldir("file:///", TEST_ROOT_DIR+"/dest2");
-      deldir("file:///", TEST_ROOT_DIR+"/srcdat");
+      deldir(fs, TEST_ROOT_DIR+"/destdat");
+      deldir(fs, TEST_ROOT_DIR+"/dest2");
+      deldir(fs, TEST_ROOT_DIR+"/srcdat");
     }
   }
 
@@ -511,45 +494,45 @@ public class TestCopyFiles extends TestCase {
 
       {//test preserving user
         MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
-        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        FileStatus[] srcstat = getFileStatus(fs, "/srcdat", files);
         for(int i = 0; i < srcstat.length; i++) {
           fs.setOwner(srcstat[i].getPath(), "u" + i, null);
         }
         ToolRunner.run(new DistCp(conf),
             new String[]{"-pu", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(nnUri, "/destdat", files));
+                   checkFiles(fs, "/destdat", files));
         
-        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        FileStatus[] dststat = getFileStatus(fs, "/destdat", files);
         for(int i = 0; i < dststat.length; i++) {
           assertEquals("i=" + i, "u" + i, dststat[i].getOwner());
         }
-        deldir(nnUri, "/destdat");
-        deldir(nnUri, "/srcdat");
+        deldir(fs, "/destdat");
+        deldir(fs, "/srcdat");
       }
 
       {//test preserving group
         MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
-        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        FileStatus[] srcstat = getFileStatus(fs, "/srcdat", files);
         for(int i = 0; i < srcstat.length; i++) {
           fs.setOwner(srcstat[i].getPath(), null, "g" + i);
         }
         ToolRunner.run(new DistCp(conf),
             new String[]{"-pg", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(nnUri, "/destdat", files));
+                   checkFiles(fs, "/destdat", files));
         
-        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        FileStatus[] dststat = getFileStatus(fs, "/destdat", files);
         for(int i = 0; i < dststat.length; i++) {
           assertEquals("i=" + i, "g" + i, dststat[i].getGroup());
         }
-        deldir(nnUri, "/destdat");
-        deldir(nnUri, "/srcdat");
+        deldir(fs, "/destdat");
+        deldir(fs, "/srcdat");
       }
 
       {//test preserving mode
         MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
-        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        FileStatus[] srcstat = getFileStatus(fs, "/srcdat", files);
         FsPermission[] permissions = new FsPermission[srcstat.length];
         for(int i = 0; i < srcstat.length; i++) {
           permissions[i] = new FsPermission((short)(i & 0666));
@@ -559,14 +542,14 @@ public class TestCopyFiles extends TestCase {
         ToolRunner.run(new DistCp(conf),
             new String[]{"-pp", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles(nnUri, "/destdat", files));
+                   checkFiles(fs, "/destdat", files));
   
-        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        FileStatus[] dststat = getFileStatus(fs, "/destdat", files);
         for(int i = 0; i < dststat.length; i++) {
           assertEquals("i=" + i, permissions[i], dststat[i].getPermission());
         }
-        deldir(nnUri, "/destdat");
-        deldir(nnUri, "/srcdat");
+        deldir(fs, "/destdat");
+        deldir(fs, "/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -597,13 +580,13 @@ public class TestCopyFiles extends TestCase {
                         namenode+"/srcdat",
                         namenode+"/destdat"});
       assertTrue("Source and destination directories do not match.",
-                 checkFiles(namenode, "/destdat", files));
+                 checkFiles(fs, "/destdat", files));
       FileStatus[] logs = fs.listStatus(new Path(namenode+"/logs"));
       // rare case where splits are exact, logs.length can be 4
       assertTrue("Unexpected map count", logs.length == 5 || logs.length == 4);
 
-      deldir(namenode, "/destdat");
-      deldir(namenode, "/logs");
+      deldir(fs, "/destdat");
+      deldir(fs, "/logs");
       ToolRunner.run(new DistCp(job),
           new String[] {"-m", "1",
                         "-log",
@@ -640,10 +623,10 @@ public class TestCopyFiles extends TestCase {
         ToolRunner.run(distcp,
             new String[]{"-filelimit", ""+filelimit, nnUri+srcrootdir, nnUri+dstrootdir});
         
-        FileStatus[] dststat = getFileStatus(nnUri, dstrootdir, files, true);
+        FileStatus[] dststat = getFileStatus(fs, dstrootdir, files, true);
         assertEquals(filelimit, dststat.length);
-        deldir(nnUri, dstrootdir);
-        deldir(nnUri, srcrootdir);
+        deldir(fs, dstrootdir);
+        deldir(fs, srcrootdir);
       }
 
       {//test -sizelimit
@@ -657,8 +640,8 @@ public class TestCopyFiles extends TestCase {
         ContentSummary summary = fs.getContentSummary(dstrootpath);
         System.out.println("summary=" + summary);
         assertTrue(summary.getLength() <= sizelimit);
-        deldir(nnUri, dstrootdir);
-        deldir(nnUri, srcrootdir);
+        deldir(fs, dstrootdir);
+        deldir(fs, srcrootdir);
       }
 
       {//test update
@@ -681,19 +664,19 @@ public class TestCopyFiles extends TestCase {
         for(int i = 0; i <= parts; i++) {
           ToolRunner.run(distcp, args);
         
-          FileStatus[] dststat = getFileStatus(nnUri, dstrootdir, srcs, true);
+          FileStatus[] dststat = getFileStatus(fs, dstrootdir, srcs, true);
           System.out.println(i + ") dststat.length=" + dststat.length);
           assertTrue(dststat.length - dstfilecount <= filelimit);
           ContentSummary summary = fs.getContentSummary(dstrootpath);
           System.out.println(i + ") summary.getLength()=" + summary.getLength());
           assertTrue(summary.getLength() - dstsize <= sizelimit);
-          assertTrue(checkFiles(nnUri, dstrootdir, srcs, true));
+          assertTrue(checkFiles(fs, dstrootdir, srcs, true));
           dstfilecount = dststat.length;
           dstsize = summary.getLength();
         }
 
-        deldir(nnUri, dstrootdir);
-        deldir(nnUri, srcrootdir);
+        deldir(fs, dstrootdir);
+        deldir(fs, srcrootdir);
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
