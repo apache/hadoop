@@ -1522,7 +1522,7 @@ public class FsShell extends Configured implements Tool {
         } else if ("-dus".equals(cmd)) {
           dus(argv[i]);
         } else if (Count.matches(cmd)) {
-          new Count(argv, i, fs).runAll();
+          new Count(argv, i, getConf()).runAll();
         } else if ("-ls".equals(cmd)) {
           ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
@@ -1772,7 +1772,7 @@ public class FsShell extends Configured implements Tool {
           dus(".");
         }         
       } else if (Count.matches(cmd)) {
-        exitCode = new Count(argv, i, fs).runAll();
+        exitCode = new Count(argv, i, getConf()).runAll();
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {

@@ -47,13 +47,15 @@ public class DFSAdmin extends FsShell {
    * An abstract class for the execution of a file system command
    */
   abstract private static class DFSAdminCommand extends Command {
+    final DistributedFileSystem dfs;
     /** Constructor */
     public DFSAdminCommand(FileSystem fs) {
-      super(fs);
+      super(fs.getConf());
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
             " is not a distributed file system");
       }
+      this.dfs = (DistributedFileSystem)fs;
     }
   }
   
@@ -92,7 +94,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      ((DistributedFileSystem)fs).clearQuota(path);
+      dfs.clearQuota(path);
     }
   }
   
@@ -139,7 +141,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      ((DistributedFileSystem)fs).setQuota(path, quota);
+      dfs.setQuota(path, quota);
     }
   }
   

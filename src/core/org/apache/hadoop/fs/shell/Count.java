@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.shell;
 import java.io.*;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -41,10 +42,9 @@ public class Count extends Command {
    * 
    * @param cmd the count command
    * @param pos the starting index of the arguments 
-   * @param fs the file system handler
    */
-  public Count(String[] cmd, int pos, FileSystem fs) {
-    super(fs);
+  public Count(String[] cmd, int pos, Configuration conf) {
+    super(conf);
     CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE, "q");
     List<String> parameters = c.parse(cmd, pos);
     this.args = parameters.toArray(new String[parameters.size()]);
@@ -70,6 +70,7 @@ public class Count extends Command {
 
   @Override
   protected void run(Path path) throws IOException {
+    FileSystem fs = path.getFileSystem(getConf());
     System.out.println(fs.getContentSummary(path).toString(qOption) + path);
   }
 }

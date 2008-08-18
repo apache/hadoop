@@ -19,6 +19,8 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.*;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -27,13 +29,12 @@ import org.apache.hadoop.ipc.RemoteException;
 /**
  * An abstract class for the execution of a file system command
  */
-abstract public class Command {
-  final protected FileSystem fs;
+abstract public class Command extends Configured {
   protected String[] args;
   
   /** Constructor */
-  protected Command(FileSystem fs) {
-    this.fs = fs;
+  protected Command(Configuration conf) {
+    super(conf);
   }
   
   /** Return the command's name excluding the leading character - */
@@ -57,6 +58,7 @@ abstract public class Command {
     for (String src : args) {
       try {
         Path srcPath = new Path(src);
+        FileSystem fs = srcPath.getFileSystem(getConf());
         FileStatus[] statuses = fs.globStatus(srcPath);
         if (statuses == null) {
           System.err.println("Can not find listing for " + src);

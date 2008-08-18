@@ -673,10 +673,20 @@ public class TestDFSShell extends TestCase {
       String root = createTree(dfs, "count");
 
       // Verify the counts
-      runCount(root, 2, 4, dfs);
-      runCount(root + "2", 2, 1, dfs);
-      runCount(root + "2/f1", 0, 1, dfs);
-      runCount(root + "2/sub", 1, 0, dfs);
+      runCount(root, 2, 4, conf);
+      runCount(root + "2", 2, 1, conf);
+      runCount(root + "2/f1", 0, 1, conf);
+      runCount(root + "2/sub", 1, 0, conf);
+
+      final FileSystem localfs = FileSystem.getLocal(conf);
+      Path localpath = new Path(TEST_ROOT_DIR, "testcount");
+      localpath = localpath.makeQualified(localfs);
+      localfs.mkdirs(localpath);
+      
+      final String localstr = localpath.toString();
+      System.out.println("localstr=" + localstr);
+      runCount(localstr, 1, 0, conf);
+      assertEquals(0, new Count(new String[]{root, localstr}, 0, conf).runAll());
     } finally {
       try {
         dfs.close();
@@ -685,17 +695,17 @@ public class TestDFSShell extends TestCase {
       cluster.shutdown();
     }
   }
-  private void runCount(String path, long dirs, long files, FileSystem fs
+  private void runCount(String path, long dirs, long files, Configuration conf
     ) throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
     PrintStream out = new PrintStream(bytes);
     PrintStream oldOut = System.out;
     System.setOut(out);
     Scanner in = null;
+    String results = null;
     try {
-      new Count(new String[]{path}, 0, fs).runAll();
-      String results = bytes.toString();
-      System.out.println(results);
+      new Count(new String[]{path}, 0, conf).runAll();
+      results = bytes.toString();
       in = new Scanner(results);
       assertEquals(dirs, in.nextLong());
       assertEquals(files, in.nextLong());
@@ -703,6 +713,7 @@ public class TestDFSShell extends TestCase {
       if (in!=null) in.close();
       IOUtils.closeStream(out);
       System.setOut(oldOut);
+      System.out.println("results:\n" + results);
     }
   }
 
