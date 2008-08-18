@@ -202,6 +202,8 @@ Trunk (unreleased changes)
 
     HADOOP-3905. Create generic interfaces for edit log streams. (shv)
 
+    HADOOP-3934. Upgrade log4j to 1.2.15. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
