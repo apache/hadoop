@@ -1,4 +1,4 @@
-Hbase Change Log
+HBase Change Log
 
 Release 0.3.0 - Unreleased
   INCOMPATIBLE CHANGES
