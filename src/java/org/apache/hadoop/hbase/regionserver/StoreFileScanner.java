@@ -63,7 +63,6 @@ implements ChangedReadersObserver {
     super(timestamp, targetCols);
     this.store = store;
     this.store.addChangedReaderObserver(this);
-    this.store.lock.readLock().lock();
     try {
       openReaders(firstRow);
     } catch (Exception ex) {
@@ -71,8 +70,6 @@ implements ChangedReadersObserver {
       IOException e = new IOException("HStoreScanner failed construction");
       e.initCause(ex);
       throw e;
-    } finally {
-      this.store.lock.readLock().unlock();
     }
   }
   

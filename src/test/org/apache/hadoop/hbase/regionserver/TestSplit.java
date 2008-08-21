@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -52,7 +55,9 @@ public class TestSplit extends HBaseClusterTestCase {
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
-
+    
+    conf.setInt("hbase.regionserver.lease.period", 10 * 1000);
+    
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);
 
@@ -82,6 +87,57 @@ public class TestSplit extends HBaseClusterTestCase {
         region.getLog().closeAndDelete();
       }
     }
+  }
+  
+  /**
+   * Test for HBASE-810
+   * @throws Exception
+   */
+  public void testScanSplitOnRegion() throws Exception {
+    HRegion region = null;
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3));
+      region = createNewHRegion(htd, null, null);
+      addContent(region, COLFAMILY_NAME3);
+      region.flushcache();
+      final byte [] midkey = region.compactStores();
+      assertNotNull(midkey);
+      byte [][] cols = {COLFAMILY_NAME3};
+      final InternalScanner s = region.getScanner(cols,
+        HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
+      final HRegion regionForThread = region;
+      
+      Thread splitThread = new Thread() {
+        public void run() {
+          try {
+            HRegion [] regions = split(regionForThread, midkey);
+          } catch (IOException e) {
+            fail("Unexpected exception " + e);
+          } 
+        }
+      };
+      splitThread.start();
+      HRegionServer server = cluster.getRegionThreads().get(0).getRegionServer();
+      long id = server.addScanner(s);
+      for(int i = 0; i < 6; i++) {
+        try {
+          BatchUpdate update = 
+            new BatchUpdate(region.getRegionInfo().getStartKey());
+          update.put(COLFAMILY_NAME3, Bytes.toBytes("val"));
+          region.batchUpdate(update);
+          Thread.sleep(1000);
+        }
+        catch (InterruptedException e) {
+          fail("Unexpected exception " + e);
+        }
+      }
+      server.next(id);
+      server.close(id);
+    } catch(UnknownScannerException ex) {
+      ex.printStackTrace();
+      fail("Got the " + ex);
+    } 
   }
   
   private void basicSplit(final HRegion region) throws Exception {

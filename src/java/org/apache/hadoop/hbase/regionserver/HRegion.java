@@ -372,6 +372,9 @@ public class HRegion implements HConstants {
   // Used to guard splits and closes
   private final ReentrantReadWriteLock splitsAndClosesLock =
     new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock newScannerLock = 
+    new ReentrantReadWriteLock();
+
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
@@ -583,8 +586,8 @@ public class HRegion implements HConstants {
           }
         }
       }
-      splitsAndClosesLock.writeLock().lock();
-      LOG.debug("Updates and scanners disabled for region " + this);
+      newScannerLock.writeLock().lock();
+      LOG.debug("Scanners disabled for region " + this);
       try {
         // Wait for active scanners to finish. The write lock we hold will
         // prevent new scanners from being created.
@@ -600,28 +603,33 @@ public class HRegion implements HConstants {
           }
         }
         LOG.debug("No more active scanners for region " + this);
-
-        // Write lock means no more row locks can be given out.  Wait on
-        // outstanding row locks to come in before we close so we do not drop
-        // outstanding updates.
-        waitOnRowLocks();
-        LOG.debug("No more row locks outstanding on region " + this);
-
-        // Don't flush the cache if we are aborting
-        if (!abort) {
-          internalFlushcache();
+        splitsAndClosesLock.writeLock().lock();
+        LOG.debug("Updates disabled for region " + this);
+        try {
+          // Write lock means no more row locks can be given out.  Wait on
+          // outstanding row locks to come in before we close so we do not drop
+          // outstanding updates.
+          waitOnRowLocks();
+          LOG.debug("No more row locks outstanding on region " + this);
+  
+          // Don't flush the cache if we are aborting
+          if (!abort) {
+            internalFlushcache();
+          }
+  
+          List<HStoreFile> result = new ArrayList<HStoreFile>();
+          for (HStore store: stores.values()) {
+            result.addAll(store.close());
+          }
+          this.closed.set(true);
+          
+          LOG.info("closed " + this);
+          return result;
+        } finally {
+          splitsAndClosesLock.writeLock().unlock();
         }
-
-        List<HStoreFile> result = new ArrayList<HStoreFile>();
-        for (HStore store: stores.values()) {
-          result.addAll(store.close());
-        }
-        this.closed.set(true);
-        
-        LOG.info("closed " + this);
-        return result;
       } finally {
-        splitsAndClosesLock.writeLock().unlock();
+        newScannerLock.writeLock().unlock();
       }
     }
   }
@@ -867,45 +875,50 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   private byte [] compactStores(final boolean force) throws IOException {
-    byte [] midKey = null;
-    if (this.closed.get()) {
-      return midKey;
-    }
+    splitsAndClosesLock.readLock().lock();
     try {
-      synchronized (writestate) {
-        if (!writestate.compacting && writestate.writesEnabled) {
-          writestate.compacting = true;
-        } else {
-          LOG.info("NOT compacting region " + this +
-              ": compacting=" + writestate.compacting + ", writesEnabled=" +
-              writestate.writesEnabled);
-            return midKey;
+      byte [] midKey = null;
+      if (this.closed.get()) {
+        return midKey;
+      }
+      try {
+        synchronized (writestate) {
+          if (!writestate.compacting && writestate.writesEnabled) {
+            writestate.compacting = true;
+          } else {
+            LOG.info("NOT compacting region " + this +
+                ": compacting=" + writestate.compacting + ", writesEnabled=" +
+                writestate.writesEnabled);
+              return midKey;
+          }
+        }
+        LOG.info("starting compaction on region " + this);
+        long startTime = System.currentTimeMillis();
+        doRegionCompactionPrep();
+        long maxSize = -1;
+        for (HStore store: stores.values()) {
+          final HStore.StoreSize size = store.compact(force);
+          if (size != null && size.getSize() > maxSize) {
+            maxSize = size.getSize();
+            midKey = size.getKey();
+          }
+        }
+        doRegionCompactionCleanup();
+        String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
+            startTime);
+        LOG.info("compaction completed on region " + this + " in " + timeTaken);
+        
+        this.historian.addRegionCompaction(regionInfo, timeTaken);
+      } finally {
+        synchronized (writestate) {
+          writestate.compacting = false;
+          writestate.notifyAll();
         }
       }
-      LOG.info("starting compaction on region " + this);
-      long startTime = System.currentTimeMillis();
-      doRegionCompactionPrep();
-      long maxSize = -1;
-      for (HStore store: stores.values()) {
-        final HStore.StoreSize size = store.compact(force);
-        if (size != null && size.getSize() > maxSize) {
-          maxSize = size.getSize();
-          midKey = size.getKey();
-        }
-      }
-      doRegionCompactionCleanup();
-      String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
-          startTime);
-      LOG.info("compaction completed on region " + this + " in " + timeTaken);
-      
-      this.historian.addRegionCompaction(regionInfo, timeTaken);
+      return midKey;
     } finally {
-      synchronized (writestate) {
-        writestate.compacting = false;
-        writestate.notifyAll();
-      }
+      splitsAndClosesLock.readLock().unlock();
     }
-    return midKey;
   }
 
   /**
@@ -1143,15 +1156,20 @@ public class HRegion implements HConstants {
   public Cell[] get(byte [] row, byte [] column, long timestamp,
     int numVersions) 
   throws IOException {
-    if (this.closed.get()) {
-      throw new IOException("Region " + this + " closed");
+    splitsAndClosesLock.readLock().lock();
+    try {
+      if (this.closed.get()) {
+        throw new IOException("Region " + this + " closed");
+      }
+      // Make sure this is a valid row and valid column
+      checkRow(row);
+      checkColumn(column);
+      // Don't need a row lock for a simple get
+      HStoreKey key = new HStoreKey(row, column, timestamp);
+      return getStore(column).get(key, numVersions);
+    } finally {
+      splitsAndClosesLock.readLock().unlock();
     }
-    // Make sure this is a valid row and valid column
-    checkRow(row);
-    checkColumn(column);
-    // Don't need a row lock for a simple get
-    HStoreKey key = new HStoreKey(row, column, timestamp);
-    return getStore(column).get(key, numVersions);
   }
 
   /**
@@ -1321,7 +1339,7 @@ public class HRegion implements HConstants {
   public InternalScanner getScanner(byte[][] cols, byte [] firstRow,
     long timestamp, RowFilterInterface filter) 
   throws IOException {
-    splitsAndClosesLock.readLock().lock();
+    newScannerLock.readLock().lock();
     try {
       if (this.closed.get()) {
         throw new IOException("Region " + this + " closed");
@@ -1336,7 +1354,7 @@ public class HRegion implements HConstants {
       return new HScanner(cols, firstRow, timestamp,
         storeSet.toArray(new HStore [storeSet.size()]), filter);
     } finally {
-      splitsAndClosesLock.readLock().unlock();
+      newScannerLock.readLock().unlock();
     }
   }
 

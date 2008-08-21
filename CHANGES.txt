@@ -29,6 +29,9 @@ Release 0.3.0 - Unreleased
    HBASE-831   committing BatchUpdate with no row should complain
                (Andrew Purtell via Jim Kellerman)
    HBASE-833   Doing an insert with an unknown family throws a NPE in HRS
+   HBASE-810   Prevent temporary deadlocks when, during a scan with write
+               operations, the region splits (Jean-Daniel Cryans via Jim
+               Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
