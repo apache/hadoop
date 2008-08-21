@@ -43,6 +43,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 class BlockSender implements java.io.Closeable, FSConstants {
   public static final Log LOG = DataNode.LOG;
+  static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
   private Block block; // the block to read from
   private InputStream blockIn; // data stream
@@ -62,7 +63,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
   private boolean blockReadFully; //set when the whole block is read
   private boolean verifyChecksum; //if true, check is verified while reading
   private BlockTransferThrottler throttler;
-  
+  private final String clientTraceFmt; // format of client trace log message
+
   /**
    * Minimum buffer used while sending data to clients. Used only if
    * transferTo() is enabled. 64KB is not that large. It could be larger, but
@@ -74,7 +76,14 @@ class BlockSender implements java.io.Closeable, FSConstants {
   BlockSender(Block block, long startOffset, long length,
               boolean corruptChecksumOk, boolean chunkOffsetOK,
               boolean verifyChecksum, DataNode datanode) throws IOException {
+    this(block, startOffset, length, corruptChecksumOk, chunkOffsetOK,
+         verifyChecksum, datanode, null);
+  }
 
+  BlockSender(Block block, long startOffset, long length,
+              boolean corruptChecksumOk, boolean chunkOffsetOK,
+              boolean verifyChecksum, DataNode datanode, String clientTraceFmt)
+      throws IOException {
     try {
       this.block = block;
       this.chunkOffsetOK = chunkOffsetOK;
@@ -82,6 +91,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.verifyChecksum = verifyChecksum;
       this.blockLength = datanode.data.getLength(block);
       this.transferToAllowed = datanode.transferToAllowed;
+      this.clientTraceFmt = clientTraceFmt;
 
       if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {
         checksumIn = new DataInputStream(
@@ -382,6 +392,9 @@ class BlockSender implements java.io.Closeable, FSConstants {
       out.writeInt(0); // mark the end of block        
       out.flush();
     } finally {
+      if (clientTraceFmt != null) {
+        ClientTraceLog.info(String.format(clientTraceFmt, totalRead));
+      }
       close();
     }
 

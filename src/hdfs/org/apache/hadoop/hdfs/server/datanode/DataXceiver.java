@@ -36,16 +36,18 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
 
 /**
  * Thread for processing incoming/outgoing data stream.
  */
 class DataXceiver implements Runnable, FSConstants {
   public static final Log LOG = DataNode.LOG;
+  static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
   Socket s;
-  String remoteAddress; // address of remote side
-  String localAddress;  // local address of this daemon
+  final String remoteAddress; // address of remote side
+  final String localAddress;  // local address of this daemon
   DataNode datanode;
   DataXceiverServer dataXceiverServer;
   
@@ -55,9 +57,8 @@ class DataXceiver implements Runnable, FSConstants {
     this.s = s;
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
-    InetSocketAddress isock = (InetSocketAddress)s.getRemoteSocketAddress();
-    remoteAddress = isock.toString();
-    localAddress = s.getInetAddress() + ":" + s.getLocalPort();
+    remoteAddress = s.getRemoteSocketAddress().toString();
+    localAddress = s.getLocalSocketAddress().toString();
     LOG.debug("Number of active connections is: " + datanode.getXceiverCount());
   }
 
@@ -141,7 +142,7 @@ class DataXceiver implements Runnable, FSConstants {
 
     long startOffset = in.readLong();
     long length = in.readLong();
-
+    String clientName = Text.readString(in);
     // send the block
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
@@ -149,10 +150,17 @@ class DataXceiver implements Runnable, FSConstants {
                  new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
     
     BlockSender blockSender = null;
+    final String clientTraceFmt =
+      clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
+        ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
+            "%d", "HDFS_READ", clientName,
+            datanode.dnRegistration.getStorageID(), block)
+        : datanode.dnRegistration + " Served block " + block + " to " +
+            s.getInetAddress();
     try {
       try {
-        blockSender = new BlockSender(block, startOffset, length, 
-                                      true, true, false, datanode);
+        blockSender = new BlockSender(block, startOffset, length,
+            true, true, false, datanode, clientTraceFmt);
       } catch(IOException e) {
         out.writeShort(OP_STATUS_ERROR);
         throw e;
@@ -174,8 +182,6 @@ class DataXceiver implements Runnable, FSConstants {
       
       datanode.myMetrics.bytesRead.inc((int) read);
       datanode.myMetrics.blocksRead.inc();
-      LOG.info(datanode.dnRegistration + " Served block " + block + " to " + 
-          s.getInetAddress());
     } catch ( SocketException ignored ) {
       // Its ok for remote side to close the connection anytime.
       datanode.myMetrics.blocksRead.inc();
@@ -241,8 +247,9 @@ class DataXceiver implements Runnable, FSConstants {
     try {
       // open a block receiver and check if the block does not exist
       blockReceiver = new BlockReceiver(block, in, 
-          s.getInetAddress().toString(), isRecovery, client, srcDataNode,
-          datanode);
+          s.getRemoteSocketAddress().toString(),
+          s.getLocalSocketAddress().toString(),
+          isRecovery, client, srcDataNode, datanode);
 
       // get a connection back to the previous target
       replyOut = new DataOutputStream(
@@ -502,8 +509,8 @@ class DataXceiver implements Runnable, FSConstants {
     try {
       // open a block receiver and check if the block does not exist
        blockReceiver = new BlockReceiver(
-          block, in, s.getRemoteSocketAddress().toString(), false, "", null,
-          datanode);
+          block, in, s.getRemoteSocketAddress().toString(),
+          s.getLocalSocketAddress().toString(), false, "", null, datanode);
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 

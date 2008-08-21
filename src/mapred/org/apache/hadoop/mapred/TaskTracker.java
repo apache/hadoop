@@ -99,6 +99,15 @@ public class TaskTracker
   public static final Log LOG =
     LogFactory.getLog(TaskTracker.class);
 
+  public static final String MR_CLIENTTRACE_FORMAT =
+        "src: %s" +     // src IP
+        ", dest: %s" +  // dst IP
+        ", bytes: %s" + // byte count
+        ", op: %s" +    // operation
+        ", cliID: %s";  // task id
+  public static final Log ClientTraceLog =
+    LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
+
   private boolean running = true;
 
   private LocalDirAllocator localDirAllocator;
@@ -2389,6 +2398,7 @@ public class TaskTracker
       FSDataInputStream indexIn = null;
       FSDataInputStream mapOutputIn = null;
       
+      long totalRead = 0;
       ShuffleServerMetrics shuffleMetrics = (ShuffleServerMetrics)
                                       context.getAttribute("shuffleServerMetrics");
       try {
@@ -2468,7 +2478,6 @@ public class TaskTracker
         //seek to the correct offset for the reduce
         mapOutputIn.seek(startOffset);
           
-        long totalRead = 0;
         int len = mapOutputIn.read(buffer, 0,
                                    partLength < MAX_BYTES_TO_READ 
                                    ? (int)partLength : MAX_BYTES_TO_READ);
@@ -2514,6 +2523,12 @@ public class TaskTracker
           mapOutputIn.close();
         }
         shuffleMetrics.serverHandlerFree();
+        if (ClientTraceLog.isInfoEnabled()) {
+          ClientTraceLog.info(String.format(MR_CLIENTTRACE_FORMAT,
+                request.getLocalAddr() + ":" + request.getLocalPort(),
+                request.getRemoteAddr() + ":" + request.getRemotePort(),
+                totalRead, "MAPRED_SHUFFLE", mapId));
+        }
       }
       outStream.close();
       shuffleMetrics.successOutput();

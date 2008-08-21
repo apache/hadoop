@@ -33,6 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
@@ -113,7 +114,18 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
  **********************************************************/
 public class DataNode extends Configured 
     implements InterDatanodeProtocol, ClientDatanodeProtocol, FSConstants, Runnable {
-  public static final Log LOG = LogFactory.getLog(DataNode.class.getName());
+  public static final Log LOG = LogFactory.getLog(DataNode.class);
+
+  public static final String DN_CLIENTTRACE_FORMAT =
+        "src: %s" +      // src IP
+        ", dest: %s" +   // dst IP
+        ", bytes: %s" +  // byte count
+        ", op: %s" +     // operation
+        ", cliID: %s" +  // DFSClient id
+        ", srvID: %s" +  // DatanodeRegistration
+        ", blockid: %s"; // block id
+  static final Log ClientTraceLog =
+    LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
 
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
@@ -914,6 +926,8 @@ public class DataNode extends Configured
      +-------------------------------------------------------------------------+
      | 8 byte Block ID | 8 byte genstamp | 8 byte start offset | 8 byte length |
      +-------------------------------------------------------------------------+
+     |   vInt length   |  <DFSClient id> |
+     +-----------------------------------+
      
      Client sends optional response only at the end of receiving data.
        

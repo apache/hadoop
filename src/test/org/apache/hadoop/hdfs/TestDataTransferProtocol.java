@@ -267,6 +267,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(0L);
     sendOut.writeLong(fileLen);
     recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
+    Text.writeString(sendOut, "cl");
     sendRecvData("Wrong block ID " + newBlockId + " for read", false); 
 
     // negative block start offset
@@ -277,6 +278,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(-1L);
     sendOut.writeLong(fileLen);
+    Text.writeString(sendOut, "cl");
     sendRecvData("Negative start-offset for read for block " + 
                  firstBlock.getBlockId(), false);
 
@@ -288,6 +290,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(fileLen);
     sendOut.writeLong(fileLen);
+    Text.writeString(sendOut, "cl");
     sendRecvData("Wrong start-offset for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -301,6 +304,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(-1-random.nextInt(oneMil));
+    Text.writeString(sendOut, "cl");
     sendRecvData("Negative length for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -314,6 +318,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen + 1);
+    Text.writeString(sendOut, "cl");
     sendRecvData("Wrong length for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -325,6 +330,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen);
+    Text.writeString(sendOut, "cl");
     readFile(fileSys, file, fileLen);
   }
 }

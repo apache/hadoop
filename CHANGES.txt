@@ -206,6 +206,9 @@ Trunk (unreleased changes)
 
     HADOOP-3934. Upgrade log4j to 1.2.15. (omalley)
 
+    HADOOP-3062. Add metrics to DataNode and TaskTracker to record network
+    traffic for HDFS reads/writes and MR shuffling. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

@@ -1115,6 +1115,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum)
                                        throws IOException {
+      return newBlockReader(sock, file, blockId, genStamp, startOffset,
+                            len, bufferSize, verifyChecksum, "");
+    }
+
+    public static BlockReader newBlockReader( Socket sock, String file,
+                                       long blockId, 
+                                       long genStamp,
+                                       long startOffset, long len,
+                                       int bufferSize, boolean verifyChecksum,
+                                       String clientName)
+                                       throws IOException {
       // in and out will be closed when sock is closed (by the caller)
       DataOutputStream out = new DataOutputStream(
         new BufferedOutputStream(NetUtils.getOutputStream(sock,WRITE_TIMEOUT)));
@@ -1126,6 +1137,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       out.writeLong( genStamp );
       out.writeLong( startOffset );
       out.writeLong( len );
+      Text.writeString(out, clientName);
       out.flush();
       
       //
@@ -1391,7 +1403,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
               blk.getGenerationStamp(),
               offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
-              buffersize, verifyChecksum);
+              buffersize, verifyChecksum, clientName);
           return chosenNode;
         } catch (IOException ex) {
           // Put chosen node into dead list, continue
@@ -1573,7 +1585,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                               block.getBlock().getBlockId(),
                                               block.getBlock().getGenerationStamp(),
                                               start, len, buffersize, 
-                                              verifyChecksum);
+                                              verifyChecksum, clientName);
           int nread = reader.readAll(buf, offset, len);
           if (nread != len) {
             throw new IOException("truncated return from reader.read(): " +
@@ -2297,7 +2309,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
         this.hasError = false;
         errorIndex = 0;
-        success = createBlockOutputStream(nodes, src, true);
+        success = createBlockOutputStream(nodes, clientName, true);
       }
 
       response = new ResponseProcessor(nodes);
@@ -2482,7 +2494,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         //
         // Connect to first DataNode in the list.
         //
-        success = createBlockOutputStream(nodes, client, false);
+        success = createBlockOutputStream(nodes, clientName, false);
 
         if (!success) {
           LOG.info("Abandoning block " + block);
