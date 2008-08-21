@@ -45,6 +45,7 @@ Release 0.3.0 - Unreleased
    HBASE-795  More Table operation in TableHandler for REST interface: part 2
               (Sishen Freecity via Stack)
    HBASE-830  Debugging HCM.locateRegionInMeta is painful
+   HBASE-784  Base hbase-0.3.0 on hadoop-0.18
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
