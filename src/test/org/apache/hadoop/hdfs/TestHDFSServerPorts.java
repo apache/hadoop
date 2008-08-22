@@ -182,6 +182,7 @@ public class TestHDFSServerPorts extends TestCase {
       // both ports are different from the name-node ones
       conf2.set("dfs.datanode.address", NAME_NODE_HOST + "0");
       conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
+      conf2.set("dfs.datanode.ipc.address", NAME_NODE_HOST + "0");
       started = canStartDataNode(conf2);
       assertTrue(started); // should start now
     } finally {

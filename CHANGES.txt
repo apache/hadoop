@@ -351,6 +351,9 @@ Trunk (unreleased changes)
     HADOOP-3958. Fix TestMapRed to check the success of test-job. (omalley via
     acmurthy)
 
+    HADOOP-3985. Fix TestHDFSServerPorts to use random ports.  (Hairong Kuang 
+    via omalley)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
