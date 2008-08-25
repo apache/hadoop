@@ -151,11 +151,11 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort, 
-                                      tmpInfoPort == 0);
+    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
+        tmpInfoPort == 0, conf);
     infoServer.setAttribute("name.system.image", checkpointImage);
     this.infoServer.setAttribute("name.conf", conf);
-    infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
+    infoServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
     infoServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info

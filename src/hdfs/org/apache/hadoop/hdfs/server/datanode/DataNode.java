@@ -347,7 +347,8 @@ public class DataNode extends Configured
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    this.infoServer = new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0);
+    this.infoServer = new HttpServer("datanode", infoHost, tmpInfoPort,
+        tmpInfoPort == 0, conf);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.https.address", infoHost + ":" + 0));
     Configuration sslConf = new Configuration(conf);
@@ -358,7 +359,7 @@ public class DataNode extends Configured
           sslConf.get("https.keystore.password", ""),
           sslConf.get("https.keystore.keypassword", ""));
     }
-    this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
+    this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.setAttribute("datanode.blockScanner", blockScanner);
     this.infoServer.addServlet(null, "/blockScannerReport", 
                                DataBlockScanner.Servlet.class);

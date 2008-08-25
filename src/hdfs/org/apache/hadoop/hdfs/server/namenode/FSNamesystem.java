@@ -344,7 +344,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
-                                            tmpInfoPort == 0);
+        tmpInfoPort == 0, conf);
     InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
         conf.get("dfs.https.address", infoHost + ":" + 0));
     Configuration sslConf = new Configuration(conf);
@@ -363,10 +363,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.infoServer.setAttribute("name.node", nn);
     this.infoServer.setAttribute("name.system.image", getFSImage());
     this.infoServer.setAttribute("name.conf", conf);
-    this.infoServer.addServlet("fsck", "/fsck", FsckServlet.class);
-    this.infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
-    this.infoServer.addServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
-    this.infoServer.addServlet("data", "/data/*", FileDataServlet.class);
+    this.infoServer.addInternalServlet("fsck", "/fsck", FsckServlet.class);
+    this.infoServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
+    this.infoServer.addInternalServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
+    this.infoServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
     this.infoServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info

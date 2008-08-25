@@ -21,6 +21,17 @@
   <description>Should native hadoop libraries, if present, be used.</description>
 </property>
 
+<property>
+  <name>hadoop.http.filter.initializers</name>
+  <value></value>
+  <description>A comma separated list of class names.  Each class in the list must extend org.apache.hadoop.http.FilterInitializer.
+  
+  The corresponding Filter will be initialized.  Then, the Filter will be applied to all user facing jsp and servlet web pages.  The ordering of the list defines the ordering of the filters.
+
+  The value can be empty.
+  </description>
+</property>
+
 <!--- logging properties -->
 
 <property>

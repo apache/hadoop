@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -799,8 +798,8 @@ public class TaskTracker
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String httpBindAddress = infoSocAddr.getHostName();
     int httpPort = infoSocAddr.getPort();
-    this.server = new StatusHttpServer(
-                        "task", httpBindAddress, httpPort, httpPort == 0);
+    this.server = new StatusHttpServer("task", httpBindAddress, httpPort,
+        httpPort == 0, conf);
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
     this.shuffleServerMetrics = new ShuffleServerMetrics(conf);
     server.setThreads(1, workerThreads);
@@ -814,8 +813,8 @@ public class TaskTracker
     server.setAttribute("log", LOG);
     server.setAttribute("localDirAllocator", localDirAllocator);
     server.setAttribute("shuffleServerMetrics", shuffleServerMetrics);
-    server.addServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
-    server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
+    server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
+    server.addInternalServlet("taskLog", "/tasklog", TaskLogServlet.class);
     server.start();
     this.httpPort = server.getPort();
     initialize();

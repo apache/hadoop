@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 
     HADOOP-1480. Add counters to the C++ Pipes API. (acmurthy via omalley)
 
+    HADOOP-3854. Add support for pluggable servlet filters in the HttpServers.
+    (Tsz Wo (Nicholas) Sze via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

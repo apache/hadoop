@@ -25,6 +25,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
+
 /**
  * A mapred http server.  
  */
@@ -37,9 +39,9 @@ public class StatusHttpServer extends org.apache.hadoop.http.HttpServer {
    * @param findPort whether the server should start at the given port and 
    *        increment by 1 until it finds a free port.
    */
-  StatusHttpServer(String name, String bindAddress, int port, 
-                          boolean findPort) throws IOException {
-    super(name, bindAddress, port, findPort);
+  StatusHttpServer(String name, String bindAddress, int port, boolean findPort,
+      Configuration conf) throws IOException {
+    super(name, bindAddress, port, findPort, conf);
     addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
   }
 

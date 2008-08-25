@@ -19,8 +19,12 @@ package org.apache.hadoop.http;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.net.InetSocketAddress;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -28,14 +32,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.util.ReflectionUtils;
-
 import org.mortbay.http.HttpContext;
 import org.mortbay.http.SocketListener;
 import org.mortbay.http.SslListener;
 import org.mortbay.http.handler.ResourceHandler;
+import org.mortbay.jetty.servlet.Dispatcher;
+import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.WebApplicationContext;
+import org.mortbay.jetty.servlet.WebApplicationHandler;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -45,14 +52,24 @@ import org.mortbay.jetty.servlet.WebApplicationContext;
  *   "/static/" -> points to common static files (src/webapps/static)
  *   "/" -> the jsp server code from (src/webapps/<name>)
  */
-public class HttpServer {
+public class HttpServer implements FilterContainer {
   public static final Log LOG = LogFactory.getLog(HttpServer.class);
+
+  static final String FILTER_INITIALIZER_PROPERTY
+      = "hadoop.http.filter.initializers";
 
   protected final org.mortbay.jetty.Server webServer;
   protected final WebApplicationContext webAppContext;
   protected final boolean findPort;
   protected final SocketListener listener;
   private SslListener sslListener;
+  protected final List<String> filterNames = new ArrayList<String>();
+
+  /** Same as this(name, bindAddress, port, findPort, null); */
+  public HttpServer(String name, String bindAddress, int port, boolean findPort
+      ) throws IOException {
+    this(name, bindAddress, port, findPort, null);
+  }
 
   /**
    * Create a status server on the given port.
@@ -61,9 +78,10 @@ public class HttpServer {
    * @param port The port to use on the server
    * @param findPort whether the server should start at the given port and 
    *        increment by 1 until it finds a free port.
+   * @param conf Configuration 
    */
-  public HttpServer(String name, String bindAddress, int port, boolean findPort
-      ) throws IOException {
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf) throws IOException {
     webServer = new org.mortbay.jetty.Server();
     this.findPort = findPort;
     listener = new SocketListener();
@@ -73,7 +91,33 @@ public class HttpServer {
 
     final String appDir = getWebAppsPath();
     webAppContext = webServer.addWebApplication("/", appDir + "/" + name);
+
+    final FilterInitializer[] initializers = getFilterInitializers(conf); 
+    if (initializers != null) {
+      for(FilterInitializer c : initializers) {
+        c.initFilter(this);
+      }
+    }
     addWebapps(appDir);
+  }
+
+  /** Get an array of FilterConfiguration specified in the conf */
+  private static FilterInitializer[] getFilterInitializers(Configuration conf) {
+    if (conf == null) {
+      return null;
+    }
+
+    Class<?>[] classes = conf.getClasses(FILTER_INITIALIZER_PROPERTY);
+    if (classes == null) {
+      return null;
+    }
+
+    FilterInitializer[] initializers = new FilterInitializer[classes.length];
+    for(int i = 0; i < classes.length; i++) {
+      initializers[i] = (FilterInitializer)ReflectionUtils.newInstance(
+          classes[i], conf);
+    }
+    return initializers;
   }
 
   /**
@@ -85,23 +129,32 @@ public class HttpServer {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {
-      HttpContext logContext = new HttpContext();
-      logContext.setContextPath("/logs/*");
-      logContext.setResourceBase(logDir);
-      logContext.addHandler(new ResourceHandler());
-      webServer.addContext(logContext);
+      addContext("/logs/*", logDir, true);
     }
 
     // set up the context for "/static/*"
-    HttpContext staticContext = new HttpContext();
-    staticContext.setContextPath("/static/*");
-    staticContext.setResourceBase(appDir + "/static");
-    staticContext.addHandler(new ResourceHandler());
-    webServer.addContext(staticContext);
+    addContext("/static/*", appDir + "/static", true);
 
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
+  }
+
+  /**
+   * Add a context 
+   * @param pathSpec The path spec for the context
+   * @param dir The directory containing the context
+   * @param isFiltered if true, the servlet is added to the filter path mapping 
+   */
+  protected void addContext(String pathSpec, String dir, boolean isFiltered) {
+    HttpContext context = new HttpContext();
+    context.setContextPath(pathSpec);
+    context.setResourceBase(dir);
+    context.addHandler(new ResourceHandler());
+    webServer.addContext(context);
+    if (isFiltered) {
+      addFilterPathMapping(pathSpec);
+    }
   }
 
   /**
@@ -118,15 +171,29 @@ public class HttpServer {
    * Add a servlet in the server.
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
-   * @param servletClass The servlet class
+   * @param clazz The servlet class
    */
-  public <T extends HttpServlet> void addServlet(String name, String pathSpec,
-      Class<T> servletClass) {
+  public void addServlet(String name, String pathSpec,
+      Class<? extends HttpServlet> clazz) {
+    addInternalServlet(name, pathSpec, clazz);
+    addFilterPathMapping(pathSpec);
+  }
+
+  /**
+   * Add an internal servlet in the server.
+   * @param name The name of the servlet (can be passed as null)
+   * @param pathSpec The path spec for the servlet
+   * @param clazz The servlet class
+   * @deprecated this is a temporary method
+   */
+  @Deprecated
+  public void addInternalServlet(String name, String pathSpec,
+      Class<? extends HttpServlet> clazz) {
     try {
       if (name == null) {
-        webAppContext.addServlet(pathSpec, servletClass.getName());
+        webAppContext.addServlet(pathSpec, clazz.getName());
       } else {
-        webAppContext.addServlet(name, pathSpec, servletClass.getName());
+        webAppContext.addServlet(name, pathSpec, clazz.getName());
       } 
     } catch (ClassNotFoundException cnfe) {
       throw new RuntimeException("Problem instantiating class", cnfe);
@@ -134,6 +201,38 @@ public class HttpServer {
       throw new RuntimeException("Problem instantiating class", ie);
     } catch (IllegalAccessException iae) {
       throw new RuntimeException("Problem instantiating class", iae);
+    }
+  }
+
+  /** {@inheritDoc} */
+  public void addFilter(String name, String classname,
+      Map<String, String> parameters) {
+    WebApplicationHandler handler = webAppContext.getWebApplicationHandler();
+
+    LOG.info("adding " + name + " (class=" + classname + ")");
+    filterNames.add(name);
+
+    FilterHolder holder = handler.defineFilter(name, classname);
+    if (parameters != null) {
+      for(Map.Entry<String, String> e : parameters.entrySet()) {
+        holder.setInitParameter(e.getKey(), e.getValue());
+      }
+    }
+
+    final String[] USER_FACING_URLS = {"*.html", "*.jsp"};
+    for(String url : USER_FACING_URLS) {
+      handler.addFilterPathMapping(url, name, Dispatcher.__ALL);
+    }
+  }
+
+  /**
+   * Add the path spec to the filter path mapping.
+   * @param pathSpec The path spec
+   */
+  protected void addFilterPathMapping(String pathSpec) {
+    WebApplicationHandler handler = webAppContext.getWebApplicationHandler();
+    for(String name : filterNames) {
+      handler.addFilterPathMapping(pathSpec, name, Dispatcher.__ALL);
     }
   }
 

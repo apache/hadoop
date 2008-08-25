@@ -652,6 +652,33 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   }
 
   /** 
+   * Get the value of the <code>name</code> property
+   * as an array of <code>Class</code>.
+   * The value of the property specifies a list of comma separated class names.  
+   * If no such property is specified, then <code>defaultValue</code> is 
+   * returned.
+   * 
+   * @param name the property name.
+   * @param defaultValue default value.
+   * @return property value as a <code>Class[]</code>, 
+   *         or <code>defaultValue</code>. 
+   */
+  public Class<?>[] getClasses(String name, Class<?> ... defaultValue) {
+    String[] classnames = getStrings(name);
+    if (classnames == null)
+      return defaultValue;
+    try {
+      Class<?>[] classes = new Class<?>[classnames.length];
+      for(int i = 0; i < classnames.length; i++) {
+        classes[i] = getClassByName(classnames[i]);
+      }
+      return classes;
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /** 
    * Get the value of the <code>name</code> property as a <code>Class</code>.  
    * If no such property is specified, then <code>defaultValue</code> is 
    * returned.
