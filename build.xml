@@ -74,6 +74,7 @@
             value="${build.c++}/examples/pipes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
+  <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
   <property name="install.c++" value="${build.dir}/c++/${build.platform}"/>
   <property name="install.c++.examples" 
@@ -91,6 +92,7 @@
   <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
   <property name="test.build.testshell" value="${test.build.dir}/testshell"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
+  <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
@@ -778,6 +780,48 @@
     <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
   </target>
 	
+  <target name="javadoc-dev" description="Generate javadoc for hadoop developers">
+    <mkdir dir="${build.javadoc.dev}"/>
+    <javadoc
+      overview="${core.src.dir}/overview.html"
+      packagenames="org.apache.hadoop.*"
+      destdir="${build.javadoc.dev}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} Developer API"
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      >
+        <packageset dir="${core.src.dir}"/>
+        <packageset dir="${mapred.src.dir}"/>
+        <packageset dir="${hdfs.src.dir}"/>        	
+    	<packageset dir="${examples.dir}"/>
+
+    	<packageset dir="src/contrib/streaming/src/java"/>
+    	<packageset dir="src/contrib/data_join/src/java"/>
+    	<packageset dir="src/contrib/index/src/java"/>
+
+        <link href="${javadoc.link.java}"/>
+
+        <classpath >
+          <path refid="classpath" />
+          <fileset dir="src/contrib/">
+            <include name="*/lib/*.jar" />
+          </fileset>
+          <pathelement path="${java.class.path}"/>
+        </classpath>
+
+    	<group title="Core" packages="org.apache.*"/>
+    	<group title="Examples" packages="org.apache.hadoop.examples*"/>
+
+       <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
+       <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
+       <group title="contrib: Index" packages="org.apache.hadoop.contrib.index*"/>
+
+    </javadoc>
+  </target>	
+
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -793,7 +837,6 @@
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
-        <packageset dir="${hdfs.src.dir}"/>        	
     	<packageset dir="${examples.dir}"/>
 
     	<packageset dir="src/contrib/streaming/src/java"/>

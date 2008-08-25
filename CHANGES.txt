@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     HADOOP-3062. Add metrics to DataNode and TaskTracker to record network
     traffic for HDFS reads/writes and MR shuffling. (cdouglas)
 
+    HADOOP-3742. Remove HDFS from public java doc and add javadoc-dev for
+    generative javadoc for developers. (Sanjay Radia via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
