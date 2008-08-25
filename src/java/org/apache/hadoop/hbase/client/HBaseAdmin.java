@@ -49,6 +49,7 @@ import org.apache.hadoop.ipc.RemoteException;
 public class HBaseAdmin {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final HConnection connection;
+  private volatile HBaseConfiguration conf;
   private final long pause;
   private final int numRetries;
   private volatile HMasterInterface master;
@@ -61,6 +62,7 @@ public class HBaseAdmin {
    */
   public HBaseAdmin(HBaseConfiguration conf) throws MasterNotRunningException {
     this.connection = HConnectionManager.getConnection(conf);
+    this.conf = conf;
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.master = connection.getMaster();
@@ -285,6 +287,8 @@ public class HBaseAdmin {
         // continue
       }
     }
+    // Delete cached information to prevent clients from using old locations
+    HConnectionManager.deleteConnectionInfo(conf);
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
 
