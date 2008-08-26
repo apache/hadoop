@@ -33,23 +33,10 @@
     <!-- Copy the required files so that the jar can run independently
 	 of Hadoop source code -->
     
-    <mkdir dir="lib"/>
-  
-    <copy todir="lib">
-      <fileset dir="${hadoop.root}/lib/"
-	       includes="commons-logging-*, log4j*"/>
-    </copy>
-  
-    <copy todir="lib">
-      <fileset dir="${hadoop.root}/build/"
-	       includes="hadoop-*"/>
-    </copy>
-  
   <!-- create the list of files to add to the classpath -->
-  <fileset dir="${basedir}" id="class.path">
-    <include name="lib/commons-logging*.jar"/>
-    <include name="lib/log4j*.jar"/>
-    <include name="lib/hadoop-*.jar"/>
+  <fileset dir="${hadoop.root}/lib" id="class.path">
+    <include name="**/*.jar" />
+    <exclude name="**/excluded/" />
   </fileset>
   
   <pathconvert pathsep=" " property="failmon-class-path" refid="class.path">

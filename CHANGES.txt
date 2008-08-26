@@ -360,6 +360,8 @@ Trunk (unreleased changes)
     HADOOP-3985. Fix TestHDFSServerPorts to use random ports.  (Hairong Kuang 
     via omalley)
 
+    HADOOP-3964. Fix javadoc warnings introduced by FailMon. (dhruba)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
