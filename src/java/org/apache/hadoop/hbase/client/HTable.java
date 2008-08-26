@@ -386,8 +386,9 @@ public class HTable {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Cell>(connection, tableName, row) {
           public Cell call() throws IOException {
-            return server.get(location.getRegionInfo().getRegionName(), row,
-                column);
+            Cell[] result = server.get(location.getRegionInfo().getRegionName(), 
+                row, column, -1, -1);
+            return (result == null)? null : result[0];
           }
         }
     );
@@ -408,7 +409,7 @@ public class HTable {
         new ServerCallable<Cell[]>(connection, tableName, row) {
           public Cell[] call() throws IOException {
             return server.get(location.getRegionInfo().getRegionName(), row, 
-                column, numVersions);
+                column, -1, numVersions);
           }
         }
     );

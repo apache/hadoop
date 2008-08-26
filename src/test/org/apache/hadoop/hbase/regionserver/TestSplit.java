@@ -215,7 +215,7 @@ public class TestSplit extends HBaseClusterTestCase {
   private void assertGet(final HRegion r, final byte [] family, final byte [] k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
-    Cell[] results = r.get(k, family, Integer.MAX_VALUE);
+    Cell[] results = r.get(k, family, -1, Integer.MAX_VALUE);
     for (int j = 0; j < results.length; j++) {
       byte [] tmp = results[j].getValue();
       // Row should be equal to value every time.

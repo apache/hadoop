@@ -422,13 +422,14 @@ public abstract class HBaseTestCase extends TestCase {
 
     /** {@inheritDoc} */
     public Cell get(byte [] row, byte [] column) throws IOException {
-      return this.region.get(row, column);
+      Cell[] result = this.region.get(row, column, -1, -1);
+      return (result == null)? null : result[0];
     }
 
     /** {@inheritDoc} */
     public Cell[] get(byte [] row, byte [] column, int versions)
     throws IOException {
-      return this.region.get(row, column, versions);
+      return this.region.get(row, column, -1, versions);
     }
 
     /** {@inheritDoc} */

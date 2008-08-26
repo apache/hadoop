@@ -33,6 +33,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HLog;
@@ -140,10 +141,10 @@ public class Merge extends Configured implements Tool {
    */
   private void mergeTwoMetaRegions() throws IOException {
     HRegion rootRegion = utils.getRootRegion();
-    HRegionInfo info1 = Writables.getHRegionInfo(
-        rootRegion.get(region1, HConstants.COL_REGIONINFO));
-    HRegionInfo info2 = Writables.getHRegionInfo(
-        rootRegion.get(region2, HConstants.COL_REGIONINFO));
+    Cell[] cells1 = rootRegion.get(region1, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null : cells1[0]);
+    Cell[] cells2 = rootRegion.get(region2, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null : cells2[0]);
     HRegion merged = merge(info1, rootRegion, info2, rootRegion); 
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
@@ -205,8 +206,8 @@ public class Merge extends Configured implements Tool {
     LOG.info("Found meta for region1 " + meta1.getRegionName() +
       ", meta for region2 " + meta2.getRegionName());
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
-    HRegionInfo info1 = Writables.getHRegionInfo(
-      metaRegion1.get(region1, HConstants.COL_REGIONINFO));
+    Cell[] cells1 = metaRegion1.get(region1, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null : cells1[0]);
     if (info1== null) {
       throw new NullPointerException("info1 is null using key " + region1 +
         " in " + meta1);
@@ -218,8 +219,8 @@ public class Merge extends Configured implements Tool {
     } else {
       metaRegion2 = utils.getMetaRegion(meta2);
     }
-    HRegionInfo info2 = Writables.getHRegionInfo(
-      metaRegion2.get(region2, HConstants.COL_REGIONINFO));
+    Cell[] cells2 = metaRegion2.get(region2, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null : cells2[0]);
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }

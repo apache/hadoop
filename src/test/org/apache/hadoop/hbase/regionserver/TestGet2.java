@@ -82,11 +82,11 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       
       // Now delete all then retry
       region.deleteAll(Bytes.toBytes(T00), System.currentTimeMillis(), null);
-      Cell [] cells = region.get(Bytes.toBytes(T00), column,
+      Cell [] cells = region.get(Bytes.toBytes(T00), column, -1,
         HColumnDescriptor.DEFAULT_VERSIONS);
       assertTrue(cells == null);
       region.flushcache();
-      cells = region.get(Bytes.toBytes(T00), column,
+      cells = region.get(Bytes.toBytes(T00), column, -1,
           HColumnDescriptor.DEFAULT_VERSIONS);
       assertTrue(cells == null);
       
@@ -123,11 +123,11 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       final byte [] column)
   throws IOException {
     byte [] r = Bytes.toBytes(row);
-    Cell [] cells = region.get(r, column, 100);
+    Cell [] cells = region.get(r, column, -1, 100);
     assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
-    cells = region.get(r, column, 1);
+    cells = region.get(r, column, -1, 1);
     assertTrue(cells.length == 1);
-    cells = region.get(r, column, HConstants.ALL_VERSIONS);
+    cells = region.get(r, column, -1, HConstants.ALL_VERSIONS);
     assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
   }
   

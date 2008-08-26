@@ -1008,34 +1008,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public Cell get(final byte [] regionName, final byte [] row,
-    final byte [] column) 
-  throws IOException {
-    checkOpen();
-    requestCount.incrementAndGet();
-    try {
-      return getRegion(regionName).get(row, column);
-    } catch (IOException e) {
-      checkFileSystem();
-      throw e;
-    }
-  }
-
-  /** {@inheritDoc} */
-  public Cell[] get(final byte [] regionName, final byte [] row,
-    final byte [] column, final int numVersions) 
-  throws IOException {
-    checkOpen();
-    requestCount.incrementAndGet();
-    try {
-      return getRegion(regionName).get(row, column, numVersions);
-    } catch (IOException e) {
-      checkFileSystem();
-      throw e;
-    }
-  }
-
-  /** {@inheritDoc} */
   public Cell[] get(final byte [] regionName, final byte [] row,
     final byte [] column, final long timestamp, final int numVersions) 
   throws IOException {

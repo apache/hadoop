@@ -49,33 +49,6 @@ public interface HRegionInterface extends VersionedProtocol {
    */
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException;
-
-  /**
-   * Retrieve a single value from the specified region for the specified row
-   * and column keys
-   * 
-   * @param regionName name of region
-   * @param row row key
-   * @param column column key
-   * @return alue for that region/row/column
-   * @throws IOException
-   */
-  public Cell get(final byte [] regionName, final byte [] row, final byte [] column)
-  throws IOException;
-
-  /**
-   * Get the specified number of versions of the specified row and column
-   * 
-   * @param regionName region name
-   * @param row row key
-   * @param column column key
-   * @param numVersions number of versions to return
-   * @return array of values
-   * @throws IOException
-   */
-  public Cell[] get(final byte [] regionName, final byte [] row,
-    final byte [] column, final int numVersions)
-  throws IOException;
   
   /**
    * Get the specified number of versions of the specified row and column with

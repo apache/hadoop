@@ -400,7 +400,7 @@ public class MetaUtils {
   throws IOException {
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(
-        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO).getValue());
+        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1)[0].getValue());
       LOG.debug("Old " + Bytes.toString(HConstants.COL_REGIONINFO) +
         " for " + hri.toString() + " in " + r.toString() + " is: " +
         h.toString());
@@ -410,7 +410,7 @@ public class MetaUtils {
     r.batchUpdate(b, null);
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(
-          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO).getValue());
+          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1)[0].getValue());
         LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
           " for " + hri.toString() + " in " + r.toString() + " is: " +
           h.toString());

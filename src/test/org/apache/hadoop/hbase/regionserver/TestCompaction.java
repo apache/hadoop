@@ -100,7 +100,7 @@ public class TestCompaction extends HBaseTestCase {
     // available.
     addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
     Cell[] cellValues = 
-      r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
+      r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
     // Assert that I can get 3 versions since it is the max I should get
     assertTrue(cellValues.length == 3);
     r.flushcache();
@@ -114,7 +114,7 @@ public class TestCompaction extends HBaseTestCase {
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
-    cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, 100/*Too many*/);
+    cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100/*Too many*/);
     LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " + cellValues.length);
     // Commented out because fails on an hp+ubuntu single-processor w/ 1G and
     // "Intel(R) Pentium(R) 4 CPU 3.20GHz" though passes on all local
@@ -131,10 +131,10 @@ public class TestCompaction extends HBaseTestCase {
     // Now, before compacting, remove all instances of the first row so can
     // verify that it is removed as we compact.
     // Assert all delted.
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     r.flushcache();
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Add a bit of data and flush it so we for sure have the compaction limit
     // for store files.  Usually by this time we will have but if compaction
     // included the flush that ran 'concurrently', there may be just the
@@ -146,7 +146,7 @@ public class TestCompaction extends HBaseTestCase {
     r.compactStores();
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
     // Assert that the first row is still deleted.
-    cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
+    cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
     assertNull(cellValues);
     // Make sure the store files do have some 'aaa' keys in them.
     boolean containsStartRow = false;

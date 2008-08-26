@@ -179,7 +179,7 @@ public class TestMergeTool extends HBaseTestCase {
   throws IOException {
     for (int i = 0; i < upperbound; i++) {
       for (int j = 0; j < rows[i].length; j++) {
-        byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
+        byte[] bytes = merged.get(rows[i][j], COLUMN_NAME, -1, -1)[0].getValue();
         assertNotNull(rows[i][j].toString(), bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
@@ -195,7 +195,7 @@ public class TestMergeTool extends HBaseTestCase {
     // contain the right data.
     for (int i = 0; i < regions.length; i++) {
       for (int j = 0; j < rows[i].length; j++) {
-        byte[] bytes = regions[i].get(rows[i][j], COLUMN_NAME).getValue();
+        byte[] bytes = regions[i].get(rows[i][j], COLUMN_NAME, -1, -1)[0].getValue();
         assertNotNull(bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }

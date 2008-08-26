@@ -1119,43 +1119,26 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Fetch a single data item.
-   * @param row
-   * @param column
-   * @return column value
-   * @throws IOException
-   */
-  public Cell get(byte [] row, byte [] column) throws IOException {
-    Cell[] results = get(row, column, Long.MAX_VALUE, 1);
-    return (results == null || results.length == 0)? null: results[0];
-  }
-  /**
-   * Fetch multiple versions of a single data item
-   * 
-   * @param row
-   * @param column
-   * @param numVersions
-   * @return array of values one element per version
-   * @throws IOException
-   */
-  public Cell[] get(byte [] row, byte [] column, int numVersions)
-  throws IOException {
-    return get(row, column, Long.MAX_VALUE, numVersions);
-  }
-
-  /**
    * Fetch multiple versions of a single data item, with timestamp.
    *
    * @param row
    * @param column
    * @param timestamp
    * @param numVersions
-   * @return array of values one element per version that matches the timestamp
+   * @return array of values one element per version that matches the timestamp, 
+   * or null if there are no matches.
    * @throws IOException
    */
   public Cell[] get(byte [] row, byte [] column, long timestamp,
     int numVersions) 
   throws IOException {
+    if (timestamp == -1) {
+      timestamp = Long.MAX_VALUE;
+    }
+    if (numVersions == -1) {
+      numVersions = 1;
+    }
+
     splitsAndClosesLock.readLock().lock();
     try {
       if (this.closed.get()) {
@@ -1166,7 +1149,10 @@ public class HRegion implements HConstants {
       checkColumn(column);
       // Don't need a row lock for a simple get
       HStoreKey key = new HStoreKey(row, column, timestamp);
-      return getStore(column).get(key, numVersions);
+      Cell[] result = getStore(column).get(key, numVersions);
+      // Guarantee that we return null instead of a zero-length array, 
+      // if there are no results to return.
+      return (result == null || result.length == 0)? null : result;
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
