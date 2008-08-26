@@ -404,7 +404,61 @@ public class TestSequenceFile extends TestCase {
     }
     writer.close();
   }
+
+  public void testClose() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = new LocalFileSystem();
+    fs.setConf(conf);
+    fs.getRawFileSystem().setConf(conf);
   
+    // create a sequence file 1
+    Path path1 = new Path(System.getProperty("test.build.data",".")+"/test1.seq");
+    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, path1,
+        Text.class, NullWritable.class, CompressionType.BLOCK);
+    writer.append(new Text("file1-1"), NullWritable.get());
+    writer.append(new Text("file1-2"), NullWritable.get());
+    writer.close();
+  
+    Path path2 = new Path(System.getProperty("test.build.data",".")+"/test2.seq");
+    writer = SequenceFile.createWriter(fs, conf, path2, Text.class,
+        NullWritable.class, CompressionType.BLOCK);
+    writer.append(new Text("file2-1"), NullWritable.get());
+    writer.append(new Text("file2-2"), NullWritable.get());
+    writer.close();
+  
+    // Create a reader which uses 4 BuiltInZLibInflater instances
+    SequenceFile.Reader reader = new SequenceFile.Reader(fs, path1, conf);
+    // Returns the 4 BuiltInZLibInflater instances to the CodecPool
+    reader.close();
+    // The second close _could_ erroneously returns the same 
+    // 4 BuiltInZLibInflater instances to the CodecPool again
+    reader.close();
+  
+    // The first reader gets 4 BuiltInZLibInflater instances from the CodecPool
+    SequenceFile.Reader reader1 = new SequenceFile.Reader(fs, path1, conf);
+    // read first value from reader1
+    Text text = new Text();
+    reader1.next(text);
+    assertEquals("file1-1", text.toString());
+    
+    // The second reader _could_ get the same 4 BuiltInZLibInflater 
+    // instances from the CodePool as reader1
+    SequenceFile.Reader reader2 = new SequenceFile.Reader(fs, path2, conf);
+    
+    // read first value from reader2
+    reader2.next(text);
+    assertEquals("file2-1", text.toString());
+    // read second value from reader1
+    reader1.next(text);
+    assertEquals("file1-2", text.toString());
+    // read second value from reader2 (this throws an exception)
+    reader2.next(text);
+    assertEquals("file2-2", text.toString());
+  
+    assertFalse(reader1.next(text));
+    assertFalse(reader2.next(text));
+  }
+
   /** For debugging and testing. */
   public static void main(String[] args) throws Exception {
     int count = 1024 * 1024;

@@ -947,6 +947,7 @@ public class SequenceFile {
     /** Close the file. */
     public synchronized void close() throws IOException {
       CodecPool.returnCompressor(compressor);
+      compressor = null;
       
       keySerializer.close();
       uncompressedValSerializer.close();
@@ -1572,6 +1573,8 @@ public class SequenceFile {
       CodecPool.returnDecompressor(keyDecompressor);
       CodecPool.returnDecompressor(valLenDecompressor);
       CodecPool.returnDecompressor(valDecompressor);
+      keyLenDecompressor = keyDecompressor = null;
+      valLenDecompressor = valDecompressor = null;
       
       if (keyDeserializer != null) {
     	keyDeserializer.close();
