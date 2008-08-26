@@ -174,7 +174,7 @@ public class MigrationTool extends Configured implements Tool {
     try {
       return s3Service.getObject(bucket, key);
     } catch (S3ServiceException e) {
-      if (e.getS3ErrorCode().equals("NoSuchKey")) {
+      if ("NoSuchKey".equals(e.getS3ErrorCode())) {
         return null;
       }
     }
@@ -232,7 +232,7 @@ public class MigrationTool extends Configured implements Tool {
         S3Object object = s3Service.getObject(bucket, key);
         return object.getDataInputStream();
       } catch (S3ServiceException e) {
-        if (e.getS3ErrorCode().equals("NoSuchKey")) {
+        if ("NoSuchKey".equals(e.getS3ErrorCode())) {
           return null;
         }
         if (e.getCause() instanceof IOException) {

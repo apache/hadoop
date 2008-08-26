@@ -365,6 +365,9 @@ Trunk (unreleased changes)
     HADOOP-3785. Fix FileSystem cache to be case-insensitive for scheme and
     authority. (Bill de hOra via cdouglas)
 
+    HADOOP-3506. Fix a rare NPE caused by error handling in S3. (Tom White via
+    cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
