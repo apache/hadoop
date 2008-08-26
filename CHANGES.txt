@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     HADOOP-3944. Improve documentation for public TupleWritable class in 
     join package. (Chris Douglas via enis)
 
+    HADOOP-2330. Preallocate HDFS transaction log to improve performance.
+    (dhruba and hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
