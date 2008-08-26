@@ -135,6 +135,8 @@ public class Parser {
       tok.ordinaryChar(',');
       tok.ordinaryChar('(');
       tok.ordinaryChar(')');
+      tok.wordChars('$','$');
+      tok.wordChars('_','_');
     }
 
     Token next() throws IOException {

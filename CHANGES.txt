@@ -368,6 +368,9 @@ Trunk (unreleased changes)
     HADOOP-3506. Fix a rare NPE caused by error handling in S3. (Tom White via
     cdouglas)
 
+    HADOOP-3705. Fix mapred.join parser to accept InputFormats named with
+    underscore and static, inner classes. (cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
