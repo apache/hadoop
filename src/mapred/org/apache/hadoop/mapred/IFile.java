@@ -123,6 +123,7 @@ class IFile {
         compressedOut.finish();
         compressedOut.resetState();
         CodecPool.returnCompressor(compressor);
+        compressor = null;
       }
 
       // Close the stream
@@ -376,6 +377,7 @@ class IFile {
       if (decompressor != null) {
         decompressor.reset();
         CodecPool.returnDecompressor(decompressor);
+        decompressor = null;
       }
       
       // Close the underlying stream

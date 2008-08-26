@@ -371,6 +371,13 @@ Trunk (unreleased changes)
     HADOOP-3705. Fix mapred.join parser to accept InputFormats named with
     underscore and static, inner classes. (cdouglas)
 
+Release 0.18.1 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-3821. Prevent SequenceFile and IFile from duplicating codecs in
+    CodecPool when closed more than once. (Arun Murthy via cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

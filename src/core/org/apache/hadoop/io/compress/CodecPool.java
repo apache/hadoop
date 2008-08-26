@@ -59,7 +59,7 @@ public class CodecPool {
         if (codecList != null) {
           synchronized (codecList) {
             if (!codecList.isEmpty()) {
-              codec = codecList.remove(0);
+              codec = codecList.remove(codecList.size()-1);
             }
           }
         }
