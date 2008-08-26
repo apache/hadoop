@@ -315,7 +315,11 @@ document.write("Last Published: " + document.lastModified);
 <p>
 				  Following are supported by <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
 				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a> and 
-				  <a href="commands_manual.html#job">job</a>.
+				  <a href="commands_manual.html#job">job</a>. 
+				  Applications should implement 
+				  <a href="api/org/apache/hadoop/util/Tool.html">Tool</a> to support
+				  <a href="api/org/apache/hadoop/util/GenericOptionsParser.html">
+				  GenericOptions</a>.
 				</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
 			          
@@ -380,11 +384,11 @@ document.write("Last Published: " + document.lastModified);
 </div>
 		
 		
-<a name="N100FB"></a><a name="User+Commands"></a>
+<a name="N10103"></a><a name="User+Commands"></a>
 <h2 class="h3"> User Commands </h2>
 <div class="section">
 <p>Commands useful for users of a hadoop cluster.</p>
-<a name="N10104"></a><a name="archive"></a>
+<a name="N1010C"></a><a name="archive"></a>
 <h3 class="h4"> archive </h3>
 <p>
 					Creates a hadoop archive. More information can be found at <a href="hadoop_archives.html">Hadoop Archives</a>.
@@ -422,7 +426,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N1014F"></a><a name="distcp"></a>
+<a name="N10157"></a><a name="distcp"></a>
 <h3 class="h4"> distcp </h3>
 <p>
 					Copy file or directories recursively. More information can be found at <a href="distcp.html">DistCp Guide</a>.
@@ -454,7 +458,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N1018C"></a><a name="fs"></a>
+<a name="N10194"></a><a name="fs"></a>
 <h3 class="h4"> fs </h3>
 <p>
 					
@@ -468,7 +472,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">HDFS Shell Guide</a>.
 				</p>
-<a name="N101A8"></a><a name="fsck"></a>
+<a name="N101B0"></a><a name="fsck"></a>
 <h3 class="h4"> fsck </h3>
 <p>
 					Runs a HDFS filesystem checking utility. See <a href="hdfs_user_guide.html#Fsck">Fsck</a> for more info.
@@ -541,7 +545,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 					
 </table>
-<a name="N1023C"></a><a name="jar"></a>
+<a name="N10244"></a><a name="jar"></a>
 <h3 class="h4"> jar </h3>
 <p>
 					Runs a jar file. Users can bundle their Map Reduce code in a jar file and execute it using this command.
@@ -561,7 +565,7 @@ document.write("Last Published: " + document.lastModified);
 					<a href="mapred_tutorial.html#Usage">Wordcount example</a>
 				
 </p>
-<a name="N1025A"></a><a name="job"></a>
+<a name="N10262"></a><a name="job"></a>
 <h3 class="h4"> job </h3>
 <p>
 					Command to interact with Map Reduce Jobs.
@@ -648,7 +652,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 					
 </table>
-<a name="N102FA"></a><a name="pipes"></a>
+<a name="N10302"></a><a name="pipes"></a>
 <h3 class="h4"> pipes </h3>
 <p>
 					Runs a pipes job.
@@ -753,7 +757,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 					
 </table>
-<a name="N103BF"></a><a name="version"></a>
+<a name="N103C7"></a><a name="version"></a>
 <h3 class="h4"> version </h3>
 <p>
 					Prints the version.
@@ -763,7 +767,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Usage: hadoop version</span>
 				
 </p>
-<a name="N103CF"></a><a name="CLASSNAME"></a>
+<a name="N103D7"></a><a name="CLASSNAME"></a>
 <h3 class="h4"> CLASSNAME </h3>
 <p>
 					 hadoop script can be used to invoke any class.
@@ -779,11 +783,11 @@ document.write("Last Published: " + document.lastModified);
 </div>
 		
 		
-<a name="N103E3"></a><a name="Administration+Commands"></a>
+<a name="N103EB"></a><a name="Administration+Commands"></a>
 <h2 class="h3"> Administration Commands </h2>
 <div class="section">
 <p>Commands useful for administrators of a hadoop cluster.</p>
-<a name="N103EC"></a><a name="balancer"></a>
+<a name="N103F4"></a><a name="balancer"></a>
 <h3 class="h4"> balancer </h3>
 <p>
 					Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the 
@@ -809,7 +813,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N1041B"></a><a name="daemonlog"></a>
+<a name="N10423"></a><a name="daemonlog"></a>
 <h3 class="h4"> daemonlog </h3>
 <p>
 					 Get/Set the log level for each daemon.
@@ -846,7 +850,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N10458"></a><a name="datanode"></a>
+<a name="N10460"></a><a name="datanode"></a>
 <h3 class="h4"> datanode</h3>
 <p>
 					Runs a HDFS datanode.
@@ -872,7 +876,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N10483"></a><a name="dfsadmin"></a>
+<a name="N1048B"></a><a name="dfsadmin"></a>
 <h3 class="h4"> dfsadmin </h3>
 <p>
 					Runs a HDFS dfsadmin client.
@@ -987,7 +991,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N10543"></a><a name="jobtracker"></a>
+<a name="N1054B"></a><a name="jobtracker"></a>
 <h3 class="h4"> jobtracker </h3>
 <p>
 					Runs the MapReduce job Tracker node.
@@ -997,7 +1001,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Usage: hadoop jobtracker</span>
 				
 </p>
-<a name="N10553"></a><a name="namenode"></a>
+<a name="N1055B"></a><a name="namenode"></a>
 <h3 class="h4"> namenode </h3>
 <p>
 					Runs the namenode. More info about the upgrade, rollback and finalize is at 
@@ -1055,7 +1059,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N105BA"></a><a name="secondarynamenode"></a>
+<a name="N105C2"></a><a name="secondarynamenode"></a>
 <h3 class="h4"> secondarynamenode </h3>
 <p>
 					Runs the HDFS secondary namenode. See <a href="hdfs_user_guide.html#Secondary+Namenode">Secondary Namenode</a> 
@@ -1089,7 +1093,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N105F7"></a><a name="tasktracker"></a>
+<a name="N105FF"></a><a name="tasktracker"></a>
 <h3 class="h4"> tasktracker </h3>
 <p>
 					Runs a MapReduce task Tracker node.

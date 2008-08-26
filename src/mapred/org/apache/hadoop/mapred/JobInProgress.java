@@ -133,7 +133,8 @@ class JobInProgress {
   private boolean hasSpeculativeMaps;
   private boolean hasSpeculativeReduces;
   private long inputLength = 0;
-
+  private long maxVirtualMemoryForTask;
+  
   // Per-job counters
   public static enum Counter { 
     NUM_FAILED_MAPS, 
@@ -225,6 +226,7 @@ class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
+    this.maxVirtualMemoryForTask = conf.getMaxVirtualMemoryForTask();
   }
 
   /**
@@ -440,6 +442,11 @@ class JobInProgress {
     } else {
       this.priority = priority;
     }
+  }
+
+  // Accessors for resources.
+  public long getMaxVirtualMemoryForTask() {
+    return maxVirtualMemoryForTask;
   }
   
   long getInputLength() {
@@ -1089,9 +1096,10 @@ class JobInProgress {
     
 
     long outSize = resourceEstimator.getEstimatedMapOutputSize();
-    if(tts.getAvailableSpace() < outSize) {
+    long availSpace = tts.getResourceStatus().getAvailableSpace();
+    if(availSpace < outSize) {
       LOG.warn("No room for map task. Node " + node + 
-               " has " + tts.getAvailableSpace() + 
+               " has " + availSpace + 
                " bytes free; but we expect map to take " + outSize);
 
       return -1; //see if a different TIP might work better. 
@@ -1295,9 +1303,10 @@ class JobInProgress {
     }
 
     long outSize = resourceEstimator.getEstimatedReduceInputSize();
-    if(tts.getAvailableSpace() < outSize) {
+    long availSpace = tts.getResourceStatus().getAvailableSpace();
+    if(availSpace < outSize) {
       LOG.warn("No room for reduce task. Node " + taskTracker + " has " +
-               tts.getAvailableSpace() + 
+                availSpace + 
                " bytes free; but we expect reduce input to take " + outSize);
 
       return -1; //see if a different TIP might work better. 

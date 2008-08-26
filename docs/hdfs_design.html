@@ -588,12 +588,12 @@ document.write("Last Published: " + document.lastModified);
           
 <tr>
             
-<td colspan="1" rowspan="1"> Decommission DataNode <span class="codefrag">datanodename</span> </td><td colspan="1" rowspan="1"> <span class="codefrag">bin/hadoop dfsadmin -decommission datanodename</span> </td>
+<td colspan="1" rowspan="1"> Recommission or decommission DataNode(s) </td><td colspan="1" rowspan="1"> <span class="codefrag">bin/hadoop dfsadmin -refreshNodes</span> </td>
           
 </tr>
         
 </table>
-<a name="N10219"></a><a name="Browser+Interface"></a>
+<a name="N10216"></a><a name="Browser+Interface"></a>
 <h3 class="h4"> Browser Interface </h3>
 <p>
         A typical HDFS install configures a web server to expose the HDFS namespace through a configurable TCP port. This allows a user to navigate the HDFS namespace and view the contents of its files using a web browser.
@@ -601,10 +601,10 @@ document.write("Last Published: " + document.lastModified);
 </div> 
 
     
-<a name="N10224"></a><a name="Space+Reclamation"></a>
+<a name="N10221"></a><a name="Space+Reclamation"></a>
 <h2 class="h3"> Space Reclamation </h2>
 <div class="section">
-<a name="N1022A"></a><a name="File+Deletes+and+Undeletes"></a>
+<a name="N10227"></a><a name="File+Deletes+and+Undeletes"></a>
 <h3 class="h4"> File Deletes and Undeletes </h3>
 <p>
         When a file is deleted by a user or an application, it is not immediately removed from HDFS.  Instead, HDFS first renames it to a file in the <span class="codefrag">/trash</span> directory. The file can be restored quickly as long as it remains in <span class="codefrag">/trash</span>. A file remains in <span class="codefrag">/trash</span> for a configurable amount of time. After the expiry of its life in <span class="codefrag">/trash</span>, the NameNode deletes the file from the HDFS namespace. The deletion of a file causes the blocks associated with the file to be freed. Note that there could be an appreciable time delay between the time a file is deleted by a user and the time of the corresponding increase in free space in HDFS.
@@ -612,7 +612,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         A user can Undelete a file after deleting it as long as it remains in the <span class="codefrag">/trash</span> directory. If a user wants to undelete a file that he/she has deleted, he/she can navigate the <span class="codefrag">/trash</span> directory and retrieve the file. The <span class="codefrag">/trash</span> directory contains only the latest copy of the file that was deleted. The <span class="codefrag">/trash</span> directory is just like any other directory with one special feature: HDFS applies specified policies to automatically delete files from this directory. The current default policy is to delete files from <span class="codefrag">/trash</span> that are more than 6 hours old. In the future, this policy will be configurable through a well defined interface.
         </p>
-<a name="N10252"></a><a name="Decrease+Replication+Factor"></a>
+<a name="N1024F"></a><a name="Decrease+Replication+Factor"></a>
 <h3 class="h4"> Decrease Replication Factor </h3>
 <p>
         When the replication factor of a file is reduced, the NameNode selects excess replicas that can be deleted. The next Heartbeat transfers this information to the DataNode. The DataNode then removes the corresponding blocks and the corresponding free space appears in the cluster. Once again, there might be a time delay between the completion of the <span class="codefrag">setReplication</span> API call and the appearance of free space in the cluster.
@@ -621,7 +621,7 @@ document.write("Last Published: " + document.lastModified);
 
 
     
-<a name="N10260"></a><a name="References"></a>
+<a name="N1025D"></a><a name="References"></a>
 <h2 class="h3"> References </h2>
 <div class="section">
 <p>

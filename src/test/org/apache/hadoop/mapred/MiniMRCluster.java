@@ -73,7 +73,11 @@ public class MiniMRCluster {
     public int getJobTrackerInfoPort() {
       return tracker.getInfoPort();
     }
-        
+  
+    public JobTracker getJobTracker() {
+      return tracker;
+    }
+    
     /**
      * Create the job tracker and run it.
      */
@@ -116,12 +120,18 @@ public class MiniMRCluster {
     volatile boolean isDead = false;
     int numDir;
 
-    TaskTrackerRunner(int trackerId, int numDir, String hostname) 
+    TaskTrackerRunner(int trackerId, int numDir, String hostname, 
+                                    JobConf cfg) 
     throws IOException {
       this.trackerId = trackerId;
       this.numDir = numDir;
       localDirs = new String[numDir];
-      JobConf conf = createJobConf();
+      JobConf conf = null;
+      if (cfg == null) {
+        conf = createJobConf();
+      } else {
+        conf = createJobConf(cfg);
+      }
       if (hostname != null) {
         conf.set("slave.host.name", hostname);
       }
@@ -216,6 +226,10 @@ public class MiniMRCluster {
             taskTrackerList.get(taskTracker)).getLocalDir();
   }
 
+  public JobTrackerRunner getJobTrackerRunner() {
+    return jobTracker;
+  }
+  
   /**
    * Get the number of task trackers in the cluster
    */
@@ -413,7 +427,7 @@ public class MiniMRCluster {
       }
       TaskTrackerRunner taskTracker;
       taskTracker = new TaskTrackerRunner(idx, numDir, 
-          hosts == null ? null : hosts[idx]);
+          hosts == null ? null : hosts[idx], conf);
       
       Thread taskTrackerThread = new Thread(taskTracker);
       taskTrackerList.add(taskTracker);

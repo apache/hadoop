@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HADOOP-3854. Add support for pluggable servlet filters in the HttpServers.
     (Tsz Wo (Nicholas) Sze via omalley)
 
+    HADOOP-3759. Provides ability to run memory intensive jobs without 
+    affecting other running tasks on the nodes. (Hemanth Yamijala via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

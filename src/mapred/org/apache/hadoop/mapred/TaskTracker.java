@@ -177,6 +177,11 @@ public class TaskTracker
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
   private CleanupQueue directoryCleanupThread;
+  private long maxVirtualMemoryForTasks 
+                                    = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+  private long defaultMemoryPerTask = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+  
+  
   /**
    * the minimum interval between jobtracker polls
    */
@@ -432,6 +437,13 @@ public class TaskTracker
                              "Map-events fetcher for all reduce tasks " + "on " + 
                              taskTrackerName);
     mapEventsFetcher.start();
+    maxVirtualMemoryForTasks = fConf.getMaxVirtualMemoryForTasks();
+    if (maxVirtualMemoryForTasks != 
+                JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT) {
+      defaultMemoryPerTask = maxVirtualMemoryForTasks /
+                                    (maxCurrentMapTasks + 
+                                        maxCurrentReduceTasks);
+    }
     this.running = true;
   }
   
@@ -704,7 +716,11 @@ public class TaskTracker
     }
     launchTaskForJob(tip, new JobConf(rjob.jobFile)); 
   }
-    
+
+  private long getDefaultMemoryPerTask() {
+    return defaultMemoryPerTask;
+  }
+
   private void launchTaskForJob(TaskInProgress tip, JobConf jobConf) throws IOException{
     synchronized (tip) {
       try {
@@ -1034,7 +1050,12 @@ public class TaskTracker
     if (askForNewTask) {
       checkLocalDirs(fConf.getLocalDirs());
       askForNewTask = enoughFreeSpace(localMinSpaceStart);
-      status.setAvailableSpace( getFreeSpace() );
+      status.getResourceStatus().setAvailableSpace( getFreeSpace() );
+      long freeVirtualMem = findFreeVirtualMemory();
+      LOG.debug("Setting amount of free virtual memory for the new task: " +
+                    freeVirtualMem);
+      status.getResourceStatus().setFreeVirtualMemory(freeVirtualMem);
+      status.getResourceStatus().setDefaultVirtualMemoryPerTask(getDefaultMemoryPerTask());      
     }
       
     //
@@ -1079,6 +1100,68 @@ public class TaskTracker
     return heartbeatResponse;
   }
 
+  /**
+   * Return the maximum amount of memory available for all tasks on 
+   * this tracker
+   * @return maximum amount of virtual memory
+   */
+  long getMaxVirtualMemoryForTasks() {
+    return maxVirtualMemoryForTasks;
+  }
+  
+  /**
+   * Find the minimum amount of virtual memory that would be
+   * available for a new task.
+   * 
+   * The minimum amount of virtual memory is computed by looking
+   * at the maximum amount of virtual memory that is allowed for
+   * all tasks in the system, as per mapred.tasktracker.tasks.maxmemory,
+   * and the total amount of maximum virtual memory that can be
+   * used by all currently running tasks.
+   * 
+   * @return amount of free virtual memory that can be assured for
+   * new tasks
+   */
+  private synchronized long findFreeVirtualMemory() {
+  
+    if (maxVirtualMemoryForTasks == JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT) {
+      // this will disable picking up tasks based on free memory.
+      return JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+    }
+  
+    long maxMemoryUsed = 0L;
+    for (TaskInProgress tip: runningTasks.values()) {
+      // the following task states are one in which the slot is
+      // still occupied and hence memory of the task should be
+      // accounted in used memory.
+      if ((tip.getRunState() == TaskStatus.State.RUNNING)
+            || (tip.getRunState() == TaskStatus.State.UNASSIGNED)
+            || (tip.getRunState() == TaskStatus.State.COMMIT_PENDING)) {
+        maxMemoryUsed += getMemoryForTask(tip);
+      }
+    }
+  
+    return (maxVirtualMemoryForTasks - maxMemoryUsed);
+  }
+
+  /**
+   * Return the memory allocated for a TIP.
+   * 
+   * If the TIP's job has a configured value for the max memory that is
+   * returned. Else, the default memory that would be assigned for the
+   * task is returned.
+   * @param tip The TaskInProgress
+   * @return the memory allocated for the TIP.
+   */
+  private long getMemoryForTask(TaskInProgress tip) {
+    long memForTask = tip.getJobConf().getMaxVirtualMemoryForTask();
+    if (memForTask == JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT) {
+      memForTask = this.getDefaultMemoryPerTask();
+    }
+    return memForTask;
+  }  
+  
+  
   /**
    * Check if the jobtracker directed a 'reset' of the tasktracker.
    * 

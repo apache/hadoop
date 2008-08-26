@@ -446,13 +446,26 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">-finalizeUpgrade</span>
    		: removes previous backup of the cluster made during last upgrade.
    	</li>
+    
+<li>
+      
+<span class="codefrag">-refreshNodes</span>
+      : Updates the set of hosts allowed to connect to namenode.
+      Re-reads the config file to update values defined by dfs.hosts and 
+      dfs.host.exclude and reads the entires (hostnames) in those files. 
+      Each entry not defined in dfs.hosts but in dfs.hosts.exclude 
+      is decommissioned. Each entry defined in dfs.hosts and also in 
+      dfs.host.exclude is stopped from decommissioning if it has aleady 
+      been marked for decommission. Entires not present in both the lists 
+      are decommissioned. 
+    </li>
    	
 </ul>
 <p>
    	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.
    	</p>
 </div> 
-<a name="N100D2"></a><a name="Secondary+NameNode"></a>
+<a name="N100D8"></a><a name="Secondary+NameNode"></a>
 <h2 class="h3"> Secondary NameNode </h2>
 <div class="section">
 <p>
@@ -537,7 +550,7 @@ document.write("Last Published: " + document.lastModified);
      For command usage, see <a href="commands_manual.html#secondarynamenode"><span class="codefrag">secondarynamenode</span> command</a>.
    </p>
 </div> 
-<a name="N10139"></a><a name="Rebalancer"></a>
+<a name="N1013F"></a><a name="Rebalancer"></a>
 <h2 class="h3"> Rebalancer </h2>
 <div class="section">
 <p>
@@ -585,7 +598,7 @@ document.write("Last Published: " + document.lastModified);
      For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
    </p>
 </div> 
-<a name="N10164"></a><a name="Rack+Awareness"></a>
+<a name="N1016A"></a><a name="Rack+Awareness"></a>
 <h2 class="h3"> Rack Awareness </h2>
 <div class="section">
 <p>
@@ -604,7 +617,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>.
     </p>
 </div> 
-<a name="N10179"></a><a name="Safemode"></a>
+<a name="N1017F"></a><a name="Safemode"></a>
 <h2 class="h3"> Safemode </h2>
 <div class="section">
 <p>
@@ -625,7 +638,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><span class="codefrag">setSafeMode()</span></a>.
     </p>
 </div> 
-<a name="N1018B"></a><a name="fsck"></a>
+<a name="N10191"></a><a name="fsck"></a>
 <h2 class="h3"> fsck </h2>
 <div class="section">
 <p>    
@@ -643,7 +656,7 @@ document.write("Last Published: " + document.lastModified);
       <span class="codefrag">fsck</span> can be run on the whole file system or on a subset of files.
      </p>
 </div> 
-<a name="N101AD"></a><a name="Upgrade+and+Rollback"></a>
+<a name="N101B3"></a><a name="Upgrade+and+Rollback"></a>
 <h2 class="h3"> Upgrade and Rollback </h2>
 <div class="section">
 <p>
@@ -702,7 +715,7 @@ document.write("Last Published: " + document.lastModified);
       
 </ul>
 </div> 
-<a name="N101EB"></a><a name="File+Permissions+and+Security"></a>
+<a name="N101F1"></a><a name="File+Permissions+and+Security"></a>
 <h2 class="h3"> File Permissions and Security </h2>
 <div class="section">
 <p>           
@@ -715,7 +728,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="hdfs_permissions_guide.html">Permissions User and Administrator Guide</a>.
      </p>
 </div> 
-<a name="N101F9"></a><a name="Scalability"></a>
+<a name="N101FF"></a><a name="Scalability"></a>
 <h2 class="h3"> Scalability </h2>
 <div class="section">
 <p>
@@ -733,7 +746,7 @@ document.write("Last Published: " + document.lastModified);
       suggested configuration improvements for large Hadoop clusters.
      </p>
 </div> 
-<a name="N1020B"></a><a name="Related+Documentation"></a>
+<a name="N10211"></a><a name="Related+Documentation"></a>
 <h2 class="h3"> Related Documentation </h2>
 <div class="section">
 <p>

@@ -1653,7 +1653,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     TaskInProgress tip = getTip(tipid);
     return (tip == null ? null : tip.getCounters());
   }
-    
+
+  /**
+   * Returns the configured task scheduler for this job tracker.
+   * @return the configured task scheduler
+   */
+  TaskScheduler getTaskScheduler() {
+    return taskScheduler;
+  }
+  
   /**
    * Returns specified TaskInProgress, or null.
    */

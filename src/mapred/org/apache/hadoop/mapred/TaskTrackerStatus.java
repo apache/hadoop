@@ -48,13 +48,98 @@ class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
-  long availableSpace; //space available on this node
+   
+  /**
+   * Class representing a collection of resources on this tasktracker.
+   */
+  static class ResourceStatus implements Writable {
     
+    private long freeVirtualMemory;
+    private long defaultVirtualMemoryPerTask;
+    private long availableSpace;
+    
+    ResourceStatus() {
+      freeVirtualMemory = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+      defaultVirtualMemoryPerTask = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+      availableSpace = Long.MAX_VALUE;
+    }
+    
+    /**
+     * Set the amount of free virtual memory that is available for running
+     * a new task
+     * @param freeVMem amount of free virtual memory
+     */
+    void setFreeVirtualMemory(long freeVmem) {
+      freeVirtualMemory = freeVmem;
+    }
+
+    /**
+     * Get the amount of free virtual memory that will be available for
+     * running a new task. 
+     * 
+     * If this is {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should 
+     * be ignored and not used in computation.
+     * 
+     *@return amount of free virtual memory.
+     */
+    long getFreeVirtualMemory() {
+      return freeVirtualMemory;
+    }
+
+    /**
+     * Set the default amount of virtual memory per task.
+     * @param vmem amount of free virtual memory.
+     */
+    void setDefaultVirtualMemoryPerTask(long defaultVmem) {
+      defaultVirtualMemoryPerTask = defaultVmem;
+    }
+    
+    /**
+     * Get the default amount of virtual memory per task.
+     * 
+     * This amount will be returned if a task's job does not specify any
+     * virtual memory itself. If this is 
+     * {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should be ignored 
+     * and not used in any computation.
+     * 
+     * @return default amount of virtual memory per task. 
+     */    
+    long getDefaultVirtualMemoryPerTask() {
+      return defaultVirtualMemoryPerTask;
+    }
+    
+    void setAvailableSpace(long availSpace) {
+      availableSpace = availSpace;
+    }
+    
+    /**
+     * Will return LONG_MAX if space hasn't been measured yet.
+     * @return bytes of available local disk space on this tasktracker.
+     */    
+    long getAvailableSpace() {
+      return availableSpace;
+    }
+    
+    public void write(DataOutput out) throws IOException {
+      WritableUtils.writeVLong(out, freeVirtualMemory);
+      WritableUtils.writeVLong(out, defaultVirtualMemoryPerTask);
+      WritableUtils.writeVLong(out, availableSpace);
+    }
+    
+    public void readFields(DataInput in) throws IOException {
+      freeVirtualMemory = WritableUtils.readVLong(in);;
+      defaultVirtualMemoryPerTask = WritableUtils.readVLong(in);;
+      availableSpace = WritableUtils.readVLong(in);;
+    }
+  }
+  
+  private ResourceStatus resStatus;
+  
   /**
    */
   public TaskTrackerStatus() {
     taskReports = new ArrayList<TaskStatus>();
-    this.availableSpace = Long.MAX_VALUE; //not measured by default.
+    resStatus = new ResourceStatus();
   }
 
   /**
@@ -71,7 +156,7 @@ class TaskTrackerStatus implements Writable {
     this.failures = failures;
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
-    this.availableSpace = Long.MAX_VALUE; //not measured by default.
+    this.resStatus = new ResourceStatus();
   }
 
   /**
@@ -171,17 +256,14 @@ class TaskTrackerStatus implements Writable {
   }  
   
   /**
-   * Will return LONG_MAX if space hasn't been measured yet.
-   * @return bytes of available local disk space on this tasktracker.
+   * Return the {@link ResourceStatus} object configured with this
+   * status.
+   * 
+   * @return the resource status
    */
-  public long getAvailableSpace() {
-    return availableSpace;
+  ResourceStatus getResourceStatus() {
+    return resStatus;
   }
-  
-  public void setAvailableSpace(long a) {
-    availableSpace = a;
-  }
-  
   
   ///////////////////////////////////////////
   // Writable
@@ -193,8 +275,9 @@ class TaskTrackerStatus implements Writable {
     out.writeInt(failures);
     out.writeInt(maxMapTasks);
     out.writeInt(maxReduceTasks);
+    resStatus.write(out);
     out.writeInt(taskReports.size());
-    out.writeLong(availableSpace);
+
     for (TaskStatus taskStatus : taskReports) {
       TaskStatus.writeTaskStatus(out, taskStatus);
     }
@@ -207,9 +290,10 @@ class TaskTrackerStatus implements Writable {
     this.failures = in.readInt();
     this.maxMapTasks = in.readInt();
     this.maxReduceTasks = in.readInt();
+    resStatus.readFields(in);
     taskReports.clear();
     int numTasks = in.readInt();
-    this.availableSpace = in.readLong();
+
     for (int i = 0; i < numTasks; i++) {
       taskReports.add(TaskStatus.readTaskStatus(in));
     }

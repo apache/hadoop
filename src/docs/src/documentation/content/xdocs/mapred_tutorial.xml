@@ -1082,7 +1082,9 @@
         </p>
         
         <p>Users/admins can also specify the maximum virtual memory 
-        of the launched child-task using <code>mapred.child.ulimit</code>.
+        of the launched child-task, and any sub-process it launches 
+        recursively, using <code>mapred.child.ulimit</code>. Note that
+        the value set here is a per process limit.
         The value for <code>mapred.child.ulimit</code> should be specified 
         in kilo bytes (KB). And also the value must be greater than
         or equal to the -Xmx passed to JavaVM, else the VM might not start. 
@@ -1093,6 +1095,27 @@
         the memory options for daemons is documented in 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
         cluster_setup.html </a></p>
+        
+        <p>There are two additional parameters that influence virtual memory
+        limits for tasks run on a tasktracker. The parameter 
+        <code>mapred.tasktracker.maxmemory</code> is set by admins
+        to limit the total memory all tasks that it runs can use together. 
+        Setting this enables the parameter <code>mapred.task.maxmemory</code>
+        that can be used to specify the maximum virtual memory the entire 
+        process tree starting from the launched child-task requires. 
+        This is a cumulative limit of all processes in the process tree. 
+        By specifying this value, users can be assured that the system will 
+        run their tasks only on tasktrackers that have atleast this amount 
+        of free memory available. If at any time during task execution, this 
+        limit is exceeded, the task would be killed by the system. By default, 
+        any task would get a share of 
+        <code>mapred.tasktracker.maxmemory</code>, divided
+        equally among the number of slots. The user can thus verify if the
+        tasks need more memory than this, and specify it in 
+        <code>mapred.task.maxmemory</code>. Specifically, this value must be 
+        greater than any value specified for a maximum heap-size
+        of the child jvm via <code>mapred.child.java.opts</code>, or a ulimit
+        value in <code>mapred.child.ulimit</code>. </p>
         
         <p>The task tracker has local directory,
         <code> ${mapred.local.dir}/taskTracker/</code> to create localized

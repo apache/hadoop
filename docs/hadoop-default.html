@@ -11,6 +11,14 @@
 <td><a name="hadoop.native.lib">hadoop.native.lib</a></td><td>true</td><td>Should native hadoop libraries, if present, be used.</td>
 </tr>
 <tr>
+<td><a name="hadoop.http.filter.initializers">hadoop.http.filter.initializers</a></td><td></td><td>A comma separated list of class names.  Each class in the list must extend org.apache.hadoop.http.FilterInitializer.
+  
+  The corresponding Filter will be initialized.  Then, the Filter will be applied to all user facing jsp and servlet web pages.  The ordering of the list defines the ordering of the filters.
+
+  The value can be empty.
+  </td>
+</tr>
+<tr>
 <td><a name="hadoop.logfile.size">hadoop.logfile.size</a></td><td>10000000</td><td>The max size of each log file</td>
 </tr>
 <tr>
@@ -76,7 +84,7 @@ creations/deletions), or "all".</td>
   facilitate opening large map files using less memory.</td>
 </tr>
 <tr>
-<td><a name="io.compression.codecs">io.compression.codecs</a></td><td>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.LzopCodec</td><td>A list of the compression codec classes that can be used 
+<td><a name="io.compression.codecs">io.compression.codecs</a></td><td>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.LzopCodec,org.apache.hadoop.io.compress.BZip2Codec</td><td>A list of the compression codec classes that can be used 
                for compression/decompression.</td>
 </tr>
 <tr>
@@ -237,11 +245,6 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="dfs.permissions.supergroup">dfs.permissions.supergroup</a></td><td>supergroup</td><td>The name of the group of super-users.</td>
-</tr>
-<tr>
-<td><a name="dfs.client.buffer.dir">dfs.client.buffer.dir</a></td><td>${hadoop.tmp.dir}/dfs/tmp</td><td>Determines where on the local filesystem an DFS client
-  should store its blocks before it sends them to the datanode.
-  </td>
 </tr>
 <tr>
 <td><a name="dfs.data.dir">dfs.data.dir</a></td><td>${hadoop.tmp.dir}/dfs/data</td><td>Determines where on the local filesystem an DFS data node
@@ -416,6 +419,10 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
+<td><a name="mapred.tasktracker.instrumentation">mapred.tasktracker.instrumentation</a></td><td>org.apache.hadoop.mapred.TaskTrackerMetricsInst</td><td>Expert: The instrumentation class to associate with each TaskTracker.
+  </td>
+</tr>
+<tr>
 <td><a name="mapred.map.tasks">mapred.map.tasks</a></td><td>2</td><td>The default number of map tasks per job.  Typically set
   to a prime several times greater than number of available hosts.
   Ignored when mapred.job.tracker is "local".  
@@ -425,6 +432,14 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.reduce.tasks">mapred.reduce.tasks</a></td><td>1</td><td>The default number of reduce tasks per job.  Typically set
   to a prime close to the number of available hosts.  Ignored when
   mapred.job.tracker is "local".
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.taskScheduler">mapred.jobtracker.taskScheduler</a></td><td>org.apache.hadoop.mapred.JobQueueTaskScheduler</td><td>The class responsible for scheduling the tasks.</td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.taskScheduler.maxRunningTasksPerJob">mapred.jobtracker.taskScheduler.maxRunningTasksPerJob</a></td><td></td><td>The maximum number of running tasks for a job before
+  it gets preempted. No limits if undefined.
   </td>
 </tr>
 <tr>
@@ -467,6 +482,10 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="mapred.jobtracker.completeuserjobs.maximum">mapred.jobtracker.completeuserjobs.maximum</a></td><td>100</td><td>The maximum number of complete jobs per user to keep around before delegating them to the job history.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.instrumentation">mapred.jobtracker.instrumentation</a></td><td>org.apache.hadoop.mapred.JobTrackerMetricsInst</td><td>Expert: The instrumentation class to associate with each JobTracker.
   </td>
 </tr>
 <tr>
@@ -752,7 +771,7 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="topology.script.number.args">topology.script.number.args</a></td><td>20</td><td> The max number of args that the script configured with 
+<td><a name="topology.script.number.args">topology.script.number.args</a></td><td>100</td><td> The max number of args that the script configured with 
     topology.script.file.name should be run with. Each arg is an
     IP address.
   </td>
@@ -761,6 +780,31 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.task.cache.levels">mapred.task.cache.levels</a></td><td>2</td><td> This is the max level of the task cache. For example, if
     the level is 2, the tasks cached are at the host level and at the rack
     level.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.tasks.maxmemory">mapred.tasktracker.tasks.maxmemory</a></td><td>-1</td><td> The maximum amount of virtual memory all tasks running on a
+    tasktracker, including sub-processes they launch, can use. This value is
+    used to compute the amount of free memory available for tasks. Any task
+    scheduled on this tasktracker is guaranteed and constrained to use a 
+    share of this amount. Any task exceeding its share will be killed. 
+    If set to -1, this functionality is disabled, and mapred.task.maxmemory
+    is ignored.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.maxmemory">mapred.task.maxmemory</a></td><td>-1</td><td> The maximum amount of memory any task of a job will use.
+    A task of this job will be scheduled on a tasktracker, only if the 
+    amount of free memory on the tasktracker is greater than or 
+    equal to this value. If set to -1, tasks are assured a memory limit on
+    the tasktracker equal to 
+    mapred.tasktracker.tasks.maxmemory/number of slots. If the value of 
+    mapred.tasktracker.tasks.maxmemory is set to -1, this value is ignored.
+    
+    Note: If mapred.child.java.opts is specified with an Xmx value, or if 
+    mapred.child.ulimit is specified, then the value of mapred.task.maxmemory
+    must be set to a higher value than these. If not, the task might be 
+    killed even though these limits are not reached.
   </td>
 </tr>
 </table>
