@@ -30,6 +30,15 @@ import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Writable type storing multiple {@link org.apache.hadoop.io.Writable}s.
+ *
+ * This is *not* a general-purpose tuple type. In almost all cases, users are
+ * encouraged to implement their own serializable types, which can perform
+ * better validation and provide more efficient encodings than this class is
+ * capable. TupleWritable relies on the join framework for type safety and
+ * assumes its instances will rarely be persisted, assumptions not only
+ * incompatible with, but contrary to the general case.
+ *
+ * @see org.apache.hadoop.io.Writable
  */
 public class TupleWritable implements Writable, Iterable<Writable> {
 
@@ -77,7 +86,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
   public boolean equals(Object other) {
     if (other instanceof TupleWritable) {
       TupleWritable that = (TupleWritable)other;
-      if (this.size() != that.size() || this.mask() != that.mask()) {
+      if (this.size() != that.size() || this.written != that.written) {
         return false;
       }
       for (int i = 0; i < values.length; ++i) {
@@ -213,14 +222,6 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    */
   void clearWritten() {
     written = 0L;
-  }
-
-  /**
-   * Return a bitmap recording which of the writables that have been
-   * written to.
-   */
-  long mask() {
-    return written;
   }
 
 }

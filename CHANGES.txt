@@ -215,6 +215,9 @@ Trunk (unreleased changes)
     HADOOP-3742. Remove HDFS from public java doc and add javadoc-dev for
     generative javadoc for developers. (Sanjay Radia via omalley)
 
+    HADOOP-3944. Improve documentation for public TupleWritable class in 
+    join package. (Chris Douglas via enis)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
