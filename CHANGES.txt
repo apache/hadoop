@@ -224,6 +224,8 @@ Trunk (unreleased changes)
     HADOOP-2330. Preallocate HDFS transaction log to improve performance.
     (dhruba and hairong)
 
+    HADOOP-3965. Convert DataBlockScanner into a package private class. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

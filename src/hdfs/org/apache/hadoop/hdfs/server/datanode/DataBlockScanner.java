@@ -57,7 +57,7 @@ import org.apache.hadoop.util.StringUtils;
  * Currently it does not modify the metadata for block.
  */
 
-public class DataBlockScanner implements Runnable {
+class DataBlockScanner implements Runnable {
   
   public static final Log LOG = LogFactory.getLog(DataBlockScanner.class);
   
@@ -122,7 +122,7 @@ public class DataBlockScanner implements Runnable {
              compareTo((BlockScanInfo)other) == 0;
     }
     
-    public long getLastScanTime() {
+    long getLastScanTime() {
       return ( lastScanType == ScanType.NONE) ? 0 : lastScanTime;
     }
     
@@ -283,7 +283,7 @@ public class DataBlockScanner implements Runnable {
   }
 
   /** @return the last scan time */
-  public synchronized long getLastScanTime(Block block) {
+  synchronized long getLastScanTime(Block block) {
     if (!isInitiliazed()) {
       return 0;
     }

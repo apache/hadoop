@@ -514,7 +514,7 @@ public class MiniDFSCluster {
   }
   
   /** @return the datanode having the ipc server listen port */
-  DataNode getDataNode(int ipcPort) {
+  public DataNode getDataNode(int ipcPort) {
     for(DataNode dn : getDataNodes()) {
       if (dn.ipcServer.getListenerAddress().getPort() == ipcPort) {
         return dn;

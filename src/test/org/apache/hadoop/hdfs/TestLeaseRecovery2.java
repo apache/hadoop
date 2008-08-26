@@ -23,6 +23,7 @@ import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 
 public class TestLeaseRecovery2 extends junit.framework.TestCase {
@@ -90,7 +91,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       dfs.dfs.clientName += "_1";
       while (true) {
         try {
-          FSDataOutputStream newstm = dfs.create(filepath, false,
+          dfs.create(filepath, false,
             dfs.getConf().getInt("io.file.buffer.size", 4096),
             (short)repl, (long)BLOCK_SIZE);
           assertTrue("Creation of an existing file should never succeed.", false);

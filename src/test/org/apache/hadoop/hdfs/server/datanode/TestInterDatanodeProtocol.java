@@ -15,13 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -36,7 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestInterDatanodeProtocol extends junit.framework.TestCase {
-  static void checkMetaInfo(Block b, InterDatanodeProtocol idp,
+  public static void checkMetaInfo(Block b, InterDatanodeProtocol idp,
       DataBlockScanner scanner) throws IOException {
     BlockMetaDataInfo metainfo = idp.getBlockMetaDataInfo(b);
     assertEquals(b.getBlockId(), metainfo.getBlockId());
@@ -47,8 +50,9 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
     }
   }
 
-  static LocatedBlock getLastLocatedBlock(ClientProtocol namenode, String src
-      ) throws IOException {
+  public static LocatedBlock getLastLocatedBlock(
+      ClientProtocol namenode, String src
+  ) throws IOException {
     //get block info for the last block
     LocatedBlocks locations = namenode.getBlockLocations(src, 0, Long.MAX_VALUE);
     List<LocatedBlock> blocks = locations.getLocatedBlocks();
@@ -76,10 +80,10 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       String filestr = "/foo";
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
-      assertTrue(dfs.dfs.exists(filestr));
+      assertTrue(dfs.getClient().exists(filestr));
 
       //get block info
-      LocatedBlock locatedblock = getLastLocatedBlock(dfs.dfs.namenode, filestr);
+      LocatedBlock locatedblock = getLastLocatedBlock(dfs.getClient().namenode, filestr);
       DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
       assertTrue(datanodeinfo.length > 0);
 
