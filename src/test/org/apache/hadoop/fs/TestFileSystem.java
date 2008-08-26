@@ -23,6 +23,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
@@ -578,5 +584,38 @@ public class TestFileSystem extends TestCase {
       UnixUserGroupInformation.login(fs.getConf(), true);
       FileSystem.closeAll();
     }
+  }
+
+
+  public void testCacheKeysAreCaseInsensitive()
+    throws Exception
+  {
+    Configuration conf = new Configuration();
+    
+    // check basic equality
+    FileSystem.Cache.Key lowercaseCachekey1 = new FileSystem.Cache.Key(new URI("hftp://localhost:12345/"), conf);
+    FileSystem.Cache.Key lowercaseCachekey2 = new FileSystem.Cache.Key(new URI("hftp://localhost:12345/"), conf);
+    assertEquals( lowercaseCachekey1, lowercaseCachekey2 );
+
+    // check insensitive equality    
+    FileSystem.Cache.Key uppercaseCachekey = new FileSystem.Cache.Key(new URI("HFTP://Localhost:12345/"), conf);
+    assertEquals( lowercaseCachekey2, uppercaseCachekey );
+
+    // check behaviour with collections
+    List<FileSystem.Cache.Key> list = new ArrayList<FileSystem.Cache.Key>();
+    list.add(uppercaseCachekey);
+    assertTrue(list.contains(uppercaseCachekey));
+    assertTrue(list.contains(lowercaseCachekey2));
+
+    Set<FileSystem.Cache.Key> set = new HashSet<FileSystem.Cache.Key>();
+    set.add(uppercaseCachekey);
+    assertTrue(set.contains(uppercaseCachekey));
+    assertTrue(set.contains(lowercaseCachekey2));
+
+    Map<FileSystem.Cache.Key, String> map = new HashMap<FileSystem.Cache.Key, String>();
+    map.put(uppercaseCachekey, "");
+    assertTrue(map.containsKey(uppercaseCachekey));
+    assertTrue(map.containsKey(lowercaseCachekey2));    
+
   }
 }

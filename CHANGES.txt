@@ -362,6 +362,9 @@ Trunk (unreleased changes)
 
     HADOOP-3964. Fix javadoc warnings introduced by FailMon. (dhruba)
 
+    HADOOP-3785. Fix FileSystem cache to be case-insensitive for scheme and
+    authority. (Bill de hOra via cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

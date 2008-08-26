@@ -1323,7 +1323,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /** Caching FileSystem objects */
-  private static class Cache {
+  static class Cache {
     private final Map<Key, FileSystem> map = new HashMap<Key, FileSystem>();
 
     synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
@@ -1378,14 +1378,14 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     /** FileSystem.Cache.Key */
-    private static class Key {
+    static class Key {
       final String scheme;
       final String authority;
       final String username;
 
       Key(URI uri, Configuration conf) throws IOException {
-        scheme = uri.getScheme();
-        authority = uri.getAuthority();
+        scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
+        authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
         UserGroupInformation ugi = UserGroupInformation.readFrom(conf);
         if (ugi == null) {
           try {
