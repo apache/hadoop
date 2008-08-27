@@ -268,7 +268,7 @@ public class TestQuota extends TestCase {
       assertEquals(c.getDirectoryCount(), 6);
       assertEquals(c.getQuota(), 6);
 
-      // 10: Move /nqdir0/qdir1/qdir21/nqdir30 to /nqdir0/qdir1/qdir21
+      // 10: Move /nqdir0/qdir1/qdir20/nqdir30 to /nqdir0/qdir1/qdir21
       hasException = false;
       try {
         assertFalse(dfs.rename(tempPath, quotaDir3));
@@ -276,6 +276,19 @@ public class TestQuota extends TestCase {
         hasException = true;
       }
       assertTrue(hasException);
+      assertTrue(dfs.exists(tempPath));
+      assertFalse(dfs.exists(new Path(quotaDir3, "nqdir30")));
+      
+      // 10.a: Rename /nqdir0/qdir1/qdir20/nqdir30 to /nqdir0/qdir1/qdir21/nqdir32
+      hasException = false;
+      try {
+        assertFalse(dfs.rename(tempPath, new Path(quotaDir3, "nqdir32")));
+      } catch (QuotaExceededException e) {
+        hasException = true;
+      }
+      assertTrue(hasException);
+      assertTrue(dfs.exists(tempPath));
+      assertFalse(dfs.exists(new Path(quotaDir3, "nqdir32")));
 
       // 11: Move /nqdir0/qdir1/qdir20/nqdir30 to /nqdir0
       assertTrue(dfs.rename(tempPath, new Path("/nqdir0")));
