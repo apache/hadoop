@@ -30,8 +30,19 @@
     </condition>
   </target>
 
+
+  <target name="check-libhdfs-exists" if="fusedfs">
+  <property name="libhdfs.lib" value="${hadoop.root}/build/libhdfs/libhdfs.so"/>
+        <available file="${libhdfs.lib}" property="libhdfs-exists"/>
+    <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile-libhdfs -Dlibhdfs=1">
+         <condition>
+            <not><isset property="libhdfs-exists"/></not>
+          </condition>
+   </fail>
+   </target>
+
   <!-- override compile target !-->
-  <target name="compile" depends="check-libhdfs-fuse" if="libhdfs-fuse">
+  <target name="compile" depends="check-libhdfs-fuse,check-libhdfs-exists" if="libhdfs-fuse">
     <echo message="contrib: ${name}"/>
 
     <exec executable="/bin/sh" failonerror="true">

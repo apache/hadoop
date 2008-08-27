@@ -106,6 +106,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
+    (Pete Wyckoff through zshao)
+
     HADOOP-3732. Delay intialization of datanode block verification till
     the verification thread is started. (rangadi)
 
