@@ -488,11 +488,15 @@ runContribTestOnEclipseFiles () {
   export ECLIPSE_DECLARED_SRC=$(sed -n 's@.*kind="src".*path="\(.*\)".*@\1@p' < .eclipse.templates/.classpath |sort)
 
   if [ "${DECLARED_JARS}" != "${PRESENT_JARS}" ]; then
-    echo "Some jars are not declared in the Eclipse project."
+    echo "
+FAILED. Some jars are not declared in the Eclipse project.
+  Declared jars: ${DECLARED_JARS}
+  Present jars:  ${PRESENT_JARS}"
     return 1
   fi
   for dir in $ECLIPSE_DECLARED_SRC; do
-    [ '!' -d $dir ] && echo "$dir is referenced in the Eclipse project although it doesn't exists anymore." && return 1
+    [ '!' -d $dir ] && echo "
+FAILED: $dir is referenced in the Eclipse project although it doesn't exists anymore." && return 1
   done
   return 0
 }
