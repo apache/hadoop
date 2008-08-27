@@ -371,6 +371,8 @@ class FSDirectory implements FSConstants, Closeable {
         return false;
       }
 
+      String srcChildName = srcChild.getLocalName();
+      
       // check the validity of the destination
       INode dstChild = null;
       QuotaExceededException failureByQuota = null;
@@ -412,6 +414,7 @@ class FSDirectory implements FSConstants, Closeable {
             +"failed to rename "+src+" to "+dst);
         try {
           // put it back
+          srcChild.setLocalName(srcChildName);
           addChild(srcInodes, srcInodes.length-1, srcChild, false);
         } catch (IOException ignored) {}
         if (failureByQuota != null) {
