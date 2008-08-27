@@ -66,6 +66,9 @@
     <fileset dir="${hadoop.root}/lib">
       <include name="**/*.jar" />
     </fileset>
+    <fileset dir="${build.dir}">
+      <include name="**/*.jar" />
+    </fileset>
   </path>
 
   <!-- the unit test classpath -->

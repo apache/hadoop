@@ -104,6 +104,9 @@ Trunk (unreleased changes)
     HADOOP-3759. Provides ability to run memory intensive jobs without 
     affecting other running tasks on the nodes. (Hemanth Yamijala via ddas)
 
+    HADOOP-3754. A Thrift Interface to allow access to HDFS. This creates
+    HDFS APIs in perl, python, php, ruby and cocoa. (dhruba)
+
   IMPROVEMENTS
 
     HADOOP-3732. Delay intialization of datanode block verification till

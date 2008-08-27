@@ -1,0 +1,10 @@
+This is the Thrift interface to access HDFS. The thrift interafce definition is located in if/hadoopfs.thrift. Thrift uses this file to generate HDFS access methods in multiple languages.
+
+The languages that are currently supported are C++, python, php, Ruby, Cocoa and perl. 
+
+A compiled thrift package is checked into lib/thrift. This is a version for Linux only. This patch is not yet tested on other platforms.  A "ant package" from the top level hadoop workspace build this package. The thrift-generated methods are located in build/contrib/thriftfs/gen-*. 
+
+The script in src/contrib/thriftfs/scripts/start_thrift_server.sh starts the proxy server. You might have to change the CLASSPATH settings in this file to make it work in your cluster. A python script hdfs.py uses the HDFS thrift APIs to access hdfs files in python language. This file is mostly present to demonstrate the usage of the Thrift HDFS API.
+
+
+
