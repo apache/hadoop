@@ -217,15 +217,26 @@ public class TestPipes extends TestCase {
     DataOutputStream out = local.create(new Path(inDir, "part0"));
     out.writeBytes("i am a silly test\n");
     out.writeBytes("you are silly\n");
+    out.writeBytes("i am a cat test\n");
+    out.writeBytes("you is silly\n");
+    out.writeBytes("i am a billy test\n");
+    out.writeBytes("hello are silly\n");
     out.close();
     out = local.create(new Path(inDir, "part1"));
-    out.writeBytes("all silly things drink java\n");
+    out.writeBytes("mall world things drink java\n");
+    out.writeBytes("hall silly cats drink java\n");
+    out.writeBytes("all dogs bow wow\n");
+    out.writeBytes("hello drink java\n");
     out.close();
     local.delete(outDir, true);
     local.mkdirs(outDir);
     out = local.create(jobXml);
     job.write(out);
     out.close();
+    System.err.println("About to run: Submitter -conf " + jobXml + 
+                       " -input " + inDir + " -output " + outDir + 
+                       " -program " + 
+                       dfs.getFileSystem().makeQualified(wordExec));
     try {
       Submitter.main(new String[]{"-conf", jobXml.toString(),
                                   "-input", inDir.toString(),

@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred.pipes;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
@@ -59,7 +61,12 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
                   Reporter reporter) throws IOException {
     Application<K1, V1, K2, V2> application = null;
     try {
-      application = new Application<K1, V1, K2, V2>(job, output, reporter,
+      RecordReader<FloatWritable, NullWritable> fakeInput = 
+        (!Submitter.getIsJavaRecordReader(job) && 
+         !Submitter.getIsJavaMapper(job)) ? 
+	  (RecordReader<FloatWritable, NullWritable>) input : null;
+      application = new Application<K1, V1, K2, V2>(job, fakeInput, output, 
+                                                    reporter,
           (Class<? extends K2>) job.getOutputKeyClass(), 
           (Class<? extends V2>) job.getOutputValueClass());
     } catch (InterruptedException ie) {

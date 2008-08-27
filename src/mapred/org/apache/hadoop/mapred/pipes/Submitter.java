@@ -261,6 +261,15 @@ public class Submitter {
     setIfUnset(conf, "mapred.mapoutput.value.class", textClassname);
     setIfUnset(conf, "mapred.output.key.class", textClassname);
     setIfUnset(conf, "mapred.output.value.class", textClassname);
+    
+    // Use PipesNonJavaInputFormat if necessary to handle progress reporting
+    // from C++ RecordReaders ...
+    if (!getIsJavaRecordReader(conf) && !getIsJavaMapper(conf)) {
+      conf.setClass("mapred.pipes.user.inputformat", 
+                    conf.getInputFormat().getClass(), InputFormat.class);
+      conf.setInputFormat(PipesNonJavaInputFormat.class);
+    }
+    
     String exec = getExecutable(conf);
     if (exec == null) {
       throw new IllegalArgumentException("No application program defined.");

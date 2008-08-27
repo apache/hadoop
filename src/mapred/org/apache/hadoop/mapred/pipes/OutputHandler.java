@@ -24,10 +24,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
@@ -42,6 +45,7 @@ class OutputHandler<K extends WritableComparable,
   private float progressValue = 0.0f;
   private boolean done = false;
   private Throwable exception = null;
+  RecordReader<FloatWritable,NullWritable> recordReader = null;
   private Map<Integer, Counters.Counter> registeredCounters = 
     new HashMap<Integer, Counters.Counter>();
 
@@ -50,9 +54,11 @@ class OutputHandler<K extends WritableComparable,
    * @param collector the "real" collector that takes the output
    * @param reporter the reporter for reporting progress
    */
-  public OutputHandler(OutputCollector<K, V> collector, Reporter reporter) {
+  public OutputHandler(OutputCollector<K, V> collector, Reporter reporter, 
+                       RecordReader<FloatWritable,NullWritable> recordReader) {
     this.reporter = reporter;
     this.collector = collector;
+    this.recordReader = recordReader;
   }
 
   /**
@@ -78,12 +84,19 @@ class OutputHandler<K extends WritableComparable,
     reporter.setStatus(msg);
   }
 
+  private FloatWritable progressKey = new FloatWritable(0.0f);
+  private NullWritable nullValue = NullWritable.get();
   /**
    * Update the amount done and call progress on the reporter.
    */
   public void progress(float progress) throws IOException {
     progressValue = progress;
     reporter.progress();
+    
+    if (recordReader != null) {
+      progressKey.set(progress);
+      recordReader.next(progressKey, nullValue);
+    }
   }
 
   /**

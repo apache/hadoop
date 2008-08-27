@@ -396,6 +396,9 @@ Trunk (unreleased changes)
     input jobs. Delays limiting task placement until after 10% of the maps
     have finished. (Ari Rabkin via omalley)
 
+    HADOOP-2168. Fix problem with C++ record reader's progress not being
+    reported to framework. (acmurthy via omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES

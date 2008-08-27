@@ -105,7 +105,7 @@ public:
    */
   virtual float getProgress() {
     if (bytesTotal > 0) {
-      return bytesRead / bytesTotal;
+      return (float)bytesRead / bytesTotal;
     } else {
       return 1.0f;
     }
