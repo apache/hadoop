@@ -385,6 +385,9 @@ Trunk (unreleased changes)
     HADOOP-4023. Fix javadoc warnings introduced when the HDFS javadoc was 
     made private. (omalley)
 
+    HADOOP-4030. Remove lzop from the default list of codecs. (Arun Murthy via
+    cdouglas)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
