@@ -388,6 +388,10 @@ Trunk (unreleased changes)
     HADOOP-4030. Remove lzop from the default list of codecs. (Arun Murthy via
     cdouglas)
 
+    HADOOP-3961. Fix task disk space requirement estimates for virtual
+    input jobs. Delays limiting task placement until after 10% of the maps
+    have finished. (Ari Rabkin via omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
