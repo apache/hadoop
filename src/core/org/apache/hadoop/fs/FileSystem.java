@@ -51,7 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * 
  * <p>
  * The local implementation is {@link LocalFileSystem} and distributed
- * implementation is {@link DistributedFileSystem}.
+ * implementation is DistributedFileSystem.
  *****************************************************************/
 public abstract class FileSystem extends Configured implements Closeable {
   private static final String FS_DEFAULT_NAME_KEY = "fs.default.name";

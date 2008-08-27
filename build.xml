@@ -822,7 +822,7 @@
     </javadoc>
   </target>	
 
-  <target name="javadoc" description="Generate javadoc">
+  <target name="javadoc" depends="compile" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${core.src.dir}/overview.html"

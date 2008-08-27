@@ -382,6 +382,9 @@ Trunk (unreleased changes)
     HADOOP-3705. Fix mapred.join parser to accept InputFormats named with
     underscore and static, inner classes. (cdouglas)
 
+    HADOOP-4023. Fix javadoc warnings introduced when the HDFS javadoc was 
+    made private. (omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
