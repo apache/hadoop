@@ -43,6 +43,10 @@ Trunk (unreleased changes)
     HADOOP-3549. Give more meaningful errno's in libhdfs. In particular, 
     EACCES is returned for permission problems. (Ben Slusky via omalley)
 
+    HADOOP-4036. ResourceStatus was added to TaskTrackerStatus by HADOOP-3759,
+    so increment the InterTrackerProtocol version. (Hemanth Yamijala via 
+    omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
