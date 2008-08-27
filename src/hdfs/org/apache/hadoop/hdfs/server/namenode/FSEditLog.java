@@ -221,12 +221,12 @@ public class FSEditLog {
     private void preallocate() throws IOException {
       long position = fc.position();
       if (position + 4096 >= fc.size()) {
-        FSNamesystem.LOG.info("XXX Preallocating Edit log, current size " +
-                              fc.size());
+        FSNamesystem.LOG.debug("Preallocating Edit log, current size " +
+                                fc.size());
         long newsize = position + 1024*1024; // 1MB
         fill.position(0);
         int written = fc.write(fill, newsize);
-        FSNamesystem.LOG.info("XXX Edit log size is now " + fc.size() +
+        FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
                               " written " + written + " bytes " +
                               " at offset " +  newsize);
       }
