@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -112,8 +111,8 @@ public class TestGet extends HBaseTestCase {
       batchUpdate.put(HConstants.COL_SERVER, 
         Bytes.toBytes(new HServerAddress(SERVER_ADDRESS).toString()));
       batchUpdate.put(HConstants.COL_STARTCODE, Bytes.toBytes(12345));
-      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
-        "region"), Bytes.toBytes("region"));
+      batchUpdate.put(Bytes.toString(HConstants.COLUMN_FAMILY) +
+        "region", Bytes.toBytes("region"));
       r.commit(batchUpdate);
       
       // Verify that get works the same from memcache as when reading from disk
@@ -134,14 +133,12 @@ public class TestGet extends HBaseTestCase {
       // Update one family member and add a new one
       
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
-      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
-        "region"),
+      batchUpdate.put(Bytes.toString(HConstants.COLUMN_FAMILY) + "region",
         "region2".getBytes(HConstants.UTF8_ENCODING));
       String otherServerName = "bar.foo.com:4321";
       batchUpdate.put(HConstants.COL_SERVER, 
         Bytes.toBytes(new HServerAddress(otherServerName).toString()));
-      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
-        "junk"),
+      batchUpdate.put(Bytes.toString(HConstants.COLUMN_FAMILY) + "junk",
         "junk".getBytes(HConstants.UTF8_ENCODING));
       r.commit(batchUpdate);
 

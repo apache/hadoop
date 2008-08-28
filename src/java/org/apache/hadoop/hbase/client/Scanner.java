@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 public interface Scanner extends Closeable, Iterable<RowResult> {
   /**
    * Grab the next row's worth of values. The scanner will return a RowResult
-   * that contains both the row's key and a map of Text column names to Cell 
+   * that contains both the row's key and a map of byte[] column names to Cell 
    * value objects. The data returned will only contain the most recent data 
    * value for each row that is not newer than the target time passed when the
    * scanner was created.

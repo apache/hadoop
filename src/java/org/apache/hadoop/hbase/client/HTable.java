@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /**
  * Used to communicate with a single HBase table
@@ -52,18 +51,6 @@ public class HTable {
   private final HConnection connection;
   private final byte [] tableName;
   private HBaseConfiguration configuration;
-
-  /**
-   * Creates an object to access a HBase table
-   *
-   * @param tableName name of the table
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public HTable(final Text tableName)
-  throws IOException {
-    this(new HBaseConfiguration(), tableName.getBytes());
-  }
 
   /**
    * Creates an object to access a HBase table
@@ -85,19 +72,6 @@ public class HTable {
   public HTable(final byte [] tableName)
   throws IOException {
     this(new HBaseConfiguration(), tableName);
-  }
-
-  /**
-   * Creates an object to access a HBase table
-   * 
-   * @param conf configuration object
-   * @param tableName name of the table
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public HTable(HBaseConfiguration conf, final Text tableName)
-  throws IOException {
-    this(conf, tableName.getBytes());
   }
 
   /**
@@ -131,15 +105,6 @@ public class HTable {
    * @param tableName name of table to check
    * @return true if table is on-line
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public static boolean isTableEnabled(Text tableName) throws IOException {
-    return isTableEnabled(tableName.getBytes());
-  }
-  /**
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
    */
   public static boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
@@ -151,18 +116,6 @@ public class HTable {
    */
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(new HBaseConfiguration(), tableName);
-  }
-  
-  /**
-   * @param conf HBaseConfiguration object
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public static boolean isTableEnabled(HBaseConfiguration conf, Text tableName)
-  throws IOException {
-    return isTableEnabled(conf, tableName.getBytes());
   }
   
   /**
@@ -185,18 +138,6 @@ public class HTable {
   public static boolean isTableEnabled(HBaseConfiguration conf, byte[] tableName)
   throws IOException {
     return HConnectionManager.getConnection(conf).isTableEnabled(tableName);
-  }
-  
-  /**
-   * Find region location hosting passed row using cached info
-   * @param row Row to find.
-   * @return Location of row.
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public HRegionLocation getRegionLocation(final Text row)
-  throws IOException {
-    return connection.getRegionLocation(tableName, row.getBytes(), false);
   }
 
   /**
@@ -233,15 +174,6 @@ public class HTable {
    */
   public HConnection getConnection() {
     return this.connection;
-  }
-
-  /**
-   * @return table metadata 
-   * @throws IOException
-   */
-  @Deprecated
-  public HTableDescriptor getMetadata() throws IOException {
-    return getTableDescriptor();
   }
 
   /**
@@ -315,35 +247,6 @@ public class HTable {
     };
     MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
-  }
-  
-  /**
-   * Get a single value for the specified row and column
-   * 
-   * @param row row key
-   * @param column column name
-   * @return value for specified row/column
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Cell get(final Text row, final Text column)
-  throws IOException {
-    return get(row.getBytes(), column.getBytes());
-  }
-
-  /** 
-   * Get a single value for the specified row and column
-   *
-   * @param row row key
-   * @param column column name
-   * @param numVersions - number of versions to retrieve
-   * @return value for specified row/column
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Cell[] get(final Text row, final Text column, int numVersions)
-  throws IOException {
-    return get(row.getBytes(), column.getBytes(), numVersions);
   }
 
   /**
@@ -425,24 +328,6 @@ public class HTable {
    * @param numVersions - number of versions to retrieve
    * @return            - array of values that match the above criteria
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Cell[] get(final Text row, final Text column,
-    final long timestamp, final int numVersions)
-  throws IOException {
-    return get(row.getBytes(), column.getBytes(), timestamp, numVersions);
-  }
-
-  /** 
-   * Get the specified number of versions of the specified row and column with
-   * the specified timestamp.
-   *
-   * @param row         - row key
-   * @param column      - column name
-   * @param timestamp   - timestamp
-   * @param numVersions - number of versions to retrieve
-   * @return            - array of values that match the above criteria
-   * @throws IOException
    */
   public Cell[] get(final String row, final String column,
     final long timestamp, final int numVersions)
@@ -490,18 +375,6 @@ public class HTable {
    * @param row row key
    * @return RowResult is empty if row does not exist.
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public RowResult getRow(final Text row) throws IOException {
-    return getRow(row.getBytes());
-  }
-
-  /** 
-   * Get all the data for the specified row at the latest timestamp
-   * 
-   * @param row row key
-   * @return RowResult is empty if row does not exist.
-   * @throws IOException
    */
   public RowResult getRow(final String row) throws IOException {
     return getRow(Bytes.toBytes(row));
@@ -516,20 +389,6 @@ public class HTable {
    */
   public RowResult getRow(final byte [] row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
-  }
-
-  /** 
-   * Get all the data for the specified row at a specified timestamp
-   * 
-   * @param row row key
-   * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public RowResult getRow(final Text row, final long ts) 
-  throws IOException {
-    return getRow(row.getBytes(), ts);
   }
 
   /** 
@@ -565,20 +424,6 @@ public class HTable {
    * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is empty if row does not exist.
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public RowResult getRow(final Text row, final Text[] columns) 
-  throws IOException {
-    return getRow(row.getBytes(), Bytes.toByteArrays(columns));
-  }
-
-  /** 
-   * Get selected columns for the specified row at the latest timestamp
-   * 
-   * @param row row key
-   * @param columns Array of column names and families you want to retrieve.
-   * @return RowResult is empty if row does not exist.
-   * @throws IOException
    */
   public RowResult getRow(final String row, final String [] columns) 
   throws IOException {
@@ -596,22 +441,6 @@ public class HTable {
   public RowResult getRow(final byte [] row, final byte [][] columns) 
   throws IOException {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
-  }
-
-  /** 
-   * Get selected columns for the specified row at a specified timestamp
-   * 
-   * @param row row key
-   * @param columns Array of column names and families you want to retrieve.
-   * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public RowResult getRow(final Text row, final Text [] columns, 
-    final long ts) 
-  throws IOException {  
-    return getRow(row.getBytes(), Bytes.toByteArrays(columns), ts);
   }
 
   /** 
@@ -683,47 +512,10 @@ public class HTable {
    * <code>\+|^&*$[]]}{)(</code>.
    * @return scanner
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Scanner getScanner(final Text [] columns)
-  throws IOException {
-    return getScanner(Bytes.toByteArrays(columns), HConstants.EMPTY_START_ROW);
-  }
-
-  /** 
-   * Get a scanner on the current table starting at first row.
-   * Return the specified columns.
-   *
-   * @param columns columns to scan. If column name is a column family, all
-   * columns of the specified column family are returned.  Its also possible
-   * to pass a regex in the column qualifier. A column qualifier is judged to
-   * be a regex if it contains at least one of the following characters:
-   * <code>\+|^&*$[]]}{)(</code>.
-   * @return scanner
-   * @throws IOException
    */
   public Scanner getScanner(final String [] columns)
   throws IOException {
     return getScanner(Bytes.toByteArrays(columns), HConstants.EMPTY_START_ROW);
-  }
-
-  /** 
-   * Get a scanner on the current table starting at the specified row.
-   * Return the specified columns.
-   *
-   * @param columns columns to scan. If column name is a column family, all
-   * columns of the specified column family are returned.  Its also possible
-   * to pass a regex in the column qualifier. A column qualifier is judged to
-   * be a regex if it contains at least one of the following characters:
-   * <code>\+|^&*$[]]}{)(</code>.
-   * @param startRow starting row in table to scan
-   * @return scanner
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Scanner getScanner(final Text [] columns, final Text startRow)
-  throws IOException {
-    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes());
   }
 
   /** 
@@ -861,32 +653,6 @@ public class HTable {
    * @param timestamp only return results whose timestamp <= this value
    * @return scanner
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Scanner getScanner(final Text[] columns,
-    final Text startRow, final Text stopRow, final long timestamp)
-  throws IOException {
-    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes(),
-      stopRow.getBytes(), timestamp);
-  }
-
-  /** 
-   * Get a scanner on the current table starting at the specified row and
-   * ending just before <code>stopRow<code>.
-   * Return the specified columns.
-   *
-   * @param columns columns to scan. If column name is a column family, all
-   * columns of the specified column family are returned.  Its also possible
-   * to pass a regex in the column qualifier. A column qualifier is judged to
-   * be a regex if it contains at least one of the following characters:
-   * <code>\+|^&*$[]]}{)(</code>.
-   * @param startRow starting row in table to scan
-   * @param stopRow Row to stop scanning on. Once we hit this row we stop
-   * returning values; i.e. we return the row before this one but not the
-   * <code>stopRow</code> itself.
-   * @param timestamp only return results whose timestamp <= this value
-   * @return scanner
-   * @throws IOException
    */
   public Scanner getScanner(final String [] columns,
     final String startRow, final String stopRow, final long timestamp)
@@ -918,29 +684,6 @@ public class HTable {
   throws IOException {
     return getScanner(columns, startRow, timestamp,
       new WhileMatchRowFilter(new StopRowFilter(stopRow)));
-  }  
-  
-  /** 
-   * Get a scanner on the current table starting at the specified row.
-   * Return the specified columns.
-   *
-   * @param columns columns to scan. If column name is a column family, all
-   * columns of the specified column family are returned.  Its also possible
-   * to pass a regex in the column qualifier. A column qualifier is judged to
-   * be a regex if it contains at least one of the following characters:
-   * <code>\+|^&*$[]]}{)(</code>.
-   * @param startRow starting row in table to scan
-   * @param timestamp only return results whose timestamp <= this value
-   * @param filter a row filter using row-key regexp and/or column data filter.
-   * @return scanner
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public Scanner getScanner(Text[] columns,
-    Text startRow, long timestamp, RowFilterInterface filter)
-  throws IOException {
-    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes(),
-      timestamp, filter);
   }
 
   /** 
@@ -997,18 +740,7 @@ public class HTable {
   public void deleteAll(final byte [] row) throws IOException {
     deleteAll(row, null);
   }
-  
-  /**
-   * Completely delete the row's cells.
-   *
-   * @param row Key of the row you want to completely delete.
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public void deleteAll(final Text row) throws IOException {
-    deleteAll(row, null);
-  }
-  
+
   /**
    * Completely delete the row's cells.
    *
@@ -1055,30 +787,6 @@ public class HTable {
     deleteAll(row, null, ts);
   }
 
-  /**
-   * Completely delete the row's cells.
-   *
-   * @param row Key of the row you want to completely delete.
-   * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */
-  public void deleteAll(final Text row, final long ts)
-  throws IOException {
-    deleteAll(row, null, ts);
-  }
-
-  /** 
-   * Delete all cells that match the passed row and column.
-   * @param row Row to update
-   * @param column name of column whose value is to be deleted
-   * @throws IOException 
-   * @deprecated Use String or byte [] overload instead
-   */
-  public void deleteAll(final Text row, final Text column) throws IOException {
-    deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
-  }
-
   /** 
    * Delete all cells that match the passed row and column.
    * @param row Row to update
@@ -1090,20 +798,6 @@ public class HTable {
     deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
   }
 
-  /** 
-   * Delete all cells that match the passed row and column and whose
-   * timestamp is equal-to or older than the passed timestamp.
-   * @param row Row to update
-   * @param column name of column whose value is to be deleted
-   * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException 
-   * @deprecated Use String or byte [] overload instead
-   */
-  public void deleteAll(final Text row, final Text column, final long ts)
-  throws IOException {
-    deleteAll(row.getBytes(), column.getBytes(), ts);
-  }
-  
   /** 
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
@@ -1169,18 +863,28 @@ public class HTable {
    *
    * @param row The row to operate on
    * @param family The column family to match
-   * @param timestamp Timestamp to match
    * @throws IOException
-   * @deprecated Use String or byte [] overload instead
-   */  
-  public void deleteFamily(final Text row, final Text family,
-      final long timestamp)
-  throws IOException{
-    deleteFamily(row.getBytes(), family.getBytes(), timestamp);
+   */
+  public void deleteFamily(final String row, final String family) 
+  throws IOException {
+    deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
    * Delete all cells for a row with matching column family at all timestamps.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   * @throws IOException
+   */
+  public void deleteFamily(final byte[] row, final byte[] family) 
+  throws IOException {
+    deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family with timestamps
+   * less than or equal to <i>timestamp</i>.
    *
    * @param row The row to operate on
    * @param family The column family to match
@@ -1336,12 +1040,6 @@ public class HTable {
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     protected RowFilterInterface filter;
-    
-    protected ClientScanner(final Text [] columns, final Text startRow,
-        long timestamp, RowFilterInterface filter) {
-      this(Bytes.toByteArrays(columns), startRow.getBytes(), timestamp,
-        filter);
-    }
 
     protected ClientScanner(final byte[][] columns, final byte [] startRow,
         final long timestamp, final RowFilterInterface filter) {

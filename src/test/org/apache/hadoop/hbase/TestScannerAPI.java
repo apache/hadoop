@@ -35,13 +35,11 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
 
 /** test the scanner API at all levels */
 public class TestScannerAPI extends HBaseClusterTestCase {
-  private final byte [][] columns = Bytes.toByteArrays(new Text[] {
-    new Text("a:"),
-    new Text("b:")
+  private final byte [][] columns = Bytes.toByteArrays(new String[] {
+    "a:", "b:"
   });
   private final byte [] startRow = Bytes.toBytes("0");
 

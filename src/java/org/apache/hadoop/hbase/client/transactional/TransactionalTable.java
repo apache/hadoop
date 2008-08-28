@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
-import org.apache.hadoop.io.Text;
 
 /**
  * Table with transactional support.
@@ -43,11 +42,6 @@ public class TransactionalTable extends HTable {
 
   public TransactionalTable(final HBaseConfiguration conf,
       final String tableName) throws IOException {
-    super(conf, tableName);
-  }
-
-  public TransactionalTable(final HBaseConfiguration conf, final Text tableName)
-      throws IOException {
     super(conf, tableName);
   }
 

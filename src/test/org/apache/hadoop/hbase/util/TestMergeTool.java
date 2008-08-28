@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.ToolRunner;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
@@ -90,11 +89,11 @@ public class TestMergeTool extends HBaseTestCase {
      * Now create some row keys
      */
     this.rows = new byte [5][][];
-    this.rows[0] = Bytes.toByteArrays(new Text[] { new Text("row_0210"), new Text("row_0280") });
-    this.rows[1] = Bytes.toByteArrays(new Text[] { new Text("row_0260"), new Text("row_0350") });
-    this.rows[2] = Bytes.toByteArrays(new Text[] { new Text("row_0110"), new Text("row_0175") });
-    this.rows[3] = Bytes.toByteArrays(new Text[] { new Text("row_0525"), new Text("row_0560") });
-    this.rows[4] = Bytes.toByteArrays(new Text[] { new Text("row_0050"), new Text("row_1000") });
+    this.rows[0] = Bytes.toByteArrays(new String[] { "row_0210", "row_0280" });
+    this.rows[1] = Bytes.toByteArrays(new String[] { "row_0260", "row_0350" });
+    this.rows[2] = Bytes.toByteArrays(new String[] { "row_0110", "row_0175" });
+    this.rows[3] = Bytes.toByteArrays(new String[] { "row_0525", "row_0560" });
+    this.rows[4] = Bytes.toByteArrays(new String[] { "row_0050", "row_1000" });
     
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);

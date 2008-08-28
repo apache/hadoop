@@ -136,16 +136,6 @@ public class HColumnDescriptor implements WritableComparable {
   public HColumnDescriptor(final String columnName) {
     this(Bytes.toBytes(columnName));
   }
-
-  /**
-   * Construct a column descriptor specifying only the family name 
-   * The other attributes are defaulted.
-   * 
-   * @param columnName - column family name
-   */
-  public HColumnDescriptor(final Text columnName) {
-    this(columnName.getBytes());
-  }
   
   /**
    * Construct a column descriptor specifying only the family name 

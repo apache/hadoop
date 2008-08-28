@@ -24,7 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -97,7 +97,7 @@ public class HMsg implements Writable {
 
   private Type type = null;
   private HRegionInfo info = null;
-  private Text message = null;
+  private byte[] message = null;
 
   // Some useful statics.  Use these rather than create a new HMsg each time.
   public static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
@@ -141,7 +141,7 @@ public class HMsg implements Writable {
    * null.  If no info associated, used other Constructor.
    * @param msg Optional message (Stringified exception, etc.)
    */
-  public HMsg(final HMsg.Type type, final HRegionInfo hri, final Text msg) {
+  public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg) {
     if (type == null) {
       throw new NullPointerException("Message type cannot be null");
     }
@@ -172,7 +172,7 @@ public class HMsg implements Writable {
     return this.type.equals(other);
   }
   
-  public Text getMessage() {
+  public byte[] getMessage() {
     return this.message;
   }
 
@@ -188,7 +188,7 @@ public class HMsg implements Writable {
       sb.append(": ");
       sb.append(this.info.getRegionNameAsString());
     }
-    if (this.message != null && this.message.getLength() > 0) {
+    if (this.message != null && this.message.length > 0) {
       sb.append(": " + this.message);
     }
     return sb.toString();
@@ -221,11 +221,11 @@ public class HMsg implements Writable {
   public void write(DataOutput out) throws IOException {
      out.writeInt(this.type.ordinal());
      this.info.write(out);
-     if (this.message == null || this.message.getLength() == 0) {
+     if (this.message == null || this.message.length == 0) {
        out.writeBoolean(false);
      } else {
        out.writeBoolean(true);
-       this.message.write(out);
+       Bytes.writeByteArray(out, this.message);
      }
    }
 
@@ -238,10 +238,7 @@ public class HMsg implements Writable {
      this.info.readFields(in);
      boolean hasMessage = in.readBoolean();
      if (hasMessage) {
-       if (this.message == null) {
-         this.message = new Text();
-       }
-       this.message.readFields(in);
+       this.message = Bytes.readByteArray(in);
      }
    }
 }

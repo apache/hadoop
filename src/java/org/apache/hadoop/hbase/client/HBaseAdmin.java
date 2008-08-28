@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -79,16 +78,6 @@ public class HBaseAdmin {
   /** @return - true if the master server is running */
   public boolean isMasterRunning() {
     return this.connection.isMasterRunning();
-  }
-
-  /**
-   * @param tableName Table to check.
-   * @return True if table exists already.
-   * @throws MasterNotRunningException
-   */
-  public boolean tableExists(final Text tableName)
-  throws MasterNotRunningException {
-    return tableExists(tableName.getBytes());
   }
 
   /**
@@ -194,16 +183,6 @@ public class HBaseAdmin {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
   }
-  
-  /**
-   * Deletes a table
-   * 
-   * @param tableName name of table to delete
-   * @throws IOException
-   */
-  public void deleteTable(final Text tableName) throws IOException {
-    deleteTable(tableName.getBytes());
-  }
 
   /**
    * Deletes a table
@@ -298,16 +277,6 @@ public class HBaseAdmin {
    * @param tableName name of the table
    * @throws IOException
    */
-  public void enableTable(final Text tableName) throws IOException {
-    enableTable(tableName.getBytes());
-  }
-
-  /**
-   * Brings a table on-line (enables it)
-   * 
-   * @param tableName name of the table
-   * @throws IOException
-   */
   public void enableTable(final String tableName) throws IOException {
     enableTable(Bytes.toBytes(tableName));
   }
@@ -351,17 +320,6 @@ public class HBaseAdmin {
       throw new IOException("unable to enable table " +
         Bytes.toString(tableName));
     LOG.info("Enabled table " + Bytes.toString(tableName));
-  }
-
-  /**
-   * Disables a table (takes it off-line) If it is being served, the master
-   * will tell the servers to stop serving it.
-   * 
-   * @param tableName name of table
-   * @throws IOException
-   */
-  public void disableTable(final Text tableName) throws IOException {
-    disableTable(tableName.getBytes());
   }
 
   /**
@@ -421,14 +379,6 @@ public class HBaseAdmin {
    * @return true if table is on-line
    * @throws IOException
    */
-  public boolean isTableEnabled(Text tableName) throws IOException {
-    return isTableEnabled(tableName.getBytes());
-  }
-  /**
-   * @param tableName name of table to check
-   * @return true if table is on-line
-   * @throws IOException
-   */
   public boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
   }
@@ -439,18 +389,6 @@ public class HBaseAdmin {
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
     return connection.isTableEnabled(tableName);
-  }
-  
-  /**
-   * Add a column to an existing table
-   * 
-   * @param tableName name of the table to add column to
-   * @param column column descriptor of column to be added
-   * @throws IOException
-   */
-  public void addColumn(final Text tableName, HColumnDescriptor column)
-  throws IOException {
-    addColumn(tableName.getBytes(), column);
   }
 
   /**
@@ -492,18 +430,6 @@ public class HBaseAdmin {
    * @param columnName name of column to be deleted
    * @throws IOException
    */
-  public void deleteColumn(final Text tableName, final Text columnName)
-  throws IOException {
-    deleteColumn(tableName.getBytes(), columnName.getBytes());
-  }
-
-  /**
-   * Delete a column from a table
-   * 
-   * @param tableName name of table
-   * @param columnName name of column to be deleted
-   * @throws IOException
-   */
   public void deleteColumn(final String tableName, final String columnName)
   throws IOException {
     deleteColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName));
@@ -527,20 +453,6 @@ public class HBaseAdmin {
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
-  }
-
-  /**
-   * Modify an existing column family on a table
-   * 
-   * @param tableName name of table
-   * @param columnName name of column to be modified
-   * @param descriptor new column descriptor to use
-   * @throws IOException
-   */
-  public void modifyColumn(final Text tableName, final Text columnName, 
-      HColumnDescriptor descriptor)
-  throws IOException {
-    modifyColumn(tableName.getBytes(), columnName.getBytes(), descriptor);
   }
 
   /**

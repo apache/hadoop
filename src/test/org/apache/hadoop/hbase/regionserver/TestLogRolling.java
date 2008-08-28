@@ -24,7 +24,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
@@ -115,7 +114,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
 
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       BatchUpdate b =
-        new BatchUpdate(new Text("row" + String.format("%1$04d", i)));
+        new BatchUpdate("row" + String.format("%1$04d", i));
       b.put(HConstants.COLUMN_FAMILY, value);
       table.commit(b);
 

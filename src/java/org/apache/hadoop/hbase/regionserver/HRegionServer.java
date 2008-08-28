@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.Progressable;
@@ -742,10 +741,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /* Add to the outbound message buffer */
-  private void reportClose(final HRegionInfo region, final Text message) {
+  private void reportClose(final HRegionInfo region, final byte[] message) {
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
   }
-
   
   /**
    * Add to the outbound message buffer
@@ -761,9 +759,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegionInfo newRegionB) {
 
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
-      new Text(oldRegion.getRegionNameAsString() + " split; daughters: " +
+      (oldRegion.getRegionNameAsString() + " split; daughters: " +
         newRegionA.getRegionNameAsString() + ", " +
-        newRegionB.getRegionNameAsString())));
+        newRegionB.getRegionNameAsString()).getBytes()));
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionA));
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionB));
   }
@@ -884,7 +882,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
-        reportClose(regionInfo, new Text(StringUtils.stringifyException(e)));
+        reportClose(regionInfo, StringUtils.stringifyException(e).getBytes());
         return;
       }
       this.lock.writeLock().lock();

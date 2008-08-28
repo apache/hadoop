@@ -63,6 +63,8 @@ Release 0.18.0 - Unreleased
               compilation problems that were introduced by patch.
    HBASE-669  MultiRegion transactions with Optimistic Concurrency Control
               (Clint Morgan via Stack)
+   HBASE-842  Remove methods that have Text as a parameter and were deprecated
+              in 0.2.1 (Jean-Daniel Cryans via Jim Kellerman)
 
   OPTIMIZATIONS
 

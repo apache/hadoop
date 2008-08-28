@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -74,7 +73,7 @@ class RegionManager implements HConstants {
     Collections.synchronizedSortedMap(new TreeMap<byte [],
       MetaRegion>(Bytes.BYTES_COMPARATOR));
 
-  private static final Text OVERLOADED = new Text("Overloaded");
+  private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
   /**
    * The 'unassignedRegions' table maps from a HRegionInfo to a timestamp that

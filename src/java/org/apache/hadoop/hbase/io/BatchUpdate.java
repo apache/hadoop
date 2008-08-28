@@ -27,7 +27,6 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -61,16 +60,6 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * 
    * @param row
    */
-  public BatchUpdate(final Text row) {
-    this(row, HConstants.LATEST_TIMESTAMP);
-  }
-  
-  /**
-   * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
-   * now.
-   * 
-   * @param row
-   */
   public BatchUpdate(final String row) {
     this(Bytes.toBytes(row), HConstants.LATEST_TIMESTAMP);
   }
@@ -92,15 +81,6 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    */
   public BatchUpdate(final String row, long timestamp){
     this(Bytes.toBytes(row), timestamp);
-  }
-
-  /**
-   * Initialize a BatchUpdate operation on a row with a specific timestamp.
-   * 
-   * @param row
-   */
-  public BatchUpdate(final Text row, long timestamp){
-    this(row.getBytes(), timestamp);
   }
 
   /**
@@ -139,16 +119,6 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * @param column column whose value is being set
    * @param val new value for column.  Cannot be null (can be empty).
    */
-  public synchronized void put(final Text column, final byte val[]) {
-    put(column.getBytes(), val);
-  }
-  
-  /** 
-   * Change a value for the specified column
-   *
-   * @param column column whose value is being set
-   * @param val new value for column.  Cannot be null (can be empty).
-   */
   public synchronized void put(final String column, final byte val[]) {
     put(Bytes.toBytes(column), val);
   }
@@ -167,16 +137,6 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     operations.add(new BatchOperation(column, val));
   }
 
-  /** 
-   * Delete the value for a column
-   * Deletes the cell whose row/column/commit-timestamp match those of the
-   * delete.
-   * @param column name of column whose value is to be deleted
-   */
-  public void delete(final Text column) {
-    delete(column.getBytes());
-  }
- 
   /** 
    * Delete the value for a column
    * Deletes the cell whose row/column/commit-timestamp match those of the

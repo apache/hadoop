@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.LeaseException;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Text;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
@@ -437,7 +436,7 @@ class ServerManager implements HConstants {
       // Otherwise the HMaster will think the Region was closed on purpose, 
       // and then try to reopen it elsewhere; that's not what we want.
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
-        region, new Text("Duplicate assignment")));
+        region, "Duplicate assignment".getBytes()));
     } else {
       // it was assigned, and it's not a duplicate assignment, so take it out 
       // of the unassigned list.

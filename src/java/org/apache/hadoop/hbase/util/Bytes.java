@@ -9,7 +9,6 @@ import java.util.Comparator;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -239,18 +238,6 @@ public class Bytes {
     return result;
   }
   
-  
-  /**
-   * @param t
-   * @return Array of byte arrays made from passed array of Text
-   */
-  public static byte [][] toByteArrays(final Text [] t) {
-    byte [][] result = new byte[t.length][];
-    for (int i = 0; i < t.length; i++) {
-      result[i] = t[i].getBytes();
-    }
-    return result;
-  }
 
   /**
    * @param t

@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /**
  * Test HBase Writables serializations
@@ -50,7 +49,7 @@ public class TestSerialization extends HBaseTestCase {
     m = new HMsg(HMsg.Type.MSG_REGIONSERVER_QUIESCE,
       new HRegionInfo(new HTableDescriptor(getName()),
         HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
-        new Text("Some message"));
+        "Some message".getBytes());
     mb = Writables.getBytes(m);
     deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
     assertTrue(m.equals(deserializedHMsg));
