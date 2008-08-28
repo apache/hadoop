@@ -417,6 +417,9 @@ Trunk (unreleased changes)
     HADOOP-4037. Fix the eclipse plugin for versions of kfs and log4j. (nigel
     via omalley)
 
+    HADOOP-3950. Cause the Mini MR cluster to wait for task trackers to 
+    register before continuing. (enis via omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
