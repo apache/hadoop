@@ -95,9 +95,13 @@
         + url+"\"></head>"
         + "<body><h3> Are you sure you want to kill " + jobId
         + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
-        + "<a href=\"" +  url + "&action=kill"
-        + "\">Kill</a></td><td width=\"100\"><a href=\"" + url
-        + "\">Cancel </a></td></tr></table></body></html>");
+        + "<form action=\"" + url + "\" method=\"post\">"
+        + "<input type=\"hidden\" name=\"action\" value=\"kill\" />"
+        + "<input type=\"submit\" name=\"kill\" value=\"Kill\" />"
+        + "</form>"
+        + "</td><td width=\"100\"><form method=\"post\" action=\"" + url
+        + "\"><input type=\"submit\" value=\"Cancel\" name=\"Cancel\""
+        + "/></form></td></tr></table></body></html>");
   }
   
 %>       
@@ -121,7 +125,7 @@
     JobInProgress job = (JobInProgress) tracker.getJob(jobIdObj);
     
     String action = request.getParameter("action");
-    if("changeprio".equalsIgnoreCase(action)) {
+    if("changeprio".equalsIgnoreCase(action) && request.getMethod().equalsIgnoreCase("POST")) {
       tracker.setJobPriority(jobIdObj, 
                              JobPriority.valueOf(request.getParameter("prio")));
     }
@@ -132,7 +136,8 @@
   	      printConfirm(out, jobId);
     	    return;
 	    }
-  	    else if(action != null && action.equalsIgnoreCase("kill")) {
+  	    else if(action != null && action.equalsIgnoreCase("kill") && 
+  	        request.getMethod().equalsIgnoreCase("POST")) {
 	      tracker.killJob(jobIdObj);
 	    }
     }
@@ -292,16 +297,24 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
        style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
 <%} }%>
 
-<hr>Change priority from <%=job.getPriority()%> to: 
+<hr>
+<table border="0"> <tr> <td>
+Change priority from <%=job.getPriority()%> to:
+<form action="jobdetails.jsp" method="post">
+<input type="hidden" name="action" value="changeprio"/>
+<input type="hidden" name="jobid" value="<%=jobId%>"/>
+</td><td> <select name="prio"> 
 <%
   JobPriority jobPrio = job.getPriority();
   for (JobPriority prio : JobPriority.values()) {
     if(jobPrio != prio) {
-      %> <a style="margin-left: 5px; margin-right: 5px;" href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a> <%
+      %> <option value=<%=prio%>><%=prio%></option> <%
     }
   }
 %>
-</br>
+</select> </td><td><input type="submit" value="Submit"> </form></td></tr> </table>
+
+<table border="0"> <tr>
     
 <% if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
     	&& runState == JobStatus.RUNNING) { %>

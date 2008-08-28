@@ -236,6 +236,9 @@ Trunk (unreleased changes)
     HADOOP-3488. Prevent hadoop-daemon from rsync'ing log files (Stefan 
     Groshupf and Craig Macdonald via omalley)
 
+    HADOOP-3342. Change the kill task actions to require http post instead of 
+    get to prevent accidental crawls from triggering it. (enis via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

@@ -22,9 +22,13 @@
     out.print("<html><head><META http-equiv=\"refresh\" content=\"15;URL="
         + url + "\"></head>" + "<body><h3> Are you sure you want to kill/fail "
         + taskid + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
-        + "<a href=\"" + url + "&action=" + action
-        + "\">Kill / Fail</a></td><td width=\"100\"><a href=\"" + url
-        + "\">Cancel</a></td></tr></table></body></html>");
+        + "<form action=\"" + url + "\" method=\"post\">"
+        + "<input type=\"hidden\" name=\"action\" value=\"" + action + "\" />"
+        + "<input type=\"submit\" name=\"Kill/Fail\" value=\"Kill/Fail\" />"
+        + "</form>"
+        + "</td><td width=\"100\"><form method=\"post\" action=\"" + url
+        + "\"><input type=\"submit\" value=\"Cancel\" name=\"Cancel\""
+        + "/></form></td></tr></table></body></html>");
   }%>
 <%
     JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
@@ -49,13 +53,15 @@
           printConfirm(out, jobid, tipid, taskid, subAction);
           return;
         }
-        else if (action.equalsIgnoreCase("kill-task")) {
+        else if (action.equalsIgnoreCase("kill-task") 
+            && request.getMethod().equalsIgnoreCase("POST")) {
           tracker.killTask(taskidObj, false);
           //redirect again so that refreshing the page will not attempt to rekill the task
           response.sendRedirect("/taskdetails.jsp?" + "&subaction=kill-task"
               + "&jobid=" + jobid + "&tipid=" + tipid);
         }
-        else if (action.equalsIgnoreCase("fail-task")) {
+        else if (action.equalsIgnoreCase("fail-task")
+            && request.getMethod().equalsIgnoreCase("POST")) {
           tracker.killTask(taskidObj, true);
           response.sendRedirect("/taskdetails.jsp?" + "&subaction=fail-task"
               + "&jobid=" + jobid + "&tipid=" + tipid);
