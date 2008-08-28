@@ -233,6 +233,9 @@ Trunk (unreleased changes)
 
     HADOOP-3965. Convert DataBlockScanner into a package private class. (shv)
 
+    HADOOP-3488. Prevent hadoop-daemon from rsync'ing log files (Stefan 
+    Groshupf and Craig Macdonald via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
