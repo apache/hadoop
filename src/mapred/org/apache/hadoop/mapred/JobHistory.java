@@ -71,6 +71,7 @@ public class JobHistory {
   
   public static final String JOBTRACKER_START_TIME =
                                String.valueOf(System.currentTimeMillis());
+  public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
   private static String LOG_DIR = null;
   private static Map<String, ArrayList<PrintWriter>> openJobs = 
@@ -449,9 +450,13 @@ public class JobHistory {
         }
         
         // setup the history log file for this job
+        String trimmedJobName = jobName;
+        if (jobName.length() > JOB_NAME_TRIM_LENGTH) {
+          trimmedJobName = jobName.substring(0, JOB_NAME_TRIM_LENGTH);
+        }
         String logFileName = 
             encodeJobHistoryFileName(jobUniqueString +  "_" + user + "_" + 
-                                     jobName);
+                                     trimmedJobName);
 
         // find user log directory 
         Path outputPath = FileOutputFormat.getOutputPath(jobConf);
