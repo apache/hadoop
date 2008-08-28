@@ -176,11 +176,6 @@ public class Migrate extends Configured implements Tool {
         LOG.info("No upgrade necessary.");
         return 0;
       }
-      if (versionStr == null ||
-          Float.parseFloat(versionStr) < HBASE_0_1_VERSION) {
-        throw new IOException("Install 0.1.x of hbase and run its " +
-          "migration first");
-      }
       float version = Float.parseFloat(versionStr);
       if (version == HBASE_0_1_VERSION) {
         checkForUnrecoveredLogFiles(getRootDirFiles());
