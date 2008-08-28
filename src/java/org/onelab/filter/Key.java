@@ -91,13 +91,17 @@ public class Key implements WritableComparable {
    * @param weight The weight associated to <i>this</i> key.
    */
   public Key(byte[] value, double weight) {
+    set(value, weight);
+  }//end constructor
+
+  public void set(byte[] value, double weight) {
     if(value == null) {
       throw new IllegalArgumentException("value can not be null");
     }
     this.bytes = value;
     this.weight = weight;
-  }//end constructor
-
+  }
+  
   /** @return byte[] The value of <i>this</i> key. */
   public byte[] getBytes() {
     return this.bytes;

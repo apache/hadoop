@@ -35,6 +35,7 @@ Release 0.18.0 - Unreleased
    HBASE-843   Deleting and recreating a table in a single process does not work
                (Jonathan Gray via Jim Kellerman)
    HBASE-849   Speed improvement in JenkinsHash (Andrzej Bialecki via Stack)
+   HBASE-552   Bloom filter bugs (Andrzej Bialecki via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

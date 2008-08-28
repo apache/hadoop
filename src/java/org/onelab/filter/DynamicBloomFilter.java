@@ -88,17 +88,22 @@ public class DynamicBloomFilter extends Filter {
   /** 
    * Threshold for the maximum number of key to record in a dynamic Bloom filter row.
    */
-  int nr;
+  private int nr;
 
   /**
    * The number of keys recorded in the current standard active Bloom filter.
    */
-  int currentNbRecord;
+  private int currentNbRecord;
 
   /**
    * The matrix of Bloom filter.
    */
-  BloomFilter[] matrix;
+  private BloomFilter[] matrix;
+
+  /**
+   * Zero-args constructor for the serialization.
+   */
+  public DynamicBloomFilter() { }
 
   /**
    * Constructor.
@@ -253,7 +258,10 @@ public class DynamicBloomFilter extends Filter {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    for(int i = 0; i < matrix.length; i++) {
+    out.writeInt(nr);
+    out.writeInt(currentNbRecord);
+    out.writeInt(matrix.length);
+    for (int i = 0; i < matrix.length; i++) {
       matrix[i].write(out);
     }
   }
@@ -262,8 +270,12 @@ public class DynamicBloomFilter extends Filter {
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    matrix = new BloomFilter[vectorSize];
-    for(int i = 0; i < matrix.length; i++) {
+    nr = in.readInt();
+    currentNbRecord = in.readInt();
+    int len = in.readInt();
+    matrix = new BloomFilter[len];
+    for (int i = 0; i < matrix.length; i++) {
+      matrix[i] = new BloomFilter();
       matrix[i].readFields(in);
     }
   }
