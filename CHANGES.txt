@@ -402,6 +402,9 @@ Trunk (unreleased changes)
     HADOOP-2168. Fix problem with C++ record reader's progress not being
     reported to framework. (acmurthy via omalley)
 
+    HADOOP-3966. Copy findbugs generated output files to PATCH_DIR while 
+    running test-patch. (Ramya R via lohit)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES

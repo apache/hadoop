@@ -434,6 +434,8 @@ $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/1999" \
   $FINDBUGS_HOME/bin/convertXmlToText -html \
     $BASEDIR/build/test/findbugs/newPatchFindbugsWarnings.xml \
     $BASEDIR/build/test/findbugs/newPatchFindbugsWarnings.html
+  cp $BASEDIR/build/test/findbugs/newPatchFindbugsWarnings.html $PATCH_DIR/newPatchFindbugsWarnings.html
+  cp $BASEDIR/build/test/findbugs/newPatchFindbugsWarnings.xml $PATCH_DIR/newPatchFindbugsWarnings.xml
   if [[ $findbugsWarnings != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
