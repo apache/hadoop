@@ -405,6 +405,9 @@ Trunk (unreleased changes)
     HADOOP-3966. Copy findbugs generated output files to PATCH_DIR while 
     running test-patch. (Ramya R via lohit)
 
+    HADOOP-4037. Fix the eclipse plugin for versions of kfs and log4j. (nigel
+    via omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
