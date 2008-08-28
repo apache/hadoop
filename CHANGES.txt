@@ -36,6 +36,9 @@ Release 0.18.0 - Unreleased
                (Jonathan Gray via Jim Kellerman)
    HBASE-849   Speed improvement in JenkinsHash (Andrzej Bialecki via Stack)
    HBASE-552   Bloom filter bugs (Andrzej Bialecki via Jim Kellerman)
+   HBASE-762   deleteFamily takes timestamp, should only take row and family.
+               Javadoc describes both cases but only implements the timestamp
+               case. (Jean-Daniel Cryans via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
