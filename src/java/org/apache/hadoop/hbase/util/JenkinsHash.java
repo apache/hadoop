@@ -43,8 +43,8 @@ public class JenkinsHash {
   private static long BYTE_MASK = 0x00000000000000ffL;
 
   private static long rot(long val, int pos) {
-    return Long.valueOf(Integer.rotateLeft(
-        Long.valueOf(val & INT_MASK).intValue(), pos)).longValue() & INT_MASK;
+    return ((long)(Integer.rotateLeft(
+        (int)(val & INT_MASK), pos)) & INT_MASK);
   }
 
   /**
@@ -202,7 +202,7 @@ public class JenkinsHash {
       a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;
       break;
     case  0:
-      return Long.valueOf(c & INT_MASK).intValue();
+      return (int)(c & INT_MASK);
     }
     /*
      * final -- final mixing of 3 32-bit values (a,b,c) into c
@@ -249,7 +249,7 @@ public class JenkinsHash {
     b ^= a; b = (b - rot(a,14)) & INT_MASK;
     c ^= b; c = (c - rot(b,24)) & INT_MASK;
 
-    return Long.valueOf(c & INT_MASK).intValue();
+    return (int)(c & INT_MASK);
   }
   
   /**
