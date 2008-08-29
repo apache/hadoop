@@ -333,7 +333,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     }
   }
 
-  static class SampleMapper<K extends WritableComparable, V extends Writable>
+  public static class SampleMapper<K extends WritableComparable, V extends Writable>
       extends SampleMapReduceBase<K,V> implements Mapper<K,V,K,V> {
 
     public void configure(JobConf job) {
@@ -349,7 +349,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
 
   }
 
-  static class SampleReducer<K extends WritableComparable, V extends Writable>
+  public static class SampleReducer<K extends WritableComparable, V extends Writable>
       extends SampleMapReduceBase<K,V> implements Reducer<K,V,K,V> {
 
     public void configure(JobConf job) {

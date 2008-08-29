@@ -267,6 +267,10 @@ Trunk (unreleased changes)
     HADOOP-2130. Pipes submit job should have both blocking and non-blocking
     versions. (acmurthy via omalley)
 
+    HADOOP-3769. Make the SampleMapper and SampleReducer from
+    GenericMRLoadGenerator public, so they can be used in other contexts. 
+    (Lingyun Yang via omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

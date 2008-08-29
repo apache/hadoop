@@ -224,6 +224,14 @@ public class Job {
     this.message = message;
   }
 	
+
+  /**
+   * @return the job client of this job
+   */
+  public JobClient getJobClient(){
+          return this.jc;
+  }
+
   /**
    * @return the depending jobs of this job
    */
