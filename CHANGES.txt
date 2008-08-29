@@ -108,6 +108,9 @@ Trunk (unreleased changes)
 
     HADOOP-3754. Add a thrift interface to access HDFS. (dhruba via omalley)
 
+    HADOOP-3828. Provides a way to write skipped records to DFS.
+    (Sharad Agarwal via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

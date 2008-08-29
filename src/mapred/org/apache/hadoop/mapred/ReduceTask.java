@@ -56,16 +56,20 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.IFile.*;
 import org.apache.hadoop.mapred.Merger.Segment;
+import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -232,6 +236,10 @@ class ReduceTask extends Task {
     @Override
     public VALUE next() {
       reduceInputValueCounter.increment(1);
+      return moveToNext();
+    }
+    
+    protected VALUE moveToNext() {
       return super.next();
     }
     
@@ -243,9 +251,14 @@ class ReduceTask extends Task {
 
   private class SkippingReduceValuesIterator<KEY,VALUE> 
      extends ReduceValuesIterator<KEY,VALUE> {
-     private Iterator<Long> skipFailedRecIndexIterator;
+     private SkipRangeIterator skipIt;
      private TaskUmbilicalProtocol umbilical;
+     private Counters.Counter skipGroupCounter;
+     private Counters.Counter skipRecCounter;
      private long recIndex = -1;
+     private Class<KEY> keyClass;
+     private Class<VALUE> valClass;
+     private SequenceFile.Writer skipWriter;
      
      public SkippingReduceValuesIterator(RawKeyValueIterator in,
          RawComparator<KEY> comparator, Class<KEY> keyClass,
@@ -253,7 +266,13 @@ class ReduceTask extends Task {
          TaskUmbilicalProtocol umbilical) throws IOException {
        super(in, comparator, keyClass, valClass, conf, reporter);
        this.umbilical = umbilical;
-       skipFailedRecIndexIterator = getFailedRanges().skipRangeIterator();
+       this.skipGroupCounter = 
+         getCounters().findCounter(Counter.REDUCE_SKIPPED_GROUPS);
+       this.skipRecCounter = 
+         getCounters().findCounter(Counter.REDUCE_SKIPPED_RECORDS);
+       this.keyClass = keyClass;
+       this.valClass = valClass;
+       skipIt = getFailedRanges().skipRangeIterator();
        mayBeSkip();
      }
      
@@ -264,14 +283,37 @@ class ReduceTask extends Task {
      
      private void mayBeSkip() throws IOException {
        recIndex++;
-       long nextRecIndex = skipFailedRecIndexIterator.next();
+       long nextRecIndex = skipIt.next();
        long skip = nextRecIndex - recIndex;
+       long skipRec = 0;
        for(int i=0;i<skip && super.more();i++) {
+         while (hasNext()) {
+           writeSkippedRec(getKey(), moveToNext());
+           skipRec++;
+         }
          super.nextKey();
          recIndex++;
        }
-       getCounters().incrCounter(Counter.REDUCE_SKIPPED_RECORDS, skip);
+       //close the skip writer once all the ranges are skipped
+       if(skip>0 && skipIt.skippedAllRanges() && skipWriter!=null) {
+         skipWriter.close();
+       }
+       skipGroupCounter.increment(skip);
+       skipRecCounter.increment(skipRec);
        reportNextRecordRange(umbilical, nextRecIndex);
+     }
+     
+     @SuppressWarnings("unchecked")
+     private void writeSkippedRec(KEY key, VALUE value) throws IOException{
+       if(skipWriter==null) {
+         Path skipDir = SkipBadRecords.getSkipOutputPath(conf);
+         Path skipFile = new Path(skipDir, getTaskID().toString());
+         skipWriter = SequenceFile.createWriter(
+               skipFile.getFileSystem(conf), conf, skipFile,
+               keyClass, valClass, 
+               CompressionType.BLOCK, getReporter(umbilical));
+       }
+       skipWriter.append(key, value);
      }
   }
 

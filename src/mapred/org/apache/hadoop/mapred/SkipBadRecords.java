@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Utility class for skip bad records functionality. It contains various 
@@ -33,6 +34,7 @@ public class SkipBadRecords {
     "mapred.skip.map.auto.incr.proc.count";
   private static final String AUTO_INCR_REDUCE_PROC_COUNT = 
     "mapred.skip.reduce.auto.incr.proc.count";
+  private static final String OUT_PATH = "mapred.skip.out.dir";
   
   /**
    * Is skipping of bad records enabled. If it is enabled 
@@ -156,6 +158,33 @@ public class SkipBadRecords {
   public static void setAutoIncrReducerProcCount(Configuration conf, 
       boolean autoIncr) {
     conf.setBoolean(AUTO_INCR_REDUCE_PROC_COUNT, autoIncr);
+  }
+  
+  /**
+   * Get the directory to which skipped records are written. By default it is 
+   * the sub directory of the output _logs directory.
+   * @param conf the configuration.
+   * @return path skip output directory. Null is returned if this is not set 
+   * and output directory is also not set.
+   */
+  public static Path getSkipOutputPath(Configuration conf) {
+    String name =  conf.get(OUT_PATH);
+    if(name!=null) {
+      return new Path(name);
+    }
+    Path outPath = FileOutputFormat.getOutputPath(new JobConf(conf));
+    return outPath==null ? null : new Path(outPath, 
+        "_logs"+Path.SEPARATOR+"skip");
+  }
+  
+  /**
+   * Set the directory to which skipped records are written. By default it is 
+   * the sub directory of the output _logs directory.
+   * @param conf the configuration.
+   * @param path skip output directory path
+   */
+  public static void setSkipOutputPath(JobConf conf, Path path) {
+    conf.set(OUT_PATH, path.toString());
   }
   
 }

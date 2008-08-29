@@ -73,6 +73,7 @@ abstract class Task implements Writable, Configurable {
     REDUCE_INPUT_GROUPS,
     REDUCE_INPUT_RECORDS,
     REDUCE_OUTPUT_RECORDS,
+    REDUCE_SKIPPED_GROUPS,
     REDUCE_SKIPPED_RECORDS
   }
   

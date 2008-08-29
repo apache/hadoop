@@ -179,6 +179,7 @@ class TaskInProgress {
   void init(JobID jobId) {
     this.startTime = System.currentTimeMillis();
     this.id = new TaskID(jobId, isMapTask(), partition);
+    this.skipping = startSkipping();
   }
 
   ////////////////////////////////////
@@ -489,10 +490,7 @@ class TaskInProgress {
       machinesWhereFailed.add(trackerHostName);
       LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
       failedRanges.add(status.getNextRecordRange());
-      if(SkipBadRecords.getEnabled(conf) && 
-          numTaskFailures>=SkipBadRecords.getAttemptsToStartSkipping(conf)) {
-        skipping = true;
-      }
+      skipping = startSkipping();
     } else {
       numKilledTasks++;
     }
@@ -501,6 +499,17 @@ class TaskInProgress {
       LOG.info("TaskInProgress " + getTIPId() + " has failed " + numTaskFailures + " times.");
       kill();
     }
+  }
+  
+  /**
+   * Get whether to start skipping mode. 
+   */
+  private boolean startSkipping() {
+    if(SkipBadRecords.getEnabled(conf) && 
+        numTaskFailures>=SkipBadRecords.getAttemptsToStartSkipping(conf)) {
+      return true;
+    }
+    return false;
   }
 
   /**

@@ -121,13 +121,12 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
   public void testDisableSkip() throws Exception {
     JobConf clusterConf = createJobConf();
     createInput();
-    
+    int attSkip =0;
+    SkipBadRecords.setAttemptsToStartSkipping(clusterConf,attSkip);
     //the no of attempts to successfully complete the task depends 
     //on the no of bad records.
-    int mapperAttempts = SkipBadRecords.getAttemptsToStartSkipping(clusterConf)
-                          +1+MAPPER_BAD_RECORDS.size();
-    int reducerAttempts = SkipBadRecords.getAttemptsToStartSkipping(clusterConf)
-                           +1+REDUCER_BAD_RECORDS.size();
+    int mapperAttempts = attSkip+1+MAPPER_BAD_RECORDS.size();
+    int reducerAttempts = attSkip+1+REDUCER_BAD_RECORDS.size();
     String[] args =  new String[] {
       "-input", (new Path(getInputDir(), "text.txt")).toString(),
       "-output", getOutputDir().toString(),
@@ -135,6 +134,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-reducer", badReducer,
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
+      "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
       "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
       "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
       "-jobconf", "mapred.skip.mode.enabled=false",
@@ -157,13 +157,12 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
   public void testSkip() throws Exception {
     JobConf clusterConf = createJobConf();
     createInput();
-    
+    int attSkip =0;
+    SkipBadRecords.setAttemptsToStartSkipping(clusterConf,attSkip);
     //the no of attempts to successfully complete the task depends 
     //on the no of bad records.
-    int mapperAttempts = SkipBadRecords.getAttemptsToStartSkipping(clusterConf)
-                          +1+MAPPER_BAD_RECORDS.size();
-    int reducerAttempts = SkipBadRecords.getAttemptsToStartSkipping(clusterConf)
-                           +1+REDUCER_BAD_RECORDS.size();
+    int mapperAttempts = attSkip+1+MAPPER_BAD_RECORDS.size();
+    int reducerAttempts = attSkip+1+REDUCER_BAD_RECORDS.size();
     
     String[] args =  new String[] {
       "-input", (new Path(getInputDir(), "text.txt")).toString(),
@@ -172,6 +171,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-reducer", badReducer,
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
+      "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
       "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
       "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
       "-jobconf", "mapred.map.tasks=1",

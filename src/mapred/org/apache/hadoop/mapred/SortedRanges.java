@@ -35,28 +35,28 @@ import org.apache.hadoop.io.Writable;
  * Provides the SkipRangeIterator, which skips the Ranges 
  * stored in this object.
  */
-public class SortedRanges implements Writable{
+class SortedRanges implements Writable{
   
   private static final Log LOG = 
     LogFactory.getLog(SortedRanges.class);
   
-  private SortedSet<Range> ranges = new TreeSet<Range>();
-  private int indicesCount;
+  private TreeSet<Range> ranges = new TreeSet<Range>();
+  private long indicesCount;
   
   /**
    * Get Iterator which skips the stored ranges.
    * The Iterator.next() call return the index starting from 0.
-   * @return Iterator<Long>
+   * @return SkipRangeIterator
    */
-  public Iterator<Long> skipRangeIterator(){
-    return new SkipRangeIterator();
+  synchronized SkipRangeIterator skipRangeIterator(){
+    return new SkipRangeIterator(ranges.iterator());
   }
   
   /**
    * Get the no of indices stored in the ranges.
    * @return indices count
    */
-  public synchronized int getIndicesCount() {
+  synchronized long getIndicesCount() {
     return indicesCount;
   }
   
@@ -69,7 +69,7 @@ public class SortedRanges implements Writable{
    * If the range is of 0 length, doesn't do anything.
    * @param range Range to be added.
    */
-  public synchronized void add(Range range){
+  synchronized void add(Range range){
     if(range.isEmpty()) {
       return;
     }
@@ -123,7 +123,7 @@ public class SortedRanges implements Writable{
    * If range is of 0 length, doesn't do anything.
    * @param range Range to be removed.
    */
-  public synchronized void remove(Range range) {
+  synchronized void remove(Range range) {
     if(range.isEmpty()) {
       return;
     }
@@ -177,7 +177,8 @@ public class SortedRanges implements Writable{
     }
   }
   
-  public void readFields(DataInput in) throws IOException {
+  public synchronized void readFields(DataInput in) throws IOException {
+    indicesCount = in.readLong();
     ranges = new TreeSet<Range>();
     int size = in.readInt();
     for(int i=0;i<size;i++) {
@@ -187,7 +188,8 @@ public class SortedRanges implements Writable{
     }
   }
 
-  public void write(DataOutput out) throws IOException {
+  public synchronized void write(DataOutput out) throws IOException {
+    out.writeLong(indicesCount);
     out.writeInt(ranges.size());
     Iterator<Range> it = ranges.iterator();
     while(it.hasNext()) {
@@ -215,7 +217,7 @@ public class SortedRanges implements Writable{
     private long startIndex;
     private long length;
         
-    public Range(long startIndex, long length) {
+    Range(long startIndex, long length) {
       if(length<0) {
         throw new RuntimeException("length can't be negative");
       }
@@ -223,7 +225,7 @@ public class SortedRanges implements Writable{
       this.length = length;
     }
     
-    public Range() {
+    Range() {
       this(0,0);
     }
     
@@ -231,7 +233,7 @@ public class SortedRanges implements Writable{
      * Get the start index. Start index in inclusive.
      * @return startIndex. 
      */
-    public long getStartIndex() {
+    long getStartIndex() {
       return startIndex;
     }
     
@@ -239,7 +241,7 @@ public class SortedRanges implements Writable{
      * Get the end index. End index is exclusive.
      * @return endIndex.
      */
-    public long getEndIndex() {
+    long getEndIndex() {
       return startIndex + length;
     }
     
@@ -247,7 +249,7 @@ public class SortedRanges implements Writable{
     * Get Length.
     * @return length
     */
-    public long getLength() {
+    long getLength() {
       return length;
     }
     
@@ -256,7 +258,7 @@ public class SortedRanges implements Writable{
      * @return <code>true</code> if empty
      *         <code>false</code> otherwise.
      */
-    public boolean isEmpty() {
+    boolean isEmpty() {
       return length==0;
     }
     
@@ -299,17 +301,25 @@ public class SortedRanges implements Writable{
   /**
    * Index Iterator which skips the stored ranges.
    */
-  private class SkipRangeIterator implements Iterator<Long> {
-    Iterator<Range> rangeIterator = ranges.iterator();
+  static class SkipRangeIterator implements Iterator<Long> {
+    Iterator<Range> rangeIterator;
     Range range = new Range();
     long currentIndex = -1;
+    
+    /**
+     * Constructor
+     * @param rangeIterator the iterator which gives the ranges.
+     */
+    SkipRangeIterator(Iterator<Range> rangeIterator) {
+      this.rangeIterator = rangeIterator;
+    }
     
     /**
      * Returns true till the index reaches Long.MAX_VALUE.
      * @return <code>true</code> next index exists.
      *         <code>false</code> otherwise.
      */
-    public boolean hasNext() {
+    public synchronized boolean hasNext() {
       return currentIndex<Long.MAX_VALUE;
     }
     
@@ -336,6 +346,15 @@ public class SortedRanges implements Writable{
         currentIndex = range.getEndIndex();
         
       }
+    }
+    
+    /**
+     * Get whether all the ranges have been skipped.
+     * @return <code>true</code> if all ranges have been skipped.
+     *         <code>false</code> otherwise.
+     */
+    synchronized boolean skippedAllRanges() {
+      return !rangeIterator.hasNext() && currentIndex>=range.getEndIndex();
     }
     
     /**

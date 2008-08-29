@@ -35,7 +35,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestBadRecords extends ClusterMapReduceTestCase {
   
@@ -71,6 +73,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     conf.setNumReduceTasks(1);
     conf.setInt("mapred.task.timeout", 30*1000);
     
+    SkipBadRecords.setAttemptsToStartSkipping(conf,0);
     //the no of attempts to successfully complete the task depends 
     //on the no of bad records.
     conf.setMaxMapAttempts(SkipBadRecords.getAttemptsToStartSkipping(conf)+1+
@@ -105,6 +108,59 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     throws Exception{
     LOG.info(runningJob.getCounters().toString());
     assertTrue(runningJob.isSuccessful());
+    
+    //validate counters
+    Counters counters = runningJob.getCounters();
+    assertEquals(counters.findCounter(Task.Counter.MAP_SKIPPED_RECORDS).
+        getCounter(),mapperBadRecords.size());
+    
+    int mapRecs = input.size() - mapperBadRecords.size();
+    assertEquals(counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).
+        getCounter(),mapRecs);
+    assertEquals(counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).
+        getCounter(),mapRecs);
+    
+    int redRecs = mapRecs - redBadRecords.size();
+    assertEquals(counters.findCounter(Task.Counter.REDUCE_SKIPPED_RECORDS).
+        getCounter(),redBadRecords.size());
+    assertEquals(counters.findCounter(Task.Counter.REDUCE_SKIPPED_GROUPS).
+        getCounter(),redBadRecords.size());
+    assertEquals(counters.findCounter(Task.Counter.REDUCE_INPUT_GROUPS).
+        getCounter(),redRecs);
+    assertEquals(counters.findCounter(Task.Counter.REDUCE_INPUT_RECORDS).
+        getCounter(),redRecs);
+    assertEquals(counters.findCounter(Task.Counter.REDUCE_OUTPUT_RECORDS).
+        getCounter(),redRecs);
+    
+    //validate skipped records
+    Path skipDir = SkipBadRecords.getSkipOutputPath(conf);
+    Path[] skips = FileUtil.stat2Paths(getFileSystem().listStatus(skipDir));
+    List<String> mapSkipped = new ArrayList<String>();
+    List<String> redSkipped = new ArrayList<String>();
+    for(Path skipPath : skips) {
+      LOG.info("skipPath: " + skipPath);
+      
+      SequenceFile.Reader reader = new SequenceFile.Reader(
+          getFileSystem(), skipPath, conf);
+      Object key = ReflectionUtils.newInstance(reader.getKeyClass(), conf);
+      Object value = ReflectionUtils.newInstance(reader.getValueClass(), 
+          conf);
+      key = reader.next(key);
+      while(key!=null) {
+        value = reader.getCurrentValue(value);
+        LOG.debug("key:"+key+" value:"+value.toString());
+        if(skipPath.getName().contains("_r_")) {
+          redSkipped.add(value.toString());
+        } else {
+          mapSkipped.add(value.toString());
+        }
+        key = reader.next(key);
+      }
+      reader.close();
+    }
+    assertTrue(mapSkipped.containsAll(mapperBadRecords));
+    assertTrue(redSkipped.containsAll(redBadRecords));
+    
     Path[] outputFiles = FileUtil.stat2Paths(
         getFileSystem().listStatus(getOutputDir(),
         new OutputLogFilter()));
