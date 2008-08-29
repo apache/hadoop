@@ -82,15 +82,9 @@ public class MetaUtils {
    * @throws IOException
    */
   private void initialize() throws IOException {
-    this.fs = FileSystem.get(this.conf);              // get DFS handle
+    this.fs = FileSystem.get(this.conf);
     // Get root directory of HBase installation
-    this.rootdir = fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
-    if (!fs.exists(rootdir)) {
-      String message = "HBase root directory " + rootdir.toString() +
-        " does not exist.";
-      LOG.error(message);
-      throw new FileNotFoundException(message);
-    }
+    this.rootdir = FSUtils.getRootDir(this.conf);
   }
 
   /** @return the HLog 

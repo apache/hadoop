@@ -309,7 +309,7 @@ class Memcache {
         if (columns == null || columns.contains(itKey.getColumn())) {
           byte [] val = tailMap.get(itKey);
           if (HLogEdit.isDeleted(val)) {
-            if (!deletes.containsKey(itCol) 
+            if (!deletes.containsKey(itCol)
               || deletes.get(itCol).longValue() < itKey.getTimestamp()) {
               deletes.put(itCol, Long.valueOf(itKey.getTimestamp()));
             }
@@ -395,14 +395,13 @@ class Memcache {
         found_key = key_iterator.next();
         if (Bytes.compareTo(found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
-            handleDeleted(found_key, candidateKeys, deletes);
+            HStore.handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {
               deletedOrExpiredRow = found_key;
             }
           } else {
             if (HStore.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
-              HStoreKey strippedKey = stripTimestamp(found_key);
-              candidateKeys.put(strippedKey,
+              candidateKeys.put(stripTimestamp(found_key),
                 new Long(found_key.getTimestamp()));
             } else {
               if (deletedOrExpiredRow == null) {
@@ -493,7 +492,7 @@ class Memcache {
       do {
         HStoreKey found_key = key_iterator.next();
         if (HLogEdit.isDeleted(thisRowTailMap.get(found_key))) {
-          handleDeleted(found_key, candidateKeys, deletes);
+          HStore.handleDeleted(found_key, candidateKeys, deletes);
         } else {
           if (ttl == HConstants.FOREVER ||
               now < found_key.getTimestamp() + ttl ||
@@ -509,20 +508,6 @@ class Memcache {
           }
         }
       } while (key_iterator.hasNext());
-    }
-  }
-
-  private void handleDeleted(final HStoreKey k,
-      final SortedMap<HStoreKey, Long> candidateKeys,
-      final Set<HStoreKey> deletes) {
-    deletes.add(k);
-    HStoreKey strippedKey = stripTimestamp(k);
-    if (candidateKeys.containsKey(strippedKey)) {
-      long bestCandidateTs = 
-        candidateKeys.get(strippedKey).longValue();
-      if (bestCandidateTs <= k.getTimestamp()) {
-        candidateKeys.remove(strippedKey);
-      }
     }
   }
   

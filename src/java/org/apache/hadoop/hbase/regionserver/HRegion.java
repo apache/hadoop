@@ -1275,9 +1275,10 @@ public class HRegion implements HConstants {
   /*
    * Get <code>versions</code> keys matching the origin key's
    * row/column/timestamp and those of an older vintage.
+   * Public so available when debugging.
    * @param origin Where to start searching.
-   * @param versions How many versions to return. Pass
-   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @param versions How many versions to return. Pass HConstants.ALL_VERSIONS
+   * to retrieve all.
    * @return Ordered list of <code>versions</code> keys going from newest back.
    * @throws IOException
    */
@@ -1500,7 +1501,7 @@ public class HRegion implements HConstants {
     checkReadOnly();
     Integer lid = getLock(lockid,row);
     try {
-      // Delete ALL verisons rather than MAX_VERSIONS.  If we just did
+      // Delete ALL versions rather than MAX_VERSIONS.  If we just did
       // MAX_VERSIONS, then if 2* MAX_VERSION cells, subsequent gets would
       // get old stuff.
       deleteMultiple(row, column, ts, ALL_VERSIONS);
@@ -1657,14 +1658,14 @@ public class HRegion implements HConstants {
     this.updatesLock.readLock().lock();
     try {
       if (writeToWAL) {
-        this.log.append(regionInfo.getRegionName(), regionInfo.getTableDesc()
-            .getName(), updatesByColumn);
+        this.log.append(regionInfo.getRegionName(),
+          regionInfo.getTableDesc().getName(), updatesByColumn);
       }
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
         size = this.memcacheSize.addAndGet(
-            getStore(key.getColumn()).add(key, e.getValue()));
+          getStore(key.getColumn()).add(key, e.getValue()));
       }
       flush = isFlushSize(size);
     } finally {
@@ -1716,12 +1717,14 @@ public class HRegion implements HConstants {
       this.conf, reporter);
   }
 
-  /*
-   * @param column
+  /**
+   * Return HStore instance.
+   * Use with caution.  Exposed for use of fixup utilities.
+   * @param column Name of column family hosted by this region.
    * @return Store that goes with the family on passed <code>column</code>.
    * TODO: Make this lookup faster.
    */
-  protected HStore getStore(final byte [] column) {
+  public HStore getStore(final byte [] column) {
     return this.stores.get(HStoreKey.getFamilyMapKey(column)); 
   }
   
@@ -2226,8 +2229,7 @@ public class HRegion implements HConstants {
   public static void removeRegionFromMETA(final HRegionInterface srvr,
     final byte [] metaRegionName, final byte [] regionName)
   throws IOException {
-    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP,
-        (long)-1L);
+    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP, -1L);
   }
 
   /**
@@ -2248,7 +2250,7 @@ public class HRegion implements HConstants {
     b.delete(COL_STARTCODE);
     // If carrying splits, they'll be in place when we show up on new
     // server.
-    srvr.batchUpdate(metaRegionName, b, (long)-1L);
+    srvr.batchUpdate(metaRegionName, b, -1L);
   }
 
   /**

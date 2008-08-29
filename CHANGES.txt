@@ -42,6 +42,7 @@ Release 0.18.0 - Unreleased
    HBASE-768   This message 'java.io.IOException: Install 0.1.x of hbase and run
                its migration first' is useless (Jean-Daniel Cryans via Jim
                Kellerman)
+   HBASE-826   Delete table followed by recreation results in honked table
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

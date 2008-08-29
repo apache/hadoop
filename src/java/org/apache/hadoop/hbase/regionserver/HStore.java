@@ -739,6 +739,7 @@ public class HStore implements HConstants {
         if (this.storefiles.size() <= 0) {
           return null;
         }
+        // filesToCompact are sorted oldest to newest.
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
 
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
@@ -805,12 +806,12 @@ public class HStore implements HConstants {
        * the caching associated with the currently-loaded ones. Our iteration-
        * based access pattern is practically designed to ruin the cache.
        */
-      List<MapFile.Reader> readers = new ArrayList<MapFile.Reader>();
+      List<MapFile.Reader> rdrs = new ArrayList<MapFile.Reader>();
       for (HStoreFile file: filesToCompact) {
         try {
           HStoreFile.BloomFilterMapFile.Reader reader =
             file.getReader(fs, false, false);
-          readers.add(reader);
+          rdrs.add(reader);
           
           // Compute the size of the new bloomfilter if needed
           if (this.family.isBloomfilter()) {
@@ -821,28 +822,24 @@ public class HStore implements HConstants {
           // exception message so output a message here where we know the
           // culprit.
           LOG.warn("Failed with " + e.toString() + ": " + file.toString());
-          closeCompactionReaders(readers);
+          closeCompactionReaders(rdrs);
           throw e;
         }
       }
-      
-      // Storefiles are keyed by sequence id. The oldest file comes first.
-      // We need to return out of here a List that has the newest file first.
-      Collections.reverse(readers);
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
           this.compactionDir, info.getEncodedName(), family.getName(),
           -1L, null);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + readers.size() + " files into " +
+        LOG.debug("started compaction of " + rdrs.size() + " files into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
         this.compression, this.family.isBloomfilter(), nrows);
       writer.setIndexInterval(family.getMapFileIndexInterval());
       try {
-        compactHStoreFiles(writer, readers);
+        compact(writer, rdrs);
       } finally {
         writer.close();
       }
@@ -864,14 +861,20 @@ public class HStore implements HConstants {
    * Compact a list of MapFile.Readers into MapFile.Writer.
    * 
    * We work by iterating through the readers in parallel. We always increment
-   * the lowest-ranked one.
-   * Updates to a single row/column will appear ranked by timestamp. This allows
-   * us to throw out deleted values or obsolete versions.
+   * the lowest-ranked one. Updates to a single row/column will appear ranked
+   * by timestamp.
+   * @param compactedOut Where to write compaction.
+   * @param pReaders List of readers sorted oldest to newest.
+   * @throws IOException
    */
-  private void compactHStoreFiles(final MapFile.Writer compactedOut,
-      final List<MapFile.Reader> readers)
+  private void compact(final MapFile.Writer compactedOut,
+      final List<MapFile.Reader> pReaders)
   throws IOException {
-    MapFile.Reader[] rdrs = readers.toArray(new MapFile.Reader[readers.size()]);
+    // Reverse order so we newest is first.
+    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders.size());
+    Collections.copy(copy, pReaders);
+    Collections.reverse(copy);
+    MapFile.Reader[] rdrs = pReaders.toArray(new MapFile.Reader[copy.size()]);
     try {
       HStoreKey[] keys = new HStoreKey[rdrs.length];
       ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
@@ -885,10 +888,10 @@ public class HStore implements HConstants {
       // Now, advance through the readers in order.  This will have the
       // effect of a run-time sort of the entire dataset.
       int numDone = 0;
-      for(int i = 0; i < rdrs.length; i++) {
+      for (int i = 0; i < rdrs.length; i++) {
         rdrs[i].reset();
-        done[i] = ! rdrs[i].next(keys[i], vals[i]);
-        if(done[i]) {
+        done[i] = !rdrs[i].next(keys[i], vals[i]);
+        if (done[i]) {
           numDone++;
         }
       }
@@ -897,7 +900,6 @@ public class HStore implements HConstants {
       int timesSeen = 0;
       byte [] lastRow = null;
       byte [] lastColumn = null;
-
       while (numDone < done.length) {
         // Find the reader with the smallest key.  If two files have same key
         // but different values -- i.e. one is delete and other is non-delete
@@ -906,19 +908,17 @@ public class HStore implements HConstants {
         // store file.
         int smallestKey = -1;
         for (int i = 0; i < rdrs.length; i++) {
-          if(done[i]) {
+          if (done[i]) {
             continue;
           }
-          if(smallestKey < 0) {
+          if (smallestKey < 0) {
             smallestKey = i;
           } else {
-            if(keys[i].compareTo(keys[smallestKey]) < 0) {
+            if (keys[i].compareTo(keys[smallestKey]) < 0) {
               smallestKey = i;
             }
           }
         }
-
-        // Reflect the current key/val in the output
         HStoreKey sk = keys[smallestKey];
         if (Bytes.equals(lastRow, sk.getRow())
             && Bytes.equals(lastColumn, sk.getColumn())) {
@@ -1172,7 +1172,7 @@ public class HStore implements HConstants {
   /**
    * @return Array of readers ordered oldest to newest.
    */
-  MapFile.Reader [] getReaders() {
+  public MapFile.Reader [] getReaders() {
     return this.readers.values().
       toArray(new MapFile.Reader[this.readers.size()]);
   }
@@ -1306,9 +1306,8 @@ public class HStore implements HConstants {
   }
 
   /**
-   * Get <code>versions</code> keys matching the origin key's
+   * Get <code>versions</code> of keys matching the origin key's
    * row/column/timestamp and those of an older vintage.
-   * Default access so can be accessed out of {@link HRegionServer}.
    * @param origin Where to start searching.
    * @param numVersions How many versions to return. Pass
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
@@ -1333,7 +1332,7 @@ public class HStore implements HConstants {
       }
       MapFile.Reader[] maparray = getReaders();
       // Returned array is sorted with the most recent addition last.
-      for(int i = maparray.length - 1;
+      for (int i = maparray.length - 1;
           i >= 0 && keys.size() < versions; i--) {
         MapFile.Reader map = maparray[i];
         synchronized(map) {
@@ -1351,10 +1350,9 @@ public class HStore implements HConstants {
           do {
             // if the row matches, we might want this one.
             if (rowMatches(origin, readkey)) {
-              // if the cell matches, then we definitely want this key.
+              // if the cell address matches, then we definitely want this key.
               if (cellMatches(origin, readkey)) {
-                // Store the key if it isn't deleted or superceeded by what's
-                // in the memcache
+                // Store key if isn't deleted or superceded by memcache
                 if (!HLogEdit.isDeleted(readval.get())) {
                   if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
                     keys.add(new HStoreKey(readkey));
@@ -1363,7 +1361,6 @@ public class HStore implements HConstants {
                     break;
                   }
                 } else {
-                  // Is this copy necessary?
                   deletes.add(new HStoreKey(readkey));
                 }
               } else {
@@ -1410,8 +1407,6 @@ public class HStore implements HConstants {
     // and columns that match those set on the scanner and which have delete
     // values.  If memory usage becomes an issue, could redo as bloom filter.
     Set<HStoreKey> deletes = new HashSet<HStoreKey>();
-    
-    
     this.lock.readLock().lock();
     try {
       // First go to the memcache.  Pick up deletes and candidates.
@@ -1425,7 +1420,8 @@ public class HStore implements HConstants {
         rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys, deletes);
       }
       // Return the best key from candidateKeys
-      byte [] result = candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
+      byte [] result =
+        candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
       return result;
     } finally {
       this.lock.readLock().unlock();
@@ -1550,18 +1546,15 @@ public class HStore implements HConstants {
         // as a candidate key
         if (Bytes.equals(readkey.getRow(), searchKey.getRow())) {
           if (!HLogEdit.isDeleted(readval.get())) {
-            if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
-              candidateKeys.put(stripTimestamp(readkey), 
-                  new Long(readkey.getTimestamp()));
+            if (handleNonDelete(readkey, now, deletes, candidateKeys)) {
               foundCandidate = true;
               // NOTE! Continue.
               continue;
             }
           }
-          // Deleted value.
-          deletes.add(readkey);
+          HStoreKey copy = addCopyToDeletes(readkey, deletes);
           if (deletedOrExpiredRow == null) {
-            deletedOrExpiredRow = new HStoreKey(readkey);
+            deletedOrExpiredRow = copy;
           }
         } else if (Bytes.compareTo(readkey.getRow(), searchKey.getRow()) > 0) {
           // if the row key we just read is beyond the key we're searching for,
@@ -1572,16 +1565,15 @@ public class HStore implements HConstants {
           // we're seeking yet, so this row is a candidate for closest
           // (assuming that it isn't a delete).
           if (!HLogEdit.isDeleted(readval.get())) {
-            if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
-              candidateKeys.put(stripTimestamp(readkey), 
-                  new Long(readkey.getTimestamp()));
+            if (handleNonDelete(readkey, now, deletes, candidateKeys)) {
               foundCandidate = true;
+              // NOTE: Continue
               continue;
             }
           }
-          deletes.add(readkey);
+          HStoreKey copy = addCopyToDeletes(readkey, deletes);
           if (deletedOrExpiredRow == null) {
-            deletedOrExpiredRow = new HStoreKey(readkey);
+            deletedOrExpiredRow = copy;
           }
         }        
       } while(map.next(readkey, readval) && (knownNoGoodKey == null ||
@@ -1601,6 +1593,18 @@ public class HStore implements HConstants {
     // Arriving here just means that we consumed the whole rest of the map
     // without going "past" the key we're searching for. we can just fall
     // through here.
+  }
+  
+  /*
+   * @param key Key to copy and add to <code>deletes</code>
+   * @param deletes
+   * @return Instance of the copy added to <code>deletes</code>
+   */
+  private HStoreKey addCopyToDeletes(final HStoreKey key,
+      final Set<HStoreKey> deletes) {
+    HStoreKey copy = new HStoreKey(key);
+    deletes.add(copy);
+    return copy;
   }
   
   private void rowAtOrBeforeWithCandidates(final HStoreKey startKey,
@@ -1631,57 +1635,80 @@ public class HStore implements HConstants {
     }
 
     do {
-      HStoreKey strippedKey = null;
       // if we have an exact match on row, and it's not a delete, save this
       // as a candidate key
       if (Bytes.equals(readkey.getRow(), row)) {
-        strippedKey = stripTimestamp(readkey);
-        if (!HLogEdit.isDeleted(readval.get())) {
-          if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
-            candidateKeys.put(strippedKey,
-                new Long(readkey.getTimestamp()));
-          }
-        } else {
-          // If the candidate keys contain any that might match by timestamp,
-          // then check for a match and remove it if it's too young to 
-          // survive the delete 
-          if (candidateKeys.containsKey(strippedKey)) {
-            long bestCandidateTs =
-              candidateKeys.get(strippedKey).longValue();
-            if (bestCandidateTs <= readkey.getTimestamp()) {
-              candidateKeys.remove(strippedKey);
-            } 
-          }
-        }
+        handleKey(readkey, readval.get(), now, deletes, candidateKeys);
       } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
         // if the row key we just read is beyond the key we're searching for,
         // then we're done.
         break;
       } else {
-        strippedKey = stripTimestamp(readkey);
         // So, the row key doesn't match, but we haven't gone past the row
         // we're seeking yet, so this row is a candidate for closest 
         // (assuming that it isn't a delete).
-        if (!HLogEdit.isDeleted(readval.get())) {
-          if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
-            candidateKeys.put(strippedKey, Long.valueOf(readkey.getTimestamp()));
-          }
-        } else {
-          // If the candidate keys contain any that might match by timestamp,
-          // then check for a match and remove it if it's too young to 
-          // survive the delete 
-          if (candidateKeys.containsKey(strippedKey)) {
-            long bestCandidateTs = 
-              candidateKeys.get(strippedKey).longValue();
-            if (bestCandidateTs <= readkey.getTimestamp()) {
-              candidateKeys.remove(strippedKey);
-            } 
-          }
-        }      
+        handleKey(readkey, readval.get(), now, deletes, candidateKeys);
       }
     } while(map.next(readkey, readval));    
   }
   
+  /*
+   * @param readkey
+   * @param now
+   * @param deletes
+   * @param candidateKeys
+   */
+  private void handleKey(final HStoreKey readkey, final byte [] value,
+      final long now, final Set<HStoreKey> deletes,
+      final SortedMap<HStoreKey, Long> candidateKeys) {
+    if (!HLogEdit.isDeleted(value)) {
+      handleNonDelete(readkey, now, deletes, candidateKeys);
+    } else {
+      // Pass copy because readkey will change next time next is called.
+      handleDeleted(new HStoreKey(readkey), candidateKeys, deletes);
+    }
+  }
+  
+  /*
+   * @param readkey
+   * @param now
+   * @param deletes
+   * @param candidateKeys
+   * @return True if we added a candidate.
+   */
+  private boolean handleNonDelete(final HStoreKey readkey, final long now,
+      final Set<HStoreKey> deletes, final Map<HStoreKey, Long> candidateKeys) {
+    if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
+      candidateKeys.put(stripTimestamp(readkey),
+        Long.valueOf(readkey.getTimestamp()));
+      return true;
+    }
+    return false;
+  }
+
+  /* Handle keys whose values hold deletes.
+   * Add to the set of deletes and then if the candidate keys contain any that
+   * might match by timestamp, then check for a match and remove it if it's too
+   * young to survive the delete 
+   * @param k Be careful; if key was gotten from a Mapfile, pass in a copy.
+   * Values gotten by 'nexting' out of Mapfiles will change in each invocation.
+   * @param candidateKeys
+   * @param deletes
+   */
+  static void handleDeleted(final HStoreKey k,
+      final SortedMap<HStoreKey, Long> candidateKeys,
+      final Set<HStoreKey> deletes) {
+    deletes.add(k);
+    HStoreKey strippedKey = stripTimestamp(k);
+    if (candidateKeys.containsKey(strippedKey)) {
+      long bestCandidateTs = 
+        candidateKeys.get(strippedKey).longValue();
+      if (bestCandidateTs <= k.getTimestamp()) {
+        candidateKeys.remove(strippedKey);
+      }
+    }
+  }
+
   /*
    * @param mf MapFile to dig in.
    * @return Final key from passed <code>mf</code>
@@ -1697,8 +1724,8 @@ public class HStore implements HConstants {
     return new HStoreKey(key.getRow(), key.getColumn());
   }
     
-  /**
-   * Test that the <i>target</i> matches the <i>origin</i>. If the 
+  /*
+   * Test that the <i>target</i> matches the <i>origin</i> cell address. If the 
    * <i>origin</i> has an empty column, then it's assumed to mean any column 
    * matches and only match on row and timestamp. Otherwise, it compares the
    * keys with HStoreKey.matchesRowCol().
@@ -1707,7 +1734,7 @@ public class HStore implements HConstants {
    */
   private boolean cellMatches(HStoreKey origin, HStoreKey target){
     // if the origin's column is empty, then we're matching any column
-    if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)){
+    if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)) {
       // if the row matches, then...
       if (Bytes.equals(target.getRow(), origin.getRow())) {
         // check the timestamp
@@ -1719,7 +1746,7 @@ public class HStore implements HConstants {
     return target.matchesRowCol(origin);
   }
     
-  /**
+  /*
    * Test that the <i>target</i> matches the <i>origin</i>. If the <i>origin</i>
    * has an empty column, then it just tests row equivalence. Otherwise, it uses
    * HStoreKey.matchesRowCol().
