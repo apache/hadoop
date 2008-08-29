@@ -31,6 +31,9 @@ import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -85,6 +88,7 @@ public class TestEditLog extends TestCase {
     // start a cluster 
 
     Collection<File> namedirs = null;
+    Collection<File> editsdirs = null;
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(0, conf, numDatanodes, 
                                                 true, true, null, null);
@@ -94,6 +98,7 @@ public class TestEditLog extends TestCase {
 
     try {
       namedirs = cluster.getNameDirs();
+      editsdirs = cluster.getNameEditsDirs();
     } finally {
       fileSys.close();
       cluster.shutdown();
@@ -105,7 +110,7 @@ public class TestEditLog extends TestCase {
       numdirs++;
     }
 
-    FSImage fsimage = new FSImage(namedirs);
+    FSImage fsimage = new FSImage(namedirs, editsdirs);
     FSEditLog editLog = fsimage.getEditLog();
 
     // set small size of flush buffer
@@ -136,8 +141,9 @@ public class TestEditLog extends TestCase {
     // If there were any corruptions, it is likely that the reading in
     // of these transactions will throw an exception.
     //
-    for (int i = 0; i < numdirs; i++) {
-      File editFile = fsimage.getEditFile(i);
+    for (Iterator<StorageDirectory> it = 
+            fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
+      File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
       int numEdits = FSEditLog.loadFSEdits(new EditLogFileInputStream(editFile));
       int numLeases = FSNamesystem.getFSNamesystem().leaseManager.countLease();

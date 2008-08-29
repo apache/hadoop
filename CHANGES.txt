@@ -111,6 +111,9 @@ Trunk (unreleased changes)
     HADOOP-3828. Provides a way to write skipped records to DFS.
     (Sharad Agarwal via ddas)
 
+    HADOOP-3948. Separate name-node edits and fsimage directories.
+    (Lohit Vijayarenu via shv)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
@@ -626,7 +629,7 @@ Release 0.18.0 - 2008-08-19
     (rangadi)
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
-    (Lohit Vjayarenu via rangadi)
+    (Lohit Vijayarenu via rangadi)
 
     HADOOP-3130. Make the connect timeout smaller for getFile.
     (Amar Ramesh Kamat via ddas)

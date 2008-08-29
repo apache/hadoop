@@ -54,7 +54,8 @@ class FSDirectory implements FSConstants, Closeable {
   /** Access an existing dfs name directory. */
   public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this(new FSImage(), ns, conf);
-    fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null));
+    fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null),
+                                FSImage.getCheckpointEditsDirs(conf, null));
   }
 
   public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) throws IOException {
@@ -73,22 +74,23 @@ class FSDirectory implements FSConstants, Closeable {
   }
 
   void loadFSImage(Collection<File> dataDirs,
+                   Collection<File> editsDirs,
                    StartupOption startOpt) throws IOException {
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {
-      fsImage.setStorageDirectories(dataDirs);
+      fsImage.setStorageDirectories(dataDirs, editsDirs);
       fsImage.format();
       startOpt = StartupOption.REGULAR;
     }
     try {
-      if (fsImage.recoverTransitionRead(dataDirs, startOpt)) {
+      if (fsImage.recoverTransitionRead(dataDirs, editsDirs, startOpt)) {
         fsImage.saveFSImage();
       }
       FSEditLog editLog = fsImage.getEditLog();
       assert editLog != null : "editLog must be initialized";
       if (!editLog.isOpen())
         editLog.open();
-      fsImage.setCheckpointDirectories(null);
+      fsImage.setCheckpointDirectories(null, null);
     } catch(IOException e) {
       fsImage.close();
       throw e;

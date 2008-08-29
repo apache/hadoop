@@ -97,21 +97,116 @@ public abstract class Storage extends StorageInfo {
     NORMAL;
   }
   
+  /**
+   * An interface to denote storage directory type
+   * Implementations can define a type for storage directory by implementing
+   * this interface.
+   */
+  public interface StorageDirType {
+    public StorageDirType getStorageDirType();
+    public boolean isOfType(StorageDirType type);
+  }
+  
   private NodeType storageType;    // Type of the node using this storage 
   protected List<StorageDirectory> storageDirs = new ArrayList<StorageDirectory>();
+  
+  private class DirIterator implements Iterator<StorageDirectory> {
+    StorageDirType dirType;
+    int prevIndex; // for remove()
+    int nextIndex; // for next()
+    
+    DirIterator(StorageDirType dirType) {
+      this.dirType = dirType;
+      this.nextIndex = 0;
+      this.prevIndex = 0;
+    }
+    
+    public boolean hasNext() {
+      if (storageDirs.isEmpty() || nextIndex >= storageDirs.size())
+        return false;
+      if (dirType != null) {
+        while (nextIndex < storageDirs.size()) {
+          if (getStorageDir(nextIndex).getStorageDirType().isOfType(dirType))
+            break;
+          nextIndex++;
+        }
+        if (nextIndex >= storageDirs.size())
+         return false;
+      }
+      return true;
+    }
+    
+    public StorageDirectory next() {
+      StorageDirectory sd = getStorageDir(nextIndex);
+      prevIndex = nextIndex;
+      nextIndex++;
+      if (dirType != null) {
+        while (nextIndex < storageDirs.size()) {
+          if (getStorageDir(nextIndex).getStorageDirType().isOfType(dirType))
+            break;
+          nextIndex++;
+        }
+      }
+      return sd;
+    }
+    
+    public void remove() {
+      nextIndex = prevIndex; // restore previous state
+      storageDirs.remove(prevIndex); // remove last returned element
+      hasNext(); // reset nextIndex to correct place
+    }
+  }
+  
+  /**
+   * Return default iterator
+   * This iterator returns all entires of storageDirs
+   */
+  public Iterator<StorageDirectory> dirIterator() {
+    return dirIterator(null);
+  }
+  
+  /**
+   * Return iterator based on Storage Directory Type
+   * This iterator selects entires of storageDirs of type dirType and returns
+   * them via the Iterator
+   */
+  public Iterator<StorageDirectory> dirIterator(StorageDirType dirType) {
+    return new DirIterator(dirType);
+  }
   
   /**
    * One of the storage directories.
    */
   public class StorageDirectory {
-    public File              root; // root directory
+    File              root; // root directory
     FileLock          lock; // storage lock
+    StorageDirType dirType; // storage dir type
     
     public StorageDirectory(File dir) {
+      // default dirType is null
+      this(dir, null);
+    }
+    
+    public StorageDirectory(File dir, StorageDirType dirType) {
       this.root = dir;
       this.lock = null;
+      this.dirType = dirType;
+    }
+    
+    /**
+     * Get root directory of this storage
+     */
+    public File getRoot() {
+      return root;
     }
 
+    /**
+     * Get storage directory type
+     */
+    public StorageDirType getStorageDirType() {
+      return dirType;
+    }
+    
     /**
      * Read version file.
      * 

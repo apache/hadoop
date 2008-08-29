@@ -302,7 +302,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.registerMBean(conf); // register the MBean for the FSNamesystemStutus
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
-    this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
+    this.dir.loadFSImage(getNamespaceDirs(conf),
+                         getNamespaceEditsDirs(conf), startOpt);
     long timeTakenToLoadFSImage = now() - systemStart;
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
     NameNode.getNameNodeMetrics().fsImageLoadTime.set(
@@ -381,6 +382,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       dirNames.add("/tmp/hadoop/dfs/name");
     Collection<File> dirs = new ArrayList<File>(dirNames.size());
     for(String name : dirNames) {
+      dirs.add(new File(name));
+    }
+    return dirs;
+  }
+  
+  public static Collection<File> getNamespaceEditsDirs(Configuration conf) {
+    Collection<String> editsDirNames = 
+            conf.getStringCollection("dfs.name.edits.dir");
+    if (editsDirNames.isEmpty())
+      editsDirNames.add("/tmp/hadoop/dfs/name");
+    Collection<File> dirs = new ArrayList<File>(editsDirNames.size());
+    for(String name : editsDirNames) {
       dirs.add(new File(name));
     }
     return dirs;

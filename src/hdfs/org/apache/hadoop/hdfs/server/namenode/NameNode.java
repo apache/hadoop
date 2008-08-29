@@ -742,6 +742,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                 boolean isConfirmationNeeded
                                 ) throws IOException {
     Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    Collection<File> editDirsToFormat = 
+                 FSNamesystem.getNamespaceEditsDirs(conf);
     for(Iterator<File> it = dirsToFormat.iterator(); it.hasNext();) {
       File curDir = it.next();
       if (!curDir.exists())
@@ -756,7 +758,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       }
     }
 
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat), conf);
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat,
+                                         editDirsToFormat), conf);
     nsys.dir.fsImage.format();
     return false;
   }
@@ -765,7 +768,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                boolean isConfirmationNeeded
                                ) throws IOException {
     Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat), conf);
+    Collection<File> editDirsToFormat = 
+                               FSNamesystem.getNamespaceEditsDirs(conf);
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat,
+                                         editDirsToFormat), conf);
     System.err.print(
         "\"finalize\" will remove the previous state of the files system.\n"
         + "Recent upgrade will become permanent.\n"

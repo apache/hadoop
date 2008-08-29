@@ -242,9 +242,20 @@ creations/deletions), or "all".</description>
   <name>fs.checkpoint.dir</name>
   <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary images and edits to merge.
+      name node should store the temporary images to merge.
       If this is a comma-delimited list of directories then the image is
       replicated in all of the directories for redundancy.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.edits.dir</name>
+  <value>${fs.checkpoint.dir}</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as fs.checkpoint.dir
   </description>
 </property>
 
@@ -380,11 +391,20 @@ creations/deletions), or "all".</description>
   <name>dfs.name.dir</name>
   <value>${hadoop.tmp.dir}/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
-      should store the name table.  If this is a comma-delimited list
+      should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
       directories, for redundancy. </description>
 </property>
 
+<property>
+  <name>dfs.name.edits.dir</name>
+  <value>${dfs.name.dir}</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </description>
+</property>
 <property>
   <name>dfs.web.ugi</name>
   <value>webuser,webgroup</value>

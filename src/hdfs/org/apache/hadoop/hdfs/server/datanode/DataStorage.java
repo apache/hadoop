@@ -179,14 +179,14 @@ public class DataStorage extends Storage {
     if (ssid == null ||
         !("".equals(storageID) || "".equals(ssid) ||
           storageID.equals(ssid)))
-      throw new InconsistentFSStateException(sd.root,
+      throw new InconsistentFSStateException(sd.getRoot(),
                                              "has incompatible storage Id.");
     if ("".equals(storageID)) // update id only if it was empty
       storageID = ssid;
   }
 
   public boolean isConversionNeeded(StorageDirectory sd) throws IOException {
-    File oldF = new File(sd.root, "storage");
+    File oldF = new File(sd.getRoot(), "storage");
     if (!oldF.exists())
       return false;
     // check the layout version inside the storage file
@@ -230,7 +230,7 @@ public class DataStorage extends Storage {
       "Future version is not allowed";
     if (getNamespaceID() != nsInfo.getNamespaceID())
       throw new IOException(
-                            "Incompatible namespaceIDs in " + sd.root.getCanonicalPath()
+                            "Incompatible namespaceIDs in " + sd.getRoot().getCanonicalPath()
                             + ": namenode namespaceID = " + nsInfo.getNamespaceID() 
                             + "; datanode namespaceID = " + getNamespaceID());
     if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
@@ -262,7 +262,7 @@ public class DataStorage extends Storage {
   void doUpgrade(StorageDirectory sd,
                  NamespaceInfo nsInfo
                  ) throws IOException {
-    LOG.info("Upgrading storage directory " + sd.root 
+    LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + this.getLayoutVersion()
              + "; old CTime = " + this.getCTime()
              + ".\n   new LV = " + nsInfo.getLayoutVersion()
@@ -287,7 +287,7 @@ public class DataStorage extends Storage {
     sd.write();
     // rename tmp to previous
     rename(tmpDir, prevDir);
-    LOG.info("Upgrade of " + sd.root + " is complete.");
+    LOG.info("Upgrade of " + sd.getRoot()+ " is complete.");
   }
 
   void doRollback( StorageDirectory sd,
@@ -298,19 +298,19 @@ public class DataStorage extends Storage {
     if (!prevDir.exists())
       return;
     DataStorage prevInfo = new DataStorage();
-    StorageDirectory prevSD = prevInfo.new StorageDirectory(sd.root);
+    StorageDirectory prevSD = prevInfo.new StorageDirectory(sd.getRoot());
     prevSD.read(prevSD.getPreviousVersionFile());
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
     if (!(prevInfo.getLayoutVersion() >= FSConstants.LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
-      throw new InconsistentFSStateException(prevSD.root,
+      throw new InconsistentFSStateException(prevSD.getRoot(),
                                              "Cannot rollback to a newer state.\nDatanode previous state: LV = " 
                                              + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime() 
                                              + " is newer than the namespace state: LV = "
                                              + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime());
-    LOG.info("Rolling back storage directory " + sd.root 
+    LOG.info("Rolling back storage directory " + sd.getRoot()
              + ".\n   target LV = " + nsInfo.getLayoutVersion()
              + "; target CTime = " + nsInfo.getCTime());
     File tmpDir = sd.getRemovedTmp();
@@ -323,14 +323,14 @@ public class DataStorage extends Storage {
     rename(prevDir, curDir);
     // delete tmp dir
     deleteDir(tmpDir);
-    LOG.info("Rollback of " + sd.root + " is complete.");
+    LOG.info("Rollback of " + sd.getRoot() + " is complete.");
   }
 
   void doFinalize(StorageDirectory sd) throws IOException {
     File prevDir = sd.getPreviousDir();
     if (!prevDir.exists())
       return; // already discarded
-    final String dataDirPath = sd.root.getCanonicalPath();
+    final String dataDirPath = sd.getRoot().getCanonicalPath();
     LOG.info("Finalizing upgrade for storage directory " 
              + dataDirPath 
              + ".\n   cur LV = " + this.getLayoutVersion()

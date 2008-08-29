@@ -96,7 +96,8 @@ public class MiniDFSCluster {
   public MiniDFSCluster(Configuration conf,
                         int numDataNodes,
                         StartupOption nameNodeOperation) throws IOException {
-    this(0, conf, numDataNodes, false, false, nameNodeOperation, null, null, null);
+    this(0, conf, numDataNodes, false, false, false,  nameNodeOperation, 
+          null, null, null);
   }
   
   /**
@@ -116,7 +117,7 @@ public class MiniDFSCluster {
                         int numDataNodes,
                         boolean format,
                         String[] racks) throws IOException {
-    this(0, conf, numDataNodes, format, true, null, racks, null, null);
+    this(0, conf, numDataNodes, format, true, true,  null, racks, null, null);
   }
   
   /**
@@ -137,7 +138,7 @@ public class MiniDFSCluster {
                         int numDataNodes,
                         boolean format,
                         String[] racks, String[] hosts) throws IOException {
-    this(0, conf, numDataNodes, format, true, null, racks, hosts, null);
+    this(0, conf, numDataNodes, format, true, true, null, racks, hosts, null);
   }
   
   /**
@@ -165,8 +166,8 @@ public class MiniDFSCluster {
                         boolean manageDfsDirs,
                         StartupOption operation,
                         String[] racks) throws IOException {
-    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, operation, 
-        racks, null, null);
+    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
+         operation, racks, null, null);
   }
 
   /**
@@ -196,8 +197,8 @@ public class MiniDFSCluster {
                         StartupOption operation,
                         String[] racks,
                         long[] simulatedCapacities) throws IOException {
-    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, operation, racks, null, 
-        simulatedCapacities);
+    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
+          operation, racks, null, simulatedCapacities);
   }
   
   /**
@@ -212,8 +213,10 @@ public class MiniDFSCluster {
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param format if true, format the NameNode and DataNodes before starting up
-   * @param manageDfsDirs if true, the data directories for servers will be
+   * @param manageNameDfsDirs if true, the data directories for servers will be
    *          created and dfs.name.dir and dfs.data.dir will be set in the conf
+   * @param manageDataDfsDirs if true, the data directories for datanodes will
+   *          be created and dfs.data.dir set to same in the conf
    * @param operation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    * @param racks array of strings indicating the rack that each DataNode is on
@@ -224,7 +227,8 @@ public class MiniDFSCluster {
                         Configuration conf,
                         int numDataNodes,
                         boolean format,
-                        boolean manageDfsDirs,
+                        boolean manageNameDfsDirs,
+                        boolean manageDataDfsDirs,
                         StartupOption operation,
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
@@ -242,9 +246,11 @@ public class MiniDFSCluster {
     // Setup the NameNode configuration
     FileSystem.setDefaultUri(conf, "hdfs://localhost:"+ Integer.toString(nameNodePort));
     conf.set("dfs.http.address", "127.0.0.1:0");  
-    if (manageDfsDirs) {
+    if (manageNameDfsDirs) {
       conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
                new File(base_dir, "name2").getPath());
+      conf.set("fs.checkpoint.dir", new File(base_dir, "namesecondary1").
+                getPath()+"," + new File(base_dir, "namesecondary2").getPath());
     }
     
     int replication = conf.getInt("dfs.replication", 3);
@@ -270,7 +276,8 @@ public class MiniDFSCluster {
     nameNode = NameNode.createNameNode(args, conf);
     
     // Start the DataNodes
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts, simulatedCapacities);
+    startDataNodes(conf, numDataNodes, manageDataDfsDirs, 
+                    operation, racks, hosts, simulatedCapacities);
     waitClusterUp();
   }
 
@@ -686,10 +693,17 @@ public class MiniDFSCluster {
   }
 
   /**
-   * Get the directories where the namenode stores its state.
+   * Get the directories where the namenode stores its image.
    */
   public Collection<File> getNameDirs() {
     return FSNamesystem.getNamespaceDirs(conf);
+  }
+
+  /**
+   * Get the directories where the namenode stores its edits.
+   */
+  public Collection<File> getNameEditsDirs() {
+    return FSNamesystem.getNamespaceEditsDirs(conf);
   }
 
   /**

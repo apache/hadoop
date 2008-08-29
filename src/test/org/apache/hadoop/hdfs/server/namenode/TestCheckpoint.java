@@ -21,6 +21,7 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Collection;
 import java.util.List;
+import java.util.Iterator;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -28,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -173,10 +176,16 @@ public class TestCheckpoint extends TestCase {
     // and that temporary checkpoint files are gone.
     FSImage image = cluster.getNameNode().getFSImage();
     int nrDirs = image.getNumStorageDirs();
-    for(int idx = 0; idx < nrDirs; idx++) {
-      assertFalse(image.getImageFile(idx, NameNodeFile.IMAGE_NEW).exists());
-      assertFalse(image.getEditNewFile(idx).exists());
-      File edits = image.getEditFile(idx);
+    for (Iterator<StorageDirectory> it = 
+             image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      assertFalse(FSImage.getImageFile(sd, NameNodeFile.IMAGE_NEW).exists());
+    }
+    for (Iterator<StorageDirectory> it = 
+            image.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      assertFalse(image.getEditNewFile(sd).exists());
+      File edits = image.getEditFile(sd);
       assertTrue(edits.exists()); // edits should exist and be empty
       long editsLen = edits.length();
       assertTrue(editsLen == Integer.SIZE/Byte.SIZE);
@@ -335,7 +344,12 @@ public class TestCheckpoint extends TestCase {
     FSImage image = cluster.getNameNode().getFSImage();
     try {
       assertTrue(!fileSys.exists(file1));
-      long fsimageLength = image.getImageFile(0, NameNodeFile.IMAGE).length();
+      StorageDirectory sd = null;
+      for (Iterator<StorageDirectory> it = 
+                image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();)
+         sd = it.next();
+      assertTrue(sd != null);
+      long fsimageLength = FSImage.getImageFile(sd, NameNodeFile.IMAGE).length();
       //
       // Make the checkpoint
       //
@@ -352,9 +366,9 @@ public class TestCheckpoint extends TestCase {
       ErrorSimulator.clearErrorSimulation(2);
 
       // Verify that image file sizes did not change.
-      int nrDirs = image.getNumStorageDirs();
-      for(int idx = 0; idx < nrDirs; idx++) {
-        assertTrue(image.getImageFile(idx, 
+      for (Iterator<StorageDirectory> it = 
+              image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+        assertTrue(FSImage.getImageFile(it.next(), 
                                 NameNodeFile.IMAGE).length() == fsimageLength);
       }
 
@@ -385,8 +399,11 @@ public class TestCheckpoint extends TestCase {
   void testStartup(Configuration conf) throws IOException {
     System.out.println("Startup of the name-node in the checkpoint directory.");
     String primaryDirs = conf.get("dfs.name.dir");
+    String primaryEditsDirs = conf.get("dfs.name.edits.dir");
     String checkpointDirs = conf.get("fs.checkpoint.dir");
-    NameNode nn = startNameNode(conf, checkpointDirs, StartupOption.REGULAR);
+    String checkpointEditsDirs = conf.get("fs.checkpoint.edits.dir");
+    NameNode nn = startNameNode(conf, checkpointDirs, checkpointEditsDirs,
+                                 StartupOption.REGULAR);
 
     // Starting secondary node in the same directory as the primary
     System.out.println("Startup of secondary in the same dir as the primary.");
@@ -403,7 +420,8 @@ public class TestCheckpoint extends TestCase {
     // Starting primary node in the same directory as the secondary
     System.out.println("Startup of primary in the same dir as the secondary.");
     // secondary won't start without primary
-    nn = startNameNode(conf, primaryDirs, StartupOption.REGULAR);
+    nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
+                        StartupOption.REGULAR);
     boolean succeed = false;
     do {
       try {
@@ -415,7 +433,8 @@ public class TestCheckpoint extends TestCase {
     } while(!succeed);
     nn.stop(); nn = null;
     try {
-      nn = startNameNode(conf, checkpointDirs, StartupOption.REGULAR);
+      nn = startNameNode(conf, checkpointDirs, checkpointEditsDirs,
+                          StartupOption.REGULAR);
       assertFalse(nn.getFSImage().isLockSupported(0));
       nn.stop(); nn = null;
     } catch (IOException e) { // expected to fail
@@ -425,7 +444,8 @@ public class TestCheckpoint extends TestCase {
     // Try another secondary in the same directory
     System.out.println("Startup of two secondaries in the same dir.");
     // secondary won't start without primary
-    nn = startNameNode(conf, primaryDirs, StartupOption.REGULAR);
+    nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
+                        StartupOption.REGULAR);
     SecondaryNameNode secondary2 = null;
     try {
       secondary2 = startSecondaryNameNode(conf);
@@ -440,15 +460,18 @@ public class TestCheckpoint extends TestCase {
     // Import a checkpoint with existing primary image.
     System.out.println("Import a checkpoint with existing primary image.");
     try {
-      nn = startNameNode(conf, primaryDirs, StartupOption.IMPORT);
+      nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
+                          StartupOption.IMPORT);
       assertTrue(false);
     } catch (IOException e) { // expected to fail
       assertTrue(nn == null);
     }
-
+    
     // Remove current image and import a checkpoint.
     System.out.println("Import a checkpoint with existing primary image.");
     List<File> nameDirs = (List<File>)FSNamesystem.getNamespaceDirs(conf);
+    List<File> nameEditsDirs = (List<File>)FSNamesystem.
+                                  getNamespaceEditsDirs(conf);
     long fsimageLength = new File(new File(nameDirs.get(0), "current"), 
                                         NameNodeFile.IMAGE.getName()).length();
     for(File dir : nameDirs) {
@@ -458,18 +481,29 @@ public class TestCheckpoint extends TestCase {
       if (!dir.mkdirs())
         throw new IOException("Cannot create directory " + dir);
     }
-    nn = startNameNode(conf, primaryDirs, StartupOption.IMPORT);
+
+    for(File dir : nameEditsDirs) {
+      if(dir.exists())
+        if(!(FileUtil.fullyDelete(dir)))
+          throw new IOException("Cannot remove directory: " + dir);
+      if (!dir.mkdirs())
+        throw new IOException("Cannot create directory " + dir);
+    }
+    
+    nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
+                        StartupOption.IMPORT);
     // Verify that image file sizes did not change.
     FSImage image = nn.getFSImage();
-    int nrDirs = image.getNumStorageDirs();
-    for(int idx = 0; idx < nrDirs; idx++) {
-      assertTrue(image.getImageFile(idx, 
-                              NameNodeFile.IMAGE).length() == fsimageLength);
+    for (Iterator<StorageDirectory> it = 
+            image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+      assertTrue(FSImage.getImageFile(it.next(), 
+                          NameNodeFile.IMAGE).length() == fsimageLength);
     }
     nn.stop();
 
     // recover failed checkpoint
-    nn = startNameNode(conf, primaryDirs, StartupOption.REGULAR);
+    nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
+                        StartupOption.REGULAR);
     Collection<File> secondaryDirs = FSImage.getCheckpointDirs(conf, null);
     for(File dir : secondaryDirs) {
       Storage.rename(new File(dir, "current"), 
@@ -504,10 +538,12 @@ public class TestCheckpoint extends TestCase {
 
   NameNode startNameNode( Configuration conf,
                           String imageDirs,
+                          String editsDirs,
                           StartupOption start) throws IOException {
     conf.set("fs.default.name", "hdfs://localhost:0");
     conf.set("dfs.http.address", "0.0.0.0:0");  
     conf.set("dfs.name.dir", imageDirs);
+    conf.set("dfs.name.edits.dir", editsDirs);
     String[] args = new String[]{start.getName()};
     NameNode nn = NameNode.createNameNode(args, conf);
     assertTrue(nn.isInSafeMode());

@@ -34,6 +34,8 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
+
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 
 /**********************************************************
@@ -66,6 +68,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   private String infoBindAddress;
 
   private Collection<File> checkpointDirs;
+  private Collection<File> checkpointEditsDirs;
   private long checkpointPeriod;	// in seconds
   private long checkpointSize;    // size (in MB) of current Edit Log
 
@@ -135,8 +138,10 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     fsName = getInfoServer();
     checkpointDirs = FSImage.getCheckpointDirs(conf,
                                   "/tmp/hadoop/dfs/namesecondary");
+    checkpointEditsDirs = FSImage.getCheckpointEditsDirs(conf, 
+                                  "/tmp/hadoop/dfs/namesecondary");    
     checkpointImage = new CheckpointStorage();
-    checkpointImage.recoverCreate(checkpointDirs);
+    checkpointImage.recoverCreate(checkpointDirs, checkpointEditsDirs);
 
     // Initialize other scheduling parameters from the configuration
     checkpointPeriod = conf.getLong("fs.checkpoint.period", 3600);
@@ -329,7 +334,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   private void startCheckpoint() throws IOException {
     checkpointImage.unlockAll();
     checkpointImage.getEditLog().close();
-    checkpointImage.recoverCreate(checkpointDirs);
+    checkpointImage.recoverCreate(checkpointDirs, checkpointEditsDirs);
     checkpointImage.startCheckpoint();
   }
 
@@ -483,23 +488,29 @@ public class SecondaryNameNode implements FSConstants, Runnable {
      * Recover from an unsuccessful checkpoint is necessary. 
      * 
      * @param dataDirs
+     * @param editsDirs
      * @throws IOException
      */
-    void recoverCreate(Collection<File> dataDirs) throws IOException {
-      this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
-      for(File dataDir : dataDirs) {
+    void recoverCreate(Collection<File> dataDirs,
+                       Collection<File> editsDirs) throws IOException {
+      Collection<File> tempDataDirs = new ArrayList<File>(dataDirs);
+      Collection<File> tempEditsDirs = new ArrayList<File>(editsDirs);
+      this.storageDirs = new ArrayList<StorageDirectory>();
+      setStorageDirectories(tempDataDirs, tempEditsDirs);
+      for (Iterator<StorageDirectory> it = 
+                   dirIterator(); it.hasNext();) {
+        StorageDirectory sd = it.next();
         boolean isAccessible = true;
         try { // create directories if don't exist yet
-          if(!dataDir.mkdirs()) {
-            // do nothing, directory is already ctreated
+          if(!sd.getRoot().mkdirs()) {
+            // do nothing, directory is already created
           }
         } catch(SecurityException se) {
           isAccessible = false;
         }
         if(!isAccessible)
-          throw new InconsistentFSStateException(dataDir,
+          throw new InconsistentFSStateException(sd.getRoot(),
               "cannot access checkpoint directory.");
-        StorageDirectory sd = new StorageDirectory(dataDir);
         StorageState curState;
         try {
           curState = sd.analyzeStorage(StartupOption.REGULAR);
@@ -507,7 +518,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
           switch(curState) {
           case NON_EXISTENT:
             // fail if any of the configured checkpoint dirs are inaccessible 
-            throw new InconsistentFSStateException(sd.root,
+            throw new InconsistentFSStateException(sd.getRoot(),
                   "checkpoint directory does not exist or is not accessible.");
           case NOT_FORMATTED:
             break;  // it's ok since initially there is no current and VERSION
@@ -520,9 +531,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
           sd.unlock();
           throw ioe;
         }
-        // add to the storage list
-        addStorageDir(sd);
-        LOG.warn("Checkpoint directory " + sd.root + " is added.");
       }
     }
 
@@ -566,9 +574,19 @@ public class SecondaryNameNode implements FSConstants, Runnable {
      */
     private void doMerge(CheckpointSignature sig) throws IOException {
       getEditLog().open();
-      StorageDirectory sd = getStorageDir(0);
-      loadFSImage(FSImage.getImageFile(sd, NameNodeFile.IMAGE));
-      loadFSEdits(sd);
+      StorageDirectory sdName = null;
+      StorageDirectory sdEdits = null;
+      Iterator<StorageDirectory> it = null;
+      it = dirIterator(NameNodeDirType.IMAGE);
+      if (it.hasNext())
+        sdName = it.next();
+      it = dirIterator(NameNodeDirType.EDITS);
+      if (it.hasNext())
+        sdEdits = it.next();
+      if ((sdName == null) || (sdEdits == null))
+        throw new IOException("Could not locate checkpoint directories");
+      loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
+      loadFSEdits(sdEdits);
       sig.validateStorageInfo(this);
       saveFSImage();
     }
