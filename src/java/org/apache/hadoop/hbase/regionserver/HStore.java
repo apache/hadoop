@@ -778,10 +778,6 @@ public class HStore implements HConstants {
       if (!majorCompaction) {
         Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(), family.getName());
         long lowTimestamp = getLowestTimestamp(fs, mapdir);
-        if (LOG.isDebugEnabled() && lowTimestamp > 0l) {
-          LOG.debug("Time since last major compaction on store " + this.storeNameStr +
-            ": " + ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
-        }
         lastMajorCompaction = System.currentTimeMillis() - lowTimestamp;
         if (lowTimestamp < (System.currentTimeMillis() - majorCompactionTime) &&
             lowTimestamp > 0l) {
