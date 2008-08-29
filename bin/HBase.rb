@@ -196,7 +196,7 @@ module HBase
     end
 
     def getAllColumns
-       htd = @table.getMetadata()
+       htd = @table.getTableDescriptor()
        result = []
        for f in htd.getFamilies()
          n = f.getNameAsString()

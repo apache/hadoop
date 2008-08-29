@@ -43,6 +43,8 @@ Release 0.18.0 - Unreleased
                its migration first' is useless (Jean-Daniel Cryans via Jim
                Kellerman)
    HBASE-826   Delete table followed by recreation results in honked table
+   HBASE-834   'Major' compactions and upper bound on files we compact at any
+               one time (Billy Pearson via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

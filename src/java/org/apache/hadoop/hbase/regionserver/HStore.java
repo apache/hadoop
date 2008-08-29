@@ -86,7 +86,8 @@ public class HStore implements HConstants {
   final FileSystem fs;
   private final HBaseConfiguration conf;
   protected long ttl;
-
+  private long majorCompactionTime;
+  private int maxFilesToCompact;
   private final long desiredMaxFileSize;
   private volatile long storeSize;
 
@@ -187,6 +188,8 @@ public class HStore implements HConstants {
     }
     this.desiredMaxFileSize = maxFileSize;
 
+    this.majorCompactionTime = conf.getLong("hbase.hregion.majorcompaction", 86400000);
+    this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
     this.storeSize = 0L;
 
     if (family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
@@ -708,7 +711,29 @@ public class HStore implements HConstants {
     }
     return false;
   }
-  
+
+  /*
+   * Gets lowest timestamp from files in a dir
+   * 
+   * @param fs
+   * @param dir
+   * @throws IOException
+   */
+  private static long getLowestTimestamp(FileSystem fs, Path dir) throws IOException {
+   FileStatus[] stats = fs.listStatus(dir);
+   if (stats == null || stats.length == 0) {
+     return 0l;
+   }
+   long lowTimestamp = Long.MAX_VALUE;   
+   for (int i = 0; i < stats.length; i++) {
+     long timestamp = stats[i].getModificationTime();
+     if (timestamp < lowTimestamp){
+    	 lowTimestamp = timestamp;
+     }
+   }
+  return lowTimestamp;
+  }
+
   /**
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
@@ -725,12 +750,12 @@ public class HStore implements HConstants {
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
    * 
-   * @param force True to force a compaction regardless of thresholds (Needed
-   * by merge).
+   * @param majorCompaction True to force a major compaction regardless of
+   * thresholds
    * @return mid key if a split is needed, null otherwise
    * @throws IOException
    */
-  StoreSize compact(final boolean force) throws IOException {
+  StoreSize compact(boolean majorCompaction) throws IOException {
     synchronized (compactLock) {
       long maxId = -1;
       int nrows = -1;
@@ -741,12 +766,34 @@ public class HStore implements HConstants {
         }
         // filesToCompact are sorted oldest to newest.
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
-
+        
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
         // last key of storefiles.
         maxId = this.storefiles.lastKey().longValue();
       }
-      if (!force && !hasReferences(filesToCompact) &&
+      // Check to see if we need to do a major compaction on this region.
+      // If so, change majorCompaction to true to skip the incremental compacting below.
+      // Only check if majorCompaction is not true.
+      long lastMajorCompaction = 0L;
+      if (!majorCompaction) {
+        Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(), family.getName());
+        long lowTimestamp = getLowestTimestamp(fs, mapdir);
+        if (LOG.isDebugEnabled() && lowTimestamp > 0l) {
+          LOG.debug("Time since last major compaction on store " + this.storeNameStr +
+            ": " + ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+        }
+        lastMajorCompaction = System.currentTimeMillis() - lowTimestamp;
+        if (lowTimestamp < (System.currentTimeMillis() - majorCompactionTime) &&
+            lowTimestamp > 0l) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Major compaction triggered on store: " + this.storeNameStr +
+              ". Time since last major compaction: " +
+              ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+          }
+          majorCompaction = true;
+        }
+      }
+      if (!majorCompaction && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
         return checkSplit();
       }
@@ -772,13 +819,13 @@ public class HStore implements HConstants {
         fileSizes[i] = len;
         totalSize += len;
       }
-      if (!force && !hasReferences(filesToCompact)) {
+      if (!majorCompaction && !hasReferences(filesToCompact)) {
         // Here we select files for incremental compaction.  
         // The rule is: if the largest(oldest) one is more than twice the 
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
         for (point = 0; point < compactionThreshold - 1; point++) {
-          if (fileSizes[point] < fileSizes[point + 1] * 2) {
+          if (fileSizes[point] < fileSizes[point + 1] * 2 && maxFilesToCompact < (countOfFiles - point)) {
             break;
           }
           skipped += fileSizes[point];
@@ -839,7 +886,7 @@ public class HStore implements HConstants {
         this.compression, this.family.isBloomfilter(), nrows);
       writer.setIndexInterval(family.getMapFileIndexInterval());
       try {
-        compact(writer, rdrs);
+        compact(writer, rdrs, majorCompaction);
       } finally {
         writer.close();
       }
@@ -851,7 +898,9 @@ public class HStore implements HConstants {
       completeCompaction(filesToCompact, compactedOutputFile);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Completed compaction of " + this.storeNameStr +
-          " store size is " + StringUtils.humanReadableInt(storeSize));
+          " store size is " + StringUtils.humanReadableInt(storeSize) +
+          (majorCompaction? "": "; time since last major compaction: " +
+          (lastMajorCompaction/1000) + " seconds"));
       }
     }
     return checkSplit();
@@ -865,10 +914,12 @@ public class HStore implements HConstants {
    * by timestamp.
    * @param compactedOut Where to write compaction.
    * @param pReaders List of readers sorted oldest to newest.
+   * @param majorCompaction True to force a major compaction regardless of
+   * thresholds
    * @throws IOException
    */
   private void compact(final MapFile.Writer compactedOut,
-      final List<MapFile.Reader> pReaders)
+      final List<MapFile.Reader> pReaders, final boolean majorCompaction)
   throws IOException {
     // Reverse order so we newest is first.
     List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders);
@@ -926,7 +977,10 @@ public class HStore implements HConstants {
           timesSeen = 0;
         }
 
-        if (timesSeen <= family.getMaxVersions()) {
+        // Added majorCompaction here to make sure all versions make it to 
+        // the major compaction so we do not remove the wrong last versions
+        // this effected HBASE-826
+        if (timesSeen <= family.getMaxVersions() || !majorCompaction) {
           // Keep old versions until we have maxVersions worth.
           // Then just skip them.
           if (sk.getRow().length != 0 && sk.getColumn().length != 0) {

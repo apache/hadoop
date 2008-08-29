@@ -869,12 +869,11 @@ public class HRegion implements HConstants {
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
    * 
-   * @param force True to force a compaction regardless of thresholds (Needed
-   * by merge).
+   * @param majorCompaction True to force a major compaction regardless of thresholds
    * @return mid key if split is needed
    * @throws IOException
    */
-  private byte [] compactStores(final boolean force) throws IOException {
+  private byte [] compactStores(final boolean majorCompaction) throws IOException {
     splitsAndClosesLock.readLock().lock();
     try {
       byte [] midKey = null;
@@ -897,7 +896,7 @@ public class HRegion implements HConstants {
         doRegionCompactionPrep();
         long maxSize = -1;
         for (HStore store: stores.values()) {
-          final HStore.StoreSize size = store.compact(force);
+          final HStore.StoreSize size = store.compact(majorCompaction);
           if (size != null && size.getSize() > maxSize) {
             maxSize = size.getSize();
             midKey = size.getKey();
@@ -1528,6 +1527,7 @@ public class HRegion implements HConstants {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
           ALL_VERSIONS, now);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+        LOG.info("GETKEYS REMOVE " + keys);
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.deleteBytes.get());
         }

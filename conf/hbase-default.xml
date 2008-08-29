@@ -251,6 +251,20 @@
     </description>
   </property>
   <property>
+    <name>hbase.hstore.compaction.max</name>
+    <value>10</value>
+    <description>Max number of HStoreFiles to compact per 'minor' compaction.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.majorcompaction</name>
+    <value>86400000</value>
+    <description>The time (in miliseconds) between 'major' compactions of all
+    HStoreFiles in a region.  Default: 1 day.
+    </description>
+  </property>
+  <property>
+  <property>
     <name>hbase.regionserver.nbreservationblocks</name>
     <value>4</value>
     <description>The number of reservation blocks which are used to prevent
