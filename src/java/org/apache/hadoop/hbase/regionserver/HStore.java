@@ -871,8 +871,7 @@ public class HStore implements HConstants {
       final List<MapFile.Reader> pReaders)
   throws IOException {
     // Reverse order so we newest is first.
-    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders.size());
-    Collections.copy(copy, pReaders);
+    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders);
     Collections.reverse(copy);
     MapFile.Reader[] rdrs = pReaders.toArray(new MapFile.Reader[copy.size()]);
     try {
