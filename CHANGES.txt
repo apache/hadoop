@@ -104,6 +104,8 @@ Trunk (unreleased changes)
     HADOOP-3759. Provides ability to run memory intensive jobs without 
     affecting other running tasks on the nodes. (Hemanth Yamijala via ddas)
 
+    HADOOP-3746. Add a fair share scheduler. (Matei Zaharia via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

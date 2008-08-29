@@ -47,6 +47,7 @@
   <target name="test">
     <subant target="test">
       <fileset dir="." includes="streaming/build.xml"/>
+      <fileset dir="." includes="fairscheduler/build.xml"/>
     </subant>
   </target>
   

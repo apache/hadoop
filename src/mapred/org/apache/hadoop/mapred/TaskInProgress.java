@@ -832,4 +832,7 @@ class TaskInProgress {
     rawSplit.clearBytes();
   }
 
+  TreeMap<TaskAttemptID, String> getActiveTasks() {
+    return activeTasks;
+  }
 }
