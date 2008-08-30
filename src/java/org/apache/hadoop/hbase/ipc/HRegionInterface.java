@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 public interface HRegionInterface extends VersionedProtocol {
   /**
    * Protocol version.
-   * Upped to 3 when we went from Text to byte arrays for row and column names.
+   * Upped to 4 when we removed overloaded methods from the protocol.
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /** 
    * Get metainfo about an HRegion

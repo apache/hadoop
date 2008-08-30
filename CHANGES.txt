@@ -47,6 +47,8 @@ Release 0.18.0 - Unreleased
                one time (Billy Pearson via Stack)
    HBASE-836   Update thrift examples to work with changed IDL (HBASE-697)
                (Toby White via Stack)
+   HBASE-854   hbase-841 broke build on hudson? - makes sure that proxies are
+               closed. (Andrew Purtell via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

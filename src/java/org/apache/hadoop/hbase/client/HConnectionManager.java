@@ -98,7 +98,10 @@ public class HConnectionManager implements HConstants {
    */
   public static void deleteConnectionInfo(HBaseConfiguration conf) {
     synchronized (HBASE_INSTANCES) {
-      HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
+      TableServers t = HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
+      if (t != null) {
+        t.close();
+      }
     }
   }
 
@@ -107,6 +110,9 @@ public class HConnectionManager implements HConstants {
    */
   public static void deleteConnectionInfo() {
     synchronized (HBASE_INSTANCES) {
+      for (TableServers t: HBASE_INSTANCES.values()) {
+        t.close();
+      }
       HBASE_INSTANCES.clear();
     }
   }
@@ -887,5 +893,19 @@ public class HConnectionManager implements HConstants {
       }
       return null;    
     }
+
+    void close() {
+      if (master != null) {
+        HbaseRPC.stopProxy(master);
+        master = null;
+        masterChecked = false;
+      }
+      synchronized (servers) {
+        for (HRegionInterface i: servers.values()) {
+          HbaseRPC.stopProxy(i);
+        }
+      }
+    }
   }
+  
 }

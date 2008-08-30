@@ -484,6 +484,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
     }
+    if (this.hbaseMaster != null) {
+      HbaseRPC.stopProxy(this.hbaseMaster);
+      this.hbaseMaster = null;
+    }
     join();
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
