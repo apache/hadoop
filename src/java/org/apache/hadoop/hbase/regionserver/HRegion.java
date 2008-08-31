@@ -1529,7 +1529,6 @@ public class HRegion implements HConstants {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
           ALL_VERSIONS, now);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
-        LOG.info("GETKEYS REMOVE " + keys);
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.deleteBytes.get());
         }
