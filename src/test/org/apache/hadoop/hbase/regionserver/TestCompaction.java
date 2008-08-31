@@ -96,8 +96,7 @@ public class TestCompaction extends HBaseTestCase {
     }
     // Add more content.  Now there are about 5 versions of each column.
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
-    // Assert > 3 and then after compaction, assert that only 3 versions
-    // available.
+    // Assert == 3 when we ask for versions.
     addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
     Cell[] cellValues = 
       r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
@@ -105,49 +104,33 @@ public class TestCompaction extends HBaseTestCase {
     assertTrue(cellValues.length == 3);
     r.flushcache();
     r.compactStores();
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
-    // Now assert that there are 4 versions of a record only: thats the
-    // 3 versions that should be in the compacted store and then the one more
-    // we added when we flushed. But could be 3 only if the flush happened
-    // before the compaction started though we tried to have the threads run
-    // concurrently (On hudson this happens).
+    // Always 3 version if that is what max versions is.
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100/*Too many*/);
     LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " + cellValues.length);
-    // Commented out because fails on an hp+ubuntu single-processor w/ 1G and
-    // "Intel(R) Pentium(R) 4 CPU 3.20GHz" though passes on all local
-    // machines and even on hudson.  On said machine, its reporting in the
-    // LOG line above that there are 3 items in row so it should pass the
-    // below test.
-    assertTrue(cellValues.length == 3 || cellValues.length == 4);
+    assertTrue(cellValues.length == 3);
 
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis(),null);
-    // Now, before compacting, remove all instances of the first row so can
-    // verify that it is removed as we compact.
-    // Assert all delted.
+    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis(), null);
+    // Assert deleted.
     assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     r.flushcache();
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
     assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
-    // Add a bit of data and flush it so we for sure have the compaction limit
-    // for store files.  Usually by this time we will have but if compaction
-    // included the flush that ran 'concurrently', there may be just the
-    // compacted store and the flush above when we added deletes.  Add more
-    // content to be certain.
+    // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flushcache();
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 3);
-    r.compactStores();
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 2);
     // Assert that the first row is still deleted.
     cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
-    assertNull(cellValues);
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    // Force major compaction.
+    r.compactStores(true);
+    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Make sure the store files do have some 'aaa' keys in them.
     boolean containsStartRow = false;
     for (MapFile.Reader reader: this.r.stores.

@@ -821,7 +821,8 @@ public class HStore implements HConstants {
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
         for (point = 0; point < compactionThreshold - 1; point++) {
-          if (fileSizes[point] < fileSizes[point + 1] * 2 && maxFilesToCompact < (countOfFiles - point)) {
+          if (fileSizes[point] < fileSizes[point + 1] * 2 &&
+              maxFilesToCompact < (countOfFiles - point)) {
             break;
           }
           skipped += fileSizes[point];
@@ -917,10 +918,10 @@ public class HStore implements HConstants {
   private void compact(final MapFile.Writer compactedOut,
       final List<MapFile.Reader> pReaders, final boolean majorCompaction)
   throws IOException {
-    // Reverse order so we newest is first.
+    // Reverse order so newest is first.
     List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders);
     Collections.reverse(copy);
-    MapFile.Reader[] rdrs = pReaders.toArray(new MapFile.Reader[copy.size()]);
+    MapFile.Reader[] rdrs = copy.toArray(new MapFile.Reader[0]);
     try {
       HStoreKey[] keys = new HStoreKey[rdrs.length];
       ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
@@ -947,11 +948,6 @@ public class HStore implements HConstants {
       byte [] lastRow = null;
       byte [] lastColumn = null;
       while (numDone < done.length) {
-        // Find the reader with the smallest key.  If two files have same key
-        // but different values -- i.e. one is delete and other is non-delete
-        // value -- we will find the first, the one that was written later and
-        // therefore the one whose value should make it out to the compacted
-        // store file.
         int smallestKey = -1;
         for (int i = 0; i < rdrs.length; i++) {
           if (done[i]) {
@@ -970,7 +966,7 @@ public class HStore implements HConstants {
             && Bytes.equals(lastColumn, sk.getColumn())) {
           timesSeen++;
         } else {
-          timesSeen = 0;
+          timesSeen = 1;
         }
 
         // Added majorCompaction here to make sure all versions make it to 
@@ -980,10 +976,13 @@ public class HStore implements HConstants {
           // Keep old versions until we have maxVersions worth.
           // Then just skip them.
           if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
-            // Only write out objects which have a non-zero length key and
-            // value
+            // Only write out objects with non-zero length key and value
             if (!isExpired(sk, ttl, now)) {
               compactedOut.append(sk, vals[smallestKey]);
+            } else {
+              // HBASE-855 remove one from timesSeen because it did not make it
+              // past expired check -- don't count against max versions.
+              timesSeen--;
             }
           }
         }

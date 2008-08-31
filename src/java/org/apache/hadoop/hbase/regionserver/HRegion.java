@@ -858,7 +858,7 @@ public class HRegion implements HConstants {
     return compactStores(false);
   }
 
-  /**
+  /*
    * Called by compaction thread and after region is opened to compact the
    * HStores if necessary.
    *
@@ -873,7 +873,8 @@ public class HRegion implements HConstants {
    * @return mid key if split is needed
    * @throws IOException
    */
-  private byte [] compactStores(final boolean majorCompaction) throws IOException {
+  byte [] compactStores(final boolean majorCompaction)
+  throws IOException {
     splitsAndClosesLock.readLock().lock();
     try {
       byte [] midKey = null;

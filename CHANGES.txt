@@ -49,6 +49,8 @@ Release 0.18.0 - Unreleased
                (Toby White via Stack)
    HBASE-854   hbase-841 broke build on hudson? - makes sure that proxies are
                closed. (Andrew Purtell via Jim Kellerman)
+   HBASE-855   compaction can return less versions then we should in some cases
+               (Billy Pearson via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
