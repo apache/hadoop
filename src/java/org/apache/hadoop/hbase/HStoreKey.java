@@ -40,6 +40,12 @@ public class HStoreKey implements WritableComparable {
   private byte [] column = HConstants.EMPTY_BYTE_ARRAY;
   private long timestamp = Long.MAX_VALUE;
 
+  /*
+   * regionInfo is only used as a hack to compare HSKs.
+   * It is not serialized.  See https://issues.apache.org/jira/browse/HBASE-832
+   */
+  private HRegionInfo regionInfo = null;
+
   /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
     super();
@@ -47,8 +53,8 @@ public class HStoreKey implements WritableComparable {
   
   /**
    * Create an HStoreKey specifying only the row
-   * The column defaults to the empty string and the time stamp defaults to
-   * Long.MAX_VALUE
+   * The column defaults to the empty string, the time stamp defaults to
+   * Long.MAX_VALUE and the table defaults to empty string
    * 
    * @param row - row key
    */
@@ -58,8 +64,8 @@ public class HStoreKey implements WritableComparable {
 
   /**
    * Create an HStoreKey specifying only the row
-   * The column defaults to the empty string and the time stamp defaults to
-   * Long.MAX_VALUE
+   * The column defaults to the empty string, the time stamp defaults to
+   * Long.MAX_VALUE and the table defaults to empty string
    * 
    * @param row - row key
    */
@@ -69,7 +75,7 @@ public class HStoreKey implements WritableComparable {
 
   /**
    * Create an HStoreKey specifying the row and timestamp
-   * The column name defaults to the empty string
+   * The column and table names default to the empty string
    * 
    * @param row row key
    * @param timestamp timestamp value
@@ -80,29 +86,31 @@ public class HStoreKey implements WritableComparable {
 
   /**
    * Create an HStoreKey specifying the row and timestamp
-   * The column name defaults to the empty string
+   * The column and table names default to the empty string
    * 
    * @param row row key
    * @param timestamp timestamp value
    */
   public HStoreKey(final String row, long timestamp) {
-    this (row, "", timestamp);
+    this (row, "", timestamp, new HRegionInfo());
   }
 
   /**
    * Create an HStoreKey specifying the row and column names
    * The timestamp defaults to LATEST_TIMESTAMP
+   * and table name defaults to the empty string
    * 
    * @param row row key
    * @param column column key
    */
   public HStoreKey(final String row, final String column) {
-    this(row, column, HConstants.LATEST_TIMESTAMP);
+    this(row, column, HConstants.LATEST_TIMESTAMP, new HRegionInfo());
   }
 
   /**
    * Create an HStoreKey specifying the row and column names
    * The timestamp defaults to LATEST_TIMESTAMP
+   * and table name defaults to the empty string
    * 
    * @param row row key
    * @param column column key
@@ -110,17 +118,18 @@ public class HStoreKey implements WritableComparable {
   public HStoreKey(final byte [] row, final byte [] column) {
     this(row, column, HConstants.LATEST_TIMESTAMP);
   }
-
+  
   /**
-   * Create an HStoreKey specifying all the fields
-   * Does not make copies of the passed byte arrays. Presumes the passed 
-   * arrays immutable.
+   * Create an HStoreKey specifying the row, column names and table name
+   * The timestamp defaults to LATEST_TIMESTAMP
+   * 
    * @param row row key
    * @param column column key
-   * @param timestamp timestamp value
+   * @param regionInfo region info
    */
-  public HStoreKey(final String row, final String column, long timestamp) {
-    this (Bytes.toBytes(row), Bytes.toBytes(column), timestamp);
+  public HStoreKey(final byte [] row, 
+      final byte [] column, final HRegionInfo regionInfo) {
+    this(row, column, HConstants.LATEST_TIMESTAMP, regionInfo);
   }
 
   /**
@@ -130,12 +139,42 @@ public class HStoreKey implements WritableComparable {
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
+   * @param regionInfo region info
+   */
+  public HStoreKey(final String row, 
+      final String column, long timestamp, final HRegionInfo regionInfo) {
+    this (Bytes.toBytes(row), Bytes.toBytes(column), 
+        timestamp, regionInfo);
+  }
+
+  /**
+   * Create an HStoreKey specifying all the fields with unspecified table
+   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * arrays immutable.
+   * @param row row key
+   * @param column column key
+   * @param timestamp timestamp value
    */
   public HStoreKey(final byte [] row, final byte [] column, long timestamp) {
+    this(row, column, timestamp, null);
+  }
+  
+  /**
+   * Create an HStoreKey specifying all the fields with specified table
+   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * arrays immutable.
+   * @param row row key
+   * @param column column key
+   * @param timestamp timestamp value
+   * @param regionInfo region info
+   */
+  public HStoreKey(final byte [] row, 
+      final byte [] column, long timestamp, final HRegionInfo regionInfo) {
     // Make copies
     this.row = row;
     this.column = column;
     this.timestamp = timestamp;
+    this.regionInfo = regionInfo;
   }
   
   /** @return Approximate size in bytes of this key. */
@@ -203,6 +242,11 @@ public class HStoreKey implements WritableComparable {
   /** @return value of timestamp */
   public long getTimestamp() {
     return this.timestamp;
+  }
+  
+  /** @return value of regioninfo */
+  public HRegionInfo getHRegionInfo() {
+    return this.regionInfo;
   }
   
   /**
@@ -274,7 +318,7 @@ public class HStoreKey implements WritableComparable {
   /** {@inheritDoc} */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey)o;
-    int result = Bytes.compareTo(this.row, other.row);
+    int result = compareTwoRowKeys(this.regionInfo, this.row, other.row);
     if (result != 0) {
       return result;
     }
@@ -417,6 +461,66 @@ public class HStoreKey implements WritableComparable {
    */
   public static byte[] getBytes(final HStoreKey hsk) {
     return Bytes.add(hsk.getRow(), hsk.getColumn());
+  }
+  
+  /**
+   * Utility method to compare two row keys.
+   * This is required because of the meta delimiters.
+   * This is a hack.
+   * @param regioninfo
+   * @param rowA
+   * @param rowB
+   * @return value of the comparison
+   */
+  public static int compareTwoRowKeys(HRegionInfo regionInfo, 
+      byte[] rowA, byte[] rowB) {
+    if(regionInfo != null && (regionInfo.isMetaRegion() ||
+        regionInfo.isRootRegion())) {
+      byte[][] keysA = stripStartKeyMeta(rowA);
+      byte[][] KeysB = stripStartKeyMeta(rowB);
+      int rowCompare = Bytes.compareTo(keysA[0], KeysB[0]);
+      if(rowCompare == 0)
+        rowCompare = Bytes.compareTo(keysA[1], KeysB[1]);
+      return rowCompare;
+    } else {
+      return Bytes.compareTo(rowA, rowB);
+    }
+  }
+  
+  /**
+   * Utility method to check if two row keys are equal.
+   * This is required because of the meta delimiters
+   * This is a hack
+   * @param regioninfo
+   * @param rowA
+   * @param rowB
+   * @return if it's equal
+   */
+  public static boolean equalsTwoRowKeys(HRegionInfo regionInfo, 
+      byte[] rowA, byte[] rowB) {
+    return rowA == null && rowB == null? true:
+      rowA == null && rowB != null? false:
+        rowA != null && rowB == null? false:
+          rowA.length != rowB.length? false:
+        compareTwoRowKeys(regionInfo,rowA,rowB) == 0;
+  }
+  
+  private static byte[][] stripStartKeyMeta(byte[] rowKey) {
+    int offset = -1;
+    for (int i = rowKey.length - 1; i > 0; i--) {
+      if (rowKey[i] == HConstants.META_ROW_DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    byte [] row = new byte[offset];
+    System.arraycopy(rowKey, 0, row, 0,offset);
+    byte [] timestamp = new byte[rowKey.length - offset - 1];
+    System.arraycopy(rowKey, offset+1, timestamp, 0,rowKey.length - offset - 1);
+    byte[][] elements = new byte[2][];
+    elements[0] = row;
+    elements[1] = timestamp;
+    return elements;
   }
   
   // Writable

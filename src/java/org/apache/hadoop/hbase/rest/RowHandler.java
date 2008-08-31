@@ -2,9 +2,9 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import javax.servlet.ServletException;
@@ -72,7 +72,7 @@ public class RowHandler extends GenericHandler {
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException {
     // pull the row key out of the path
-    String row = URLDecoder.decode(pathSegments[2], HConstants.UTF8_ENCODING);
+    byte[] row = Bytes.toBytes(URLDecoder.decode(pathSegments[2], HConstants.UTF8_ENCODING));
 
     String timestampStr = null;
     if (pathSegments.length == 4) {
@@ -85,16 +85,52 @@ public class RowHandler extends GenericHandler {
       }
     }
     
-    String[] columns = request.getParameterValues(COLUMN);
-        
-    if (columns == null || columns.length == 0) {
-      // They want full row returned. 
-
-      // Presumption is that this.table has already been focused on target table.
-      Map<byte [], Cell> result = timestampStr == null ? 
-        table.getRow(Bytes.toBytes(row)) 
-        : table.getRow(Bytes.toBytes(row), Long.parseLong(timestampStr));
-        
+    String[] column_params = request.getParameterValues(COLUMN);
+    
+    byte[][] columns = null;
+    
+    if (column_params != null && column_params.length > 0) {
+      List<String> available_columns = new ArrayList<String>();
+      for (String column_param : column_params) {
+        if (column_param.length() > 0 && table.getTableDescriptor().hasFamily(Bytes.toBytes(column_param))) {
+          available_columns.add(column_param);
+        }
+      }
+      columns = Bytes.toByteArrays(available_columns.toArray(new String[0]));
+    }
+    
+    String[] version_params = request.getParameterValues(VERSION);
+    int version = 0;
+    if (version_params != null && version_params.length == 1) {
+      version = Integer.parseInt(version_params[0]);
+    }
+    
+    if (version > 0 && columns != null) {
+      Map<byte[], Cell[]> result = new TreeMap<byte [], Cell[]>(Bytes.BYTES_COMPARATOR);      
+      
+      for (byte[] col : columns) {
+        Cell[] cells = timestampStr == null ? table.get(row, col, version)
+                      : table.get(row, col, Long.parseLong(timestampStr), version);
+        if (cells != null) {
+          result.put(col, cells);
+        }
+      }
+      
+      if (result == null || result.size() == 0) {
+        doNotFound(response, "Row not found!");
+      } else {
+        switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
+        case XML:
+          outputRowWithMultiVersionsXml(response, result);
+          break;
+        case MIME:
+        default:
+          doNotAcceptable(response, "Unsupported Accept Header Content: "
+              + request.getHeader(CONTENT_TYPE));
+        }
+      }      
+    } else {
+      Map<byte[], Cell> result = timestampStr == null ? table.getRow(row, columns) : table.getRow(row, columns, Long.parseLong(timestampStr));
       if (result == null || result.size() == 0) {
         doNotFound(response, "Row not found!");
       } else {
@@ -104,45 +140,8 @@ public class RowHandler extends GenericHandler {
           break;
         case MIME:
         default:
-          doNotAcceptable(response, "Unsupported Accept Header Content: " +
-            request.getHeader(CONTENT_TYPE));
-        }
-      }
-    } else {
-      Map<byte [], Cell> prefiltered_result = table.getRow(Bytes.toBytes(row));
-    
-      if (prefiltered_result == null || prefiltered_result.size() == 0) {
-        doNotFound(response, "Row not found!");
-      } else {
-        // create a Set from the columns requested so we can
-        // efficiently filter the actual found columns
-        Set<String> requested_columns_set = new HashSet<String>();
-        for(int i = 0; i < columns.length; i++){
-          requested_columns_set.add(columns[i]);
-        }
-  
-        // output map that will contain the filtered results
-        Map<byte [], Cell> m =
-          new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-
-        // get an array of all the columns retrieved
-        Set<byte []> columns_retrieved = prefiltered_result.keySet();
-
-        // copy over those cells with requested column names
-        for(byte [] current_column: columns_retrieved) {
-          if (requested_columns_set.contains(Bytes.toString(current_column))) {
-            m.put(current_column, prefiltered_result.get(current_column));            
-          }
-        }
-        
-        switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
-          case XML:
-            outputRowXml(response, m);
-            break;
-          case MIME:
-          default:
-            doNotAcceptable(response, "Unsupported Accept Header Content: " +
-              request.getHeader(CONTENT_TYPE));
+          doNotAcceptable(response, "Unsupported Accept Header Content: "
+              + request.getHeader(CONTENT_TYPE));
         }
       }
     }
@@ -167,6 +166,18 @@ public class RowHandler extends GenericHandler {
     outputter.getWriter().close();
   }
   
+  private void outputRowWithMultiVersionsXml(final HttpServletResponse response,
+      final Map<byte[], Cell[]> result) 
+  throws IOException {
+    setResponseHeader(response, result.size() > 0? 200: 204,
+        ContentType.XML.toString());
+    XMLOutputter outputter = getXMLOutputter(response.getWriter());
+    outputter.startTag(ROW);
+    outputColumnsWithMultiVersionsXml(outputter, result);
+    outputter.endTag();
+    outputter.endDocument();
+    outputter.getWriter().close();   
+  }
   /*
    * @param response
    * @param result

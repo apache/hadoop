@@ -1246,13 +1246,14 @@ public class HRegion implements HConstants {
         // get the closest key
         byte [] closestKey = store.getRowKeyAtOrBefore(row);
         // if it happens to be an exact match, we can stop looping
-        if (Bytes.equals(row, closestKey)) {
+        if (HStoreKey.equalsTwoRowKeys(regionInfo,row, closestKey)) {
           key = new HStoreKey(closestKey);
           break;
         }
         // otherwise, we need to check if it's the max and move to the next
         if (closestKey != null 
-          && (key == null || Bytes.compareTo(closestKey, key.getRow()) > 0) ) {
+          && (key == null || HStoreKey.compareTwoRowKeys(
+              regionInfo,closestKey, key.getRow()) > 0) ) {
           key = new HStoreKey(closestKey);
         }
       }

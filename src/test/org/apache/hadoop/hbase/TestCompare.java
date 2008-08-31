@@ -54,6 +54,43 @@ public class TestCompare extends TestCase {
   }
   
   /**
+   * Tests cases where rows keys have characters below the ','.
+   * See HBASE-832
+   */
+  public void testHStoreKeyBorderCases() {
+    HRegionInfo info = new HRegionInfo(new HTableDescriptor("testtable"),
+        HConstants.EMPTY_BYTE_ARRAY,HConstants.EMPTY_BYTE_ARRAY);
+    HStoreKey rowA = new HStoreKey("testtable,www.hbase.org/,1234",
+        "", Long.MAX_VALUE, info);
+    HStoreKey rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
+        "", Long.MAX_VALUE, info);
+
+    assertTrue(rowA.compareTo(rowB) > 0);
+
+    rowA = new HStoreKey("testtable,www.hbase.org/,1234",
+        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
+    rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
+        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
+
+    assertTrue(rowA.compareTo(rowB) < 0);
+
+    rowA = new HStoreKey("testtable,,1234",
+        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
+    rowB = new HStoreKey("testtable,$www.hbase.org/,99999",
+        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
+
+    assertTrue(rowA.compareTo(rowB) < 0);
+
+    rowA = new HStoreKey(".META.,testtable,www.hbase.org/,1234,4321",
+        "", Long.MAX_VALUE, HRegionInfo.ROOT_REGIONINFO);
+    rowB = new HStoreKey(".META.,testtable,www.hbase.org/%20,99999,99999",
+        "", Long.MAX_VALUE, HRegionInfo.ROOT_REGIONINFO);
+
+    assertTrue(rowA.compareTo(rowB) > 0);
+  }
+
+  
+  /**
    * Sort of HRegionInfo.
    */
   public void testHRegionInfo() {

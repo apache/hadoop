@@ -67,6 +67,8 @@ Release 0.18.0 - Unreleased
    HBASE-784  Base hbase-0.3.0 on hadoop-0.18
    HBASE-841  Consolidate multiple overloaded methods in HRegionInterface,
               HRegionServer (Jean-Daniel Cryans via Jim Kellerman)
+   HBASE-840  More options on the row query in REST interface
+              (Sishen Freecity via Stack)
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)

@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,6 +54,8 @@ class Memcache {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
   private final long ttl;
+  
+  private HRegionInfo regionInfo;
 
   // Note that since these structures are always accessed with a lock held,
   // so no additional synchronization is required.
@@ -72,14 +75,17 @@ class Memcache {
    */
   public Memcache() {
     this.ttl = HConstants.FOREVER;
+    this.regionInfo = null;
   }
 
   /**
    * Constructor.
    * @param ttl The TTL for cache entries, in milliseconds.
+   * @param regionInfo The HRI for this cache 
    */
-  public Memcache(final long ttl) {
+  public Memcache(final long ttl, HRegionInfo regionInfo) {
     this.ttl = ttl;
+    this.regionInfo = regionInfo;
   }
 
   /*
@@ -383,7 +389,8 @@ class Memcache {
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tailMap.isEmpty() &&
-        Bytes.compareTo(tailMap.firstKey().getRow(), search_key.getRow()) <= 0) {
+        HStoreKey.compareTwoRowKeys(regionInfo, 
+            tailMap.firstKey().getRow(), search_key.getRow()) <= 0) {
       Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
 
       // Keep looking at cells as long as they are no greater than the 
@@ -391,9 +398,11 @@ class Memcache {
       HStoreKey deletedOrExpiredRow = null;
       for (HStoreKey found_key = null; key_iterator.hasNext() &&
           (found_key == null ||
-            Bytes.compareTo(found_key.getRow(), row) <= 0);) {
+            HStoreKey.compareTwoRowKeys(regionInfo, 
+                found_key.getRow(), row) <= 0);) {
         found_key = key_iterator.next();
-        if (Bytes.compareTo(found_key.getRow(), row) <= 0) {
+        if (HStoreKey.compareTwoRowKeys(regionInfo, 
+            found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
             HStore.handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {

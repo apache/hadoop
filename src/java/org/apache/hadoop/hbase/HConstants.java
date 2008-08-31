@@ -132,7 +132,10 @@ public interface HConstants {
   static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
   /** The META table's name. */
-  static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
+  static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");  
+
+  /** delimiter used between portions of a region name */
+  public static final int META_ROW_DELIMITER = ',';
 
   // Defines for the column names used in both ROOT and META HBase 'meta' tables.
   

@@ -55,6 +55,7 @@ public abstract class GenericHandler {
   protected static final String CONTENT_TYPE = "content-type";
   protected static final String ROW = "row";
   protected static final String REGIONS = "regions";
+  protected static final String VERSION = "version";
   
   protected final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -233,13 +234,32 @@ public abstract class GenericHandler {
       outputter.startTag(COLUMN);
       doElement(outputter, "name", 
         org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getKey()));
-      // We don't know String from binary data so we always base64 encode.
-      doElement(outputter, "value",
-        org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getValue().getValue()));
+      outputCellXml(outputter, e.getValue());
       outputter.endTag();
     }
   }
 
+  protected void outputColumnsWithMultiVersionsXml(final XMLOutputter outputter,
+    final Map<byte [], Cell[]> m)
+  throws IllegalStateException, IllegalArgumentException, IOException {
+    for (Map.Entry<byte [], Cell[]> e: m.entrySet()) {
+      for (Cell c : e.getValue()) {
+        outputter.startTag(COLUMN);
+        doElement(outputter, "name", 
+            org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getKey())); 
+        outputCellXml(outputter, c);
+        outputter.endTag();       
+      }
+    }
+  }
+  
+  protected void outputCellXml(final XMLOutputter outputter, Cell c) 
+  throws IllegalStateException, IllegalArgumentException, IOException {
+    // We don't know String from binary data so we always base64 encode.
+    doElement(outputter, "value",
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(c.getValue()));
+    doElement(outputter, "timestamp", String.valueOf(c.getTimestamp()));    
+  }
 //  Commented - multipart support is currently nonexistant.
 //  protected void outputColumnsMime(final MultiPartResponse mpr,
 //     final Map<Text, Cell> m)
