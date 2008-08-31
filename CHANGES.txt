@@ -444,6 +444,10 @@ Release 0.18.1 - Unreleased
     HADOOP-3821. Prevent SequenceFile and IFile from duplicating codecs in
     CodecPool when closed more than once. (Arun Murthy via cdouglas)
 
+    HADOOP-4040. Remove coded default of the IPC idle connection timeout
+    from the TaskTracker, which was causing HDFS client connections to not be 
+    collected. (ddas via omalley)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES

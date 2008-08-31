@@ -2275,8 +2275,6 @@ public class TaskTracker
       int port = Integer.parseInt(args[1]);
       InetSocketAddress address = new InetSocketAddress(host, port);
       TaskAttemptID taskid = TaskAttemptID.forName(args[2]);
-      //set a very high idle timeout so that the connection is never closed
-      defaultConf.setInt("ipc.client.connection.maxidletime", 60*60*1000);
       TaskUmbilicalProtocol umbilical =
         (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
                                             TaskUmbilicalProtocol.versionID,
