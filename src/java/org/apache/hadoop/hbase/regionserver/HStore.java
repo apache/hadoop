@@ -169,7 +169,7 @@ public class HStore implements HConstants {
     this.ttl = family.getTimeToLive();
     if (ttl != HConstants.FOREVER)
       this.ttl *= 1000;
-    this.memcache = new Memcache(this.ttl);
+    this.memcache = new Memcache(this.ttl, info);
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName = Bytes.toBytes(this.info.getEncodedName() + "/" +
       Bytes.toString(this.family.getName()));
@@ -728,7 +728,7 @@ public class HStore implements HConstants {
    for (int i = 0; i < stats.length; i++) {
      long timestamp = stats[i].getModificationTime();
      if (timestamp < lowTimestamp){
-    	 lowTimestamp = timestamp;
+       lowTimestamp = timestamp;
      }
    }
   return lowTimestamp;
@@ -820,9 +820,9 @@ public class HStore implements HConstants {
         // The rule is: if the largest(oldest) one is more than twice the 
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
-        for (point = 0; point < compactionThreshold - 1; point++) {
-          if (fileSizes[point] < fileSizes[point + 1] * 2 &&
-              maxFilesToCompact < (countOfFiles - point)) {
+        for (point = 0; point < countOfFiles - 1; point++) {
+          if ((fileSizes[point] < fileSizes[point + 1] * 2) && 
+               (countOfFiles - point) <= maxFilesToCompact) {
             break;
           }
           skipped += fileSizes[point];
@@ -1498,7 +1498,7 @@ public class HStore implements HConstants {
       }
       // If start row for this file is beyond passed in row, return; nothing
       // in here is of use to us.
-      if (Bytes.compareTo(startKey.getRow(), row) > 0) {
+      if (HStoreKey.compareTwoRowKeys(info,startKey.getRow(), row) > 0) {
         return;
       }
       long now = System.currentTimeMillis();
@@ -1531,10 +1531,11 @@ public class HStore implements HConstants {
     // up to the row before and return that.
     HStoreKey finalKey = getFinalKey(map);
     HStoreKey searchKey = null;
-    if (Bytes.compareTo(finalKey.getRow(), row) < 0) {
+    if (HStoreKey.compareTwoRowKeys(info,finalKey.getRow(), row) < 0) {
       searchKey = finalKey;
     } else {
-      searchKey = new HStoreKey(row);
+      searchKey = new HStoreKey(row, 
+          HConstants.EMPTY_BYTE_ARRAY, info);
       if (searchKey.compareTo(startKey) < 0) {
         searchKey = startKey;
       }
@@ -1592,7 +1593,8 @@ public class HStore implements HConstants {
       do {
         // If we have an exact match on row, and it's not a delete, save this
         // as a candidate key
-        if (Bytes.equals(readkey.getRow(), searchKey.getRow())) {
+        if (HStoreKey.equalsTwoRowKeys(info, 
+            readkey.getRow(), searchKey.getRow())) {
           if (!HLogEdit.isDeleted(readval.get())) {
             if (handleNonDelete(readkey, now, deletes, candidateKeys)) {
               foundCandidate = true;
@@ -1604,7 +1606,8 @@ public class HStore implements HConstants {
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = copy;
           }
-        } else if (Bytes.compareTo(readkey.getRow(), searchKey.getRow()) > 0) {
+        } else if (HStoreKey.compareTwoRowKeys(info, 
+            readkey.getRow(), searchKey.getRow()) > 0) {
           // if the row key we just read is beyond the key we're searching for,
           // then we're done.
           break;
@@ -1669,7 +1672,8 @@ public class HStore implements HConstants {
     // of the row in case there are deletes for this candidate in this mapfile
     // BUT do not backup before the first key in the mapfile else getClosest
     // will return null
-    HStoreKey searchKey = new HStoreKey(candidateKeys.firstKey().getRow());
+    HStoreKey searchKey = new HStoreKey(candidateKeys.firstKey().getRow(), 
+        HConstants.EMPTY_BYTE_ARRAY, info);
     if (searchKey.compareTo(startKey) < 0) {
       searchKey = startKey;
     }
@@ -1687,7 +1691,8 @@ public class HStore implements HConstants {
       // as a candidate key
       if (Bytes.equals(readkey.getRow(), row)) {
         handleKey(readkey, readval.get(), now, deletes, candidateKeys);
-      } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
+      } else if (HStoreKey.compareTwoRowKeys(info, 
+          readkey.getRow(), row) > 0 ) {
         // if the row key we just read is beyond the key we're searching for,
         // then we're done.
         break;
