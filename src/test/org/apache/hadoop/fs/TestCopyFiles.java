@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.StringTokenizer;
 
 import junit.framework.TestCase;
 
@@ -54,7 +57,6 @@ public class TestCopyFiles extends TestCase {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)DistCp.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
   }
   
   static final URI LOCAL_FS = URI.create("file:///");
@@ -741,5 +743,86 @@ public class TestCopyFiles extends TestCase {
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
+  }
+
+  public void testDelete() throws Exception {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final URI nnURI = FileSystem.getDefaultUri(conf);
+      final String nnUri = nnURI.toString();
+      final FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
+
+      final DistCp distcp = new DistCp(conf);
+      final FsShell shell = new FsShell(conf);  
+
+      final String srcrootdir = "/src_root";
+      final String dstrootdir = "/dst_root";
+
+      {//test -delete
+        createFiles(nnURI, srcrootdir);
+        createFiles(nnURI, dstrootdir);
+        create(fs, new Path(dstrootdir, "foo"));
+        create(fs, new Path(dstrootdir, "foobar"));
+        
+        System.out.println("srcrootdir=" +  srcrootdir);
+        shell.run(new String[]{"-lsr", srcrootdir});
+
+        System.out.println("dstrootdir=" +  dstrootdir);
+        shell.run(new String[]{"-lsr", dstrootdir});
+
+        ToolRunner.run(distcp,
+            new String[]{"-delete", "-update", "-log", "/log",
+                         nnUri+srcrootdir, nnUri+dstrootdir});
+
+        String srcresults = execCmd(shell, "-lsr", srcrootdir);
+        srcresults = removePrefix(srcresults, srcrootdir);
+        System.out.println("srcresults=" +  srcresults);
+
+        String dstresults = execCmd(shell, "-lsr", dstrootdir);
+        dstresults = removePrefix(dstresults, dstrootdir);
+        System.out.println("dstresults=" +  dstresults);
+        
+        assertEquals(srcresults, dstresults);
+        deldir(fs, dstrootdir);
+        deldir(fs, srcrootdir);
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  static void create(FileSystem fs, Path f) throws IOException {
+    FSDataOutputStream out = fs.create(f);
+    try {
+      byte[] b = new byte[1024 + RAN.nextInt(1024)];
+      RAN.nextBytes(b);
+      out.write(b);
+    } finally {
+      if (out != null) out.close();
+    }
+  }
+  
+  static String execCmd(FsShell shell, String... args) throws Exception {
+    ByteArrayOutputStream baout = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baout, true);
+    PrintStream old = System.out;
+    System.setOut(out);
+    shell.run(args);
+    out.close();
+    System.setOut(old);
+    return baout.toString();
+  }
+  
+  private static String removePrefix(String lines, String prefix) {
+    final int prefixlen = prefix.length();
+    final StringTokenizer t = new StringTokenizer(lines, "\n");
+    final StringBuffer results = new StringBuffer(); 
+    for(; t.hasMoreTokens(); ) {
+      String s = t.nextToken();
+      results.append(s.substring(s.indexOf(prefix) + prefixlen) + "\n");
+    }
+    return results.toString();
   }
 }
