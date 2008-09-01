@@ -7,6 +7,8 @@ Release 0.18.0 - Unreleased
    HBASE-822   Update thrift README and HBase.thrift to use thrift 20080411
 
   BUG FIXES
+   HBASE-860   Fixed Bug in IndexTableReduce where it concerns writing lucene 
+               index fields.
    HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
                Jim Kellerman) (Fix whitespace diffs in HRegionServer)
    HBASE-811   HTD is not fully copyable (Andrew Purtell via Jim Kellerman)
