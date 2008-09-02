@@ -420,5 +420,48 @@ public class TestComparators extends TestCase
       fail("Oops! The job broke due to an unexpected error");
     }
   }
-  
+
+  /**
+   * Test a user comparator that relies on deserializing both arguments
+   * for each compare.
+   */
+  public void testBakedUserComparator() throws Exception {
+    MyWritable a = new MyWritable(8, 8);
+    MyWritable b = new MyWritable(7, 9);
+    assertTrue(a.compareTo(b) > 0);
+    assertTrue(WritableComparator.get(MyWritable.class).compare(a, b) < 0);
+  }
+
+  public static class MyWritable implements WritableComparable<MyWritable> {
+    int i, j;
+    public MyWritable() { }
+    public MyWritable(int i, int j) {
+      this.i = i;
+      this.j = j;
+    }
+    public void readFields(DataInput in) throws IOException {
+      i = in.readInt();
+      j = in.readInt();
+    }
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(i);
+      out.writeInt(j);
+    }
+    public int compareTo(MyWritable b) {
+      return this.i - b.i;
+    }
+    static {
+      WritableComparator.define(MyWritable.class, new MyCmp());
+    }
+  }
+
+  public static class MyCmp extends WritableComparator {
+    public MyCmp() { super(MyWritable.class, true); }
+    public int compare(WritableComparable a, WritableComparable b) {
+      MyWritable aa = (MyWritable)a;
+      MyWritable bb = (MyWritable)b;
+      return aa.j - bb.j;
+    }
+  }
+
 }
