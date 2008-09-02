@@ -46,7 +46,7 @@ public class SkipBadRecords {
    *         <code>false</code> otherwise.
    */
   public static boolean getEnabled(Configuration conf) {
-    return conf.getBoolean(ENABLED, true);
+    return conf.getBoolean(ENABLED, false);
   }
   
   /**

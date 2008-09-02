@@ -174,6 +174,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
       "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
       "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
+      "-jobconf", "mapred.skip.mode.enabled=true",
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "mapred.reduce.tasks=1",
       "-jobconf", "mapred.task.timeout=30000",

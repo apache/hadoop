@@ -1129,6 +1129,51 @@ creations/deletions), or "all".</description>
     <description> Number of lines per split in NLineInputFormat.
     </description>
   </property>
+  
+  <property>
+    <name>mapred.skip.mode.enabled</name>
+    <value>false</value>
+    <description> Indicates whether skipping of bad records is enabled or not.
+    If enabled the framework will try to find bad records and skip  
+    them on further attempts.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.attempts.to.start.skipping</name>
+    <value>2</value>
+    <description> The number of Task attempts AFTER which skip mode 
+    will be kicked off. When skip mode is kicked off, the 
+    tasks reports the range of records which it will process 
+    next, to the TaskTracker. So that on failures, TT knows which 
+    ones are possibly the bad records. On further executions, 
+    those are skipped.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.map.auto.incr.proc.count</name>
+    <value>true</value>
+    <description> The flag which if set to true, 
+    Counters.Application.MAP_PROCESSED_RECORDS is incremented 
+    by MapRunner after invoking the map function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.reduce.auto.incr.proc.count</name>
+    <value>true</value>
+    <description> The flag which if set to true, 
+    Counters.Application.REDUCE_PROCESSED_RECORDS is incremented 
+    by framework after invoking the reduce function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </description>
+  </property>
 
 <!-- ipc properties -->
 
