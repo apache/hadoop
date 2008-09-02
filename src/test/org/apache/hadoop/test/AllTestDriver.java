@@ -27,7 +27,6 @@ import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.hdfs.BenchmarkThroughput;
-import org.apache.hadoop.hdfs.ClusterTestDFS;
 import org.apache.hadoop.hdfs.NNBench;
 import org.apache.hadoop.fs.DistributedFSCheck;
 import org.apache.hadoop.fs.TestDFSIO;
@@ -55,7 +54,6 @@ public class AllTestDriver {
       pgd.addClass("mrbench", MRBench.class, "A map/reduce benchmark that can create many small jobs");
       pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode.");
       pgd.addClass("mapredtest", TestMapRed.class, "A map/reduce test check.");
-      pgd.addClass("clustertestdfs", ClusterTestDFS.class, "A pseudo distributed test for DFS.");
       pgd.addClass("testfilesystem", TestFileSystem.class, "A test for FileSystem read/write.");
       pgd.addClass("testsequencefile", TestSequenceFile.class, "A test for flat files of binary key value pairs.");
       pgd.addClass("testsetfile", TestSetFile.class, "A test for flat files of binary key/value pairs.");

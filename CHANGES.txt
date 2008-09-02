@@ -437,6 +437,9 @@ Trunk (unreleased changes)
     HADOOP-3950. Cause the Mini MR cluster to wait for task trackers to 
     register before continuing. (enis via omalley)
 
+    HADOOP-3910. Remove unused ClusterTestDFSNamespaceLogging and
+    ClusterTestDFS. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
