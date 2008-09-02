@@ -1,0 +1,7 @@
+a	int	
+b	float	
+a	array<int>	
+b	float	
+c	map<float,int>	
+src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test2a	test2b	
+src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test2b	

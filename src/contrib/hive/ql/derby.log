@@ -1,0 +1,6 @@
+----------------------------------------------------------------
+2008-08-29 00:46:12.378 GMT:
+ Booting Derby version The Apache Software Foundation - Apache Derby - 10.4.1.3 - (648739): instance a816c00e-011c-0bec-accd-00000092de60
+on database directory /home/athusoo/apacheprojects/hadoop-core-trunk_ws1/build/contrib/hive/test/junit_metastore_db  
+
+Database Class Loader started - derby.database.classpath=''

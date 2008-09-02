@@ -1,0 +1,2 @@
+Semantic Exception: 
+line 2:36 Function Argument Type Mismatch concat: Looking for UDF "concat" with parameters [class java.lang.String, class java.lang.String, class java.lang.String]

@@ -1,0 +1,7 @@
+CREATE TABLE dest1(value STRING, key INT);
+
+FROM src1
+INSERT OVERWRITE TABLE dest1 SELECT NULL, src1.key where NULL = NULL;
+
+SELECT dest1.* FROM dest1;
+

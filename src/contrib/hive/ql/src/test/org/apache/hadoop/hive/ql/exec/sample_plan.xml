@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<java version="1.5.0_13" class="java.beans.XMLDecoder"> 
+ <object class="org.apache.hadoop.hive.ql.plan.mapredWork"> 
+  <void property="aliasToWork"> 
+   <object class="java.util.HashMap"> 
+    <void method="put"> 
+     <string>src</string> 
+     <object class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
+      <void property="childOperators"> 
+       <object class="java.util.ArrayList"> 
+        <void method="add"> 
+         <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+          <void property="childOperators"> 
+           <object class="java.util.ArrayList"> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+              <void property="childOperators"> 
+               <object class="java.util.ArrayList"> 
+                <void method="add"> 
+                 <object class="org.apache.hadoop.hive.ql.exec.FileSinkOperator"> 
+                  <void property="conf"> 
+                   <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
+                    <void property="dirName"> 
+                     <string>/tmp/dest1-1187471701</string> 
+                    </void> 
+                    <void property="properties"> 
+                     <object class="java.util.Properties"> 
+                      <void method="put"> 
+                       <string>name</string> 
+                       <string>dest1</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serde</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>bucket_field_name</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.format</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>columns</string> 
+                       <string>key,value</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.class</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>field_to_dimension</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>bucket_count</string> 
+                       <string>-1</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.lib</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>location</string> 
+                       <string>hdfs://hadooptest001.sf2p.facebook.com:9000/warehouse//dest1</string> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="serdeClassName"> 
+                     <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="conf"> 
+               <object class="org.apache.hadoop.hive.ql.plan.selectDesc"> 
+                <void property="colList"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object class="org.apache.hadoop.hive.ql.plan.expressionDesc"> 
+                    <void property="exprType"> 
+                     <string>FIELD</string> 
+                    </void> 
+                    <void property="fieldexpr"> 
+                     <string>0.key</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                  <void method="add"> 
+                   <object class="org.apache.hadoop.hive.ql.plan.expressionDesc"> 
+                    <void property="exprType"> 
+                     <string>FIELD</string> 
+                    </void> 
+                    <void property="fieldexpr"> 
+                     <string>0.value</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+             </object> 
+            </void> 
+           </object> 
+          </void> 
+          <void property="conf"> 
+           <object class="org.apache.hadoop.hive.ql.plan.filterDesc"> 
+            <void property="predicate"> 
+             <object class="org.apache.hadoop.hive.ql.plan.JEXLExpressionDesc"> 
+              <void property="expression"> 
+               <string> ( F_0 &lt; 100)</string> 
+              </void> 
+              <void property="variableMap"> 
+               <object class="java.util.HashMap"> 
+                <void method="put"> 
+                 <string>F_0</string> 
+                 <string>0.key</string> 
+                </void> 
+               </object> 
+              </void> 
+             </object> 
+            </void> 
+           </object> 
+          </void> 
+         </object> 
+        </void> 
+        <void method="add"> 
+         <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+          <void property="childOperators"> 
+           <object class="java.util.ArrayList"> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+              <void property="childOperators"> 
+               <object class="java.util.ArrayList"> 
+                <void method="add"> 
+                 <object class="org.apache.hadoop.hive.ql.exec.FileSinkOperator"> 
+                  <void property="conf"> 
+                   <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
+                    <void property="dirName"> 
+                     <string>/tmp/dest21982641932</string> 
+                    </void> 
+                    <void property="properties"> 
+                     <object class="java.util.Properties"> 
+                      <void method="put"> 
+                       <string>name</string> 
+                       <string>dest2</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serde</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>bucket_field_name</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.format</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>columns</string> 
+                       <string>key,value</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.class</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>field_to_dimension</string> 
+                       <string></string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>bucket_count</string> 
+                       <string>-1</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>serialization.lib</string> 
+                       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                      </void> 
+                      <void method="put"> 
+                       <string>location</string> 
+                       <string>hdfs://hadooptest001.sf2p.facebook.com:9000/warehouse//dest2</string> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="serdeClassName"> 
+                     <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="conf"> 
+               <object class="org.apache.hadoop.hive.ql.plan.selectDesc"> 
+                <void property="colList"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object class="org.apache.hadoop.hive.ql.plan.expressionDesc"> 
+                    <void property="exprType"> 
+                     <string>FIELD</string> 
+                    </void> 
+                    <void property="fieldexpr"> 
+                     <string>0.value</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+             </object> 
+            </void> 
+           </object> 
+          </void> 
+          <void property="conf"> 
+           <object class="org.apache.hadoop.hive.ql.plan.filterDesc"> 
+            <void property="predicate"> 
+             <object class="org.apache.hadoop.hive.ql.plan.JEXLExpressionDesc"> 
+              <void property="expression"> 
+               <string> ( F_0 &gt;= 100)</string> 
+              </void> 
+              <void property="variableMap"> 
+               <object class="java.util.HashMap"> 
+                <void method="put"> 
+                 <string>F_0</string> 
+                 <string>0.key</string> 
+                </void> 
+               </object> 
+              </void> 
+             </object> 
+            </void> 
+           </object> 
+          </void> 
+         </object> 
+        </void> 
+       </object> 
+      </void> 
+     </object> 
+    </void> 
+   </object> 
+  </void> 
+  <void property="moveWork"> 
+   <object class="java.util.HashMap"> 
+    <void method="put"> 
+     <string>/tmp/dest1-1187471701</string> 
+     <string>/warehouse/dest1</string> 
+    </void> 
+    <void method="put"> 
+     <string>/tmp/dest21982641932</string> 
+     <string>/warehouse/dest2</string> 
+    </void> 
+   </object> 
+  </void> 
+  <void property="pathToAliases"> 
+   <object class="java.util.HashMap"> 
+    <void method="put"> 
+     <string>/warehouse/src</string> 
+     <object class="java.util.ArrayList"> 
+      <void method="add"> 
+       <string>src</string> 
+      </void> 
+     </object> 
+    </void> 
+   </object> 
+  </void> 
+  <void property="pathToTableInfo"> 
+   <object class="java.util.HashMap"> 
+    <void method="put"> 
+     <string>/warehouse/src</string> 
+     <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+      <void property="properties"> 
+       <object class="java.util.Properties"> 
+        <void method="put"> 
+         <string>name</string> 
+         <string>src</string> 
+        </void> 
+        <void method="put"> 
+         <string>serde</string> 
+         <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+        </void> 
+        <void method="put"> 
+         <string>bucket_field_name</string> 
+         <string></string> 
+        </void> 
+        <void method="put"> 
+         <string>serialization.format</string> 
+         <string></string> 
+        </void> 
+        <void method="put"> 
+         <string>columns</string> 
+         <string>key,value</string> 
+        </void> 
+        <void method="put"> 
+         <string>serialization.class</string> 
+         <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+        </void> 
+        <void method="put"> 
+         <string>field_to_dimension</string> 
+         <string></string> 
+        </void> 
+        <void method="put"> 
+         <string>bucket_count</string> 
+         <string>-1</string> 
+        </void> 
+        <void method="put"> 
+         <string>serialization.lib</string> 
+         <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+        </void> 
+        <void method="put"> 
+         <string>location</string> 
+         <string>hdfs://hadooptest001.sf2p.facebook.com:9000/warehouse//src</string> 
+        </void> 
+       </object> 
+      </void> 
+      <void property="serdeClassName"> 
+       <string>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</string> 
+      </void> 
+     </object> 
+    </void> 
+   </object> 
+  </void> 
+ </object> 
+</java> 

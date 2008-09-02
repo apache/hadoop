@@ -1,0 +1,56 @@
+#! /usr/bin/perl -w
+use strict;
+use Data::Dumper;
+my %primitive = (
+  'int' => 1,
+  'byte' => 1,
+  'string' => 1,
+  'float' => 1,
+  'long' => 1,
+);
+
+sub get_hive_cols($)
+{
+  my $col = shift;
+  my $cmd = "echo 'describe $col;' | /mnt/vol/hive/stable/bin/hive_cli.py | grep '|'";
+  #print "$cmd\n";
+  my @cols = `$cmd`;
+  
+  map { s/\|//g; s/^\s+//g; s/\s+$//g; s/\s+/ /g; } @cols;
+  #print Dumper(\@cols);
+  return @cols;
+}
+
+sub get_cols($$$)
+{
+  my ($msg, $c, $t) = @_;
+  if ($primitive{lc($t)}) {
+    print "$msg$t:$c\n";
+    return;
+  }
+  elsif ($t =~ /List<(.*?)>/ and $primitive{lc($1)}) {
+    print "$msg$t:$c\n";
+    return;
+  }
+  my @cols = &get_hive_cols($c);
+  die "no cols!" unless @cols;
+  print "$msg$t {\n";
+  foreach (@cols) {
+    my ($name, $type) = split;
+    $name = "$c.$name";
+    &get_cols($msg."\t", $name, $type);
+  }
+  print "$msg}//$t\n";
+}
+
+#die "Usage: dump_schema tableName\n" unless @ARGV;
+my $tablename = $ARGV[0];
+$tablename = "." unless $tablename;
+eval {
+&get_cols("", $tablename, $tablename);
+};
+if ($@) {
+  my $cmd = "echo show | /mnt/vol/hive/stable/bin/hive_cli.py | grep '|' | tr '|' '\\n' | awk '{print \$1}' | grep -v ^\$ | grep $tablename | sort";
+  my @tables = `$cmd`;
+  print @tables;
+}

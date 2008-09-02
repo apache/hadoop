@@ -1,0 +1,65 @@
+2008-08-28 17:37:48,880 - Log4JLogChute initialized using file 'velocity.log'
+2008-08-28 17:37:48,880 - Starting Apache Velocity v1.5 (compiled: 2007-02-22 08:52:29)
+2008-08-28 17:37:48,880 - Default Properties File: org/apache/velocity/runtime/defaults/velocity.properties
+2008-08-28 17:37:48,880 - Trying to use logger class org.apache.velocity.runtime.log.AvalonLogChute
+2008-08-28 17:37:48,880 - Couldn't find class org.apache.velocity.runtime.log.AvalonLogChute or necessary supporting classes in classpath.
+java.lang.NoClassDefFoundError: org/apache/log/format/Formatter
+	at java.lang.Class.forName0(Native Method)
+	at java.lang.Class.forName(Class.java:169)
+	at org.apache.velocity.util.ClassUtils.getClass(ClassUtils.java:76)
+	at org.apache.velocity.util.ClassUtils.getNewInstance(ClassUtils.java:95)
+	at org.apache.velocity.runtime.log.LogManager.createLogChute(LogManager.java:147)
+	at org.apache.velocity.runtime.log.LogManager.updateLog(LogManager.java:208)
+	at org.apache.velocity.runtime.RuntimeInstance.initializeLog(RuntimeInstance.java:728)
+	at org.apache.velocity.runtime.RuntimeInstance.init(RuntimeInstance.java:240)
+	at org.apache.velocity.app.VelocityEngine.init(VelocityEngine.java:116)
+	at org.apache.hadoop.hive.ant.QTestGenTask.execute(QTestGenTask.java:227)
+	at org.apache.tools.ant.UnknownElement.execute(UnknownElement.java:275)
+	at org.apache.tools.ant.Task.perform(Task.java:364)
+	at org.apache.tools.ant.Target.execute(Target.java:341)
+	at org.apache.tools.ant.Target.performTasks(Target.java:369)
+	at org.apache.tools.ant.Project.executeSortedTargets(Project.java:1216)
+	at org.apache.tools.ant.helper.SingleCheckExecutor.executeTargets(SingleCheckExecutor.java:37)
+	at org.apache.tools.ant.Project.executeTargets(Project.java:1068)
+	at org.apache.tools.ant.taskdefs.Ant.execute(Ant.java:382)
+	at org.apache.tools.ant.taskdefs.SubAnt.execute(SubAnt.java:277)
+	at org.apache.tools.ant.taskdefs.SubAnt.execute(SubAnt.java:201)
+	at org.apache.tools.ant.UnknownElement.execute(UnknownElement.java:275)
+	at org.apache.tools.ant.Task.perform(Task.java:364)
+	at org.apache.tools.ant.Target.execute(Target.java:341)
+	at org.apache.tools.ant.Target.performTasks(Target.java:369)
+	at org.apache.tools.ant.Project.executeSortedTargets(Project.java:1216)
+	at org.apache.tools.ant.Project.executeTarget(Project.java:1185)
+	at org.apache.tools.ant.helper.DefaultExecutor.executeTargets(DefaultExecutor.java:40)
+	at org.apache.tools.ant.Project.executeTargets(Project.java:1068)
+	at org.apache.tools.ant.Main.runBuild(Main.java:668)
+	at org.apache.tools.ant.Main.startAnt(Main.java:187)
+	at org.apache.tools.ant.launch.Launcher.run(Launcher.java:246)
+	at org.apache.tools.ant.launch.Launcher.main(Launcher.java:67)
+Caused by: java.lang.ClassNotFoundException: org.apache.log.format.Formatter
+	at org.apache.tools.ant.AntClassLoader.findClassInComponents(AntClassLoader.java:1166)
+	at org.apache.tools.ant.AntClassLoader.findClass(AntClassLoader.java:1107)
+	at org.apache.tools.ant.AntClassLoader.loadClass(AntClassLoader.java:977)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:251)
+	at java.lang.ClassLoader.loadClassInternal(ClassLoader.java:319)
+	... 32 more
+2008-08-28 17:37:48,881 - Trying to use logger class org.apache.velocity.runtime.log.Log4JLogChute
+2008-08-28 17:37:48,882 - Using logger class org.apache.velocity.runtime.log.Log4JLogChute
+2008-08-28 17:37:48,882 - Default ResourceManager initializing. (class org.apache.velocity.runtime.resource.ResourceManagerImpl)
+2008-08-28 17:37:48,882 - ResourceLoader instantiated: org.apache.velocity.runtime.resource.loader.FileResourceLoader
+2008-08-28 17:37:48,883 - Do unicode file recognition:  false
+2008-08-28 17:37:48,883 - FileResourceLoader : adding path '/home/athusoo/apacheprojects/hadoop-core-trunk_ws1/src/contrib/hive/ql/src/test/templates'
+2008-08-28 17:37:48,883 - ResourceCache: initialized (class org.apache.velocity.runtime.resource.ResourceCacheImpl)
+2008-08-28 17:37:48,899 - Loaded System Directive: org.apache.velocity.runtime.directive.Literal
+2008-08-28 17:37:48,899 - Loaded System Directive: org.apache.velocity.runtime.directive.Macro
+2008-08-28 17:37:48,899 - Loaded System Directive: org.apache.velocity.runtime.directive.Parse
+2008-08-28 17:37:48,900 - Loaded System Directive: org.apache.velocity.runtime.directive.Include
+2008-08-28 17:37:48,900 - Loaded System Directive: org.apache.velocity.runtime.directive.Foreach
+2008-08-28 17:37:48,905 - Created '20' parsers.
+2008-08-28 17:37:48,906 - Velocimacro : "velocimacro.library" is not set.  Trying default library: VM_global_library.vm
+2008-08-28 17:37:48,906 - Velocimacro : Default library not found.
+2008-08-28 17:37:48,906 - Velocimacro : allowInline = true : VMs can be defined inline in templates
+2008-08-28 17:37:48,907 - Velocimacro : allowInlineToOverride = false : VMs defined inline may NOT replace previous VM definitions
+2008-08-28 17:37:48,907 - Velocimacro : allowInlineLocal = false : VMs defined inline will be global in scope if allowed.
+2008-08-28 17:37:48,907 - Velocimacro : autoload off : VM system will not automatically reload global library macros
+2008-08-28 17:37:48,915 - ResourceManager : found TestCliDriver.vm with loader org.apache.velocity.runtime.resource.loader.FileResourceLoader

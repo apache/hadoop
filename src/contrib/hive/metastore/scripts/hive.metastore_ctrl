@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# chkconfig: 2345 90 20
+# description: hive metastore
+
+import sys
+sys.path.append('/usr/local/fbprojects/fb303/scripts')
+
+import fb303_scripts
+
+# thrift python packages need to be installed
+import thrift
+from thrift import protocol, transport
+from thrift.transport import TTransport
+from thrift.protocol import TBinaryProtocol
+from thrift.transport import *
+
+if (len(sys.argv) > 2):
+    port = int(sys.argv[2])
+else:
+    port = 9082
+    
+if (len(sys.argv) > 1):
+    retval = fb303_scripts.service_ctrl('hive.metastore',
+                                        port,
+                                        sys.argv[1],
+                                        binary_name = "start_meta_store_thrift_server.sh",
+                                        trans_factory = thrift.transport.TTransport.TBufferedTransportFactory(),
+                                        prot_factory = TBinaryProtocol.TBinaryProtocolFactory())
+    sys.exit(retval)
+else:
+    print 'metastore_ctrl requires a command: start, stop, restart, reload, force-reload, status, or version'
+    sys.exit(2)

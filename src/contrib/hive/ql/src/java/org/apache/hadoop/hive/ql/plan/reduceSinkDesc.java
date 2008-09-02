@@ -1,0 +1,88 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hive.ql.plan;
+
+import java.io.Serializable;
+
+public class reduceSinkDesc implements Serializable {
+  private static final long serialVersionUID = 1L;
+  // these are the expressions that go into the reduce key
+  private java.util.ArrayList<exprNodeDesc> keyCols;
+  private java.util.ArrayList<exprNodeDesc> valueCols;
+  private int tag;
+  
+  // The partition key will be the first #numPartitionFields of keyCols
+  // If the value is 0, then all data will go to a single reducer
+  // If the value is -1, then data will go to a random reducer 
+  private int numPartitionFields;
+  
+  public reduceSinkDesc() { }
+
+  public reduceSinkDesc
+  (final java.util.ArrayList<exprNodeDesc> keyCols,
+   final java.util.ArrayList<exprNodeDesc> valueCols,
+   final int numPartitionFields) {
+  this.keyCols = keyCols;
+  this.valueCols = valueCols;
+  this.tag = -1;
+  this.numPartitionFields = numPartitionFields;
+}
+
+  public reduceSinkDesc
+    (java.util.ArrayList<exprNodeDesc> keyCols,
+     java.util.ArrayList<exprNodeDesc> valueCols,
+     int tag,
+     int numPartitionFields) {
+    this.keyCols = keyCols;
+    this.valueCols = valueCols;
+    assert tag != -1;
+    this.tag = tag;
+    this.numPartitionFields = numPartitionFields;
+  }
+
+  public java.util.ArrayList<exprNodeDesc> getKeyCols() {
+    return this.keyCols;
+  }
+  public void setKeyCols
+    (final java.util.ArrayList<exprNodeDesc> keyCols) {
+    this.keyCols=keyCols;
+  }
+
+  public java.util.ArrayList<exprNodeDesc> getValueCols() {
+    return this.valueCols;
+  }
+  public void setValueCols
+    (final java.util.ArrayList<exprNodeDesc> valueCols) {
+    this.valueCols=valueCols;
+  }
+  
+  public int getNumPartitionFields() {
+    return this.numPartitionFields;
+  }
+  public void setNumPartitionFields(int numPartitionFields) {
+    this.numPartitionFields = numPartitionFields;
+  }
+  public int getTag() {
+    return this.tag;
+  }
+  public void setTag(int tag) {
+    this.tag = tag;
+  }
+  
+}

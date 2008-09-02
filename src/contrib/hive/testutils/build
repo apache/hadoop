@@ -1,0 +1,4 @@
+cd ql
+ant build-grammar
+cd ..
+ant

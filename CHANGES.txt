@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     HADOOP-3939. Add an option to DistCp to delete files at the destination
     not present at the source. (Tsz Wo (Nicholas) Sze via cdouglas)
 
+    HADOOP-3601. Add a new contrib module for Hive, which is a sql-like
+    query processing tool that uses map/reduce. (Ashish Thusoo via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

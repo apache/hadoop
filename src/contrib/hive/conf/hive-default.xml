@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+
+<!-- Hive Configuration can either be stored in this file or in the hadoop configuration files  -->
+<!-- that are implied by Hadoop setup variables.                                                -->
+<!-- Aside from Hadoop setup variables - this file is provided as a convenience so that Hive    -->
+<!-- users do not have to edit hadoop configuration files (that may be managed as a centralized -->
+<!-- resource).                                                                                 -->
+
+<!-- Hadoop Setup -->
+<property>
+  <name>hadoop.bin.path</name>
+  <value>${user.dir}/../../../bin/hadoop</value>
+  <!-- note that the hive shell script also uses this property name -->
+  <description>Path to hadoop binary. Assumes that by default we are executing from hive</description>
+</property>
+
+<property>
+  <name>hadoop.config.dir</name>
+  <value>${user.dir}/../../../conf</value>
+  <!-- note that the hive shell script also uses this property name -->
+  <description>Path to hadoop configuration. Again assumes that by default we are executing from hive/</description>
+</property>
+
+<!-- Hive Execution Parameters -->
+<property>
+  <name>hive.exec.scratchdir</name>
+  <value>/tmp/hive-${user.name}</value>
+  <description>Scratch space for Hive jobs</description>
+</property>
+
+<property>
+  <name>hive.metastore.local</name>
+  <value>true</value>
+  <description>controls whether to connect to remove metastore server or open a new metastore server in Hive Client JVM</description>
+</property>
+
+<property>
+  <name>javax.jdo.option.ConnectionURL</name>
+  <value>jdbc:derby:;databaseName=metastore_db;create=true</value>
+  <description>JDBC connect string for a JDBC metastore</description>
+</property>
+
+<property>
+  <name>javax.jdo.option.ConnectionDriverName</name>
+  <value>org.apache.derby.jdbc.EmbeddedDriver</value>
+  <description>Driver class name for a JDBC metastore</description>
+</property>
+
+<property>
+  <name>hive.metastore.uris</name>
+  <value>thift://</value>
+  <description>Comma separated list of URIs of metastore servers. The first server that can be connected to will be used.</description>
+</property>
+
+<property>
+  <name>hive.metastore.metadb.dir</name>
+  <value>file:///var/metastore/metadb/</value>
+  <description>The location of filestore metadata base dir</description>
+</property>
+<property>
+  <name>hive.metastore.uris</name>
+  <value>file:///var/metastore/metadb/</value>
+  <description></description>
+</property>
+
+<property>
+  <name>hive.metastore.warehouse.dir</name>
+  <value>/user/hive/warehouse</value>
+  <description>location of default database for the warehouse</description>
+</property>
+
+<property>
+  <name>hive.metastore.connect.retries</name>
+  <value>5</value>
+  <description>Number of retries while opening a connection to metastore</description>
+</property>
+
+<property>
+  <name>hive.metastore.rawstore.impl</name>
+  <value>org.apache.hadoop.hive.metastore.ObjectStore</value>
+  <description>Name of the class that implements org.apache.hadoop.hive.metastore.rawstore interface. This class is used to store and retrieval of raw metadata objects such as table, database</description>
+</property>
+
+</configuration>

@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. "$bin"/hive-config.sh
+
+CLASSPATH="${HIVE_CONF_DIR}"
+
+HIVE_LIB=${HIVE_HOME}/lib
+
+# needed for execution
+if [ ! -f "${HIVE_LIB}/hive_exec.jar" ]; then
+  echo "Missing Hive Execution Jar: ${HIVE_LIB}/hive_exec.jar"
+  exit 1;
+fi
+
+if [ ! -f "${HIVE_LIB}/hive_metastore.jar" ]; then
+  echo "Missing Hive MetaStore Jar"
+  exit 2;
+fi
+
+# cli specific code
+if [ ! -f "${HIVE_LIB}/hive_cli.jar" ]; then
+  echo "Missing Hive CLI Jar"
+  exit 3;
+fi
+
+for f in ${HIVE_LIB}/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add the auxillary jars such as serdes
+if [ -d "${HIVE_AUX_JARS_PATH}" ]; then
+  for f in ${HIVE_AUX_JARS_PATH}/*.jar; do
+    AUX_CLASSPATH=${AUX_CLASSPATH}:$f;
+    if [ "${AUX_PARAM}" == "" ]; then
+        AUX_PARAM=$f
+    else
+        AUX_PARAM=${AUX_PARAM},$f;
+    fi
+  done
+else
+  AUX_CLASSPATH=${HIVE_AUX_JARS_PATH}
+  AUX_PARAM=${HIVE_AUX_JARS_PATH}
+fi
+CLASSPATH=${CLASSPATH}:${AUX_CLASSPATH}
+
+
+# pass classpath to hadoop
+export HADOOP_CLASSPATH=${CLASSPATH}
+
+# point to the first available hadoop instance
+HADOOP_IN_PATH=`which hadoop 2>/dev/null`
+HADOOP=${HADOOP:-$HADOOP_IN_PATH}
+if [ "$HADOOP" == "" ]; then
+  echo "Cannot find hadoop installation: 'hadoop' must be in your path or specified via \$HADOOP";
+  exit 4;
+fi
+
+if [ ! -f ${HADOOP} ]; then
+  echo "Cannot find hadoop installation: \"$HADOOP\" does not exist";
+  exit 4;
+fi
+
+# override default value of hadoop.bin.path to point to what we are running off
+# if the user specified a -D override - this will be further overriden
+export HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.bin.path=$HADOOP"
+
+CLASS=org.apache.hadoop.hive.cli.CliDriver
+
+if [ "${AUX_PARAM}" != "" ]; then
+  HADOOP_OPTS="-Dhive.aux.jars.path=${AUX_PARAM}"
+  AUX_JARS_CMD_LINE="-libjars ${AUX_PARAM}"
+fi
+#echo "CLASSPATH="$CLASSPATH
+#echo "AUX_LIB_PATH"=$AUX_PARAM
+#echo "HADOOP_OPTS="$HADOOP_OPTS
+# note: $@ only works in "$@"
+exec $HADOOP jar $AUX_JARS_CMD_LINE ${HIVE_LIB}/hive_cli.jar $CLASS "$@"
+
