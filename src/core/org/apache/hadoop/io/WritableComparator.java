@@ -63,7 +63,7 @@ public class WritableComparator implements RawComparator {
     this(keyClass, false);
   }
 
-  private WritableComparator(Class<? extends WritableComparable> keyClass,
+  protected WritableComparator(Class<? extends WritableComparable> keyClass,
       boolean createInstances) {
     this.keyClass = keyClass;
     if (createInstances) {

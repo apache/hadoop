@@ -457,6 +457,9 @@ Release 0.18.1 - Unreleased
     from the TaskTracker, which was causing HDFS client connections to not be 
     collected. (ddas via omalley)
 
+    HADOOP-4046. Made WritableComparable's constructor protected instead of 
+    private to re-enable class derivation. (cdouglas via omalley)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
