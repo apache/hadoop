@@ -34,8 +34,11 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 
 public class TestFairScheduler extends TestCase {
-  final static String TEST_DIR = new File(".").getAbsolutePath();
-  final static String ALLOC_FILE = new File("./test-pools").getAbsolutePath();
+  final static String TEST_DIR = new File(System.getProperty("test.build.data",
+  		"build/contrib/streaming/test/data")).getAbsolutePath();
+  final static String ALLOC_FILE = new File(TEST_DIR, 
+  		"test-pools").getAbsolutePath();
+  
   private static final String POOL_PROPERTY = "pool";
   
   private static int jobCounter;
