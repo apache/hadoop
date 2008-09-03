@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     HADOOP-3601. Add a new contrib module for Hive, which is a sql-like
     query processing tool that uses map/reduce. (Ashish Thusoo via omalley)
 
+    HADOOP-3866. Added sort and multi-job updates in the JobTracker web ui.
+    (Craig Weisenfluh via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
