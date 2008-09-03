@@ -166,33 +166,34 @@ class Flusher extends Thread implements FlushRequester {
         flushQueue.remove(region);
       }
       lock.lock();
-      try {
-        // See comment above for removeFromQueue on why we do not
-        // compact if removeFromQueue is true. Note that region.flushCache()
-        // only returns true if a flush is done and if a compaction is needed.
-        if (region.flushcache() && !removeFromQueue) {
-          server.compactSplitThread.compactionRequested(region);
-        }
-      } catch (DroppedSnapshotException ex) {
-        // Cache flush can fail in a few places.  If it fails in a critical
-        // section, we get a DroppedSnapshotException and a replay of hlog
-        // is required. Currently the only way to do this is a restart of
-        // the server.  Abort because hdfs is probably bad (HBASE-644 is a case
-        // where hdfs was bad but passed the hdfs check).
-        LOG.fatal("Replay of hlog required. Forcing server restart", ex);
-        server.abort();
-        return false;
-      } catch (IOException ex) {
-        LOG.error("Cache flush failed" +
-            (region != null ? (" for region " + region.getRegionName()) : ""),
-            RemoteExceptionHandler.checkIOException(ex));
-        if (!server.checkFileSystem()) {
-          return false;
-        }
-      } finally {
-        lock.unlock();
-      }
     }
+    try {
+      // See comment above for removeFromQueue on why we do not
+      // compact if removeFromQueue is true. Note that region.flushCache()
+      // only returns true if a flush is done and if a compaction is needed.
+      if (region.flushcache() && !removeFromQueue) {
+        server.compactSplitThread.compactionRequested(region);
+      }
+    } catch (DroppedSnapshotException ex) {
+      // Cache flush can fail in a few places. If it fails in a critical
+      // section, we get a DroppedSnapshotException and a replay of hlog
+      // is required. Currently the only way to do this is a restart of
+      // the server. Abort because hdfs is probably bad (HBASE-644 is a case
+      // where hdfs was bad but passed the hdfs check).
+      LOG.fatal("Replay of hlog required. Forcing server restart", ex);
+      server.abort();
+      return false;
+    } catch (IOException ex) {
+      LOG.error("Cache flush failed"
+          + (region != null ? (" for region " + region.getRegionName()) : ""),
+          RemoteExceptionHandler.checkIOException(ex));
+      if (!server.checkFileSystem()) {
+        return false;
+      }
+    } finally {
+      lock.unlock();
+    }
+
     return true;
   }
   
