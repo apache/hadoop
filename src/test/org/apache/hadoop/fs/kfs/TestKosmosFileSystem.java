@@ -38,6 +38,7 @@ public class TestKosmosFileSystem extends TestCase {
 
     KosmosFileSystem kosmosFileSystem;
     KFSEmulationImpl kfsEmul;
+    Path baseDir;
     
     @Override
     protected void setUp() throws IOException {
@@ -47,6 +48,8 @@ public class TestKosmosFileSystem extends TestCase {
         kosmosFileSystem = new KosmosFileSystem(kfsEmul);
         // a dummy URI; we are not connecting to any setup here
         kosmosFileSystem.initialize(URI.create("kfs:///"), conf);
+        baseDir = new Path(System.getProperty("test.build.data",
+                                               "/tmp/kfs-test"));
     }
 
     @Override
@@ -57,7 +60,6 @@ public class TestKosmosFileSystem extends TestCase {
     // @Test
     // Check all the directory API's in KFS
     public void testDirs() throws Exception {
-        Path baseDir = new Path("/tmp/test/kfs-test");
         Path subDir1 = new Path("dir.1");
 
         // make the dir
@@ -81,7 +83,6 @@ public class TestKosmosFileSystem extends TestCase {
     // @Test
     // Check the file API's
     public void testFiles() throws Exception {
-        Path baseDir = new Path("/tmp/test/kfs-test");
         Path subDir1 = new Path("dir.1");
         Path file1 = new Path("dir.1/foo.1");
         Path file2 = new Path("dir.1/foo.2");
@@ -116,7 +117,6 @@ public class TestKosmosFileSystem extends TestCase {
     // @Test
     // Check file/read write
     public void testFileIO() throws Exception {
-        Path baseDir = new Path("/tmp/test/kfs-test");
         Path subDir1 = new Path("dir.1");
         Path file1 = new Path("dir.1/foo.1");
 

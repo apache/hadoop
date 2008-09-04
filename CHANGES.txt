@@ -455,6 +455,9 @@ Trunk (unreleased changes)
     HADOOP-4050. Fix TestFailScheduler to use absolute paths for the work
     directory. (Matei Zaharia via omalley)
 
+    HADOOP-4069. Keep temporary test files from TestKosmosFileSystem under
+    test.build.data instead of /tmp. (Hemanth Yamijala via omalley)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
