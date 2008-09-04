@@ -314,6 +314,8 @@ public class HLog implements HConstants {
   /**
    * This is a convenience method that computes a new filename with a given
    * file-number.
+   * @param fn
+   * @return Path
    */
   public Path computeFilename(final long fn) {
     return new Path(dir, HLOG_DATFILE + fn);
@@ -433,8 +435,7 @@ public class HLog implements HConstants {
   
   /** Append an entry to the log.
    * 
-   * @param regionName
-   * @param tableName
+   * @param regionInfo
    * @param row
    * @param logEdit
    * @throws IOException

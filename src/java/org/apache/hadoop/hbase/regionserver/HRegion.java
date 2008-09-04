@@ -398,22 +398,16 @@ public class HRegion implements HConstants {
    * appropriate log info for this HRegion. If there is a previous log file
    * (implying that the HRegion has been written-to before), then read it from
    * the supplied path.
-   * @param basedir qualified path of directory where region should be located,
-   * usually the table directory.
    * @param fs is the filesystem.  
    * @param conf is global configuration settings.
    * @param regionInfo - HRegionInfo that describes the region
-   * @param initialFiles If there are initial files (implying that the HRegion
    * is new), then read them from the supplied path.
    * @param flushListener an object that implements CacheFlushListener or null
-   * @param reporter Call on a period so hosting server can report we're
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
-   * @throws IOException
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
-      HRegionInfo regionInfo,
-      FlushRequester flushListener) {
+      HRegionInfo regionInfo, FlushRequester flushListener) {
     this.basedir = basedir;
     this.log = log;
     this.fs = fs;
@@ -1171,6 +1165,7 @@ public class HRegion implements HConstants {
    * @param row
    * @param columns Array of columns you'd like to retrieve. When null, get all.
    * @param ts
+   * @param lockid
    * @return Map<columnName, Cell> values
    * @throws IOException
    */
@@ -1360,6 +1355,7 @@ public class HRegion implements HConstants {
   
   /**
    * @param b
+   * @param writeToWAL
    * @throws IOException
    */
   public void batchUpdate(BatchUpdate b, boolean writeToWAL) throws IOException {
@@ -1369,6 +1365,7 @@ public class HRegion implements HConstants {
   
   /**
    * @param b
+   * @param lockid
    * @throws IOException
    */
   public void batchUpdate(BatchUpdate b, Integer lockid) throws IOException {
@@ -1377,7 +1374,8 @@ public class HRegion implements HConstants {
   
   /**
    * @param b
-   * @param writeToWal if true, then we write this update to the log
+   * @param lockid
+   * @param writeToWAL if true, then we write this update to the log
    * @throws IOException
    */
   public void batchUpdate(BatchUpdate b, Integer lockid, boolean writeToWAL)

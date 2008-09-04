@@ -56,6 +56,7 @@ Release 0.18.0 - Unreleased
    HBASE-832   Problem with row keys beginnig with characters < than ',' and
                the region location cache
    HBASE-864   Deadlock in regionserver
+   HBASE-865   Fix javadoc warnings (Rong-En Fan via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

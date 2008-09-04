@@ -162,7 +162,6 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * Commit the transaction.
    * 
    * @param transactionId
-   * @return
    */
   public void commit(final byte[] regionName, long transactionId)
       throws IOException;
@@ -171,7 +170,6 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * Abort the transaction.
    * 
    * @param transactionId
-   * @return
    */
   public void abort(final byte[] regionName, long transactionId)
       throws IOException;

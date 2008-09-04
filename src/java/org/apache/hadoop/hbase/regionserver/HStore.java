@@ -1357,8 +1357,8 @@ public class HStore implements HConstants {
    * Get <code>versions</code> of keys matching the origin key's
    * row/column/timestamp and those of an older vintage.
    * @param origin Where to start searching.
-   * @param numVersions How many versions to return. Pass
-   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @param versions How many versions to return. Pass
+   * {@link HConstants#ALL_VERSIONS} to retrieve all.
    * @param now
    * @return Matching keys.
    * @throws IOException

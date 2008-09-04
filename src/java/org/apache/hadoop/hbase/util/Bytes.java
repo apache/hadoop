@@ -180,7 +180,7 @@ public class Bytes {
   /**
    * @param b
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
-   * passed in array.  This method is what {@link Text} and
+   * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
    * {@link ImmutableBytesWritable} use calculating hash code.
    */
   public static int hashCode(final byte [] b) {
@@ -189,8 +189,9 @@ public class Bytes {
 
   /**
    * @param b
+   * @param length
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
-   * passed in array.  This method is what {@link Text} and
+   * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
    * {@link ImmutableBytesWritable} use calculating hash code.
    */
   public static int hashCode(final byte [] b, final int length) {
@@ -208,6 +209,7 @@ public class Bytes {
 
   /**
    * @param b
+   * @param length
    * @return A hash of <code>b</code> as an Integer that can be used as key in
    * Maps.
    */

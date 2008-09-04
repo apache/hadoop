@@ -65,7 +65,6 @@ public class TransactionManager {
    * Try and commit a transaction.
    * 
    * @param transactionState
-   * @return
    * @throws IOException
    */
   public void tryCommit(final TransactionState transactionState)

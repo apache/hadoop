@@ -78,6 +78,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get a single value for the specified row and column
    * 
+   * @param transactionState
    * @param row row key
    * @param column column name
    * @return value for specified row/column
@@ -100,6 +101,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get the specified number of versions of the specified row and column
    * 
+   * @param transactionState
    * @param row - row key
    * @param column - column name
    * @param numVersions - number of versions to retrieve
@@ -128,6 +130,7 @@ public class TransactionalTable extends HTable {
    * Get the specified number of versions of the specified row and column with
    * the specified timestamp.
    * 
+   * @param transactionState
    * @param row - row key
    * @param column - column name
    * @param timestamp - timestamp
@@ -157,6 +160,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get all the data for the specified row at the latest timestamp
    * 
+   * @param transactionState
    * @param row row key
    * @return RowResult is empty if row does not exist.
    * @throws IOException
@@ -169,6 +173,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get all the data for the specified row at a specified timestamp
    * 
+   * @param transactionState
    * @param row row key
    * @param ts timestamp
    * @return RowResult is empty if row does not exist.
@@ -191,6 +196,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get selected columns for the specified row at the latest timestamp
    * 
+   * @param transactionState
    * @param row row key
    * @param columns Array of column names you want to retrieve.
    * @return RowResult is empty if row does not exist.
@@ -204,6 +210,7 @@ public class TransactionalTable extends HTable {
   /**
    * Get selected columns for the specified row at a specified timestamp
    * 
+   * @param transactionState
    * @param row row key
    * @param columns Array of column names you want to retrieve.
    * @param ts timestamp
@@ -229,8 +236,8 @@ public class TransactionalTable extends HTable {
    * Delete all cells that match the passed row and whose timestamp is equal-to
    * or older than the passed timestamp.
    * 
+   * @param transactionState
    * @param row Row to update
-   * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
    * @throws IOException
    */
@@ -253,6 +260,7 @@ public class TransactionalTable extends HTable {
    * Get a scanner on the current table starting at first row. Return the
    * specified columns.
    * 
+   * @param transactionState
    * @param columns columns to scan. If column name is a column family, all
    * columns of the specified column family are returned. Its also possible to
    * pass a regex in the column qualifier. A column qualifier is judged to be a
@@ -271,6 +279,7 @@ public class TransactionalTable extends HTable {
    * Get a scanner on the current table starting at the specified row. Return
    * the specified columns.
    * 
+   * @param transactionState
    * @param columns columns to scan. If column name is a column family, all
    * columns of the specified column family are returned. Its also possible to
    * pass a regex in the column qualifier. A column qualifier is judged to be a
@@ -290,6 +299,7 @@ public class TransactionalTable extends HTable {
    * Get a scanner on the current table starting at the specified row. Return
    * the specified columns.
    * 
+   * @param transactionState
    * @param columns columns to scan. If column name is a column family, all
    * columns of the specified column family are returned. Its also possible to
    * pass a regex in the column qualifier. A column qualifier is judged to be a
@@ -310,6 +320,7 @@ public class TransactionalTable extends HTable {
    * Get a scanner on the current table starting at the specified row. Return
    * the specified columns.
    * 
+   * @param transactionState
    * @param columns columns to scan. If column name is a column family, all
    * columns of the specified column family are returned. Its also possible to
    * pass a regex in the column qualifier. A column qualifier is judged to be a
@@ -331,6 +342,7 @@ public class TransactionalTable extends HTable {
    * Get a scanner on the current table starting at the specified row. Return
    * the specified columns.
    * 
+   * @param transactionState
    * @param columns columns to scan. If column name is a column family, all
    * columns of the specified column family are returned. Its also possible to
    * pass a regex in the column qualifier. A column qualifier is judged to be a
@@ -354,6 +366,7 @@ public class TransactionalTable extends HTable {
   /**
    * Commit a BatchUpdate to the table.
    * 
+   * @param transactionState
    * @param batchUpdate
    * @throws IOException
    */
