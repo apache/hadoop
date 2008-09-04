@@ -156,10 +156,11 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
+  ### DISABLE RELEASE AUDIT UNTIL HADOOP-4074 IS FIXED
   ### Do not call releaseaudit when run by a developer
-  if [[ $HUDSON == "true" ]] ; then
-    $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit &> $PATCH_DIR/trunkReleaseAuditWarnings.txt
-  fi
+  ### if [[ $HUDSON == "true" ]] ; then
+    ### $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit &> $PATCH_DIR/trunkReleaseAuditWarnings.txt
+  ### fi
   $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= clean tar &> $PATCH_DIR/trunkJavacWarnings.txt
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
@@ -639,8 +640,9 @@ checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
 if [[ $HUDSON == "true" ]] ; then
-  checkReleaseAuditWarnings
-  (( RESULT = RESULT + $? ))
+  ### DISABLE RELEASE AUDIT UNTIL HADOOP-4074 IS FIXED
+  ### checkReleaseAuditWarnings
+  ### (( RESULT = RESULT + $? ))
   runCoreTests
   (( RESULT = RESULT + $? ))
   runContribTests
