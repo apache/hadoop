@@ -40,8 +40,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 8: change {job|task}id's to use corresponding objects rather that strings.
    * Version 9: change the counter representation for HADOOP-1915
    * Version 10: added getSystemDir for HADOOP-3135
+   * Version 11: changed JobProfile to include the queue name for HADOOP-3698
    */
-  public static final long versionID = 10L;
+  public static final long versionID = 11L;
 
   /**
    * Allocate a name for the job.

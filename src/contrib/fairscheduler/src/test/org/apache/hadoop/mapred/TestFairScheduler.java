@@ -131,6 +131,11 @@ public class TestFairScheduler extends TestCase {
     }
 
     @Override
+    public QueueManager getQueueManager() {
+      return null;
+    }
+    
+    @Override
     public int getNumberOfUniqueHosts() {
       return 0;
     }

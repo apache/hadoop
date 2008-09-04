@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     HADOOP-3866. Added sort and multi-job updates in the JobTracker web ui.
     (Craig Weisenfluh via omalley)
 
+    HADOOP-3698. Add access control to control who is allowed to submit or 
+    modify jobs in the JobTracker. (Hemanth Yamijala via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

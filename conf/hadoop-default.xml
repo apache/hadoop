@@ -1380,4 +1380,65 @@ creations/deletions), or "all".</description>
   </description>  
 </property>
 
+<property>
+  <name>mapred.queue.names</name>
+  <value>default</value>
+  <description> Comma separated list of queues configured for this jobtracker.
+    Jobs are added to queues and schedulers can configure different 
+    scheduling properties for the various queues. To configure a property 
+    for a queue, the name of the queue must match the name specified in this 
+    value. Queue properties that are common to all schedulers are configured 
+    here with the naming convention, mapred.queue.$QUEUE-NAME.$PROPERTY-NAME,
+    for e.g. mapred.queue.default.submit-job-acl.
+    The number of queues configured in this parameter could depend on the
+    type of scheduler being used, as specified in 
+    mapred.jobtracker.taskScheduler. For example, the JobQueueTaskScheduler
+    supports only a single queue, which is the default configured here.
+    Before adding more queues, ensure that the scheduler you've configured
+    supports multiple queues.
+  </description>
+</property>
+
+<property>
+  <name>mapred.acls.enabled</name>
+  <value>false</value>
+  <description> Specifies whether ACLs are enabled, and should be checked
+    for various operations.
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.default.acl-submit-job</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to submit jobs to the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to 
+    submit jobs. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.default.acl-administer-jobs</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to delete jobs or modify job's priority for jobs not owned by the current
+    user in the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to do 
+    this operation.
+  </description>
+</property>
+
+<property>
+  <name>queue.name</name>
+  <value>default</value>
+  <description> Queue to which a job is submitted. This must match one of the
+    queues defined in mapred.queue.names for the system. Also, the ACL setup
+    for the queue must allow the current user to submit a job to the queue.
+    Before specifying a queue, ensure that the system is configured with 
+    the queue, and access is allowed for submitting jobs to the queue.
+  </description>
+</property>
+
 </configuration>

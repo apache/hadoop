@@ -169,6 +169,15 @@ public class SleepJob extends Configured implements Tool,
   public int run(int numMapper, int numReducer, long mapSleepTime,
       int mapSleepCount, long reduceSleepTime,
       int reduceSleepCount) throws IOException {
+    JobConf job = setupJobConf(numMapper, numReducer, mapSleepTime, 
+                  mapSleepCount, reduceSleepTime, reduceSleepCount);
+    JobClient.runJob(job);
+    return 0;
+  }
+
+  public JobConf setupJobConf(int numMapper, int numReducer, 
+                                long mapSleepTime, int mapSleepCount, 
+                                long reduceSleepTime, int reduceSleepCount) {
     JobConf job = new JobConf(getConf(), SleepJob.class);
     job.setNumMapTasks(numMapper);
     job.setNumReduceTasks(numReducer);
@@ -186,9 +195,7 @@ public class SleepJob extends Configured implements Tool,
     job.setLong("sleep.job.reduce.sleep.time", reduceSleepTime);
     job.setInt("sleep.job.map.sleep.count", mapSleepCount);
     job.setInt("sleep.job.reduce.sleep.count", reduceSleepCount);
-
-    JobClient.runJob(job);
-    return 0;
+    return job;
   }
 
   public int run(String[] args) throws Exception {

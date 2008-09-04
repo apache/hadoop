@@ -111,6 +111,12 @@ public class JobConf extends Configuration {
   public static final long DISABLED_VIRTUAL_MEMORY_LIMIT = -1L;
   
   /**
+   * Name of the queue to which jobs will be submitted, if no queue
+   * name is mentioned.
+   */
+  public static final String DEFAULT_QUEUE_NAME = "default";
+  
+  /**
    * Construct a map/reduce job configuration.
    */
   public JobConf() {}
@@ -1351,7 +1357,26 @@ public class JobConf extends Configuration {
   public void setMaxVirtualMemoryForTask(long vmem) {
     setLong("mapred.task.maxmemory", vmem);
   }
-    
+  
+  /**
+   * Return the name of the queue to which this job is submitted.
+   * Defaults to 'default'.
+   * 
+   * @return name of the queue
+   */
+  public String getQueueName() {
+    return get("queue.name", DEFAULT_QUEUE_NAME);
+  }
+  
+  /**
+   * Set the name of the queue to which this job should be submitted.
+   * 
+   * @param queueName Name of the queue
+   */
+  public void setQueueName(String queueName) {
+    set("queue.name", queueName);
+  }
+  
   /** 
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing

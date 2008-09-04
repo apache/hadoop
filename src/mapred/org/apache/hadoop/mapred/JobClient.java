@@ -61,6 +61,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -396,7 +397,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
     return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
-        JobSubmissionProtocol.versionID, addr, conf,
+        JobSubmissionProtocol.versionID, addr, getUGI(conf), conf,
         NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
   }
 
@@ -552,13 +553,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id
      */
-    UnixUserGroupInformation ugi = null;
-    try {
-      ugi = UnixUserGroupInformation.login(job, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException(
-          "Failed to get the current user's information.").initCause(e));
-    }
+    UnixUserGroupInformation ugi = getUGI(job);
       
     //
     // Figure out what fs the JobTracker is using.  Copy the
@@ -676,6 +671,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       job.setWorkingDirectory(fs.getWorkingDirectory());          
     }
 
+  }
+
+  private UnixUserGroupInformation getUGI(Configuration job) throws IOException {
+    UnixUserGroupInformation ugi = null;
+    try {
+      ugi = UnixUserGroupInformation.login(job, true);
+    } catch (LoginException e) {
+      throw (IOException)(new IOException(
+          "Failed to get the current user's information.").initCause(e));
+    }
+    return ugi;
   }
   
   /**

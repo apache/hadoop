@@ -56,4 +56,11 @@ interface TaskTrackerManager {
    */
   public void removeJobInProgressListener(JobInProgressListener listener);
 
+  /**
+   * Return the {@link QueueManager} which manages the queues in this
+   * {@link TaskTrackerManager}.
+   *
+   * @return the {@link QueueManager}
+   */
+  public QueueManager getQueueManager();
 }

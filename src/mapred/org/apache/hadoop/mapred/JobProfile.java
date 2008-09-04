@@ -47,7 +47,8 @@ public class JobProfile implements Writable {
   String jobFile;
   String url;
   String name;
-
+  String queueName;
+  
   /**
    * Construct an empty {@link JobProfile}.
    */
@@ -66,13 +67,30 @@ public class JobProfile implements Writable {
    */
   public JobProfile(String user, JobID jobid, String jobFile, String url,
                     String name) {
+    this(user, jobid, jobFile, url, name, JobConf.DEFAULT_QUEUE_NAME);
+  }
+
+  /**
+   * Construct a {@link JobProfile} the userid, jobid, 
+   * job config-file, job-details url and job name. 
+   * 
+   * @param user userid of the person who submitted the job.
+   * @param jobid id of the job.
+   * @param jobFile job configuration file. 
+   * @param url link to the web-ui for details of the job.
+   * @param name user-specified job name.
+   * @param queueName name of the queue to which the job is submitted
+   */
+  public JobProfile(String user, JobID jobid, String jobFile, String url,
+                      String name, String queueName) {
     this.user = user;
     this.jobid = jobid;
     this.jobFile = jobFile;
     this.url = url;
     this.name = name;
+    this.queueName = queueName;
   }
-
+  
   /**
    * @deprecated use JobProfile(String, JobID, String, String, String) instead
    */
@@ -128,7 +146,15 @@ public class JobProfile implements Writable {
   public String getJobName() {
     return name;
   }
-    
+  
+  /**
+   * Get the name of the queue to which the job is submitted.
+   * @return name of the queue.
+   */
+  public String getQueueName() {
+    return queueName;
+  }
+  
   ///////////////////////////////////////
   // Writable
   ///////////////////////////////////////
@@ -138,6 +164,7 @@ public class JobProfile implements Writable {
     Text.writeString(out, url);
     Text.writeString(out, user);
     Text.writeString(out, name);
+    Text.writeString(out, queueName);
   }
   public void readFields(DataInput in) throws IOException {
     this.jobid = JobID.read(in);
@@ -145,6 +172,7 @@ public class JobProfile implements Writable {
     this.url = Text.readString(in);
     this.user = Text.readString(in);
     this.name = Text.readString(in);
+    this.queueName = Text.readString(in);
   }
 }
 

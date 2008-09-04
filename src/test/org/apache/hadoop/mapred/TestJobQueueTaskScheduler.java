@@ -139,6 +139,11 @@ public class TestJobQueueTaskScheduler extends TestCase {
       listeners.remove(listener);
     }
     
+    @Override
+    public QueueManager getQueueManager() {
+      return null;
+    }
+    
     // Test methods
     
     public void submitJob(JobInProgress job) {

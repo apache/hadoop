@@ -60,6 +60,9 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.security.AccessControlIOException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -511,6 +514,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   private Thread taskCommitThread;
   
+  private QueueManager queueManager;
+
   /**
    * Start the JobTracker process, listen on the indicated port
    */
@@ -532,6 +537,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
                                            conf.get("mapred.hosts.exclude", ""));
+    
+    queueManager = new QueueManager(this.conf);
     
     // Create the scheduler
     Class<? extends TaskScheduler> schedulerClass
@@ -1134,6 +1141,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     jobInProgressListeners.remove(listener);
   }
   
+  /**
+   * Return the {@link QueueManager} associated with the JobTracker.
+   */
+  public QueueManager getQueueManager() {
+    return queueManager;
+  }
+  
   ////////////////////////////////////////////////////
   // InterTrackerProtocol
   ////////////////////////////////////////////////////
@@ -1490,6 +1504,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     totalSubmissions++;
     JobInProgress job = new JobInProgress(jobId, this, this.conf);
+    checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB);
+
     synchronized (jobs) {
       synchronized (taskScheduler) {
         jobs.put(job.getProfile().getJobID(), job);
@@ -1500,6 +1516,26 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
     myInstrumentation.submitJob();
     return job.getStatus();
+  }
+
+  // Check whether the specified operation can be performed
+  // related to the job. If ownerAllowed is true, then an owner
+  // of the job can perform the operation irrespective of
+  // access control.
+  private void checkAccess(JobInProgress job, 
+                                QueueManager.QueueOperation oper) 
+                                  throws IOException {
+    // get the user group info
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+
+    // get the queue
+    String queue = job.getProfile().getQueueName();
+    if (!queueManager.hasAccess(queue, job, oper, ugi)) {
+      throw new AccessControlIOException("User " 
+                            + ugi.getUserName() 
+                            + " cannot perform "
+                            + "operation " + oper + " on queue " + queue);
+    }
   }
 
   public synchronized ClusterStatus getClusterStatus() {
@@ -1513,8 +1549,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
     
-  public synchronized void killJob(JobID jobid) {
+  public synchronized void killJob(JobID jobid) throws IOException {
     JobInProgress job = jobs.get(jobid);
+    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
     if (job.inited()) {
       job.kill();
     }
@@ -1674,6 +1711,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized boolean killTask(TaskAttemptID taskid, boolean shouldFail) throws IOException{
     TaskInProgress tip = taskidToTIPMap.get(taskid);
     if(tip != null) {
+      checkAccess(tip.getJob(), QueueManager.QueueOperation.ADMINISTER_JOBS);
       return tip.killTask(taskid, shouldFail);
     }
     else {
