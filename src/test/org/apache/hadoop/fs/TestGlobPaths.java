@@ -266,6 +266,28 @@ public class TestGlobPaths extends TestCase {
     } finally {
       cleanupDFS();
     }
+    // cross-component curlies
+    try {
+      files = new String[] { USER_DIR+"/a/b", USER_DIR+"/a/d",
+                             USER_DIR+"/c/b", USER_DIR+"/c/d" };
+      matchedPath = prepareTesting(USER_DIR+"/{a/b,c/d}", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[3]);
+    } finally {
+      cleanupDFS();
+    }
+    // cross-component absolute curlies
+    try {
+      files = new String[] { "/a/b", "/a/d",
+                             "/c/b", "/c/d" };
+      matchedPath = prepareTesting("{/a/b,/c/d}", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[3]);
+    } finally {
+      cleanupDFS();
+    }
     try {
       // test standalone }
       files = new String[] {USER_DIR+"/}bc", USER_DIR+"/}c"};

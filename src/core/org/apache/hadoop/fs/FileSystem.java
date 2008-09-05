@@ -843,7 +843,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
     return globStatus(pathPattern, DEFAULT_FILTER);
   }
-
+  
   /**
    * Return an array of FileStatus objects whose path names match pathPattern
    * and is accepted by the user-supplied path filter. Results are sorted by
@@ -859,6 +859,24 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException if any I/O error occurs when fetching file status
    */
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    String filename = pathPattern.toUri().getPath();
+    List<String> filePatterns = GlobExpander.expand(filename);
+    if (filePatterns.size() == 1) {
+      return globStatusInternal(pathPattern, filter);
+    } else {
+      List<FileStatus> results = new ArrayList<FileStatus>();
+      for (String filePattern : filePatterns) {
+        FileStatus[] files = globStatusInternal(new Path(filePattern), filter);
+        for (FileStatus file : files) {
+          results.add(file);
+        }
+      }
+      return results.toArray(new FileStatus[results.size()]);
+    }
+  }
+
+  private FileStatus[] globStatusInternal(Path pathPattern, PathFilter filter)
       throws IOException {
     Path[] parents = new Path[1];
     int level = 0;

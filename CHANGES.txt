@@ -267,6 +267,9 @@ Trunk (unreleased changes)
     HADOOP-3943. Remove unnecessary synchronization in 
     NetworkTopology.pseudoSortByDistance. (hairong via omalley)
 
+    HADOOP-3498. File globbing alternation should be able to span path
+    components. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
