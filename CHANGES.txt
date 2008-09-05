@@ -462,7 +462,7 @@ Trunk (unreleased changes)
     HADOOP-3954. Disable record skipping by default. (Sharad Agarwal via
     cdouglas)
 
-    HADOOP-4050. Fix TestFailScheduler to use absolute paths for the work
+    HADOOP-4050. Fix TestFairScheduler to use absolute paths for the work
     directory. (Matei Zaharia via omalley)
 
     HADOOP-4069. Keep temporary test files from TestKosmosFileSystem under
