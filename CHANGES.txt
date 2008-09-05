@@ -396,10 +396,6 @@ Trunk (unreleased changes)
     HADOOP-3773. Change Pipes to set the default map output key and value 
     types correctly. (Koji Noguchi via omalley)
 
-    HADOOP-3940. Fix in-memory merge condition to wait when there are no map
-    outputs or when the final map outputs are being fetched without contention.
-    (cdouglas)
-
     HADOOP-3952. Fix compilation error in TestDataJoin referencing dfs package.
     (omalley)
 
@@ -489,6 +485,10 @@ Release 0.18.1 - Unreleased
 
     HADOOP-4046. Made WritableComparable's constructor protected instead of 
     private to re-enable class derivation. (cdouglas via omalley)
+
+    HADOOP-3940. Fix in-memory merge condition to wait when there are no map
+    outputs or when the final map outputs are being fetched without contention.
+    (cdouglas)
 
 Release 0.18.0 - 2008-08-19
 
