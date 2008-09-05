@@ -31,7 +31,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -265,6 +264,13 @@ class MapTask extends Task {
 
     // start thread that will handle communication with parent
     startCommunicationThread(umbilical);
+
+    initialize(job, reporter);
+    // check if it is a cleanupJobTask
+    if (cleanupJob) {
+      runCleanup(umbilical);
+      return;
+    }
 
     int numReduceTasks = conf.getNumReduceTasks();
     LOG.info("numReduceTasks: " + numReduceTasks);

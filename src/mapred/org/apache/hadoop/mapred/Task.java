@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.net.URI;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,8 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -48,7 +45,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
@@ -110,8 +106,8 @@ abstract class Task implements Writable, Configurable {
   private String jobFile;                         // job configuration file
   private TaskAttemptID taskId;                          // unique, includes job id
   private int partition;                          // id within job
-  TaskStatus taskStatus; 										      // current status of the task
-  private Path taskOutputPath;                    // task-specific output dir
+  TaskStatus taskStatus;                          // current status of the task
+  protected boolean cleanupJob = false;
   
   //failed ranges from previous attempts
   private SortedRanges failedRanges = new SortedRanges();
@@ -125,6 +121,10 @@ abstract class Task implements Writable, Configurable {
   protected JobConf conf;
   protected MapOutputFile mapOutputFile = new MapOutputFile();
   protected LocalDirAllocator lDirAlloc;
+  private final static int MAX_RETRIES = 10;
+  protected JobContext jobContext;
+  protected TaskAttemptContext taskContext;
+  private volatile boolean commitPending = false;
 
   ////////////////////////////////////////////
   // Constructors
@@ -220,6 +220,13 @@ abstract class Task implements Writable, Configurable {
     this.skipping = skipping;
   }
 
+  /**
+   * Sets whether the task is cleanup task
+   */
+  public void setCleanupTask() {
+    cleanupJob = true;
+  }
+
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -228,48 +235,27 @@ abstract class Task implements Writable, Configurable {
     Text.writeString(out, jobFile);
     taskId.write(out);
     out.writeInt(partition);
-    if (taskOutputPath != null) {
-      Text.writeString(out, taskOutputPath.toString());
-    } else {
-      Text.writeString(out, "");
-    }
     taskStatus.write(out);
     failedRanges.write(out);
     out.writeBoolean(skipping);
+    out.writeBoolean(cleanupJob);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
     taskId = TaskAttemptID.read(in);
     partition = in.readInt();
-    String outPath = Text.readString(in);
-    if (outPath.length() != 0) {
-      taskOutputPath = new Path(outPath);
-    } else {
-      taskOutputPath = null;
-    }
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 
     failedRanges.readFields(in);
     currentRecIndexIterator = failedRanges.skipRangeIterator();
     currentRecStartIndex = currentRecIndexIterator.next();
     skipping = in.readBoolean();
+    cleanupJob = in.readBoolean();
   }
 
   @Override
   public String toString() { return taskId.toString(); }
 
-  private Path getTaskOutputPath(JobConf conf) {
-    Path p = new Path(FileOutputFormat.getOutputPath(conf), 
-      (MRConstants.TEMP_DIR_NAME + Path.SEPARATOR + "_" + taskId));
-    try {
-      FileSystem fs = p.getFileSystem(conf);
-      return p.makeQualified(fs);
-    } catch (IOException ie) {
-      LOG.warn(StringUtils.stringifyException(ie));
-      return p;
-    }
-  }
-  
   /**
    * Localize the given JobConf to be specific for this task.
    */
@@ -279,12 +265,18 @@ abstract class Task implements Writable, Configurable {
     conf.setBoolean("mapred.task.is.map", isMapTask());
     conf.setInt("mapred.task.partition", partition);
     conf.set("mapred.job.id", taskId.getJobID().toString());
-    
-    // The task-specific output path
-    if (FileOutputFormat.getOutputPath(conf) != null) {
-      taskOutputPath = getTaskOutputPath(conf);
-      FileOutputFormat.setWorkOutputPath(conf, taskOutputPath);
+    Path outputPath = FileOutputFormat.getOutputPath(conf);
+    if (outputPath != null) {
+      OutputCommitter committer = conf.getOutputCommitter();
+      if ((committer instanceof FileOutputCommitter)) {
+        TaskAttemptContext context = new TaskAttemptContext(conf, taskId);
+        FileOutputFormat.setWorkOutputPath(conf, 
+          ((FileOutputCommitter)committer).getTempTaskOutputPath(context));
+      } else {
+        FileOutputFormat.setWorkOutputPath(conf, outputPath);
+      }
     }
+
   }
   
   /** Run this task as a part of the named job.  This method is executed in the
@@ -359,8 +351,17 @@ abstract class Task implements Writable, Configurable {
               if (sendProgress) {
                 // we need to send progress update
                 updateCounters();
-                taskStatus.statusUpdate(taskProgress.get(), taskProgress.toString(), 
-                        counters);
+                if (commitPending) {
+                  taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
+                                          taskProgress.get(),
+                                          taskProgress.toString(), 
+                                          counters);
+                } else {
+                  taskStatus.statusUpdate(TaskStatus.State.RUNNING,
+                                          taskProgress.get(),
+                                          taskProgress.toString(), 
+                                          counters);
+                }
                 taskFound = umbilical.statusUpdate(taskId, taskStatus);
                 taskStatus.clearStatus();
               }
@@ -396,6 +397,13 @@ abstract class Task implements Writable, Configurable {
     LOG.debug(getTaskID() + " Progress/ping thread started");
   }
 
+  public void initialize(JobConf job, Reporter reporter) 
+  throws IOException {
+    jobContext = new JobContext(job, reporter);
+    taskContext = new TaskAttemptContext(job, taskId, reporter);
+    OutputCommitter committer = conf.getOutputCommitter();
+    committer.setupTask(taskContext);
+  }
   
   protected Reporter getReporter(final TaskUmbilicalProtocol umbilical) 
     throws IOException 
@@ -543,54 +551,86 @@ abstract class Task implements Writable, Configurable {
   }
 
   public void done(TaskUmbilicalProtocol umbilical) throws IOException {
-    int retries = 10;
-    boolean needProgress = true;
+    LOG.info("Task:" + taskId + " is done."
+             + " And is in the process of commiting");
     updateCounters();
+
+    OutputCommitter outputCommitter = conf.getOutputCommitter();
+    // check whether the commit is required.
+    boolean commitRequired = outputCommitter.needsTaskCommit(taskContext);
+    if (commitRequired) {
+      int retries = MAX_RETRIES;
+      taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
+      commitPending = true;
+      // say the task tracker that task is commit pending
+      while (true) {
+        try {
+          umbilical.commitPending(taskId, taskStatus);
+          break;
+        } catch (InterruptedException ie) {
+          // ignore
+        } catch (IOException ie) {
+          LOG.warn("Failure sending commit pending: " + 
+                    StringUtils.stringifyException(ie));
+          if (--retries == 0) {
+            System.exit(67);
+          }
+        }
+      }
+      //wait for commit approval and commit
+      commit(umbilical, outputCommitter);
+    }
     taskDone.set(true);
+    sendLastUpdate(umbilical);
+    //signal the tasktracker that we are done
+    sendDone(umbilical);
+  }
+
+  private void sendLastUpdate(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    //first wait for the COMMIT approval from the tasktracker
+    int retries = MAX_RETRIES;
     while (true) {
       try {
-        if (needProgress) {
-          // send a final status report
-          taskStatus.statusUpdate(taskProgress.get(), taskProgress.toString(), 
+        // send a final status report
+        if (commitPending) {
+          taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
+                                  taskProgress.get(),
+                                  taskProgress.toString(), 
                                   counters);
-          try {
-            if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
-              LOG.warn("Parent died.  Exiting "+taskId);
-              System.exit(66);
-            }
-            taskStatus.clearStatus();
-            needProgress = false;
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();       // interrupt ourself
-          }
+        } else {
+          taskStatus.statusUpdate(TaskStatus.State.RUNNING,
+                                  taskProgress.get(),
+                                  taskProgress.toString(), 
+                                  counters);
         }
-        // Check whether there is any task output
-        boolean shouldBePromoted = false;
+
         try {
-          if (taskOutputPath != null) {
-            // Get the file-system for the task output directory
-            FileSystem fs = taskOutputPath.getFileSystem(conf);
-            if (fs.exists(taskOutputPath)) {
-              // Get the summary for the folder
-              ContentSummary summary = fs.getContentSummary(taskOutputPath);
-              // Check if the directory contains data to be promoted
-              // i.e total-files + total-folders - 1(itself)
-              if (summary != null 
-                  && (summary.getFileCount() + summary.getDirectoryCount() - 1)
-                      > 0) {
-                shouldBePromoted = true;
-              }
-            } else {
-              LOG.info(getTaskID() + ": No outputs to promote from " + 
-                       taskOutputPath);
-            }
+          if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
+            LOG.warn("Parent died.  Exiting "+taskId);
+            System.exit(66);
           }
-        } catch (IOException ioe) {
-          // To be safe in case of an exception
-          shouldBePromoted = true;
+          taskStatus.clearStatus();
+          return;
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt(); // interrupt ourself
         }
-        umbilical.done(taskId, shouldBePromoted);
-        LOG.info("Task '" + getTaskID() + "' done.");
+      } catch (IOException ie) {
+        LOG.warn("Failure sending last status update: " + 
+                  StringUtils.stringifyException(ie));
+        if (--retries == 0) {
+          throw ie;
+        }
+      }
+    }
+  }
+
+  private void sendDone(TaskUmbilicalProtocol umbilical) throws IOException {
+    int retries = MAX_RETRIES;
+    while (true) {
+      try {
+        umbilical.done(getTaskID());
+        LOG.info("Task '" + taskId + "' done.");
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 
@@ -601,15 +641,66 @@ abstract class Task implements Writable, Configurable {
       }
     }
   }
+
+  private void commit(TaskUmbilicalProtocol umbilical,
+                      OutputCommitter committer) throws IOException {
+    int retries = MAX_RETRIES;
+    while (true) {
+      try {
+        while (!umbilical.canCommit(taskId)) {
+          try {
+            Thread.sleep(1000);
+          } catch(InterruptedException ie) {
+            //ignore
+          }
+          setProgressFlag();
+        }
+        // task can Commit now  
+        try {
+          LOG.info("Task " + taskId + " is allowed to commit now");
+          committer.commitTask(taskContext);
+          return;
+        } catch (IOException iee) {
+          LOG.warn("Failure committing: " + 
+                    StringUtils.stringifyException(iee));
+          discardOutput(taskContext, committer);
+          throw iee;
+        }
+      } catch (IOException ie) {
+        LOG.warn("Failure asking whether task can commit: " + 
+            StringUtils.stringifyException(ie));
+        if (--retries == 0) {
+          //if it couldn't commit a successfully then delete the output
+          discardOutput(taskContext, committer);
+          System.exit(68);
+        }
+      }
+    }
+  }
+
+  private void discardOutput(TaskAttemptContext taskContext,
+                             OutputCommitter committer) {
+    try {
+      committer.abortTask(taskContext);
+    } catch (IOException ioe)  {
+      LOG.warn("Failure cleaning up: " + 
+               StringUtils.stringifyException(ioe));
+    }
+  }
+
+  protected void runCleanup(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    // set phase for this task
+    setPhase(TaskStatus.Phase.CLEANUP);
+    getProgress().setStatus("cleanup");
+    // do the cleanup
+    conf.getOutputCommitter().cleanupJob(jobContext);
+    done(umbilical);
+  }
   
   public void setConf(Configuration conf) {
     if (conf instanceof JobConf) {
       this.conf = (JobConf) conf;
-
-      if (taskId != null && taskOutputPath == null && 
-          FileOutputFormat.getOutputPath(this.conf) != null) {
-        taskOutputPath = getTaskOutputPath(this.conf);
-      }
     } else {
       this.conf = new JobConf(conf);
     }
@@ -630,68 +721,6 @@ abstract class Task implements Writable, Configurable {
 
   public Configuration getConf() {
     return this.conf;
-  }
-
-  /**
-   * Save the task's output on successful completion.
-   * 
-   * @throws IOException
-   */
-  void saveTaskOutput() throws IOException {
-
-    if (taskOutputPath != null) {
-      FileSystem fs = taskOutputPath.getFileSystem(conf);
-      if (fs.exists(taskOutputPath)) {
-        Path jobOutputPath = taskOutputPath.getParent().getParent();
-
-        // Move the task outputs to their final place
-        moveTaskOutputs(fs, jobOutputPath, taskOutputPath);
-
-        // Delete the temporary task-specific output directory
-        if (!fs.delete(taskOutputPath, true)) {
-          LOG.info("Failed to delete the temporary output directory of task: " + 
-                  getTaskID() + " - " + taskOutputPath);
-        }
-        
-        LOG.info("Saved output of task '" + getTaskID() + "' to " + jobOutputPath);
-      }
-    }
-  }
-  
-  private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
-    URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
-    if (relativePath.getPath().length() > 0) {
-      return new Path(jobOutputDir, relativePath.getPath());
-    } else {
-      return jobOutputDir;
-    }
-  }
-  
-  private void moveTaskOutputs(FileSystem fs, Path jobOutputDir, Path taskOutput) 
-  throws IOException {
-    if (fs.isFile(taskOutput)) {
-      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
-      if (!fs.rename(taskOutput, finalOutputPath)) {
-        if (!fs.delete(finalOutputPath, true)) {
-          throw new IOException("Failed to delete earlier output of task: " + 
-                  getTaskID());
-        }
-        if (!fs.rename(taskOutput, finalOutputPath)) {
-          throw new IOException("Failed to save output of task: " + 
-                  getTaskID());
-        }
-      }
-      LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);
-    } else if(fs.isDirectory(taskOutput)) {
-      FileStatus[] paths = fs.listStatus(taskOutput);
-      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
-      fs.mkdirs(finalOutputPath);
-      if (paths != null) {
-        for (FileStatus path : paths) {
-          moveTaskOutputs(fs, jobOutputDir, path.getPath());
-        }
-      }
-    }
   }
 
   /**

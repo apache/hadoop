@@ -46,7 +46,7 @@ public class IsolationRunner {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public void done(TaskAttemptID taskid, boolean shouldPromote) throws IOException {
+    public void done(TaskAttemptID taskid) throws IOException {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
@@ -66,6 +66,15 @@ public class IsolationRunner {
       return true;
     }
 
+    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
+      statusUpdate(taskId, taskStatus);
+    }
+    
+    public boolean canCommit(TaskAttemptID taskid) throws IOException {
+      return true;
+    }
+    
     public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
     throws IOException, InterruptedException {
       StringBuffer buf = new StringBuffer("Task ");

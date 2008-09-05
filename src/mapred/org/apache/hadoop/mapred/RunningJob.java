@@ -85,6 +85,15 @@ public interface RunningJob {
   public float reduceProgress() throws IOException;
 
   /**
+   * Get the <i>progress</i> of the job's cleanup-tasks, as a float between 0.0 
+   * and 1.0.  When all cleanup tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's cleanup-tasks.
+   * @throws IOException
+   */
+  public float cleanupProgress() throws IOException;
+
+  /**
    * Check if the job is finished or not. 
    * This is a non-blocking call.
    * 

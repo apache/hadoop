@@ -39,9 +39,12 @@
      reports = (job != null) ? tracker.getMapTaskReports(jobidObj) : null;
      tasks = (job != null) ? job.getMapTasks() : null;
     }
-  else{
+  else if ("reduce".equals(type)) {
     reports = (job != null) ? tracker.getReduceTaskReports(jobidObj) : null;
     tasks = (job != null) ? job.getReduceTasks() : null;
+  } else {
+    reports = (job != null) ? tracker.getCleanupTaskReports(jobidObj) : null;
+    tasks = (job != null) ? job.getCleanupTasks() : null;
   }
 %>
 

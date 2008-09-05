@@ -69,7 +69,6 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.IFile.*;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
-import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -326,7 +325,15 @@ class ReduceTask extends Task {
 
     // start thread that will handle communication with parent
     startCommunicationThread(umbilical);
+    final Reporter reporter = getReporter(umbilical);
+    initialize(job, reporter);
 
+    // check if it is a cleanupJobTask
+    if (cleanupJob) {
+      runCleanup(umbilical);
+      return;
+    }
+    
     FileSystem lfs = FileSystem.getLocal(job);
     
     // Initialize the codec
@@ -350,7 +357,6 @@ class ReduceTask extends Task {
  
     setPhase(TaskStatus.Phase.SORT); 
 
-    final Reporter reporter = getReporter(umbilical);
     
     // sort the input file
     LOG.info("Initiating final on-disk merge with " + mapFiles.length + 

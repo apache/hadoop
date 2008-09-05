@@ -45,9 +45,10 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 9 changes the counter representation for HADOOP-1915
    * Version 10 changed the TaskStatus format and added reportNextRecordRange
    *            for HADOOP-153
+   * Version 11 Adds RPCs for task commit as part of HADOOP-3150
    * */
 
-  public static final long versionID = 10L;
+  public static final long versionID = 11L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(TaskAttemptID taskid) throws IOException;
@@ -88,9 +89,26 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   /** Report that the task is successfully completed.  Failure is assumed if
    * the task process exits without calling this.
    * @param taskid task's id
-   * @param shouldBePromoted whether to promote the task's output or not 
    */
-  void done(TaskAttemptID taskid, boolean shouldBePromoted) throws IOException;
+  void done(TaskAttemptID taskid) throws IOException;
+  
+  /** 
+   * Report that the task is complete, but its commit is pending.
+   * 
+   * @param taskId task's id
+   * @param taskStatus status of the child
+   * @throws IOException
+   */
+  void commitPending(TaskAttemptID taskId, TaskStatus taskStatus) 
+  throws IOException, InterruptedException;  
+
+  /**
+   * Polling to know whether the task can go-ahead with commit 
+   * @param taskid
+   * @return true/false 
+   * @throws IOException
+   */
+  boolean canCommit(TaskAttemptID taskid) throws IOException;
 
   /** Report that a reduce-task couldn't shuffle map-outputs.*/
   void shuffleError(TaskAttemptID taskId, String message) throws IOException;

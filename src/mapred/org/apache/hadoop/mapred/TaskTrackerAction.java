@@ -48,7 +48,10 @@ abstract class TaskTrackerAction implements Writable {
     KILL_JOB,
     
     /** Reinitialize the tasktracker. */
-    REINIT_TRACKER
+    REINIT_TRACKER,
+
+    /** Ask a task to save its output. */
+    COMMIT_TASK
   };
   
   /**
@@ -78,6 +81,11 @@ abstract class TaskTrackerAction implements Writable {
     case REINIT_TRACKER:
       {
         action = new ReinitTrackerAction();
+      }
+      break;
+    case COMMIT_TASK:
+      {
+        action = new CommitTaskAction();
       }
       break;
     }

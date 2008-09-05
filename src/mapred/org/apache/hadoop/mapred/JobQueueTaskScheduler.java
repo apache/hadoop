@@ -73,20 +73,68 @@ class JobQueueTaskScheduler extends TaskScheduler {
                                  0.01f);
   }
 
+  protected Task getCleanupTask(int numMaps, int numReduces,
+                                int maxMapTasks, int maxReduceTasks,
+                                TaskTrackerStatus taskTracker,
+                                int numTaskTrackers,
+                                Collection<JobInProgress> jobQueue) 
+  throws IOException {
+    Task t = null;
+    if (numMaps < maxMapTasks) {
+      for (JobInProgress job : jobQueue) {
+        t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
+                       taskTrackerManager.getNumberOfUniqueHosts(), true);
+        if (t != null) {
+          return t;
+        }
+      }
+    }
+    if (numReduces < maxReduceTasks) {
+      for (JobInProgress job : jobQueue) {
+        t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
+                       taskTrackerManager.getNumberOfUniqueHosts(), false);
+        if (t != null) {
+          return t;
+        }
+      }
+    }
+    return t;
+  }
+  
   @Override
   public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
       throws IOException {
-    //
-    // Compute average map and reduce task numbers across pool
-    //
-    int remainingReduceLoad = 0;
-    int remainingMapLoad = 0;
 
     ClusterStatus clusterStatus = taskTrackerManager.getClusterStatus();
     int numTaskTrackers = clusterStatus.getTaskTrackers();
 
     Collection<JobInProgress> jobQueue =
       jobQueueJobInProgressListener.getJobQueue();
+
+    //
+    // Get map + reduce counts for the current tracker.
+    //
+    int maxCurrentMapTasks = taskTracker.getMaxMapTasks();
+    int maxCurrentReduceTasks = taskTracker.getMaxReduceTasks();
+    int numMaps = taskTracker.countMapTasks();
+    int numReduces = taskTracker.countReduceTasks();
+
+
+    // cleanup task has the highest priority, it should be 
+    // launched as soon as the job is done.
+    synchronized (jobQueue) {
+      Task t = getCleanupTask(numMaps, numReduces, maxCurrentMapTasks,
+                 maxCurrentReduceTasks, taskTracker, numTaskTrackers, jobQueue);
+      if (t != null) {
+        return Collections.singletonList(t);
+      }
+    }
+
+    //
+    // Compute average map and reduce task numbers across pool
+    //
+    int remainingReduceLoad = 0;
+    int remainingMapLoad = 0;
     synchronized (jobQueue) {
       for (JobInProgress job : jobQueue) {
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
@@ -98,8 +146,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
       }
     }
 
-    int maxCurrentMapTasks = taskTracker.getMaxMapTasks();
-    int maxCurrentReduceTasks = taskTracker.getMaxReduceTasks();
     // find out the maximum number of maps or reduces that we are willing
     // to run on any node.
     int maxMapLoad = 0;
@@ -113,13 +159,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
                                                / numTaskTrackers));
     }
         
-    //
-    // Get map + reduce counts for the current tracker.
-    //
-
-    int numMaps = taskTracker.countMapTasks();
-    int numReduces = taskTracker.countReduceTasks();
-    
     int totalMaps = clusterStatus.getMapTasks();
     int totalMapTaskCapacity = clusterStatus.getMaxMapTasks();
     int totalReduces = clusterStatus.getReduceTasks();

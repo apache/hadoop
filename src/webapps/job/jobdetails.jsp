@@ -88,6 +88,41 @@
                   ) + 
               "</td></tr>\n");
   }
+
+  private void printCleanupTaskSummary(JspWriter out,
+                                String jobId,
+                                TaskInProgress[] tasks
+                               ) throws IOException {
+    int totalTasks = tasks.length;
+    int runningTasks = 0;
+    int finishedTasks = 0;
+    int killedTasks = 0;
+    String kind = "cleanup";
+    for(int i=0; i < totalTasks; ++i) {
+      TaskInProgress task = tasks[i];
+      if (task.isComplete()) {
+        finishedTasks += 1;
+      } else if (task.isRunning()) {
+        runningTasks += 1;
+      } else if (task.isFailed()) {
+        killedTasks += 1;
+      }
+    }
+    int pendingTasks = totalTasks - runningTasks - killedTasks - finishedTasks; 
+    out.print(((runningTasks > 0)  
+               ? "<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind + 
+                 "&pagenum=1" + "&state=running\">" + " Running" + 
+                 "</a>" 
+               : ((pendingTasks > 0) ? " Pending" :
+                 ((finishedTasks > 0) 
+               ?"<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind + 
+                "&pagenum=1" + "&state=completed\">" + " Successful"
+                 + "</a>" 
+               : ((killedTasks > 0) 
+               ?"<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind +
+                "&pagenum=1" + "&state=killed\">" + " Failed" 
+                + "</a>" : "None")))));
+  }
   
   private void printConfirm(JspWriter out, String jobId) throws IOException{
     String url = "jobdetails.jsp?jobid=" + jobId;
@@ -194,6 +229,9 @@
             job.getFinishTime(), job.getStartTime()) + "<br>\n");
       }
     }
+    out.print("<b>Job Cleanup:</b>");
+    printCleanupTaskSummary(out, jobId, job.getCleanupTasks());
+    out.print("<br>\n");
     if (flakyTaskTrackers > 0) {
       out.print("<b>Black-listed TaskTrackers:</b> " + 
           "<a href=\"jobblacklistedtrackers.jsp?jobid=" + jobId + "\">" +

@@ -61,10 +61,5 @@ interface MRConstants {
    */
   public static final String RAW_MAP_OUTPUT_LENGTH = "Raw-Map-Output-Length";
 
-  /**
-   * Temporary directory name 
-   */
-  public static final String TEMP_DIR_NAME = "_temporary";
-  
   public static final String WORKDIR = "work";
 }

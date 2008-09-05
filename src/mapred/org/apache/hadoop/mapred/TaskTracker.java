@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -191,6 +192,12 @@ public class TaskTracker
    */  
   private int probe_sample_size = 500;
     
+  /*
+   * A list of commitTaskActions for whom commit response has been received 
+   */
+  private List<TaskAttemptID> commitResponses = 
+            Collections.synchronizedList(new ArrayList<TaskAttemptID>());
+
   private ShuffleServerMetrics shuffleServerMetrics;
   /** This class contains the methods that should be used for metrics-reporting
    * the specific metrics for shuffle. The TaskTracker is actually a server for
@@ -407,8 +414,10 @@ public class TaskTracker
     // RPC initialization
     int max = maxCurrentMapTasks > maxCurrentReduceTasks ? 
                        maxCurrentMapTasks : maxCurrentReduceTasks;
+    //set the num handlers to max*2 since canCommit may wait for the duration
+    //of a heartbeat RPC
     this.taskReportServer =
-      RPC.getServer(this, bindAddress, tmpPort, max, false, this.fConf);
+      RPC.getServer(this, bindAddress, tmpPort, 2 * max, false, this.fConf);
     this.taskReportServer.start();
 
     // get the assigned address
@@ -957,6 +966,13 @@ public class TaskTracker
           for(TaskTrackerAction action: actions) {
             if (action instanceof LaunchTaskAction) {
               startNewTask((LaunchTaskAction) action);
+            } else if (action instanceof CommitTaskAction) {
+              CommitTaskAction commitAction = (CommitTaskAction)action;
+              if (!commitResponses.contains(commitAction.getTaskID())) {
+                LOG.info("Received commit task action for " + 
+                          commitAction.getTaskID());
+                commitResponses.add(commitAction.getTaskID());
+              }
             } else {
               tasksToCleanup.put(action);
             }
@@ -1072,7 +1088,8 @@ public class TaskTracker
       
     synchronized (this) {
       for (TaskStatus taskStatus : status.getTaskReports()) {
-        if (taskStatus.getRunState() != TaskStatus.State.RUNNING) {
+        if (taskStatus.getRunState() != TaskStatus.State.RUNNING &&
+            taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING) {
           if (taskStatus.getIsMap()) {
             mapTotal--;
           } else {
@@ -1188,7 +1205,8 @@ public class TaskTracker
   private synchronized void markUnresponsiveTasks() throws IOException {
     long now = System.currentTimeMillis();
     for (TaskInProgress tip: runningTasks.values()) {
-      if (tip.getRunState() == TaskStatus.State.RUNNING) {
+      if (tip.getRunState() == TaskStatus.State.RUNNING ||
+          tip.getRunState() == TaskStatus.State.COMMIT_PENDING) {
         // Check the per-job timeout interval for tasks;
         // an interval of '0' implies it is never timed-out
         long jobTaskTimeout = tip.getTaskTimeout();
@@ -1308,7 +1326,8 @@ public class TaskTracker
     TaskInProgress killMe = null;
     for (Iterator it = runningTasks.values().iterator(); it.hasNext();) {
       TaskInProgress tip = (TaskInProgress) it.next();
-      if ((tip.getRunState() == TaskStatus.State.RUNNING) &&
+      if ((tip.getRunState() == TaskStatus.State.RUNNING ||
+           tip.getRunState() == TaskStatus.State.COMMIT_PENDING) &&
           !tip.wasKilled) {
                 
         if (killMe == null) {
@@ -1517,7 +1536,6 @@ public class TaskTracker
     private TaskStatus taskStatus; 
     private long taskTimeout;
     private String debugCommand;
-    private boolean shouldPromoteOutput = false;
         
     /**
      */
@@ -1667,7 +1685,8 @@ public class TaskTracker
           "% " + taskStatus.getStateString());
       
       if (this.done || 
-          this.taskStatus.getRunState() != TaskStatus.State.RUNNING) {
+          (this.taskStatus.getRunState() != TaskStatus.State.RUNNING &&
+          this.taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING)) {
         //make sure we ignore progress messages after a task has 
         //invoked TaskUmbilicalProtocol.done() or if the task has been
         //KILLED/FAILED
@@ -1717,15 +1736,8 @@ public class TaskTracker
     /**
      * The task is reporting that it's done running
      */
-    public synchronized void reportDone(boolean shouldPromote) {
-      TaskStatus.State state = null;
-      this.shouldPromoteOutput = shouldPromote;
-      if (shouldPromote) {
-        state = TaskStatus.State.COMMIT_PENDING;
-      } else {
-        state = TaskStatus.State.SUCCEEDED;
-      }
-      this.taskStatus.setRunState(state);
+    public synchronized void reportDone() {
+      this.taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
       this.taskStatus.setProgress(1.0f);
       this.taskStatus.setFinishTime(System.currentTimeMillis());
       this.done = true;
@@ -1758,13 +1770,7 @@ public class TaskTracker
       //
       boolean needCleanup = false;
       synchronized (this) {
-        if (done) {
-          if (shouldPromoteOutput) {
-            taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
-          } else {
-            taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
-          }
-        } else {
+        if (!done) {
           if (!wasKilled) {
             failures += 1;
             taskStatus.setRunState(TaskStatus.State.FAILED);
@@ -1960,7 +1966,8 @@ public class TaskTracker
     public void jobHasFinished(boolean wasFailure) throws IOException {
       // Kill the task if it is still running
       synchronized(this){
-        if (getRunState() == TaskStatus.State.RUNNING) {
+        if (getRunState() == TaskStatus.State.RUNNING ||
+            getRunState() == TaskStatus.State.COMMIT_PENDING) {
           kill(wasFailure);
         }
       }
@@ -1974,7 +1981,8 @@ public class TaskTracker
      * @param wasFailure was it a failure (versus a kill request)?
      */
     public synchronized void kill(boolean wasFailure) throws IOException {
-      if (taskStatus.getRunState() == TaskStatus.State.RUNNING) {
+      if (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
+          taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING) {
         wasKilled = true;
         if (wasFailure) {
           failures += 1;
@@ -2136,13 +2144,33 @@ public class TaskTracker
   }
 
   /**
+   * Task is reporting that it is in commit_pending
+   * and it is waiting for the commit Response
+   */
+  public synchronized void commitPending(TaskAttemptID taskid,
+                                         TaskStatus taskStatus) 
+  throws IOException {
+    LOG.info("Task " + taskid + " is in COMMIT_PENDING");
+    statusUpdate(taskid, taskStatus);
+    reportTaskFinished(taskid, true);
+  }
+  
+  /**
+   * Child checking whether it can commit 
+   */
+  public synchronized boolean canCommit(TaskAttemptID taskid) {
+    return commitResponses.contains(taskid); //don't remove it now
+  }
+  
+  /**
    * The task is done.
    */
-  public synchronized void done(TaskAttemptID taskid, boolean shouldPromote) 
+  public synchronized void done(TaskAttemptID taskid) 
   throws IOException {
     TaskInProgress tip = tasks.get(taskid);
+    commitResponses.remove(taskid);
     if (tip != null) {
-      tip.reportDone(shouldPromote);
+      tip.reportDone();
     } else {
       LOG.warn("Unknown child task done: "+taskid+". Ignored.");
     }
@@ -2196,13 +2224,15 @@ public class TaskTracker
   /**
    * The task is no longer running.  It may not have completed successfully
    */
-  void reportTaskFinished(TaskAttemptID taskid) {
+  void reportTaskFinished(TaskAttemptID taskid, boolean commitPending) {
     TaskInProgress tip;
     synchronized (this) {
       tip = tasks.get(taskid);
     }
     if (tip != null) {
-      tip.taskFinished();
+      if (!commitPending) {
+        tip.taskFinished();
+      }
       synchronized(finishedCount) {
         finishedCount[0]++;
         finishedCount.notify();
@@ -2331,7 +2361,7 @@ public class TaskTracker
       TaskStatus status = tip.getStatus();
       status.setIncludeCounters(sendCounters);
       status.setOutputSize(tryToGetOutputSize(status.getTaskID(), fConf));
-      // send counters for finished or failed tasks.
+      // send counters for finished or failed tasks and commit pending tasks
       if (status.getRunState() != TaskStatus.State.RUNNING) {
         status.setIncludeCounters(true);
       }

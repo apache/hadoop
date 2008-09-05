@@ -35,17 +35,19 @@ public class TestTextOutputFormat extends TestCase {
       throw new RuntimeException("init failure", e);
     }
   }
+  // A random task attempt id for testing.
+  private static String attempt = "attempt_200707121733_0001_m_000000_0";
 
   private static Path workDir = 
     new Path(new Path(
                       new Path(System.getProperty("test.build.data", "."), 
                                "data"), 
-                      MRConstants.TEMP_DIR_NAME), 
-             "TestTextOutputFormat");
+                      FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
 
   @SuppressWarnings("unchecked")
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
+    job.set("mapred.task.id", attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
@@ -98,6 +100,7 @@ public class TestTextOutputFormat extends TestCase {
     JobConf job = new JobConf();
     String separator = "\u0001";
     job.set("mapred.textoutputformat.separator", separator);
+    job.set("mapred.task.id", attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);

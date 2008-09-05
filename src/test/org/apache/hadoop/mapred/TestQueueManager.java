@@ -230,6 +230,13 @@ public class TestQueueManager extends TestCase {
         }
       }
       rjob.killJob();
+      while(rjob.cleanupProgress() == 0.0f) {
+        try {
+          Thread.sleep(10);  
+        } catch (InterruptedException ie) {
+          break;
+        }
+      }
       if (shouldSucceed) {
         assertTrue(rjob.isComplete());
       } else {

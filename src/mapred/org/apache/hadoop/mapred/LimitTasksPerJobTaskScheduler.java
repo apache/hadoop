@@ -62,17 +62,32 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
   public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
       throws IOException {
 
+    final int numTaskTrackers =
+        taskTrackerManager.getClusterStatus().getTaskTrackers();
+    Collection<JobInProgress> jobQueue =
+      jobQueueJobInProgressListener.getJobQueue();
+    Task task;
+
     /* Stats about the current taskTracker */
     final int mapTasksNumber = taskTracker.countMapTasks();
     final int reduceTasksNumber = taskTracker.countReduceTasks();
     final int maximumMapTasksNumber = taskTracker.getMaxMapTasks();
     final int maximumReduceTasksNumber = taskTracker.getMaxReduceTasks();
+
+    // check if cleanup task can be launched
+    synchronized (jobQueue) {
+      task = getCleanupTask(mapTasksNumber, reduceTasksNumber,
+               maximumMapTasksNumber, maximumReduceTasksNumber,
+               taskTracker, numTaskTrackers, jobQueue);
+      if (task != null) {
+        return Collections.singletonList(task);
+      }
+    }
+
     /*
      * Statistics about the whole cluster. Most are approximate because of
      * concurrency
      */
-    final int numTaskTrackers =
-      taskTrackerManager.getClusterStatus().getTaskTrackers();
     final int[] maxMapAndReduceLoad = getMaxMapAndReduceLoad(
         maximumMapTasksNumber, maximumReduceTasksNumber);
     final int maximumMapLoad = maxMapAndReduceLoad[0];
@@ -112,11 +127,8 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
         continue;
       }
       /* For each job, start its tasks */
-      Collection<JobInProgress> jobQueue =
-        jobQueueJobInProgressListener.getJobQueue();
       synchronized (jobQueue) {
         for (JobInProgress job : jobQueue) {
-          Task task;
           /* Ignore non running jobs */
           if (job.getStatus().getRunState() != JobStatus.RUNNING) {
             continue;

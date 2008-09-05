@@ -41,8 +41,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 9: change the counter representation for HADOOP-1915
    * Version 10: added getSystemDir for HADOOP-3135
    * Version 11: changed JobProfile to include the queue name for HADOOP-3698
+   * Version 12: Added getCleanupTaskReports and 
+   *             cleanupProgress to JobStatus as part of HADOOP-3150
    */
-  public static final long versionID = 11L;
+  public static final long versionID = 12L;
 
   /**
    * Allocate a name for the job.
@@ -103,6 +105,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Grab a bunch of info on the reduce tasks that make up the job
    */
   public TaskReport[] getReduceTaskReports(JobID jobid) throws IOException;
+
+  /**
+   * Grab a bunch of info on the cleanup tasks that make up the job
+   */
+  public TaskReport[] getCleanupTaskReports(JobID jobid) throws IOException;
 
   /**
    * A MapReduce system always operates on a single filesystem.  This 

@@ -152,6 +152,12 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    *  
    * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
    * 
+   * <p><i>Note:</i> The following is valid only if the {@link OutputCommitter}
+   *  is {@link FileOutputCommitter}. If <code>OutputCommitter</code> is not 
+   *  a <code>FileOutputCommitter</code>, the task's temporary output
+   *  directory is same as {@link #getOutputPath(JobConf)} i.e.
+   *  <tt>${mapred.output.dir}$</tt></p>
+   *  
    * <p>Some applications need to create/write-to side-files, which differ from
    * the actual job-outputs.
    * 
@@ -207,29 +213,23 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    */
   protected static Path getTaskOutputPath(JobConf conf, String name) 
   throws IOException {
-    // ${mapred.job.dir}
+    // ${mapred.out.dir}
     Path outputPath = getOutputPath(conf);
     if (outputPath == null) {
       throw new IOException("Undefined job output-path");
     }
 
-    // ${mapred.out.dir}/_temporary
-    Path jobTmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
-    FileSystem fs = jobTmpDir.getFileSystem(conf);
-    if (!fs.exists(jobTmpDir)) {
-      throw new IOException("The temporary job-output directory " + 
-          jobTmpDir.toString() + " doesn't exist!"); 
-    }
-
-    // ${mapred.out.dir}/_temporary/_${taskid}
-    Path taskTmpDir = getWorkOutputPath(conf);
-    if (!fs.mkdirs(taskTmpDir)) {
-      throw new IOException("Mkdirs failed to create " 
-          + taskTmpDir.toString());
+    OutputCommitter committer = conf.getOutputCommitter();
+    Path workPath = outputPath;
+    TaskAttemptContext context = new TaskAttemptContext(conf,
+                TaskAttemptID.forName(conf.get("mapred.task.id")));
+    if (committer instanceof FileOutputCommitter) {
+      workPath = ((FileOutputCommitter)committer).getWorkPath(context,
+                                                              outputPath);
     }
     
     // ${mapred.out.dir}/_temporary/_${taskid}/${name}
-    return new Path(taskTmpDir, name);
+    return new Path(workPath, name);
   } 
 
   /**

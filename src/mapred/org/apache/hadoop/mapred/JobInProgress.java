@@ -61,6 +61,7 @@ class JobInProgress {
 
   TaskInProgress maps[] = new TaskInProgress[0];
   TaskInProgress reduces[] = new TaskInProgress[0];
+  TaskInProgress cleanup[] = new TaskInProgress[0];
   int numMapTasks = 0;
   int numReduceTasks = 0;
   
@@ -76,6 +77,8 @@ class JobInProgress {
   int reduceFailuresPercent = 0;
   int failedMapTIPs = 0;
   int failedReduceTIPs = 0;
+  private volatile boolean launchedCleanup = false;
+  private volatile boolean jobKilled = false;
 
   JobPriority priority = JobPriority.NORMAL;
   JobTracker jobtracker = null;
@@ -361,6 +364,7 @@ class JobInProgress {
       this.finishTime = System.currentTimeMillis();
       status.setMapProgress(1.0f);
       status.setReduceProgress(1.0f);
+      status.setCleanupProgress(1.0f);
       status.setRunState(JobStatus.SUCCEEDED);
       tasksInited.set(true);
       JobHistory.JobInfo.logStarted(profile.getJobID(), 
@@ -385,15 +389,18 @@ class JobInProgress {
       nonRunningReduces.add(reduces[i]);
     }
 
-    // create job specific temporary directory in output path
-    Path outputPath = FileOutputFormat.getOutputPath(conf);
-    if (outputPath != null) {
-      Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
-      FileSystem fileSys = tmpDir.getFileSystem(conf);
-      if (!fileSys.mkdirs(tmpDir)) {
-        LOG.error("Mkdirs failed to create " + tmpDir.toString());
-      }
-    }
+    // create cleanup two cleanup tips, one map and one reduce.
+    cleanup = new TaskInProgress[2];
+    // cleanup map tip. This map is doesn't use split. 
+    // Just assign splits[0]
+    cleanup[0] = new TaskInProgress(jobId, jobFile, splits[0], 
+            jobtracker, conf, this, numMapTasks);
+    cleanup[0].setCleanupTask();
+
+    // cleanup reduce tip.
+    cleanup[1] = new TaskInProgress(jobId, jobFile, numMapTasks,
+                       numReduceTasks, jobtracker, conf, this);
+    cleanup[1].setCleanupTask();
 
     this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, JobStatus.RUNNING);
     tasksInited.set(true);
@@ -463,6 +470,14 @@ class JobInProgress {
   }
     
   /**
+   * Get the list of cleanup tasks
+   * @return the array of cleanup tasks for the job
+   */
+  TaskInProgress[] getCleanupTasks() {
+    return cleanup;
+  }
+  
+  /**
    * Get the list of reduce tasks
    * @return the raw array of reduce tasks for this job
    */
@@ -481,7 +496,7 @@ class JobInProgress {
   /**
    * Return a vector of completed TaskInProgress objects
    */
-  public Vector<TaskInProgress> reportTasksInProgress(boolean shouldBeMap,
+  public synchronized Vector<TaskInProgress> reportTasksInProgress(boolean shouldBeMap,
                                                       boolean shouldBeComplete) {
     
     Vector<TaskInProgress> results = new Vector<TaskInProgress>();
@@ -498,6 +513,21 @@ class JobInProgress {
     }
     return results;
   }
+  
+  /**
+   * Return a vector of cleanup TaskInProgress objects
+   */
+  public synchronized Vector<TaskInProgress> reportCleanupTIPs(
+                                               boolean shouldBeComplete) {
+    
+    Vector<TaskInProgress> results = new Vector<TaskInProgress>();
+    for (int i = 0; i < cleanup.length; i++) {
+      if (cleanup[i].isComplete() == shouldBeComplete) {
+        results.add(cleanup[i]);
+      }
+    }
+    return results;
+  }
 
   ////////////////////////////////////////////////////
   // Status update methods
@@ -509,6 +539,9 @@ class JobInProgress {
     double oldProgress = tip.getProgress();   // save old progress
     boolean wasRunning = tip.isRunning();
     boolean wasComplete = tip.isComplete();
+    boolean wasPending = tip.isOnlyCommitPending();
+    TaskAttemptID taskid = status.getTaskID();
+    
     // If the TIP is already completed and the task reports as SUCCEEDED then 
     // mark the task as KILLED.
     // In case of task with no promotion the task tracker will mark the task 
@@ -522,13 +555,6 @@ class JobInProgress {
       TaskTrackerStatus ttStatus = 
         this.jobtracker.getTaskTracker(status.getTaskTracker());
       String httpTaskLogLocation = null; 
-
-      if (state == TaskStatus.State.COMMIT_PENDING) {
-        JobWithTaskContext j = new JobWithTaskContext(this, tip, 
-                                                      status.getTaskID(),
-                                                      metrics);
-        jobtracker.addToCommitQueue(j);
-      }
 
       if (null != ttStatus){
         String host;
@@ -545,7 +571,7 @@ class JobInProgress {
       if (state == TaskStatus.State.SUCCEEDED) {
         taskEvent = new TaskCompletionEvent(
                                             taskCompletionEventTracker, 
-                                            status.getTaskID(),
+                                            taskid,
                                             tip.idWithinJob(),
                                             status.getIsMap(),
                                             TaskCompletionEvent.Status.SUCCEEDED,
@@ -554,27 +580,29 @@ class JobInProgress {
         taskEvent.setTaskRunTime((int)(status.getFinishTime() 
                                        - status.getStartTime()));
         tip.setSuccessEventNumber(taskCompletionEventTracker); 
-      }
-      //For a failed task update the JT datastructures.For the task state where
-      //only the COMMIT is pending, delegate everything to the JT thread. For
-      //failed tasks we want the JT to schedule a reexecution ASAP (and not go
-      //via the queue for the datastructures' updates).
-      else if (state == TaskStatus.State.COMMIT_PENDING) {
+      } else if (state == TaskStatus.State.COMMIT_PENDING) {
+        // If it is the first attempt reporting COMMIT_PENDING
+        // ask the task to commit.
+        if (!wasComplete && !wasPending) {
+          tip.doCommit(taskid);
+        }
         return;
-      } else if (state == TaskStatus.State.FAILED ||
-                 state == TaskStatus.State.KILLED) {
+      }
+      //For a failed task update the JT datastructures. 
+      else if (state == TaskStatus.State.FAILED ||
+               state == TaskStatus.State.KILLED) {
         // Get the event number for the (possibly) previously successful
         // task. If there exists one, then set that status to OBSOLETE 
         int eventNumber;
         if ((eventNumber = tip.getSuccessEventNumber()) != -1) {
           TaskCompletionEvent t = 
             this.taskCompletionEvents.get(eventNumber);
-          if (t.getTaskAttemptId().equals(status.getTaskID()))
+          if (t.getTaskAttemptId().equals(taskid))
             t.setTaskStatus(TaskCompletionEvent.Status.OBSOLETE);
         }
         
         // Tell the job to fail the relevant task
-        failedTask(tip, status.getTaskID(), status, ttStatus,
+        failedTask(tip, taskid, status, ttStatus,
                    wasRunning, wasComplete, metrics);
 
         // Did the task failure lead to tip failure?
@@ -586,7 +614,7 @@ class JobInProgress {
           taskCompletionStatus = TaskCompletionEvent.Status.TIPFAILED;
         }
         taskEvent = new TaskCompletionEvent(taskCompletionEventTracker, 
-                                            status.getTaskID(),
+                                            taskid,
                                             tip.idWithinJob(),
                                             status.getIsMap(),
                                             taskCompletionStatus, 
@@ -616,21 +644,24 @@ class JobInProgress {
       LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
                  oldProgress + " to " + tip.getProgress());
     }
-    double progressDelta = tip.getProgress() - oldProgress;
-    if (tip.isMapTask()) {
-      if (maps.length == 0) {
-        this.status.setMapProgress(1.0f);
+    
+    if (!tip.isCleanupTask()) {
+      double progressDelta = tip.getProgress() - oldProgress;
+      if (tip.isMapTask()) {
+        if (maps.length == 0) {
+          this.status.setMapProgress(1.0f);
+        } else {
+          this.status.setMapProgress((float) (this.status.mapProgress() +
+                                              progressDelta / maps.length));
+        }
       } else {
-        this.status.setMapProgress((float) (this.status.mapProgress() +
-                                            progressDelta / maps.length));
-      }
-    } else {
-      if (reduces.length == 0) {
-        this.status.setReduceProgress(1.0f);
-      } else {
-        this.status.setReduceProgress
-          ((float) (this.status.reduceProgress() +
-                    (progressDelta / reduces.length)));
+        if (reduces.length == 0) {
+          this.status.setReduceProgress(1.0f);
+        } else {
+          this.status.setReduceProgress
+            ((float) (this.status.reduceProgress() +
+                      (progressDelta / reduces.length)));
+        }
       }
     }
   }
@@ -662,7 +693,7 @@ class JobInProgress {
    *  Returns the total job counters, by adding together the job, 
    *  the map and the reduce counters.
    */
-  public Counters getCounters() {
+  public synchronized Counters getCounters() {
     Counters result = new Counters();
     result.incrAllCounters(getJobCounters());
     incrementTaskCounters(result, maps);
@@ -719,6 +750,77 @@ class JobInProgress {
     return result;
   }    
 
+  /**
+   * Return a CleanupTask, if appropriate, to run on the given tasktracker
+   * 
+   */
+  public synchronized Task obtainCleanupTask(TaskTrackerStatus tts, 
+                                             int clusterSize, 
+                                             int numUniqueHosts,
+                                             boolean isMapSlot
+                                            ) throws IOException {
+    if (!canLaunchCleanupTask()) {
+      return null;
+    }
+    
+    String taskTracker = tts.getTrackerName();
+    // Update the last-known clusterSize
+    this.clusterSize = clusterSize;
+    if (!shouldRunOnTaskTracker(taskTracker)) {
+      return null;
+    }
+    
+    List<TaskInProgress> cleanupTaskList = new ArrayList<TaskInProgress>();
+    if (isMapSlot) {
+      cleanupTaskList.add(cleanup[0]);
+    } else {
+      cleanupTaskList.add(cleanup[1]);
+    }
+    TaskInProgress tip = findTaskFromList(cleanupTaskList,
+                           tts, numUniqueHosts, false);
+    if (tip == null) {
+      return null;
+    }
+    
+    // Now launch the cleanupTask
+    Task result = tip.getTaskToRun(tts.getTrackerName());
+    if (result != null) {
+      launchedCleanup = true;
+      if (tip.isFirstAttempt(result.getTaskID())) {
+        JobHistory.Task.logStarted(tip.getTIPId(), 
+          tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(),
+          System.currentTimeMillis(), tip.getSplitNodes());
+      }
+    }
+    return result;
+  }
+  
+  /**
+   * Check whether cleanup task can be launched for the job.
+   * 
+   * Cleanup task can be launched if it is not already launched
+   * or job is Killed
+   * or all maps and reduces are complete
+   * @return true/false
+   */
+  private synchronized boolean canLaunchCleanupTask() {
+    if (launchedCleanup) {
+      return false;
+    }
+    // check if job has failed or killed
+    if (jobKilled) {
+      return true;
+    }
+    // Check if all maps and reducers have finished.
+    boolean launchCleanupTask = 
+        ((finishedMapTasks + failedMapTIPs) == (numMapTasks));
+    if (launchCleanupTask) {
+      launchCleanupTask = 
+        ((finishedReduceTasks + failedReduceTIPs) == numReduceTasks);
+    }
+    return launchCleanupTask;
+  }
+  
   /**
    * Return a ReduceTask, if appropriate, to run on the given tasktracker.
    * We don't have cache-sensitivity for reduce tasks, as they
@@ -1408,27 +1510,45 @@ class JobInProgress {
     }
         
     // Update the running/finished map/reduce counts
-    if (tip.isMapTask()){
-      runningMapTasks -= 1;
-      finishedMapTasks += 1;
-      metrics.completeMap(taskid);
-      // remove the completed map from the resp running caches
-      retireMap(tip);
-    } else{
-      runningReduceTasks -= 1;
-      finishedReduceTasks += 1;
-      metrics.completeReduce(taskid);
-      // remove the completed reduces from the running reducers set
-      retireReduce(tip);
-    }
-        
-    //
-    // Figure out whether the Job is done
-    //
-    isJobComplete(tip, metrics);
-    
-    if (this.status.getRunState() != JobStatus.RUNNING) {
-      // The job has been killed/failed, 
+    if (!tip.isCleanupTask()) {
+      if (tip.isMapTask()) {
+        runningMapTasks -= 1;
+        finishedMapTasks += 1;
+        metrics.completeMap(taskid);
+        // remove the completed map from the resp running caches
+        retireMap(tip);
+        if ((finishedMapTasks + failedMapTIPs) == (numMapTasks)) {
+          this.status.setMapProgress(1.0f);
+        }
+      } else {
+        runningReduceTasks -= 1;
+        finishedReduceTasks += 1;
+        metrics.completeReduce(taskid);
+        // remove the completed reduces from the running reducers set
+        retireReduce(tip);
+        if ((finishedReduceTasks + failedReduceTIPs) == (numReduceTasks)) {
+          this.status.setReduceProgress(1.0f);
+        }
+      }
+    } else {
+      // cleanup task has finished. Kill the extra cleanup tip
+      if (tip.isMapTask()) {
+        // kill the reduce tip
+        cleanup[1].kill();
+      } else {
+        cleanup[0].kill();
+      }
+      //
+      // The Job is done
+      //
+      // if the job is killed, then mark the job failed.
+      if (jobKilled) {
+        killJob();
+      }
+      else {
+        jobComplete(metrics);
+      }
+      // The job has been killed/failed/successful
       // JobTracker should cleanup this task
       jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
       return false;
@@ -1438,31 +1558,18 @@ class JobInProgress {
   }
 
   /**
-   * Check if the job is done since all it's component tasks are either
+   * The job is done since all it's component tasks are either
    * successful or have failed.
    * 
-   * @param tip the current tip which completed either succesfully or failed
    * @param metrics job-tracker metrics
-   * @return
    */
-  private boolean isJobComplete(TaskInProgress tip, JobTrackerInstrumentation metrics) {
-    // Job is complete if total-tips = finished-tips + failed-tips
-    boolean allDone = 
-      ((finishedMapTasks + failedMapTIPs) == numMapTasks);
-    if (allDone) {
-      if (tip.isMapTask()) {
-        this.status.setMapProgress(1.0f);              
-      }
-      allDone = 
-        ((finishedReduceTasks + failedReduceTIPs) == numReduceTasks);
-    }
-
+  private void jobComplete(JobTrackerInstrumentation metrics) {
     //
-    // If all tasks are complete, then the job is done!
+    // All tasks are complete, then the job is done!
     //
-    if (this.status.getRunState() == JobStatus.RUNNING && allDone) {
+    if (this.status.getRunState() == JobStatus.RUNNING ) {
       this.status.setRunState(JobStatus.SUCCEEDED);
-      this.status.setReduceProgress(1.0f);
+      this.status.setCleanupProgress(1.0f);
       this.finishTime = System.currentTimeMillis();
       garbageCollect();
       LOG.info("Job " + this.status.getJobID() + 
@@ -1472,11 +1579,21 @@ class JobInProgress {
                                      this.finishedReduceTasks, failedMapTasks, 
                                      failedReduceTasks, getCounters());
       metrics.completeJob();
-      return true;
     }
-    
-    return false;
   }
+  
+  private synchronized void killJob() {
+    if ((status.getRunState() == JobStatus.RUNNING) ||
+        (status.getRunState() == JobStatus.PREP)) {
+      this.status = new JobStatus(status.getJobID(),
+                          1.0f, 1.0f, 1.0f, JobStatus.FAILED);
+      this.finishTime = System.currentTimeMillis();
+      JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
+              this.finishedMapTasks, this.finishedReduceTasks);
+      garbageCollect();
+    }
+  }
+
   /**
    * Kill the job and all its component tasks.
    */
@@ -1484,8 +1601,6 @@ class JobInProgress {
     if ((status.getRunState() == JobStatus.RUNNING) ||
          (status.getRunState() == JobStatus.PREP)) {
       LOG.info("Killing job '" + this.status.getJobID() + "'");
-      this.status = new JobStatus(status.getJobID(), 1.0f, 1.0f, JobStatus.FAILED);
-      this.finishTime = System.currentTimeMillis();
       this.runningMapTasks = 0;
       this.runningReduceTasks = 0;
       //
@@ -1497,9 +1612,7 @@ class JobInProgress {
       for (int i = 0; i < reduces.length; i++) {
         reduces[i].kill();
       }
-      JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
-                                   this.finishedMapTasks, this.finishedReduceTasks);
-      garbageCollect();
+      jobKilled = true;
     }
   }
 
@@ -1531,7 +1644,9 @@ class JobInProgress {
         
     //update running  count on task failure.
     if (wasRunning && !isRunning) {
-      if (tip.isMapTask()){
+      if (tip.isCleanupTask()) {
+        launchedCleanup = false;
+      } else if (tip.isMapTask()) {
         runningMapTasks -= 1;
         // remove from the running queue and put it in the non-running cache
         // if the tip is not complete i.e if the tip still needs to be run
@@ -1592,10 +1707,12 @@ class JobInProgress {
         
     // After this, try to assign tasks with the one after this, so that
     // the failed task goes to the end of the list.
-    if (tip.isMapTask()) {
-      failedMapTasks++; 
-    } else {
-      failedReduceTasks++; 
+    if (!tip.isCleanupTask()) {
+      if (tip.isMapTask()) {
+        failedMapTasks++;
+      } else {
+        failedReduceTasks++; 
+      }
     }
             
     //
@@ -1620,8 +1737,8 @@ class JobInProgress {
       // Allow upto 'mapFailuresPercent' of map tasks to fail or
       // 'reduceFailuresPercent' of reduce tasks to fail
       //
-      boolean killJob = 
-        tip.isMapTask() ? 
+      boolean killJob = tip.isCleanupTask() ? true :
+                        tip.isMapTask() ? 
             ((++failedMapTIPs*100) > (mapFailuresPercent*numMapTasks)) :
             ((++failedReduceTIPs*100) > (reduceFailuresPercent*numReduceTasks));
       
@@ -1638,18 +1755,28 @@ class JobInProgress {
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks
                                     );
-        kill();
-      } else {
-        isJobComplete(tip, metrics);
+        if (tip.isCleanupTask()) {
+          // kill the other tip
+          if (tip.isMapTask()) {
+            cleanup[1].kill();
+          } else {
+            cleanup[0].kill();
+          }
+          killJob();
+        } else {
+          kill();
+        }
       }
       
       //
       // Update the counters
       //
-      if (tip.isMapTask()) {
-        jobCounters.incrCounter(Counter.NUM_FAILED_MAPS, 1);
-      } else {
-        jobCounters.incrCounter(Counter.NUM_FAILED_REDUCES, 1);
+      if (!tip.isCleanupTask()) {
+        if (tip.isMapTask()) {
+          jobCounters.incrCounter(Counter.NUM_FAILED_MAPS, 1);
+        } else {
+          jobCounters.incrCounter(Counter.NUM_FAILED_REDUCES, 1);
+        }
       }
     }
   }
@@ -1711,16 +1838,6 @@ class JobInProgress {
       Path tempDir = new Path(jobtracker.getSystemDir(), jobId.toString());
       FileSystem fs = tempDir.getFileSystem(conf);
       fs.delete(tempDir, true); 
-
-      // delete the temporary directory in output directory
-      Path outputPath = FileOutputFormat.getOutputPath(conf);
-      if (outputPath != null) {
-        Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
-        FileSystem fileSys = tmpDir.getFileSystem(conf);
-        if (fileSys.exists(tmpDir)) {
-          fileSys.delete(tmpDir, true);
-        }
-      }
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
     }
@@ -1736,8 +1853,13 @@ class JobInProgress {
   /**
    * Return the TaskInProgress that matches the tipid.
    */
-  public TaskInProgress getTaskInProgress(TaskID tipid){
+  public synchronized TaskInProgress getTaskInProgress(TaskID tipid) {
     if (tipid.isMap()) {
+      for (int i = 0; i < cleanup.length; i++) {
+        if (tipid.equals(cleanup[i].getTIPId())){
+          return cleanup[i];
+        }
+      }
       for (int i = 0; i < maps.length; i++) {
         if (tipid.equals(maps[i].getTIPId())){
           return maps[i];
@@ -1758,7 +1880,7 @@ class JobInProgress {
    * @param mapId the id of the map
    * @return the task status of the completed task
    */
-  public TaskStatus findFinishedMap(int mapId) {
+  public synchronized TaskStatus findFinishedMap(int mapId) {
     TaskInProgress tip = maps[mapId];
     if (tip.isComplete()) {
       TaskStatus[] statuses = tip.getTaskStatuses();

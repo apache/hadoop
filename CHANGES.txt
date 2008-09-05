@@ -47,6 +47,10 @@ Trunk (unreleased changes)
     so increment the InterTrackerProtocol version. (Hemanth Yamijala via 
     omalley)
 
+    HADOOP-3150. Moves task promotion to tasks. Defines a new interface for
+    committing output files. Moves job setup to jobclient, and moves jobcleanup
+    to a separate task. (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

@@ -38,12 +38,14 @@ public class TestMultipleTextOutputFormat extends TestCase {
     }
   }
 
+  // A random task attempt id for testing.
+  private static String attempt = "attempt_200707121733_0001_m_000000_0";
+
   private static Path workDir = 
     new Path(new Path(
                       new Path(System.getProperty("test.build.data", "."), 
                                "data"), 
-                      MRConstants.TEMP_DIR_NAME), 
-             "TestMultipleTextOutputFormat");
+                      FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
 
   private static void writeData(RecordWriter<Text, Text> rw) throws IOException {
     for (int i = 10; i < 40; i++) {
@@ -84,6 +86,7 @@ public class TestMultipleTextOutputFormat extends TestCase {
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
+    job.set("mapred.task.id", attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);

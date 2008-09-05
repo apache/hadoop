@@ -79,6 +79,7 @@ class TaskInProgress {
   private boolean killed = false;
   private volatile SortedRanges failedRanges = new SortedRanges();
   private volatile boolean skipping = false;
+  private boolean cleanup = false; 
    
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
@@ -106,6 +107,9 @@ class TaskInProgress {
   
   //list of tasks to kill, <taskid> -> <shouldFail> 
   private TreeMap<TaskAttemptID, Boolean> tasksToKill = new TreeMap<TaskAttemptID, Boolean>();
+  
+  //task to commit, <taskattemptid>  
+  private TaskAttemptID taskToCommit;
   
   private Counters counters = new Counters();
   
@@ -164,6 +168,14 @@ class TaskInProgress {
     return partition;
   }    
 
+  public boolean isCleanupTask() {
+   return cleanup;
+  }
+  
+  public void setCleanupTask() {
+    cleanup = true;
+  }
+  
   public boolean isOnlyCommitPending() {
     for (TaskStatus t : taskStatuses.values()) {
       if (t.getRunState() == TaskStatus.State.COMMIT_PENDING) {
@@ -171,6 +183,14 @@ class TaskInProgress {
       }
     }
     return false;
+  }
+ 
+  public boolean isCommitPending(TaskAttemptID taskId) {
+    TaskStatus t = taskStatuses.get(taskId);
+    if (t == null) {
+      return false;
+    }
+    return t.getRunState() ==  TaskStatus.State.COMMIT_PENDING;
   }
   
   /**
@@ -324,10 +344,29 @@ class TaskInProgress {
                !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
       close = true; 
+    } else if (isCommitPending(taskid) && !shouldCommit(taskid) &&
+               !tasksReportedClosed.contains(taskid)) {
+      tasksReportedClosed.add(taskid);
+      close = true; 
     } else {
       close = tasksToKill.keySet().contains(taskid);
     }   
     return close;
+  }
+
+  /**
+   * Commit this task attempt for the tip. 
+   * @param taskid
+   */
+  public void doCommit(TaskAttemptID taskid) {
+    taskToCommit = taskid;
+  }
+
+  /**
+   * Returns whether the task attempt should be committed or not 
+   */
+  public boolean shouldCommit(TaskAttemptID taskid) {
+    return taskToCommit.equals(taskid);
   }
 
   /**
@@ -401,7 +440,8 @@ class TaskInProgress {
       // status update for the same taskid! This is a safety check, 
       // and is addressed better at the TaskTracker to ensure this.
       // @see {@link TaskTracker.transmitHeartbeat()}
-      if ((newState != TaskStatus.State.RUNNING) && 
+      if ((newState != TaskStatus.State.RUNNING && 
+           newState != TaskStatus.State.COMMIT_PENDING ) && 
           (oldState == newState)) {
         LOG.warn("Recieved duplicate status update of '" + newState + 
                  "' for '" + taskid + "' of TIP '" + getTIPId() + "'");
@@ -732,6 +772,9 @@ class TaskInProgress {
           rawSplit.getClassName(), rawSplit.getBytes());
     } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps);
+    }
+    if (cleanup) {
+      t.setCleanupTask();
     }
     t.setConf(conf);
     t.setFailedRanges(failedRanges);

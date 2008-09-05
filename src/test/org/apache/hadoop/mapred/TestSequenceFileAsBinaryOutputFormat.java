@@ -23,7 +23,6 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 import junit.framework.TestCase;
@@ -34,6 +33,8 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
       LogFactory.getLog(TestSequenceFileAsBinaryOutputFormat.class.getName());
 
   private static final int RECORDS = 10000;
+  // A random task attempt id for testing.
+  private static final String attempt = "attempt_200707121733_0001_m_000000_0";
 
   public void testBinary() throws IOException {
     JobConf job = new JobConf();
@@ -41,8 +42,7 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
     
     Path dir = 
       new Path(new Path(new Path(System.getProperty("test.build.data",".")), 
-                        MRConstants.TEMP_DIR_NAME),
-               "mapred");
+                        FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
     long seed = r.nextLong();
@@ -53,6 +53,7 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
       fail("Failed to create output directory");
     }
 
+    job.set("mapred.task.id", attempt);
     FileOutputFormat.setOutputPath(job, dir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, dir);
 

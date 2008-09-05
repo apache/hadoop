@@ -715,7 +715,8 @@
       <p>We will then discuss other core interfaces including 
       <code>JobConf</code>, <code>JobClient</code>, <code>Partitioner</code>, 
       <code>OutputCollector</code>, <code>Reporter</code>, 
-      <code>InputFormat</code>, <code>OutputFormat</code> and others.</p>
+      <code>InputFormat</code>, <code>OutputFormat</code>,
+      <code>OutputCommitter</code> and others.</p>
       
       <p>Finally, we will wrap up by discussing some useful features of the
       framework such as the <code>DistributedCache</code>, 
@@ -1013,8 +1014,9 @@
  
         <p><code>JobConf</code> is typically used to specify the 
         <code>Mapper</code>, combiner (if any), <code>Partitioner</code>, 
-        <code>Reducer</code>, <code>InputFormat</code> and 
-        <code>OutputFormat</code> implementations. <code>JobConf</code> also 
+        <code>Reducer</code>, <code>InputFormat</code>, 
+        <code>OutputFormat</code> and <code>OutputCommitter</code> 
+        implementations. <code>JobConf</code> also 
         indicates the set of input files 
         (<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/setinputpaths">setInputPaths(JobConf, Path...)</a>
         /<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/addinputpath">addInputPath(JobConf, Path)</a>)
@@ -1428,6 +1430,45 @@
  
         <p><code>TextOutputFormat</code> is the default 
         <code>OutputFormat</code>.</p>
+
+        <section>
+        <title>OutputCommitter</title>
+        
+        <p><a href="ext:api/org/apache/hadoop/mapred/outputcommitter">
+        OutputCommitter</a> describes the commit of task output for a 
+        Map/Reduce job.</p>
+
+        <p>The Map/Reduce framework relies on the <code>OutputCommitter</code>
+        of the job to:</p>
+        <ol>
+          <li>
+            Setup the job during initialization. For example, create
+            the temporary output directory for the job during the
+            initialization of the job. The job client does the setup
+            for the job.
+          </li>
+          <li>
+            Cleanup the job after the job completion. For example, remove the
+            temporary output directory after the job completion. A separate 
+            task does the cleanupJob at the end of the job.
+          </li>
+          <li>
+            Setup the task temporary output.
+          </li> 
+          <li>
+            Check whether a task needs a commit. This is to avoid the commit
+            procedure if a task does not need commit.
+          </li>
+          <li>
+            Commit of the task output. 
+          </li> 
+          <li>
+            Discard the task commit.
+          </li>
+        </ol>
+        <p><code>FileOutputCommitter</code> is the default 
+        <code>OutputCommitter</code>.</p>
+        </section>
  
         <section>
           <title>Task Side-Effect Files</title>
@@ -1443,7 +1484,9 @@
           (using the attemptid, say <code>attempt_200709221812_0001_m_000000_0</code>), 
           not just per task.</p> 
  
-          <p>To avoid these issues the Map/Reduce framework maintains a special 
+          <p>To avoid these issues the Map/Reduce framework, when the 
+          <code>OutputCommitter</code> is <code>FileOutputCommitter</code>, 
+          maintains a special 
           <code>${mapred.output.dir}/_temporary/_${taskid}</code> sub-directory
           accessible via <code>${mapred.work.output.dir}</code>
           for each task-attempt on the <code>FileSystem</code> where the output

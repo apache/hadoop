@@ -190,6 +190,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
               <outputcollector href="OutputCollector.html">
                 <collect href="#collect(K, V)" />
               </outputcollector>
+              <outputcommitter href="OutputCommitter.html" />
               <outputformat href="OutputFormat.html" />
               <outputlogfilter href="OutputLogFilter.html" />
               <sequencefileoutputformat href="SequenceFileOutputFormat.html">

@@ -436,7 +436,7 @@ abstract class TaskRunner extends Thread {
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
-      tracker.reportTaskFinished(t.getTaskID());
+      tracker.reportTaskFinished(t.getTaskID(), false);
     }
   }
 

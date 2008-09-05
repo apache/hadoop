@@ -49,6 +49,7 @@ public class JobStatus implements Writable {
   private JobID jobid;
   private float mapProgress;
   private float reduceProgress;
+  private float cleanupProgress;
   private int runState;
   private long startTime;
   private String user;
@@ -63,14 +64,29 @@ public class JobStatus implements Writable {
    * @param jobid The jobid of the job
    * @param mapProgress The progress made on the maps
    * @param reduceProgress The progress made on the reduces
+   * @param cleanupProgress The progress made on cleanup
    * @param runState The current state of the job
    */
-  public JobStatus(JobID jobid, float mapProgress, float reduceProgress, int runState) {
+  public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
+                   float cleanupProgress, int runState) {
     this.jobid = jobid;
     this.mapProgress = mapProgress;
     this.reduceProgress = reduceProgress;
+    this.cleanupProgress = cleanupProgress;
     this.runState = runState;
     this.user = "nobody";
+  }
+
+  /**
+   * Create a job status object for a given jobid.
+   * @param jobid The jobid of the job
+   * @param mapProgress The progress made on the maps
+   * @param reduceProgress The progress made on the reduces
+   * @param runState The current state of the job
+   */
+  public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
+                   int runState) {
+    this(jobid, mapProgress, reduceProgress, 0.0f, runState);
   }
 
   /**
@@ -96,7 +112,20 @@ public class JobStatus implements Writable {
   synchronized void setMapProgress(float p) { 
     this.mapProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
   }
+
+  /**
+   * @return Percentage of progress in cleanup 
+   */
+  public synchronized float cleanupProgress() { return cleanupProgress; }
     
+  /**
+   * Sets the cleanup progress of this job
+   * @param p The value of cleanup progress to set to
+   */
+  synchronized void setCleanupProgress(float p) { 
+    this.cleanupProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
+  }
+
   /**
    * @return Percentage of progress in reduce 
    */
@@ -150,6 +179,7 @@ public class JobStatus implements Writable {
     jobid.write(out);
     out.writeFloat(mapProgress);
     out.writeFloat(reduceProgress);
+    out.writeFloat(cleanupProgress);
     out.writeInt(runState);
     out.writeLong(startTime);
     Text.writeString(out, user);
@@ -159,6 +189,7 @@ public class JobStatus implements Writable {
     this.jobid = JobID.read(in);
     this.mapProgress = in.readFloat();
     this.reduceProgress = in.readFloat();
+    this.cleanupProgress = in.readFloat();
     this.runState = in.readInt();
     this.startTime = in.readLong();
     this.user = Text.readString(in);

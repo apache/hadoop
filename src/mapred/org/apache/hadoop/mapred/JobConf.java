@@ -360,6 +360,28 @@ public class JobConf extends Configuration {
                                                               OutputFormat.class),
                                                      this);
   }
+
+  /**
+   * Get the {@link OutputCommitter} implementation for the map-reduce job,
+   * defaults to {@link FileOutputCommitter} if not specified explicitly.
+   * 
+   * @return the {@link OutputCommitter} implementation for the map-reduce job.
+   */
+  public OutputCommitter getOutputCommitter() {
+    return (OutputCommitter)ReflectionUtils.newInstance(
+      getClass("mapred.output.committer.class", FileOutputCommitter.class,
+               OutputCommitter.class), this);
+  }
+
+  /**
+   * Set the {@link OutputCommitter} implementation for the map-reduce job.
+   * 
+   * @param theClass the {@link OutputCommitter} implementation for the map-reduce 
+   *                 job.
+   */
+  public void setOutputCommitter(Class<? extends OutputCommitter> theClass) {
+    setClass("mapred.output.committer.class", theClass, OutputCommitter.class);
+  }
   
   /**
    * Set the {@link OutputFormat} implementation for the map-reduce job.

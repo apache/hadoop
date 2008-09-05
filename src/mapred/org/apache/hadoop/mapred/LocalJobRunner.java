@@ -111,18 +111,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
           numReduceTasks = 1;
           job.setNumReduceTasks(1);
         }
-        // create job specific temp directory in output path
-        Path outputPath = FileOutputFormat.getOutputPath(job);
-        FileSystem outputFs = null;
-        Path tmpDir = null;
-        if (outputPath != null) {
-          tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
-          outputFs = tmpDir.getFileSystem(job);
-          if (!outputFs.mkdirs(tmpDir)) {
-            LOG.error("Mkdirs failed to create " + tmpDir.toString());
-          }
-        }
-
+        JobContext jContext = new JobContext(conf);
+        OutputCommitter outputCommitter = job.getOutputCommitter();
+        
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
           TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i), 0);  
@@ -136,25 +127,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                     splits[i].getClass().getName(),
                                     split);
           JobConf localConf = new JobConf(job);
-          if (outputFs != null) {
-            if (outputFs.exists(tmpDir)) {
-              Path taskTmpDir = new Path(tmpDir, "_" + mapId);
-              if (!outputFs.mkdirs(taskTmpDir)) {
-                throw new IOException("Mkdirs failed to create " 
-                                       + taskTmpDir.toString());
-              }
-            } else {
-              throw new IOException("The directory " + tmpDir.toString()
-                                   + " doesnt exist " );
-            }
-          }
           map.setJobFile(localFile.toString());
           map.localizeConfiguration(localConf);
           map.setConf(localConf);
           map_tasks += 1;
           myMetrics.launchMap(mapId);
           map.run(localConf, this);
-          map.saveTaskOutput();
           myMetrics.completeMap(mapId);
           map_tasks -= 1;
           updateCounters(map);
@@ -180,25 +158,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
               ReduceTask reduce = new ReduceTask(file.toString(), 
                                                  reduceId, 0, mapIds.size());
               JobConf localConf = new JobConf(job);
-              if (outputFs != null) {
-                if (outputFs.exists(tmpDir)) {
-                  Path taskTmpDir = new Path(tmpDir, "_" + reduceId);
-                  if (!outputFs.mkdirs(taskTmpDir)) {
-                    throw new IOException("Mkdirs failed to create " 
-                                           + taskTmpDir.toString());
-                  }
-                } else {
-                  throw new IOException("The directory " + tmpDir.toString()
-                                       + " doesnt exist ");
-                }
-              }
               reduce.setJobFile(localFile.toString());
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
               myMetrics.launchReduce(reduce.getTaskID());
               reduce.run(localConf, this);
-              reduce.saveTaskOutput();
               myMetrics.completeReduce(reduce.getTaskID());
               reduce_tasks -= 1;
               updateCounters(reduce);
@@ -213,15 +178,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
           }
         }
         // delete the temporary directory in output directory
-        try {
-          if (outputFs != null) {
-            if (outputFs.exists(tmpDir)) {
-              outputFs.delete(tmpDir, true);
-            }
-          }
-        } catch (IOException e) {
-          LOG.error("Exception in deleting " + tmpDir.toString());
-        }
+        outputCommitter.cleanupJob(jContext);
+        status.setCleanupProgress(1.0f);
 
         this.status.setRunState(JobStatus.SUCCEEDED);
 
@@ -265,6 +223,16 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
 
     /**
+     * Task is reporting that it is in commit_pending
+     * and it is waiting for the commit Response
+     */
+    public void commitPending(TaskAttemptID taskid,
+                              TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
+      statusUpdate(taskid, taskStatus);
+    }
+
+    /**
      * Updates counters corresponding to completed tasks.
      * @param task A map or reduce task which has just been 
      * successfully completed
@@ -285,8 +253,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public boolean ping(TaskAttemptID taskid) throws IOException {
       return true;
     }
-
-    public void done(TaskAttemptID taskId, boolean shouldPromote) throws IOException {
+    
+    public boolean canCommit(TaskAttemptID taskid) 
+    throws IOException {
+      return true;
+    }
+    
+    public void done(TaskAttemptID taskId) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
         status.setMapProgress(1.0f);
@@ -350,6 +323,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new TaskReport[0];
   }
   public TaskReport[] getReduceTaskReports(JobID id) {
+    return new TaskReport[0];
+  }
+  public TaskReport[] getCleanupTaskReports(JobID id) {
     return new TaskReport[0];
   }
 
