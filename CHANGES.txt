@@ -17,6 +17,10 @@ Release 0.18.1 - Unreleased
     HADOOP-4046. Made WritableComparable's constructor protected instead of 
     private to re-enable class derivation. (cdouglas via omalley)
 
+    HADOOP-3940. Fix in-memory merge condition to wait when there are no map
+    outputs or when the final map outputs are being fetched without contention.
+    (cdouglas)
+
 Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
