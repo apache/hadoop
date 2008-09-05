@@ -244,6 +244,11 @@ public class FilterFileSystem extends FileSystem {
     return fs.getFileStatus(f);
   }
 
+  /** {@inheritDoc} */
+  public FileChecksum getFileChecksum(Path f) throws IOException {
+    return fs.getFileChecksum(f);
+  }
+
   @Override
   public Configuration getConf() {
     return fs.getConf();

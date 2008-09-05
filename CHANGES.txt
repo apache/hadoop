@@ -132,6 +132,9 @@ Trunk (unreleased changes)
 
     HADOOP-1869. Support access times for HDFS files. (dhruba)
 
+    HADOOP-3941. Extend FileSystem API to return file-checksums.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

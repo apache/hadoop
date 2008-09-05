@@ -58,6 +58,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
+  private static final Random RAN = new Random();
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE = conf.getInt("io.file.buffer.size", 4096);
@@ -617,5 +618,39 @@ public class TestFileSystem extends TestCase {
     assertTrue(map.containsKey(uppercaseCachekey));
     assertTrue(map.containsKey(lowercaseCachekey2));    
 
+  }
+  
+  public void testFileChecksum() throws IOException {
+    final long seed = RAN.nextLong();
+    System.out.println("seed=" + seed);
+    RAN.setSeed(seed);
+
+    final Configuration conf = new Configuration();
+    final String dir = ROOT + "/fileChecksum";
+    final LocalFileSystem fs = FileSystem.getLocal(conf);
+    final Path foo = new Path(dir, "foo");
+
+    //generate random data
+    final byte[] data = new byte[RAN.nextInt(3*1024) + 10*1024];
+    RAN.nextBytes(data);
+
+    //write data to a file
+    final FSDataOutputStream out = fs.create(foo);
+    out.write(data);
+    out.close();
+    
+    //compute checksum
+    final FileChecksum cs1 = fs.getFileChecksum(foo);
+    System.out.println("cs1=" + cs1);
+    
+    //rename the file and verify again
+    final Path bar = new Path(dir, "bar");
+    fs.rename(foo, bar);
+
+    { //verify checksum
+      final FileChecksum cs2 = fs.getFileChecksum(bar);
+      assertEquals(cs1.hashCode(), cs2.hashCode());
+      assertEquals(cs1, cs2);
+    }
   }
 }

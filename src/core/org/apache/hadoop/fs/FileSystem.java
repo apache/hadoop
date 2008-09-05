@@ -1286,6 +1286,16 @@ public abstract class FileSystem extends Configured implements Closeable {
   public abstract FileStatus getFileStatus(Path f) throws IOException;
 
   /**
+   * Get the checksum of a file.
+   *
+   * @param f The file path
+   * @return The checksum 
+   */
+  public FileChecksum getFileChecksum(Path f) throws IOException {
+    return new LengthFileChecksum(getFileStatus(f).getLen());
+  }
+
+  /**
    * Return a list of file status objects that corresponds to the list of paths
    * excluding those non-existent paths.
    * 
