@@ -84,7 +84,7 @@ creations/deletions), or "all".</td>
   facilitate opening large map files using less memory.</td>
 </tr>
 <tr>
-<td><a name="io.compression.codecs">io.compression.codecs</a></td><td>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.LzopCodec,org.apache.hadoop.io.compress.BZip2Codec</td><td>A list of the compression codec classes that can be used 
+<td><a name="io.compression.codecs">io.compression.codecs</a></td><td>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.BZip2Codec</td><td>A list of the compression codec classes that can be used 
                for compression/decompression.</td>
 </tr>
 <tr>
@@ -138,9 +138,17 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="fs.checkpoint.dir">fs.checkpoint.dir</a></td><td>${hadoop.tmp.dir}/dfs/namesecondary</td><td>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary images and edits to merge.
+      name node should store the temporary images to merge.
       If this is a comma-delimited list of directories then the image is
       replicated in all of the directories for redundancy.
+  </td>
+</tr>
+<tr>
+<td><a name="fs.checkpoint.edits.dir">fs.checkpoint.edits.dir</a></td><td>${fs.checkpoint.dir}</td><td>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as fs.checkpoint.dir
   </td>
 </tr>
 <tr>
@@ -225,9 +233,16 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="dfs.name.dir">dfs.name.dir</a></td><td>${hadoop.tmp.dir}/dfs/name</td><td>Determines where on the local filesystem the DFS name node
-      should store the name table.  If this is a comma-delimited list
+      should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
       directories, for redundancy. </td>
+</tr>
+<tr>
+<td><a name="dfs.name.edits.dir">dfs.name.edits.dir</a></td><td>${dfs.name.dir}</td><td>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </td>
 </tr>
 <tr>
 <td><a name="dfs.web.ugi">dfs.web.ugi</a></td><td>webuser,webgroup</td><td>The user account used by the web interface.
@@ -686,6 +701,39 @@ creations/deletions), or "all".</td>
     </td>
 </tr>
 <tr>
+<td><a name="mapred.skip.mode.enabled">mapred.skip.mode.enabled</a></td><td>false</td><td> Indicates whether skipping of bad records is enabled or not.
+    If enabled the framework will try to find bad records and skip  
+    them on further attempts.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.attempts.to.start.skipping">mapred.skip.attempts.to.start.skipping</a></td><td>2</td><td> The number of Task attempts AFTER which skip mode 
+    will be kicked off. When skip mode is kicked off, the 
+    tasks reports the range of records which it will process 
+    next, to the TaskTracker. So that on failures, TT knows which 
+    ones are possibly the bad records. On further executions, 
+    those are skipped.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.map.auto.incr.proc.count">mapred.skip.map.auto.incr.proc.count</a></td><td>true</td><td> The flag which if set to true, 
+    Counters.Application.MAP_PROCESSED_RECORDS is incremented 
+    by MapRunner after invoking the map function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.reduce.auto.incr.proc.count">mapred.skip.reduce.auto.incr.proc.count</a></td><td>true</td><td> The flag which if set to true, 
+    Counters.Application.REDUCE_PROCESSED_RECORDS is incremented 
+    by framework after invoking the reduce function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </td>
+</tr>
+<tr>
 <td><a name="ipc.client.idlethreshold">ipc.client.idlethreshold</a></td><td>4000</td><td>Defines the threshold number of connections after which
                connections will be inspected for idleness.
   </td>
@@ -805,6 +853,52 @@ creations/deletions), or "all".</td>
     mapred.child.ulimit is specified, then the value of mapred.task.maxmemory
     must be set to a higher value than these. If not, the task might be 
     killed even though these limits are not reached.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.queue.names">mapred.queue.names</a></td><td>default</td><td> Comma separated list of queues configured for this jobtracker.
+    Jobs are added to queues and schedulers can configure different 
+    scheduling properties for the various queues. To configure a property 
+    for a queue, the name of the queue must match the name specified in this 
+    value. Queue properties that are common to all schedulers are configured 
+    here with the naming convention, mapred.queue.$QUEUE-NAME.$PROPERTY-NAME,
+    for e.g. mapred.queue.default.submit-job-acl.
+    The number of queues configured in this parameter could depend on the
+    type of scheduler being used, as specified in 
+    mapred.jobtracker.taskScheduler. For example, the JobQueueTaskScheduler
+    supports only a single queue, which is the default configured here.
+    Before adding more queues, ensure that the scheduler you've configured
+    supports multiple queues.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.acls.enabled">mapred.acls.enabled</a></td><td>false</td><td> Specifies whether ACLs are enabled, and should be checked
+    for various operations.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.queue.default.acl-submit-job">mapred.queue.default.acl-submit-job</a></td><td>*</td><td> Comma separated list of user and group names that are allowed
+    to submit jobs to the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to 
+    submit jobs. 
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.queue.default.acl-administer-jobs">mapred.queue.default.acl-administer-jobs</a></td><td>*</td><td> Comma separated list of user and group names that are allowed
+    to delete jobs or modify job's priority for jobs not owned by the current
+    user in the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to do 
+    this operation.
+  </td>
+</tr>
+<tr>
+<td><a name="queue.name">queue.name</a></td><td>default</td><td> Queue to which a job is submitted. This must match one of the
+    queues defined in mapred.queue.names for the system. Also, the ACL setup
+    for the queue must allow the current user to submit a job to the queue.
+    Before specifying a queue, ensure that the system is configured with 
+    the queue, and access is allowed for submitting jobs to the queue.
   </td>
 </tr>
 </table>

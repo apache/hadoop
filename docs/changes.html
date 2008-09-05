@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(12)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -85,10 +85,16 @@ zero for true and non-zero for false.<br />(Ben Slusky via cdouglas)</li>
 which is no longer needed.<br />(tomwhite via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3549">HADOOP-3549</a>. Give more meaningful errno's in libhdfs. In particular,
 EACCES is returned for permission problems.<br />(Ben Slusky via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4036">HADOOP-4036</a>. ResourceStatus was added to TaskTrackerStatus by <a href="http://issues.apache.org/jira/browse/HADOOP-3759">HADOOP-3759</a>,
+so increment the InterTrackerProtocol version.<br />(Hemanth Yamijala via
+omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3150">HADOOP-3150</a>. Moves task promotion to tasks. Defines a new interface for
+committing output files. Moves job setup to jobclient, and moves jobcleanup
+to a separate task.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(14)
+</a>&nbsp;&nbsp;&nbsp;(23)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3341">HADOOP-3341</a>. Allow streaming jobs to specify the field separator for map
 and reduce input and output. The new configuration values are:
@@ -127,11 +133,26 @@ analysis of anomalies.<br />(Ioannis Koltsidas via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3854">HADOOP-3854</a>. Add support for pluggable servlet filters in the HttpServers.
 (Tsz Wo (Nicholas) Sze via omalley)
 </li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3759">HADOOP-3759</a>. Provides ability to run memory intensive jobs without
+affecting other running tasks on the nodes.<br />(Hemanth Yamijala via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3746">HADOOP-3746</a>. Add a fair share scheduler.<br />(Matei Zaharia via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3754">HADOOP-3754</a>. Add a thrift interface to access HDFS.<br />(dhruba via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3828">HADOOP-3828</a>. Provides a way to write skipped records to DFS.<br />(Sharad Agarwal via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3948">HADOOP-3948</a>. Separate name-node edits and fsimage directories.<br />(Lohit Vijayarenu via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3939">HADOOP-3939</a>. Add an option to DistCp to delete files at the destination
+not present at the source. (Tsz Wo (Nicholas) Sze via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3601">HADOOP-3601</a>. Add a new contrib module for Hive, which is a sql-like
+query processing tool that uses map/reduce.<br />(Ashish Thusoo via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3866">HADOOP-3866</a>. Added sort and multi-job updates in the JobTracker web ui.<br />(Craig Weisenfluh via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3698">HADOOP-3698</a>. Add access control to control who is allowed to submit or
+modify jobs in the JobTracker.<br />(Hemanth Yamijala via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(40)
+</a>&nbsp;&nbsp;&nbsp;(48)
     <ol id="trunk_(unreleased_changes)_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3908">HADOOP-3908</a>. Fuse-dfs: better error message if llibhdfs.so doesn't exist.<br />(Pete Wyckoff through zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3732">HADOOP-3732</a>. Delay intialization of datanode block verification till
 the verification thread is started.<br />(rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1627">HADOOP-1627</a>. Various small improvements to 'dfsadmin -report' output.<br />(rangadi)</li>
@@ -205,10 +226,22 @@ traffic for HDFS reads/writes and MR shuffling.<br />(cdouglas)</li>
 generative javadoc for developers.<br />(Sanjay Radia via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3944">HADOOP-3944</a>. Improve documentation for public TupleWritable class in
 join package.<br />(Chris Douglas via enis)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2330">HADOOP-2330</a>. Preallocate HDFS transaction log to improve performance.<br />(dhruba and hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3965">HADOOP-3965</a>. Convert DataBlockScanner into a package private class.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3488">HADOOP-3488</a>. Prevent hadoop-daemon from rsync'ing log files<br />(Stefan
+Groshupf and Craig Macdonald via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3342">HADOOP-3342</a>. Change the kill task actions to require http post instead of
+get to prevent accidental crawls from triggering it.<br />(enis via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3937">HADOOP-3937</a>. Limit the job name in the job history filename to 50
+characters.<br />(Matei Zaharia via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3943">HADOOP-3943</a>. Remove unnecessary synchronization in
+NetworkTopology.pseudoSortByDistance.<br />(hairong via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3498">HADOOP-3498</a>. File globbing alternation should be able to span path
+components.<br />(tomwhite)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
-</a>&nbsp;&nbsp;&nbsp;(6)
+</a>&nbsp;&nbsp;&nbsp;(7)
     <ol id="trunk_(unreleased_changes)_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3556">HADOOP-3556</a>. Removed lock contention in MD5Hash by changing the
 singleton MessageDigester by an instance per Thread using
@@ -223,10 +256,12 @@ initialized.<br />(acmurthy via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3816">HADOOP-3816</a>. Faster directory listing in KFS.<br />(Sriram Rao via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2130">HADOOP-2130</a>. Pipes submit job should have both blocking and non-blocking
 versions.<br />(acmurthy via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3769">HADOOP-3769</a>. Make the SampleMapper and SampleReducer from
+GenericMRLoadGenerator public, so they can be used in other contexts.<br />(Lingyun Yang via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(44)
+</a>&nbsp;&nbsp;&nbsp;(55)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -314,6 +349,30 @@ authority.<br />(Bill de hOra via cdouglas)</li>
 cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3705">HADOOP-3705</a>. Fix mapred.join parser to accept InputFormats named with
 underscore and static, inner classes.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4023">HADOOP-4023</a>. Fix javadoc warnings introduced when the HDFS javadoc was
+made private.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4030">HADOOP-4030</a>. Remove lzop from the default list of codecs.<br />(Arun Murthy via
+cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3961">HADOOP-3961</a>. Fix task disk space requirement estimates for virtual
+input jobs. Delays limiting task placement until after 10% of the maps
+have finished.<br />(Ari Rabkin via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2168">HADOOP-2168</a>. Fix problem with C++ record reader's progress not being
+reported to framework.<br />(acmurthy via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3966">HADOOP-3966</a>. Copy findbugs generated output files to PATCH_DIR while
+running test-patch.<br />(Ramya R via lohit)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4037">HADOOP-4037</a>. Fix the eclipse plugin for versions of kfs and log4j.<br />(nigel
+via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3950">HADOOP-3950</a>. Cause the Mini MR cluster to wait for task trackers to
+register before continuing.<br />(enis via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3910">HADOOP-3910</a>. Remove unused ClusterTestDFSNamespaceLogging and
+ClusterTestDFS. (Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3954">HADOOP-3954</a>. Disable record skipping by default.<br />(Sharad Agarwal via
+cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4050">HADOOP-4050</a>. Fix TestFailScheduler to use absolute paths for the work
+directory.<br />(Matei Zaharia via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4069">HADOOP-4069</a>. Keep temporary test files from TestKosmosFileSystem under
+test.build.data instead of /tmp.<br />(lohit via omalley)</li>
     </ol>
   </li>
 </ul>
@@ -321,10 +380,17 @@ underscore and static, inner classes.<br />(cdouglas)</li>
 </a></h2>
 <ul id="release_0.18.1_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="release_0.18.1_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3995">HADOOP-3995</a>. In case of quota failure on HDFS, rename does not restore
+source filename.<br />(rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3821">HADOOP-3821</a>. Prevent SequenceFile and IFile from duplicating codecs in
 CodecPool when closed more than once.<br />(Arun Murthy via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4040">HADOOP-4040</a>. Remove coded default of the IPC idle connection timeout
+from the TaskTracker, which was causing HDFS client connections to not be
+collected.<br />(ddas via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4046">HADOOP-4046</a>. Made WritableComparable's constructor protected instead of
+private to re-enable class derivation.<br />(cdouglas via omalley)</li>
     </ol>
   </li>
 </ul>
@@ -471,7 +537,7 @@ in hadoop user guide.<br />(shv)</li>
     <ol id="release_0.18.0_-_2008-08-19_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3677">HADOOP-3677</a>. Simplify generation stamp upgrade by making is a
 local upgrade on datandodes. Deleted distributed upgrade.<br />(rangadi)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vijayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3160">HADOOP-3160</a>. Remove deprecated exists() from ClientProtocol and
 FSNamesystem<br />(Lohit Vjayarenu via rangadi)</li>
