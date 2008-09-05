@@ -616,7 +616,7 @@ public class NetworkTopology {
    * location at postion 0.
    * It leaves the rest nodes untouched.
    */
-  public synchronized void pseudoSortByDistance( Node reader, Node[] nodes ) {
+  public void pseudoSortByDistance( Node reader, Node[] nodes ) {
     int tempIndex = 0;
     if (reader != null ) {
       int localRackNode = -1;
