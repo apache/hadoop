@@ -19,12 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.RegionException;
 
 /**
  * Thrown when no region server can be found for a region
  */
-public class NoServerForRegionException extends IOException {
+public class NoServerForRegionException extends RegionException {
   private static final long serialVersionUID = 1L << 11 - 1L;
 
   /** default constructor */

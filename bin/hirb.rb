@@ -70,7 +70,7 @@ end
 # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
 @configuration = org.apache.hadoop.hbase.HBaseConfiguration.new()
 @configuration.set("hbase.master", master) if master
-@configuration.setInt("hbase.client.retries.number", 3)
+@configuration.setInt("hbase.client.retries.number", 5)
 @configuration.setInt("ipc.client.connect.max.retries", 3)
 
 # Do lazy create of admin because if we are pointed at bad master, it will hang

@@ -19,10 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.RegionException;
 
 /** Thrown when a table can not be located */
-public class RegionOfflineException extends IOException {
+public class RegionOfflineException extends RegionException {
   private static final long serialVersionUID = 466008402L;
 /** default constructor */
   public RegionOfflineException() {

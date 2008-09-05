@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -145,7 +145,7 @@ public class HBaseAdmin {
         connection.locateRegion(desc.getName(), HConstants.EMPTY_START_ROW);
         break;
         
-      } catch (TableNotFoundException e) {
+      } catch (RegionException e) {
         if (tries == numRetries - 1) {
           // Ran out of tries
           throw e;
@@ -368,9 +368,10 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
-    if (isTableEnabled(tableName))
-      throw new IOException("unable to disable table " +
-        Bytes.toString(tableName));
+    if (isTableEnabled(tableName)) {
+      throw new RegionException("Retries exhausted, it took too long to wait"+
+        " for the table " + Bytes.toString(tableName) + " to be disabled.");
+    }
     LOG.info("Disabled " + Bytes.toString(tableName));
   }
   
