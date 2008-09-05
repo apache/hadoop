@@ -159,20 +159,22 @@ public class HftpFileSystem extends FileSystem {
         throw new SAXException("Unrecognized entry: " + qname);
       }
       long modif;
+      long atime = 0;
       try {
         modif = df.parse(attrs.getValue("modified")).getTime();
+        atime = df.parse(attrs.getValue("accesstime")).getTime();
       } catch (ParseException e) { throw new SAXException(e); }
       FileStatus fs = "file".equals(qname)
         ? new FileStatus(
               Long.valueOf(attrs.getValue("size")).longValue(), false,
               Short.valueOf(attrs.getValue("replication")).shortValue(),
               Long.valueOf(attrs.getValue("blocksize")).longValue(),
-              modif, FsPermission.valueOf(attrs.getValue("permission")),
+              modif, atime, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
               new Path(getUri().toString(), attrs.getValue("path"))
                 .makeQualified(HftpFileSystem.this))
         : new FileStatus(0L, true, 0, 0L,
-              modif, FsPermission.valueOf(attrs.getValue("permission")),
+              modif, atime, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
               new Path(getUri().toString(), attrs.getValue("path"))
                 .makeQualified(HftpFileSystem.this));

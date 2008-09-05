@@ -35,22 +35,23 @@ public class FileStatus implements Writable, Comparable {
   private short block_replication;
   private long blocksize;
   private long modification_time;
+  private long access_time;
   private FsPermission permission;
   private String owner;
   private String group;
   
-  public FileStatus() { this(0, false, 0, 0, 0, null, null, null, null); }
+  public FileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
   
   //We should deprecate this soon?
   public FileStatus(long length, boolean isdir, int block_replication,
                     long blocksize, long modification_time, Path path) {
 
     this(length, isdir, block_replication, blocksize, modification_time,
-         null, null, null, path);
+         0, null, null, null, path);
   }
   
   public FileStatus(long length, boolean isdir, int block_replication,
-                    long blocksize, long modification_time,
+                    long blocksize, long modification_time, long access_time,
                     FsPermission permission, String owner, String group, 
                     Path path) {
     this.length = length;
@@ -58,6 +59,7 @@ public class FileStatus implements Writable, Comparable {
     this.block_replication = (short)block_replication;
     this.blocksize = blocksize;
     this.modification_time = modification_time;
+    this.access_time = access_time;
     this.permission = (permission == null) ? 
                       FsPermission.getDefault() : permission;
     this.owner = (owner == null) ? "" : owner;
@@ -102,6 +104,14 @@ public class FileStatus implements Writable, Comparable {
    */
   public long getModificationTime() {
     return modification_time;
+  }
+
+  /**
+   * Get the access time of the file.
+   * @return the access time of file in milliseconds since January 1, 1970 UTC.
+   */
+  public long getAccessTime() {
+    return access_time;
   }
 
   /**
@@ -166,7 +176,7 @@ public class FileStatus implements Writable, Comparable {
   protected void setGroup(String group) {
     this.group = (group == null) ? "" :  group;
   }
-  
+
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
@@ -177,6 +187,7 @@ public class FileStatus implements Writable, Comparable {
     out.writeShort(block_replication);
     out.writeLong(blocksize);
     out.writeLong(modification_time);
+    out.writeLong(access_time);
     permission.write(out);
     Text.writeString(out, owner);
     Text.writeString(out, group);
@@ -190,6 +201,7 @@ public class FileStatus implements Writable, Comparable {
     this.block_replication = in.readShort();
     blocksize = in.readLong();
     modification_time = in.readLong();
+    access_time = in.readLong();
     permission.readFields(in);
     owner = Text.readString(in);
     group = Text.readString(in);

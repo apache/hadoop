@@ -64,6 +64,7 @@ public class FSEditLog {
   private static final byte OP_SET_GENSTAMP = 10;    // store genstamp
   private static final byte OP_SET_QUOTA = 11; // set a directory's quota
   private static final byte OP_CLEAR_QUOTA = 12; // clear a directory's quota
+  private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -486,7 +487,7 @@ public class FSEditLog {
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
         numOpRename = 0, numOpSetRepl = 0, numOpMkDir = 0,
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpOther = 0;
+        numOpTimes = 0, numOpOther = 0;
     long startTime = FSNamesystem.now();
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(edits));
@@ -516,6 +517,7 @@ public class FSEditLog {
       while (true) {
         long timestamp = 0;
         long mtime = 0;
+        long atime = 0;
         long blockSize = 0;
         byte opcode = -1;
         try {
@@ -536,7 +538,8 @@ public class FSEditLog {
           // get name and replication
           int length = in.readInt();
           if (-7 == logVersion && length != 3||
-              logVersion < -7 && length != 4) {
+              -17 < logVersion && logVersion < -7 && length != 4 ||
+              logVersion <= -17 && length != 5) {
               throw new IOException("Incorrect data format."  +
                                     " logVersion is " + logVersion +
                                     " but writables.length is " +
@@ -545,6 +548,9 @@ public class FSEditLog {
           path = FSImage.readString(in);
           short replication = adjustReplication(readShort(in));
           mtime = readLong(in);
+          if (logVersion <= -17) {
+            atime = readLong(in);
+          }
           if (logVersion < -7) {
             blockSize = readLong(in);
           }
@@ -608,7 +614,7 @@ public class FSEditLog {
           INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
                                                     path, permissions,
                                                     blocks, replication, 
-                                                    mtime, blockSize);
+                                                    mtime, atime, blockSize);
           if (opcode == OP_ADD) {
             numOpAdd++;
             //
@@ -681,12 +687,20 @@ public class FSEditLog {
           numOpMkDir++;
           PermissionStatus permissions = fsNamesys.getUpgradePermission();
           int length = in.readInt();
-          if (length != 2) {
+          if (-17 < logVersion && length != 2 ||
+              logVersion <= -17 && length != 3) {
             throw new IOException("Incorrect data format. " 
                                   + "Mkdir operation.");
           }
           path = FSImage.readString(in);
           timestamp = readLong(in);
+
+          // The disk format stores atimes for directories as well.
+          // However, currently this is not being updated/used because of
+          // performance reasons.
+          if (logVersion <= -17) {
+            atime = readLong(in);
+          }
 
           if (logVersion <= -11) {
             permissions = PermissionStatus.read(in);
@@ -749,6 +763,19 @@ public class FSEditLog {
           fsDir.unprotectedClearQuota(FSImage.readString(in));
           break;
         }
+        case OP_TIMES: {
+          numOpTimes++;
+          int length = in.readInt();
+          if (length != 3) {
+            throw new IOException("Incorrect data format. " 
+                                  + "times operation.");
+          }
+          path = FSImage.readString(in);
+          mtime = readLong(in);
+          atime = readLong(in);
+          fsDir.unprotectedSetTimes(path, mtime, atime, true);
+          break;
+        }
         default: {
           throw new IOException("Never seen opcode " + opcode);
         }
@@ -768,6 +795,7 @@ public class FSEditLog {
           + " numOpSetPerm = " + numOpSetPerm 
           + " numOpSetOwner = " + numOpSetOwner
           + " numOpSetGenStamp = " + numOpSetGenStamp 
+          + " numOpTimes = " + numOpTimes
           + " numOpOther = " + numOpOther);
     }
 
@@ -942,6 +970,7 @@ public class FSEditLog {
       new UTF8(path), 
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getModificationTime()),
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
@@ -959,6 +988,7 @@ public class FSEditLog {
       new UTF8(path),
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getAccessTime()),
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_CLOSE,
             new ArrayWritable(UTF8.class, nameReplicationPair),
@@ -972,7 +1002,8 @@ public class FSEditLog {
   public void logMkDir(String path, INode newNode) {
     UTF8 info[] = new UTF8[] {
       new UTF8(path),
-      FSEditLog.toLogLong(newNode.getModificationTime())
+      FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getAccessTime())
     };
     logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info),
         newNode.getPermissionStatus());
@@ -1043,6 +1074,17 @@ public class FSEditLog {
    */
   void logGenerationStamp(long genstamp) {
     logEdit(OP_SET_GENSTAMP, new LongWritable(genstamp));
+  }
+
+  /** 
+   * Add access time record to edit log
+   */
+  void logTimes(String src, long mtime, long atime) {
+    UTF8 info[] = new UTF8[] { 
+      new UTF8(src),
+      FSEditLog.toLogLong(mtime),
+      FSEditLog.toLogLong(atime)};
+    logEdit(OP_TIMES, new ArrayWritable(UTF8.class, info));
   }
   
   static private UTF8 toLogReplication(short replication) {

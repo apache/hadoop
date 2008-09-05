@@ -42,7 +42,7 @@ public class INodeFileUnderConstruction extends INodeFile {
                              String clientMachine,
                              DatanodeDescriptor clientNode) 
                              throws IOException {
-    super(permissions.applyUMask(UMASK), 0, replication, modTime,
+    super(permissions.applyUMask(UMASK), 0, replication, modTime, modTime,
         preferredBlockSize);
     this.clientName = new StringBytesWritable(clientName);
     this.clientMachine = new StringBytesWritable(clientMachine);
@@ -59,7 +59,7 @@ public class INodeFileUnderConstruction extends INodeFile {
                              String clientMachine,
                              DatanodeDescriptor clientNode)
                              throws IOException {
-    super(perm, blocks, blockReplication, modificationTime, 
+    super(perm, blocks, blockReplication, modificationTime, modificationTime,
           preferredBlockSize);
     setLocalName(name);
     this.clientName = new StringBytesWritable(clientName);
@@ -98,11 +98,13 @@ public class INodeFileUnderConstruction extends INodeFile {
 
   //
   // converts a INodeFileUnderConstruction into a INodeFile
+  // use the modification time as the access time
   //
   INodeFile convertToInodeFile() {
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
                                   getReplication(),
+                                  getModificationTime(),
                                   getModificationTime(),
                                   getPreferredBlockSize());
     return obj;

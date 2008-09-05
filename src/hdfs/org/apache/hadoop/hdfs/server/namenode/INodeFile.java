@@ -35,9 +35,9 @@ public class INodeFile extends INode {
 
   INodeFile(PermissionStatus permissions,
             int nrBlocks, short replication, long modificationTime,
-            long preferredBlockSize) {
+            long atime, long preferredBlockSize) {
     this(permissions, new BlockInfo[nrBlocks], replication,
-        modificationTime, preferredBlockSize);
+        modificationTime, atime, preferredBlockSize);
   }
 
   protected INodeFile() {
@@ -48,8 +48,8 @@ public class INodeFile extends INode {
 
   protected INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
-                      long preferredBlockSize) {
-    super(permissions, modificationTime);
+                      long atime, long preferredBlockSize) {
+    super(permissions, modificationTime, atime);
     this.blockReplication = replication;
     this.preferredBlockSize = preferredBlockSize;
     blocks = blklist;

@@ -754,6 +754,21 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      QuotaExceededException.class);
     }
   }
+
+  /**
+   * set the modification and access time of a file
+   * @throws FileNotFoundException if the path is not a file
+   */
+  public void setTimes(String src, long mtime, long atime) throws IOException {
+    checkOpen();
+    try {
+      namenode.setTimes(src, mtime, atime);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
+
   /**
    * Pick the best node from which to stream the data.
    * Entries in <i>nodes</i> are already in the priority order

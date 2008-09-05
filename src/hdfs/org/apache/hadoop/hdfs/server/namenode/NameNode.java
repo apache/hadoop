@@ -593,6 +593,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.fsync(src, clientName);
   }
 
+  /** @inheritDoc */
+  public void setTimes(String src, long mtime, long atime) throws IOException {
+    namesystem.setTimes(src, mtime, atime);
+  }
+
   ////////////////////////////////////////////////////////////////
   // DatanodeProtocol
   ////////////////////////////////////////////////////////////////

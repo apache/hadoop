@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -43,6 +44,7 @@ public abstract class INode implements Comparable<byte[]> {
   protected byte[] name;
   protected INodeDirectory parent;
   protected long modificationTime;
+  protected int accessTime; // precise to the last hour
 
   //Only updated by updatePermissionStatus(...).
   //Other codes should not modify it.
@@ -76,17 +78,19 @@ public abstract class INode implements Comparable<byte[]> {
     name = null;
     parent = null;
     modificationTime = 0;
+    accessTime = 0;
   }
 
-  INode(PermissionStatus permissions, long mTime) {
+  INode(PermissionStatus permissions, long mTime, long atime) {
     this.name = null;
     this.parent = null;
     this.modificationTime = mTime;
+    setAccessTime(atime);
     setPermissionStatus(permissions);
   }
 
   protected INode(String name, PermissionStatus permissions) {
-    this(permissions, 0L);
+    this(permissions, 0L, 0L);
     setLocalName(name);
   }
   
@@ -99,6 +103,7 @@ public abstract class INode implements Comparable<byte[]> {
     this.parent = other.getParent();
     setPermissionStatus(other.getPermissionStatus());
     setModificationTime(other.getModificationTime());
+    setAccessTime(other.getAccessTime());
   }
 
   /**
@@ -237,7 +242,7 @@ public abstract class INode implements Comparable<byte[]> {
     return this.parent;
   }
 
-  /**
+  /** 
    * Get last modification time of inode.
    * @return access time
    */
@@ -252,6 +257,34 @@ public abstract class INode implements Comparable<byte[]> {
     assert isDirectory();
     if (this.modificationTime <= modtime) {
       this.modificationTime = modtime;
+    }
+  }
+
+  /**
+   * Always set the last modification time of inode.
+   */
+  void setModificationTimeForce(long modtime) {
+    assert !isDirectory();
+    this.modificationTime = modtime;
+  }
+
+  /**
+   * Get access time of inode.
+   * @return access time
+   */
+  public long getAccessTime() {
+    return this.accessTime * FSNamesystem.getFSNamesystem().getAccessTimePrecision();
+  }
+
+  /**
+   * Set last access time of inode.
+   */
+  void setAccessTime(long atime) {
+    long precision = FSNamesystem.getFSNamesystem().getAccessTimePrecision();
+    if (precision == 0) {
+      this.accessTime = 0;
+    } else {
+      this.accessTime = (int)(atime/precision);
     }
   }
 

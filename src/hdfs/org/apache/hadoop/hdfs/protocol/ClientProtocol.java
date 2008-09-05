@@ -39,9 +39,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 36 : Added append(...).
+   * 37 : Added setTimes
    */
-  public static final long versionID = 36L;
+  public static final long versionID = 37L;
   
   ///////////////////////////////////////
   // File contents
@@ -456,4 +456,16 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param client The string representation of the client
    */
   public void fsync(String src, String client) throws IOException;
+
+  /**
+   * Sets the modification and access time of the file to the specified time.
+   * @param src The string representation of the path
+   * @param mtime The number of milliseconds since Jan 1, 1970.
+   *              Setting mtime to -1 means that modification time should not be set
+   *              by this call.
+   * @param atime The number of milliseconds since Jan 1, 1970.
+   *              Setting atime to -1 means that access time should not be set
+   *              by this call.
+   */
+  public void setTimes(String src, long mtime, long atime) throws IOException;
 }

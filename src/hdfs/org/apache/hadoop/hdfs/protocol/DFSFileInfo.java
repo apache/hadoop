@@ -55,6 +55,7 @@ public class DFSFileInfo extends FileStatus {
           node.isDirectory() ? 0 : ((INodeFile)node).getReplication(), 
           node.isDirectory() ? 0 : ((INodeFile)node).getPreferredBlockSize(),
           node.getModificationTime(),
+          node.getAccessTime(),
           node.getFsPermission(),
           node.getUserName(),
           node.getGroupName(),

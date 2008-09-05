@@ -276,6 +276,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // Ask Datanode only up to this many blocks to delete.
   private int blockInvalidateLimit = FSConstants.BLOCK_INVALIDATE_CHUNK;
 
+  // precision of access times.
+  private long accessTimePrecision = 0;
+
   /**
    * FSNamesystem constructor.
    */
@@ -292,7 +295,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Initialize FSNamesystem.
    */
-  private void initialize(NameNode nn, Configuration conf) throws IOException {
+  private synchronized void initialize(NameNode nn, Configuration conf) throws IOException {
     this.systemStart = now();
     this.startTime = new Date(systemStart); 
     setConfigurationParameters(conf);
@@ -411,7 +414,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Initializes some of the members from configuration
    */
-  private void setConfigurationParameters(Configuration conf) 
+  private synchronized void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
     fsNamesystemObject = this;
     try {
@@ -466,6 +469,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
                                          20*(int)(heartbeatInterval/1000));
+    this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
   }
 
   /**
@@ -569,6 +573,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   long getDefaultBlockSize() {
     return defaultBlockSize;
+  }
+
+  long getAccessTimePrecision() {
+    return accessTimePrecision;
+  }
+
+  private boolean isAccessTimeSupported() {
+    return accessTimePrecision > 0;
   }
     
   /* get replication factor of a block */
@@ -728,7 +740,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkPathAccess(src, FsAction.READ);
     }
 
-    LocatedBlocks blocks = getBlockLocations(src, offset, length);
+    LocatedBlocks blocks = getBlockLocations(src, offset, length, true);
     if (blocks != null) {
       //sort the blocks
       DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
@@ -746,14 +758,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public LocatedBlocks getBlockLocations(String src, long offset, long length
       ) throws IOException {
+    return getBlockLocations(src, offset, length, false);
+  }
+
+  /**
+   * Get block locations within the specified range.
+   * @see ClientProtocol#getBlockLocations(String, long, long)
+   */
+  public LocatedBlocks getBlockLocations(String src, long offset, long length,
+      boolean doAccessTime) throws IOException {
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
     }
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-    final LocatedBlocks ret = getBlockLocationsInternal(dir.getFileINode(src),
-        offset, length, Integer.MAX_VALUE);  
+    final LocatedBlocks ret = getBlockLocationsInternal(src, dir.getFileINode(src),
+        offset, length, Integer.MAX_VALUE, doAccessTime);  
     if (auditLog.isInfoEnabled()) {
       logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
@@ -762,12 +783,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return ret;
   }
 
-  private synchronized LocatedBlocks getBlockLocationsInternal(INodeFile inode,
+  private synchronized LocatedBlocks getBlockLocationsInternal(String src,
+                                                       INodeFile inode,
                                                        long offset, 
                                                        long length,
-                                                       int nrBlocksToReturn) {
+                                                       int nrBlocksToReturn,
+                                                       boolean doAccessTime) 
+                                                       throws IOException {
     if(inode == null) {
       return null;
+    }
+    if (doAccessTime & isAccessTimeSupported()) {
+      dir.setTimes(src, inode, -1, now(), false);
     }
     Block[] blocks = inode.getBlocks();
     if (blocks == null) {
@@ -826,6 +853,38 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           && results.size() < nrBlocksToReturn);
     
     return inode.createLocatedBlocks(results);
+  }
+
+  /**
+   * stores the modification and access time for this inode. 
+   * The access time is precise upto an hour. The transaction, if needed, is
+   * written to the edits log but is not flushed.
+   */
+  public synchronized void setTimes(String src, long mtime, long atime) throws IOException {
+    if (!isAccessTimeSupported() && atime != -1) {
+      throw new IOException("Access time for hdfs is not configured. " +
+                            " Please set dfs.support.accessTime configuration parameter.");
+    }
+    //
+    // The caller needs to have read-access to set access times
+    // and write access to set modification times.
+    if (isPermissionEnabled) {
+      if (mtime == -1) {
+        checkPathAccess(src, FsAction.READ);
+      } else {
+        checkPathAccess(src, FsAction.WRITE);
+      }
+    }
+    INodeFile inode = dir.getFileINode(src);
+    if (inode != null) {
+      dir.setTimes(src, inode, mtime, atime, true);
+      if (auditLog.isInfoEnabled()) {
+        final FileStatus stat = dir.getFileInfo(src);
+        logAuditEvent(UserGroupInformation.getCurrentUGI(),
+                      Server.getRemoteIp(),
+                      "setTimes", src, null, stat);
+      }
+    }
   }
 
   /**

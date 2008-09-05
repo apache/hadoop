@@ -438,12 +438,13 @@ public class FTPFileSystem extends FileSystem {
     // block sizes on server. The assumption could be less than ideal.
     long blockSize = DEFAULT_BLOCK_SIZE;
     long modTime = ftpFile.getTimestamp().getTimeInMillis();
+    long accessTime = 0;
     FsPermission permission = getPermissions(ftpFile);
     String user = ftpFile.getUser();
     String group = ftpFile.getGroup();
     Path filePath = new Path(parentPath, ftpFile.getName());
     return new FileStatus(length, isDir, blockReplication, blockSize, modTime,
-        permission, user, group, filePath.makeQualified(this));
+        accessTime, permission, user, group, filePath.makeQualified(this));
   }
 
   @Override

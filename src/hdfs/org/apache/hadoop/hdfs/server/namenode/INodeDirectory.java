@@ -42,7 +42,7 @@ public class INodeDirectory extends INode {
   }
 
   public INodeDirectory(PermissionStatus permissions, long mTime) {
-    super(permissions, mTime);
+    super(permissions, mTime, 0);
     this.children = null;
   }
 

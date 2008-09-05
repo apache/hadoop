@@ -177,13 +177,14 @@ class FSDirectory implements FSConstants, Closeable {
                             Block[] blocks, 
                             short replication,
                             long modificationTime,
+                            long atime,
                             long preferredBlockSize) {
     INode newNode;
     if (blocks == null)
       newNode = new INodeDirectory(permissions, modificationTime);
     else 
       newNode = new INodeFile(permissions, blocks.length, replication,
-                              modificationTime, preferredBlockSize);
+                              modificationTime, atime, preferredBlockSize);
     synchronized (rootDir) {
       try {
         newNode = addNode(path, newNode, false);
@@ -208,6 +209,7 @@ class FSDirectory implements FSConstants, Closeable {
                               Block[] blocks, 
                               short replication,
                               long modificationTime,
+                              long atime,
                               long quota,
                               long preferredBlockSize) {
     // create new inode
@@ -221,7 +223,7 @@ class FSDirectory implements FSConstants, Closeable {
       }
     } else 
       newNode = new INodeFile(permissions, blocks.length, replication,
-                              modificationTime, preferredBlockSize);
+                              modificationTime, atime, preferredBlockSize);
     // add new node to the parent
     INodeDirectory newParent = null;
     synchronized (rootDir) {
@@ -1065,5 +1067,43 @@ class FSDirectory implements FSConstants, Closeable {
     synchronized (rootDir) {
       return rootDir.numItemsInTree();
     }
+  }
+
+  /**
+   * Sets the access time on the file. Logs it in the transaction log
+   */
+  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) 
+                                                        throws IOException {
+    if (unprotectedSetTimes(src, inode, mtime, atime, force)) {
+      fsImage.getEditLog().logTimes(src, mtime, atime);
+    }
+  }
+
+  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
+                              throws IOException {
+    INodeFile inode = getFileINode(src);
+    return unprotectedSetTimes(src, inode, mtime, atime, force);
+  }
+
+  private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
+                                      long atime, boolean force) throws IOException {
+    boolean status = false;
+    if (mtime != -1) {
+      inode.setModificationTimeForce(mtime);
+      status = true;
+    }
+    if (atime != -1) {
+      long inodeTime = inode.getAccessTime();
+
+      // if the last access time update was within the last precision interval, then
+      // no need to store access time
+      if (atime <= inodeTime + namesystem.getAccessTimePrecision() && !force) {
+        status =  false;
+      } else {
+        inode.setAccessTime(atime);
+        status = true;
+      }
+    } 
+    return status;
   }
 }

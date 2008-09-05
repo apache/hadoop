@@ -849,11 +849,15 @@ public class FSImage extends Storage {
       INodeDirectory parentINode = fsDir.rootDir;
       for (long i = 0; i < numFiles; i++) {
         long modificationTime = 0;
+        long atime = 0;
         long blockSize = 0;
         path = readString(in);
         replication = in.readShort();
         replication = FSEditLog.adjustReplication(replication);
         modificationTime = in.readLong();
+        if (imgVersion <= -17) {
+          atime = in.readLong();
+        }
         if (imgVersion <= -8) {
           blockSize = in.readLong();
         }
@@ -914,7 +918,7 @@ public class FSImage extends Storage {
         }
         // add new inode
         parentINode = fsDir.addToParent(path, parentINode, permissions,
-            blocks, replication, modificationTime, quota, blockSize);
+            blocks, replication, modificationTime, atime, quota, blockSize);
       }
       
       // load datanode info
@@ -1089,6 +1093,7 @@ public class FSImage extends Storage {
       INodeFile fileINode = (INodeFile)node;
       out.writeShort(fileINode.getReplication());
       out.writeLong(fileINode.getModificationTime());
+      out.writeLong(fileINode.getAccessTime());
       out.writeLong(fileINode.getPreferredBlockSize());
       Block[] blocks = fileINode.getBlocks();
       out.writeInt(blocks.length);
@@ -1101,6 +1106,7 @@ public class FSImage extends Storage {
     } else {   // write directory inode
       out.writeShort(0);  // replication
       out.writeLong(node.getModificationTime());
+      out.writeLong(0);   // access time
       out.writeLong(0);   // preferred block size
       out.writeInt(-1);    // # of blocks
       out.writeLong(node.getQuota());

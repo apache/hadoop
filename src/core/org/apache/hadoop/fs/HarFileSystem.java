@@ -535,7 +535,8 @@ public class HarFileSystem extends FilterFileSystem {
     hstatus = new HarStatus(readStr);
     return new FileStatus(hstatus.isDir()?0:hstatus.getLength(), hstatus.isDir(),
         (int)archiveStatus.getReplication(), archiveStatus.getBlockSize(),
-        archiveStatus.getModificationTime(), new FsPermission(
+        archiveStatus.getModificationTime(), archiveStatus.getAccessTime(),
+        new FsPermission(
         archiveStatus.getPermission()), archiveStatus.getOwner(), 
         archiveStatus.getGroup(), 
             makeRelative(this.uri.toString(), new Path(hstatus.name)));
@@ -640,7 +641,7 @@ public class HarFileSystem extends FilterFileSystem {
         statuses.add(new FileStatus(hstatus.getLength(), 
             hstatus.isDir(),
             archiveStatus.getReplication(), archiveStatus.getBlockSize(),
-            archiveStatus.getModificationTime(), 
+            archiveStatus.getModificationTime(), archiveStatus.getAccessTime(),
             new FsPermission(archiveStatus.getPermission()),
             archiveStatus.getOwner(), archiveStatus.getGroup(), 
             makeRelative(this.uri.toString(), new Path(hstatus.name))));

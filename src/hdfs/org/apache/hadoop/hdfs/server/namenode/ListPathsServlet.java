@@ -62,6 +62,7 @@ public class ListPathsServlet extends DfsServlet {
     doc.startTag(i.isDir() ? "directory" : "file");
     doc.attribute("path", i.getPath().toUri().getPath());
     doc.attribute("modified", df.format(new Date(i.getModificationTime())));
+    doc.attribute("accesstime", df.format(new Date(i.getAccessTime())));
     if (!i.isDir()) {
       doc.attribute("size", String.valueOf(i.getLen()));
       doc.attribute("replication", String.valueOf(i.getReplication()));
@@ -114,7 +115,8 @@ public class ListPathsServlet extends DfsServlet {
    *   <listing path="..." recursive="(yes|no)" filter="..."
    *            time="yyyy-MM-dd hh:mm:ss UTC" version="...">
    *     <directory path="..." modified="yyyy-MM-dd hh:mm:ss"/>
-   *     <file path="..." modified="yyyy-MM-dd'T'hh:mm:ssZ" blocksize="..."
+   *     <file path="..." modified="yyyy-MM-dd'T'hh:mm:ssZ" accesstime="yyyy-MM-dd'T'hh:mm:ssZ" 
+   *           blocksize="..."
    *           replication="..." size="..."/>
    *   </listing>
    * }

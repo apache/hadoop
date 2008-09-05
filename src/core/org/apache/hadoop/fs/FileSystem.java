@@ -1329,6 +1329,20 @@ public abstract class FileSystem extends Configured implements Closeable {
       ) throws IOException {
   }
 
+  /**
+   * Set access time of a file
+   * @param p The path
+   * @param mtime Set the modification time of this file.
+   *              The number of milliseconds since Jan 1, 1970. 
+   *              A value of -1 means that this call should not set modification time.
+   * @param atime Set the access time of this file.
+   *              The number of milliseconds since Jan 1, 1970. 
+   *              A value of -1 means that this call should not set access time.
+   */
+  public void setTimes(Path p, long mtime, long atime
+      ) throws IOException {
+  }
+
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
     Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);

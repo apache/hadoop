@@ -228,6 +228,7 @@ public class DistributedFileSystem extends FileSystem {
   private FileStatus makeQualified(FileStatus f) {
     return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
         f.getBlockSize(), f.getModificationTime(),
+        f.getAccessTime(),
         f.getPermission(), f.getOwner(), f.getGroup(),
         f.getPath().makeQualified(this)); // fully-qualify path
   }
@@ -418,5 +419,11 @@ public class DistributedFileSystem extends FileSystem {
       throw new IOException("username == null && groupname == null");
     }
     dfs.setOwner(getPathName(p), username, groupname);
+  }
+
+  /** {@inheritDoc }*/
+  public void setTimes(Path p, long mtime, long atime
+      ) throws IOException {
+    dfs.setTimes(getPathName(p), mtime, atime);
   }
 }
