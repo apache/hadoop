@@ -1191,6 +1191,20 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
         return NULL;
     }
 
+    jvalue jFSVal;
+    jthrowable jFSExc = NULL;
+    if (invokeMethod(env, &jFSVal, &jFSExc, INSTANCE, jFS,
+                     HADOOP_FS, "getFileStatus", 
+                     "(Lorg/apache/hadoop/fs/Path;)"
+                     "Lorg/apache/hadoop/fs/FileStatus;",
+                     jPath) != 0) {
+        errno = errnoFromException(jFSExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::getFileStatus");
+        destroyLocalReference(env, jPath);
+        return NULL;
+    }
+    jobject jFileStatus = jFSVal.l;
+
     //org.apache.hadoop.fs.FileSystem::getFileBlockLocations
     char*** blockHosts = NULL;
     jobjectArray jBlockLocations;;
@@ -1198,12 +1212,13 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
     jthrowable jExc = NULL;
     if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS,
                      HADOOP_FS, "getFileBlockLocations", 
-                     "(Lorg/apache/hadoop/fs/Path;JJ)"
+                     "(Lorg/apache/hadoop/fs/FileStatus;JJ)"
                      "[Lorg/apache/hadoop/fs/BlockLocation;",
-                     jPath, start, length) != 0) {
+                     jFileStatus, start, length) != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "FileSystem::getFileCacheHints");
+                                   "FileSystem::getFileBlockLocations");
         destroyLocalReference(env, jPath);
+        destroyLocalReference(env, jFileStatus);
         return NULL;
     }
     jBlockLocations = jVal.l;
@@ -1237,6 +1252,7 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
             errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                        "BlockLocation::getHosts");
             destroyLocalReference(env, jPath);
+            destroyLocalReference(env, jFileStatus);
             destroyLocalReference(env, jBlockLocations);
             return NULL;
         }
@@ -1279,6 +1295,7 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
 
     //Delete unnecessary local references
     destroyLocalReference(env, jPath);
+    destroyLocalReference(env, jFileStatus);
     destroyLocalReference(env, jBlockLocations);
 
     return blockHosts;
