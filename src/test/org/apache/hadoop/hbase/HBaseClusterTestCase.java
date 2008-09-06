@@ -145,7 +145,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected void tearDown() throws Exception {
     super.tearDown();
     try {
-      HConnectionManager.deleteConnectionInfo(conf);
+      HConnectionManager.deleteConnectionInfo(conf, true);
       if (this.cluster != null) {
         try {
           this.cluster.shutdown();

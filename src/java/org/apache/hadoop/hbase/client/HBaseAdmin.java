@@ -267,7 +267,7 @@ public class HBaseAdmin {
       }
     }
     // Delete cached information to prevent clients from using old locations
-    HConnectionManager.deleteConnectionInfo(conf);
+    HConnectionManager.deleteConnectionInfo(conf, false);
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
 

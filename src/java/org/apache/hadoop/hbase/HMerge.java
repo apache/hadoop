@@ -76,7 +76,7 @@ class HMerge implements HConstants {
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
-    HConnectionManager.deleteConnectionInfo(conf);
+    HConnectionManager.deleteConnectionInfo(conf, false);
     if (Bytes.equals(tableName, META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(

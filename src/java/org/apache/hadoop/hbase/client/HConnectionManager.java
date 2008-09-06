@@ -95,29 +95,18 @@ public class HConnectionManager implements HConstants {
   /**
    * Delete connection information for the instance specified by the configuration
    * @param conf
+   * @param stopProxy
    */
-  public static void deleteConnectionInfo(HBaseConfiguration conf) {
+  public static void deleteConnectionInfo(HBaseConfiguration conf,
+      boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
       TableServers t = HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
       if (t != null) {
-        t.close();
+        t.close(stopProxy);
       }
     }
   }
 
-  /**
-   * Clear the static map of connection info.
-   */
-  public static void deleteConnectionInfo() {
-    synchronized (HBASE_INSTANCES) {
-      for (TableServers t: HBASE_INSTANCES.values()) {
-        t.close();
-      }
-      HBASE_INSTANCES.clear();
-    }
-  }
-
-  
   /* Encapsulates finding the servers for an HBase instance */
   private static class TableServers implements HConnection, HConstants {
     private static final Log LOG = LogFactory.getLog(TableServers.class);
@@ -894,15 +883,19 @@ public class HConnectionManager implements HConstants {
       return null;    
     }
 
-    void close() {
+    void close(boolean stopProxy) {
       if (master != null) {
-        HbaseRPC.stopProxy(master);
+        if (stopProxy) {
+          HbaseRPC.stopProxy(master);
+        }
         master = null;
         masterChecked = false;
       }
-      synchronized (servers) {
-        for (HRegionInterface i: servers.values()) {
-          HbaseRPC.stopProxy(i);
+      if (stopProxy) {
+        synchronized (servers) {
+          for (HRegionInterface i: servers.values()) {
+            HbaseRPC.stopProxy(i);
+          }
         }
       }
     }

@@ -76,6 +76,8 @@ Release 0.18.0 - Unreleased
               HRegionServer (Jean-Daniel Cryans via Jim Kellerman)
    HBASE-840  More options on the row query in REST interface
               (Sishen Freecity via Stack)
+   HBASE-874  deleting a table kills client rpc; no subsequent communication if
+              shell or thrift server, etc. (Jonathan Gray via Jim Kellerman)
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)

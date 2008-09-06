@@ -134,7 +134,7 @@ public class TestMigrate extends HBaseTestCase {
     // Delete any cached connections.  Need to do this because connection was
     // created earlier when no master was around.  The fact that there was no
     // master gets cached.  Need to delete so we go get master afresh.
-    HConnectionManager.deleteConnectionInfo();
+    HConnectionManager.deleteConnectionInfo(conf, false);
     
     LOG.info("Start a cluster against migrated FS");
     // Up number of retries.  Needed while cluster starts up. Its been set to 1
@@ -159,7 +159,7 @@ public class TestMigrate extends HBaseTestCase {
         "changes before opening a scanner");
       waitOnStartCodeChange(retries);
       // Delete again so we go get it all fresh.
-      HConnectionManager.deleteConnectionInfo();
+      HConnectionManager.deleteConnectionInfo(conf, false);
       HTable t = new HTable(this.conf, TABLENAME);
       int count = 0;
       LOG.info("OPENING SCANNER");
@@ -179,7 +179,7 @@ public class TestMigrate extends HBaseTestCase {
         s.close();
       }
     } finally {
-      HConnectionManager.deleteConnectionInfo();
+      HConnectionManager.deleteConnectionInfo(conf, false);
       cluster.shutdown();
     }
   }
