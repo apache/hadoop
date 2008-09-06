@@ -468,6 +468,9 @@ Trunk (unreleased changes)
 
     HADOOP-4069. Keep temporary test files from TestKosmosFileSystem under
     test.build.data instead of /tmp. (lohit via omalley)
+ 
+    HADOOP-4078. Create test files for TestKosmosFileSystem in separate
+    directory under test.build.data. (lohit)
 
 Release 0.18.1 - Unreleased
 

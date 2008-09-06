@@ -48,8 +48,8 @@ public class TestKosmosFileSystem extends TestCase {
         kosmosFileSystem = new KosmosFileSystem(kfsEmul);
         // a dummy URI; we are not connecting to any setup here
         kosmosFileSystem.initialize(URI.create("kfs:///"), conf);
-        baseDir = new Path(System.getProperty("test.build.data",
-                                               "/tmp/kfs-test"));
+        baseDir = new Path(System.getProperty("test.build.data", "/tmp" ) +
+                                              "/kfs-test");
     }
 
     @Override
