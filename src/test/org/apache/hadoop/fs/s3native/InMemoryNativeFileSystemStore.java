@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3native;
 
+import static org.apache.hadoop.fs.s3native.NativeS3FileSystem.PATH_DELIMITER;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -127,22 +128,36 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
   public PartialListing list(String prefix, int maxListingLength,
       String priorLastKey) throws IOException {
 
-    if (prefix.length() > 0 &&
-        !prefix.endsWith(NativeS3FileSystem.PATH_DELIMITER)) {
-      prefix += NativeS3FileSystem.PATH_DELIMITER;
+    return list(prefix, PATH_DELIMITER, maxListingLength, priorLastKey);
+  }
+
+  public PartialListing listAll(String prefix, int maxListingLength,
+      String priorLastKey) throws IOException {
+
+    return list(prefix, null, maxListingLength, priorLastKey);
+  }
+
+  private PartialListing list(String prefix, String delimiter,
+      int maxListingLength, String priorLastKey) throws IOException {
+
+    if (prefix.length() > 0 && !prefix.endsWith(PATH_DELIMITER)) {
+      prefix += PATH_DELIMITER;
     }
     
     List<FileMetadata> metadata = new ArrayList<FileMetadata>();
     SortedSet<String> commonPrefixes = new TreeSet<String>();
     for (String key : dataMap.keySet()) {
       if (key.startsWith(prefix)) {
-        int delimIndex = key.indexOf(NativeS3FileSystem.PATH_DELIMITER,
-            prefix.length());
-        if (delimIndex == -1) {
+        if (delimiter == null) {
           metadata.add(retrieveMetadata(key));
         } else {
-          String commonPrefix = key.substring(0, delimIndex);
-          commonPrefixes.add(commonPrefix);
+          int delimIndex = key.indexOf(delimiter, prefix.length());
+          if (delimIndex == -1) {
+            metadata.add(retrieveMetadata(key));
+          } else {
+            String commonPrefix = key.substring(0, delimIndex);
+            commonPrefixes.add(commonPrefix);
+          }
         }
       }
       if (metadata.size() + commonPrefixes.size() == maxListingLength) {
@@ -159,6 +174,11 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     dataMap.remove(key);
   }
 
+  public void rename(String srcKey, String dstKey) throws IOException {
+    metadataMap.put(dstKey, metadataMap.remove(srcKey));
+    dataMap.put(dstKey, dataMap.remove(srcKey));
+  }
+  
   public void purge(String prefix) throws IOException {
     Iterator<Entry<String, FileMetadata>> i =
       metadataMap.entrySet().iterator();

@@ -44,8 +44,12 @@ interface NativeFileSystemStore {
   PartialListing list(String prefix, int maxListingLength) throws IOException;
   PartialListing list(String prefix, int maxListingLength, String priorLastKey)
     throws IOException;
+  PartialListing listAll(String prefix, int maxListingLength,
+      String priorLastKey) throws IOException;
   
   void delete(String key) throws IOException;
+
+  void rename(String srcKey, String dstKey) throws IOException;
   
   /**
    * Delete all keys with the given prefix. Used for testing.

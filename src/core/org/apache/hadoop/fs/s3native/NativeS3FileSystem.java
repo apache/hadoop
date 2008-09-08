@@ -451,11 +451,115 @@ public class NativeS3FileSystem extends FileSystem {
     return new FSDataInputStream(new BufferedFSInputStream(
         new NativeS3FsInputStream(store.retrieve(key), key), bufferSize));
   }
+  
+  // rename() and delete() use this method to ensure that the parent directory
+  // of the source does not vanish.
+  private void createParent(Path path) throws IOException {
+      Path parent = path.getParent();
+      if (parent != null) {
+          String key = pathToKey(makeAbsolute(parent));
+          if (key.length() > 0) {
+              store.storeEmptyFile(key + FOLDER_SUFFIX);
+          }
+      }
+  }
+  
+  private boolean existsAndIsFile(Path f) throws IOException {
+    
+    Path absolutePath = makeAbsolute(f);
+    String key = pathToKey(absolutePath);
+    
+    if (key.length() == 0) {
+        return false;
+    }
+    
+    FileMetadata meta = store.retrieveMetadata(key);
+    if (meta != null) {
+        // S3 object with given key exists, so this is a file
+        return true;
+    }
+    
+    if (store.retrieveMetadata(key + FOLDER_SUFFIX) != null) {
+        // Signifies empty directory
+        return false;
+    }
+    
+    PartialListing listing = store.list(key, 1, null);
+    if (listing.getFiles().length > 0 ||
+        listing.getCommonPrefixes().length > 0) {
+        // Non-empty directory
+        return false;
+    }
+    
+    throw new FileNotFoundException(absolutePath +
+        ": No such file or directory");
+}
+
 
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-    throw new IOException("Not supported");
+
+    String srcKey = pathToKey(makeAbsolute(src));
+
+    if (srcKey.length() == 0) {
+      // Cannot rename root of file system
+      return false;
+    }
+
+    // Figure out the final destination
+    String dstKey;
+    try {
+      boolean dstIsFile = existsAndIsFile(dst);
+      if (dstIsFile) {
+        // Attempting to overwrite a file using rename()
+        return false;
+      } else {
+        // Move to within the existent directory
+        dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
+      }
+    } catch (FileNotFoundException e) {
+      // dst doesn't exist, so we can proceed
+      dstKey = pathToKey(makeAbsolute(dst));
+      try {
+        if (!getFileStatus(dst.getParent()).isDir()) {
+          return false; // parent dst is a file
+        }
+      } catch (FileNotFoundException ex) {
+        return false; // parent dst does not exist
+      }
+    }
+
+    try {
+      boolean srcIsFile = existsAndIsFile(src);
+      if (srcIsFile) {
+        store.rename(srcKey, dstKey);
+      } else {
+        // Move the folder object
+        store.delete(srcKey + FOLDER_SUFFIX);
+        store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
+
+        // Move everything inside the folder
+        String priorLastKey = null;
+        do {
+          PartialListing listing = store.listAll(srcKey, S3_MAX_LISTING_LENGTH,
+              priorLastKey);
+          for (FileMetadata file : listing.getFiles()) {
+            store.rename(file.getKey(), dstKey
+                + file.getKey().substring(srcKey.length()));
+          }
+          priorLastKey = listing.getPriorLastKey();
+        } while (priorLastKey != null);
+      }
+
+      createParent(src);
+      return true;
+
+    } catch (FileNotFoundException e) {
+      // Source file does not exist;
+      return false;
+    }
   }
+
 
   /**
    * Set the working directory to the given directory.

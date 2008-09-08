@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3native;
 
+import static org.apache.hadoop.fs.s3native.NativeS3FileSystem.PATH_DELIMITER;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -171,17 +173,27 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     throws IOException {
     return list(prefix, maxListingLength, null);
   }
-
+  
   public PartialListing list(String prefix, int maxListingLength,
       String priorLastKey) throws IOException {
+
+    return list(prefix, PATH_DELIMITER, maxListingLength, priorLastKey);
+  }
+
+  public PartialListing listAll(String prefix, int maxListingLength,
+      String priorLastKey) throws IOException {
+
+    return list(prefix, null, maxListingLength, priorLastKey);
+  }
+
+  private PartialListing list(String prefix, String delimiter,
+      int maxListingLength, String priorLastKey) throws IOException {
     try {
-      if (prefix.length() > 0 &&
-          !prefix.endsWith(NativeS3FileSystem.PATH_DELIMITER)) {
-        prefix += NativeS3FileSystem.PATH_DELIMITER;
+      if (prefix.length() > 0 && !prefix.endsWith(PATH_DELIMITER)) {
+        prefix += PATH_DELIMITER;
       }
       S3ObjectsChunk chunk = s3Service.listObjectsChunked(bucket.getName(),
-          prefix, NativeS3FileSystem.PATH_DELIMITER, maxListingLength,
-          priorLastKey);
+          prefix, delimiter, maxListingLength, priorLastKey);
       
       FileMetadata[] fileMetadata =
         new FileMetadata[chunk.getObjects().length];
@@ -203,6 +215,18 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   public void delete(String key) throws IOException {
     try {
       s3Service.deleteObject(bucket, key);
+    } catch (S3ServiceException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      }
+      throw new S3Exception(e);
+    }
+  }
+  
+  public void rename(String srcKey, String dstKey) throws IOException {
+    try {
+      s3Service.moveObject(bucket.getName(), srcKey, bucket.getName(),
+          new S3Object(dstKey), false);
     } catch (S3ServiceException e) {
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();

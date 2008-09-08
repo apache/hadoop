@@ -279,6 +279,9 @@ Trunk (unreleased changes)
     HADOOP-3498. File globbing alternation should be able to span path
     components. (tomwhite)
 
+    HADOOP-3361. Implement renames for NativeS3FileSystem.
+    (Albert Chern via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

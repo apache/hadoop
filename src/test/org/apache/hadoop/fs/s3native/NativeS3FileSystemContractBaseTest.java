@@ -47,11 +47,6 @@ public abstract class NativeS3FileSystemContractBaseTest
     super.tearDown();
   }
   
-  @Override
-  protected boolean renameSupported() {
-    return false;
-  }
-  
   public void testListStatusForRoot() throws Exception {
     Path testDir = path("/test");
     assertTrue(fs.mkdirs(testDir));
