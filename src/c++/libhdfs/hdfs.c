@@ -114,7 +114,11 @@ static int errnoFromException(jthrowable exc, JNIEnv *env,
     if (exc == NULL)
         goto default_error;
 
-    excClass = classNameOfObject((jobject) exc, env);
+    if ((excClass = classNameOfObject((jobject) exc, env)) == NULL) {
+      errnum = EINTERNAL;
+      goto done;
+    }
+
     if (!strcmp(excClass, "org.apache.hadoop.fs.permission."
                 "AccessControlException")) {
         errnum = EACCES;
@@ -163,6 +167,10 @@ hdfsFS hdfsConnect(const char* host, tPort port)
 
     //Get the JNIEnv* corresponding to current thread
     env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     //Create the org.apache.hadoop.conf.Configuration object
     jConfiguration =
@@ -255,6 +263,11 @@ int hdfsDisconnect(hdfsFS fs)
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
 
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -2;
+    }
+
     //Parameters
     jobject jFS = (jobject)fs;
 
@@ -293,6 +306,11 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
 
     /* Get the JNIEnv* corresponding to current thread */
     JNIEnv* env = getJNIEnv();
+
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -435,6 +453,11 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
 
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -2;
+    }
+
     //Parameters
     jobject jStream = (jobject)(file ? file->file : NULL);
 
@@ -469,6 +492,11 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
 int hdfsExists(hdfsFS fs, const char *path)
 {
     JNIEnv *env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -2;
+    }
+
     jobject jPath = constructNewObjectOfPath(env, path);
     jvalue  jVal;
     jthrowable jExc = NULL;
@@ -499,6 +527,10 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : NULL);
@@ -556,6 +588,10 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : NULL);
@@ -611,6 +647,10 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jOutputStream = (jobject)(f ? f->file : 0);
@@ -666,6 +706,10 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : 0);
@@ -698,6 +742,10 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jStream = (jobject)(f ? f->file : 0);
@@ -734,6 +782,10 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jOutputStream = (jobject)(f ? f->file : 0);
@@ -766,6 +818,10 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jInputStream = (jobject)(f ? f->file : 0);
@@ -802,6 +858,10 @@ int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     //Parameters
     jobject jSrcFS = (jobject)srcFS;
@@ -869,6 +929,11 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
 
     //Parameters
     jobject jSrcFS = (jobject)srcFS;
@@ -937,6 +1002,10 @@ int hdfsDelete(hdfsFS fs, const char* path)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -974,6 +1043,10 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1020,6 +1093,10 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     jobject jFS = (jobject)fs;
     jobject jPath = NULL;
@@ -1072,6 +1149,10 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
     int retval = 0;
@@ -1107,6 +1188,10 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1144,6 +1229,10 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1182,6 +1271,10 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1322,6 +1415,10 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1349,6 +1446,10 @@ tOffset hdfsGetCapacity(hdfsFS fs)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1381,6 +1482,10 @@ tOffset hdfsGetUsed(hdfsFS fs)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1533,6 +1638,10 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     jobject jFS = (jobject)fs;
 
@@ -1608,6 +1717,10 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     jobject jFS = (jobject)fs;
 

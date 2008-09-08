@@ -475,6 +475,9 @@ Trunk (unreleased changes)
     HADOOP-3968. Fix getFileBlockLocations calls to use FileStatus instead
     of Path reflecting the new API. (Pete Wyckoff via lohit)
 
+    HADOOP-3963. libhdfs does not exit on its own, instead it returns error 
+    to the caller and behaves as a true library. (Pete Wyckoff via dhruba)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
