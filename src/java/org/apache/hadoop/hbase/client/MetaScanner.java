@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -47,9 +48,10 @@ class MetaScanner implements HConstants {
           HRegionInfo.createRegionName(tableName, null, ZEROES);
       
     // Scan over each meta region
+    ScannerCallable callable = null;
     do {
-      ScannerCallable callable = new ScannerCallable(connection,
-        META_TABLE_NAME, COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP, null);
+      callable = new ScannerCallable(connection, META_TABLE_NAME,
+        COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP, null);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
       try {
@@ -67,7 +69,7 @@ class MetaScanner implements HConstants {
         callable.setClose();
         connection.getRegionServerWithRetries(callable);
       }
-    } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
+    } while (HStoreKey.compareTwoRowKeys(callable.getHRegionInfo(), startRow, LAST_ROW) != 0);
   }
 
   /**

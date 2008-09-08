@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.io.VersionedWritable;
@@ -397,12 +398,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
 
     // Compare start keys.
-    result = Bytes.compareTo(this.startKey, other.startKey);
+    result = HStoreKey.compareTwoRowKeys(other, this.startKey, other.startKey);
     if (result != 0) {
       return result;
     }
     
     // Compare end keys.
-    return Bytes.compareTo(this.endKey, other.endKey);
+    return HStoreKey.compareTwoRowKeys(other, this.endKey, other.endKey);
   }
 }

@@ -109,7 +109,7 @@ public class HRegion implements HConstants {
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
   private final RegionHistorian historian;
-
+  
   /**
    * Merge two HRegions.  The regions must be adjacent andmust not overlap.
    * 
@@ -132,12 +132,14 @@ public class HRegion implements HConstants {
       }
       // A's start key is null but B's isn't. Assume A comes before B
     } else if ((srcB.getStartKey() == null)         // A is not null but B is
-        || (Bytes.compareTo(srcA.getStartKey(), srcB.getStartKey()) > 0)) { // A > B
+        || (HStoreKey.compareTwoRowKeys(srcA.getRegionInfo(), 
+            srcA.getStartKey(), srcB.getStartKey()) > 0)) { // A > B
       a = srcB;
       b = srcA;
     }
 
-    if (!Bytes.equals(a.getEndKey(), b.getStartKey())) {
+    if (!HStoreKey.equalsTwoRowKeys(srcA.getRegionInfo(),
+      a.getEndKey(), b.getStartKey())) {
       throw new IOException("Cannot merge non-adjacent regions");
     }
     return merge(a, b);
@@ -181,13 +183,19 @@ public class HRegion implements HConstants {
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path basedir = a.getBaseDir();
-    final byte [] startKey = Bytes.equals(a.getStartKey(), EMPTY_BYTE_ARRAY) ||
-      Bytes.equals(b.getStartKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        Bytes.compareTo(a.getStartKey(), b.getStartKey()) <= 0 ?
+    final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+        a.getStartKey(), EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+          b.getStartKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
+        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getStartKey(), 
+            b.getStartKey()) <= 0 ?
             a.getStartKey() : b.getStartKey();
-    final byte [] endKey = Bytes.equals(a.getEndKey(), EMPTY_BYTE_ARRAY) ||
-      Bytes.equals(b.getEndKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        Bytes.compareTo(a.getEndKey(), b.getEndKey()) <= 0 ?
+    final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+        a.getEndKey(), EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(b.getRegionInfo(), b.getEndKey(), 
+          EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
+        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getEndKey(), 
+            b.getEndKey()) <= 0 ?
             b.getEndKey() : a.getEndKey();
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
@@ -232,7 +240,7 @@ public class HRegion implements HConstants {
       }
       for (HStoreFile hsf: srcFiles) {
         HStoreFile dst = new HStoreFile(conf, fs, basedir,
-            newRegionInfo.getEncodedName(), colFamily, -1, null);
+            newRegionInfo, colFamily, -1, null);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Renaming " + hsf + " to " + dst);
         }
@@ -718,12 +726,12 @@ public class HRegion implements HConstants {
       // Add start/end key checking: hbase-428.
       byte [] startKey = this.regionInfo.getStartKey();
       byte [] endKey = this.regionInfo.getEndKey();
-      if (Bytes.equals(startKey, midKey)) {
+      if (HStoreKey.equalsTwoRowKeys(this.regionInfo,startKey, midKey)) {
         LOG.debug("Startkey (" + startKey + ") and midkey + (" + 
           midKey + ") are same, not splitting");
         return null;
       }
-      if (Bytes.equals(midKey, endKey)) {
+      if (HStoreKey.equalsTwoRowKeys(this.regionInfo,midKey, endKey)) {
         LOG.debug("Endkey and midkey are same, not splitting");
         return null;
       }
@@ -769,15 +777,15 @@ public class HRegion implements HConstants {
         // A reference to the bottom half of the hsf store file.
         HStoreFile.Reference aReference = new HStoreFile.Reference(
             this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey), HStoreFile.Range.bottom);
+            new HStoreKey(midKey, this.regionInfo), HStoreFile.Range.bottom);
         HStoreFile a = new HStoreFile(this.conf, fs, splits,
-            regionAInfo.getEncodedName(), h.getColFamily(), -1, aReference);
+            regionAInfo, h.getColFamily(), -1, aReference);
         // Reference to top half of the hsf store file.
         HStoreFile.Reference bReference = new HStoreFile.Reference(
             this.regionInfo.getEncodedName(), h.getFileId(),
             new HStoreKey(midKey), HStoreFile.Range.top);
         HStoreFile b = new HStoreFile(this.conf, fs, splits,
-            regionBInfo.getEncodedName(), h.getColFamily(), -1, bReference);
+            regionBInfo, h.getColFamily(), -1, bReference);
         h.splitStoreFile(a, b, this.fs);
       }
 
@@ -1142,7 +1150,7 @@ public class HRegion implements HConstants {
       checkRow(row);
       checkColumn(column);
       // Don't need a row lock for a simple get
-      HStoreKey key = new HStoreKey(row, column, timestamp);
+      HStoreKey key = new HStoreKey(row, column, timestamp, this.regionInfo);
       Cell[] result = getStore(column).get(key, numVersions);
       // Guarantee that we return null instead of a zero-length array, 
       // if there are no results to return.
@@ -1178,7 +1186,7 @@ public class HRegion implements HConstants {
         checkColumn(column);
       }
     }
-    HStoreKey key = new HStoreKey(row, ts);
+    HStoreKey key = new HStoreKey(row, ts, this.regionInfo);
     Integer lid = getLock(lockid,row);
     HashSet<HStore> storeSet = new HashSet<HStore>();
     try {
@@ -1242,14 +1250,14 @@ public class HRegion implements HConstants {
         byte [] closestKey = store.getRowKeyAtOrBefore(row);
         // if it happens to be an exact match, we can stop looping
         if (HStoreKey.equalsTwoRowKeys(regionInfo,row, closestKey)) {
-          key = new HStoreKey(closestKey);
+          key = new HStoreKey(closestKey, this.regionInfo);
           break;
         }
         // otherwise, we need to check if it's the max and move to the next
         if (closestKey != null 
           && (key == null || HStoreKey.compareTwoRowKeys(
               regionInfo,closestKey, key.getRow()) > 0) ) {
-          key = new HStoreKey(closestKey);
+          key = new HStoreKey(closestKey, this.regionInfo);
         }
       }
       if (key == null) {
@@ -1401,7 +1409,8 @@ public class HRegion implements HConstants {
     try {
       List<byte []> deletes = null;
       for (BatchOperation op: b) {
-        HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime);
+        HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
+          this.regionInfo);
         byte[] val = null;
         if (op.isPut()) {
           val = op.getValue();
@@ -1524,7 +1533,7 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       for (HStore store : stores.values()) {
-        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts, this.regionInfo),
           ALL_VERSIONS, now);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
         for (HStoreKey key: keys) {
@@ -1557,8 +1566,8 @@ public class HRegion implements HConstants {
       // find the HStore for the column family
       HStore store = getStore(family);
       // find all the keys that match our criteria
-      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
-        ALL_VERSIONS, now);
+      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp,
+        this.regionInfo), ALL_VERSIONS, now);
       // delete all the cells
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
       for (HStoreKey key: keys) {
@@ -1585,7 +1594,7 @@ public class HRegion implements HConstants {
       final long ts, final int versions)
   throws IOException {
     checkReadOnly();
-    HStoreKey origin = new HStoreKey(row, column, ts);
+    HStoreKey origin = new HStoreKey(row, column, ts, this.regionInfo);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
@@ -1881,7 +1890,7 @@ public class HRegion implements HConstants {
       }
     }
   }
-
+  
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
@@ -1958,7 +1967,7 @@ public class HRegion implements HConstants {
       this.resultSets = new TreeMap[scanners.length];
       this.keys = new HStoreKey[scanners.length];
       for (int i = 0; i < scanners.length; i++) {
-        keys[i] = new HStoreKey();
+        keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY,regionInfo);
         resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
         if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
           closeScanner(i);
@@ -1983,9 +1992,11 @@ public class HRegion implements HConstants {
         long chosenTimestamp = -1;
         for (int i = 0; i < this.keys.length; i++) {
           if (scanners[i] != null &&
-              (chosenRow == null ||
-                  (Bytes.compareTo(keys[i].getRow(), chosenRow) < 0) ||
-                  ((Bytes.compareTo(keys[i].getRow(), chosenRow) == 0) &&
+             (chosenRow == null ||
+               (HStoreKey.compareTwoRowKeys(regionInfo, 
+                 keys[i].getRow(), chosenRow) < 0) ||
+               ((HStoreKey.compareTwoRowKeys(regionInfo, keys[i].getRow(),
+                 chosenRow) == 0) &&
                       (keys[i].getTimestamp() > chosenTimestamp)))) {
             chosenRow = keys[i].getRow();
             chosenTimestamp = keys[i].getTimestamp();
@@ -2002,7 +2013,7 @@ public class HRegion implements HConstants {
 
           for (int i = 0; i < scanners.length; i++) {
             if (scanners[i] != null &&
-              Bytes.compareTo(keys[i].getRow(), chosenRow) == 0) {
+              HStoreKey.compareTwoRowKeys(regionInfo,keys[i].getRow(), chosenRow) == 0) {
               // NOTE: We used to do results.putAll(resultSets[i]);
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
@@ -2024,7 +2035,7 @@ public class HRegion implements HConstants {
           // If the current scanner is non-null AND has a lower-or-equal
           // row label, then its timestamp is bad. We need to advance it.
           while ((scanners[i] != null) &&
-              (Bytes.compareTo(keys[i].getRow(), chosenRow) <= 0)) {
+              (HStoreKey.compareTwoRowKeys(regionInfo,keys[i].getRow(), chosenRow) <= 0)) {
             resultSets[i].clear();
             if (!scanners[i].next(keys[i], resultSets[i])) {
               closeScanner(i);
@@ -2206,7 +2217,8 @@ public class HRegion implements HConstants {
     byte [] row = r.getRegionName();
     Integer lid = meta.obtainRowLock(row);
     try {
-      HStoreKey key = new HStoreKey(row, COL_REGIONINFO, System.currentTimeMillis());
+      HStoreKey key = new HStoreKey(row, COL_REGIONINFO,
+        System.currentTimeMillis(), r.getRegionInfo());
       TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>();
       edits.put(key, Writables.getBytes(r.getRegionInfo()));
       meta.update(edits);
@@ -2307,9 +2319,9 @@ public class HRegion implements HConstants {
    */
   public static boolean rowIsInRange(HRegionInfo info, final byte [] row) {
     return ((info.getStartKey().length == 0) ||
-        (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
+        (HStoreKey.compareTwoRowKeys(info,info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
-            (Bytes.compareTo(info.getEndKey(), row) > 0));
+            (HStoreKey.compareTwoRowKeys(info,info.getEndKey(), row) > 0));
   }
 
   /**

@@ -119,25 +119,28 @@ public class HStoreFile implements HConstants {
   private final HBaseConfiguration conf;
   private final FileSystem fs;
   private final Reference reference;
+  private final HRegionInfo hri;
 
   /**
    * Constructor that fully initializes the object
    * @param conf Configuration object
    * @param basedir qualified path that is parent of region directory
-   * @param encodedRegionName file name friendly name of the region
    * @param colFamily name of the column family
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
+   * @param hri The region info for this file (HACK HBASE-868). TODO: Fix.
    * @throws IOException
    */
   HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
-      int encodedRegionName, byte [] colFamily, long fileId,
-      final Reference ref) throws IOException {
+      final HRegionInfo hri, byte [] colFamily, long fileId,
+      final Reference ref)
+  throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.basedir = basedir;
-    this.encodedRegionName = encodedRegionName;
+    this.encodedRegionName = hri.getEncodedName();
     this.colFamily = colFamily;
+    this.hri = hri;
     
     long id = fileId;
     if (id == -1) {
@@ -431,7 +434,7 @@ public class HStoreFile implements HConstants {
         "HStoreFile reference");
     }
     return new BloomFilterMapFile.Writer(conf, fs,
-      getMapFilePath().toString(), compression, bloomFilter, nrows);
+      getMapFilePath().toString(), compression, bloomFilter, nrows, this.hri);
   }
 
   /**
@@ -584,7 +587,6 @@ public class HStoreFile implements HConstants {
    * Hbase customizations of MapFile.
    */
   static class HbaseMapFile extends MapFile {
-    static final Class<? extends Writable>  KEY_CLASS = HStoreKey.class;
     static final Class<? extends Writable>  VALUE_CLASS =
       ImmutableBytesWritable.class;
 
@@ -672,9 +674,10 @@ public class HStoreFile implements HConstants {
        * @throws IOException
        */
       public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
-          SequenceFile.CompressionType compression)
+          SequenceFile.CompressionType compression, final HRegionInfo hri)
       throws IOException {
-        super(conf, fs, dirName, KEY_CLASS, VALUE_CLASS, compression);
+        super(conf, fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri),
+           VALUE_CLASS, compression);
         // Default for mapfiles is 128.  Makes random reads faster if we
         // have more keys indexed and we're not 'next'-ing around in the
         // mapfile.
@@ -788,14 +791,15 @@ public class HStoreFile implements HConstants {
        * @param compression
        * @param filter
        * @param nrows
+       * @param hri
        * @throws IOException
        */
       @SuppressWarnings("unchecked")
       public Writer(Configuration conf, FileSystem fs, String dirName,
         SequenceFile.CompressionType compression, final boolean filter,
-        int nrows)
+        int nrows, final HRegionInfo hri)
       throws IOException {
-        super(conf, fs, dirName, compression);
+        super(conf, fs, dirName, compression, hri);
         this.dirName = dirName;
         this.fs = fs;
         if (filter) {

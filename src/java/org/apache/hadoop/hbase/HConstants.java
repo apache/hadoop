@@ -92,6 +92,9 @@ public interface HConstants {
 
   /** Parameter name for how often threads should wake up */
   static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
+  
+  /** Parameter name for how often a region should should perform a major compaction */
+  static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
   /** Parameter name for HBase instance root directory */
   static final String HBASE_DIR = "hbase.rootdir";

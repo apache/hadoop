@@ -61,12 +61,10 @@ class Memcache {
   // so no additional synchronization is required.
   
   // The currently active sorted map of edits.
-  private volatile SortedMap<HStoreKey, byte[]> memcache =
-    createSynchronizedSortedMap();
+  private volatile SortedMap<HStoreKey, byte[]> memcache;
 
   // Snapshot of memcache.  Made for flusher.
-  private volatile SortedMap<HStoreKey, byte[]> snapshot =
-    createSynchronizedSortedMap();
+  private volatile SortedMap<HStoreKey, byte[]> snapshot;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -75,7 +73,10 @@ class Memcache {
    */
   public Memcache() {
     this.ttl = HConstants.FOREVER;
-    this.regionInfo = null;
+    // Set default to be the first meta region.
+    this.regionInfo = HRegionInfo.FIRST_META_REGIONINFO;
+    this.memcache = createSynchronizedSortedMap();
+    this.snapshot = createSynchronizedSortedMap();
   }
 
   /**
@@ -86,14 +87,18 @@ class Memcache {
   public Memcache(final long ttl, HRegionInfo regionInfo) {
     this.ttl = ttl;
     this.regionInfo = regionInfo;
+    this.memcache = createSynchronizedSortedMap();
+    this.snapshot = createSynchronizedSortedMap();
   }
 
   /*
-   * Utility method.
+   * Utility method using HSKWritableComparator
    * @return sycnhronized sorted map of HStoreKey to byte arrays.
    */
-  private static SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap() {
-    return Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
+  private SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap() {
+    return Collections.synchronizedSortedMap(
+      new TreeMap<HStoreKey, byte []>(
+        new HStoreKey.HStoreKeyWritableComparator(this.regionInfo)));
   }
 
   /**
@@ -229,7 +234,7 @@ class Memcache {
     if (b == null) {
       return a;
     }
-    return Bytes.compareTo(a, b) <= 0? a: b;
+    return HStoreKey.compareTwoRowKeys(regionInfo, a, b) <= 0? a: b;
   }
 
   /**
@@ -259,14 +264,13 @@ class Memcache {
     synchronized (map) {
       // Make an HSK with maximum timestamp so we get past most of the current
       // rows cell entries.
-      HStoreKey hsk = new HStoreKey(row, HConstants.LATEST_TIMESTAMP);
+      HStoreKey hsk = new HStoreKey(row, HConstants.LATEST_TIMESTAMP, this.regionInfo);
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(hsk);
       // Iterate until we fall into the next row; i.e. move off current row
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
-        if (Bytes.compareTo(itKey.getRow(), row) <= 0) {
+        if (HStoreKey.compareTwoRowKeys(regionInfo, itKey.getRow(), row) <= 0)
           continue;
-        }
         // Note: Not suppressing deletes or expired cells.
         result = itKey.getRow();
         break;
@@ -330,13 +334,15 @@ class Memcache {
             }
           }
         }
-      } else if (Bytes.compareTo(key.getRow(), itKey.getRow()) < 0) {
+      } else if (HStoreKey.compareTwoRowKeys(regionInfo, key.getRow(), 
+          itKey.getRow()) < 0) {
         break;
       }
     }
     // Remove expired victims from the map.
-    for (HStoreKey v: victims)
+    for (HStoreKey v: victims) {
       map.remove(v);
+    }
   }
 
   /**
@@ -377,8 +383,8 @@ class Memcache {
       final Set<HStoreKey> deletes) {
     // We want the earliest possible to start searching from.  Start before
     // the candidate key in case it turns out a delete came in later.
-    HStoreKey search_key = candidateKeys.isEmpty()? new HStoreKey(row):
-      new HStoreKey(candidateKeys.firstKey().getRow());
+    HStoreKey search_key = candidateKeys.isEmpty()? new HStoreKey(row, this.regionInfo):
+      new HStoreKey(candidateKeys.firstKey().getRow(), this.regionInfo);
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
     long now = System.currentTimeMillis();
     
@@ -409,7 +415,8 @@ class Memcache {
               deletedOrExpiredRow = found_key;
             }
           } else {
-            if (HStore.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
+            if (HStore.notExpiredAndNotInDeletes(this.ttl, 
+                found_key, now, deletes)) {
               candidateKeys.put(stripTimestamp(found_key),
                 new Long(found_key.getTimestamp()));
             } else {
@@ -469,7 +476,8 @@ class Memcache {
         // not a delete record.
         boolean deleted = HLogEdit.isDeleted(headMap.get(found_key));
         if (lastRowFound != null &&
-            !Bytes.equals(lastRowFound, found_key.getRow()) && !deleted) {
+            !HStoreKey.equalsTwoRowKeys(regionInfo, lastRowFound, 
+                found_key.getRow()) && !deleted) {
           break;
         }
         // If this isn't a delete, record it as a candidate key. Also 
@@ -496,7 +504,7 @@ class Memcache {
       // smaller acceptable candidate keys would have caused us to start
       // our search earlier in the list, and we wouldn't be searching here.
       SortedMap<HStoreKey, byte[]> thisRowTailMap = 
-        headMap.tailMap(new HStoreKey(headMap.lastKey().getRow()));
+        headMap.tailMap(new HStoreKey(headMap.lastKey().getRow(), this.regionInfo));
       Iterator<HStoreKey> key_iterator = thisRowTailMap.keySet().iterator();
       do {
         HStoreKey found_key = key_iterator.next();
@@ -521,7 +529,7 @@ class Memcache {
   }
   
   static HStoreKey stripTimestamp(HStoreKey key) {
-    return new HStoreKey(key.getRow(), key.getColumn());
+    return new HStoreKey(key.getRow(), key.getColumn(), key.getHRegionInfo());
   }
   
   /*
@@ -636,7 +644,8 @@ class Memcache {
       if (origin.getColumn() != null && origin.getColumn().length == 0) {
         // if the current and origin row don't match, then we can jump
         // out of the loop entirely.
-        if (!Bytes.equals(key.getRow(), origin.getRow())) {
+        if (!HStoreKey.equalsTwoRowKeys(regionInfo, key.getRow(), 
+            origin.getRow())) {
           break;
         }
         // if the rows match but the timestamp is newer, skip it so we can
@@ -788,7 +797,6 @@ class Memcache {
           results.put(column, c);
         }
         this.currentRow = getNextRow(this.currentRow);
-
       }
       // Set the timestamp to the largest one for the row if we would otherwise
       // return HConstants.LATEST_TIMESTAMP

@@ -26,6 +26,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
 
 /**
  * A Key for a stored row.
@@ -71,6 +72,29 @@ public class HStoreKey implements WritableComparable {
    */
   public HStoreKey(final String row) {
     this(row, Long.MAX_VALUE);
+  }
+
+  /**
+   * Create an HStoreKey specifying the row and timestamp
+   * The column and table names default to the empty string
+   * 
+   * @param row row key
+   * @param hri
+   */
+  public HStoreKey(final byte [] row, final HRegionInfo hri) {
+    this(row, HConstants.EMPTY_BYTE_ARRAY, hri);
+  }
+ 
+  /**
+   * Create an HStoreKey specifying the row and timestamp
+   * The column and table names default to the empty string
+   * 
+   * @param row row key
+   * @param timestamp timestamp value
+   * @param hri HRegionInfo
+   */
+  public HStoreKey(final byte [] row, long timestamp, final HRegionInfo hri) {
+    this(row, HConstants.EMPTY_BYTE_ARRAY, timestamp, hri);
   }
 
   /**
@@ -188,7 +212,7 @@ public class HStoreKey implements WritableComparable {
    * @param other the source key
    */
   public HStoreKey(HStoreKey other) {
-    this(other.row, other.column, other.timestamp);
+    this(other.row, other.column, other.timestamp, other.regionInfo);
   }
   
   /**
@@ -257,7 +281,7 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */ 
   public boolean matchesRowCol(HStoreKey other) {
-    return Bytes.equals(this.row, other.row) &&
+    return HStoreKey.equalsTwoRowKeys(this.regionInfo, this.row, other.row) &&
       Bytes.equals(column, other.column);
   }
   
@@ -271,7 +295,7 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */
   public boolean matchesWithoutColumn(HStoreKey other) {
-    return Bytes.equals(this.row, other.row) &&
+    return equalsTwoRowKeys(this.regionInfo, this.row, other.row) &&
       this.timestamp >= other.getTimestamp();
   }
   
@@ -286,7 +310,7 @@ public class HStoreKey implements WritableComparable {
    */
   public boolean matchesRowFamily(HStoreKey that) {
     int delimiterIndex = getFamilyDelimiterIndex(this.column);
-    return Bytes.equals(this.row, that.row) &&
+    return equalsTwoRowKeys(this.regionInfo, this.row, that.row) &&
       Bytes.compareTo(this.column, 0, delimiterIndex, that.column, 0,
         delimiterIndex) == 0;
   }
@@ -317,15 +341,19 @@ public class HStoreKey implements WritableComparable {
 
   /** {@inheritDoc} */
   public int compareTo(Object o) {
-    HStoreKey other = (HStoreKey)o;
-    int result = compareTwoRowKeys(this.regionInfo, this.row, other.row);
+    return compareTo(this.regionInfo, this, (HStoreKey)o);
+  }
+  
+  static int compareTo(final HRegionInfo hri, final HStoreKey left,
+      final HStoreKey right) {
+    int result = compareTwoRowKeys(hri, left.getRow(), right.getRow());
     if (result != 0) {
       return result;
     }
-    result = this.column == null && other.column == null? 0:
-      this.column == null && other.column != null? -1:
-      this.column != null && other.column == null? 1:
-      Bytes.compareTo(this.column, other.column);
+    result = left.getColumn() == null && right.getColumn() == null? 0:
+      left.getColumn() == null && right.getColumn() != null? -1:
+        left.getColumn() != null && right.getColumn() == null? 1:
+      Bytes.compareTo(left.getColumn(), right.getColumn());
     if (result != 0) {
       return result;
     }
@@ -333,9 +361,9 @@ public class HStoreKey implements WritableComparable {
     // wrong but it is intentional. This way, newer timestamps are first
     // found when we iterate over a memcache and newer versions are the
     // first we trip over when reading from a store file.
-    if (this.timestamp < other.timestamp) {
+    if (left.getTimestamp() < right.getTimestamp()) {
       result = 1;
-    } else if (this.timestamp > other.timestamp) {
+    } else if (left.getTimestamp() > right.getTimestamp()) {
       result = -1;
     }
     return result;
@@ -482,9 +510,8 @@ public class HStoreKey implements WritableComparable {
       if(rowCompare == 0)
         rowCompare = Bytes.compareTo(keysA[1], KeysB[1]);
       return rowCompare;
-    } else {
-      return Bytes.compareTo(rowA, rowB);
     }
+    return Bytes.compareTo(rowA, rowB);
   }
   
   /**
@@ -513,10 +540,14 @@ public class HStoreKey implements WritableComparable {
         break;
       }
     }
-    byte [] row = new byte[offset];
-    System.arraycopy(rowKey, 0, row, 0,offset);
-    byte [] timestamp = new byte[rowKey.length - offset - 1];
-    System.arraycopy(rowKey, offset+1, timestamp, 0,rowKey.length - offset - 1);
+    byte [] row = rowKey;
+    byte [] timestamp = HConstants.EMPTY_BYTE_ARRAY;
+    if (offset != -1) {
+      row = new byte[offset];
+      System.arraycopy(rowKey, 0, row, 0, offset);
+      timestamp = new byte[rowKey.length - offset - 1];
+      System.arraycopy(rowKey, offset+1, timestamp, 0,rowKey.length - offset - 1);
+    }
     byte[][] elements = new byte[2][];
     elements[0] = row;
     elements[1] = timestamp;
@@ -537,5 +568,21 @@ public class HStoreKey implements WritableComparable {
     this.row = Bytes.readByteArray(in);
     this.column = Bytes.readByteArray(in);
     this.timestamp = in.readLong();
+  }
+  
+  /**
+   * Passed as comparator for memcache and for store files.  See HBASE-868.
+   */
+  public static class HStoreKeyWritableComparator extends WritableComparator {
+    private final HRegionInfo hri;
+    
+    public HStoreKeyWritableComparator(final HRegionInfo hri) {
+      super(HStoreKey.class);
+      this.hri = hri;
+    }
+    
+    public int compare(final WritableComparable left, final WritableComparable right) {
+      return compareTo(this.hri, (HStoreKey)left, (HStoreKey)right);
+    }
   }
 }

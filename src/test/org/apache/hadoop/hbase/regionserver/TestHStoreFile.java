@@ -34,6 +34,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 /**
  * Test HStoreFile
@@ -126,7 +127,7 @@ public class TestHStoreFile extends HBaseTestCase {
   throws IOException {
     // Make a store file and write data to it.
     HStoreFile hsf = new HStoreFile(this.conf, this.fs, this.dir,
-      JenkinsHash.hash(Bytes.toBytes(getName())),
+      HRegionInfo.FIRST_META_REGIONINFO,
       Bytes.toBytes("colfamily"), 1234567890L, null);
     MapFile.Writer writer =
       hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, false, 0);
@@ -145,7 +146,7 @@ public class TestHStoreFile extends HBaseTestCase {
           midkey, HStoreFile.Range.top);
     HStoreFile refHsf = new HStoreFile(this.conf, this.fs, 
         new Path(DIR, getName()),
-        JenkinsHash.hash(Bytes.toBytes(getName() + "_reference")),
+        HRegionInfo.FIRST_META_REGIONINFO,
         hsf.getColFamily(), 456, reference);
     // Assert that reference files are written and that we can write and
     // read the info reference file at least.

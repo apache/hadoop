@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -323,7 +324,7 @@ public class HConnectionManager implements HConstants {
         if (currentRegion != null) {
           byte[] endKey = currentRegion.getEndKey();
           if (endKey == null ||
-              Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)) {
+              HStoreKey.equalsTwoRowKeys(currentRegion, endKey, HConstants.EMPTY_BYTE_ARRAY)) {
             // We have reached the end of the table and we're done
             break;
           }
@@ -636,8 +637,10 @@ public class HConnectionManager implements HConstants {
           // this one. the exception case is when the endkey is EMPTY_START_ROW,
           // signifying that the region we're checking is actually the last
           // region in the table.
-          if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-              Bytes.compareTo(endKey, row) > 0) {
+          if (HStoreKey.equalsTwoRowKeys(possibleRegion.getRegionInfo(), 
+              endKey, HConstants.EMPTY_END_ROW) ||
+              HStoreKey.compareTwoRowKeys(possibleRegion.getRegionInfo(), 
+                  endKey, row) > 0) {
             return possibleRegion;
           }
         }
@@ -684,7 +687,8 @@ public class HConnectionManager implements HConstants {
           
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (Bytes.compareTo(endKey, row) <= 0) {
+          if (HStoreKey.compareTwoRowKeys(possibleRegion.getRegionInfo(),
+              endKey, row) <= 0) {
             // delete any matching entry
             HRegionLocation rl = 
               tableLocations.remove(matchingRegions.lastKey());

@@ -101,7 +101,7 @@ implements ChangedReadersObserver {
     
     // Advance the readers to the first pos.
     for (i = 0; i < readers.length; i++) {
-      keys[i] = new HStoreKey();
+      keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.store.getHRegionInfo());
       if (firstRow != null && firstRow.length != 0) {
         if (findFirstRow(i, firstRow)) {
           continue;
@@ -159,7 +159,8 @@ implements ChangedReadersObserver {
         for (int i = 0; i < keys.length; i++) {
           // Fetch the data
           while ((keys[i] != null)
-              && (Bytes.compareTo(keys[i].getRow(), viableRow.getRow()) == 0)) {
+              && (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
+                  keys[i].getRow(), viableRow.getRow()) == 0)) {
 
             // If we are doing a wild card match or there are multiple matchers
             // per column, we need to scan all the older versions of this row
@@ -187,7 +188,8 @@ implements ChangedReadersObserver {
           // Advance the current scanner beyond the chosen row, to
           // a valid timestamp, so we're ready next time.
           while ((keys[i] != null)
-              && ((Bytes.compareTo(keys[i].getRow(), viableRow.getRow()) <= 0)
+              && ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
+                keys[i].getRow(), viableRow.getRow()) <= 0)
                   || (keys[i].getTimestamp() > this.timestamp)
                   || (! columnMatch(i)))) {
             getNext(i);
@@ -246,8 +248,10 @@ implements ChangedReadersObserver {
           // column matches and the timestamp of the row is less than or equal
           // to this.timestamp, so we do not need to test that here
           && ((viableRow == null)
-              || (Bytes.compareTo(keys[i].getRow(), viableRow) < 0)
-              || ((Bytes.compareTo(keys[i].getRow(), viableRow) == 0)
+              || (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
+                  keys[i].getRow(), viableRow) < 0)
+              || ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
+                  keys[i].getRow(), viableRow) == 0)
                   && (keys[i].getTimestamp() > viableTimestamp)))) {
         if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
           viableRow = keys[i].getRow();
@@ -273,7 +277,7 @@ implements ChangedReadersObserver {
   private boolean findFirstRow(int i, final byte [] firstRow) throws IOException {
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     HStoreKey firstKey
-      = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
+      = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow, this.store.getHRegionInfo()), ibw);
     if (firstKey == null) {
       // Didn't find it. Close the scanner and return TRUE
       closeSubScanner(i);

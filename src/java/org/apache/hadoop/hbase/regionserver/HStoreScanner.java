@@ -119,8 +119,10 @@ class HStoreScanner implements InternalScanner {
       for (int i = 0; i < this.keys.length; i++) {
         if (scanners[i] != null &&
             (chosenRow == null ||
-            (Bytes.compareTo(keys[i].getRow(), chosenRow) < 0) ||
-            ((Bytes.compareTo(keys[i].getRow(), chosenRow) == 0) &&
+            (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
+              keys[i].getRow(), chosenRow) < 0) ||
+            ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
+              keys[i].getRow(), chosenRow) == 0) &&
             (keys[i].getTimestamp() > chosenTimestamp)))) {
           chosenRow = keys[i].getRow();
           chosenTimestamp = keys[i].getTimestamp();
@@ -150,7 +152,8 @@ class HStoreScanner implements InternalScanner {
           while ((scanners[i] != null
               && !filtered
               && moreToFollow)
-              && (Bytes.compareTo(keys[i].getRow(), chosenRow) == 0)) {
+              && (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
+                keys[i].getRow(), chosenRow) == 0)) {
             // If we are doing a wild card match or there are multiple
             // matchers per column, we need to scan all the older versions of 
             // this row to pick up the rest of the family members
@@ -165,7 +168,7 @@ class HStoreScanner implements InternalScanner {
             // values with older ones. So now we only insert
             // a result if the map does not contain the key.
             HStoreKey hsk = new HStoreKey(key.getRow(), HConstants.EMPTY_BYTE_ARRAY,
-              key.getTimestamp());
+              key.getTimestamp(), this.store.getHRegionInfo());
             for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
               hsk.setColumn(e.getKey());
               if (HLogEdit.isDeleted(e.getValue().getValue())) {
@@ -202,7 +205,8 @@ class HStoreScanner implements InternalScanner {
         // If the current scanner is non-null AND has a lower-or-equal
         // row label, then its timestamp is bad. We need to advance it.
         while ((scanners[i] != null) &&
-            (Bytes.compareTo(keys[i].getRow(), chosenRow) <= 0)) {
+            (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
+              keys[i].getRow(), chosenRow) <= 0)) {
           resultSets[i].clear();
           if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);

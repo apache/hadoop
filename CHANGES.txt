@@ -58,6 +58,8 @@ Release 0.18.0 - Unreleased
    HBASE-864   Deadlock in regionserver
    HBASE-865   Fix javadoc warnings (Rong-En Fan via Jim Kellerman)
    HBASE-872   Getting exceptions in shell when creating/disabling tables
+   HBASE-868   Incrementing binary rows cause strange behavior once table
+               splits (Jonathan Gray via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
@@ -78,6 +80,8 @@ Release 0.18.0 - Unreleased
               (Sishen Freecity via Stack)
    HBASE-874  deleting a table kills client rpc; no subsequent communication if
               shell or thrift server, etc. (Jonathan Gray via Jim Kellerman)
+   HBASE-871  Major compaction periodicity should be specifyable at the column
+              family level, not cluster wide (Jonathan Gray via Stack)
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)

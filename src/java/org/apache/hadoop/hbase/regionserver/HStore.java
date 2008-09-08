@@ -188,7 +188,12 @@ public class HStore implements HConstants {
     }
     this.desiredMaxFileSize = maxFileSize;
 
-    this.majorCompactionTime = conf.getLong("hbase.hregion.majorcompaction", 86400000);
+    this.majorCompactionTime = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 86400000);
+    if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
+      String strCompactionTime = family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
+      this.majorCompactionTime = (new Long(strCompactionTime)).longValue();
+    }
+
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
     this.storeSize = 0L;
 
@@ -319,7 +324,8 @@ public class HStore implements HConstants {
             || !HStoreKey.matchingFamily(family.getName(), column)) {
           continue;
         }
-        HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
+        HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp(),
+          this.info);
         reconstructedCache.put(k, val.getVal());
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
@@ -390,7 +396,7 @@ public class HStore implements HConstants {
       if (isReference) {
         reference = HStoreFile.readSplitInfo(p, fs);
       }
-      curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
+      curfile = new HStoreFile(conf, fs, basedir, this.info,
         family.getName(), fid, reference);
       long storeSeqId = -1;
       try {
@@ -424,7 +430,9 @@ public class HStore implements HConstants {
           // Try fixing this file.. if we can.  Use the hbase version of fix.
           // Need to remove the old index file first else fix won't go ahead.
           this.fs.delete(new Path(mapfile, MapFile.INDEX_FILE_NAME), false);
-          long count = MapFile.fix(this.fs, mapfile, HStoreFile.HbaseMapFile.KEY_CLASS,
+          // TODO: This is going to fail if we are to rebuild a file from
+          // meta because it won't have right comparator: HBASE-848.
+          long count = MapFile.fix(this.fs, mapfile, HStoreKey.class,
             HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
           if (LOG.isDebugEnabled()) {
             LOG.debug("Fixed index on " + mapfile.toString() + "; had " +
@@ -589,7 +597,7 @@ public class HStore implements HConstants {
       long now = System.currentTimeMillis();
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
-        info.getEncodedName(),  family.getName(), -1L, null);
+        this.info,  family.getName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.family.isBloomfilter(), cache.size());
        out.setIndexInterval(family.getMapFileIndexInterval());
@@ -873,8 +881,7 @@ public class HStore implements HConstants {
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
-          this.compactionDir, info.getEncodedName(), family.getName(),
-          -1L, null);
+          this.compactionDir,  this.info, family.getName(), -1L, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("started compaction of " + rdrs.size() + " files into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
@@ -962,7 +969,7 @@ public class HStore implements HConstants {
           }
         }
         HStoreKey sk = keys[smallestKey];
-        if (Bytes.equals(lastRow, sk.getRow())
+        if (HStoreKey.equalsTwoRowKeys(info,lastRow, sk.getRow())
             && Bytes.equals(lastColumn, sk.getColumn())) {
           timesSeen++;
         } else {
@@ -1045,7 +1052,7 @@ public class HStore implements HConstants {
     try {
       // 1. Moving the new MapFile into place.
       HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
-        info.getEncodedName(), family.getName(), -1, null);
+        this.info, family.getName(), -1, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("moving " + FSUtils.getPath(compactedFile.getMapFilePath()) +
           " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));
@@ -1207,7 +1214,7 @@ public class HStore implements HConstants {
               }
             }
           }
-        } else if (Bytes.compareTo(key.getRow(), readkey.getRow()) < 0) {
+        } else if (HStoreKey.compareTwoRowKeys(info,key.getRow(), readkey.getRow()) < 0) {
           // if we've crossed into the next row, then we can just stop 
           // iterating
           break;
@@ -1774,7 +1781,7 @@ public class HStore implements HConstants {
   }
   
   static HStoreKey stripTimestamp(HStoreKey key) {
-    return new HStoreKey(key.getRow(), key.getColumn());
+    return new HStoreKey(key.getRow(), key.getColumn(), key.getHRegionInfo());
   }
     
   /*
@@ -1789,7 +1796,7 @@ public class HStore implements HConstants {
     // if the origin's column is empty, then we're matching any column
     if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)) {
       // if the row matches, then...
-      if (Bytes.equals(target.getRow(), origin.getRow())) {
+      if (HStoreKey.equalsTwoRowKeys(info, target.getRow(), origin.getRow())) {
         // check the timestamp
         return target.getTimestamp() <= origin.getTimestamp();
       }
@@ -1810,7 +1817,7 @@ public class HStore implements HConstants {
     // if the origin's column is empty, then we're matching any column
     if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)) {
       // if the row matches, then...
-      return Bytes.equals(target.getRow(), origin.getRow());
+      return HStoreKey.equalsTwoRowKeys(info, target.getRow(), origin.getRow());
     }
     // otherwise, we want to match on row and column
     return target.matchesRowCol(origin);
@@ -1869,8 +1876,8 @@ public class HStore implements HConstants {
       if (mk != null) {
         // if the midkey is the same as the first and last keys, then we cannot
         // (ever) split this region. 
-        if (Bytes.equals(mk.getRow(), firstKey.getRow()) && 
-            Bytes.equals(mk.getRow(), lastKey.getRow())) {
+        if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(), firstKey.getRow()) && 
+            HStoreKey.equalsTwoRowKeys(info, mk.getRow(), lastKey.getRow())) {
           return null;
         }
         return new StoreSize(maxSize, mk.getRow());
@@ -1956,5 +1963,9 @@ public class HStore implements HConstants {
     byte[] getKey() {
       return key;
     }
+  }
+
+  HRegionInfo getHRegionInfo() {
+    return this.info;
   }
 }
