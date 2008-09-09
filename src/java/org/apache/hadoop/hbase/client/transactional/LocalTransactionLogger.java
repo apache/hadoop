@@ -33,6 +33,11 @@ public class LocalTransactionLogger implements TransactionLogger {
 
   private static LocalTransactionLogger instance;
   
+  /**
+   * Creates singleton if it does not exist
+   * 
+   * @return reference to singleton
+   */
   public synchronized static LocalTransactionLogger getInstance() {
     if (instance == null) {
       instance = new LocalTransactionLogger();
@@ -48,7 +53,7 @@ public class LocalTransactionLogger implements TransactionLogger {
     // Enforce singlton
   }
   
-  // Gives back random longs to minimize possibility of collision
+  /** @return random longs to minimize possibility of collision */
   public long createNewTransactionLog() {
     long id = random.nextLong();
     transactionIdToStatusMap.put(id, TransactionStatus.PENDING);

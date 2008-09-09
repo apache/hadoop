@@ -52,7 +52,7 @@ public class TestRegExpRowFilter extends TestCase {
       fail();
     }
   }
-  /** {@inheritDoc} */
+
   @Override
   protected void setUp() throws Exception {
     super.setUp();

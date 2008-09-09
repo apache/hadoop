@@ -67,7 +67,6 @@ class CompactSplitThread extends Thread implements HConstants {
       20 * 1000);
   }
   
-  /** {@inheritDoc} */
   @Override
   public void run() {
     while (!server.isStopRequested()) {

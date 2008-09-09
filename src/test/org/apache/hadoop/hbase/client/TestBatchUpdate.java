@@ -58,9 +58,6 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     smallValue = "a".getBytes(HConstants.UTF8_ENCODING);
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void setUp() throws Exception {
     super.setUp();

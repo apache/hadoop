@@ -62,6 +62,9 @@ class TransactionalHLogManager {
   private final HRegionInfo regionInfo;
   private final HBaseConfiguration conf;
 
+  /**
+   * @param region
+   */
   public TransactionalHLogManager(final TransactionalRegion region) {
     this.hlog = region.getLog();
     this.fileSystem = region.getFilesystem();
@@ -78,6 +81,10 @@ class TransactionalHLogManager {
     this.conf = conf;
   }
 
+  /**
+   * @param transactionId
+   * @throws IOException
+   */
   public void writeStartToLog(final long transactionId) throws IOException {
     HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId, HLogEdit.TransactionalOperation.START);
@@ -85,6 +92,11 @@ class TransactionalHLogManager {
     hlog.append(regionInfo, logEdit);
   }
 
+  /**
+   * @param transactionId
+   * @param update
+   * @throws IOException
+   */
   public void writeUpdateToLog(final long transactionId,
       final BatchUpdate update) throws IOException {
 
@@ -98,6 +110,10 @@ class TransactionalHLogManager {
     }
   }
 
+  /**
+   * @param transactionId
+   * @throws IOException
+   */
   public void writeCommitToLog(final long transactionId) throws IOException {
     HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId,
@@ -106,6 +122,10 @@ class TransactionalHLogManager {
     hlog.append(regionInfo, logEdit);
   }
 
+  /**
+   * @param transactionId
+   * @throws IOException
+   */
   public void writeAbortToLog(final long transactionId) throws IOException {
     HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId, HLogEdit.TransactionalOperation.ABORT);
@@ -113,6 +133,14 @@ class TransactionalHLogManager {
     hlog.append(regionInfo, logEdit);
   }
 
+  /**
+   * @param reconstructionLog
+   * @param maxSeqID
+   * @param reporter
+   * @return map of batch updates
+   * @throws UnsupportedEncodingException
+   * @throws IOException
+   */
   public Map<Long, List<BatchUpdate>> getCommitsFromLog(
       final Path reconstructionLog, final long maxSeqID,
       final Progressable reporter) throws UnsupportedEncodingException,

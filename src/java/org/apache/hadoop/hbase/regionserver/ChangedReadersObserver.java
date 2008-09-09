@@ -29,6 +29,7 @@ import java.io.IOException;
 public interface ChangedReadersObserver {
   /**
    * Notify observers.
+   * @throws IOException
    */
   void updateReaders() throws IOException;
 }

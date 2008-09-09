@@ -189,19 +189,16 @@ public class TestClassMigration extends TestCase {
       return timestamp;
     }
 
-    /** {@inheritDoc} */
     @Override
     public String toString() {
       return row.toString() + "/" + column.toString() + "/" + timestamp;
     }
     
-    /** {@inheritDoc} */
     @Override
     public boolean equals(Object obj) {
       return compareTo(obj) == 0;
     }
     
-    /** {@inheritDoc} */
     @Override
     public int hashCode() {
       int result = this.row.hashCode();
@@ -236,14 +233,12 @@ public class TestClassMigration extends TestCase {
 
     // Writable
 
-    /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
       row.write(out);
       column.write(out);
       out.writeLong(timestamp);
     }
 
-    /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
       row.readFields(in);
       column.readFields(in);

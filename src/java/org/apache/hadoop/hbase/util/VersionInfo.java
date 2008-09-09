@@ -75,11 +75,15 @@ public class VersionInfo {
   
   /**
    * Get the subversion URL for the root hbase directory.
+   * @return the url
    */
   public static String getUrl() {
     return version != null ? version.url() : "Unknown";
   }
   
+  /**
+   * @param args
+   */
   public static void main(String[] args) {
     System.out.println("HBase " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());

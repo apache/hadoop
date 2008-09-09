@@ -72,7 +72,6 @@ abstract class TableOperation implements HConstants {
       super(m, master);
     }
 
-    /** {@inheritDoc} */
     public Boolean call() throws IOException {
       boolean tableExists = false;
 

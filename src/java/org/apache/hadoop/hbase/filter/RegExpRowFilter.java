@@ -86,13 +86,11 @@ public class RegExpRowFilter implements RowFilterInterface {
     this.setColumnFilters(columnFilter);
   }
   
-  /** {@inheritDoc} */
   @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     //doesn't care
   }
 
-  /** {@inheritDoc} */
   public boolean processAlways() {
     return false;
   }
@@ -134,36 +132,20 @@ public class RegExpRowFilter implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void reset() {
     // Nothing to reset
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterAllRemaining() {
     return false;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterRowKey(final byte [] rowKey) {
     return (filtersByRowKey() && rowKey != null)?
       !getRowKeyPattern().matcher(Bytes.toString(rowKey)).matches():
       false;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
       final byte[] data) {
     if (filterRowKey(rowKey)) {
@@ -183,10 +165,6 @@ public class RegExpRowFilter implements RowFilterInterface {
     return false;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     for (Entry<byte [], Cell> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
@@ -225,10 +203,6 @@ public class RegExpRowFilter implements RowFilterInterface {
     return rowKeyPattern;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void readFields(final DataInput in) throws IOException {
     boolean hasRowKeyPattern = in.readBoolean();
     if (hasRowKeyPattern) {
@@ -255,10 +229,6 @@ public class RegExpRowFilter implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void validate(final byte [][] columns) {
     Set<byte []> invalids = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     for (byte [] colKey : getFilterColumns()) {
@@ -289,10 +259,6 @@ public class RegExpRowFilter implements RowFilterInterface {
     return cols;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void write(final DataOutput out) throws IOException {
     if (!filtersByRowKey()) {
       out.writeBoolean(false);

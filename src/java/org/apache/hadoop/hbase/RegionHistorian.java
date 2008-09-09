@@ -56,6 +56,8 @@ public class RegionHistorian implements HConstants {
   private static SimpleDateFormat dateFormat = new SimpleDateFormat(
   "EEE, d MMM yyyy HH:mm:ss");
 
+  //TODO: Why is this public? Appears to only apply internally.
+  
   public static enum HistorianColumnKey  {
     REGION_CREATION ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"creation")),
     REGION_OPEN ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"open")),
@@ -132,6 +134,7 @@ public class RegionHistorian implements HConstants {
   /**
    * Method to add a creation event to the row in the .META table
    * @param info
+   * @param serverName
    */
   public void addRegionAssignment(HRegionInfo info, String serverName) {
     add(HistorianColumnKey.REGION_ASSIGNMENT.key, "Region assigned to server "
@@ -175,6 +178,7 @@ public class RegionHistorian implements HConstants {
   /**
    * Method to add a compaction event to the row in the .META table
    * @param info
+   * @param timeTaken
    */
   public void addRegionCompaction(final HRegionInfo info,
       final String timeTaken) {
@@ -191,6 +195,7 @@ public class RegionHistorian implements HConstants {
   /**
    * Method to add a flush event to the row in the .META table
    * @param info
+   * @param timeTaken
    */
   public void addRegionFlush(HRegionInfo info,
     @SuppressWarnings("unused") String timeTaken) {
@@ -249,6 +254,11 @@ public class RegionHistorian implements HConstants {
 
     private String description;
 
+    /**
+     * @param timestamp
+     * @param event
+     * @param description
+     */
     public RegionHistoryInformation(long timestamp, String event,
         String description) {
       this.timestamp = timestamp;
@@ -256,21 +266,21 @@ public class RegionHistorian implements HConstants {
       this.description = description;
     }
 
-    /**
-     * Returns the inverse value of Long.compareTo
-     */
     public int compareTo(RegionHistoryInformation otherInfo) {
       return -1 * Long.valueOf(timestamp).compareTo(otherInfo.getTimestamp());
     }
 
+    /** @return the event */
     public String getEvent() {
       return event;
     }
 
+    /** @return the description */
     public String getDescription() {
       return description;
     }
 
+    /** @return the timestamp */
     public long getTimestamp() {
       return timestamp;
     }

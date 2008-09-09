@@ -49,7 +49,6 @@ public abstract class Chore extends Thread {
     this.stop = s;
   }
 
-  /** {@inheritDoc} */
   @Override
   public void run() {
     try {

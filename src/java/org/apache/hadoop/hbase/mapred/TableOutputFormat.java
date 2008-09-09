@@ -63,19 +63,16 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
       m_table = table;
     }
 
-    /** {@inheritDoc} */
     public void close(@SuppressWarnings("unused") Reporter reporter) {
       // Nothing to do.
     }
 
-    /** {@inheritDoc} */
     public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
         BatchUpdate value) throws IOException {
       m_table.commit(value);
     }
   }
   
-  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unchecked")
   public RecordWriter getRecordWriter(
@@ -97,7 +94,6 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
     return new TableRecordWriter(table);
   }
 
-  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unused")
   public void checkOutputSpecs(FileSystem ignored, JobConf job)

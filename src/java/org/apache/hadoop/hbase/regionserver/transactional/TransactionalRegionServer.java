@@ -60,12 +60,21 @@ public class TransactionalRegionServer extends HRegionServer implements
 
   private final CleanOldTransactionsChore cleanOldTransactionsThread;
 
+  /**
+   * @param conf
+   * @throws IOException
+   */
   public TransactionalRegionServer(final HBaseConfiguration conf)
       throws IOException {
     this(new HServerAddress(conf.get(REGIONSERVER_ADDRESS,
         DEFAULT_REGIONSERVER_ADDRESS)), conf);
   }
 
+  /**
+   * @param address
+   * @param conf
+   * @throws IOException
+   */
   public TransactionalRegionServer(final HServerAddress address,
       final HBaseConfiguration conf) throws IOException {
     super(address, conf);
@@ -73,7 +82,6 @@ public class TransactionalRegionServer extends HRegionServer implements
         super.stopRequested);
   }
 
-  /** {@inheritDoc} */
   @Override
   public long getProtocolVersion(final String protocol, final long clientVersion)
       throws IOException {
@@ -241,7 +249,6 @@ public class TransactionalRegionServer extends HRegionServer implements
 
   }
 
-  /** {@inheritDoc} */
   public void deleteAll(final long transactionId, final byte[] regionName,
       final byte[] row, final long timestamp) throws IOException {
     checkOpen();

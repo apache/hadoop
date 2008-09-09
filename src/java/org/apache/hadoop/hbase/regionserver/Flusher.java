@@ -77,7 +77,6 @@ class Flusher extends Thread implements FlushRequester {
         globalMemcacheLimit / 2);        
   }
   
-  /** {@inheritDoc} */
   @Override
   public void run() {
     while (!server.isStopRequested()) {
@@ -109,7 +108,6 @@ class Flusher extends Thread implements FlushRequester {
     LOG.info(getName() + " exiting");
   }
   
-  /** {@inheritDoc} */
   public void request(HRegion r) {
     addRegion(r, System.currentTimeMillis());
   }
@@ -233,7 +231,8 @@ class Flusher extends Thread implements FlushRequester {
    * @param r Region to add.
    * @param now The 'now' to use.  Set last flush time to this value.
    */
-  private void addRegion(final HRegion r, final long now) {
+  private void addRegion(final HRegion r,
+      @SuppressWarnings("unused") final long now) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
         regionsInQueue.add(r);

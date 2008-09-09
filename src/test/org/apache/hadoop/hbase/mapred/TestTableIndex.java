@@ -86,7 +86,6 @@ public class TestTableIndex extends MultiRegionTable {
     Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
   }
 
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     if (jobConf != null) {

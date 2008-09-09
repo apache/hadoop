@@ -57,62 +57,77 @@ public class BeforeThisStoreKey extends HStoreKey {
     return false;
   }
 
+  @Override
   public byte[] getColumn() {
     return this.beforeThisKey.getColumn();
   }
 
+  @Override
   public byte[] getRow() {
     return this.beforeThisKey.getRow();
   }
 
+  @Override
   public long getSize() {
     return this.beforeThisKey.getSize();
   }
 
+  @Override
   public long getTimestamp() {
     return this.beforeThisKey.getTimestamp();
   }
 
+  @Override
   public int hashCode() {
     return this.beforeThisKey.hashCode();
   }
 
+  @Override
   public boolean matchesRowCol(HStoreKey other) {
     return this.beforeThisKey.matchesRowCol(other);
   }
 
+  @Override
   public boolean matchesRowFamily(HStoreKey that) {
     return this.beforeThisKey.matchesRowFamily(that);
   }
 
+  @Override
   public boolean matchesWithoutColumn(HStoreKey other) {
     return this.beforeThisKey.matchesWithoutColumn(other);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     this.beforeThisKey.readFields(in);
   }
 
+  @Override
   public void set(HStoreKey k) {
     this.beforeThisKey.set(k);
   }
 
+  @Override
   public void setColumn(byte[] c) {
     this.beforeThisKey.setColumn(c);
   }
 
+  @Override
   public void setRow(byte[] newrow) {
     this.beforeThisKey.setRow(newrow);
   }
 
+  @Override
   public void setVersion(long timestamp) {
     this.beforeThisKey.setVersion(timestamp);
   }
 
+  @Override
   public String toString() {
     return this.beforeThisKey.toString();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     this.beforeThisKey.write(out);
   }

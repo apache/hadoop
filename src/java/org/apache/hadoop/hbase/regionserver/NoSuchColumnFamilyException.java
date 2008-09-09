@@ -24,11 +24,16 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * Thrown if request for nonexistent column family.
  */
+@SuppressWarnings("serial")
 public class NoSuchColumnFamilyException extends DoNotRetryIOException {
+  /** default constructor */
   public NoSuchColumnFamilyException() {
     super();
   }
 
+  /**
+   * @param message
+   */
   public NoSuchColumnFamilyException(String message) {
     super(message);
   }

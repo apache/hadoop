@@ -104,7 +104,6 @@ public class BloomFilter extends Filter {
     bits = new BitSet(this.vectorSize);
   }//end constructor
 
-  /** {@inheritDoc} */
   @Override
   public void add(Key key) {
     if(key == null) {
@@ -119,7 +118,6 @@ public class BloomFilter extends Filter {
     }
   }//end add()
 
-  /** {@inheritDoc} */
   @Override
   public void and(Filter filter){
     if(filter == null
@@ -132,7 +130,6 @@ public class BloomFilter extends Filter {
     this.bits.and(((BloomFilter) filter).bits);
   }//end and()
 
-  /** {@inheritDoc} */
   @Override
   public boolean membershipTest(Key key){
     if(key == null) {
@@ -149,13 +146,11 @@ public class BloomFilter extends Filter {
     return true;
   }//end memberhsipTest()
 
-  /** {@inheritDoc} */
   @Override
   public void not(){
     bits.flip(0, vectorSize - 1);
   }//end not()
 
-  /** {@inheritDoc} */
   @Override
   public void or(Filter filter){
     if(filter == null
@@ -167,7 +162,6 @@ public class BloomFilter extends Filter {
     bits.or(((BloomFilter) filter).bits);
   }//end or()
 
-  /** {@inheritDoc} */
   @Override
   public void xor(Filter filter){
     if(filter == null
@@ -179,13 +173,11 @@ public class BloomFilter extends Filter {
     bits.xor(((BloomFilter) filter).bits);
   }//and xor()
 
-  /** {@inheritDoc} */
   @Override
   public String toString(){
     return bits.toString();
   }//end toString()
 
-  /** {@inheritDoc} */
   @Override
   public Object clone(){
     BloomFilter bf = new BloomFilter(vectorSize, nbHash);
@@ -202,7 +194,6 @@ public class BloomFilter extends Filter {
 
   // Writable
 
-  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -222,7 +213,6 @@ public class BloomFilter extends Filter {
     out.write(bytes);
   }
 
-  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);

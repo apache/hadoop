@@ -22,20 +22,32 @@ package org.apache.hadoop.hbase.client.transactional;
 /** Thrown when a transaction cannot be committed. 
  * 
  */
+@SuppressWarnings("serial")
 public class CommitUnsuccessfulException extends Exception {
 
+  /** Default Constructor */
   public CommitUnsuccessfulException() {
     super();
   }
 
+  /**
+   * @param arg0 message
+   * @param arg1 cause
+   */
   public CommitUnsuccessfulException(String arg0, Throwable arg1) {
     super(arg0, arg1);
   }
 
+  /**
+   * @param arg0 message
+   */
   public CommitUnsuccessfulException(String arg0) {
     super(arg0);
   }
 
+  /**
+   * @param arg0 cause
+   */
   public CommitUnsuccessfulException(Throwable arg0) {
     super(arg0);
   }

@@ -40,6 +40,7 @@ public class HMsg implements Writable {
    * Message types sent between master and regionservers
    */
   public static enum Type {
+    /** null message */
     MSG_NONE,
     
     // Message types sent from master to region server
@@ -100,14 +101,19 @@ public class HMsg implements Writable {
   private byte[] message = null;
 
   // Some useful statics.  Use these rather than create a new HMsg each time.
+  //TODO: move the following to HRegionServer
   public static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   public static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
+  //TODO: Move to o.a.h.h.master
   public static final HMsg REGIONSERVER_QUIESCE =
     new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
+  //TODO: Move to o.a.h.h.master
   public static final HMsg REGIONSERVER_STOP =
     new HMsg(Type.MSG_REGIONSERVER_STOP);
+  //TODO: Move to o.a.h.h.master
   public static final HMsg CALL_SERVER_STARTUP =
     new HMsg(Type.MSG_CALL_SERVER_STARTUP);
+  //TODO: Move to o.a.h.h.master
   public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
 
@@ -160,6 +166,7 @@ public class HMsg implements Writable {
     return this.info;
   }
 
+  /** @return the type of message */
   public Type getType() {
     return this.type;
   }
@@ -171,14 +178,12 @@ public class HMsg implements Writable {
   public boolean isType(final HMsg.Type other) {
     return this.type.equals(other);
   }
-  
+
+  /** @return the message type */
   public byte[] getMessage() {
     return this.message;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -215,9 +220,6 @@ public class HMsg implements Writable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * {@inheritDoc}
-   */
   public void write(DataOutput out) throws IOException {
      out.writeInt(this.type.ordinal());
      this.info.write(out);
@@ -229,9 +231,6 @@ public class HMsg implements Writable {
      }
    }
 
-  /**
-   * {@inheritDoc}
-   */
   public void readFields(DataInput in) throws IOException {
      int ordinal = in.readInt();
      this.type = HMsg.Type.values()[ordinal];

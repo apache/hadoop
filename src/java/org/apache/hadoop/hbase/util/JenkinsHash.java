@@ -43,7 +43,7 @@ public class JenkinsHash {
   private static long BYTE_MASK = 0x00000000000000ffL;
 
   private static long rot(long val, int pos) {
-    return ((long)(Integer.rotateLeft(
+    return ((Integer.rotateLeft(
         (int)(val & INT_MASK), pos)) & INT_MASK);
   }
 
@@ -93,6 +93,7 @@ public class JenkinsHash {
    * <p>Use for hash table lookup, or anything where one collision in 2^^32 is
    * acceptable.  Do NOT use for cryptographic purposes.
   */
+  @SuppressWarnings("fallthrough")
   public static int hash(byte[] key, int nbytes, int initval) {
     int length = nbytes;
     long a, b, c;       // We use longs because we don't have unsigned ints

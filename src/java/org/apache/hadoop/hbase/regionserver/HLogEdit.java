@@ -64,8 +64,16 @@ public class HLogEdit implements Writable, HConstants {
     return (value == null)? false: deleteBytes.compareTo(value) == 0;
   }
   
+  /** If transactional log entry, these are the op codes */
   public enum TransactionalOperation {
-    START, WRITE, COMMIT, ABORT
+    /** start transaction */
+    START,
+    /** Equivalent to append in non-transactional environment */
+    WRITE,
+    /** Transaction commit entry */
+    COMMIT,
+    /** Abort transaction entry */
+    ABORT
   }
 
   private byte [] column;
@@ -139,7 +147,8 @@ public class HLogEdit implements Writable, HConstants {
   public long getTimestamp() {
     return this.timestamp;
   }
-  
+
+  /** @return true if entry is a transactional entry */
   public boolean isTransactionEntry() {
     return isTransactionEntry;
   }
@@ -188,7 +197,6 @@ public class HLogEdit implements Writable, HConstants {
   
   // Writable
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.column);
     if (this.val == null) {
@@ -205,7 +213,6 @@ public class HLogEdit implements Writable, HConstants {
     }
   }
   
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.column = Bytes.readByteArray(in);
     this.val = new byte[in.readInt()];

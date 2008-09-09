@@ -70,7 +70,6 @@ public class Merge extends Configured implements Tool {
     this.mergeInfo = null;
   }
 
-  /** {@inheritDoc} */
   public int run(String[] args) throws Exception {
     if (parseArgs(args) != 0) {
       return -1;
@@ -164,7 +163,6 @@ public class Merge extends Configured implements Tool {
       this.region2 = region2;
     }
     
-    /** {@inheritDoc} */
     public boolean processRow(HRegionInfo info) {
       if (meta1 == null && HRegion.rowIsInRange(info, region1)) {
         meta1 = info;

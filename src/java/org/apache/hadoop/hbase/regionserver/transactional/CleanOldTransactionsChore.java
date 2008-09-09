@@ -35,6 +35,10 @@ class CleanOldTransactionsChore extends Chore {
 
   private final TransactionalRegionServer regionServer;
 
+  /**
+   * @param regionServer
+   * @param stopRequest
+   */
   public CleanOldTransactionsChore(
       final TransactionalRegionServer regionServer,
       final AtomicBoolean stopRequest) {

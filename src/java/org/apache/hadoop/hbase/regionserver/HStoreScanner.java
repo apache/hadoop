@@ -104,7 +104,6 @@ class HStoreScanner implements InternalScanner {
     return multipleMatchers;
   }
 
-  /** {@inheritDoc} */
   public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
 
@@ -261,7 +260,6 @@ class HStoreScanner implements InternalScanner {
     }
   }
 
-  /** {@inheritDoc} */
   public void close() {
     for(int i = 0; i < scanners.length; i++) {
       if(scanners[i] != null) {

@@ -12,6 +12,11 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
+/**
+ * Utility class that handles byte arrays, conversions to/from other types,
+ * comparisons, hash code generation, manufacturing keys for HashMaps or
+ * HashSets, etc.
+ */
 public class Bytes {
   /**
    * Size of long in bytes

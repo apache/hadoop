@@ -40,11 +40,21 @@ import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
  */
 public class TransactionalTable extends HTable {
 
+  /**
+   * @param conf
+   * @param tableName
+   * @throws IOException
+   */
   public TransactionalTable(final HBaseConfiguration conf,
       final String tableName) throws IOException {
     super(conf, tableName);
   }
 
+  /**
+   * @param conf
+   * @param tableName
+   * @throws IOException
+   */
   public TransactionalTable(final HBaseConfiguration conf,
       final byte[] tableName) throws IOException {
     super(conf, tableName);
@@ -66,6 +76,12 @@ public class TransactionalTable extends HTable {
       }
     }
 
+    /**
+     * @param connection
+     * @param tableName
+     * @param row
+     * @param transactionState
+     */
     public TransactionalServerCallable(final HConnection connection,
         final byte[] tableName, final byte[] row,
         final TransactionState transactionState) {

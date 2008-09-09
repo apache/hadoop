@@ -96,6 +96,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
     /**
      * Restart from survivable exceptions by creating a new scanner.
      *
+     * @param firstRow
      * @throws IOException
      */
     public void restart(byte[] firstRow) throws IOException {
@@ -163,8 +164,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
       this.trrRowFilter = rowFilter;
     }
 
-    /** {@inheritDoc} */
-    public void close() throws IOException {
+    public void close() {
       this.scanner.close();
     }
 
@@ -186,14 +186,12 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
       return new RowResult();
     }
 
-    /** {@inheritDoc} */
     public long getPos() {
       // This should be the ordinal tuple in the range;
       // not clear how to calculate...
       return 0;
     }
 
-    /** {@inheritDoc} */
     public float getProgress() {
       // Depends on the total number of tuples and getPos
       return 0;

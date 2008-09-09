@@ -40,10 +40,17 @@ public class TransactionManager {
   private final HConnection connection;
   private final TransactionLogger transactionLogger;
 
+  /**
+   * @param conf
+   */
   public TransactionManager(final HBaseConfiguration conf) {
     this(LocalTransactionLogger.getInstance(), conf);
   }
 
+  /**
+   * @param transactionLogger
+   * @param conf
+   */
   public TransactionManager(final TransactionLogger transactionLogger,
       final HBaseConfiguration conf) {
     this.transactionLogger = transactionLogger;
@@ -66,6 +73,7 @@ public class TransactionManager {
    * 
    * @param transactionState
    * @throws IOException
+   * @throws CommitUnsuccessfulException
    */
   public void tryCommit(final TransactionState transactionState)
       throws CommitUnsuccessfulException, IOException {

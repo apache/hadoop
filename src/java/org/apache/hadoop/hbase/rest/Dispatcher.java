@@ -57,8 +57,10 @@ import org.mortbay.jetty.servlet.WebApplicationContext;
  * </ul>
  * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseRest">Hbase REST Specification</a>
  */
+@SuppressWarnings("serial")
 public class Dispatcher extends javax.servlet.http.HttpServlet
 implements javax.servlet.Servlet {
+  @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(Dispatcher.class.getName());
   private MetaHandler metaHandler;
   private TableHandler tableHandler;
@@ -75,6 +77,7 @@ implements javax.servlet.Servlet {
     super();
   }
 
+  @Override
   public void init() throws ServletException {
     super.init();
     
@@ -92,6 +95,7 @@ implements javax.servlet.Servlet {
     }
   }
 
+  @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
@@ -112,6 +116,7 @@ implements javax.servlet.Servlet {
     }
   }
 
+  @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response)
   throws IOException, ServletException {
     String [] pathSegments = getPathSegments(request);
@@ -145,6 +150,7 @@ implements javax.servlet.Servlet {
   }
   
 
+  @Override
   protected void doPut(HttpServletRequest request, HttpServletResponse response)
   throws ServletException, IOException {
     String [] pathSegments = getPathSegments(request);
@@ -158,6 +164,7 @@ implements javax.servlet.Servlet {
     }
   }
 
+  @Override
   protected void doDelete(HttpServletRequest request,
       HttpServletResponse response)
   throws IOException, ServletException {

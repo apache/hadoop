@@ -52,7 +52,6 @@ public class TestHMemcache extends TestCase {
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
 
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();

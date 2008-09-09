@@ -448,7 +448,6 @@ public class HStoreFile implements HConstants {
     return (isReference())? l / 2: l;
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return encodedRegionName + "/" + Bytes.toString(colFamily) + "/" + fileId +
@@ -549,7 +548,6 @@ public class HStoreFile implements HConstants {
       return this.encodedRegionName;
     }
    
-    /** {@inheritDoc} */
     @Override
     public String toString() {
       return encodedRegionName + "/" + fileid + "/" + region;
@@ -557,7 +555,6 @@ public class HStoreFile implements HConstants {
 
     // Make it serializable.
 
-    /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
       // Write out the encoded region name as a String.  Doing it as a String
       // keeps a Reference's serialziation backword compatible with
@@ -571,7 +568,6 @@ public class HStoreFile implements HConstants {
       midkey.write(out);
     }
 
-    /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
       this.encodedRegionName = Integer.parseInt(in.readUTF());
       fileid = in.readLong();
@@ -671,6 +667,7 @@ public class HStoreFile implements HConstants {
        * @param fs
        * @param dirName
        * @param compression
+       * @param hri
        * @throws IOException
        */
       public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
@@ -733,7 +730,6 @@ public class HStoreFile implements HConstants {
         return filter;
       }
       
-      /** {@inheritDoc} */
       @Override
       public Writable get(WritableComparable key, Writable val)
       throws IOException {
@@ -752,7 +748,6 @@ public class HStoreFile implements HConstants {
         return null;
       }
 
-      /** {@inheritDoc} */
       @Override
       public WritableComparable getClosest(WritableComparable key,
           Writable val) throws IOException {
@@ -836,7 +831,6 @@ public class HStoreFile implements HConstants {
         }
       }
 
-      /** {@inheritDoc} */
       @Override
       public void append(WritableComparable key, Writable val)
       throws IOException {
@@ -846,7 +840,6 @@ public class HStoreFile implements HConstants {
         super.append(key, val);
       }
 
-      /** {@inheritDoc} */
       @Override
       public synchronized void close() throws IOException {
         super.close();
@@ -923,7 +916,6 @@ public class HStoreFile implements HConstants {
       }
     }
 
-    /** {@inheritDoc} */
     @Override
     public synchronized void finalKey(WritableComparable key)
     throws IOException {
@@ -943,7 +935,6 @@ public class HStoreFile implements HConstants {
       }
     }
 
-    /** {@inheritDoc} */
     @Override
     public synchronized Writable get(WritableComparable key, Writable val)
         throws IOException {
@@ -951,7 +942,6 @@ public class HStoreFile implements HConstants {
       return super.get(key, val);
     }
 
-    /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
     public synchronized WritableComparable getClosest(WritableComparable key,
@@ -983,7 +973,6 @@ public class HStoreFile implements HConstants {
       return closest;
     }
 
-    /** {@inheritDoc} */
     @SuppressWarnings("unused")
     @Override
     public synchronized WritableComparable midKey() throws IOException {
@@ -991,7 +980,6 @@ public class HStoreFile implements HConstants {
       return null;
     }
 
-    /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
     public synchronized boolean next(WritableComparable key, Writable val)
@@ -1017,7 +1005,6 @@ public class HStoreFile implements HConstants {
       return result;
     }
 
-    /** {@inheritDoc} */
     @Override
     public synchronized void reset() throws IOException {
       if (top) {
@@ -1028,7 +1015,6 @@ public class HStoreFile implements HConstants {
       super.reset();
     }
 
-    /** {@inheritDoc} */
     @Override
     public synchronized boolean seek(WritableComparable key)
     throws IOException {

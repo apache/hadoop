@@ -48,7 +48,6 @@ class LogRoller extends Thread implements LogRollListener {
     lastLogRollTime = System.currentTimeMillis();
   }
 
-  /** {@inheritDoc} */
   @Override
   public void run() {
     while (!server.isStopRequested()) {
@@ -93,7 +92,6 @@ class LogRoller extends Thread implements LogRollListener {
     LOG.info("LogRoller exiting.");
   }
 
-  /** {@inheritDoc} */
   public void logRollRequested() {
     synchronized (rollLog) {
       rollLog.set(true);

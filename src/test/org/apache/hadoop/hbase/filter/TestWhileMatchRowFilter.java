@@ -37,7 +37,6 @@ public class TestWhileMatchRowFilter extends TestCase {
   WhileMatchRowFilter wmStopRowFilter;
   WhileMatchRowFilter wmRegExpRowFilter;
 
-  /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
     super.setUp();

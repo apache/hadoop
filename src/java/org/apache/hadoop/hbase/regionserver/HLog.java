@@ -205,6 +205,9 @@ public class HLog implements HConstants {
     }
   }
   
+  /**
+   * @return log sequence number
+   */
   public long getSequenceNumber() {
     return logSeqNum;
   }
@@ -565,6 +568,10 @@ public class HLog implements HConstants {
     this.cacheFlushLock.unlock();
   }
 
+  /**
+   * @param column
+   * @return true if the column is a meta column
+   */
   public static boolean isMetaColumn(byte [] column) {
     return Bytes.equals(METACOLUMN, column);
   }

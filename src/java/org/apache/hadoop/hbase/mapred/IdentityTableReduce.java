@@ -32,6 +32,7 @@ import org.apache.hadoop.mapred.Reporter;
  * Write to table each key, record pair
  */
 public class IdentityTableReduce extends TableReduce<ImmutableBytesWritable, BatchUpdate> {
+  @SuppressWarnings("unused")
   private static final Log LOG =
     LogFactory.getLog(IdentityTableReduce.class.getName());
   

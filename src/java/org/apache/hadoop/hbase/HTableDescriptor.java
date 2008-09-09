@@ -65,6 +65,8 @@ public class HTableDescriptor implements WritableComparable {
   // Table metadata
   protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
+
+  //TODO: Why can't the following be private? They are only used within this class.
   
   public static final String FAMILIES = "FAMILIES";
 
@@ -79,6 +81,8 @@ public class HTableDescriptor implements WritableComparable {
   public static final boolean DEFAULT_READONLY = false;
 
   public static final int DEFAULT_MEMCACHE_FLUSH_SIZE = 1024*1024*64;
+ 
+  // End TODO:
   
   // Key is hash of the family name.
   private final Map<Integer, HColumnDescriptor> families =
@@ -434,13 +438,11 @@ public class HTableDescriptor implements WritableComparable {
     return s.toString();
   }
 
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);
@@ -456,7 +458,6 @@ public class HTableDescriptor implements WritableComparable {
 
   // Writable
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     int version = in.readInt();
     if (version < 3)
@@ -484,7 +485,6 @@ public class HTableDescriptor implements WritableComparable {
     }
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
 	out.writeInt(TABLE_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, name);
@@ -506,7 +506,6 @@ public class HTableDescriptor implements WritableComparable {
 
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HTableDescriptor other = (HTableDescriptor) o;
     int result = Bytes.compareTo(this.name, other.name);

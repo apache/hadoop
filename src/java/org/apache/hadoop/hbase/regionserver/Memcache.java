@@ -742,7 +742,6 @@ class Memcache {
       }
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
@@ -806,7 +805,6 @@ class Memcache {
       return results.size() > 0;
     }
 
-    /** {@inheritDoc} */
     public void close() {
       if (!scannerClosed) {
         scannerClosed = true;

@@ -1891,19 +1891,16 @@ public class HRegion implements HConstants {
     }
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.hashCode() == ((HRegion)o).hashCode();
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return this.regionInfo.getRegionName().hashCode();
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return this.regionInfo.getRegionNameAsString();
@@ -1979,7 +1976,6 @@ public class HRegion implements HConstants {
       activeScannerCount.incrementAndGet();
     }
 
-    /** {@inheritDoc} */
     @SuppressWarnings("null")
     public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
@@ -2097,9 +2093,6 @@ public class HRegion implements HConstants {
       }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public void close() {
       try {
         for(int i = 0; i < scanners.length; i++) {
@@ -2123,12 +2116,10 @@ public class HRegion implements HConstants {
       }
     }
 
-    /** {@inheritDoc} */
     public boolean isWildcardScanner() {
       throw new UnsupportedOperationException("Unimplemented on HScanner");
     }
 
-    /** {@inheritDoc} */
     public boolean isMultipleMatchScanner() {
       throw new UnsupportedOperationException("Unimplemented on HScanner");
     }  

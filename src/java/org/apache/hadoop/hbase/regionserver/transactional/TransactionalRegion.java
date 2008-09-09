@@ -103,6 +103,14 @@ class TransactionalRegion extends HRegion {
   private TransactionalHLogManager logManager;
   private final int oldTransactionFlushTrigger;
 
+  /**
+   * @param basedir
+   * @param log
+   * @param fs
+   * @param conf
+   * @param regionInfo
+   * @param flushListener
+   */
   public TransactionalRegion(final Path basedir, final HLog log,
       final FileSystem fs, final HBaseConfiguration conf,
       final HRegionInfo regionInfo, final FlushRequester flushListener) {
@@ -160,6 +168,10 @@ class TransactionalRegion extends HRegion {
     return minPendingStartSequenceId;
   }
 
+  /**
+   * @param transactionId
+   * @throws IOException
+   */
   public void beginTransaction(final long transactionId) throws IOException {
     String key = String.valueOf(transactionId);
     if (transactionsById.get(key) != null) {
@@ -332,6 +344,7 @@ class TransactionalRegion extends HRegion {
   /**
    * Add a write to the transaction. Does not get applied until commit process.
    * 
+   * @param transactionId
    * @param b
    * @throws IOException
    */
@@ -346,7 +359,9 @@ class TransactionalRegion extends HRegion {
    * Add a delete to the transaction. Does not get applied until commit process.
    * FIXME, not sure about this approach
    * 
-   * @param b
+   * @param transactionId
+   * @param row
+   * @param timestamp
    * @throws IOException
    */
   public void deleteAll(final long transactionId, final byte[] row,
@@ -370,6 +385,11 @@ class TransactionalRegion extends HRegion {
 
   }
 
+  /**
+   * @param transactionId
+   * @return true if commit is successful
+   * @throws IOException
+   */
   public boolean commitRequest(final long transactionId) throws IOException {
     synchronized (commitCheckLock) {
       TransactionState state = getTransactionState(transactionId);
@@ -419,7 +439,6 @@ class TransactionalRegion extends HRegion {
    * Commit the transaction.
    * 
    * @param transactionId
-   * @return
    * @throws IOException
    */
   public void commit(final long transactionId) throws IOException {
@@ -446,7 +465,6 @@ class TransactionalRegion extends HRegion {
    * Commit the transaction.
    * 
    * @param transactionId
-   * @return
    * @throws IOException
    */
   public void abort(final long transactionId) throws IOException {
@@ -594,7 +612,6 @@ class TransactionalRegion extends HRegion {
       this.transactionName = n;
     }
 
-    /** {@inheritDoc} */
     public void leaseExpired() {
       LOG.info("Transaction " + this.transactionName + " lease expired");
       TransactionState s = null;
@@ -627,6 +644,10 @@ class TransactionalRegion extends HRegion {
     private long transactionId;
     private InternalScanner scanner;
 
+    /**
+     * @param transactionId
+     * @param scanner
+     */
     public ScannerWrapper(final long transactionId,
         final InternalScanner scanner) {
       this.transactionId = transactionId;

@@ -173,7 +173,6 @@ public class HConnectionManager implements HConstants {
       return this.pause * HConstants.RETRY_BACKOFF[tries];
     }
 
-    /** {@inheritDoc} */
     public HMasterInterface getMaster() throws MasterNotRunningException {
       HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
@@ -224,7 +223,6 @@ public class HConnectionManager implements HConstants {
       return this.master;
     }
 
-    /** {@inheritDoc} */
     public boolean isMasterRunning() {
       if (this.master == null) {
         try {
@@ -237,7 +235,6 @@ public class HConnectionManager implements HConstants {
       return true;
     }
 
-    /** {@inheritDoc} */
     public boolean tableExists(final byte [] tableName)
     throws MasterNotRunningException {
       getMaster();
@@ -271,7 +268,6 @@ public class HConnectionManager implements HConstants {
         Bytes.equals(n, META_TABLE_NAME);
     }
 
-    /** {@inheritDoc} */
     public HRegionLocation getRegionLocation(final byte [] name,
         final byte [] row, boolean reload)
     throws IOException {
@@ -279,7 +275,6 @@ public class HConnectionManager implements HConstants {
       return reload? relocateRegion(name, row): locateRegion(name, row);
     }
 
-    /** {@inheritDoc} */
     public HTableDescriptor[] listTables() throws IOException {
       getMaster();
       final HashSet<HTableDescriptor> uniqueTables =
@@ -287,7 +282,6 @@ public class HConnectionManager implements HConstants {
 
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
-        /** {@inheritDoc} */
         public boolean processRow(RowResult rowResult) throws IOException {
           HRegionInfo info = Writables.getHRegionInfo(
               rowResult.get(COL_REGIONINFO));
@@ -305,7 +299,6 @@ public class HConnectionManager implements HConstants {
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
 
-    /** {@inheritDoc} */
     public boolean isTableEnabled(byte[] tableName) throws IOException {
       if (!tableExists(tableName)) {
         throw new TableNotFoundException(Bytes.toString(tableName));
@@ -371,6 +364,7 @@ public class HConnectionManager implements HConstants {
     implements MetaScanner.MetaScannerVisitor {
         byte[] tableName;
         HTableDescriptor result;
+        //TODO: change visibility to protected
         public HTableDescriptorFinder(byte[] tableName) {
           this.tableName = tableName;
         }
@@ -389,7 +383,6 @@ public class HConnectionManager implements HConstants {
         }
     }
 
-    /** {@inheritDoc} */
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
@@ -407,7 +400,6 @@ public class HConnectionManager implements HConstants {
       return result;
     }
 
-    /** {@inheritDoc} */
     public HRegionLocation locateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
@@ -415,7 +407,6 @@ public class HConnectionManager implements HConstants {
       return locateRegion(tableName, row, true);
     }
 
-    /** {@inheritDoc} */
     public HRegionLocation relocateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
@@ -724,7 +715,6 @@ public class HConnectionManager implements HConstants {
       tableLocations.put(startKey, location);
     }
     
-    /** {@inheritDoc} */
     public HRegionInterface getHRegionConnection(HServerAddress regionServer) 
     throws IOException {
       getMaster();
@@ -850,7 +840,6 @@ public class HConnectionManager implements HConstants {
         HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
     }
 
-    /** {@inheritDoc} */
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
     throws IOException, RuntimeException {
       getMaster();

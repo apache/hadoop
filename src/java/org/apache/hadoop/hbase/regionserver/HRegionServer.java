@@ -179,7 +179,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.instance = instance;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting shutdown thread.");
@@ -798,7 +797,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
-    /** {@inheritDoc} */
     public void run() {
       try {
         while(!stopRequested.get()) {
@@ -1002,14 +1000,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // HRegionInterface
   //
 
-  /** {@inheritDoc} */
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException {
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
 
-  /** {@inheritDoc} */
   public Cell[] get(final byte [] regionName, final byte [] row,
     final byte [] column, final long timestamp, final int numVersions) 
   throws IOException {
@@ -1023,7 +1019,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  /** {@inheritDoc} */
   public RowResult getRow(final byte [] regionName, final byte [] row, 
     final byte [][] columns, final long ts, final long lockId)
   throws IOException {
@@ -1050,7 +1045,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  /** {@inheritDoc} */
   public RowResult getClosestRowBefore(final byte [] regionName, 
     final byte [] row)
   throws IOException {
@@ -1068,7 +1062,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  /** {@inheritDoc} */
   public RowResult next(final long scannerId) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1103,7 +1096,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  /** {@inheritDoc} */
   public void batchUpdate(final byte [] regionName, BatchUpdate b, long lockId)
   throws IOException {
     if (b.getRow() == null)
@@ -1155,7 +1147,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //
 
-  /** {@inheritDoc} */
   public long openScanner(byte [] regionName, byte [][] cols, byte [] firstRow,
     final long timestamp, final RowFilterInterface filter)
   throws IOException {
@@ -1200,7 +1191,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return scannerId;
   }
   
-  /** {@inheritDoc} */
   public void close(final long scannerId) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1235,7 +1225,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.scannerName = n;
     }
     
-    /** {@inheritDoc} */
     public void leaseExpired() {
       LOG.info("Scanner " + this.scannerName + " lease expired");
       InternalScanner s = null;
@@ -1256,7 +1245,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // Methods that do the actual work for the remote API
   //
   
-  /** {@inheritDoc} */
   public void deleteAll(final byte [] regionName, final byte [] row,
       final byte [] column, final long timestamp, final long lockId) 
   throws IOException {
@@ -1264,7 +1252,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, column, timestamp, getLockFromId(lockId));
   }
 
-  /** {@inheritDoc} */
   public void deleteAll(final byte [] regionName, final byte [] row,
       final long timestamp, final long lockId) 
   throws IOException {
@@ -1272,7 +1259,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, timestamp, getLockFromId(lockId));
   }
 
-  /** {@inheritDoc} */
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp, final long lockId)
   throws IOException{
@@ -1280,7 +1266,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         getLockFromId(lockId));
   }
 
-  /** {@inheritDoc} */
   public long lockRow(byte [] regionName, byte [] row)
   throws IOException {
     checkOpen();
@@ -1346,7 +1331,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return rl;
   }
 
-  /** {@inheritDoc} */
   public void unlockRow(byte [] regionName, long lockId)
   throws IOException {
     checkOpen();
@@ -1397,7 +1381,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.region = region;
     }
 
-    /** {@inheritDoc} */
     public void leaseExpired() {
       LOG.info("Row Lock " + this.lockName + " lease expired");
       Integer r = null;
@@ -1617,7 +1600,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return regionsToCheck;
   }
 
-  /** {@inheritDoc} */
   public long getProtocolVersion(final String protocol, 
       @SuppressWarnings("unused") final long clientVersion)
   throws IOException {  

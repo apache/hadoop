@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.FileNotFoundException;
+import java.io.FileNotFoundException;           //TODO: remove
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;

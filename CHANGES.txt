@@ -82,6 +82,7 @@ Release 0.18.0 - Unreleased
               shell or thrift server, etc. (Jonathan Gray via Jim Kellerman)
    HBASE-871  Major compaction periodicity should be specifyable at the column
               family level, not cluster wide (Jonathan Gray via Stack)
+   HBASE-465  Fix javadoc for all public declarations
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)

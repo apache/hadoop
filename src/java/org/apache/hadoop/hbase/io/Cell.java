@@ -106,7 +106,6 @@ public class Cell implements Writable, Iterable<Cell> {
     return timestamps[0];
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     if (this.values.length == 1) {
@@ -132,7 +131,6 @@ public class Cell implements Writable, Iterable<Cell> {
   // Writable
   //
 
-  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     int nvalues = in.readInt();
     this.timestamps = new long[nvalues];
@@ -145,7 +143,6 @@ public class Cell implements Writable, Iterable<Cell> {
     }
   }
 
-  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.values.length);
     for (int i = 0; i < this.timestamps.length; i++) {
@@ -160,7 +157,6 @@ public class Cell implements Writable, Iterable<Cell> {
   // Iterable
   //
 
-  /** {@inheritDoc} */
   public Iterator<Cell> iterator() {
     return new CellIterator();
   }
@@ -169,18 +165,15 @@ public class Cell implements Writable, Iterable<Cell> {
     CellIterator() {
     }
     
-    /** {@inheritDoc} */
     public boolean hasNext() {
       return currentValue < values.length;
     }
     
-    /** {@inheritDoc} */
     public Cell next() {
       currentValue += 1;
       return new Cell(values[currentValue], timestamps[currentValue]);
     }
     
-    /** {@inheritDoc} */
     public void remove() throws UnsupportedOperationException {
       throw new UnsupportedOperationException("remove is not supported");
     }

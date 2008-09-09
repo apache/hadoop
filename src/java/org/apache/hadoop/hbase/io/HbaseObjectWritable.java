@@ -132,31 +132,43 @@ public class HbaseObjectWritable implements Writable, Configurable {
   private Object instance;
   private Configuration conf;
 
+  /** default constructor for writable */
   public HbaseObjectWritable() {
     super();
   }
   
+  /**
+   * @param instance
+   */
   public HbaseObjectWritable(Object instance) {
     set(instance);
   }
 
+  /**
+   * @param declaredClass
+   * @param instance
+   */
   public HbaseObjectWritable(Class<?> declaredClass, Object instance) {
     this.declaredClass = declaredClass;
     this.instance = instance;
   }
 
-  /** Return the instance, or null if none. */
+  /** @return the instance, or null if none. */
   public Object get() { return instance; }
   
-  /** Return the class this is meant to be. */
+  /** @return the class this is meant to be. */
   public Class<?> getDeclaredClass() { return declaredClass; }
   
-  /** Reset the instance. */
+  /**
+   * Reset the instance.
+   * @param instance
+   */
   public void set(Object instance) {
     this.declaredClass = instance.getClass();
     this.instance = instance;
   }
   
+  @Override
   public String toString() {
     return "OW[class=" + declaredClass + ",value=" + instance + "]";
   }
@@ -172,14 +184,18 @@ public class HbaseObjectWritable implements Writable, Configurable {
 
   private static class NullInstance extends Configured implements Writable {
     Class<?> declaredClass;
+    /** default constructor for writable */
     public NullInstance() { super(null); }
     
+    /**
+     * @param declaredClass
+     * @param conf
+     */
     public NullInstance(Class<?> declaredClass, Configuration conf) {
       super(conf);
       this.declaredClass = declaredClass;
     }
     
-    @SuppressWarnings("boxing")
     public void readFields(DataInput in) throws IOException {
       this.declaredClass = CODE_TO_CLASS.get(in.readByte());
     }
@@ -195,7 +211,6 @@ public class HbaseObjectWritable implements Writable, Configurable {
    * @param c
    * @throws IOException
    */
-  @SuppressWarnings("boxing")
   static void writeClassCode(final DataOutput out, final Class<?> c)
   throws IOException {
     Byte code = CLASS_TO_CODE.get(c);
@@ -206,9 +221,16 @@ public class HbaseObjectWritable implements Writable, Configurable {
     out.writeByte(code);
   }
 
-  /** Write a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding. */
-  @SuppressWarnings({ "boxing", "unchecked" })
+  /**
+   * Write a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding.
+   * @param out
+   * @param instance
+   * @param declaredClass
+   * @param conf
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
   public static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass, 
                                  Configuration conf)
@@ -273,16 +295,29 @@ public class HbaseObjectWritable implements Writable, Configurable {
   }
   
   
-  /** Read a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding. */
+  /**
+   * Read a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding.
+   * @param in
+   * @param conf
+   * @return the object
+   * @throws IOException
+   */
   public static Object readObject(DataInput in, Configuration conf)
     throws IOException {
     return readObject(in, null, conf);
   }
     
-  /** Read a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding. */
-  @SuppressWarnings({ "unchecked", "boxing" })
+  /**
+   * Read a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding.
+   * @param in
+   * @param objectWritable
+   * @param conf
+   * @return the object
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
   public static Object readObject(DataInput in,
       HbaseObjectWritable objectWritable, Configuration conf)
   throws IOException {
@@ -353,7 +388,6 @@ public class HbaseObjectWritable implements Writable, Configurable {
     return instance;
   }
 
-  @SuppressWarnings("boxing")
   private static void addToMap(final Class<?> clazz, final byte code) {
     CLASS_TO_CODE.put(clazz, code);
     CODE_TO_CLASS.put(code, clazz);

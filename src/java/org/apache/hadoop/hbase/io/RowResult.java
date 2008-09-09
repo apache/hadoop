@@ -43,12 +43,15 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
+  /** default constructor for writable */
   public RowResult() {
     this(null, new HbaseMapWritable<byte [], Cell>());
   }
 
   /**
    * Create a RowResult from a row and Cell map
+   * @param row
+   * @param m
    */
   public RowResult (final byte [] row,
       final HbaseMapWritable<byte [], Cell> m) {
@@ -58,6 +61,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   
   /**
    * Get the row for this RowResult
+   * @return the row
    */
   public byte [] getRow() {
     return row;
@@ -78,7 +82,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   }
 
   public Cell get(Object key) {
-    return (Cell)this.cells.get(key);
+    return this.cells.get(key);
   }
 
   public Cell remove(@SuppressWarnings("unused") Object key) {
@@ -127,6 +131,8 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   
   /**
    * Get the Cell that corresponds to column
+   * @param column
+   * @return the Cell
    */
   public Cell get(byte [] column) {
     return this.cells.get(column);
@@ -134,6 +140,8 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   
   /**
    * Get the Cell that corresponds to column, using a String key
+   * @param key
+   * @return the Cell
    */
   public Cell get(String key) {
     return get(Bytes.toBytes(key));

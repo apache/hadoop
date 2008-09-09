@@ -184,13 +184,11 @@ public abstract class Filter implements Writable {
   
   // Writable interface
   
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.nbHash);
     out.writeInt(this.vectorSize);
   }
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.nbHash = in.readInt();
     this.vectorSize = in.readInt();

@@ -151,7 +151,6 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  /** {@inheritDoc} */
   public int run(String[] args) {
     if (parseArgs(args) != 0) {
       return -1;

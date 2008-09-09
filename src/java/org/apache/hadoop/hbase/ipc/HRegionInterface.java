@@ -84,6 +84,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param regionName region name
    * @param row row key
+   * @param columns columns to get
+   * @param ts time stamp
    * @param lockId lock id
    * @return map of values
    * @throws IOException
@@ -142,6 +144,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param family The column family to match
    * @param timestamp Timestamp to match
    * @param lockId lock id
+   * @throws IOException
    */
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp, long lockId)
@@ -202,6 +205,7 @@ public interface HRegionInterface extends VersionedProtocol {
   /**
    * Releases a remote row lock.
    *
+   * @param regionName
    * @param lockId the lock id returned by lockRow
    * @throws IOException
    */

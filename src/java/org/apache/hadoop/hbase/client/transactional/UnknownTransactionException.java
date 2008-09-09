@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * Thrown if a region server is passed an unknown transaction id
  */
+@SuppressWarnings("serial")
  public class UnknownTransactionException extends DoNotRetryIOException {
 
   /** constructor */

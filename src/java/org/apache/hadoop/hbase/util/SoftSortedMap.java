@@ -37,6 +37,9 @@ import org.apache.commons.logging.LogFactory;
 /**
  * A SortedMap implementation that uses SoftReferences internally to make it
  * play well with the GC when in a low-memory situation.
+ * 
+ * @param <K> key class
+ * @param <V> value class
  */
 public class SoftSortedMap<K,V> implements SortedMap<K,V> {
   private static final Log LOG = LogFactory.getLog(SoftSortedMap.class);  
@@ -174,6 +177,7 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
   /**
    * Check the reference queue and delete anything that has since gone away
    */ 
+  @SuppressWarnings("unchecked")
   private void checkReferences() {
     SoftValue<K,V> sv;
     Object obj;
@@ -200,8 +204,8 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
     
     public K2 getKey() {return key;}
     public V2 getValue() {return get();}
-    
-    public V2 setValue(V2 value) {
+
+    public V2 setValue(@SuppressWarnings("unused") V2 value) {
       throw new RuntimeException("Not implemented");
     }
   }

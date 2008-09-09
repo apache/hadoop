@@ -22,11 +22,16 @@ package org.apache.hadoop.hbase;
 /**
  * Thrown if issue with passed column name.
  */
+@SuppressWarnings("serial")
 public class ColumnNameParseException extends DoNotRetryIOException {
+  /** default constructor */
   public ColumnNameParseException() {
     super();
   }
 
+  /**
+   * @param message
+   */
   public ColumnNameParseException(String message) {
     super(message);
   }

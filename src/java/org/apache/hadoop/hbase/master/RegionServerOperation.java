@@ -43,13 +43,11 @@ abstract class RegionServerOperation implements Delayed, HConstants {
     this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
   }
   
-  /** {@inheritDoc} */
   public long getDelay(TimeUnit unit) {
     return unit.convert(this.expire - System.currentTimeMillis(),
       TimeUnit.MILLISECONDS);
   }
   
-  /** {@inheritDoc} */
   public int compareTo(Delayed o) {
     return Long.valueOf(getDelay(TimeUnit.MILLISECONDS)
         - o.getDelay(TimeUnit.MILLISECONDS)).intValue();

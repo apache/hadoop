@@ -62,13 +62,13 @@ public class HColumnDescriptor implements WritableComparable {
     BLOCK
   }
 
-  public static final String COMPRESSION = "COMPRESSION";
-  public static final String BLOCKCACHE = "BLOCKCACHE";
-  public static final String LENGTH = "LENGTH";
-  public static final String TTL = "TTL";
-  public static final String BLOOMFILTER = "BLOOMFILTER";
-  public static final String FOREVER = "FOREVER";
-  public static final String MAPFILE_INDEX_INTERVAL =
+  public static final String COMPRESSION = "COMPRESSION";       //TODO: change to protected
+  public static final String BLOCKCACHE = "BLOCKCACHE";         //TODO: change to protected
+  public static final String LENGTH = "LENGTH";                 //TODO: change to protected
+  public static final String TTL = "TTL";                       //TODO: change to protected
+  public static final String BLOOMFILTER = "BLOOMFILTER";       //TODO: change to protected
+  public static final String FOREVER = "FOREVER";               //TODO: change to protected
+  public static final String MAPFILE_INDEX_INTERVAL =           //TODO: change to protected
       "MAPFILE_INDEX_INTERVAL";
 
   /**
@@ -455,7 +455,6 @@ public class HColumnDescriptor implements WritableComparable {
     setValue(MAPFILE_INDEX_INTERVAL, Integer.toString(interval));
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     StringBuffer s = new StringBuffer();
@@ -476,13 +475,11 @@ public class HColumnDescriptor implements WritableComparable {
     return s.toString();
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);
@@ -493,7 +490,7 @@ public class HColumnDescriptor implements WritableComparable {
   
   // Writable
 
-  /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void readFields(DataInput in) throws IOException {
     int version = in.readByte();
     if (version < 6) {
@@ -543,7 +540,6 @@ public class HColumnDescriptor implements WritableComparable {
     }
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeByte(COLUMN_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, this.name);
@@ -557,7 +553,6 @@ public class HColumnDescriptor implements WritableComparable {
 
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HColumnDescriptor other = (HColumnDescriptor)o;
     int result = Bytes.compareTo(this.name, other.getName());

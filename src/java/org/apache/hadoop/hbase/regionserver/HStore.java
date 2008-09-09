@@ -1913,7 +1913,6 @@ public class HStore implements HConstants {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return this.storeNameStr;

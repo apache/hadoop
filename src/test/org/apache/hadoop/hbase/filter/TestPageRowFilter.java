@@ -37,7 +37,6 @@ public class TestPageRowFilter extends TestCase {
   RowFilterInterface mainFilter;
   final int ROW_LIMIT = 3;
   
-  /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
     super.setUp();

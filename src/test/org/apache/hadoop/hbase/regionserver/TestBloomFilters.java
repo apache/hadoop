@@ -153,12 +153,6 @@ public class TestBloomFilters extends HBaseClusterTestCase {
       Bytes.toBytes("yzabcdef")
   };
   
-//  /** {@inheritDoc} */
-//  @Override
-//  public void setUp() throws Exception {
-//    conf.set("hbase.hregion.memcache.flush.size", "100");// flush cache every 100 bytes
-//  }
-//  
   /**
    * Test that uses automatic bloom filter
    * @throws IOException

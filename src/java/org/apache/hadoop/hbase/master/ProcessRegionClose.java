@@ -48,7 +48,6 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
    this.offlineRegion = offlineRegion;
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "ProcessRegionClose of " + this.regionInfo.getRegionNameAsString() +

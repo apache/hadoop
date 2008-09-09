@@ -83,7 +83,6 @@ public class TestHRegion extends HBaseTestCase {
   
   private static int numInserted = 0;
   
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     this.conf.set("hbase.hstore.compactionThreshold", "2");

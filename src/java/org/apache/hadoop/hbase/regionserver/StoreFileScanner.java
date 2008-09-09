@@ -368,7 +368,6 @@ implements ChangedReadersObserver {
 
   // Implementation of ChangedReadersObserver
   
-  /** {@inheritDoc} */
   public void updateReaders() throws IOException {
     this.lock.writeLock().lock();
     try {

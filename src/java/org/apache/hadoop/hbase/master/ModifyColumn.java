@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.Map;
+import java.util.Map;                                   //TODO: remove
 import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;

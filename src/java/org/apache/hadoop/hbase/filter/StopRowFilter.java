@@ -61,39 +61,27 @@ public class StopRowFilter implements RowFilterInterface {
     return this.stopRowKey;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void validate(@SuppressWarnings("unused") final byte [][] columns) {
     // Doesn't filter columns
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void reset() {
     // Nothing to reset
   }
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     // Doesn't care
   }
 
-  /** {@inheritDoc} */
   public boolean processAlways() {
     return false;
   }
   
-  /** {@inheritDoc} */
   public boolean filterAllRemaining() {
     return false;
   }
 
-  /** {@inheritDoc} */
   public boolean filterRowKey(final byte [] rowKey) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {
@@ -105,8 +93,6 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /**
-   * {@inheritDoc}
-   *
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
    */
@@ -116,24 +102,19 @@ public class StopRowFilter implements RowFilterInterface {
     return filterRowKey(rowKey);
   }
 
-  /** {@inheritDoc}
-   *
+  /**
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling filterAllRemaining().
-   * 
-   * @param columns
    */
   public boolean filterRow(@SuppressWarnings("unused")
       final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.stopRowKey = Bytes.readByteArray(in);
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.stopRowKey);
   }

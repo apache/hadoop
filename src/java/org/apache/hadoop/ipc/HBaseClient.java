@@ -26,10 +26,19 @@ import org.apache.hadoop.conf.Configuration;
  * in {@link org.apache.hadoop.hbase.ipc.HbaseRPC}
  */
 public class HBaseClient extends Client {
+  /**
+   * @param valueClass
+   * @param conf
+   * @param factory
+   */
   public HBaseClient(Class valueClass, Configuration conf, SocketFactory factory) {
     super(valueClass, conf, factory);
   }
 
+  /**
+   * @param valueClass
+   * @param conf
+   */
   public HBaseClient(Class<?> valueClass, Configuration conf) {
     super(valueClass, conf);
   }

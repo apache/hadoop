@@ -155,7 +155,6 @@ public class PerformanceEvaluation implements HConstants {
     private String cmd;
     private PerformanceEvaluation pe;
     
-    /** {@inheritDoc} */
     @Override
     public void configure(JobConf j) {
       this.cmd = j.get(CMD_KEY);
@@ -163,7 +162,6 @@ public class PerformanceEvaluation implements HConstants {
       this.pe = new PerformanceEvaluation(new HBaseConfiguration(j));
     }
     
-    /** {@inheritDoc} */
     public void map(@SuppressWarnings("unused") final Object key,
       final Object value, final OutputCollector output,
       final Reporter reporter)

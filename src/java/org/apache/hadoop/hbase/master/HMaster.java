@@ -80,7 +80,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  /** {@inheritDoc} */
   public long getProtocolVersion(String protocol,
       @SuppressWarnings("unused") long clientVersion)
   throws IOException {
@@ -525,7 +524,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * HMasterRegionInterface
    */
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unused")
   public MapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
@@ -560,7 +558,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return mw;
   }
 
-  /** {@inheritDoc} */
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
@@ -572,18 +569,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * HMasterInterface
    */
 
-  /** {@inheritDoc} */
   public boolean isMasterRunning() {
     return !closed.get();
   }
 
-  /** {@inheritDoc} */
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
     this.shutdownRequested = true;
   }
 
-  /** {@inheritDoc} */
   public void createTable(HTableDescriptor desc)
   throws IOException {    
     if (!isMasterRunning()) {
@@ -640,7 +634,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     regionManager.createRegion(newRegion, srvr, metaRegionName);
   }
 
-  /** {@inheritDoc} */
   public void deleteTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
       throw new IOException("Can't delete root table");
@@ -649,26 +642,22 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     LOG.info("deleted table: " + Bytes.toString(tableName));
   }
 
-  /** {@inheritDoc} */
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {    
     new AddColumn(this, tableName, column).process();
   }
 
-  /** {@inheritDoc} */
   public void modifyColumn(byte [] tableName, byte [] columnName, 
     HColumnDescriptor descriptor)
   throws IOException {
     new ModifyColumn(this, tableName, columnName, descriptor).process();
   }
 
-  /** {@inheritDoc} */
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
     new DeleteColumn(this, tableName, HStoreKey.getFamily(c)).process();
   }
 
-  /** {@inheritDoc} */
   public void enableTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
       throw new IOException("Can't enable root table");
@@ -676,7 +665,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     new ChangeTableState(this, tableName, true).process();
   }
 
-  /** {@inheritDoc} */
   public void disableTable(final byte [] tableName) throws IOException {
     if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
       throw new IOException("Can't disable root table");
@@ -684,14 +672,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     new ChangeTableState(this, tableName, false).process();
   }
 
-  /** {@inheritDoc} */
   public void modifyTableMeta(final byte[] tableName, HTableDescriptor desc)
     throws IOException
   {
     new ModifyTableMeta(this, tableName, desc).process();
   }
 
-  /** {@inheritDoc} */
   public HServerAddress findRootRegion() {
     return regionManager.getRootRegionLocation();
   }

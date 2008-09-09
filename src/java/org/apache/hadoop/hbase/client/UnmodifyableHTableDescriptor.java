@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Read-only table descriptor.
  */
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
+  /** Default constructor */
   public UnmodifyableHTableDescriptor() {
 	  super();
   }
@@ -73,31 +74,37 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setInMemory(boolean inMemory) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setReadOnly(boolean readOnly) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setValue(byte[] key, byte[] value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setValue(String key, String value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setMaxFileSize(long maxFileSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void setMemcacheFlushSize(int memcacheFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }

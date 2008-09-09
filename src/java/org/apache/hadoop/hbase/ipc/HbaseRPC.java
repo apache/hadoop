@@ -88,25 +88,32 @@ public class HbaseRPC {
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
     private String methodName;
+    @SuppressWarnings("unchecked")
     private Class[] parameterClasses;
     private Object[] parameters;
     private Configuration conf;
 
+    /** default constructor */
     public Invocation() {}
 
+    /**
+     * @param method
+     * @param parameters
+     */
     public Invocation(Method method, Object[] parameters) {
       this.methodName = method.getName();
       this.parameterClasses = method.getParameterTypes();
       this.parameters = parameters;
     }
 
-    /** The name of the method invoked. */
+    /** @return The name of the method invoked. */
     public String getMethodName() { return methodName; }
 
-    /** The parameter classes. */
+    /** @return The parameter classes. */
+    @SuppressWarnings("unchecked")
     public Class[] getParameterClasses() { return parameterClasses; }
 
-    /** The parameter instances. */
+    /** @return The parameter instances. */
     public Object[] getParameters() { return parameters; }
 
     public void readFields(DataInput in) throws IOException {
@@ -129,6 +136,7 @@ public class HbaseRPC {
       }
     }
 
+    @Override
     public String toString() {
       StringBuffer buffer = new StringBuffer();
       buffer.append(methodName);
@@ -217,6 +225,12 @@ public class HbaseRPC {
     private Client client;
     private boolean isClosed = false;
 
+    /**
+     * @param address
+     * @param ticket
+     * @param conf
+     * @param factory
+     */
     public Invoker(InetSocketAddress address, UserGroupInformation ticket, 
                    Configuration conf, SocketFactory factory) {
       this.address = address;
@@ -224,7 +238,8 @@ public class HbaseRPC {
       this.client = CLIENTS.getClient(conf, factory);
     }
 
-    public Object invoke(Object proxy, Method method, Object[] args)
+    public Object invoke(@SuppressWarnings("unused") Object proxy,
+        Method method, Object[] args)
       throws Throwable {
       long startTime = System.currentTimeMillis();
       ObjectWritable value = (ObjectWritable)
@@ -246,6 +261,7 @@ public class HbaseRPC {
   /**
    * A version mismatch for the RPC protocol.
    */
+  @SuppressWarnings("serial")
   public static class VersionMismatch extends IOException {
     private String interfaceName;
     private long clientVersion;
@@ -276,20 +292,30 @@ public class HbaseRPC {
     }
     
     /**
-     * Get the client's preferred version
+     * @return the client's preferred version
      */
     public long getClientVersion() {
       return clientVersion;
     }
     
     /**
-     * Get the server's agreed to version.
+     * @return the server's agreed to version.
      */
     public long getServerVersion() {
       return serverVersion;
     }
   }
   
+  /**
+   * @param protocol
+   * @param clientVersion
+   * @param addr
+   * @param conf
+   * @param maxAttempts
+   * @return proxy
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
   public static VersionedProtocol waitForProxy(Class protocol,
                                                long clientVersion,
                                                InetSocketAddress addr,
@@ -319,16 +345,38 @@ public class HbaseRPC {
       }
     }
   }
-  /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
+
+  /**
+   * Construct a client-side proxy object that implements the named protocol,
+   * talking to a server at the named address.
+   *
+   * @param protocol
+   * @param clientVersion
+   * @param addr
+   * @param conf
+   * @param factory
+   * @return proxy
+   * @throws IOException
+   */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
       SocketFactory factory) throws IOException {
     return getProxy(protocol, clientVersion, addr, null, conf, factory);
   }
   
-  /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
+  /**
+   * Construct a client-side proxy object that implements the named protocol,
+   * talking to a server at the named address.
+   *
+   * @param protocol
+   * @param clientVersion
+   * @param addr
+   * @param ticket
+   * @param conf
+   * @param factory
+   * @return proxy
+   * @throws IOException
+   */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
       Configuration conf, SocketFactory factory) throws IOException {    
@@ -375,7 +423,16 @@ public class HbaseRPC {
     }
   }
 
-  /** Expert: Make multiple, parallel calls to a set of servers. */
+  /**
+   * Expert: Make multiple, parallel calls to a set of servers.
+   *
+   * @param method
+   * @param params
+   * @param addrs
+   * @param conf
+   * @return values
+   * @throws IOException
+   */
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, Configuration conf)
     throws IOException {
@@ -403,15 +460,35 @@ public class HbaseRPC {
     }
   }
 
-  /** Construct a server for a protocol implementation instance listening on a
-   * port and address. */
+  /**
+   * Construct a server for a protocol implementation instance listening on a
+   * port and address.
+   *
+   * @param instance
+   * @param bindAddress
+   * @param port
+   * @param conf
+   * @return Server
+   * @throws IOException
+   */
   public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
     throws IOException {
     return getServer(instance, bindAddress, port, 1, false, conf);
   }
 
-  /** Construct a server for a protocol implementation instance listening on a
-   * port and address. */
+  /**
+   * Construct a server for a protocol implementation instance listening on a
+   * port and address.
+   *
+   * @param instance
+   * @param bindAddress
+   * @param port
+   * @param numHandlers
+   * @param verbose
+   * @param conf
+   * @return Server
+   * @throws IOException
+   */
   public static Server getServer(final Object instance, final String bindAddress, final int port,
                                  final int numHandlers,
                                  final boolean verbose, Configuration conf) 
@@ -425,11 +502,13 @@ public class HbaseRPC {
     private Class<?> implementation;
     private boolean verbose;
 
-    /** Construct an RPC server.
+    /**
+     * Construct an RPC server.
      * @param instance the instance whose methods will be called
      * @param conf the configuration to use
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
+     * @throws IOException
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
       throws IOException {
@@ -451,6 +530,7 @@ public class HbaseRPC {
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
+     * @throws IOException
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
                   int numHandlers, boolean verbose) throws IOException {
@@ -460,6 +540,7 @@ public class HbaseRPC {
       this.verbose = verbose;
     }
 
+    @Override
     public Writable call(Writable param, long receivedTime) throws IOException {
       try {
         Invocation call = (Invocation)param;

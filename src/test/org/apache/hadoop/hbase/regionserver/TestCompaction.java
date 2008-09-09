@@ -60,7 +60,6 @@ public class TestCompaction extends HBaseTestCase {
     this.cluster = null;
   }
   
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
@@ -72,7 +71,6 @@ public class TestCompaction extends HBaseTestCase {
     this.r = createNewHRegion(htd, null, null);
   }
   
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     HLog hlog = r.getLog();

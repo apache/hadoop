@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
+import java.io.IOException;                             //TODO: remove
 
 import org.apache.hadoop.io.Writable;
 import org.apache.lucene.document.Document;
@@ -33,19 +33,25 @@ import org.apache.lucene.document.Document;
 class LuceneDocumentWrapper implements Writable {
   private Document doc;
 
+  /**
+   * @param doc
+   */
   public LuceneDocumentWrapper(Document doc) {
     this.doc = doc;
   }
 
+  /**
+   * @return the document
+   */
   public Document get() {
     return doc;
   }
 
-  public void readFields(DataInput in) throws IOException {
+  public void readFields(@SuppressWarnings("unused") DataInput in) {
     // intentionally left blank
   }
 
-  public void write(DataOutput out) throws IOException {
+  public void write(@SuppressWarnings("unused") DataOutput out) {
     // intentionally left blank
   }
 }

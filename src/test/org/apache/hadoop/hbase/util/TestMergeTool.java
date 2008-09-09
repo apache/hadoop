@@ -47,7 +47,6 @@ public class TestMergeTool extends HBaseTestCase {
   private byte [][][] rows;
   private MiniDFSCluster dfsCluster = null;
   
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
@@ -137,7 +136,6 @@ public class TestMergeTool extends HBaseTestCase {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

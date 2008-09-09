@@ -34,6 +34,9 @@ import org.apache.hadoop.mapred.Reporter;
 
 /**
  * Write a table, sorting by the input key
+ *
+ * @param <K> key class
+ * @param <V> value class
  */
 @SuppressWarnings("unchecked")
 public abstract class TableReduce<K extends WritableComparable, V extends Writable>

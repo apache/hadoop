@@ -78,6 +78,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
    * 
    * @param row
+   * @param timestamp
    */
   public BatchUpdate(final String row, long timestamp){
     this(Bytes.toBytes(row), timestamp);
@@ -87,6 +88,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
    * 
    * @param row
+   * @param timestamp
    */
   public BatchUpdate(final byte [] row, long timestamp){
     this.row = row;
@@ -100,7 +102,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   }
 
   /**
-   * Return the timestamp this BatchUpdate will be committed with.
+   * @return the timestamp this BatchUpdate will be committed with.
    */
   public long getTimestamp() {
     return timestamp;
@@ -108,6 +110,8 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   
   /**
    * Set this BatchUpdate's timestamp.
+   * 
+   * @param timestamp
    */  
   public void setTimestamp(long timestamp) {
     this.timestamp = timestamp;

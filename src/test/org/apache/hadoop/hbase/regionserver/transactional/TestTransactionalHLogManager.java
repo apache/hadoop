@@ -51,7 +51,6 @@ public class TestTransactionalHLogManager extends HBaseTestCase implements
   final byte[] val3 = Bytes.toBytes("val3");
   final byte[] col = Bytes.toBytes("col:A");
 
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster(conf, 2, true, (String[]) null);
@@ -65,7 +64,6 @@ public class TestTransactionalHLogManager extends HBaseTestCase implements
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     if (this.fs.exists(this.dir)) {

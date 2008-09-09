@@ -40,9 +40,20 @@ import org.apache.hadoop.io.ObjectWritable;
  */
 public class ColumnValueFilter implements RowFilterInterface {
 
-  /** Comparison operator. */
+  /** Comparison operators. */
   public enum CompareOp {
-    LESS, LESS_OR_EQUAL, EQUAL, NOT_EQUAL, GREATER_OR_EQUAL, GREATER;
+    /** less than */
+    LESS,
+    /** less than or equal to */
+    LESS_OR_EQUAL,
+    /** equals */
+    EQUAL,
+    /** not equal */
+    NOT_EQUAL,
+    /** greater than or equal to */
+    GREATER_OR_EQUAL,
+    /** greater than */
+    GREATER;
   }
 
   private byte[] columnName;
@@ -82,12 +93,10 @@ public class ColumnValueFilter implements RowFilterInterface {
     this.comparator = comparator;
   }
 
-  /** {@inheritDoc} */
   public boolean filterRowKey(@SuppressWarnings("unused") final byte[] rowKey) {
     return false;
   }
 
-  /** {@inheritDoc} */
   public boolean filterColumn(@SuppressWarnings("unused") final byte[] rowKey,
       final byte[] colKey, final byte[] data) {
     if (!Arrays.equals(colKey, columnName)) {
@@ -119,12 +128,10 @@ public class ColumnValueFilter implements RowFilterInterface {
     }
   }
 
-  /** {@inheritDoc} */
   public boolean filterAllRemaining() {
     return false;
   }
 
-  /** {@inheritDoc} */
   public boolean filterRow(final SortedMap<byte[], Cell> columns) {
     // Don't let rows through if they don't have the column we are checking
     return !columns.containsKey(columnName);
@@ -141,28 +148,23 @@ public class ColumnValueFilter implements RowFilterInterface {
     return b1.length - b2.length;
   }
 
-  /** {@inheritDoc} */
   public boolean processAlways() {
     return false;
   }
 
-  /** {@inheritDoc} */
   public void reset() {
     // Nothing.
   }
 
-  /** {@inheritDoc} */
   public void rowProcessed(@SuppressWarnings("unused") final boolean filtered,
       @SuppressWarnings("unused") final byte[] key) {
     // Nothing
   }
 
-  /** {@inheritDoc} */
   public void validate(@SuppressWarnings("unused") final byte[][] columns) {
     // Nothing
   }
 
-  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     int valueLen = in.readInt();
     if (valueLen > 0) {
@@ -175,7 +177,6 @@ public class ColumnValueFilter implements RowFilterInterface {
         new HBaseConfiguration());
   }
 
-  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     if (value == null) {
       out.writeInt(0);

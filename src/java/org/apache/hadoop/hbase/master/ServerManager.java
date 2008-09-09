@@ -461,7 +461,8 @@ class ServerManager implements HConstants {
     }
   }
   
-  private void processRegionClose(HServerInfo serverInfo, HRegionInfo region) {
+  private void processRegionClose(
+      @SuppressWarnings("unused") HServerInfo serverInfo, HRegionInfo region) {
     if (region.isRootRegion()) {
       // Root region
       if (region.isOffline()) {
@@ -665,7 +666,6 @@ class ServerManager implements HConstants {
       this.server = server;
     }
 
-    /** {@inheritDoc} */
     public void leaseExpired() {
       LOG.info(server + " lease expired");
       // Remove the server from the known servers list and update load info

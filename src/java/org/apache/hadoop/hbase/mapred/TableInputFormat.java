@@ -46,7 +46,6 @@ public class TableInputFormat extends TableInputFormatBase implements
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
 
-  /** {@inheritDoc} */
   public void configure(JobConf job) {
     Path[] tableNames = FileInputFormat.getInputPaths(job);
     String colArg = job.get(COLUMN_LIST);
@@ -63,7 +62,7 @@ public class TableInputFormat extends TableInputFormatBase implements
     }
   }
 
-  /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
     Path [] tableNames = FileInputFormat.getInputPaths(job);

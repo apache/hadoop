@@ -106,13 +106,11 @@ public class ImmutableBytesWritable implements WritableComparable {
   }
 
 
-  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes, 0, this.bytes.length);
   }
   
-  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.bytes.length);
     out.write(this.bytes, 0, this.bytes.length);
@@ -120,7 +118,6 @@ public class ImmutableBytesWritable implements WritableComparable {
   
   // Below methods copied from BytesWritable
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, this.bytes.length);
@@ -150,7 +147,6 @@ public class ImmutableBytesWritable implements WritableComparable {
         0, that.length);
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof byte []) {
@@ -162,7 +158,6 @@ public class ImmutableBytesWritable implements WritableComparable {
     return false;
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() { 
     StringBuffer sb = new StringBuffer(3*this.bytes.length);
@@ -192,7 +187,6 @@ public class ImmutableBytesWritable implements WritableComparable {
       super(ImmutableBytesWritable.class);
     }
     
-    /** {@inheritDoc} */
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return comparator.compare(b1, s1, l1, b2, s2, l2);

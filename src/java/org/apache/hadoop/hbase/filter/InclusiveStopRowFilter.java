@@ -41,7 +41,6 @@ public class InclusiveStopRowFilter extends StopRowFilter{
     super(stopRowKey);
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean filterRowKey(final byte [] rowKey) {
     if (rowKey == null) {

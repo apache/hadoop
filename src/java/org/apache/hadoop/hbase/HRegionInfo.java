@@ -65,6 +65,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
   protected HTableDescriptor tableDesc = null;
   private int hashCode = -1;
+  //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final int NO_HASH = -1;
   private volatile int encodedName = NO_HASH;
   
@@ -308,9 +309,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = offLine;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public String toString() {
     return "REGION => {" + HConstants.NAME + " => '" +
@@ -323,17 +321,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       " TABLE => {" + this.tableDesc.toString() + "}";
   }
     
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public int hashCode() {
     return this.hashCode;
@@ -349,7 +341,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   // Writable
   //
 
-  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -363,7 +354,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     out.writeInt(hashCode);
   }
   
-  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -382,9 +372,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   // Comparable
   //
   
-  /**
-   * {@inheritDoc}
-   */
   public int compareTo(Object o) {
     HRegionInfo other = (HRegionInfo) o;
     if (other == null) {

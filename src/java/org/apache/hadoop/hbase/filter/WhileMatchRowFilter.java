@@ -63,13 +63,11 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return this.filter;
   }
   
-  /** {@inheritDoc} */
   public void reset() {
     this.filterAllRemaining = false;
     this.filter.reset();
   }
 
-  /** {@inheritDoc} */
   public boolean processAlways() {
     return true;
   }
@@ -85,20 +83,17 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
   }
   
-  /** {@inheritDoc} */
   public boolean filterRowKey(final byte [] rowKey) {
     changeFAR(this.filter.filterRowKey(rowKey));
     return filterAllRemaining();
   }
   
-  /** {@inheritDoc} */
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
     final byte[] data) {
     changeFAR(this.filter.filterColumn(rowKey, colKey, data));
     return filterAllRemaining();
   }
   
-  /** {@inheritDoc} */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     changeFAR(this.filter.filterRow(columns));
     return filterAllRemaining();
@@ -114,17 +109,14 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     this.filterAllRemaining = this.filterAllRemaining || value;
   }
 
-  /** {@inheritDoc} */
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     this.filter.rowProcessed(filtered, rowKey);
   }
   
-  /** {@inheritDoc} */
   public void validate(final byte [][] columns) {
     this.filter.validate(columns);
   }
   
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     String className = in.readUTF();
     
@@ -144,7 +136,6 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     }
   }
   
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());
     this.filter.write(out);

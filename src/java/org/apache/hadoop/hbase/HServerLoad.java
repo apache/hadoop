@@ -74,7 +74,6 @@ public class HServerLoad implements WritableComparable {
     return numberOfRegions;
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return toString(1);
@@ -89,13 +88,11 @@ public class HServerLoad implements WritableComparable {
     return "requests: " + numberOfRequests/msgInterval + " regions: " + numberOfRegions;
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return compareTo(o) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Integer.valueOf(numberOfRequests).hashCode();
@@ -137,13 +134,11 @@ public class HServerLoad implements WritableComparable {
 
   // Writable
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     numberOfRequests = in.readInt();
     numberOfRegions = in.readInt();
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(numberOfRequests);
     out.writeInt(numberOfRegions);
@@ -151,7 +146,6 @@ public class HServerLoad implements WritableComparable {
   
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HServerLoad other = (HServerLoad) o;
     return this.getLoad() - other.getLoad();

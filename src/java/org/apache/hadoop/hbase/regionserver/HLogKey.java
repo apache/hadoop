@@ -66,42 +66,37 @@ public class HLogKey implements WritableComparable {
   // A bunch of accessors
   //////////////////////////////////////////////////////////////////////////////
 
+  /** @return region name */
   public byte [] getRegionName() {
     return regionName;
   }
   
+  /** @return table name */
   public byte [] getTablename() {
     return tablename;
   }
   
+  /** @return row key */
   public byte [] getRow() {
     return row;
   }
   
+  /** @return log sequence number */
   public long getLogSeqNum() {
     return logSeqNum;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public String toString() {
     return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
       Bytes.toString(row) + "/" + logSeqNum;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public int hashCode() {
     int result = this.regionName.hashCode();
@@ -114,9 +109,6 @@ public class HLogKey implements WritableComparable {
   // Comparable
   //
 
-  /**
-   * {@inheritDoc}
-   */
   public int compareTo(Object o) {
     HLogKey other = (HLogKey) o;
     int result = Bytes.compareTo(this.regionName, other.regionName);
@@ -141,9 +133,6 @@ public class HLogKey implements WritableComparable {
   // Writable
   //
 
-  /**
-   * {@inheritDoc}
-   */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.regionName);
     Bytes.writeByteArray(out, this.tablename);
@@ -151,9 +140,6 @@ public class HLogKey implements WritableComparable {
     out.writeLong(logSeqNum);
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public void readFields(DataInput in) throws IOException {
     this.regionName = Bytes.readByteArray(in);
     this.tablename = Bytes.readByteArray(in);

@@ -45,7 +45,6 @@ public class TestHStoreFile extends HBaseTestCase {
   private MiniDFSCluster cluster;
   private Path dir = null;
   
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     try {
@@ -60,7 +59,6 @@ public class TestHStoreFile extends HBaseTestCase {
     super.setUp();
   }
   
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

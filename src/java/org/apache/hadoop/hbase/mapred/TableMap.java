@@ -49,6 +49,8 @@ public abstract class TableMap<K extends WritableComparable, V extends Writable>
    * @param table table name
    * @param columns columns to scan
    * @param mapper mapper class
+   * @param outputKeyClass
+   * @param outputValueClass
    * @param job job configuration
    */
   public static void initJob(String table, String columns,

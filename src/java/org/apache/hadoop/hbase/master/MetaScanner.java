@@ -45,7 +45,12 @@ class MetaScanner extends BaseScanner {
   private final List<MetaRegion> metaRegionsToRescan =
     new ArrayList<MetaRegion>();
     
-  /** Constructor */
+  /**
+   * Constructor
+   * 
+   * @param master
+   * @param regionManager
+   */
   public MetaScanner(HMaster master, RegionManager regionManager) {
     super(master, regionManager, false, master.metaRescanInterval, master.closed);
   }

@@ -61,23 +61,14 @@ public class PageRowFilter implements RowFilterInterface {
     this.pageSize = pageSize;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void validate(@SuppressWarnings("unused") final byte [][] columns) {
     // Doesn't filter columns
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void reset() {
     rowsAccepted = 0;
   }
 
-  /** {@inheritDoc} */
   public void rowProcessed(boolean filtered,
       @SuppressWarnings("unused") byte [] rowKey) {
     if (!filtered) {
@@ -85,61 +76,33 @@ public class PageRowFilter implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean processAlways() {
     return false;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterAllRemaining() {
     return this.rowsAccepted > this.pageSize;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterRowKey(@SuppressWarnings("unused") final byte [] r) {
     return filterAllRemaining();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterColumn(@SuppressWarnings("unused") final byte [] rowKey,
     @SuppressWarnings("unused") final byte [] colKey,
     @SuppressWarnings("unused") final byte[] data) {
     return filterAllRemaining();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public boolean filterRow(@SuppressWarnings("unused")
       final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void readFields(final DataInput in) throws IOException {
     this.pageSize = in.readLong();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
   public void write(final DataOutput out) throws IOException {
     out.writeLong(pageSize);
   }

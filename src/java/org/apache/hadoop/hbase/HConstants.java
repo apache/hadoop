@@ -29,8 +29,12 @@ public interface HConstants {
 
   /** long constant for zero */
   static final Long ZERO_L = Long.valueOf(0L);
-  
+
+  //TODO: NINES is only used in HBaseAdmin and HConnectionManager. Move to client
+  //      package and change visibility to default
   static final String NINES = "99999999999999";
+  //TODO: ZEROS is only used in HConnectionManager and MetaScanner. Move to
+  //      client package and change visibility to default
   static final String ZEROES = "00000000000000";
   
   // For migration
@@ -224,11 +228,18 @@ public interface HConstants {
    * Unlimited time-to-live.
    */
   static final int FOREVER = -1;
-  
+
+  //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
+  //      there.
   public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
     "hbase.client.retries.number";
+  //TODO: DEFAULT_CLIENT_RETRIES is not referenced anywhere. Remove it.
   public static final int DEFAULT_CLIENT_RETRIES = 5;
 
+  //TODO: although the following are referenced widely to format strings for
+  //      the shell. They really aren't a part of the public API. It would be
+  //      nice if we could put them somewhere where they did not need to be
+  //      public. They could have package visibility
   public static final String NAME = "NAME";
   public static final String VERSIONS = "VERSIONS";
   public static final String IN_MEMORY = "IN_MEMORY";

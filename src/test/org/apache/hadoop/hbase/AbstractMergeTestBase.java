@@ -74,9 +74,6 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void preHBaseClusterSetup() throws Exception {
     conf.setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);

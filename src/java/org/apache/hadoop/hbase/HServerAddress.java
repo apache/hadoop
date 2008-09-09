@@ -109,25 +109,16 @@ public class HServerAddress implements WritableComparable {
     return address;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public String toString() {
     return (stringValue == null ? "" : stringValue);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public int hashCode() {
     int result = this.address.hashCode();
@@ -139,9 +130,6 @@ public class HServerAddress implements WritableComparable {
   // Writable
   //
 
-  /**
-   * {@inheritDoc}
-   */
   public void readFields(DataInput in) throws IOException {
     String bindAddress = in.readUTF();
     int port = in.readInt();
@@ -156,9 +144,6 @@ public class HServerAddress implements WritableComparable {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public void write(DataOutput out) throws IOException {
     if(address == null) {
       out.writeUTF("");
@@ -174,9 +159,6 @@ public class HServerAddress implements WritableComparable {
   // Comparable
   //
   
-  /**
-   * {@inheritDoc}
-   */
   public int compareTo(Object o) {
     HServerAddress that = (HServerAddress)o;
     // Addresses as Strings may not compare though address is for the one

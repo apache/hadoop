@@ -37,7 +37,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   private Path dir;
   private MiniDFSCluster cluster;
 
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
@@ -51,7 +50,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     if (this.fs.exists(this.dir)) {

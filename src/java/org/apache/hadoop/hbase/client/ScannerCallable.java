@@ -67,7 +67,6 @@ public class ScannerCallable extends ServerCallable<RowResult> {
     }
   }
   
-  /** {@inheritDoc} */
   public RowResult call() throws IOException {
     if (scannerId != -1L && closed) {
       server.close(scannerId);

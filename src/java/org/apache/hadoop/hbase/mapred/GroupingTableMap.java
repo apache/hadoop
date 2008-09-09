@@ -67,7 +67,6 @@ public class GroupingTableMap extends TableMap<ImmutableBytesWritable,RowResult>
     job.set(GROUP_COLUMNS, groupColumns);
   }
 
-  /** {@inheritDoc} */
   @Override
   public void configure(JobConf job) {
     super.configure(job);

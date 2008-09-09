@@ -45,7 +45,6 @@ public class IndexOutputFormat extends
     FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
-  /** {@inheritDoc} */
   @Override
   public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>
   getRecordWriter(final FileSystem fs, JobConf job, String name,

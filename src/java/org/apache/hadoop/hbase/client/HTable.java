@@ -1059,7 +1059,9 @@ public class HTable {
         filter.validate(columns);
       }
     }
-   
+
+    //TODO: change visibility to protected
+    
     public void initialize() throws IOException {
       nextScanner();
     }
@@ -1144,7 +1146,6 @@ public class HTable {
       return this.filter.filterAllRemaining();
     }
 
-    /** {@inheritDoc} */
     public RowResult next() throws IOException {
       if (this.closed) {
         return null;
@@ -1160,9 +1161,6 @@ public class HTable {
       return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public void close() {
       if (callable != null) {
         callable.setClose();
@@ -1179,7 +1177,6 @@ public class HTable {
       closed = true;
     }
 
-    /** {@inheritDoc} */
     public Iterator<RowResult> iterator() {
       return new Iterator<RowResult>() {
         // The next RowResult, possibly pre-read

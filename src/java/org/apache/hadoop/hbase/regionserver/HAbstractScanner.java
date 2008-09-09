@@ -172,17 +172,14 @@ public abstract class HAbstractScanner implements InternalScanner {
     return false;
   }
 
-  /** {@inheritDoc} */
   public boolean isWildcardScanner() {
     return this.wildcardMatch;
   }
   
-  /** {@inheritDoc} */
   public boolean isMultipleMatchScanner() {
     return this.multipleMatchers;
   }
 
-  /** {@inheritDoc} */
   public abstract boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
   throws IOException;
   

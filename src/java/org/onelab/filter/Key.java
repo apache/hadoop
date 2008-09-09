@@ -94,6 +94,10 @@ public class Key implements WritableComparable {
     set(value, weight);
   }//end constructor
 
+  /**
+   * @param value
+   * @param weight
+   */
   public void set(byte[] value, double weight) {
     if(value == null) {
       throw new IllegalArgumentException("value can not be null");
@@ -125,13 +129,11 @@ public class Key implements WritableComparable {
     this.weight++;
   }//end incrementWeight()
 
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = 0;
@@ -144,14 +146,12 @@ public class Key implements WritableComparable {
 
   // Writable
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(bytes.length);
     out.write(bytes);
     out.writeDouble(weight);
   }
   
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes);
@@ -160,7 +160,6 @@ public class Key implements WritableComparable {
   
   // Comparable
   
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     Key other = (Key)o;
 

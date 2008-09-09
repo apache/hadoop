@@ -52,7 +52,6 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     this.startCode = Bytes.toBytes(info.getStartCode());
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "PendingOpenOperation from " + serverAddress.toString();

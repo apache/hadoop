@@ -58,7 +58,6 @@ public class TestRowFilterSet extends TestCase {
     }
   }
   
-  /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
     super.setUp();

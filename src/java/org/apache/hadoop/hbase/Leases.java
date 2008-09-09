@@ -66,7 +66,6 @@ public class Leases extends Thread {
     this.leaseCheckFrequency = leaseCheckFrequency;
   }
   
-  /** {@inheritDoc} */
   @Override
   public void run() {
     while (!stopRequested || (stopRequested && leaseQueue.size() > 0) ) {
@@ -149,13 +148,18 @@ public class Leases extends Thread {
    * Thrown if we are asked create a lease but lease on passed name already
    * exists.
    */
+  @SuppressWarnings("serial")
   public static class LeaseStillHeldException extends IOException {
     private final String leaseName;
     
+    /**
+     * @param name
+     */
     public LeaseStillHeldException(final String name) {
       this.leaseName = name;
     }
     
+    /** @return name of lease */
     public String getName() {
       return this.leaseName;
     }
@@ -218,25 +222,21 @@ public class Leases extends Thread {
       return this.listener;
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean equals(Object obj) {
       return this.hashCode() == ((Lease) obj).hashCode();
     }
     
-    /** {@inheritDoc} */
     @Override
     public int hashCode() {
       return this.leaseName.hashCode();
     }
 
-    /** {@inheritDoc} */
     public long getDelay(TimeUnit unit) {
       return unit.convert(this.expirationTime - System.currentTimeMillis(),
           TimeUnit.MILLISECONDS);
     }
 
-    /** {@inheritDoc} */
     public int compareTo(Delayed o) {
       long delta = this.getDelay(TimeUnit.MILLISECONDS) -
         o.getDelay(TimeUnit.MILLISECONDS);

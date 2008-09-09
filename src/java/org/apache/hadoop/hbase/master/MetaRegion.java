@@ -49,7 +49,6 @@ public class MetaRegion implements Comparable<MetaRegion> {
     this.startKey = startKey;
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "{regionname: " + Bytes.toString(this.regionName) +
@@ -72,13 +71,11 @@ public class MetaRegion implements Comparable<MetaRegion> {
     return startKey;
   }
 
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return o instanceof MetaRegion && this.compareTo((MetaRegion)o) == 0;
   }
 
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = this.regionName.hashCode();
@@ -88,7 +85,6 @@ public class MetaRegion implements Comparable<MetaRegion> {
 
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(MetaRegion other) {
     int result = Bytes.compareTo(this.regionName, other.getRegionName());
     if(result == 0) {

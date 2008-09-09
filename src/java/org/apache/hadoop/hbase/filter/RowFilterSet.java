@@ -80,28 +80,24 @@ public class RowFilterSet implements RowFilterInterface {
     this.operator = operator;
   }
 
-  /** {@inheritDoc} */
   public void validate(final byte [][] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
     }
   }
 
-  /** {@inheritDoc} */
   public void reset() {
     for (RowFilterInterface filter : filters) {
       filter.reset();
     }
   }
 
-  /** {@inheritDoc} */
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     for (RowFilterInterface filter : filters) {
       filter.rowProcessed(filtered, rowKey);
     }
   }
 
-  /** {@inheritDoc} */
   public boolean processAlways() {
     for (RowFilterInterface filter : filters) {
       if (filter.processAlways()) {
@@ -111,7 +107,6 @@ public class RowFilterSet implements RowFilterInterface {
     return false;
   }
   
-  /** {@inheritDoc} */
   public boolean filterAllRemaining() {
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
@@ -128,7 +123,6 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /** {@inheritDoc} */
   public boolean filterRowKey(final byte [] rowKey) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -152,7 +146,6 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /** {@inheritDoc} */
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey, 
     final byte[] data) {
     boolean resultFound = false;
@@ -179,7 +172,6 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /** {@inheritDoc} */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -203,7 +195,6 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     Configuration conf = new HBaseConfiguration();
     byte opByte = in.readByte();
@@ -219,7 +210,6 @@ public class RowFilterSet implements RowFilterInterface {
     }
   }
 
-  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     Configuration conf = new HBaseConfiguration();
     out.writeByte(operator.ordinal());

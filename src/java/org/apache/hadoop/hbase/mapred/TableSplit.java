@@ -68,33 +68,28 @@ public class TableSplit implements InputSplit {
     return m_endRow;
   }
 
-  /** {@inheritDoc} */
   public long getLength() {
     // Not clear how to obtain this... seems to be used only for sorting splits
     return 0;
   }
 
-  /** {@inheritDoc} */
   public String[] getLocations() {
     // Return a random node from the cluster for now
     return new String[] { };
   }
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.m_tableName = Bytes.readByteArray(in);
     this.m_startRow = Bytes.readByteArray(in);
     this.m_endRow = Bytes.readByteArray(in);
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.m_tableName);
     Bytes.writeByteArray(out, this.m_startRow);
     Bytes.writeByteArray(out, this.m_endRow);
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return Bytes.toString(m_tableName) +"," + Bytes.toString(m_startRow) +

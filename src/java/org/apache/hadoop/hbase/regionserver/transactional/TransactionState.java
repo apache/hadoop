@@ -69,6 +69,9 @@ class TransactionState {
   private Integer sequenceNumber;
   boolean hasScan = false;
 
+  //TODO: Why don't these methods and the class itself use default access?
+  //      They are only referenced from within this package.
+  
   public TransactionState(final long transactionId,
       final long rLogStartSequenceId) {
     this.transactionId = transactionId;

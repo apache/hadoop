@@ -59,7 +59,7 @@ public class BlockFSInputStream extends FSInputStream {
    * @param fileLength
    * @param blockSize the size of each block in bytes.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked",  "serial"})
   public BlockFSInputStream(InputStream in, long fileLength, int blockSize) {
     this.in = in;
     if (!(in instanceof Seekable) || !(in instanceof PositionedReadable)) {
@@ -89,12 +89,12 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   @Override
-  public synchronized long getPos() throws IOException {
+  public synchronized long getPos() {
     return pos;
   }
 
   @Override
-  public synchronized int available() throws IOException {
+  public synchronized int available() {
     return (int) (fileLength - pos);
   }
 
@@ -108,6 +108,7 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   @Override
+  @SuppressWarnings("unused")
   public synchronized boolean seekToNewSource(long targetPos)
       throws IOException {
     return false;
@@ -194,6 +195,7 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   @Override
+  @SuppressWarnings("unused")
   public void mark(int readLimit) {
     // Do nothing
   }

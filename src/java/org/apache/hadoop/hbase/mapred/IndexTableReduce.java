@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants;      //TODO: remove
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -47,6 +47,7 @@ public class IndexTableReduce extends MapReduceBase implements
 
   private IndexConfiguration indexConf;
 
+  @Override
   public void configure(JobConf job) {
     super.configure(job);
     indexConf = new IndexConfiguration();
@@ -59,13 +60,14 @@ public class IndexTableReduce extends MapReduceBase implements
     }
   }
 
+  @Override
   public void close() throws IOException {
     super.close();
   }
 
   public void reduce(ImmutableBytesWritable key, Iterator<RowResult> values,
       OutputCollector<ImmutableBytesWritable, LuceneDocumentWrapper> output,
-      Reporter reporter)
+      @SuppressWarnings("unused") Reporter reporter)
   throws IOException {
     if (!values.hasNext()) {
       return;

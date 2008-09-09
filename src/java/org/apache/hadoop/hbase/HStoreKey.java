@@ -315,20 +315,17 @@ public class HStoreKey implements WritableComparable {
         delimiterIndex) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     return Bytes.toString(this.row) + "/" + Bytes.toString(this.column) + "/" +
       timestamp;
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.row);
@@ -339,7 +336,6 @@ public class HStoreKey implements WritableComparable {
 
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     return compareTo(this.regionInfo, this, (HStoreKey)o);
   }
@@ -556,14 +552,12 @@ public class HStoreKey implements WritableComparable {
   
   // Writable
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.row);
     Bytes.writeByteArray(out, this.column);
     out.writeLong(timestamp);
   }
 
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.row = Bytes.readByteArray(in);
     this.column = Bytes.readByteArray(in);
@@ -576,12 +570,15 @@ public class HStoreKey implements WritableComparable {
   public static class HStoreKeyWritableComparator extends WritableComparator {
     private final HRegionInfo hri;
     
+    /** @param hri */
     public HStoreKeyWritableComparator(final HRegionInfo hri) {
       super(HStoreKey.class);
       this.hri = hri;
     }
     
-    public int compare(final WritableComparable left, final WritableComparable right) {
+    @Override
+    public int compare(final WritableComparable left,
+        final WritableComparable right) {
       return compareTo(this.hri, (HStoreKey)left, (HStoreKey)right);
     }
   }

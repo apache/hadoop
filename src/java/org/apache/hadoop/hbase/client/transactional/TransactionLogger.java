@@ -26,8 +26,14 @@ package org.apache.hadoop.hbase.client.transactional;
  */
 public interface TransactionLogger {
 
+  /** Transaction status values */
   enum TransactionStatus {
-    PENDING, COMMITTED, ABORTED
+    /** Transaction is pending */
+    PENDING,
+    /** Transaction was committed */
+    COMMITTED,
+    /** Transaction was aborted */
+    ABORTED
   }
 
   /**
@@ -38,8 +44,16 @@ public interface TransactionLogger {
    */
   long createNewTransactionLog();
 
+  /**
+   * @param transactionId
+   * @return transaction status
+   */
   TransactionStatus getStatusForTransaction(long transactionId);
 
+  /**
+   * @param transactionId
+   * @param status
+   */
   void setStatusForTransaction(long transactionId, TransactionStatus status);
 
 }

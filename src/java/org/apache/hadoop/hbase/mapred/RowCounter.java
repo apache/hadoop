@@ -74,6 +74,11 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
     output.collect(row, EMPTY_RESULT_VALUE);
   }
 
+  /**
+   * @param args
+   * @return the JobConf
+   * @throws IOException
+   */
   @SuppressWarnings({ "unused", "deprecation" })
   public JobConf createSubmittableJob(String[] args) throws IOException {
     JobConf c = new JobConf(getConf(), RowCounter.class);
@@ -120,6 +125,10 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
     this.conf = c;
   }
 
+  /**
+   * @param args
+   * @throws Exception
+   */
   public static void main(String[] args) throws Exception {
     HBaseConfiguration c = new HBaseConfiguration();
     int errCode = ToolRunner.run(c, new RowCounter(), args);

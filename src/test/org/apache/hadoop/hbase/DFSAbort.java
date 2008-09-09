@@ -35,7 +35,6 @@ public class DFSAbort extends HBaseClusterTestCase {
     conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
   }
   
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     try {

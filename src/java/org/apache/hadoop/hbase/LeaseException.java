@@ -19,11 +19,19 @@
  */
 package org.apache.hadoop.hbase;
 
+/**
+ * Reports a problem with a lease
+ */
+@SuppressWarnings("serial")
 public class LeaseException extends DoNotRetryIOException {
+  /** default constructor */
   public LeaseException() {
     super();
   }
 
+  /**
+   * @param message
+   */
   public LeaseException(String message) {
     super(message);
   }

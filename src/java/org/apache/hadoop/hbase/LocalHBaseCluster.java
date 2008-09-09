@@ -84,6 +84,7 @@ public class LocalHBaseCluster implements HConstants {
    * @param noRegionServers Count of regionservers to start.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final HBaseConfiguration conf,
     final int noRegionServers)
   throws IOException {
@@ -284,6 +285,10 @@ public class LocalHBaseCluster implements HConstants {
       " " + this.regionThreads.size() + " region server(s)");
   }
 
+  /**
+   * @param t
+   * @throws InterruptedException
+   */
   public void threadDumpingJoin(final Thread t) throws InterruptedException {
     if (t == null) {
       return;

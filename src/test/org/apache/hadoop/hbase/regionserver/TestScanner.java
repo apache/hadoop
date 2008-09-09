@@ -60,7 +60,6 @@ public class TestScanner extends HBaseTestCase {
   private HRegion r;
   private HRegionIncommon region;
 
-  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);

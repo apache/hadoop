@@ -102,11 +102,8 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   /**
-   * {@inheritDoc}
-   * 
    * Note that this method must be called after the mini hdfs cluster has
    * started or we end up with a local file system.
-   * 
    */
   @Override
   protected void setUp() throws Exception {
@@ -133,7 +130,6 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
   
-  /** {@inheritDoc} */
   @Override
   protected void tearDown() throws Exception {
     try {
@@ -401,18 +397,15 @@ public abstract class HBaseTestCase extends TestCase {
       this.batch = null;
     }
     
-    /** {@inheritDoc} */
     public void commit(BatchUpdate batchUpdate) throws IOException {
       region.batchUpdate(batchUpdate, null);
-    };
+    }
     
-    /** {@inheritDoc} */
     public void deleteAll(byte [] row, byte [] column, long ts)
     throws IOException {
       this.region.deleteAll(row, column, ts, null);
     }
 
-    /** {@inheritDoc} */
     public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow,
       long ts) 
     throws IOException {
@@ -420,19 +413,16 @@ public abstract class HBaseTestCase extends TestCase {
         InternalScannerIncommon(region.getScanner(columns, firstRow, ts, null));
     }
 
-    /** {@inheritDoc} */
     public Cell get(byte [] row, byte [] column) throws IOException {
       Cell[] result = this.region.get(row, column, -1, -1);
       return (result == null)? null : result[0];
     }
 
-    /** {@inheritDoc} */
     public Cell[] get(byte [] row, byte [] column, int versions)
     throws IOException {
       return this.region.get(row, column, -1, versions);
     }
 
-    /** {@inheritDoc} */
     public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException {
       return this.region.get(row, column, ts, versions);
@@ -447,7 +437,6 @@ public abstract class HBaseTestCase extends TestCase {
       return region.getFull(row, null, HConstants.LATEST_TIMESTAMP, null);
     }
 
-    /** {@inheritDoc} */
     public void flushcache() throws IOException {
       this.region.flushcache();
     }
@@ -475,36 +464,30 @@ public abstract class HBaseTestCase extends TestCase {
       this.batch = null;
     }
     
-    /** {@inheritDoc} */
     public void commit(BatchUpdate batchUpdate) throws IOException {
       table.commit(batchUpdate);
-    };
+    }
     
-    /** {@inheritDoc} */
     public void deleteAll(byte [] row, byte [] column, long ts)
     throws IOException {
       this.table.deleteAll(row, column, ts);
     }
     
-    /** {@inheritDoc} */
     public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow, long ts) 
     throws IOException {
       return new 
         ClientScannerIncommon(table.getScanner(columns, firstRow, ts, null));
     }
     
-    /** {@inheritDoc} */
     public Cell get(byte [] row, byte [] column) throws IOException {
       return this.table.get(row, column);
     }
     
-    /** {@inheritDoc} */
     public Cell[] get(byte [] row, byte [] column, int versions)
     throws IOException {
       return this.table.get(row, column, versions);
     }
     
-    /** {@inheritDoc} */
     public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException {
       return this.table.get(row, column, ts, versions);

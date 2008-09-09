@@ -50,7 +50,7 @@ package org.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Arrays;                        //TODO: remove
 
 /**
  * Implements a <i>counting Bloom filter</i>, as defined by Fan et al. in a ToN
@@ -94,7 +94,6 @@ public final class CountingBloomFilter extends Filter {
   }
 
 
-  /** {@inheritDoc} */
   @Override
   public void add(Key key) {
     if(key == null) {
@@ -153,7 +152,6 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end delete
 
-  /** {@inheritDoc} */
   @Override
   public void and(Filter filter){
     if(filter == null
@@ -170,7 +168,6 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end and()
 
-  /** {@inheritDoc} */
   @Override
   public boolean membershipTest(Key key){
     if(key == null) {
@@ -195,14 +192,12 @@ public final class CountingBloomFilter extends Filter {
     return true;
   }//end membershipTest()
 
-  /** {@inheritDoc} */
   @Override
   public void not(){
     throw new UnsupportedOperationException("not() is undefined for "
         + this.getClass().getName());
   }//end not()
 
-  /** {@inheritDoc} */
   @Override
   public void or(Filter filter){
     if(filter == null
@@ -220,7 +215,6 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end or()
 
-  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unused")
   public void xor(Filter filter){
@@ -228,7 +222,6 @@ public final class CountingBloomFilter extends Filter {
         + this.getClass().getName());
   }//end xor()
 
-  /** {@inheritDoc} */
   @Override
   public String toString(){
     StringBuilder res = new StringBuilder();
@@ -250,7 +243,6 @@ public final class CountingBloomFilter extends Filter {
     return res.toString();
   }//end toString()
 
-  /** {@inheritDoc} */
   @Override
   public Object clone(){
     CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash);
@@ -260,7 +252,6 @@ public final class CountingBloomFilter extends Filter {
 
   // Writable
 
-  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -270,7 +261,6 @@ public final class CountingBloomFilter extends Filter {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);

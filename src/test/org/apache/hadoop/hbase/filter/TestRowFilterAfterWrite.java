@@ -88,9 +88,6 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
     conf.setInt("ipc.client.timeout", 20 * 60 * 1000);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

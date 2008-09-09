@@ -45,8 +45,9 @@ import org.apache.hadoop.util.ReflectionUtils;
  * if passed a Writable it has not already been told about. Its also been
  * primed with hbase Writables.  Keys are always byte arrays.  Thats other
  * difference from MapWritable.
- * TODO: Have generics enforce V is a subclass of Writable and K is a byte []
- * only.
+ *
+ * @param <K> key
+ * @param <V> value
  */
 public class HbaseMapWritable <K, V>
 implements SortedMap<byte [], V>, Writable, Configurable {
@@ -89,47 +90,38 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     this.conf.set(conf);
   }
 
-  /** {@inheritDoc} */
   public void clear() {
     instance.clear();
   }
 
-  /** {@inheritDoc} */
   public boolean containsKey(Object key) {
     return instance.containsKey(key);
   }
 
-  /** {@inheritDoc} */
   public boolean containsValue(Object value) {
     return instance.containsValue(value);
   }
 
-  /** {@inheritDoc} */
   public Set<Entry<byte [], V>> entrySet() {
     return instance.entrySet();
   }
 
-  /** {@inheritDoc} */
   public V get(Object key) {
     return instance.get(key);
   }
   
-  /** {@inheritDoc} */
   public boolean isEmpty() {
     return instance.isEmpty();
   }
 
-  /** {@inheritDoc} */
   public Set<byte []> keySet() {
     return instance.keySet();
   }
 
-  /** {@inheritDoc} */
   public int size() {
     return instance.size();
   }
 
-  /** {@inheritDoc} */
   public Collection<V> values() {
     return instance.values();
   }
@@ -193,7 +185,6 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     return this.instance.toString();
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     // Write out the number of entries in the map
     out.writeInt(this.instance.size());
@@ -206,7 +197,7 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     }
   }
 
-  /** {@inheritDoc} */
+  @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
     // First clear the map.  Otherwise we will just accumulate
     // entries every time this method is called.

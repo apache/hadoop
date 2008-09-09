@@ -110,6 +110,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * 
    * @param tableName
    * @param desc
+   * @throws IOException
    */
   public void modifyTableMeta(byte[] tableName, HTableDescriptor desc)
     throws IOException;

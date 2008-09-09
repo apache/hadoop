@@ -26,7 +26,12 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /** Scanner for the <code>ROOT</code> HRegion. */
 class RootScanner extends BaseScanner {
-  /** Constructor */
+  /**
+   * Constructor
+   * 
+   * @param master
+   * @param regionManager
+   */
   public RootScanner(HMaster master, RegionManager regionManager) {
     super(master, regionManager, true, master.metaRescanInterval, master.closed);
   }
