@@ -288,6 +288,9 @@ Trunk (unreleased changes)
     HADOOP-3361. Implement renames for NativeS3FileSystem.
     (Albert Chern via tomwhite)
 
+    HADOOP-3605. Make EC2 scripts show an error message if AWS_ACCOUNT_ID is
+    unset. (Al Hoang via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
