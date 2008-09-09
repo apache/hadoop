@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,11 +30,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A set of named counters.
@@ -47,6 +51,15 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class Counters implements Writable, Iterable<Counters.Group> {
   private static final Log LOG = LogFactory.getLog(Counters.class);
+  private static final char GROUP_OPEN = '{';
+  private static final char GROUP_CLOSE = '}';
+  private static final char COUNTER_OPEN = '[';
+  private static final char COUNTER_CLOSE = ']';
+  private static final char UNIT_OPEN = '(';
+  private static final char UNIT_CLOSE = ')';
+  private static char[] charsToEscape =  {GROUP_OPEN, GROUP_CLOSE, 
+                                          COUNTER_OPEN, COUNTER_CLOSE, 
+                                          UNIT_OPEN, UNIT_CLOSE};
   
   //private static Log log = LogFactory.getLog("Counters.class");
   
@@ -109,6 +122,41 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      */
     public synchronized String getDisplayName() {
       return displayName;
+    }
+    
+    /**
+     * Set the display name of the counter.
+     */
+    public synchronized void setDisplayName(String displayName) {
+      this.displayName = displayName;
+    }
+    
+    /**
+     * Returns the compact stringified version of the counter in the format
+     * [(actual-name)(display-name)(value)]
+     */
+    public synchronized String makeEscapedCompactString() {
+      StringBuffer buf = new StringBuffer();
+      buf.append(COUNTER_OPEN);
+      
+      // Add the counter name
+      buf.append(UNIT_OPEN);
+      buf.append(escape(getName()));
+      buf.append(UNIT_CLOSE);
+      
+      // Add the display name
+      buf.append(UNIT_OPEN);
+      buf.append(escape(getDisplayName()));
+      buf.append(UNIT_CLOSE);
+      
+      // Add the value
+      buf.append(UNIT_OPEN);
+      buf.append(this.value);
+      buf.append(UNIT_CLOSE);
+      
+      buf.append(COUNTER_CLOSE);
+      
+      return buf.toString();
     }
     
     /**
@@ -178,6 +226,48 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      */
     public String getDisplayName() {
       return displayName;
+    }
+    
+    /**
+     * Set the display name
+     */
+    public void setDisplayName(String displayName) {
+      this.displayName = displayName;
+    }
+    
+    /**
+     * Returns the compact stringified version of the group in the format
+     * {(actual-name)(display-name)(value)[][][]} where [] are compact strings for the
+     * counters within.
+     */
+    public String makeEscapedCompactString() {
+      StringBuffer buf = new StringBuffer();
+      buf.append(GROUP_OPEN); // group start
+      
+      // Add the group name
+      buf.append(UNIT_OPEN);
+      buf.append(escape(getName()));
+      buf.append(UNIT_CLOSE);
+      
+      // Add the display name
+      buf.append(UNIT_OPEN);
+      buf.append(escape(getDisplayName()));
+      buf.append(UNIT_CLOSE);
+      
+      // write the value
+      for(Counter counter: subcounters.values()) {
+        buf.append(counter.makeEscapedCompactString());
+      }
+      
+      buf.append(GROUP_CLOSE); // group end
+      return buf.toString();
+    }
+        
+    /**
+     * Returns the names of the counters within
+     */
+    public synchronized Set<String> getCounterNames() {
+      return subcounters.keySet();
     }
     
     /**
@@ -497,6 +587,125 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       }
     }
     return buffer.toString();
+  }
+  
+  /**
+   * Represent the counter in a textual format that can be converted back to 
+   * its object form
+   * @return the string in the following format
+   * {(groupname)(group-displayname)[(countername)(displayname)(value)][][]}{}{}
+   */
+  public synchronized String makeEscapedCompactString() {
+    StringBuffer buffer = new StringBuffer();
+    for(Group group: this){
+      buffer.append(group.makeEscapedCompactString());
+    }
+    return buffer.toString();
+  }
+
+  // Extracts a block (data enclosed within delimeters) ignoring escape 
+  // sequences. Throws ParseException if an incomplete block is found else 
+  // returns null.
+  private static String getBlock(String str, char open, char close, 
+                                IntWritable index) throws ParseException {
+    StringBuilder split = new StringBuilder();
+    int next = StringUtils.findNext(str, open, StringUtils.ESCAPE_CHAR, 
+                                    index.get(), split);
+    split.setLength(0); // clear the buffer
+    if (next >= 0) {
+      ++next; // move over '('
+      
+      next = StringUtils.findNext(str, close, StringUtils.ESCAPE_CHAR, 
+                                   next, split);
+      if (next >= 0) {
+        ++next; // move over ')'
+        index.set(next);
+        return split.toString(); // found a block
+      } else {
+        throw new ParseException("Unexpected end of block", next);
+      }
+    }
+    return null; // found nothing
+  }
+  
+  /**
+   * Convert a stringified counter representation into a counter object. Note 
+   * that the counter can be recovered if its stringified using 
+   * {@link #makeEscapedCompactString()}. 
+   * @return a Counter
+   */
+  public static Counters fromEscapedCompactString(String compactString) 
+  throws ParseException {
+    Counters counters = new Counters();
+    IntWritable index = new IntWritable(0);
+    
+    // Get the group to work on
+    String groupString = 
+      getBlock(compactString, GROUP_OPEN, GROUP_CLOSE, index);
+    
+    while (groupString != null) {
+      IntWritable groupIndex = new IntWritable(0);
+      
+      // Get the actual name
+      String groupName = 
+        getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex);
+      groupName = unescape(groupName);
+      
+      // Get the display name
+      String groupDisplayName = 
+        getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex);
+      groupDisplayName = unescape(groupDisplayName);
+      
+      // Get the counters
+      Group group = counters.getGroup(groupName);
+      group.setDisplayName(groupDisplayName);
+      
+      String counterString = 
+        getBlock(groupString, COUNTER_OPEN, COUNTER_CLOSE, groupIndex);
+      
+      while (counterString != null) {
+        IntWritable counterIndex = new IntWritable(0);
+        
+        // Get the actual name
+        String counterName = 
+          getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex);
+        counterName = unescape(counterName);
+        
+        // Get the display name
+        String counterDisplayName = 
+          getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex);
+        counterDisplayName = unescape(counterDisplayName);
+        
+        // Get the value
+        long value = 
+          Long.parseLong(getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, 
+                                  counterIndex));
+        
+        // Add the counter
+        Counter counter = group.getCounterForName(counterName);
+        counter.setDisplayName(counterDisplayName);
+        counter.increment(value);
+        
+        // Get the next counter
+        counterString = 
+          getBlock(groupString, COUNTER_OPEN, COUNTER_CLOSE, groupIndex);
+      }
+      
+      groupString = getBlock(compactString, GROUP_OPEN, GROUP_CLOSE, index);
+    }
+    return counters;
+  }
+
+  // Escapes all the delimiters for counters i.e {,[,(,),],}
+  private static String escape(String string) {
+    return StringUtils.escapeString(string, StringUtils.ESCAPE_CHAR, 
+                                    charsToEscape);
+  }
+  
+  // Unescapes all the delimiters for counters i.e {,[,(,),],}
+  private static String unescape(String string) {
+    return StringUtils.unEscapeString(string, StringUtils.ESCAPE_CHAR, 
+                                      charsToEscape);
   }
   
   public static class Application {

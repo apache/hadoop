@@ -138,6 +138,9 @@ Trunk (unreleased changes)
     HADOOP-3581. Prevents memory intensive user tasks from taking down 
     nodes. (Vinod K V via ddas)
 
+    HADOOP-3970. Provides a way to recover counters written to JobHistory.
+    (Amar Kamat via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

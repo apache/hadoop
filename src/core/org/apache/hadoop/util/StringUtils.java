@@ -327,16 +327,11 @@ public class StringUtils {
     }
     ArrayList<String> strList = new ArrayList<String>();
     StringBuilder split = new StringBuilder();
-    int numPreEscapes = 0;
-    for (int i=0; i<str.length(); i++) {
-      char curChar = str.charAt(i);
-      if (numPreEscapes==0 && curChar == separator) { // separator 
-        strList.add(split.toString());
-        split.setLength(0); // clear the split
-      } else {
-        split.append(curChar);
-        numPreEscapes = (curChar == escapeChar)?(++numPreEscapes)%2:0;
-      }
+    int index = 0;
+    while ((index = findNext(str, separator, escapeChar, index, split)) >= 0) {
+      ++index; // move over the separator for next search
+      strList.add(split.toString());
+      split.setLength(0); // reset the buffer 
     }
     strList.add(split.toString());
     // remove trailing empty split(s)
@@ -345,6 +340,33 @@ public class StringUtils {
       strList.remove(last);
     }
     return strList.toArray(new String[strList.size()]);
+  }
+  
+  /**
+   * Finds the first occurrence of the separator character ignoring the escaped
+   * separators starting from the index. Note the substring between the index
+   * and the position of the separator is passed.
+   * @param str the source string
+   * @param separator the character to find
+   * @param escapeChar character used to escape
+   * @param start from where to search
+   * @param split used to pass back the extracted string
+   */
+  public static int findNext(String str, char separator, char escapeChar, 
+                             int start, StringBuilder split) {
+    int numPreEscapes = 0;
+    for (int i = start; i < str.length(); i++) {
+      char curChar = str.charAt(i);
+      if (numPreEscapes == 0 && curChar == separator) { // separator 
+        return i;
+      } else {
+        split.append(curChar);
+        numPreEscapes = (curChar == escapeChar)
+                        ? (++numPreEscapes) % 2
+                        : 0;
+      }
+    }
+    return -1;
   }
   
   /**
@@ -367,13 +389,31 @@ public class StringUtils {
    */
   public static String escapeString(
       String str, char escapeChar, char charToEscape) {
+    return escapeString(str, escapeChar, new char[] {charToEscape});
+  }
+  
+  // check if the character array has the character 
+  private static boolean hasChar(char[] chars, char character) {
+    for (char target : chars) {
+      if (character == target) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * @param charsToEscape array of characters to be escaped
+   */
+  public static String escapeString(String str, char escapeChar, 
+                                    char[] charsToEscape) {
     if (str == null) {
       return null;
     }
     StringBuilder result = new StringBuilder();
     for (int i=0; i<str.length(); i++) {
       char curChar = str.charAt(i);
-      if (curChar == escapeChar || curChar == charToEscape) {
+      if (curChar == escapeChar || hasChar(charsToEscape, curChar)) {
         // special char
         result.append(escapeChar);
       }
@@ -402,6 +442,14 @@ public class StringUtils {
    */
   public static String unEscapeString(
       String str, char escapeChar, char charToEscape) {
+    return unEscapeString(str, escapeChar, new char[] {charToEscape});
+  }
+  
+  /**
+   * @param charsToEscape array of characters to unescape
+   */
+  public static String unEscapeString(String str, char escapeChar, 
+                                      char[] charsToEscape) {
     if (str == null) {
       return null;
     }
@@ -410,7 +458,7 @@ public class StringUtils {
     for (int i=0; i<str.length(); i++) {
       char curChar = str.charAt(i);
       if (hasPreEscape) {
-        if (curChar != escapeChar && curChar != charToEscape) {
+        if (curChar != escapeChar && !hasChar(charsToEscape, curChar)) {
           // no special char
           throw new IllegalArgumentException("Illegal escaped string " + str + 
               " unescaped " + escapeChar + " at " + (i-1));
@@ -419,9 +467,9 @@ public class StringUtils {
         result.append(curChar);
         hasPreEscape = false;
       } else {
-        if (curChar == charToEscape) {
+        if (hasChar(charsToEscape, curChar)) {
           throw new IllegalArgumentException("Illegal escaped string " + str + 
-              " unescaped " + charToEscape + " at " + i);
+              " unescaped " + curChar + " at " + i);
         } else if (curChar == escapeChar) {
           hasPreEscape = true;
         } else {
@@ -431,7 +479,7 @@ public class StringUtils {
     }
     if (hasPreEscape ) {
       throw new IllegalArgumentException("Illegal escaped string " + str + 
-          ", not expecting " + charToEscape + " in the end." );
+          ", not expecting " + escapeChar + " in the end." );
     }
     return result.toString();
   }
