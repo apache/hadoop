@@ -484,6 +484,10 @@ Trunk (unreleased changes)
     HADOOP-3963. libhdfs does not exit on its own, instead it returns error 
     to the caller and behaves as a true library. (Pete Wyckoff via dhruba)
 
+    HADOOP-4100. Removes the cleanupTask scheduling from the Scheduler 
+    implementations and moves it to the JobTracker. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES

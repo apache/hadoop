@@ -74,16 +74,6 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
     final int maximumMapTasksNumber = taskTracker.getMaxMapTasks();
     final int maximumReduceTasksNumber = taskTracker.getMaxReduceTasks();
 
-    // check if cleanup task can be launched
-    synchronized (jobQueue) {
-      task = getCleanupTask(mapTasksNumber, reduceTasksNumber,
-               maximumMapTasksNumber, maximumReduceTasksNumber,
-               taskTracker, numTaskTrackers, jobQueue);
-      if (task != null) {
-        return Collections.singletonList(task);
-      }
-    }
-
     /*
      * Statistics about the whole cluster. Most are approximate because of
      * concurrency

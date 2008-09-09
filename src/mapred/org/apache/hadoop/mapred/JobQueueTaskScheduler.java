@@ -73,34 +73,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
                                  0.01f);
   }
 
-  protected Task getCleanupTask(int numMaps, int numReduces,
-                                int maxMapTasks, int maxReduceTasks,
-                                TaskTrackerStatus taskTracker,
-                                int numTaskTrackers,
-                                Collection<JobInProgress> jobQueue) 
-  throws IOException {
-    Task t = null;
-    if (numMaps < maxMapTasks) {
-      for (JobInProgress job : jobQueue) {
-        t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
-                       taskTrackerManager.getNumberOfUniqueHosts(), true);
-        if (t != null) {
-          return t;
-        }
-      }
-    }
-    if (numReduces < maxReduceTasks) {
-      for (JobInProgress job : jobQueue) {
-        t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
-                       taskTrackerManager.getNumberOfUniqueHosts(), false);
-        if (t != null) {
-          return t;
-        }
-      }
-    }
-    return t;
-  }
-  
   @Override
   public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
       throws IOException {
@@ -118,17 +90,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
     int maxCurrentReduceTasks = taskTracker.getMaxReduceTasks();
     int numMaps = taskTracker.countMapTasks();
     int numReduces = taskTracker.countReduceTasks();
-
-
-    // cleanup task has the highest priority, it should be 
-    // launched as soon as the job is done.
-    synchronized (jobQueue) {
-      Task t = getCleanupTask(numMaps, numReduces, maxCurrentMapTasks,
-                 maxCurrentReduceTasks, taskTracker, numTaskTrackers, jobQueue);
-      if (t != null) {
-        return Collections.singletonList(t);
-      }
-    }
 
     //
     // Compute average map and reduce task numbers across pool

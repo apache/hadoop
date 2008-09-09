@@ -1221,7 +1221,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (taskTrackerStatus == null) {
         LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
       } else {
-        List<Task> tasks = taskScheduler.assignTasks(taskTrackerStatus);
+        List<Task> tasks = getCleanupTask(taskTrackerStatus);
+        if (tasks == null ) {
+          tasks = taskScheduler.assignTasks(taskTrackerStatus);
+        }
         if (tasks != null) {
           for (Task task : tasks) {
             expireLaunchingTasks.addNewTask(task.getTaskID());
@@ -1457,6 +1460,43 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return null;
   }
   
+  private synchronized List<Task> getCleanupTask(TaskTrackerStatus taskTracker)
+  throws IOException {
+    int maxMapTasks = taskTracker.getMaxMapTasks();
+    int maxReduceTasks = taskTracker.getMaxReduceTasks();
+    int numMaps = taskTracker.countMapTasks();
+    int numReduces = taskTracker.countReduceTasks();
+    int numTaskTrackers = getClusterStatus().getTaskTrackers();
+    int numUniqueHosts = getNumberOfUniqueHosts();
+
+    Task t = null;
+    synchronized (jobs) {
+      if (numMaps < maxMapTasks) {
+        for (Iterator<JobInProgress> it = jobs.values().iterator();
+             it.hasNext();) {
+          JobInProgress job = it.next();
+          t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
+                                    numUniqueHosts, true);
+          if (t != null) {
+            return Collections.singletonList(t);
+          }
+        }
+      }
+      if (numReduces < maxReduceTasks) {
+        for (Iterator<JobInProgress> it = jobs.values().iterator();
+             it.hasNext();) {
+          JobInProgress job = it.next();
+          t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
+                                    numUniqueHosts, false);
+          if (t != null) {
+            return Collections.singletonList(t);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Grab the local fs name
    */

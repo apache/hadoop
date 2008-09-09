@@ -804,6 +804,11 @@ class JobInProgress {
    * @return true/false
    */
   private synchronized boolean canLaunchCleanupTask() {
+    // check if the job is running
+    if (status.getRunState() != JobStatus.RUNNING) {
+      return false;
+    }
+    // check if cleanup task has been launched already. 
     if (launchedCleanup) {
       return false;
     }
