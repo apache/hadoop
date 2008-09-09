@@ -216,7 +216,7 @@ public class TaskLog {
                                                 long tailLength
                                                ) throws IOException {
     return captureOutAndError(null, cmd, stdoutFilename,
-                              stderrFilename, tailLength );
+                              stderrFilename, tailLength, null );
   }
 
   /**
@@ -237,12 +237,44 @@ public class TaskLog {
                                                 File stderrFilename,
                                                 long tailLength
                                                ) throws IOException {
+    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
+        tailLength, null);
+  }
+
+  /**
+   * Wrap a command in a shell to capture stdout and stderr to files.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * If the tailLength is 0, the entire output will be saved.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @param pidFileName The name of the pid-file
+   * @return the modified command that should be run
+   */
+  public static List<String> captureOutAndError(List<String> setup,
+                                                List<String> cmd, 
+                                                File stdoutFilename,
+                                                File stderrFilename,
+                                                long tailLength,
+                                                String pidFileName
+                                               ) throws IOException {
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
     StringBuffer mergedCmd = new StringBuffer();
+    
+    // Spit out the pid to pidFileName
+    if (pidFileName != null) {
+      mergedCmd.append("echo $$ > ");
+      mergedCmd.append(pidFileName);
+      mergedCmd.append(" ;");
+    }
+
     if (setup != null && setup.size() > 0) {
       mergedCmd.append(addCommand(setup, false));
       mergedCmd.append(";");

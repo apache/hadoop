@@ -135,6 +135,9 @@ Trunk (unreleased changes)
     HADOOP-3941. Extend FileSystem API to return file-checksums.
     (szetszwo)
 
+    HADOOP-3581. Prevents memory intensive user tasks from taking down 
+    nodes. (Vinod K V via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

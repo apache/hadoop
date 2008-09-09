@@ -373,6 +373,13 @@ abstract class TaskRunner extends Thread {
       vargs.add(Integer.toString(address.getPort())); 
       vargs.add(taskid.toString());                      // pass task identifier
 
+      String pidFile = null;
+      if (tracker.isTaskMemoryManagerEnabled()) {
+        pidFile = lDirAlloc.getLocalPathForWrite(
+            (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + taskid),
+            this.conf).toString();
+      }
+
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
       List<String> setup = null;
@@ -389,7 +396,8 @@ abstract class TaskRunner extends Thread {
       stdout.getParentFile().mkdirs();
       tracker.getTaskTrackerInstrumentation().reportTaskLaunch(taskid, stdout, stderr);
       List<String> wrappedCommand = 
-        TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize);
+        TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize, pidFile);
+      LOG.debug("child jvm command : " + wrappedCommand.toString());
       Map<String, String> env = new HashMap<String, String>();
       StringBuffer ldLibraryPath = new StringBuffer();
       ldLibraryPath.append(workDir.toString());

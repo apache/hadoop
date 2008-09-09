@@ -75,6 +75,7 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
@@ -169,6 +170,7 @@ public class TaskTracker
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
+  private static final String PIDDIR = "pids";
   private JobConf originalConf;
   private JobConf fConf;
   private int maxCurrentMapTasks;
@@ -178,6 +180,8 @@ public class TaskTracker
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
   private CleanupQueue directoryCleanupThread;
+  private TaskMemoryManagerThread taskMemoryManager;
+  private boolean taskMemoryManagerEnabled = false;
   private long maxVirtualMemoryForTasks 
                                     = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
   private long defaultMemoryPerTask = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
@@ -342,6 +346,10 @@ public class TaskTracker
   static String getJobCacheSubdir() {
     return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.JOBCACHE;
   }
+
+  static String getPidFilesSubdir() {
+    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.PIDDIR;
+  }
     
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
@@ -452,6 +460,13 @@ public class TaskTracker
       defaultMemoryPerTask = maxVirtualMemoryForTasks /
                                     (maxCurrentMapTasks + 
                                         maxCurrentReduceTasks);
+    }
+    // start the taskMemoryManager thread only if enabled
+    setTaskMemoryManagerEnabledFlag();
+    if (isTaskMemoryManagerEnabled()) {
+      taskMemoryManager = new TaskMemoryManagerThread(this);
+      taskMemoryManager.setDaemon(true);
+      taskMemoryManager.start();
     }
     this.running = true;
   }
@@ -1447,6 +1462,9 @@ public class TaskTracker
     }
     try {
       localizeJob(tip);
+      if (isTaskMemoryManagerEnabled()) {
+        taskMemoryManager.addTask(t.getTaskID(), getMemoryForTask(tip));
+      }
     } catch (Throwable e) {
       String msg = ("Error initializing " + tip.getTask().getTaskID() + 
                     ":\n" + StringUtils.stringifyException(e));
@@ -2036,6 +2054,15 @@ public class TaskTracker
     void cleanup(boolean needCleanup) throws IOException {
       TaskAttemptID taskId = task.getTaskID();
       LOG.debug("Cleaning up " + taskId);
+
+      // Remove the associated pid-file, if any
+      if (TaskTracker.this.isTaskMemoryManagerEnabled()) {
+        Path pidFilePath = taskMemoryManager.getPidFilePath(taskId);
+        if (pidFilePath != null) {
+          directoryCleanupThread.addToQueue(pidFilePath);
+        }
+      }
+
       synchronized (TaskTracker.this) {
         if (needCleanup) {
           tasks.remove(taskId);
@@ -2239,6 +2266,10 @@ public class TaskTracker
       }
     } else {
       LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");
+    }
+    // Remove the entry from taskMemoryManagerThread's data structures.
+    if (isTaskMemoryManagerEnabled()) {
+      taskMemoryManager.removeTask(taskid);
     }
   }
 
@@ -2702,4 +2733,48 @@ public class TaskTracker
     return maxCurrentReduceTasks;
   }
 
+  /**
+   * Is the TaskMemoryManager Enabled on this system?
+   * @return true if enabled, false otherwise.
+   */
+  boolean isTaskMemoryManagerEnabled() {
+    return taskMemoryManagerEnabled;
+  }
+
+  private void setTaskMemoryManagerEnabledFlag() {
+    if (!ProcfsBasedProcessTree.isAvailable()) {
+      LOG.info("ProcessTree implementation is missing on this system. "
+          + "TaskMemoryManager is disabled.");
+      taskMemoryManagerEnabled = false;
+      return;
+    }
+
+    Long tasksMaxMem = getMaxVirtualMemoryForTasks();
+    if (tasksMaxMem == JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT) {
+      LOG.info("TaskTracker's tasksMaxMem is not set. TaskMemoryManager is "
+          + "disabled.");
+      taskMemoryManagerEnabled = false;
+      return;
+    }
+
+    taskMemoryManagerEnabled = true;
+  }
+
+  /**
+   * Clean-up the task that TaskMemoryMangerThread requests to do so.
+   * @param tid
+   * @param diagnosticMsg
+   */
+  synchronized void cleanUpOverMemoryTask(TaskAttemptID tid,
+      String diagnosticMsg) {
+    TaskInProgress tip = runningTasks.get(tid);
+    if (tip != null) {
+      tip.reportDiagnosticInfo(diagnosticMsg);
+      try {
+        purgeTask(tip, true); // Marking it as failure.
+      } catch (IOException ioe) {
+        LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe);
+      }
+    }
+  }
 }

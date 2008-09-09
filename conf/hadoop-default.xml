@@ -723,6 +723,21 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.tasktracker.taskmemorymanager.monitoring-interval</name>
+  <value>5000</value>
+  <description>The interval, in milliseconds, for which the tasktracker waits
+   between two cycles of monitoring its tasks' memory usage.</description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill</name>
+  <value>5000</value>
+  <description>The time, in milliseconds, the tasktracker waits for sending a
+  SIGKILL to a process that has overrun memory limits, after it has been sent
+  a SIGTERM.</description>
+</property>
+
+<property>
   <name>mapred.map.tasks</name>
   <value>2</value>
   <description>The default number of map tasks per job.  Typically set
