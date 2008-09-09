@@ -21,6 +21,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.DataInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -333,7 +337,23 @@ public class TestConfiguration extends TestCase {
     assertEquals(null, conf.get("test.key2"));
     assertEquals("value5", conf.get("test.key4"));
   }
-  
+
+  public void testSize() throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.set("a", "A");
+    conf.set("b", "B");
+    assertEquals(2, conf.size());
+  }
+
+  public void testClear() throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.set("a", "A");
+    conf.set("b", "B");
+    conf.clear();
+    assertEquals(0, conf.size());
+    assertFalse(conf.iterator().hasNext());
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()

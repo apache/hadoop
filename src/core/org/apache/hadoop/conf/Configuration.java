@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,10 +41,10 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Collection;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -54,11 +55,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
+import org.xml.sax.SAXException;
 
 /** 
  * Provides access to configuration parameters.
@@ -233,6 +236,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     addResourceObject(file);
   }
 
+  /**
+   * Add a configuration resource. 
+   * 
+   * The properties of this resource will override properties of previously 
+   * added resources, unless they were marked <a href="#Final">final</a>. 
+   * 
+   * @param in InputStream to deserialize the object from. 
+   */
+  public void addResource(InputStream in) {
+    addResourceObject(in);
+  }
+  
+  
   /**
    * Reload configuration from previously added resources.
    *
@@ -554,6 +570,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
       return false;
     }
     
+    @Override
     public String toString() {
       StringBuffer result = new StringBuffer();
       boolean first = true;
@@ -874,6 +891,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   }
 
   /**
+   * Return the number of keys in the configuration.
+   *
+   * @return number of keys in the configuration.
+   */
+  public int size() {
+    return getProps().size();
+  }
+
+  /**
+   * Clears all keys from the configuration.
+   */
+  public void clear() {
+    getProps().clear();
+    getOverlay().clear();
+  }
+
+  /**
    * Get an {@link Iterator} to go through the list of <code>String</code> 
    * key-value pairs in the configuration.
    * 
@@ -944,6 +978,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
             in.close();
           }
         }
+      } else if (name instanceof InputStream) {
+        try {
+          doc = builder.parse((InputStream)name);
+        } finally {
+          ((InputStream)name).close();
+        }
       }
 
       if (doc == null) {
@@ -993,11 +1033,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
         }
       }
         
-    } catch (Exception e) {
+    } catch (IOException e) {
+      LOG.fatal("error parsing conf file: " + e);
+      throw new RuntimeException(e);
+    } catch (DOMException e) {
+      LOG.fatal("error parsing conf file: " + e);
+      throw new RuntimeException(e);
+    } catch (SAXException e) {
+      LOG.fatal("error parsing conf file: " + e);
+      throw new RuntimeException(e);
+    } catch (ParserConfigurationException e) {
       LOG.fatal("error parsing conf file: " + e);
       throw new RuntimeException(e);
     }
-    
   }
 
   /** 

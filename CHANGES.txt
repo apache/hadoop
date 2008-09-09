@@ -141,6 +141,10 @@ Trunk (unreleased changes)
     HADOOP-3970. Provides a way to recover counters written to JobHistory.
     (Amar Kamat via ddas)
 
+    HADOOP-3702. Adds ChainMapper and ChainReducer classes allow composing
+    chains of Maps and Reduces in a single Map/Reduce job, something like 
+    MAP+ / REDUCE MAP*. (Alejandro Abdelnur via ddas)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
