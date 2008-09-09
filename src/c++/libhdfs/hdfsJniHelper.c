@@ -46,17 +46,17 @@ static volatile int hashTableInited = 0;
 #define MAX_HASH_TABLE_ELEM 4096
 
 
-static void validateMethodType(MethType methType)
+static int validateMethodType(MethType methType)
 {
     if (methType != STATIC && methType != INSTANCE) {
         fprintf(stderr, "Unimplemented method type\n");
-        exit(1);
+        return 0;
     }
-    return;
+    return 1;
 }
 
 
-static void hashTableInit(void)
+static int hashTableInit(void)
 {
     if (!hashTableInited) {
         LOCK_HASH_TABLE();
@@ -64,32 +64,35 @@ static void hashTableInit(void)
             if (hcreate(MAX_HASH_TABLE_ELEM) == 0) {
                 fprintf(stderr, "error creating hashtable, <%d>: %s\n",
                         errno, strerror(errno));
-                exit(1);
+                return 0;
             } 
             hashTableInited = 1;
         }
         UNLOCK_HASH_TABLE();
     }
+    return 1;
 }
 
 
-static void insertEntryIntoTable(const char *key, void *data)
+static int insertEntryIntoTable(const char *key, void *data)
 {
     ENTRY e, *ep;
     if (key == NULL || data == NULL) {
-        return;
+        return 0;
     }
-    hashTableInit();
+    if(! hashTableInit()) {
+      return -1;
+    }
     e.data = data;
     e.key = (char*)key;
     LOCK_HASH_TABLE();
     ep = hsearch(e, ENTER);
     UNLOCK_HASH_TABLE();
     if (ep == NULL) {
-        fprintf(stderr, "error adding key (%s) to hash table, <%d>: %s\n",
+        fprintf(stderr, "warn adding key (%s) to hash table, <%d>: %s\n",
                 key, errno, strerror(errno));
-        exit(1);
     }  
+    return 0;
 }
 
 
@@ -124,13 +127,19 @@ int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
     const char *str; 
     char returnType;
     
-    validateMethodType(methType);
+    if (! validateMethodType(methType)) {
+      return -1;
+    }
     cls = globalClassReference(className, env);
+    if (cls == NULL) {
+      return -2;
+    }
+
     mid = methodIdFromClass(className, methName, methSignature, 
                             methType, env);
     if (mid == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return -3;
     }
    
     str = methSignature;
@@ -220,11 +229,16 @@ jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className,
     jthrowable jthr;
 
     cls = globalClassReference(className, env);
+    if (cls == NULL) {
+        (*env)->ExceptionDescribe(env);
+      return NULL;
+    }
+
     mid = methodIdFromClass(className, "<init>", ctorSignature, 
                             INSTANCE, env);
     if (mid == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     } 
     va_start(args, ctorSignature);
     jobj = (*env)->NewObjectV(env, cls, mid, args);
@@ -247,8 +261,15 @@ jmethodID methodIdFromClass(const char *className, const char *methName,
                             JNIEnv *env)
 {
     jclass cls = globalClassReference(className, env);
+    if (cls == NULL) {
+      return NULL;
+    }
+
     jmethodID mid = 0;
-    validateMethodType(methType);
+    if (!validateMethodType(methType)) {
+      return NULL;
+    }
+
     if (methType == STATIC) {
         mid = (*env)->GetStaticMethodID(env, cls, methName, methSignature);
     }
@@ -270,12 +291,12 @@ jclass globalClassReference(const char *className, JNIEnv *env)
     clsLocalRef = (*env)->FindClass(env,className);
     if (clsLocalRef == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
     cls = (*env)->NewGlobalRef(env, clsLocalRef);
     if (cls == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
     (*env)->DeleteLocalRef(env, clsLocalRef);
     insertEntryIntoTable(className, cls);
@@ -293,22 +314,22 @@ char *classNameOfObject(jobject jobj, JNIEnv *env) {
     cls = (*env)->GetObjectClass(env, jobj);
     if (cls == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
     clsClass = (*env)->FindClass(env, "java/lang/Class");
     if (clsClass == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
     mid = (*env)->GetMethodID(env, clsClass, "getName", "()Ljava/lang/String;");
     if (mid == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
     str = (*env)->CallObjectMethod(env, cls, mid);
     if (str == NULL) {
         (*env)->ExceptionDescribe(env);
-        exit(1);
+        return NULL;
     }
 
     cstr = (*env)->GetStringUTFChars(env, str, NULL);
@@ -316,7 +337,7 @@ char *classNameOfObject(jobject jobj, JNIEnv *env) {
     (*env)->ReleaseStringUTFChars(env, str, cstr);
     if (newstr == NULL) {
         perror("classNameOfObject: strdup");
-        exit(1);
+        return NULL;
     }
     return newstr;
 }
@@ -344,7 +365,7 @@ JNIEnv* getJNIEnv(void)
     rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), vmBufLength, &noVMs);
     if (rv != 0) {
         fprintf(stderr, "JNI_GetCreatedJavaVMs failed with error: %d\n", rv);
-        exit(1);
+        return NULL;
     }
 
     if (noVMs == 0) {
@@ -352,7 +373,7 @@ JNIEnv* getJNIEnv(void)
         char *hadoopClassPath = getenv("CLASSPATH");
         if (hadoopClassPath == NULL) {
             fprintf(stderr, "Environment variable CLASSPATH not set!\n");
-            exit(-1);
+            return NULL;
         } 
         char *hadoopClassPathVMArg = "-Djava.class.path=";
         size_t optHadoopClassPathLen = strlen(hadoopClassPath) + 
@@ -397,7 +418,7 @@ JNIEnv* getJNIEnv(void)
         if (rv != 0) {
             fprintf(stderr, "Call to JNI_CreateJavaVM failed "
                     "with error: %d\n", rv);
-            exit(1);
+            return NULL;
         }
 
         free(optHadoopClassPath);
@@ -409,7 +430,7 @@ JNIEnv* getJNIEnv(void)
         if (rv != 0) {
             fprintf(stderr, "Call to AttachCurrentThread "
                     "failed with error: %d\n", rv);
-            exit(1);
+            return NULL;
         }
     }
 

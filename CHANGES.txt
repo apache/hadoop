@@ -504,6 +504,9 @@ Trunk (unreleased changes)
     HADOOP-4097. Make hive work well with speculative execution turned on.
     (Joydeep Sen Sarma via dhruba)
 
+    HADOOP-4113. Changes to libhdfs to not exit on its own, rather return
+    an error code to the caller. (Pete Wyckoff via dhruba)
+
 Release 0.18.1 - Unreleased
 
   BUG FIXES
