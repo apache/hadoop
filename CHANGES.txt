@@ -258,8 +258,6 @@ Trunk (unreleased changes)
 
     HADOOP-3905. Create generic interfaces for edit log streams. (shv)
 
-    HADOOP-3934. Upgrade log4j to 1.2.15. (omalley)
-
     HADOOP-3062. Add metrics to DataNode and TaskTracker to record network
     traffic for HDFS reads/writes and MR shuffling. (cdouglas)
 
@@ -508,6 +506,10 @@ Trunk (unreleased changes)
     an error code to the caller. (Pete Wyckoff via dhruba)
 
 Release 0.18.1 - Unreleased
+
+  IMPROVEMENTS
+
+    HADOOP-3934. Upgrade log4j to 1.2.15. (omalley)
 
   BUG FIXES
 
