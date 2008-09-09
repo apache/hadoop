@@ -502,17 +502,28 @@ public class Hive {
     }
   }
 
+  public static boolean needsDeletion(FileStatus file) {
+    String name = file.getPath().getName();
+    // There is a race condition in hadoop as a result of which
+    // the _task files created in the output directory at the time
+    // of the mapper is reported in the output directory even though
+    // it is actually removed. The first check works around that
+    // NOTE: it's not clear that this still affects recent versions of hadoop
+
+    // the second check deals with uncommitted output files produced by hive tasks
+    // this would typically happen on task failures or due to speculation
+    return (name.startsWith("_task") || name.startsWith("_tmp."));
+  }
+
   private void checkPaths(FileSystem fs, FileStatus [] srcs, Path destf, boolean replace) throws HiveException {
     try {
         for(int i=0; i<srcs.length; i++) {
             FileStatus [] items = fs.listStatus(srcs[i].getPath());
             for(int j=0; j<items.length; j++) {
-                // There is a race condition in hadoop as a result of which
-                // the _task files created in the output directory at the time
-                // of the mapper is reported in the output directory even though
-                // it is actually removed. The following check works around that
-                if (items[j].getPath().getName().startsWith("_task")) {
-                    continue;
+
+                if (needsDeletion(items[j])) {
+                      fs.delete(items[j].getPath(), true);
+                      continue;
                 }
                 if(items[j].isDir()) {
                     throw new HiveException("checkPaths: "+srcs[i].toString()+" has nested directory"+
@@ -584,9 +595,6 @@ public class Hive {
           for(int i=0; i<srcs.length; i++) {
               FileStatus[] items = fs.listStatus(srcs[i].getPath());
               for(int j=0; j<items.length; j++) {
-                  if (items[j].getPath().getName().startsWith("_task")) {
-                      continue;
-                  }
                   boolean b = fs.rename(items[j].getPath(), new Path(tmppath, items[j].getPath().getName()));
                   LOG.debug("Renaming:"+items[j]+",Status:"+b);
               }

@@ -81,7 +81,7 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
     try {
       fs = FileSystem.get(hconf);
       finalPath = new Path(conf.getDirName(), Utilities.getTaskId(hconf));
-      outPath = new Path(conf.getDirName(), "tmp."+Utilities.getTaskId(hconf));
+      outPath = new Path(conf.getDirName(), "_tmp."+Utilities.getTaskId(hconf));
       OutputFormat outputFormat = conf.getTableInfo().getOutputFileFormatClass().newInstance();
 
       if(outputFormat instanceof IgnoreKeyTextOutputFormat) {

@@ -19,13 +19,17 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.Serializable;
+import java.io.IOException;
+
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.plan.loadFileDesc;
 import org.apache.hadoop.hive.ql.plan.loadTableDesc;
 import org.apache.hadoop.hive.ql.plan.moveWork;
+import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -34,6 +38,20 @@ import org.apache.hadoop.util.StringUtils;
 public class MoveTask extends Task<moveWork> implements Serializable {
 
   private static final long serialVersionUID = 1L;
+
+  private void cleanseSource(FileSystem fs, Path sourcePath) throws IOException {
+    if(sourcePath == null)
+      return;
+
+    FileStatus [] srcs = fs.globStatus(sourcePath);
+    if(srcs != null) {
+      for(FileStatus one: srcs) {
+        if(Hive.needsDeletion(one)) {
+          fs.delete(one.getPath(), true);
+        }
+      }
+    }
+  }
 
   public int execute() {
 
@@ -46,6 +64,7 @@ public class MoveTask extends Task<moveWork> implements Serializable {
       for(loadFileDesc lfd: work.getLoadFileWork()) {
         Path targetPath = new Path(lfd.getTargetDir());
         Path sourcePath = new Path(lfd.getSourceDir());
+        cleanseSource(fs, sourcePath);
         if (lfd.getIsDfsDir()) {
           // Just do a rename on the URIs
           String mesg = "Moving data to: " + lfd.getTargetDir();

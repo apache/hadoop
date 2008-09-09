@@ -65,7 +65,7 @@ public class MetadataTypedSerDeField implements SerDeField {
 
     ColumnSet temp = (ColumnSet)obj;
     if(temp.col.size() <= _position) {
-      System.err.println("get " + temp.col.size() + "<=" + _position);
+      //System.err.println("get " + temp.col.size() + "<=" + _position);
       return null;
     }
     try {
