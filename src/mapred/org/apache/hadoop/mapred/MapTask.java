@@ -40,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -425,7 +426,8 @@ class MapTask extends Task {
     private final SpillThread spillThread = new SpillThread();
 
     private final FileSystem localFs;
-
+    private final FileSystem rfs;
+   
     private final Counters.Counter mapOutputByteCounter;
     private final Counters.Counter mapOutputRecordCounter;
     private final Counters.Counter combineInputCounter;
@@ -439,7 +441,10 @@ class MapTask extends Task {
       localFs = FileSystem.getLocal(job);
       partitions = job.getNumReduceTasks();
       partitioner = ReflectionUtils.newInstance(job.getPartitionerClass(), job);
-      // sanity checks
+       
+      rfs = ((LocalFileSystem)localFs).getRaw();
+
+      //sanity checks
       final float spillper = job.getFloat("io.sort.spill.percent",(float)0.8);
       final float recper = job.getFloat("io.sort.record.percent",(float)0.05);
       final int sortmb = job.getInt("io.sort.mb", 100);
@@ -891,7 +896,7 @@ class MapTask extends Task {
         // create spill file
         Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
                                       numSpills, size);
-        out = localFs.create(filename);
+        out = rfs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
                              getTaskID(), numSpills,
@@ -972,7 +977,7 @@ class MapTask extends Task {
         // create spill file
         Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
                                       numSpills, size);
-        out = localFs.create(filename);
+        out = rfs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
                              getTaskID(), numSpills,
@@ -1107,15 +1112,15 @@ class MapTask extends Task {
       for(int i = 0; i < numSpills; i++) {
         filename[i] = mapOutputFile.getSpillFile(getTaskID(), i);
         indexFileName[i] = mapOutputFile.getSpillIndexFile(getTaskID(), i);
-        finalOutFileSize += localFs.getFileStatus(filename[i]).getLen();
+        finalOutFileSize += rfs.getFileStatus(filename[i]).getLen();
       }
       
       if (numSpills == 1) { //the spill is the final output
-        localFs.rename(filename[0], 
-                       new Path(filename[0].getParent(), "file.out"));
-        localFs.rename(indexFileName[0], 
-                       new Path(indexFileName[0].getParent(),"file.out.index"));
-        return;
+    	  rfs.rename(filename[0],
+    			  new Path(filename[0].getParent(), "file.out"));
+    	  localFs.rename(indexFileName[0],
+    			  new Path(indexFileName[0].getParent(),"file.out.index"));
+    	  return;
       }
       //make correction in the length to include the sequence file header
       //lengths for each partition
@@ -1129,9 +1134,10 @@ class MapTask extends Task {
                             getTaskID(), finalIndexFileSize);
       
       //The output stream for the final single output file
-      FSDataOutputStream finalOut = localFs.create(finalOutputFile, true, 
-                                                   4096);
-      
+
+      FSDataOutputStream finalOut = rfs.create(finalOutputFile, true,
+                                               4096);
+
       //The final index file output stream
       FSDataOutputStream finalIndexOut = localFs.create(finalIndexFile, true,
                                                         4096);
@@ -1160,8 +1166,9 @@ class MapTask extends Task {
             long rawSegmentLength = indexIn.readLong();
             long segmentLength = indexIn.readLong();
             indexIn.close();
-            FSDataInputStream in = localFs.open(filename[i]);
+            FSDataInputStream in = rfs.open(filename[i]);
             in.seek(segmentOffset);
+
             Segment<K, V> s = 
               new Segment<K, V>(new Reader<K, V>(job, in, segmentLength, codec),
                                 true);
@@ -1176,7 +1183,7 @@ class MapTask extends Task {
           //merge
           @SuppressWarnings("unchecked")
           RawKeyValueIterator kvIter = 
-            Merger.merge(job, localFs, 
+            Merger.merge(job, rfs,
                          keyClass, valClass,
                          segmentList, job.getInt("io.sort.factor", 100), 
                          new Path(getTaskID().toString()), 
@@ -1203,7 +1210,7 @@ class MapTask extends Task {
         finalIndexOut.close();
         //cleanup
         for(int i = 0; i < numSpills; i++) {
-          localFs.delete(filename[i], true);
+          rfs.delete(filename[i],true);
           localFs.delete(indexFileName[i], true);
         }
       }
@@ -1223,7 +1230,7 @@ class MapTask extends Task {
       //StringBuffer sb = new StringBuffer();
       indexOut.writeLong(start);
       indexOut.writeLong(writer.getRawLength());
-      long segmentLength = out.getPos() - start;
+      long segmentLength = writer.getCompressedLength();
       indexOut.writeLong(segmentLength);
       LOG.info("Index: (" + start + ", " + writer.getRawLength() + ", " + 
                segmentLength + ")");

@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
@@ -75,10 +76,11 @@ public class TestReduceTask extends TestCase {
   public void runValueIterator(Path tmpDir, Pair[] vals, 
                                Configuration conf, 
                                CompressionCodec codec) throws IOException {
-    FileSystem fs = tmpDir.getFileSystem(conf);
+    FileSystem localFs = FileSystem.getLocal(conf);
+    FileSystem rfs = ((LocalFileSystem)localFs).getRaw();
     Path path = new Path(tmpDir, "data.in");
     IFile.Writer<Text, Text> writer = 
-      new IFile.Writer<Text, Text>(conf, fs, path, Text.class, Text.class, codec);
+      new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class, codec);
     for(Pair p: vals) {
       writer.append(new Text(p.key), new Text(p.value));
     }
@@ -86,7 +88,7 @@ public class TestReduceTask extends TestCase {
     
     @SuppressWarnings("unchecked")
     RawKeyValueIterator rawItr = 
-      Merger.merge(conf, fs, Text.class, Text.class, codec, new Path[]{path}, 
+      Merger.merge(conf, rfs, Text.class, Text.class, codec, new Path[]{path}, 
                    false, conf.getInt("io.sort.factor", 100), tmpDir, 
                    new Text.Comparator(), new NullProgress());
     @SuppressWarnings("unchecked") // WritableComparators are not generic

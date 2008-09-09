@@ -66,6 +66,8 @@ class IFile {
     long decompressedBytesWritten = 0;
     long compressedBytesWritten = 0;
     
+    IFileOutputStream checksumOut;
+
     Class<K> keyClass;
     Class<V> valueClass;
     Serializer<K> keySerializer;
@@ -83,17 +85,18 @@ class IFile {
     public Writer(Configuration conf, FSDataOutputStream out, 
         Class<K> keyClass, Class<V> valueClass,
         CompressionCodec codec) throws IOException {
+      this.checksumOut = new IFileOutputStream(out);
       this.rawOut = out;
       this.start = this.rawOut.getPos();
       
       if (codec != null) {
         this.compressor = CodecPool.getCompressor(codec);
         this.compressor.reset();
-        this.compressedOut = codec.createOutputStream(out, compressor);
+        this.compressedOut = codec.createOutputStream(checksumOut, compressor);
         this.out = new FSDataOutputStream(this.compressedOut,  null);
         this.compressOutput = true;
       } else {
-        this.out = out;
+        this.out = new FSDataOutputStream(checksumOut,null);
       }
       
       this.keyClass = keyClass;
@@ -106,6 +109,7 @@ class IFile {
     }
     
     public void close() throws IOException {
+
       // Close the serializers
       keySerializer.close();
       valueSerializer.close();
@@ -115,24 +119,25 @@ class IFile {
       WritableUtils.writeVInt(out, EOF_MARKER);
       decompressedBytesWritten += 2 * WritableUtils.getVIntSize(EOF_MARKER);
       
+      //Flush the stream
+      out.flush();
+  
       if (compressOutput) {
-        // Flush data from buffers into the compressor
-        out.flush();
-        
         // Flush & return the compressor
         compressedOut.finish();
         compressedOut.resetState();
         CodecPool.returnCompressor(compressor);
         compressor = null;
       }
-
+      
       // Close the stream
-      rawOut.flush();
+      checksumOut.close();
+      
       compressedBytesWritten = rawOut.getPos() - start;
-
+    
       // Close the underlying stream iff we own it...
       if (ownOutputStream) {
-        out.close();
+        rawOut.close();
       }
       out = null;
     }
@@ -216,43 +221,71 @@ class IFile {
     private static final int DEFAULT_BUFFER_SIZE = 128*1024;
     private static final int MAX_VINT_SIZE = 9;
 
-    FSDataInputStream rawIn;   // Raw InputStream from file
     InputStream in;            // Possibly decompressed stream that we read
     Decompressor decompressor;
     long bytesRead = 0;
     long fileLength = 0;
     boolean eof = false;
+    IFileInputStream checksumIn;
     
     byte[] buffer = null;
     int bufferSize = DEFAULT_BUFFER_SIZE;
     DataInputBuffer dataIn = new DataInputBuffer();
 
     int recNo = 1;
-
+    
+    /**
+     * Construct an IFile Reader.
+     * 
+     * @param conf Configuration File 
+     * @param fs  FileSystem
+     * @param file Path of the file to be opened. This file should have
+     *             checksum bytes for the data at the end of the file.
+     * @param codec codec
+     * @throws IOException
+     */
+    
     public Reader(Configuration conf, FileSystem fs, Path file,
                   CompressionCodec codec) throws IOException {
-      this(conf, fs.open(file), fs.getFileStatus(file).getLen(), codec);
+      this(conf, fs.open(file), 
+           fs.getFileStatus(file).getLen(),
+           codec);
     }
     
     protected Reader() {}
+
+    /**
+     * Construct an IFile Reader.
+     * 
+     * @param conf Configuration File 
+     * @param in   The input stream
+     * @param length Length of the data in the stream, including the checksum
+     *               bytes.
+     * @param codec codec
+     * @throws IOException
+     */
     
     public Reader(Configuration conf, FSDataInputStream in, long length, 
                   CompressionCodec codec) throws IOException {
-      this.rawIn = in;
+      checksumIn = new IFileInputStream(in,length);
       if (codec != null) {
         decompressor = CodecPool.getDecompressor(codec);
-        this.in = codec.createInputStream(in, decompressor);
+        this.in = codec.createInputStream(checksumIn, decompressor);
       } else {
-        this.in = in;
+        this.in = checksumIn;
       }
       this.fileLength = length;
       
       this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
     }
     
-    public long getLength() { return fileLength; }
+    public long getLength() { 
+      return fileLength - checksumIn.getSize();
+    }
     
-    public long getPosition() throws IOException { return rawIn.getPos(); }
+    public long getPosition() throws IOException {    
+      return checksumIn.getPosition(); 
+    }
     
     /**
      * Read upto len bytes into buf starting at offset off.
@@ -412,6 +445,11 @@ class IFile {
       // would not work. Instead, return the number of uncompressed bytes read,
       // which will be correct since in-memory data is not compressed.
       return bytesRead;
+    }
+    
+    @Override
+    public long getLength() { 
+      return fileLength;
     }
     
     private void dumpOnError() {

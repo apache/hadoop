@@ -223,9 +223,6 @@ public class DataChecksum implements Checksum {
       summer.update( b, off, len );
       inSum += len;
     }
-    // Can be removed.
-    assert inSum <= bytesPerChecksum : "DataChecksum.update() : inSum " + 
-                inSum + " > " + " bytesPerChecksum " + bytesPerChecksum ; 
   }
   public void update( int b ) {
     summer.update( b );

@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.WritableUtils;
@@ -2538,6 +2539,8 @@ public class TaskTracker
       OutputStream outStream = null;
       FSDataInputStream indexIn = null;
       FSDataInputStream mapOutputIn = null;
+ 
+      IFileInputStream checksumInputStream = null;
       
       long totalRead = 0;
       ShuffleServerMetrics shuffleMetrics = (ShuffleServerMetrics)
@@ -2598,8 +2601,9 @@ public class TaskTracker
          * send it to the reducer.
          */
         //open the map-output file
-        mapOutputIn = fileSys.open(mapOutputFileName);
-        
+        FileSystem rfs = ((LocalFileSystem)fileSys).getRaw();
+
+        mapOutputIn = rfs.open(mapOutputFileName);
         // TODO: Remove this after a 'fix' for HADOOP-3647
         // The clever trick here to reduce the impact of the extra seek for
         // logging the first key/value lengths is to read the lengths before
@@ -2618,8 +2622,9 @@ public class TaskTracker
 
         //seek to the correct offset for the reduce
         mapOutputIn.seek(startOffset);
+        checksumInputStream = new IFileInputStream(mapOutputIn,partLength);
           
-        int len = mapOutputIn.read(buffer, 0,
+        int len = checksumInputStream.readWithChecksum(buffer, 0,
                                    partLength < MAX_BYTES_TO_READ 
                                    ? (int)partLength : MAX_BYTES_TO_READ);
         while (len > 0) {
@@ -2633,9 +2638,9 @@ public class TaskTracker
           }
           totalRead += len;
           if (totalRead == partLength) break;
-          len = mapOutputIn.read(buffer, 0, 
-                                 (partLength - totalRead) < MAX_BYTES_TO_READ
-                                 ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
+          len = checksumInputStream.readWithChecksum(buffer, 0, 
+                        (partLength - totalRead) < MAX_BYTES_TO_READ
+                          ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
         }
         
         LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
@@ -2660,8 +2665,9 @@ public class TaskTracker
         if (indexIn != null) {
           indexIn.close();
         }
-        if (mapOutputIn != null) {
-          mapOutputIn.close();
+
+        if (checksumInputStream != null) {
+          checksumInputStream.close();
         }
         shuffleMetrics.serverHandlerFree();
         if (ClientTraceLog.isInfoEnabled()) {

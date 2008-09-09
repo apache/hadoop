@@ -128,7 +128,10 @@ class Merger {
     DataInputBuffer getKey() { return key; }
     DataInputBuffer getValue() { return value; }
 
-    long getLength() { return segmentLength; }
+    long getLength() { 
+      return (reader == null) ?
+        segmentLength : reader.getLength();
+    }
     
     boolean next() throws IOException {
       return reader.next(key, value);

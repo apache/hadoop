@@ -29,13 +29,19 @@ import java.util.*;
 public class LocalFileSystem extends ChecksumFileSystem {
   static final URI NAME = URI.create("file:///");
   static private Random rand = new Random();
-
+  FileSystem rfs;
+  
   public LocalFileSystem() {
-    super(new RawLocalFileSystem());
+    this(new RawLocalFileSystem());
+  }
+  
+  public FileSystem getRaw() {
+    return rfs;
   }
     
   public LocalFileSystem(FileSystem rawLocalFileSystem) {
     super(rawLocalFileSystem);
+    rfs = rawLocalFileSystem;
   }
     
   /** Convert a path to a File. */
