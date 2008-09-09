@@ -2,6 +2,10 @@ Hadoop Change Log
 
 Release 0.18.1 - Unreleased
 
+  IMPROVEMENTS
+
+    HADOOP-3934. Upgrade log4j to 1.2.15. (omalley)
+
   BUG FIXES
 
     HADOOP-3995. In case of quota failure on HDFS, rename does not restore
