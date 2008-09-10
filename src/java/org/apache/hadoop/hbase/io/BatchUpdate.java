@@ -125,7 +125,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * @return byte[] the cell value, returns null if the column does not exist.
    */
   public synchronized byte[] get(final String column) {
-	  return get(Bytes.toBytes(column));
+    return get(Bytes.toBytes(column));
   }
   
   /**
@@ -135,12 +135,12 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * @return byte[] the cell value, returns null if the column does not exist.
    */
   public synchronized byte[] get(final byte[] column) {
-	  for (BatchOperation operation: operations) {
-		  if (Arrays.equals(column, operation.getColumn())) {
-			  return operation.getValue();
-		  }
-	  }
-	  return null;
+    for (BatchOperation operation: operations) {
+      if (Arrays.equals(column, operation.getColumn())) {
+        return operation.getValue();
+      }
+    }
+    return null;
   }
 
   /** 
