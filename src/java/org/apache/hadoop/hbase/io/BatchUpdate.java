@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -115,6 +116,31 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    */  
   public void setTimestamp(long timestamp) {
     this.timestamp = timestamp;
+  }
+  
+  /**
+   * Get the current value of the specified column
+   * 
+   * @param column column name
+   * @return byte[] the cell value, returns null if the column does not exist.
+   */
+  public synchronized byte[] get(final String column) {
+	  return get(Bytes.toBytes(column));
+  }
+  
+  /**
+   * Get the current value of the specified column 
+   * 
+   * @param column column name
+   * @return byte[] the cell value, returns null if the column does not exist.
+   */
+  public synchronized byte[] get(final byte[] column) {
+	  for (BatchOperation operation: operations) {
+		  if (Arrays.equals(column, operation.getColumn())) {
+			  return operation.getValue();
+		  }
+	  }
+	  return null;
   }
 
   /** 

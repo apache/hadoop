@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
@@ -85,6 +86,8 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
 
     bu = new BatchUpdate("row2");
     bu.put(CONTENTS, value);
+    byte[] getValue = bu.get(CONTENTS);
+    assertTrue(Arrays.equals(getValue, value));
     table.commit(bu);
 
     byte [][] columns = { CONTENTS };
