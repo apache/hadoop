@@ -169,8 +169,9 @@ class hodRunner:
     return self.__log
 
   def __setup_cluster_logger(self, directory):
-    self.__baseLogger.add_file(logDirectory=directory, level=4, 
-                               addToLoggerNames=(self.__user ,))
+    self.__baseLogger.add_file(logDirectory=directory, level=4,
+                          backupCount=self.__cfg['hod']['log-rollover-count'],
+                          addToLoggerNames=(self.__user ,))
 
   def __setup_cluster_state(self, directory):
     self.__clusterState = hodState(directory)

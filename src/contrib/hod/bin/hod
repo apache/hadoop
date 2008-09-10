@@ -156,7 +156,10 @@ defList = { 'hod' : (
               True, None, False, True, 'l'),
 
              ('script-wait-time', 'pos_int', 'Specifies the time to wait before running the script. Used with the hod.script option.',
-              True, 10, False, True, 'W')),
+              True, 10, False, True, 'W'),
+
+             ('log-rollover-count', 'pos_int', 'Specifies the number of rolled-over log files of HOD client. A zero value disables rollover.',
+              True, 5, False, True, 'L')),
 
             'resource_manager' : (
              ('id', 'string', 'Batch scheduler ID: torque|condor.',

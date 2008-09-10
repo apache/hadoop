@@ -15,7 +15,14 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-Release 0.18.0 - Unreleased
+Release 0.18.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-4060. Modified HOD to rotate log files on the client side.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+Release 0.18.0 - 2008-08-19
 
   INCOMPATIBLE CHANGES
 
