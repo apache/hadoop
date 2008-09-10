@@ -147,8 +147,10 @@ class ProcessServerShutdown extends RegionServerOperation {
           // Mark region offline
           todo.regionOffline = true;
         } else {
-          // Get region reassigned
-          regions.add(info);
+          if (!info.isOffline() && !info.isSplit()) {
+            // Get region reassigned
+            regions.add(info);
+          }
         }
         // If it was pending, remove.
         master.regionManager.noLongerPending(info.getRegionName());

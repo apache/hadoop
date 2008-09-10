@@ -7,6 +7,8 @@ Release 0.18.0 - Unreleased
    HBASE-822   Update thrift README and HBase.thrift to use thrift 20080411
 
   BUG FIXES
+   HBASE-881   Fixed bug when Master tries to reassign split or offline regions
+               from a dead server
    HBASE-860   Fixed Bug in IndexTableReduce where it concerns writing lucene 
                index fields.
    HBASE-805   Remove unnecessary getRow overloads in HRS (Jonathan Gray via
