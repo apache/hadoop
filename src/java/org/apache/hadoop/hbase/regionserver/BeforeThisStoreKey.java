@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 
 /**
@@ -130,5 +131,15 @@ public class BeforeThisStoreKey extends HStoreKey {
   @Override
   public void write(DataOutput out) throws IOException {
     this.beforeThisKey.write(out);
+  }
+  
+  @Override
+  public HRegionInfo getHRegionInfo() {
+    return this.beforeThisKey.getHRegionInfo();
+  }
+  
+  @Override
+  public void setHRegionInfo(final HRegionInfo hri) {
+    this.beforeThisKey.setHRegionInfo(hri);
   }
 }

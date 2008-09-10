@@ -383,20 +383,21 @@ class Memcache {
       final Set<HStoreKey> deletes) {
     // We want the earliest possible to start searching from.  Start before
     // the candidate key in case it turns out a delete came in later.
-    HStoreKey search_key = candidateKeys.isEmpty()? new HStoreKey(row, this.regionInfo):
+    HStoreKey search_key = candidateKeys.isEmpty()?
+     new HStoreKey(row, this.regionInfo):
       new HStoreKey(candidateKeys.firstKey().getRow(), this.regionInfo);
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
     long now = System.currentTimeMillis();
-    
+
     // Get all the entries that come equal or after our search key
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(search_key);
-    
+
     // if there are items in the tail map, there's either a direct match to
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tailMap.isEmpty() &&
-        HStoreKey.compareTwoRowKeys(regionInfo, 
-            tailMap.firstKey().getRow(), search_key.getRow()) <= 0) {
+        HStoreKey.compareTwoRowKeys(this.regionInfo, 
+          tailMap.firstKey().getRow(), search_key.getRow()) <= 0) {
       Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
 
       // Keep looking at cells as long as they are no greater than the 
@@ -404,10 +405,10 @@ class Memcache {
       HStoreKey deletedOrExpiredRow = null;
       for (HStoreKey found_key = null; key_iterator.hasNext() &&
           (found_key == null ||
-            HStoreKey.compareTwoRowKeys(regionInfo, 
+            HStoreKey.compareTwoRowKeys(this.regionInfo, 
                 found_key.getRow(), row) <= 0);) {
         found_key = key_iterator.next();
-        if (HStoreKey.compareTwoRowKeys(regionInfo, 
+        if (HStoreKey.compareTwoRowKeys(this.regionInfo, 
             found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
             HStore.handleDeleted(found_key, candidateKeys, deletes);
@@ -462,7 +463,7 @@ class Memcache {
     if (headMap.isEmpty()) {
       return;
     }
-    
+
     // If there aren't any candidate keys at this point, we need to search
     // backwards until we find at least one candidate or run out of headMap.
     if (candidateKeys.isEmpty()) {
@@ -476,7 +477,7 @@ class Memcache {
         // not a delete record.
         boolean deleted = HLogEdit.isDeleted(headMap.get(found_key));
         if (lastRowFound != null &&
-            !HStoreKey.equalsTwoRowKeys(regionInfo, lastRowFound, 
+            !HStoreKey.equalsTwoRowKeys(this.regionInfo, lastRowFound, 
                 found_key.getRow()) && !deleted) {
           break;
         }

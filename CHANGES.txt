@@ -60,6 +60,8 @@ Release 0.18.0 - Unreleased
    HBASE-872   Getting exceptions in shell when creating/disabling tables
    HBASE-868   Incrementing binary rows cause strange behavior once table
                splits (Jonathan Gray via Stack)
+   HBASE-877   HCM is unable to find table with multiple regions which contains
+               binary (Jonathan Gray via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user

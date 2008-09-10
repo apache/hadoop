@@ -298,7 +298,7 @@ public class HStore implements HConstants {
     }
     long maxSeqIdInLog = -1;
     TreeMap<HStoreKey, byte []> reconstructedCache =
-      new TreeMap<HStoreKey, byte []>();
+      new TreeMap<HStoreKey, byte []>(new HStoreKey.HStoreKeyWritableComparator(this.info));
       
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
         reconstructionLog, this.conf);
@@ -934,7 +934,7 @@ public class HStore implements HConstants {
       ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
       boolean[] done = new boolean[rdrs.length];
       for(int i = 0; i < rdrs.length; i++) {
-        keys[i] = new HStoreKey();
+        keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.info);
         vals[i] = new ImmutableBytesWritable();
         done[i] = false;
       }
@@ -1451,7 +1451,8 @@ public class HStore implements HConstants {
     // most closely matches what we're looking for. We'll have to update it as
     // deletes are found all over the place as we go along before finally
     // reading the best key out of it at the end.
-    SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>();
+    SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>(
+      new HStoreKey.HStoreKeyWritableComparator(info));
     
     // Keep a list of deleted cell keys.  We need this because as we go through
     // the store files, the cell with the delete marker may be in one file and
@@ -1470,7 +1471,7 @@ public class HStore implements HConstants {
       // Process each store file.  Run through from newest to oldest.
       // This code below is very close to the body of the getKeys method.
       MapFile.Reader[] maparray = getReaders();
-      for(int i = maparray.length - 1; i >= 0; i--) {
+      for (int i = maparray.length - 1; i >= 0; i--) {
         // Update the candidate keys from the current map file
         rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys, deletes);
       }
@@ -1503,9 +1504,10 @@ public class HStore implements HConstants {
       if (!map.next(startKey, startValue)) {
         return;
       }
+      startKey.setHRegionInfo(this.info);
       // If start row for this file is beyond passed in row, return; nothing
       // in here is of use to us.
-      if (HStoreKey.compareTwoRowKeys(info,startKey.getRow(), row) > 0) {
+      if (HStoreKey.compareTwoRowKeys(this.info, startKey.getRow(), row) > 0) {
         return;
       }
       long now = System.currentTimeMillis();
@@ -1541,8 +1543,7 @@ public class HStore implements HConstants {
     if (HStoreKey.compareTwoRowKeys(info,finalKey.getRow(), row) < 0) {
       searchKey = finalKey;
     } else {
-      searchKey = new HStoreKey(row, 
-          HConstants.EMPTY_BYTE_ARRAY, info);
+      searchKey = new HStoreKey(row, this.info);
       if (searchKey.compareTo(startKey) < 0) {
         searchKey = startKey;
       }
@@ -1586,7 +1587,10 @@ public class HStore implements HConstants {
     final Set<HStoreKey> deletes, final long now)
   throws IOException {
     HStoreKey searchKey = sk;
-    HStoreKey readkey = new HStoreKey();
+    if (searchKey.getHRegionInfo() == null) {
+      searchKey.setHRegionInfo(this.info);
+    }
+    HStoreKey readkey = null;
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
     HStoreKey knownNoGoodKey = null;
     for (boolean foundCandidate = false; !foundCandidate;) {
@@ -1598,10 +1602,12 @@ public class HStore implements HConstants {
       }
       HStoreKey deletedOrExpiredRow = null;
       do {
+        // Set this region into the readkey.
+        readkey.setHRegionInfo(this.info);
         // If we have an exact match on row, and it's not a delete, save this
         // as a candidate key
-        if (HStoreKey.equalsTwoRowKeys(info, 
-            readkey.getRow(), searchKey.getRow())) {
+        if (HStoreKey.equalsTwoRowKeys(this.info, readkey.getRow(),
+            searchKey.getRow())) {
           if (!HLogEdit.isDeleted(readval.get())) {
             if (handleNonDelete(readkey, now, deletes, candidateKeys)) {
               foundCandidate = true;
@@ -1613,8 +1619,8 @@ public class HStore implements HConstants {
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = copy;
           }
-        } else if (HStoreKey.compareTwoRowKeys(info, 
-            readkey.getRow(), searchKey.getRow()) > 0) {
+        } else if (HStoreKey.compareTwoRowKeys(this.info, readkey.getRow(),
+            searchKey.getRow()) > 0) {
           // if the row key we just read is beyond the key we're searching for,
           // then we're done.
           break;
@@ -1633,7 +1639,7 @@ public class HStore implements HConstants {
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = copy;
           }
-        }        
+        }
       } while(map.next(readkey, readval) && (knownNoGoodKey == null ||
           readkey.compareTo(knownNoGoodKey) < 0));
 
@@ -1670,7 +1676,7 @@ public class HStore implements HConstants {
     final SortedMap<HStoreKey, Long> candidateKeys,
     final Set<HStoreKey> deletes, final long now) 
   throws IOException {
-    HStoreKey readkey = new HStoreKey();
+    HStoreKey readkey = null;
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
 
     // if there are already candidate keys, we need to start our search 
@@ -1679,8 +1685,7 @@ public class HStore implements HConstants {
     // of the row in case there are deletes for this candidate in this mapfile
     // BUT do not backup before the first key in the mapfile else getClosest
     // will return null
-    HStoreKey searchKey = new HStoreKey(candidateKeys.firstKey().getRow(), 
-        HConstants.EMPTY_BYTE_ARRAY, info);
+    HStoreKey searchKey = new HStoreKey(candidateKeys.firstKey().getRow(), this.info);
     if (searchKey.compareTo(startKey) < 0) {
       searchKey = startKey;
     }
@@ -1777,6 +1782,7 @@ public class HStore implements HConstants {
   private HStoreKey getFinalKey(final MapFile.Reader mf) throws IOException {
     HStoreKey finalKey = new HStoreKey(); 
     mf.finalKey(finalKey);
+    finalKey.setHRegionInfo(this.info);
     return finalKey;
   }
   

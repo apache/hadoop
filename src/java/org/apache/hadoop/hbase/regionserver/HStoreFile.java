@@ -408,10 +408,10 @@ public class HStoreFile implements HConstants {
       return new HStoreFile.HalfMapFileReader(fs,
           getMapFilePath(reference).toString(), conf, 
           reference.getFileRegion(), reference.getMidkey(), bloomFilter,
-          blockCacheEnabled);
+          blockCacheEnabled, this.hri);
     }
     return new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
-        conf, bloomFilter, blockCacheEnabled);
+        conf, bloomFilter, blockCacheEnabled, this.hri);
   }
 
   /**
@@ -608,9 +608,10 @@ public class HStoreFile implements HConstants {
        * @param conf
        * @throws IOException
        */
-      public HbaseReader(FileSystem fs, String dirName, Configuration conf)
+      public HbaseReader(FileSystem fs, String dirName, Configuration conf,
+        HRegionInfo hri)
       throws IOException {
-        this(fs, dirName, conf, false);
+        this(fs, dirName, conf, false, hri);
       }
       
       /**
@@ -618,14 +619,16 @@ public class HStoreFile implements HConstants {
        * @param dirName
        * @param conf
        * @param blockCacheEnabled
+       * @param hri
        * @throws IOException
        */
       public HbaseReader(FileSystem fs, String dirName, Configuration conf,
-          boolean blockCacheEnabled)
+          boolean blockCacheEnabled, HRegionInfo hri)
       throws IOException {
-        super(fs, dirName, null, conf, false); // defer opening streams
+        super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), 
+            conf, false); // defer opening streams
         this.blockCacheEnabled = blockCacheEnabled;
-        open(fs, dirName, null, conf);
+        open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), conf);
         
         // Force reading of the mapfile index by calling midKey.
         // Reading the index will bring the index into memory over
@@ -700,12 +703,14 @@ public class HStoreFile implements HConstants {
        * @param conf
        * @param filter
        * @param blockCacheEnabled
+       * @param hri
        * @throws IOException
        */
       public Reader(FileSystem fs, String dirName, Configuration conf,
-          final boolean filter, final boolean blockCacheEnabled)
+          final boolean filter, final boolean blockCacheEnabled, 
+          HRegionInfo hri)
       throws IOException {
-        super(fs, dirName, conf, blockCacheEnabled);
+        super(fs, dirName, conf, blockCacheEnabled, hri);
         if (filter) {
           this.bloomFilter = loadBloomFilter(fs, dirName);
         } else {
@@ -887,17 +892,19 @@ public class HStoreFile implements HConstants {
     
     HalfMapFileReader(final FileSystem fs, final String dirName, 
         final Configuration conf, final Range r,
-        final WritableComparable midKey)
+        final WritableComparable midKey,
+        final HRegionInfo hri)
     throws IOException {
-      this(fs, dirName, conf, r, midKey, false, false);
+      this(fs, dirName, conf, r, midKey, false, false, hri);
     }
     
     HalfMapFileReader(final FileSystem fs, final String dirName, 
         final Configuration conf, final Range r,
         final WritableComparable midKey, final boolean filter,
-        final boolean blockCacheEnabled)
+        final boolean blockCacheEnabled,
+        final HRegionInfo hri)
     throws IOException {
-      super(fs, dirName, conf, filter, blockCacheEnabled);
+      super(fs, dirName, conf, filter, blockCacheEnabled, hri);
       top = isTopFileRegion(r);
       midkey = midKey;
     }

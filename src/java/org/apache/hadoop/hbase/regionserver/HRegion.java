@@ -783,7 +783,7 @@ public class HRegion implements HConstants {
         // Reference to top half of the hsf store file.
         HStoreFile.Reference bReference = new HStoreFile.Reference(
             this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey), HStoreFile.Range.top);
+            new HStoreKey(midKey, this.regionInfo), HStoreFile.Range.top);
         HStoreFile b = new HStoreFile(this.conf, fs, splits,
             regionBInfo, h.getColFamily(), -1, bReference);
         h.splitStoreFile(a, b, this.fs);
@@ -1535,7 +1535,8 @@ public class HRegion implements HConstants {
       for (HStore store : stores.values()) {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts, this.regionInfo),
           ALL_VERSIONS, now);
-        TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+        TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+          new HStoreKey.HStoreKeyWritableComparator(regionInfo));
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.deleteBytes.get());
         }
@@ -1569,7 +1570,8 @@ public class HRegion implements HConstants {
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp,
         this.regionInfo), ALL_VERSIONS, now);
       // delete all the cells
-      TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+      TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
       for (HStoreKey key: keys) {
         edits.put(key, HLogEdit.deleteBytes.get());
       }
@@ -1597,7 +1599,8 @@ public class HRegion implements HConstants {
     HStoreKey origin = new HStoreKey(row, column, ts, this.regionInfo);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
-      TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+      TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
       for (HStoreKey key: keys) {
         edits.put(key, HLogEdit.deleteBytes.get());
       }
@@ -1633,7 +1636,8 @@ public class HRegion implements HConstants {
     checkReadOnly();
     TreeMap<HStoreKey, byte []> targets = this.targetColumns.get(lockid);
     if (targets == null) {
-      targets = new TreeMap<HStoreKey, byte []>();
+      targets = new TreeMap<HStoreKey, byte []>(
+        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
       this.targetColumns.put(lockid, targets);
     }
     targets.put(key, val);
@@ -2210,7 +2214,8 @@ public class HRegion implements HConstants {
     try {
       HStoreKey key = new HStoreKey(row, COL_REGIONINFO,
         System.currentTimeMillis(), r.getRegionInfo());
-      TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>();
+      TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>(
+        new HStoreKey.HStoreKeyWritableComparator(meta.getRegionInfo()));
       edits.put(key, Writables.getBytes(r.getRegionInfo()));
       meta.update(edits);
     } finally {

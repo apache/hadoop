@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.regionserver.BeforeThisStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -203,7 +204,7 @@ public class HStoreKey implements WritableComparable {
   
   /** @return Approximate size in bytes of this key. */
   public long getSize() {
-    return this.row.length + this.column.length + Bytes.SIZEOF_LONG;
+    return getRow().length + getColumn().length + Bytes.SIZEOF_LONG;
   }
   
   /**
@@ -212,7 +213,8 @@ public class HStoreKey implements WritableComparable {
    * @param other the source key
    */
   public HStoreKey(HStoreKey other) {
-    this(other.row, other.column, other.timestamp, other.regionInfo);
+    this(other.getRow(), other.getColumn(), other.getTimestamp(),
+      other.getHRegionInfo());
   }
   
   /**
@@ -274,6 +276,13 @@ public class HStoreKey implements WritableComparable {
   }
   
   /**
+   * @param hri
+   */
+  public void setHRegionInfo(final HRegionInfo hri) {
+    this.regionInfo = hri;
+  }
+  
+  /**
    * Compares the row and column of two keys
    * @param other Key to compare against. Compares row and column.
    * @return True if same row and column.
@@ -281,8 +290,8 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */ 
   public boolean matchesRowCol(HStoreKey other) {
-    return HStoreKey.equalsTwoRowKeys(this.regionInfo, this.row, other.row) &&
-      Bytes.equals(column, other.column);
+    return HStoreKey.equalsTwoRowKeys(getHRegionInfo(), getRow(), other.getRow()) &&
+      Bytes.equals(getColumn(), other.getColumn());
   }
   
   /**
@@ -295,8 +304,8 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */
   public boolean matchesWithoutColumn(HStoreKey other) {
-    return equalsTwoRowKeys(this.regionInfo, this.row, other.row) &&
-      this.timestamp >= other.getTimestamp();
+    return equalsTwoRowKeys(getHRegionInfo(), getRow(), other.getRow()) &&
+      getTimestamp() >= other.getTimestamp();
   }
   
   /**
@@ -309,9 +318,9 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesWithoutColumn(HStoreKey)
    */
   public boolean matchesRowFamily(HStoreKey that) {
-    int delimiterIndex = getFamilyDelimiterIndex(this.column);
-    return equalsTwoRowKeys(this.regionInfo, this.row, that.row) &&
-      Bytes.compareTo(this.column, 0, delimiterIndex, that.column, 0,
+    int delimiterIndex = getFamilyDelimiterIndex(getColumn());
+    return equalsTwoRowKeys(getHRegionInfo(), getRow(), that.getRow()) &&
+      Bytes.compareTo(getColumn(), 0, delimiterIndex, that.getColumn(), 0,
         delimiterIndex) == 0;
   }
   
@@ -328,9 +337,9 @@ public class HStoreKey implements WritableComparable {
   
   @Override
   public int hashCode() {
-    int result = Bytes.hashCode(this.row);
-    result ^= Bytes.hashCode(this.column);
-    result ^= this.timestamp;
+    int result = Bytes.hashCode(getRow());
+    result ^= Bytes.hashCode(getColumn());
+    result ^= getTimestamp();
     return result;
   }
 
@@ -362,7 +371,9 @@ public class HStoreKey implements WritableComparable {
     } else if (left.getTimestamp() > right.getTimestamp()) {
       result = -1;
     }
-    return result;
+    // Because of HBASE-877, our BeforeThisStoreKey trick no longer works and
+    // so instead we need to do this check here below.
+    return result == 0 && left instanceof BeforeThisStoreKey? -1: result;
   }
 
   /**

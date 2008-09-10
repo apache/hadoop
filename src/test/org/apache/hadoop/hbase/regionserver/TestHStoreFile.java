@@ -226,7 +226,7 @@ public class TestHStoreFile extends HBaseTestCase {
       // file, one from the top and the other from the bottom.
       // Test bottom half first.
       bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey);
+          this.conf, HStoreFile.Range.bottom, midkey, null);
       boolean first = true;
       while (bottom.next(key, value)) {
         previous = key.toString();
@@ -241,7 +241,7 @@ public class TestHStoreFile extends HBaseTestCase {
       }
       // Now test reading from the top.
       top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, midkey);
+          HStoreFile.Range.top, midkey, null);
       first = true;
       while (top.next(key, value)) {
         assertTrue(key.compareTo(midkey) >= 0);
@@ -262,12 +262,12 @@ public class TestHStoreFile extends HBaseTestCase {
       // properly.
       WritableComparable badkey = new HStoreKey("   ");
       bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, badkey);
+          this.conf, HStoreFile.Range.bottom, badkey, null);
       // When badkey is < than the bottom, should return no values.
       assertFalse(bottom.next(key, value));
       // Now read from the top.
       top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, badkey);
+          HStoreFile.Range.top, badkey, null);
       first = true;
       while (top.next(key, value)) {
         assertTrue(key.compareTo(badkey) >= 0);
@@ -289,7 +289,7 @@ public class TestHStoreFile extends HBaseTestCase {
       // Test when badkey is > than last key in file ('||' > 'zz').
       badkey = new HStoreKey("|||");
       bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, badkey);
+          this.conf, HStoreFile.Range.bottom, badkey, null);
       first = true;
       while (bottom.next(key, value)) {
         if (first) {
@@ -308,7 +308,7 @@ public class TestHStoreFile extends HBaseTestCase {
       }
       // Now look at top. Should not return any values.
       top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, badkey);
+          HStoreFile.Range.top, badkey, null);
       assertFalse(top.next(key, value));
       
     } finally {
@@ -341,12 +341,12 @@ public class TestHStoreFile extends HBaseTestCase {
         // properly.
         HStoreKey midkey = new HStoreKey("   ");
         bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey);
+          this.conf, HStoreFile.Range.bottom, midkey, null);
         // When midkey is < than the bottom, should return no values.
         assertFalse(bottom.next(key, value));
         // Now read from the top.
         top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.top, midkey);
+          this.conf, HStoreFile.Range.top, midkey, null);
         boolean first = true;
         while (top.next(key, value)) {
           assertTrue(key.compareTo(midkey) >= 0);
@@ -362,7 +362,7 @@ public class TestHStoreFile extends HBaseTestCase {
         // Test when midkey is > than last key in file ('||' > 'zz').
         midkey = new HStoreKey("|||");
         bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey);
+          this.conf, HStoreFile.Range.bottom, midkey, null);
         first = true;
         while (bottom.next(key, value)) {
           if (first) {
@@ -375,7 +375,7 @@ public class TestHStoreFile extends HBaseTestCase {
         assertEquals("zz", Bytes.toString(key.getRow()));
         // Now look at top.  Should not return any values.
         top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.top, midkey);
+          this.conf, HStoreFile.Range.top, midkey, null);
         assertFalse(top.next(key, value));
       } finally {
         if (top != null) {
