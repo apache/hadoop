@@ -606,6 +606,7 @@ public class HStoreFile implements HConstants {
        * @param fs
        * @param dirName
        * @param conf
+       * @param hri
        * @throws IOException
        */
       public HbaseReader(FileSystem fs, String dirName, Configuration conf,
