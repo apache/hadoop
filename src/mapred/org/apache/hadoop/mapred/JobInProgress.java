@@ -1989,32 +1989,6 @@ class JobInProgress {
     }
   }
   
-  static class JobWithTaskContext {
-    private JobInProgress job;
-    private TaskInProgress tip;
-    private TaskAttemptID taskId;
-    private JobTrackerInstrumentation metrics;
-    JobWithTaskContext(JobInProgress job, TaskInProgress tip, 
-        TaskAttemptID taskId, JobTrackerInstrumentation metrics) {
-      this.job = job;
-      this.tip = tip;
-      this.taskId = taskId;
-      this.metrics = metrics;
-    }
-    JobInProgress getJob() {
-      return job;
-    }
-    TaskInProgress getTIP() {
-      return tip;
-    }
-    TaskAttemptID getTaskID() {
-      return taskId;
-    }
-    JobTrackerInstrumentation getJobTrackerMetrics() {
-      return metrics;
-    }
-  }
-  
   /**
    * @return The JobID of this JobInProgress.
    */
