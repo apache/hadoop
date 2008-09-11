@@ -41,6 +41,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs      label="HDFS Quotas Administrator Guide" href="hdfs_quota_admin_guide.html" />
     <commands  label="Commands Manual"     href="commands_manual.html" />
     <fs        label="FS Shell Guide"     href="hdfs_shell.html" />
+    <fs        label="Synthetic Load Generator User Guide"  href="SLG_user_guide.html" />
     <distcp    label="DistCp Guide"       href="distcp.html" />
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
     <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />

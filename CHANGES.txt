@@ -148,6 +148,9 @@ Trunk (unreleased changes)
     HADOOP-3445. Add capacity scheduler that provides guaranteed capacities to 
     queues as a percentage of the cluster. (Vivek Ratan via omalley)
 
+    HADOOP-3992. Add a synthetic load generation facility to the test
+    directory. (hairong via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
