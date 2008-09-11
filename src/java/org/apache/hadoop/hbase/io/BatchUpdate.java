@@ -143,6 +143,43 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     return null;
   }
 
+  /**
+   * Get the current columns
+   * 
+   * @return byte[][] an array of byte[] columns
+   */
+  public synchronized byte[][] getColumns() {
+    byte[][] columns = new byte[operations.size()][];
+    for (int i = 0; i < operations.size(); i++) {
+      columns[i] = operations.get(i).getColumn();
+    }
+    return columns;
+  }
+
+  /**
+   * Check if the specified column is currently assigned a value
+   * 
+   * @param column column to check for
+   * @return boolean true if the given column exists
+   */
+  public synchronized boolean hasColumn(String column) {
+    return hasColumn(Bytes.toBytes(column));
+  }
+  
+  /**
+   * Check if the specified column is currently assigned a value
+   * 
+   * @param column column to check for
+   * @return boolean true if the given column exists
+   */
+  public synchronized boolean hasColumn(byte[] column) {
+    byte[] getColumn = get(column);
+    if (getColumn == null) {
+      return false;
+    }
+    return true;
+  }
+  
   /** 
    * Change a value for the specified column
    *

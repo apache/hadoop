@@ -86,7 +86,12 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
 
     bu = new BatchUpdate("row2");
     bu.put(CONTENTS, value);
-    byte[] getValue = bu.get(CONTENTS);
+    byte[][] getColumns = bu.getColumns();
+    assertEquals(getColumns.length, 1);
+    assertTrue(Arrays.equals(getColumns[0], CONTENTS));
+    assertTrue(bu.hasColumn(CONTENTS));
+    assertFalse(bu.hasColumn(new byte[] {}));
+    byte[] getValue = bu.get(getColumns[0]);
     assertTrue(Arrays.equals(getValue, value));
     table.commit(bu);
 

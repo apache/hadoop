@@ -64,8 +64,6 @@ Release 0.18.0 - Unreleased
                splits (Jonathan Gray via Stack)
    HBASE-877   HCM is unable to find table with multiple regions which contains
                binary (Jonathan Gray via Stack)
-   HBASE-822  The BatchUpdate class provides, put(col, cell) and delete(col)
-              but no get() (Ryan Smith via Stack)
 
   IMPROVEMENTS
    HBASE-801  When a table haven't disable, shell could response in a "user
@@ -89,6 +87,8 @@ Release 0.18.0 - Unreleased
    HBASE-871  Major compaction periodicity should be specifyable at the column
               family level, not cluster wide (Jonathan Gray via Stack)
    HBASE-465  Fix javadoc for all public declarations
+   HBASE-882  The BatchUpdate class provides, put(col, cell) and delete(col)
+              but no get() (Ryan Smith via Stack and Jim Kellerman)
 
   NEW FEATURES
    HBASE-787  Postgresql to HBase table replication example (Tim Sell via Stack)
