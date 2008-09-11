@@ -310,12 +310,18 @@ class hodLog:
                 logFile = os.path.join(logDirectory, "%s-%s.log" % (
                     self.__appName, loggerName))
 
+                logFilePresent = False
+                if(os.path.exists(logFile)):
+                  logFilePresent = True
+
                 if sys.version.startswith('2.4'):
                     fileHandler = hodRotatingFileHandler(logFile,
                         maxBytes=maxBytes, backupCount=backupCount)
                 else:
                     fileHandler = logging.handlers.RotatingFileHandler(logFile,
                         maxBytes=maxBytes, backupCount=backupCount)
+                if logFilePresent and backupCount:
+                  fileHandler.doRollover()
 
                 fileHandler.setLevel(loggingLevel)
                 fileHandler.setFormatter(fileFormater)
