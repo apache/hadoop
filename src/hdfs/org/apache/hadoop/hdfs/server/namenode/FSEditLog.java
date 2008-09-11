@@ -480,7 +480,6 @@ public class FSEditLog {
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     int logVersion = 0;
-    INode old = null;
     String clientName = null;
     String clientMachine = null;
     String path = null;
@@ -608,7 +607,7 @@ public class FSEditLog {
                                    " clientMachine " + clientMachine);
           }
 
-          old = fsDir.unprotectedDelete(path, mtime);
+          fsDir.unprotectedDelete(path, mtime);
 
           // add to the file tree
           INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
@@ -633,15 +632,6 @@ public class FSEditLog {
                                       null);
             fsDir.replaceNode(path, node, cons);
             fsNamesys.leaseManager.addLease(cons.clientName, path);
-          } else if (opcode == OP_CLOSE) {
-            //
-            // Remove lease if it exists.
-            //
-            if (old.isUnderConstruction()) {
-              INodeFileUnderConstruction cons = (INodeFileUnderConstruction)
-                                                   old;
-              fsNamesys.leaseManager.removeLease(cons.clientName, path);
-            }
           }
           break;
         } 
@@ -676,11 +666,7 @@ public class FSEditLog {
           }
           path = FSImage.readString(in);
           timestamp = readLong(in);
-          old = fsDir.unprotectedDelete(path, timestamp);
-          if (old != null && old.isUnderConstruction()) {
-            INodeFileUnderConstruction cons = (INodeFileUnderConstruction)old;
-            fsNamesys.leaseManager.removeLease(cons.clientName, path);
-          }
+          fsDir.unprotectedDelete(path, timestamp);
           break;
         }
         case OP_MKDIR: {

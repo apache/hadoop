@@ -516,6 +516,9 @@ Trunk (unreleased changes)
     HADOOP-4113. Changes to libhdfs to not exit on its own, rather return
     an error code to the caller. (Pete Wyckoff via dhruba)
 
+    HADOOP-4054. Remove duplicate lease removal during edit log loading.
+    (hairong)
+
 Release 0.18.1 - Unreleased
 
   IMPROVEMENTS
