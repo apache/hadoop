@@ -15,15 +15,17 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-    HADOOP-4161. Fixed bug in HOD cleanup that had the potential to
-    hang clients. (Vinod Kumar Vavilapalli via nigel)
-
 Release 0.18.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
     HADOOP-4060. Modified HOD to rotate log files on the client side.
     (Vinod Kumar Vavilapalli via yhemanth)
+
+  BUG FIXES
+
+    HADOOP-4161. Fixed bug in HOD cleanup that had the potential to
+    hang clients. (Vinod Kumar Vavilapalli via nigel)
 
 Release 0.18.0 - 2008-08-19
 
