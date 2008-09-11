@@ -1,0 +1,135 @@
+# Copyright 2008 The Apache Software Foundation Licensed under the
+# Apache License, Version 2.0 (the "License"); you may not use this
+# file except in compliance with the License.  You may obtain a copy
+# of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless
+# required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+
+This package implements a scheduler for Map-Reduce jobs, called Capacity
+Task Scheduler (or just Capacity Scheduler), which provides a way to share 
+large clusters. The scheduler provides the following features (which are 
+described in detail in HADOOP-3421):
+
+* Support for queues, where a job is submitted to a queue. 
+* Queues are guaranteed a fraction of the capacity of the grid (their 
+ 'guaranteed capacity') in the sense that a certain capacity of resources 
+ will be at their disposal. All jobs submitted to the queues of an Org will 
+ have access to the capacity guaranteed to the Org.
+* Free resources can be allocated to any queue beyond its guaranteed capacity.
+ These excess allocated resources can be reclaimed and made available to 
+ another queue in order to meet its capacity guarantee.
+* The scheduler guarantees that excess resources taken from a queue will be 
+ restored to it within N minutes of its need for them.
+* Queues optionally support job priorities (disabled by default). 
+* Within a queue, jobs with higher priority will have access to the queue's 
+ resources before jobs with lower priority. However, once a job is running, it
+ will not be preempted for a higher priority job.
+* In order to prevent one or more users from monopolizing its resources, each 
+ queue enforces a limit on the percentage of resources allocated to a user at
+ any given time, if there is competition for them.
+* Support for memory-intensive jobs, wherein a job can optionally specify 
+ higher memory-requirements than the default, and the tasks of the job will 
+ only be run on TaskTrackers that have enough memory to spare. 
+
+Whenever a TaskTracker is free, the Capacity Scheduler first picks a queue 
+that needs to reclaim any resources the earliest. If no such queue is found, 
+it then picks a queue which has most free space (whose ratio of # of running
+slots to guaranteed capacity is the lowest). 
+
+--------------------------------------------------------------------------------
+
+BUILDING:
+
+In HADOOP_HOME, run ant package to build Hadoop and its contrib packages.
+
+--------------------------------------------------------------------------------
+
+INSTALLING:
+
+To run the capacity scheduler in your Hadoop installation, you need to put it 
+on the CLASSPATH. The easiest way is to copy the 
+hadoop-*-capacity-scheduler.jar from 
+HADOOP_HOME/build/contrib/capacity-scheduler to HADOOP_HOME/lib. Alternatively
+you can modify HADOOP_CLASSPATH to include this jar, in conf/hadoop-env.sh.
+
+You will also need to set the following property in the Hadoop config file
+(conf/hadoop-site.xml) to have Hadoop use the capacity scheduler:
+
+<property>
+  <name>mapred.jobtracker.taskScheduler</name>
+  <value>org.apache.hadoop.mapred.CapacityTaskScheduler</value>
+</property>
+
+--------------------------------------------------------------------------------
+
+CONFIGURATION:
+
+The following properties can be set in hadoop-site.xml to configure the
+scheduler:
+
+mapred.capacity-scheduler.reclaimCapacity.interval: 
+		The capacity scheduler checks, every 'interval' seconds, whether any 
+		capacity needs to be reclaimed. The default value is 5 seconds. 
+
+The scheduling information for queues is maintained in a configuration file
+called 'capacity-scheduler.xml'. Note that the queue names are set in 
+hadoop-site.xml. capacity-scheduler.xml sets the scheduling properties
+for each queue. See that file for configuration details, but the following 
+are the configuration options for each queue: 
+
+mapred.capacity-scheduler.queue.<queue-name>.guaranteed-capacity
+		Percentage of the number of slots in the cluster that are
+    guaranteed to be available for jobs in this queue.
+    The sum of guaranteed capacities for all queues should be less than or
+    equal 100. 
+
+mapred.capacity-scheduler.queue.<queue-name>.reclaim-time-limit
+		The amount of time, in seconds, before which resources distributed to other 
+		queues will be reclaimed.
+
+mapred.capacity-scheduler.queue.<queue-name>.supports-priority
+		If true, priorities of jobs will be taken into account in scheduling 
+		decisions.
+		
+mapred.capacity-scheduler.queue.<queue-name>.minimum-user-limit-percent
+		Each queue enforces a limit on the percentage of resources 
+    allocated to a user at any given time, if there is competition for them. 
+    This user limit can vary between a minimum and maximum value. The former
+    depends on the number of users who have submitted jobs, and the latter is
+    set to this property value. For example, suppose the value of this 
+    property is 25. If two users have submitted jobs to a queue, no single 
+    user can use more than 50% of the queue resources. If a third user submits
+    a job, no single user can use more than 33% of the queue resources. With 4 
+    or more users, no user can use more than 25% of the queue's resources. A 
+    value of 100 implies no user limits are imposed.
+		
+
+--------------------------------------------------------------------------------
+
+IMPLEMENTATION:
+
+When a TaskTracker is free, the capacity scheduler does the following (note
+that many of these steps can be, and will be, enhanced over time to provide
+better algorithms): 
+1. Decide whether to giev it a Map or Reduce task, depending on how many tasks
+the TT is already running of that type, with respect to the maximum taks it 
+can run.
+2. The scheduler then picks a queue. Queues that need to reclaim capacity 
+sooner, come before queues that don't. For queues that don't, they're ordered 
+by a ratio of (# of running tasks)/Guaranteed capacity, which indicates how 
+much 'free space' the queue has, or how much it is over capacity.
+3. A job is picked in the queue based on its state (running jobs are picked
+first), its priority (if the queue supports priorities) or its submission 
+time, and whether the job's user is under or over limit. 
+4. A task is picked from the job in the same way it always has. 
+
+Periodically, a thread checks each queue to see if it needs to reclaim any 
+capacity. Queues that are running below capacity and that have tasks waiting,
+need to reclaim capacity within a certain perdiod of time. If a queue hasn't 
+received enough tasks in a certain amount of time, tasks will be killed from 
+queues that are running over capacity.
+
+--------------------------------------------------------------------------------

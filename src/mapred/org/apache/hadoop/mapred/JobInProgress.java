@@ -72,6 +72,10 @@ class JobInProgress {
   int finishedReduceTasks = 0;
   int failedMapTasks = 0; 
   int failedReduceTasks = 0;
+  // runningMapTasks include speculative tasks, so we need to capture 
+  // speculative tasks separately 
+  int speculativeMapTasks = 0;
+  int speculativeReduceTasks = 0;
   
   int mapFailuresPercent = 0;
   int reduceFailuresPercent = 0;
@@ -441,6 +445,14 @@ class JobInProgress {
   public synchronized int finishedReduces() {
     return finishedReduceTasks;
   }
+  public synchronized int pendingMaps() {
+    return numMapTasks - runningMapTasks - failedMapTasks - 
+    finishedMapTasks + speculativeMapTasks;
+  }
+  public synchronized int pendingReduces() {
+    return numReduceTasks - runningReduceTasks - failedReduceTasks - 
+    finishedReduceTasks + speculativeReduceTasks;
+  }
   public JobPriority getPriority() {
     return this.priority;
   }
@@ -484,7 +496,34 @@ class JobInProgress {
   TaskInProgress[] getReduceTasks() {
     return reduces;
   }
-    
+
+  /**
+   * Return the nonLocalRunningMaps
+   * @return
+   */
+  Set<TaskInProgress> getNonLocalRunningMaps()
+  {
+    return nonLocalRunningMaps;
+  }
+  
+  /**
+   * Return the runningMapCache
+   * @return
+   */
+  Map<Node, Set<TaskInProgress>> getRunningMapCache()
+  {
+    return runningMapCache;
+  }
+  
+  /**
+   * Return runningReduces
+   * @return
+   */
+  Set<TaskInProgress> getRunningReduces()
+  {
+    return runningReduces;
+  }
+  
   /**
    * Get the job configuration
    * @return the job's configuration
@@ -738,6 +777,8 @@ class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningMapTasks += 1;
+      if (maps[target].getActiveTasks().size() > 1)
+        speculativeMapTasks++;
       if (maps[target].isFirstAttempt(result.getTaskID())) {
         JobHistory.Task.logStarted(maps[target].getTIPId(), Values.MAP.name(),
                                    System.currentTimeMillis(),
@@ -849,6 +890,8 @@ class JobInProgress {
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningReduceTasks += 1;
+      if (reduces[target].getActiveTasks().size() > 1)
+        speculativeReduceTasks++;
       if (reduces[target].isFirstAttempt(result.getTaskID())) {
         JobHistory.Task.logStarted(reduces[target].getTIPId(), Values.REDUCE.name(),
                                    System.currentTimeMillis(), "");
@@ -1467,6 +1510,7 @@ class JobInProgress {
                                          JobTrackerInstrumentation metrics) 
   {
     TaskAttemptID taskid = status.getTaskID();
+    int oldNumAttempts = tip.getActiveTasks().size();
         
     // Sanity check: is the TIP already complete? 
     // It _is_ safe to not decrement running{Map|Reduce}Tasks and
@@ -1514,10 +1558,14 @@ class JobInProgress {
                                   status.getCounters()); 
     }
         
-    // Update the running/finished map/reduce counts
+    int newNumAttempts = tip.getActiveTasks().size();
     if (!tip.isCleanupTask()) {
       if (tip.isMapTask()) {
         runningMapTasks -= 1;
+        // check if this was a sepculative task
+        if (oldNumAttempts > 1) {
+          speculativeMapTasks -= (oldNumAttempts - newNumAttempts);
+        }
         finishedMapTasks += 1;
         metrics.completeMap(taskid);
         // remove the completed map from the resp running caches
@@ -1527,6 +1575,9 @@ class JobInProgress {
         }
       } else {
         runningReduceTasks -= 1;
+        if (oldNumAttempts > 1) {
+          speculativeReduceTasks -= (oldNumAttempts - newNumAttempts);
+        }
         finishedReduceTasks += 1;
         metrics.completeReduce(taskid);
         // remove the completed reduces from the running reducers set
@@ -1620,7 +1671,7 @@ class JobInProgress {
       jobKilled = true;
     }
   }
-
+  
   /**
    * A task assigned to this JobInProgress has reported in as failed.
    * Most of the time, we'll just reschedule execution.  However, after

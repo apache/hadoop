@@ -144,6 +144,11 @@ public class TestJobQueueTaskScheduler extends TestCase {
       return null;
     }
     
+    @Override
+    public int getNextHeartbeatInterval() {
+      return MRConstants.HEARTBEAT_INTERVAL_MIN;
+    }
+    
     // Test methods
     
     public void submitJob(JobInProgress job) {

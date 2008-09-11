@@ -156,6 +156,11 @@ public class TestFairScheduler extends TestCase {
       listeners.remove(listener);
     }
     
+    @Override
+    public int getNextHeartbeatInterval() {
+      return MRConstants.HEARTBEAT_INTERVAL_MIN;
+    }
+    
     // Test methods
     
     public void submitJob(JobInProgress job) {

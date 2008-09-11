@@ -1272,7 +1272,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Heartbeat interval is incremented 1second for every 50 nodes. 
    * @return next heartbeat interval.
    */
-  private int getNextHeartbeatInterval() {
+  public int getNextHeartbeatInterval() {
     // get the no of task trackers
     int clusterSize = getClusterStatus().getTaskTrackers();
     int heartbeatInterval =  Math.max(

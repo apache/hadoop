@@ -63,4 +63,12 @@ interface TaskTrackerManager {
    * @return the {@link QueueManager}
    */
   public QueueManager getQueueManager();
+  
+  /**
+   * Return the current heartbeat interval that's used by {@link TaskTracker}s.
+   *
+   * @return the heartbeat interval used by {@link TaskTracker}s
+   */
+  public int getNextHeartbeatInterval();
+  
 }
