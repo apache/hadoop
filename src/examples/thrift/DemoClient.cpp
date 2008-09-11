@@ -17,6 +17,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/*
+ * Instructions:
+ * 1. Run Thrift to generate the cpp module HBase
+ *    thrift --gen cpp ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
+ * 2. Execute {make}.
+ * 3. Execute {./DemoClient}.
+ */ 
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -40,30 +49,27 @@ typedef std::vector<std::string> StrVec;
 typedef std::map<std::string,std::string> StrMap;
 typedef std::vector<ColumnDescriptor> ColVec;
 typedef std::map<std::string,ColumnDescriptor> ColMap;
+typedef std::vector<TCell> CellVec;
+typedef std::map<std::string,TCell> CellMap;
 
 
 static void
-printRow(const std::string &row, const StrMap &columns)
+printRow(const TRowResult &rowResult)
 {
-  std::cout << "row: " << row << ", cols: ";
-  for (StrMap::const_iterator it = columns.begin(); it != columns.end(); ++it) {
-    std::cout << it->first << " => " << it->second << "; ";
+  std::cout << "row: " << rowResult.row << ", cols: ";
+  for (CellMap::const_iterator it = rowResult.columns.begin(); 
+      it != rowResult.columns.end(); ++it) {
+    std::cout << it->first << " => " << it->second.value << "; ";
   }
   std::cout << std::endl;
 }
 
-static void 
-printEntry(const ScanEntry &entry)
-{
-  printRow(entry.row, entry.columns);
-}
-
 static void
-printVersions(const std::string &row, const StrVec &versions)
+printVersions(const std::string &row, const CellVec &versions)
 {
   std::cout << "row: " << row << ", values: ";
-  for (StrVec::const_iterator it = versions.begin(); it != versions.end(); ++it) {
-    std::cout << *it << "; ";
+  for (CellVec::const_iterator it = versions.begin(); it != versions.end(); ++it) {
+    std::cout << (*it).value << "; ";
   }
   std::cout << std::endl;
 }
@@ -90,6 +96,10 @@ main(int argc, char** argv)
     for (StrVec::const_iterator it = tables.begin(); it != tables.end(); ++it) {
       std::cout << "  found: " << *it << std::endl;
       if (t == *it) {
+        if (client.isTableEnabled(*it)) {
+          std::cout << "    disabling table: " << *it << std::endl;
+          client.disableTable(*it);
+        }
         std::cout << "    deleting table: " << *it << std::endl;
         client.deleteTable(*it);
       }
@@ -126,17 +136,33 @@ main(int argc, char** argv)
     std::string valid("foo-\xE7\x94\x9F\xE3\x83\x93\xE3\x83\xBC\xE3\x83\xAB");
 
     // non-utf8 is fine for data
-    client.put(t, "foo", "entry:foo", invalid);
+    std::vector<Mutation> mutations;
+    mutations.push_back(Mutation());
+    mutations.back().column = "entry:foo";
+    mutations.back().value = invalid;
+    client.mutateRow(t, "foo", mutations);
 
     // try empty strings
-    client.put(t, "", "entry:", "");
+    mutations.clear();
+    mutations.push_back(Mutation());
+    mutations.back().column = "entry:";
+    mutations.back().value = "";
+    client.mutateRow(t, "", mutations);
 
     // this row name is valid utf8
-    client.put(t, valid, "entry:foo", valid);
+    mutations.clear();
+    mutations.push_back(Mutation());
+    mutations.back().column = "entry:foo";
+    mutations.back().value = valid;
+    client.mutateRow(t, valid, mutations);
 
     // non-utf8 is not allowed in row names
     try {
-      client.put(t, invalid, "entry:foo", invalid);
+      mutations.clear();
+      mutations.push_back(Mutation());
+      mutations.back().column = "entry:foo";
+      mutations.back().value = invalid;
+      client.mutateRow(t, invalid, mutations);
       std::cout << "FATAL: shouldn't get here!" << std::endl;
       exit(-1);
     } catch (IOError e) {
@@ -151,9 +177,9 @@ main(int argc, char** argv)
     int scanner = client.scannerOpen(t, "", columnNames);
     try {
       while (true) {
-        ScanEntry value;
+        TRowResult value;
         client.scannerGet(value, scanner);
-        printEntry(value);
+        printRow(value);
       }
     } catch (NotFound &nf) {
       client.scannerClose(scanner);
@@ -169,22 +195,32 @@ main(int argc, char** argv)
       sprintf(buf, "%0.5d", i);
       std::string row(buf);
       
-      StrMap values;
+      TRowResult rowResult;
 
-      client.put(t, row, "unused:", "DELETE_ME");
-      client.getRow(values, t, row);
-      printRow(row, values);
+      mutations.clear();
+      mutations.push_back(Mutation());
+      mutations.back().column = "unused:";
+      mutations.back().value = "DELETE_ME";
+      client.mutateRow(t, row, mutations);
+      client.getRow(rowResult, t, row);
+      printRow(rowResult);
       client.deleteAllRow(t, row);
 
-      client.put(t, row, "entry:num", "0");
-      client.put(t, row, "entry:foo", "FOO");
-      client.getRow(values, t, row);
-      printRow(row, values);
+      mutations.clear();
+      mutations.push_back(Mutation());
+      mutations.back().column = "entry:num";
+      mutations.back().value = "0";
+      mutations.push_back(Mutation());
+      mutations.back().column = "entry:foo";
+      mutations.back().value = "FOO";
+      client.mutateRow(t, row, mutations);
+      client.getRow(rowResult, t, row);
+      printRow(rowResult);
 
       // sleep to force later timestamp 
       poll(0, 0, 50);
 
-      std::vector<Mutation> mutations;
+      mutations.clear();
       mutations.push_back(Mutation());
       mutations.back().column = "entry:foo";
       mutations.back().isDelete = true;
@@ -192,13 +228,19 @@ main(int argc, char** argv)
       mutations.back().column = "entry:num";
       mutations.back().value = "-1";
       client.mutateRow(t, row, mutations);
-      client.getRow(values, t, row);
-      printRow(row, values);
-      
-      client.put(t, row, "entry:num", boost::lexical_cast<std::string>(i));
-      client.put(t, row, "entry:sqr", boost::lexical_cast<std::string>(i*i));
-      client.getRow(values, t, row);
-      printRow(row, values);
+      client.getRow(rowResult, t, row);
+      printRow(rowResult);
+
+      mutations.clear();
+      mutations.push_back(Mutation());
+      mutations.back().column = "entry:num";
+      mutations.back().value = boost::lexical_cast<std::string>(i);
+      mutations.push_back(Mutation());
+      mutations.back().column = "entry:sqr";
+      mutations.back().value = boost::lexical_cast<std::string>(i*i);
+      client.mutateRow(t, row, mutations);
+      client.getRow(rowResult, t, row);
+      printRow(rowResult);
 
       mutations.clear();
       mutations.push_back(Mutation());
@@ -208,17 +250,17 @@ main(int argc, char** argv)
       mutations.back().column = "entry:sqr";
       mutations.back().isDelete = true;
       client.mutateRowTs(t, row, mutations, 1); // shouldn't override latest
-      client.getRow(values, t, row);
-      printRow(row, values);
+      client.getRow(rowResult, t, row);
+      printRow(rowResult);
 
-      StrVec versions;
+      CellVec versions;
       client.getVer(versions, t, row, "entry:num", 10);
       printVersions(row, versions);
       assert(versions.size() == 4);
       std::cout << std::endl;
 
       try {
-        std::string value;
+        TCell value;
         client.get(value, t, row, "entry:foo");
         std::cout << "FATAL: shouldn't get here!" << std::endl;
         exit(-1);
@@ -232,16 +274,17 @@ main(int argc, char** argv)
     columnNames.clear();
     client.getColumnDescriptors(columnMap, t);
     for (ColMap::const_iterator it = columnMap.begin(); it != columnMap.end(); ++it) {
-      columnNames.push_back(it->first);
+      std::cout << "column with name: " + it->second.name << std::endl;
+      columnNames.push_back(it->second.name + ":");
     }
 
     std::cout << "Starting scanner..." << std::endl;
     scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames);
     try {
       while (true) {
-        ScanEntry value;
+        TRowResult value;
         client.scannerGet(value, scanner);
-        printEntry(value);
+        printRow(value);
       }
     } catch (NotFound &nf) {
       client.scannerClose(scanner);

@@ -47,14 +47,30 @@ import com.facebook.thrift.protocol.TProtocol;
 import com.facebook.thrift.transport.TSocket;
 import com.facebook.thrift.transport.TTransport;
 
+/*
+ * Instructions:
+ * 1. Run Thrift to generate the java module HBase
+ *    thrift --gen java ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
+ * 2. Acquire a jar of compiled Thrift java classes.  As of this writing, HBase ships 
+ *    with this jar (libthrift-[VERSION].jar).  If this jar is not present, or it is 
+ *    out-of-date with your current version of thrift, you can compile the jar 
+ *    yourself by executing {ant} in {$THRIFT_HOME}/lib/java.
+ * 3. Compile and execute this file with both the libthrift jar and the gen-java/ 
+ *    directory in the classpath.  This can be done on the command-line with the 
+ *    following lines: (from the directory containing this file and gen-java/)
+ *    
+ *    javac -cp /path/to/libthrift/jar.jar:gen-java/ DemoClient.java
+ *    mv DemoClient.class gen-java/org/apache/hadoop/hbase/thrift/
+ *    java -cp /path/to/libthrift/jar.jar:gen-java/ org.apache.hadoop.hbase.thrift.DemoClient
+ * 
+ */
 public class DemoClient {
   
   protected int port = 9090;
   CharsetDecoder decoder = null;
 
   public static void main(String[] args) 
-    throws IOError, TException, NotFound, UnsupportedEncodingException, IllegalArgument, AlreadyExists 
-  {
+  throws IOError, TException, NotFound, UnsupportedEncodingException, IllegalArgument, AlreadyExists {
     DemoClient client = new DemoClient();
     client.run();
   }
@@ -100,9 +116,10 @@ public class DemoClient {
     for (byte[] name : client.getTableNames()) {
       System.out.println("  found: " + utf8(name));
       if (utf8(name).equals(utf8(t))) {
-        System.out.println("    disabling table: " + utf8(name));
-        if (client.isTableEnabled(name))
+        if (client.isTableEnabled(name)) {
+          System.out.println("    disabling table: " + utf8(name));
           client.disableTable(name);
+        }
         System.out.println("    deleting table: " + utf8(name)); 
         client.deleteTable(name);
       }
@@ -154,7 +171,7 @@ public class DemoClient {
     // this row name is valid utf8
     mutations = new ArrayList<Mutation>();
     mutations.add(new Mutation(false, bytes("entry:foo"), valid));
-    client.mutateRow(t, bytes("foo"), mutations);
+    client.mutateRow(t, valid, mutations);
     
     // non-utf8 is not allowed in row names
     try {
@@ -264,7 +281,7 @@ public class DemoClient {
     
     columnNames.clear();
     for (ColumnDescriptor col2 : client.getColumnDescriptors(t).values()) {
-      System.out.println("column name is " + new String(col2.name));
+      System.out.println("column with name: " + new String(col2.name));
       System.out.println(col2.toString());
       columnNames.add((utf8(col2.name) + ":").getBytes());
     }

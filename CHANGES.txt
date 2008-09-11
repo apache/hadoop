@@ -5,6 +5,7 @@ Release 0.18.0 - Unreleased
    HBASE-697   Thrift idl needs update/edit to match new 0.2 API (and to fix bugs)
                (Tim Sell via Stack)
    HBASE-822   Update thrift README and HBase.thrift to use thrift 20080411
+               Updated all other languages examples (only python went in)
 
   BUG FIXES
    HBASE-881   Fixed bug when Master tries to reassign split or offline regions

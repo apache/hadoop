@@ -34,6 +34,7 @@
 namespace java org.apache.hadoop.hbase.thrift.generated
 namespace cpp  apache.hadoop.hbase.thrift
 namespace rb Apache.Hadoop.Hbase.Thrift
+namespace py hbase
 
 // note: other language namespaces tbd...
 

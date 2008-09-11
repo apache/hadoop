@@ -19,8 +19,15 @@
  * limitations under the License.
  */
 
+# Instructions:
+# 1. Run Thrift to generate the php module HBase
+#    thrift -php ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift 
+# 2. Modify the import string below to point to {$THRIFT_HOME}/lib/php/src.
+# 3. Execute {php DemoClient.php}.  Note that you must use php5 or higher.
+# 4. See {$THRIFT_HOME}/lib/php/README for additional help.
+
 # Change this to match your thrift root
-$GLOBALS['THRIFT_ROOT'] = dirname(__FILE__).'/thrift';
+$GLOBALS['THRIFT_ROOT'] = '/Users/irubin/Thrift/thrift-20080411p1/lib/php/src';
 
 require_once( $GLOBALS['THRIFT_ROOT'].'/Thrift.php' );
 
@@ -29,19 +36,17 @@ require_once( $GLOBALS['THRIFT_ROOT'].'/transport/TBufferedTransport.php' );
 require_once( $GLOBALS['THRIFT_ROOT'].'/protocol/TBinaryProtocol.php' );
 
 # According to the thrift documentation, compiled PHP thrift libraries should
-# reside under the THRIFT_ROOT/packages directory.
+# reside under the THRIFT_ROOT/packages directory.  If these compiled libraries 
+# are not present in this directory, move them there from gen-php/.  
 require_once( $GLOBALS['THRIFT_ROOT'].'/packages/Hbase/Hbase.php' );
 
-function printRow( $row, $values ) {
-  echo( "row: {$row}, cols: \n" );
+function printRow( $rowresult ) {
+  echo( "row: {$rowresult->row}, cols: \n" );
+  $values = $rowresult->columns;
   asort( $values );
   foreach ( $values as $k=>$v ) {
-    echo( "  {$k} => {$v}\n" );
+    echo( "  {$k} => {$v->value}\n" );
   }
-}
-
-function printEntry( $entry ) {
-  printRow( $entry->row, $entry->columns );
 }
 
 $socket = new TSocket( 'localhost', 9090 );
@@ -72,6 +77,10 @@ sort( $tables );
 foreach ( $tables as $name ) {
   echo( "  found: {$name}\n" );
   if ( $name == $t ) {
+    if ($client->isTableEnabled( $name )) {
+      echo( "    disabling table: {$name}\n");
+      $client->disableTable( $name );
+    }
     echo( "    deleting table: {$name}\n" );
     $client->deleteTable( $name );
   }
@@ -111,17 +120,41 @@ $invalid = "foo-\xfc\xa1\xa1\xa1\xa1\xa1";
 $valid = "foo-\xE7\x94\x9F\xE3\x83\x93\xE3\x83\xBC\xE3\x83\xAB";
 
 # non-utf8 is fine for data
-$client->put( $t, "foo", "entry:foo", $invalid );
+$mutations = array(
+  new Mutation( array(
+    'column' => 'entry:foo',
+    'value' => $invalid
+  ) ),
+);
+$client->mutateRow( $t, "foo", $mutations );
 
 # try empty strings
-$client->put( $t, "", "entry:", "" );
+$mutations = array(
+  new Mutation( array(
+    'column' => 'entry:',
+    'value' => ""
+  ) ),
+);
+$client->mutateRow( $t, "", $mutations );
 
 # this row name is valid utf8
-$client->put( $t, $valid, "entry:foo", $valid );
+$mutations = array(
+  new Mutation( array(
+    'column' => 'entry:foo',
+    'value' => $valid
+  ) ),
+);
+$client->mutateRow( $t, $valid, $mutations );
 
 # non-utf8 is not allowed in row names
 try {
-  $client->put( $t, $invalid, "entry:foo", $invalid );
+  $mutations = array(
+    new Mutation( array(
+      'column' => 'entry:foo',
+      'value' => $invalid
+    ) ),
+  );
+  $client->mutateRow( $t, $invalid, $mutations );
   throw new Exception( "shouldn't get here!" );
 } catch ( IOError $e ) {
   echo( "expected error: {$e->message}\n" );
@@ -131,7 +164,7 @@ try {
 echo( "Starting scanner...\n" );
 $scanner = $client->scannerOpen( $t, "", array( "entry:" ) );
 try {
-  while (true) printEntry( $client->scannerGet( $scanner ) );
+  while (true) printRow( $client->scannerGet( $scanner ) );
 } catch ( NotFound $nf ) {
   $client->scannerClose( $scanner );
   echo( "Scanner finished\n" );
@@ -145,13 +178,28 @@ for ($e=100; $e>=0; $e--) {
   # format row keys as "00000" to "00100"
   $row = str_pad( $e, 5, '0', STR_PAD_LEFT );
 
-  $client->put( $t, $row, "unused:", "DELETE_ME" );
-  printRow( $row, $client->getRow( $t, $row ) );
+  $mutations = array(
+    new Mutation( array(
+      'column' => 'unused:',
+      'value' => "DELETE_ME"
+    ) ),
+  );
+  $client->mutateRow( $t, $row, $mutations);
+  printRow( $client->getRow( $t, $row ));
   $client->deleteAllRow( $t, $row );
 
-  $client->put( $t, $row, "entry:num", "0" );
-  $client->put( $t, $row, "entry:foo", "FOO");
-  printRow( $row, $client->getRow( $t, $row ) );
+  $mutations = array(
+    new Mutation( array(
+      'column' => 'entry:num',
+      'value' => "0"
+    ) ),
+    new Mutation( array(
+      'column' => 'entry:foo',
+      'value' => "FOO"
+    ) ),
+  );
+  $client->mutateRow( $t, $row, $mutations );
+  printRow( $client->getRow( $t, $row ));
 
   $mutations = array(
     new Mutation( array(
@@ -164,16 +212,25 @@ for ($e=100; $e>=0; $e--) {
     ) ),
   );
   $client->mutateRow( $t, $row, $mutations );
-  printRow( $row, $client->getRow( $t, $row ) );
+  printRow( $client->getRow( $t, $row ) );
 
-  $client->put( $t, $row, "entry:num", $e );
-  $client->put( $t, $row, "entry:sqr", $e * $e );
-  printRow( $row, $client->getRow( $t, $row ) );
+  $mutations = array(
+    new Mutation( array(
+      'column' => "entry:num",
+      'value' => $e
+    ) ),
+    new Mutation( array(
+      'column' => "entry:sqr",
+      'value' => $e * $e
+    ) ),
+  );
+  $client->mutateRow( $t, $row, $mutations );
+  printRow( $client->getRow( $t, $row ));
   
   $mutations = array(
     new Mutation( array(
       'column' => 'entry:num',
-      'isDelete' => '-999'
+      'value' => '-999'
     ) ),
     new Mutation( array(
       'column' => 'entry:sqr',
@@ -181,11 +238,11 @@ for ($e=100; $e>=0; $e--) {
     ) ),
   );
   $client->mutateRowTs( $t, $row, $mutations, 1 ); # shouldn't override latest
-  printRow( $row, $client->getRow( $t, $row ) );
+  printRow( $client->getRow( $t, $row ) );
 
   $versions = $client->getVer( $t, $row, "entry:num", 10 );
   echo( "row: {$row}, values: \n" );
-  foreach ( $versions as $v ) echo( "  {$v};\n" );
+  foreach ( $versions as $v ) echo( "  {$v->value};\n" );
   
   try {
     $client->get( $t, $row, "entry:foo");
@@ -197,12 +254,15 @@ for ($e=100; $e>=0; $e--) {
 }
 
 $columns = array();
-foreach ( $client->getColumnDescriptors($t) as $col=>$desc ) $columns[] = $col;
+foreach ( $client->getColumnDescriptors($t) as $col=>$desc ) {
+  echo("column with name: {$desc->name}\n");
+  $columns[] = $desc->name.":";
+}
 
 echo( "Starting scanner...\n" );
 $scanner = $client->scannerOpenWithStop( $t, "00020", "00040", $columns );
 try {
-  while (true) printEntry( $client->scannerGet( $scanner ) );
+  while (true) printRow( $client->scannerGet( $scanner ) );
 } catch ( NotFound $nf ) {
   $client->scannerClose( $scanner );
   echo( "Scanner finished\n" );

@@ -18,7 +18,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-$:.push('~/thrift/trunk/lib/rb/lib')
+# Instructions: 
+# 1. Run Thrift to generate the ruby module HBase
+#    thrift --gen rb ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift 
+# 2. Modify the import string below to point to {$THRIFT_HOME}/lib/rb/lib.
+# 3. Execute {ruby DemoClient.rb}.
+
+# You will need to modify this import string:
+$:.push('~/Thrift/thrift-20080411p1/lib/rb/lib')
 $:.push('./gen-rb')
 
 require 'thrift/transport/tsocket'
@@ -26,16 +33,12 @@ require 'thrift/protocol/tbinaryprotocol'
 
 require 'Hbase'
 
-def printRow(row, values)
-  print "row: #{row}, cols: "
-  values.sort.each do |k,v|
-    print "#{k} => #{v}; "
+def printRow(rowresult)
+  print "row: #{rowresult.row}, cols: "
+  rowresult.columns.sort.each do |k,v|
+    print "#{k} => #{v.value}; "
   end
   puts ""
-end
-
-def printEntry(entry)
-  printRow(entry.row, entry.columns)
 end
 
 transport = TBufferedTransport.new(TSocket.new("localhost", 9090))
@@ -52,7 +55,11 @@ t = "demo_table"
 puts "scanning tables..."
 client.getTableNames().sort.each do |name|
   puts "  found: #{name}"
-  if (name == t) 
+  if (name == t)
+    if (client.isTableEnabled(name))
+      puts "    disabling table: #{name}"
+      client.disableTable(name)
+    end
     puts "    deleting table: #{name}" 
     client.deleteTable(name)
   end
@@ -89,17 +96,37 @@ invalid = "foo-\xfc\xa1\xa1\xa1\xa1\xa1"
 valid = "foo-\xE7\x94\x9F\xE3\x83\x93\xE3\x83\xBC\xE3\x83\xAB";
 
 # non-utf8 is fine for data
-client.put(t, "foo", "entry:foo", invalid)
+mutations = []
+m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+m.column = "entry:foo"
+m.value = invalid
+mutations << m
+client.mutateRow(t, "foo", mutations)
 
 # try empty strings
-client.put(t, "", "entry:", "");
+mutations = []
+m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+m.column = "entry:"
+m.value = ""
+mutations << m
+client.mutateRow(t, "", mutations)
 
 # this row name is valid utf8
-client.put(t, valid, "entry:foo", valid)
+mutations = []
+m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+m.column = "entry:foo"
+m.value = valid
+mutations << m
+client.mutateRow(t, valid, mutations)
 
 # non-utf8 is not allowed in row names
 begin
-  client.put(t, invalid, "entry:foo", invalid)
+  mutations = []
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "entry:foo"
+  m.value = invalid
+  mutations << m
+  client.mutateRow(t, invalid, mutations)
   raise "shouldn't get here!"
 rescue Apache::Hadoop::Hbase::Thrift::IOError => e
   puts "expected error: #{e.message}"
@@ -110,7 +137,7 @@ puts "Starting scanner..."
 scanner = client.scannerOpen(t, "", ["entry:"])
 begin
   while (true) 
-    printEntry(client.scannerGet(scanner))
+    printRow(client.scannerGet(scanner))
   end
 rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
   client.scannerClose(scanner)
@@ -124,13 +151,26 @@ end
   # format row keys as "00000" to "00100"
   row = format("%0.5d", e)
 
-  client.put(t, row, "unused:", "DELETE_ME");
-  printRow(row, client.getRow(t, row));
+  mutations = []
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "unused:"
+  m.value = "DELETE_ME"
+  mutations << m
+  client.mutateRow(t, row, mutations)
+  printRow(client.getRow(t, row))
   client.deleteAllRow(t, row)
 
-  client.put(t, row, "entry:num", "0")
-  client.put(t, row, "entry:foo", "FOO")
-  printRow(row, client.getRow(t, row));
+  mutations = []
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "entry:num"
+  m.value = "0"
+  mutations << m
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "entry:foo"
+  m.value = "FOO"
+  mutations << m
+  client.mutateRow(t, row, mutations)
+  printRow(client.getRow(t, row))
 
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -142,11 +182,19 @@ end
   m.value = "-1"
   mutations << m
   client.mutateRow(t, row, mutations)
-  printRow(row, client.getRow(t, row));
+  printRow(client.getRow(t, row));
 
-  client.put(t, row, "entry:num", e.to_s)
-  client.put(t, row, "entry:sqr", (e*e).to_s)
-  printRow(row, client.getRow(t, row));
+  mutations = []
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "entry:num"
+  m.value = e.to_s
+  mutations << m
+  m = Apache::Hadoop::Hbase::Thrift::Mutation.new
+  m.column = "entry:sqr"
+  m.value = (e*e).to_s
+  mutations << m
+  client.mutateRow(t, row, mutations)
+  printRow(client.getRow(t, row))
   
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -158,12 +206,12 @@ end
   m.isDelete = 1
   mutations << m
   client.mutateRowTs(t, row, mutations, 1) # shouldn't override latest
-  printRow(row, client.getRow(t, row));
+  printRow(client.getRow(t, row));
 
   versions = client.getVer(t, row, "entry:num", 10)
   print "row: #{row}, values: "
   versions.each do |v|
-    print "#{v}; "
+    print "#{v.value}; "
   end
   puts ""    
   
@@ -179,14 +227,15 @@ end
 
 columns = []
 client.getColumnDescriptors(t).each do |col, desc|
-  columns << col
+  puts "column with name: #{desc.name}"
+  columns << desc.name + ":"
 end
 
 puts "Starting scanner..."
 scanner = client.scannerOpenWithStop(t, "00020", "00040", columns)
 begin
   while (true) 
-    printEntry(client.scannerGet(scanner))
+    printRow(client.scannerGet(scanner))
   end
 rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
   client.scannerClose(scanner)
