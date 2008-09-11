@@ -553,7 +553,13 @@ if __name__ == '__main__':
     print HOD_INTERRUPTED_MESG
     sys.exit(HOD_INTERRUPTED_CODE)
   
-  if hodConfig['hod'].has_key('script'):
-    sys.exit(hod.script())
-  else:  
-    sys.exit(hod.operation())
+  opCode = 0
+  try:
+    if hodConfig['hod'].has_key('script'):
+      opCode = hod.script()
+    else:  
+      opCode = hod.operation()
+  except Exception, e:
+    print "Uncaught Exception : %s" % e
+  finally:
+    sys.exit(opCode)

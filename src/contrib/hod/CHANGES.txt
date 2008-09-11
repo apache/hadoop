@@ -15,6 +15,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-4161. Fixed bug in HOD cleanup that had the potential to
+    hang clients. (Vinod Kumar Vavilapalli via nigel)
+
 Release 0.18.1 - Unreleased
 
   INCOMPATIBLE CHANGES
