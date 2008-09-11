@@ -523,6 +523,8 @@ Trunk (unreleased changes)
     underReplicated block to the neededReplication queue using method 
     "add" not "update". (hairong)
 
+    HADOOP-4154. Fix type warnings in WritableUtils. (szetszwo via omalley)
+
 Release 0.18.1 - Unreleased
 
   IMPROVEMENTS

@@ -213,8 +213,9 @@ public final class WritableUtils  {
   /**
    * Allocate a buffer for each thread that tries to clone objects.
    */
-  private static ThreadLocal cloneBuffers = new ThreadLocal() {
-      protected synchronized Object initialValue() {
+  private static ThreadLocal<CopyInCopyOutBuffer> cloneBuffers
+      = new ThreadLocal<CopyInCopyOutBuffer>() {
+      protected synchronized CopyInCopyOutBuffer initialValue() {
         return new CopyInCopyOutBuffer();
       }
     };
@@ -242,7 +243,7 @@ public final class WritableUtils  {
    * @throws IOException
    */
   public static void cloneInto(Writable dst, Writable src) throws IOException {
-    CopyInCopyOutBuffer buffer = (CopyInCopyOutBuffer)cloneBuffers.get();
+    CopyInCopyOutBuffer buffer = cloneBuffers.get();
     buffer.outBuffer.reset();
     src.write(buffer.outBuffer);
     buffer.moveData();
@@ -404,7 +405,7 @@ public final class WritableUtils  {
    * @param enumVal enum value
    * @throws IOException
    */
-  public static void writeEnum(DataOutput out,  Enum enumVal) 
+  public static void writeEnum(DataOutput out,  Enum<?> enumVal) 
     throws IOException{
     Text.writeString(out, enumVal.name()); 
   }
