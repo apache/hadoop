@@ -3506,11 +3506,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
             // after the startDecommission method has been executed. These
             // blocks were in flight when the decommission was started.
             //
-            neededReplications.update(block, 
-                                      curReplicas,
-                                      num.decommissionedReplicas(),
-                                      curExpectedReplicas,
-                                      -1, 0);
+            neededReplications.add(block, 
+                                   curReplicas,
+                                   num.decommissionedReplicas(),
+                                   curExpectedReplicas);
           }
         }
       }

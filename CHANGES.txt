@@ -519,6 +519,10 @@ Trunk (unreleased changes)
     HADOOP-4054. Remove duplicate lease removal during edit log loading.
     (hairong)
 
+    HADOOP-4071. FSNameSystem.isReplicationInProgress should add an
+    underReplicated block to the neededReplication queue using method 
+    "add" not "update". (hairong)
+
 Release 0.18.1 - Unreleased
 
   IMPROVEMENTS
