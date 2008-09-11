@@ -145,6 +145,9 @@ Trunk (unreleased changes)
     chains of Maps and Reduces in a single Map/Reduce job, something like 
     MAP+ / REDUCE MAP*. (Alejandro Abdelnur via ddas)
 
+    HADOOP-3445. Add capacity scheduler that provides guaranteed capacities to 
+    queues as a percentage of the cluster. (Vivek Ratan via omalley)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.
