@@ -68,11 +68,36 @@ class Merger {
                             List<Segment<K, V>> segments, 
                             int mergeFactor, Path tmpDir,
                             RawComparator<K> comparator, Progressable reporter)
-  throws IOException {
-    return 
-      new MergeQueue<K, V>(conf, fs, segments, 
-                           comparator, reporter).merge(keyClass, valueClass,
-                                                       mergeFactor, tmpDir);
+      throws IOException {
+    return merge(conf, fs, keyClass, valueClass, segments, mergeFactor, tmpDir,
+                 comparator, reporter, false);
+  }
+
+  public static <K extends Object, V extends Object>
+  RawKeyValueIterator merge(Configuration conf, FileSystem fs,
+                            Class<K> keyClass, Class<V> valueClass,
+                            List<Segment<K, V>> segments,
+                            int mergeFactor, Path tmpDir,
+                            RawComparator<K> comparator, Progressable reporter,
+                            boolean sortSegments)
+      throws IOException {
+    return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
+                           sortSegments).merge(keyClass, valueClass,
+                                               mergeFactor, tmpDir);
+  }
+
+  static <K extends Object, V extends Object>
+    RawKeyValueIterator merge(Configuration conf, FileSystem fs,
+                            Class<K> keyClass, Class<V> valueClass,
+                            List<Segment<K, V>> segments,
+                            int mergeFactor, int inMemSegments, Path tmpDir,
+                            RawComparator<K> comparator, Progressable reporter,
+                            boolean sortSegments)
+      throws IOException {
+    return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
+                           sortSegments).merge(keyClass, valueClass,
+                                               mergeFactor, inMemSegments,
+                                               tmpDir);
   }
 
   public static <K extends Object, V extends Object>
@@ -201,15 +226,23 @@ class Merger {
       Collections.sort(segments, segmentComparator); 
     }
     
+    public MergeQueue(Configuration conf, FileSystem fs,
+        List<Segment<K, V>> segments, RawComparator<K> comparator,
+        Progressable reporter) {
+      this(conf, fs, segments, comparator, reporter, false);
+    }
 
     public MergeQueue(Configuration conf, FileSystem fs, 
         List<Segment<K, V>> segments, RawComparator<K> comparator,
-        Progressable reporter) {
+        Progressable reporter, boolean sortSegments) {
       this.conf = conf;
       this.fs = fs;
       this.comparator = comparator;
       this.segments = segments;
       this.reporter = reporter;
+      if (sortSegments) {
+        Collections.sort(segments, segmentComparator);
+      }
     }
 
     public void close() throws IOException {
@@ -277,7 +310,13 @@ class Merger {
     
     public RawKeyValueIterator merge(Class<K> keyClass, Class<V> valueClass,
                                      int factor, Path tmpDir) 
-    throws IOException {
+        throws IOException {
+      return merge(keyClass, valueClass, factor, 0, tmpDir);
+    }
+
+    RawKeyValueIterator merge(Class<K> keyClass, Class<V> valueClass,
+                                     int factor, int inMem, Path tmpDir)
+        throws IOException {
       LOG.info("Merging " + segments.size() + " sorted segments");
       
       //create the MergeStreams from the sorted map created in the constructor
@@ -286,8 +325,13 @@ class Merger {
       int origFactor = factor;
       int passNo = 1;
       do {
-        //get the factor for this pass of merge
-        factor = getPassFactor(factor, passNo, numSegments);
+        //get the factor for this pass of merge. We assume in-memory segments
+        //are the first entries in the segment list and that the pass factor
+        //doesn't apply to them
+        factor = getPassFactor(factor, passNo, numSegments - inMem);
+        if (1 == passNo) {
+          factor += inMem;
+        }
         List<Segment<K, V>> segmentsToMerge =
           new ArrayList<Segment<K, V>>();
         int segmentsConsidered = 0;
@@ -326,7 +370,8 @@ class Merger {
         }
         
         //feed the streams to the priority queue
-        initialize(segmentsToMerge.size()); clear();
+        initialize(segmentsToMerge.size());
+        clear();
         for (Segment<K, V> segment : segmentsToMerge) {
           put(segment);
         }
@@ -395,7 +440,12 @@ class Merger {
       } while(true);
     }
     
-    //HADOOP-591
+    /**
+     * Determine the number of segments to merge in a given pass. Assuming more
+     * than factor segments, the first pass should attempt to bring the total
+     * number of segments - 1 to be divisible by the factor - 1 (each pass
+     * takes X segments and produces 1) to minimize the number of merges.
+     */
     private int getPassFactor(int factor, int passNo, int numSegments) {
       if (passNo > 1 || numSegments <= factor || factor == 1) 
         return factor;

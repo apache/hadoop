@@ -233,12 +233,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>fs.inmemory.size.mb</name>
-  <value>75</value>
-  <description>The size of the in-memory filsystem instance in MB</description>
-</property>
-
-<property>
   <name>fs.checkpoint.dir</name>
   <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
@@ -891,6 +885,34 @@ creations/deletions), or "all".</description>
   we initiate the in-memory merge and spill to disk. A value of 0 or less than
   0 indicates we want to DON'T have any threshold and instead depend only on
   the ramfs's memory consumption to trigger the merge.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.shuffle.merge.percent</name>
+  <value>0.66</value>
+  <description>The usage threshold at which an in-memory merge will be
+  initiated, expressed as a percentage of the total memory allocated to
+  storing in-memory map outputs, as defined by
+  mapred.job.shuffle.input.buffer.percent.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.shuffle.input.buffer.percent</name>
+  <value>0.70</value>
+  <description>The percentage of memory to be allocated from the maximum heap
+  size to storing map outputs during the shuffle.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.reduce.input.buffer.percent</name>
+  <value>0.0</value>
+  <description>The percentage of memory- relative to the maximum heap size- to
+  retain map outputs during the reduce. When the shuffle is concluded, any
+  remaining map outputs in memory must consume less than this threshold before
+  the reduce can begin.
   </description>
 </property>
 

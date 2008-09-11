@@ -221,12 +221,12 @@ class IFile {
     private static final int DEFAULT_BUFFER_SIZE = 128*1024;
     private static final int MAX_VINT_SIZE = 9;
 
-    InputStream in;            // Possibly decompressed stream that we read
+    final InputStream in;        // Possibly decompressed stream that we read
     Decompressor decompressor;
     long bytesRead = 0;
-    long fileLength = 0;
+    final long fileLength;
     boolean eof = false;
-    IFileInputStream checksumIn;
+    final IFileInputStream checksumIn;
     
     byte[] buffer = null;
     int bufferSize = DEFAULT_BUFFER_SIZE;
@@ -251,8 +251,6 @@ class IFile {
            fs.getFileStatus(file).getLen(),
            codec);
     }
-    
-    protected Reader() {}
 
     /**
      * Construct an IFile Reader.
@@ -264,7 +262,6 @@ class IFile {
      * @param codec codec
      * @throws IOException
      */
-    
     public Reader(Configuration conf, FSDataInputStream in, long length, 
                   CompressionCodec codec) throws IOException {
       checksumIn = new IFileInputStream(in,length);
@@ -276,7 +273,9 @@ class IFile {
       }
       this.fileLength = length;
       
-      this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
+      if (conf != null) {
+        bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
+      }
     }
     
     public long getLength() { 
@@ -430,12 +429,14 @@ class IFile {
     TaskAttemptID taskAttemptId;
     
     public InMemoryReader(RamManager ramManager, TaskAttemptID taskAttemptId,
-                          byte[] data, int start, int length) {
+                          byte[] data, int start, int length)
+                          throws IOException {
+      super(null, null, length - start, null);
       this.ramManager = ramManager;
       this.taskAttemptId = taskAttemptId;
       
       buffer = data;
-      fileLength = bufferSize = (length - start);
+      bufferSize = (int)fileLength;
       dataIn.reset(buffer, start, length);
     }
     

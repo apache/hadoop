@@ -1118,7 +1118,157 @@
         greater than any value specified for a maximum heap-size
         of the child jvm via <code>mapred.child.java.opts</code>, or a ulimit
         value in <code>mapred.child.ulimit</code>. </p>
-        
+
+        <p>The memory available to some parts of the framework is also
+        configurable. In map and reduce tasks, performance may be influenced
+        by adjusting parameters influencing the concurrency of operations and
+        the frequency with which data will hit disk. Monitoring the filesystem
+        counters for a job- particularly relative to byte counts from the map
+        and into the reduce- is invaluable to the tuning of these
+        parameters.</p>
+
+        <section>
+          <title>Map Parameters</title>
+
+          <p>A record emitted from a map will be serialized into a buffer and
+          metadata will be stored into accounting buffers. As described in the
+          following options, when either the serialization buffer or the
+          metadata exceed a threshold, the contents of the buffers will be
+          sorted and written to disk in the background while the map continues
+          to output records. If either buffer fills completely while the spill
+          is in progress, the map thread will block. When the map is finished,
+          any remaining records are written to disk and all on-disk segments
+          are merged into a single file. Minimizing the number of spills to
+          disk can decrease map time, but a larger buffer also decreases the
+          memory available to the mapper.</p>
+
+          <table>
+            <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+            <tr><td>io.sort.mb</td><td>int</td>
+                <td>The cumulative size of the serialization and accounting
+                buffers storing records emitted from the map, in megabytes.
+                </td></tr>
+            <tr><td>io.sort.record.percent</td><td>float</td>
+                <td>The ratio of serialization to accounting space can be
+                adjusted. Each serialized record requires 16 bytes of
+                accounting information in addition to its serialized size to
+                effect the sort. This percentage of space allocated from
+                <code>io.sort.mb</code> affects the probability of a spill to
+                disk being caused by either exhaustion of the serialization
+                buffer or the accounting space. Clearly, for a map outputting
+                small records, a higher value than the default will likely
+                decrease the number of spills to disk.</td></tr>
+            <tr><td>io.sort.spill.percent</td><td>float</td>
+                <td>This is the threshold for the accounting and serialization
+                buffers. When this percentage of either buffer has filled,
+                their contents will be spilled to disk in the background. Let
+                <code>io.sort.record.percent</code> be <em>r</em>,
+                <code>io.sort.mb</code> be <em>x</em>, and this value be
+                <em>q</em>. The maximum number of records collected before the
+                collection thread will spill is <code>r * x * q * 2^16</code>.
+                Note that a higher value may decrease the number of- or even
+                eliminate- merges, but will also increase the probability of
+                the map task getting blocked. The lowest average map times are
+                usually obtained by accurately estimating the size of the map
+                output and preventing multiple spills.</td></tr>
+          </table>
+
+          <p>Other notes</p>
+          <ul>
+            <li>If either spill threshold is exceeded while a spill is in
+            progress, collection will continue until the spill is finished.
+            For example, if <code>io.sort.buffer.spill.percent</code> is set
+            to 0.33, and the remainder of the buffer is filled while the spill
+            runs, the next spill will include all the collected records, or
+            0.66 of the buffer, and will not generate additional spills. In
+            other words, the thresholds are defining triggers, not
+            blocking.</li>
+            <li>A record larger than the serialization buffer will first
+            trigger a spill, then be spilled to a separate file. It is
+            undefined whether or not this record will first pass through the
+            combiner.</li>
+          </ul>
+        </section>
+
+        <section>
+          <title>Shuffle/Reduce Parameters</title>
+
+          <p>As described previously, each reduce fetches the output assigned
+          to it by the Partitioner via HTTP into memory and periodically
+          merges these outputs to disk. If intermediate compression of map
+          outputs is turned on, each output is decompressed into memory. The
+          following options affect the frequency of these merges to disk prior
+          to the reduce and the memory allocated to map output during the
+          reduce.</p>
+
+          <table>
+            <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+            <tr><td>io.sort.factor</td><td>int</td>
+                <td>Specifies the number of segments on disk to be merged at
+                the same time. It limits the number of open files and
+                compression codecs during the merge. If the number of files
+                exceeds this limit, the merge will proceed in several passes.
+                Though this limit also applies to the map, most jobs should be
+                configured so that hitting this limit is unlikely
+                there.</td></tr>
+            <tr><td>mapred.inmem.merge.threshold</td><td>int</td>
+                <td>The number of sorted map outputs fetched into memory
+                before being merged to disk. Like the spill thresholds in the
+                preceding note, this is not defining a unit of partition, but
+                a trigger. In practice, this is usually set very high (1000)
+                or disabled (0), since merging in-memory segments is often
+                less expensive than merging from disk (see notes following
+                this table). This threshold influences only the frequency of
+                in-memory merges during the shuffle.</td></tr>
+            <tr><td>mapred.job.shuffle.merge.percent</td><td>float</td>
+                <td>The memory threshold for fetched map outputs before an
+                in-memory merge is started, expressed as a percentage of
+                memory allocated to storing map outputs in memory. Since map
+                outputs that can't fit in memory can be stalled, setting this
+                high may decrease parallelism between the fetch and merge.
+                Conversely, values as high as 1.0 have been effective for
+                reduces whose input can fit entirely in memory. This parameter
+                influences only the frequency of in-memory merges during the
+                shuffle.</td></tr>
+            <tr><td>mapred.job.shuffle.input.buffer.percent</td><td>float</td>
+                <td>The percentage of memory- relative to the maximum heapsize
+                as typically specified in <code>mapred.child.java.opts</code>-
+                that can be allocated to storing map outputs during the
+                shuffle. Though some memory should be set aside for the
+                framework, in general it is advantageous to set this high
+                enough to store large and numerous map outputs.</td></tr>
+            <tr><td>mapred.job.reduce.input.buffer.percent</td><td>float</td>
+                <td>The percentage of memory relative to the maximum heapsize
+                in which map outputs may be retained during the reduce. When
+                the reduce begins, map outputs will be merged to disk until
+                those that remain are under the resource limit this defines.
+                By default, all map outputs are merged to disk before the
+                reduce begins to maximize the memory available to the reduce.
+                For less memory-intensive reduces, this should be increased to
+                avoid trips to disk.</td></tr>
+          </table>
+
+          <p>Other notes</p>
+          <ul>
+            <li>If a map output is larger than 25 percent of the memory
+            allocated to copying map outputs, it will be written directly to
+            disk without first staging through memory.</li>
+            <li>When running with a combiner, the reasoning about high merge
+            thresholds and large buffers may not hold. For merges started
+            before all map outputs have been fetched, the combiner is run
+            while spilling to disk. In some cases, one can obtain better
+            reduce times by spending resources combining map outputs- making
+            disk spills small and parallelizing spilling and fetching- rather
+            than aggressively increasing buffer sizes.</li>
+            <li>When merging in-memory map outputs to disk to begin the
+            reduce, if an intermediate merge is necessary because there are
+            segments to spill and at least <code>io.sort.factor</code>
+            segments already on disk, the in-memory map outputs will be part
+            of the intermediate merge.</li>
+          </ul>
+
+        </section>
+
         <p>The task tracker has local directory,
         <code> ${mapred.local.dir}/taskTracker/</code> to create localized
         cache and localized job. It can define multiple local directories 

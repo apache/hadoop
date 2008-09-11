@@ -213,8 +213,12 @@ public class TestMapCollection extends TestCase {
 
     public FakeIF() { }
 
-    public InputSplit[] getSplits(JobConf conf, int splits) {
-      return new InputSplit[] { new FakeSplit() };
+    public InputSplit[] getSplits(JobConf conf, int numSplits) {
+      InputSplit[] splits = new InputSplit[numSplits];
+      for (int i = 0; i < splits.length; ++i) {
+        splits[i] = new FakeSplit();
+      }
+      return splits;
     }
 
     public RecordReader<NullWritable,NullWritable> getRecordReader(

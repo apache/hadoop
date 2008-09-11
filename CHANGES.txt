@@ -51,6 +51,11 @@ Trunk (unreleased changes)
     committing output files. Moves job setup to jobclient, and moves jobcleanup
     to a separate task. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3446. Keep map outputs in memory during the reduce. Remove
+    fs.inmemory.size.mb and replace with properties defining in memory map
+    output retention during the shuffle and reduce relative to maximum heap
+    usage. (cdouglas)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
