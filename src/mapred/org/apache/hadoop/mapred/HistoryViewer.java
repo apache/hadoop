@@ -97,11 +97,15 @@ class HistoryViewer {
     printTasks("MAP", "KILLED");
     printTasks("REDUCE", "FAILED");
     printTasks("REDUCE", "KILLED");
+    printTasks("CLEANUP", "FAILED");
+    printTasks("CLEANUP", "KILLED");
     if (printAll) {
       printTasks("MAP", "SUCCESS");
       printTasks("REDUCE", "SUCCESS");
+      printTasks("CLEANUP", "SUCCESS");
       printAllTaskAttempts("MAP");
       printAllTaskAttempts("REDUCE");
+      printAllTaskAttempts("CLEANUP");
     }
     NodesFilter filter = new FailedOnNodesFilter();
     printFailedAttempts(filter);
@@ -212,14 +216,20 @@ class HistoryViewer {
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
     int totalMaps = 0; 
     int totalReduces = 0; 
+    int totalCleanups = 0;
     int numFailedMaps = 0; 
     int numKilledMaps = 0;
     int numFailedReduces = 0; 
     int numKilledReduces = 0;
+    int numFinishedCleanups = 0;
+    int numFailedCleanups = 0;
+    int numKilledCleanups = 0;
     long mapStarted = 0; 
     long mapFinished = 0; 
     long reduceStarted = 0; 
     long reduceFinished = 0; 
+    long cleanupStarted = 0;
+    long cleanupFinished = 0;
 
     Map <String, String> allHosts = new TreeMap<String, String>();
 
@@ -243,7 +253,7 @@ class HistoryViewer {
                                             attempt.get(Keys.TASK_STATUS))) {
             numKilledMaps++;
           }
-        } else {
+        } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) {
           if (reduceStarted==0||reduceStarted > startTime) {
             reduceStarted = startTime; 
           }
@@ -256,6 +266,23 @@ class HistoryViewer {
           } else if (Values.KILLED.name().equals(
                                             attempt.get(Keys.TASK_STATUS))) {
             numKilledReduces++;
+          }
+        } else if (Values.CLEANUP.name().equals(task.get(Keys.TASK_TYPE))){
+          if (cleanupStarted==0||cleanupStarted > startTime) {
+            cleanupStarted = startTime; 
+          }
+          if (cleanupFinished < finishTime) {
+            cleanupFinished = finishTime; 
+          }
+          totalCleanups++; 
+          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFinishedCleanups++;
+          } else if (Values.FAILED.name().equals(
+                                            attempt.get(Keys.TASK_STATUS))) {
+            numFailedCleanups++;
+          } else if (Values.KILLED.name().equals(
+                                            attempt.get(Keys.TASK_STATUS))) {
+            numKilledCleanups++;
           }
         }
       }
@@ -283,6 +310,14 @@ class HistoryViewer {
                                dateFormat, reduceStarted, 0));
     taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
                                dateFormat, reduceFinished, reduceStarted)); 
+    taskSummary.append("\nCleanup\t").append(totalCleanups);
+    taskSummary.append("\t").append(numFinishedCleanups);
+    taskSummary.append("\t\t").append(numFailedCleanups);
+    taskSummary.append("\t").append(numKilledCleanups);
+    taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                               dateFormat, cleanupStarted, 0));
+    taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                               dateFormat, cleanupFinished, cleanupStarted)); 
     taskSummary.append("\n============================\n");
     System.out.println(taskSummary.toString());
   }
@@ -335,7 +370,7 @@ class HistoryViewer {
           if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))) {
             mapTasks[mapIndex++] = attempt; 
             avgMapTime += avgFinishTime;
-          } else { 
+          } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) { 
             reduceTasks[reduceIndex++] = attempt;
             avgShuffleTime += (attempt.getLong(Keys.SHUFFLE_FINISHED) - 
                                attempt.getLong(Keys.START_TIME));

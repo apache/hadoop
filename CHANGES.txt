@@ -534,6 +534,9 @@ Trunk (unreleased changes)
     HADOOP-4094. Hive now has hive-default.xml and hive-site.xml similar
     to core hadoop. (Prasad Chakka via dhruba)
 
+    HADOOP-4112. Handles cleanupTask in JobHistory 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.1 - Unreleased
 
   IMPROVEMENTS

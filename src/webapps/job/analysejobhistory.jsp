@@ -61,7 +61,7 @@
         if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))) {
           mapTasks[mapIndex++] = attempt ; 
           avgMapTime += avgFinishTime;
-        } else { 
+        } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) { 
           reduceTasks[reduceIndex++] = attempt;
           avgShuffleTime += (attempt.getLong(Keys.SHUFFLE_FINISHED) - 
                              attempt.getLong(Keys.START_TIME));

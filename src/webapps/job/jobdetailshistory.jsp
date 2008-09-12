@@ -40,16 +40,22 @@
 <%
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
     int totalMaps = 0 ; 
-    int totalReduces = 0; 
+    int totalReduces = 0;
+    int totalCleanups = 0; 
     int numFailedMaps = 0; 
     int numKilledMaps = 0;
     int numFailedReduces = 0 ; 
     int numKilledReduces = 0;
+    int numFinishedCleanups = 0;
+    int numFailedCleanups = 0;
+    int numKilledCleanups = 0;
 	
     long mapStarted = 0 ; 
     long mapFinished = 0 ; 
     long reduceStarted = 0 ; 
-    long reduceFinished = 0; 
+    long reduceFinished = 0;
+    long cleanupStarted = 0;
+    long cleanupFinished = 0; 
         
     Map <String,String> allHosts = new TreeMap<String,String>();
     for (JobHistory.Task task : tasks.values()) {
@@ -71,7 +77,7 @@
           } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
             numKilledMaps++;
           }
-        } else {
+        } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) {
           if (reduceStarted==0||reduceStarted > startTime) {
             reduceStarted = startTime ; 
           }
@@ -83,6 +89,21 @@
             numFailedReduces++;
           } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
             numKilledReduces++;
+          }
+        } else if (Values.CLEANUP.name().equals(task.get(Keys.TASK_TYPE))) {
+          if (cleanupStarted==0||cleanupStarted > startTime) {
+            cleanupStarted = startTime ; 
+          }
+          if (cleanupFinished < finishTime) {
+            cleanupFinished = finishTime; 
+          }
+          totalCleanups++; 
+          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFinishedCleanups++;
+          } else if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFailedCleanups++;
+          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numKilledCleanups++;
           }
         }
       }
@@ -120,6 +141,19 @@
         <%=numKilledReduces%></a></td>  
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceStarted, 0) %></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceFinished, reduceStarted) %></td>
+</tr>
+<tr>
+<td>Cleanup</td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=all">
+        <%=totalCleanups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.SUCCESS %>">
+        <%=numFinishedCleanups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.FAILED %>">
+        <%=numFailedCleanups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.KILLED %>">
+        <%=numKilledCleanups%></a></td>  
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupStarted, 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupFinished, cleanupStarted) %></td>
 </tr>
 </table>
 

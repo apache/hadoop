@@ -829,8 +829,7 @@ class JobInProgress {
       launchedCleanup = true;
       if (tip.isFirstAttempt(result.getTaskID())) {
         JobHistory.Task.logStarted(tip.getTIPId(), 
-          tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(),
-          System.currentTimeMillis(), tip.getSplitNodes());
+          Values.CLEANUP.name(), System.currentTimeMillis(), "");
       }
     }
     return result;
@@ -1541,19 +1540,24 @@ class JobInProgress {
                                status.getTaskTracker()).getHost()).toString();
     if (status.getIsMap()){
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                                       taskTrackerName); 
+                                       taskTrackerName, tip.isCleanupTask()); 
       JobHistory.MapAttempt.logFinished(status.getTaskID(), status.getFinishTime(), 
-                                        taskTrackerName); 
+                                        taskTrackerName, tip.isCleanupTask()); 
       JobHistory.Task.logFinished(tip.getTIPId(), 
-                                  Values.MAP.name(), status.getFinishTime(),
+                                  tip.isCleanupTask() ? Values.CLEANUP.name() :
+                                  Values.MAP.name(), 
+                                  status.getFinishTime(),
                                   status.getCounters()); 
     }else{
       JobHistory.ReduceAttempt.logStarted( status.getTaskID(), status.getStartTime(), 
-                                          taskTrackerName); 
+                                          taskTrackerName, 
+                                          tip.isCleanupTask()); 
       JobHistory.ReduceAttempt.logFinished(status.getTaskID(), status.getShuffleFinishTime(),
                                            status.getSortFinishTime(), status.getFinishTime(), 
-                                           taskTrackerName); 
+                                           taskTrackerName,
+                                           tip.isCleanupTask()); 
       JobHistory.Task.logFinished(tip.getTIPId(), 
+                                  tip.isCleanupTask() ? Values.CLEANUP.name() :
                                   Values.REDUCE.name(), status.getFinishTime(),
                                   status.getCounters()); 
     }
@@ -1741,23 +1745,26 @@ class JobInProgress {
                                taskTrackerStatus.getHost()).toString();
     if (status.getIsMap()) {
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                taskTrackerName);
+                taskTrackerName, tip.isCleanupTask());
       if (status.getRunState() == TaskStatus.State.FAILED) {
         JobHistory.MapAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
-                taskTrackerName, status.getDiagnosticInfo());
+                taskTrackerName, status.getDiagnosticInfo(), tip.isCleanupTask());
       } else {
         JobHistory.MapAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
-                taskTrackerName, status.getDiagnosticInfo());
+                taskTrackerName, status.getDiagnosticInfo(),
+                tip.isCleanupTask());
       }
     } else {
       JobHistory.ReduceAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                taskTrackerName);
+                taskTrackerName, tip.isCleanupTask());
       if (status.getRunState() == TaskStatus.State.FAILED) {
         JobHistory.ReduceAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
-                taskTrackerName, status.getDiagnosticInfo());
+                taskTrackerName, status.getDiagnosticInfo(), 
+                tip.isCleanupTask());
       } else {
         JobHistory.ReduceAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
-                taskTrackerName, status.getDiagnosticInfo());
+                taskTrackerName, status.getDiagnosticInfo(), 
+                tip.isCleanupTask());
       }
     }
         
@@ -1801,16 +1808,13 @@ class JobInProgress {
       if (killJob) {
         LOG.info("Aborting job " + profile.getJobID());
         JobHistory.Task.logFailed(tip.getTIPId(), 
+                                  tip.isCleanupTask() ?
+                                    Values.CLEANUP.name() :
                                   tip.isMapTask() ? 
                                           Values.MAP.name() : 
                                           Values.REDUCE.name(),  
                                   System.currentTimeMillis(), 
                                   status.getDiagnosticInfo());
-        JobHistory.JobInfo.logFailed(profile.getJobID(), 
-                                     System.currentTimeMillis(), 
-                                     this.finishedMapTasks, 
-                                     this.finishedReduceTasks
-                                    );
         if (tip.isCleanupTask()) {
           // kill the other tip
           if (tip.isMapTask()) {
@@ -1857,6 +1861,7 @@ class JobInProgress {
                                                     null);
     updateTaskStatus(tip, status, metrics);
     JobHistory.Task.logFailed(tip.getTIPId(), 
+                              tip.isCleanupTask() ? Values.CLEANUP.name() : 
                               tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
                               System.currentTimeMillis(), reason); 
   }
