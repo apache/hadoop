@@ -1,8 +1,26 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-    <title>Hadoop 0.18.0 Release Notes</title></head>
+    <title>Hadoop 0.18.1 Release Notes</title></head>
 <body>
 <font face="sans-serif">
+    <h1>Hadoop 0.18.1 Release Notes</h1>
+The bug fixes are listed below.
+<ul><a name="changes">
+    <h2>Changes Since Hadoop 0.18.0</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4040'>HADOOP-4040</a>] - Remove the hardcoded ipc.client.connection.maxidletime setting from the TaskTracker.Child.main().</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3934'>HADOOP-3934</a>] - Update log4j from 1.2.13 to 1.2.15.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3995'>HADOOP-3995</a>] - renameTo(src, dst) does not restore src name in case of quota failur.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4046'>HADOOP-4046</a>] - WritableComparator's constructor should be protected instead of private.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3821'>HADOOP-3821</a>] - SequenceFile's Reader.decompressorPool or Writer.decompressorPool gets into an inconsistent state when calling close() more than onc.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3940'>HADOOP-3940</a>] - Reduce often attempts in memory merge with no work.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4161'>HADOOP-4161</a>] - [HOD] Uncaught exceptions can potentially hang hod-client.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4060'>HADOOP-4060</a>] - [HOD] Make HOD to roll log files on the client.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4145'>HADOOP-4145</a>] - [HOD] Support an accounting plugin script for HOD.</li>
+</ul>
+</ul>
+
+
     <h1>Hadoop 0.18.0 Release Notes</h1>
 
 These release notes include new developer and user facing incompatibilities, features, and major improvements.
