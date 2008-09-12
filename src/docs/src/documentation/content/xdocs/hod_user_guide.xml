@@ -412,7 +412,8 @@
         <td> 5 </td>
         <td> Job execution failure </td>
         <td> 1. Torque Job was deleted from outside. Execute the Torque <code>qstat</code> command to see if you have any jobs in the <code>R</code> (Running) state. If none exist, try re-executing HOD. <br />
-          2. Torque problems such as the server momentarily going down, or becoming unresponsive. Contact system administrator. </td>
+          2. Torque problems such as the server momentarily going down, or becoming unresponsive. Contact system administrator. <br/>
+          3. The system administrator might have configured account verification, and an invalid account is specified. Contact system administrator.</td>
       </tr>
       <tr>
         <td> 6 </td>

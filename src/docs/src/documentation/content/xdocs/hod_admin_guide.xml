@@ -351,6 +351,37 @@ in the HOD Configuration Guide.</p>
         it is better not to run this inside a tight loop without sleeping.</p>
       </section>
     </section>
+
+    <section>
+      <title>verify-account - Script to verify an account under which 
+             jobs are submitted</title>
+      <p>Production systems use accounting packages to charge users for using
+      shared compute resources. HOD supports a parameter 
+      <em>resource_manager.pbs-account</em> to allow users to identify the
+      account under which they would like to submit jobs. It may be necessary
+      to verify that this account is a valid one configured in an accounting
+      system. The <em>hod-install-dir/bin/verify-account</em> script 
+      provides a mechanism to plug-in a custom script that can do this
+      verification.</p>
+      
+      <section>
+        <title>Integrating the verify-account script with HOD</title>
+        <p>HOD runs the <em>verify-account</em> script passing in the
+        <em>resource_manager.pbs-account</em> value as argument to the script,
+        before allocating a cluster. Sites can write a script that verify this 
+        account against their accounting systems. Returning a non-zero exit 
+        code from this script will cause HOD to fail allocation. Also, in
+        case of an error, HOD will print the output of script to the user.
+        Any descriptive error message can be passed to the user from the
+        script in this manner.</p>
+        <p>The default script that comes with the HOD installation does not
+        do any validation, and returns a zero exit code.</p>
+        <p>If the verify-account script is not found, then HOD will treat
+        that verification is disabled, and continue allocation as is.</p>
+      </section>
+    </section>
+
   </section>
+
 </body>
 </document>

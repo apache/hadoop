@@ -116,6 +116,10 @@ class NodePool:
     """Update information about the workers started by this NodePool."""
     raise NotImplementedError
 
+  def getAccountString(self):
+    """Return the account string for this job"""
+    raise NotImplementedError
+
   def getNextNodeSetId(self):
     id = self.nextNodeSetId
     self.nextNodeSetId += 1
