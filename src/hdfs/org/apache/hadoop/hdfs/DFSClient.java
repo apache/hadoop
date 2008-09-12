@@ -80,6 +80,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private int datanodeWriteTimeout;
   final int writePacketSize;
   private FileSystem.Statistics stats;
+  private int maxBlockAcquireFailures;
     
  
   public static ClientProtocol createNamenode(Configuration conf) throws IOException {
@@ -162,6 +163,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
+    this.maxBlockAcquireFailures = 
+                          conf.getInt("dfs.client.max.block.acquire.failures",
+                                      MAX_BLOCK_ACQUIRE_FAILURES);
     
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);
@@ -1473,6 +1477,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private synchronized int readBuffer(byte buf[], int off, int len) 
                                                     throws IOException {
       IOException ioe;
+      
+      /* we retry current node only once. So this is set to true only here.
+       * Intention is to handle one common case of an error that is not a
+       * failure on datanode or client : when DataNode closes the connection
+       * since client is idle. If there are other cases of "non-errors" then
+       * then a datanode might be retried by setting this to true again.
+       */
+      boolean retryCurrentNode = true;
  
       while (true) {
         // retry as many times as seekToNewSource allows.
@@ -1483,16 +1495,30 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                    currentNode.getName() + " at " + ce.getPos());          
           reportChecksumFailure(src, currentBlock, currentNode);
           ioe = ce;
+          retryCurrentNode = false;
         } catch ( IOException e ) {
-          LOG.warn("Exception while reading from " + currentBlock +
-                   " of " + src + " from " + currentNode + ": " +
-                   StringUtils.stringifyException(e));
+          if (!retryCurrentNode) {
+            LOG.warn("Exception while reading from " + currentBlock +
+                     " of " + src + " from " + currentNode + ": " +
+                     StringUtils.stringifyException(e));
+          }
           ioe = e;
         }
-        addToDeadNodes(currentNode);
-        if (!seekToNewSource(pos)) {
-            throw ioe;
+        boolean sourceFound = false;
+        if (retryCurrentNode) {
+          /* possibly retry the same node so that transient errors don't
+           * result in application level failures (e.g. Datanode could have
+           * closed the connection because the client is idle for too long).
+           */ 
+          sourceFound = seekToBlockSource(pos);
+        } else {
+          addToDeadNodes(currentNode);
+          sourceFound = seekToNewSource(pos);
         }
+        if (!sourceFound) {
+          throw ioe;
+        }
+        retryCurrentNode = false;
       }
     }
 
@@ -1554,7 +1580,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           return new DNAddrPair(chosenNode, targetAddr);
         } catch (IOException ie) {
           String blockInfo = block.getBlock() + " file=" + src;
-          if (failures >= MAX_BLOCK_ACQUIRE_FAILURES) {
+          if (failures >= maxBlockAcquireFailures) {
             throw new IOException("Could not obtain block: " + blockInfo);
           }
           
@@ -1726,6 +1752,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
+    /**
+     * Same as {@link #seekToNewSource(long)} except that it does not exclude
+     * the current datanode and might connect to the same node.
+     */
+    private synchronized boolean seekToBlockSource(long targetPos)
+                                                   throws IOException {
+      currentNode = blockSeekTo(targetPos);
+      return true;
+    }
+    
     /**
      * Seek to given position on a node other than the current node.  If
      * a node other than the current node is found, then returns true. 

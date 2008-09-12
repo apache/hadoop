@@ -537,6 +537,9 @@ Trunk (unreleased changes)
     HADOOP-4112. Handles cleanupTask in JobHistory 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3831. Very slow reading clients sometimes failed while reading.
+    (rangadi)
+
 Release 0.18.1 - Unreleased
 
   IMPROVEMENTS
