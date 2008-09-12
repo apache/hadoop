@@ -211,6 +211,7 @@
       <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=y"/> -->
       <sysproperty key="test.output.overwrite" value="${overwrite}"/>
       <sysproperty key="log4j.configuration" value="file://${test.data.dir}/conf/hive-log4j.properties"/>
+      <sysproperty key="derby.stream.error.file" value="${test.build.dir}/derby.log"/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
