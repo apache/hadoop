@@ -540,7 +540,7 @@ Trunk (unreleased changes)
     HADOOP-3831. Very slow reading clients sometimes failed while reading.
     (rangadi)
 
-Release 0.18.1 - Unreleased
+Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
 

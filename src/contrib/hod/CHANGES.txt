@@ -15,7 +15,7 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-Release 0.18.1 - Unreleased
+Release 0.18.1 - 2008-09-17
 
   INCOMPATIBLE CHANGES
 
