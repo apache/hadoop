@@ -252,7 +252,6 @@ class hodRunner:
     self.__cfg['ringmaster']['max-master-failures'] = \
                               min(maxFailures, maxFailedNodes)
 
-    
   def _op_allocate(self, args):
     operation = "allocate"
     argLength = len(args)
@@ -313,6 +312,21 @@ class hodRunner:
           return
  
       self.__setup_cluster_logger(clusterDir)
+
+      (status, message) = self.__cluster.is_valid_account()
+      if status is not 0:
+        if message:
+          for line in message:
+            self.__log.critical("verify-account output: %s" % line)
+        self.__log.critical("Cluster cannot be allocated because account verification failed. " \
+                              + "verify-account returned exit code: %s." % status)
+        self.__opCode = 4
+        return
+      else:
+        self.__log.debug("verify-account returned zero exit code.")
+        if message:
+          self.__log.debug("verify-account output: %s" % message)
+
       if re.match('\d+-\d+', nodes):
         (min, max) = nodes.split("-")
         min = int(min)

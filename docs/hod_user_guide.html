@@ -1021,7 +1021,8 @@ document.write("Last Published: " + document.lastModified);
 <td colspan="1" rowspan="1"> 5 </td>
         <td colspan="1" rowspan="1"> Job execution failure </td>
         <td colspan="1" rowspan="1"> 1. Torque Job was deleted from outside. Execute the Torque <span class="codefrag">qstat</span> command to see if you have any jobs in the <span class="codefrag">R</span> (Running) state. If none exist, try re-executing HOD. <br>
-          2. Torque problems such as the server momentarily going down, or becoming unresponsive. Contact system administrator. </td>
+          2. Torque problems such as the server momentarily going down, or becoming unresponsive. Contact system administrator. <br>
+          3. The system administrator might have configured account verification, and an invalid account is specified. Contact system administrator.</td>
       
 </tr>
       
@@ -1119,7 +1120,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
   
 </table>
-<a name="N10755"></a><a name="Hadoop+Jobs+Not+Running+on+a+Successfully+Allocated+Cluster"></a>
+<a name="N10757"></a><a name="Hadoop+Jobs+Not+Running+on+a+Successfully+Allocated+Cluster"></a>
 <h3 class="h4"> Hadoop Jobs Not Running on a Successfully Allocated Cluster </h3>
 <a name="Hadoop_Jobs_Not_Running_on_a_Suc" id="Hadoop_Jobs_Not_Running_on_a_Suc"></a>
 <p>This scenario generally occurs when a cluster is allocated, and is left inactive for sometime, and then hadoop jobs are attempted to be run on them. Then Hadoop jobs fail with the following exception:</p>
@@ -1138,31 +1139,31 @@ document.write("Last Published: " + document.lastModified);
 <em>Possible Cause:</em> There is a version mismatch between the version of the hadoop client being used to submit jobs and the hadoop used in provisioning (typically via the tarball option). Ensure compatible versions are being used.</p>
 <p>
 <em>Possible Cause:</em> You used one of the options for specifying Hadoop configuration <span class="codefrag">-M or -H</span>, which had special characters like space or comma that were not escaped correctly. Refer to the section <em>Options Configuring HOD</em> for checking how to specify such options correctly.</p>
-<a name="N10790"></a><a name="My+Hadoop+Job+Got+Killed"></a>
+<a name="N10792"></a><a name="My+Hadoop+Job+Got+Killed"></a>
 <h3 class="h4"> My Hadoop Job Got Killed </h3>
 <a name="My_Hadoop_Job_Got_Killed" id="My_Hadoop_Job_Got_Killed"></a>
 <p>
 <em>Possible Cause:</em> The wallclock limit specified by the Torque administrator or the <span class="codefrag">-l</span> option defined in the section <em>Specifying Additional Job Attributes</em> was exceeded since allocation time. Thus the cluster would have got released. Deallocate the cluster and allocate it again, this time with a larger wallclock time.</p>
 <p>
 <em>Possible Cause:</em> Problems with the JobTracker node. Refer to the section in <em>Collecting and Viewing Hadoop Logs</em> to get more information.</p>
-<a name="N107AB"></a><a name="Hadoop+Job+Fails+with+Message%3A+%27Job+tracker+still+initializing%27"></a>
+<a name="N107AD"></a><a name="Hadoop+Job+Fails+with+Message%3A+%27Job+tracker+still+initializing%27"></a>
 <h3 class="h4"> Hadoop Job Fails with Message: 'Job tracker still initializing' </h3>
 <a name="Hadoop_Job_Fails_with_Message_Jo" id="Hadoop_Job_Fails_with_Message_Jo"></a>
 <p>
 <em>Possible Cause:</em> The hadoop job was being run as part of the HOD script command, and it started before the JobTracker could come up fully. Allocate the cluster using a large value for the configuration option <span class="codefrag">--hod.script-wait-time</span>. Typically a value of 120 should work, though it is typically unnecessary to be that large.</p>
-<a name="N107BB"></a><a name="The+Exit+Codes+For+HOD+Are+Not+Getting+Into+Torque"></a>
+<a name="N107BD"></a><a name="The+Exit+Codes+For+HOD+Are+Not+Getting+Into+Torque"></a>
 <h3 class="h4"> The Exit Codes For HOD Are Not Getting Into Torque </h3>
 <a name="The_Exit_Codes_For_HOD_Are_Not_G" id="The_Exit_Codes_For_HOD_Are_Not_G"></a>
 <p>
 <em>Possible Cause:</em> Version 0.16 of hadoop is required for this functionality to work. The version of Hadoop used does not match. Use the required version of Hadoop.</p>
 <p>
 <em>Possible Cause:</em> The deallocation was done without using the <span class="codefrag">hod</span> command; for e.g. directly using <span class="codefrag">qdel</span>. When the cluster is deallocated in this manner, the HOD processes are terminated using signals. This results in the exit code to be based on the signal number, rather than the exit code of the program.</p>
-<a name="N107D3"></a><a name="The+Hadoop+Logs+are+Not+Uploaded+to+DFS"></a>
+<a name="N107D5"></a><a name="The+Hadoop+Logs+are+Not+Uploaded+to+DFS"></a>
 <h3 class="h4"> The Hadoop Logs are Not Uploaded to DFS </h3>
 <a name="The_Hadoop_Logs_are_Not_Uploaded" id="The_Hadoop_Logs_are_Not_Uploaded"></a>
 <p>
 <em>Possible Cause:</em> There is a version mismatch between the version of the hadoop being used for uploading the logs and the external HDFS. Ensure that the correct version is specified in the <span class="codefrag">hodring.pkgs</span> option.</p>
-<a name="N107E3"></a><a name="Locating+Ringmaster+Logs"></a>
+<a name="N107E5"></a><a name="Locating+Ringmaster+Logs"></a>
 <h3 class="h4"> Locating Ringmaster Logs </h3>
 <a name="Locating_Ringmaster_Logs" id="Locating_Ringmaster_Logs"></a>
 <p>To locate the ringmaster logs, follow these steps: </p>
@@ -1179,7 +1180,7 @@ document.write("Last Published: " + document.lastModified);
 <li> If you don't get enough information, you may want to set the ringmaster debug level to 4. This can be done by passing <span class="codefrag">--ringmaster.debug 4</span> to the hod command line.</li>
   
 </ul>
-<a name="N1080F"></a><a name="Locating+Hodring+Logs"></a>
+<a name="N10811"></a><a name="Locating+Hodring+Logs"></a>
 <h3 class="h4"> Locating Hodring Logs </h3>
 <a name="Locating_Hodring_Logs" id="Locating_Hodring_Logs"></a>
 <p>To locate hodring logs, follow the steps below: </p>

@@ -51,6 +51,12 @@ class TorquePool(NodePool):
     self.__torque = torqueInterface(
       self._cfg['resource_manager']['batch-home'], environ, self._log)
 
+  def getAccountString(self):
+    account = ''
+    if self._cfg['resource_manager'].has_key('pbs-account'):
+      account = self._cfg['resource_manager']['pbs-account']
+    return account
+
   def __gen_submit_params(self, nodeSet, walltime = None, qosLevel = None, 
                           account = None):
     argList = []

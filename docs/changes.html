@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(12)
+</a>&nbsp;&nbsp;&nbsp;(13)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -91,10 +91,14 @@ omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3150">HADOOP-3150</a>. Moves task promotion to tasks. Defines a new interface for
 committing output files. Moves job setup to jobclient, and moves jobcleanup
 to a separate task.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3446">HADOOP-3446</a>. Keep map outputs in memory during the reduce. Remove
+fs.inmemory.size.mb and replace with properties defining in memory map
+output retention during the shuffle and reduce relative to maximum heap
+usage.<br />(cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(29)
+</a>&nbsp;&nbsp;&nbsp;(30)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3341">HADOOP-3341</a>. Allow streaming jobs to specify the field separator for map
 and reduce input and output. The new configuration values are:
@@ -157,10 +161,12 @@ chains of Maps and Reduces in a single Map/Reduce job, something like
 MAP+ / REDUCE MAP*.<br />(Alejandro Abdelnur via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3445">HADOOP-3445</a>. Add capacity scheduler that provides guaranteed capacities to
 queues as a percentage of the cluster.<br />(Vivek Ratan via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3992">HADOOP-3992</a>. Add a synthetic load generation facility to the test
+directory.<br />(hairong via szetszwo)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(49)
+</a>&nbsp;&nbsp;&nbsp;(50)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3908">HADOOP-3908</a>. Fuse-dfs: better error message if llibhdfs.so doesn't exist.<br />(Pete Wyckoff through zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3732">HADOOP-3732</a>. Delay intialization of datanode block verification till
@@ -250,6 +256,8 @@ components.<br />(tomwhite)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3361">HADOOP-3361</a>. Implement renames for NativeS3FileSystem.<br />(Albert Chern via tomwhite)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3605">HADOOP-3605</a>. Make EC2 scripts show an error message if AWS_ACCOUNT_ID is
 unset.<br />(Al Hoang via tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4147">HADOOP-4147</a>. Remove unused class JobWithTaskContext from class
+JobInProgress.<br />(Amareshwari Sriramadasu via johan)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -275,7 +283,7 @@ it from a different .crc file.<br />(Jothi Padmanabhan via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(60)
+</a>&nbsp;&nbsp;&nbsp;(66)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -396,6 +404,16 @@ implementations and moves it to the JobTracker.<br />(Amareshwari Sriramadasu vi
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4097">HADOOP-4097</a>. Make hive work well with speculative execution turned on.<br />(Joydeep Sen Sarma via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4113">HADOOP-4113</a>. Changes to libhdfs to not exit on its own, rather return
 an error code to the caller.<br />(Pete Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4054">HADOOP-4054</a>. Remove duplicate lease removal during edit log loading.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4071">HADOOP-4071</a>. FSNameSystem.isReplicationInProgress should add an
+underReplicated block to the neededReplication queue using method
+"add" not "update".<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4154">HADOOP-4154</a>. Fix type warnings in WritableUtils.<br />(szetszwo via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4133">HADOOP-4133</a>. Log files generated by Hive should reside in the
+build directory.<br />(Prasad Chakka via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4094">HADOOP-4094</a>. Hive now has hive-default.xml and hive-site.xml similar
+to core hadoop.<br />(Prasad Chakka via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4112">HADOOP-4112</a>. Handles cleanupTask in JobHistory<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
 </ul>

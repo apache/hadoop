@@ -245,6 +245,15 @@ document.write("Last Published: " + document.lastModified);
 </li>
 </ul>
 </li>
+<li>
+<a href="#verify-account+-+Script+to+verify+an+account+under+which+%0A+++++++++++++jobs+are+submitted">verify-account - Script to verify an account under which 
+             jobs are submitted</a>
+<ul class="minitoc">
+<li>
+<a href="#Integrating+the+verify-account+script+with+HOD">Integrating the verify-account script with HOD</a>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -646,7 +655,33 @@ in the HOD Configuration Guide.</p>
         constraints, for example via cron. Please note that the resource manager
         and scheduler commands used in this script can be expensive and so
         it is better not to run this inside a tight loop without sleeping.</p>
+<a name="N1022D"></a><a name="verify-account+-+Script+to+verify+an+account+under+which+%0A+++++++++++++jobs+are+submitted"></a>
+<h3 class="h4">verify-account - Script to verify an account under which 
+             jobs are submitted</h3>
+<p>Production systems use accounting packages to charge users for using
+      shared compute resources. HOD supports a parameter 
+      <em>resource_manager.pbs-account</em> to allow users to identify the
+      account under which they would like to submit jobs. It may be necessary
+      to verify that this account is a valid one configured in an accounting
+      system. The <em>hod-install-dir/bin/verify-account</em> script 
+      provides a mechanism to plug-in a custom script that can do this
+      verification.</p>
+<a name="N1023C"></a><a name="Integrating+the+verify-account+script+with+HOD"></a>
+<h4>Integrating the verify-account script with HOD</h4>
+<p>HOD runs the <em>verify-account</em> script passing in the
+        <em>resource_manager.pbs-account</em> value as argument to the script,
+        before allocating a cluster. Sites can write a script that verify this 
+        account against their accounting systems. Returning a non-zero exit 
+        code from this script will cause HOD to fail allocation. Also, in
+        case of an error, HOD will print the output of script to the user.
+        Any descriptive error message can be passed to the user from the
+        script in this manner.</p>
+<p>The default script that comes with the HOD installation does not
+        do any validation, and returns a zero exit code.</p>
+<p>If the verify-account script is not found, then HOD will treat
+        that verification is disabled, and continue allocation as is.</p>
 </div>
+
 
 </div>
 <!--+

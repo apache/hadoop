@@ -22,6 +22,11 @@ Release 0.18.1 - Unreleased
     HADOOP-4060. Modified HOD to rotate log files on the client side.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+  IMPROVEMENTS
+
+    HADOOP-4145. Add an accounting plugin (script) for HOD.
+    (Hemanth Yamijala via nigel)
+
   BUG FIXES
 
     HADOOP-4161. Fixed bug in HOD cleanup that had the potential to

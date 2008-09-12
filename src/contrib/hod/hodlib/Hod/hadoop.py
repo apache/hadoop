@@ -451,8 +451,43 @@ class hadoopCluster:
       raise Exception("Invalid state: Node pool is not initialized to delete the given job.")
     return ret
          
+  def is_valid_account(self):
+    """Verify if the account being used to submit the job is a valid account.
+       This code looks for a file <install-dir>/bin/verify-account. 
+       If the file is present, it executes the file, passing as argument 
+       the account name. It returns the exit code and output from the 
+       script on non-zero exit code."""
+
+    accountValidationScript = os.path.abspath('./verify-account')
+    if not os.path.exists(accountValidationScript):
+      return (0, None)
+
+    account = self.__nodePool.getAccountString()
+    exitCode = 0
+    errMsg = None
+    try:
+      accountValidationCmd = simpleCommand('Account Validation Command',\
+                                             '%s %s' % (accountValidationScript,
+                                                        account))
+      accountValidationCmd.start()
+      accountValidationCmd.wait()
+      accountValidationCmd.join()
+      exitCode = accountValidationCmd.exit_code()
+      self.__log.debug('account validation script is run %d' \
+                          % exitCode)
+      errMsg = None
+      if exitCode is not 0:
+        errMsg = accountValidationCmd.output()
+    except Exception, e:
+      exitCode = 0
+      self.__log.warn('Error executing account script: %s ' \
+                         'Accounting is disabled.' \
+                          % get_exception_error_string())
+      self.__log.debug(get_exception_string())
+    return (exitCode, errMsg)
+    
   def allocate(self, clusterDir, min, max=None):
-    status = 0  
+    status = 0
     self.__svcrgyClient = self.__get_svcrgy_client()
         
     self.__log.debug("allocate %s %s %s" % (clusterDir, min, max))
