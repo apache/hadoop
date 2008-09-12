@@ -172,7 +172,13 @@ public class HiveConf extends Configuration {
     if(hconfurl == null) {
       l4j.warn("Unable to locate default hive configuration");
     } else {
-      addResource("hive-default.xml");
+      addResource(hconfurl);
+    }
+    URL hsiteurl = getClassLoader().getResource("hive-site.xml");
+    if(hsiteurl == null) {
+      l4j.warn("Unable to locate hive site configuration");
+    } else {
+      addResource(hsiteurl);
     }
 
     // if hadoop configuration files are already in our path - then define 
