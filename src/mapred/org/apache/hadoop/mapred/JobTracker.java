@@ -565,11 +565,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
+    this.startTime = System.currentTimeMillis();
     infoServer = new StatusHttpServer("job", infoBindAddress, tmpInfoPort, 
         tmpInfoPort == 0, conf);
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
-    boolean historyInitialized = JobHistory.init(conf, this.localMachine);
+    boolean historyInitialized = JobHistory.init(conf, this.localMachine,
+                                                 this.startTime);
     String historyLogDir = null;
     FileSystem historyFS = null;
     if (historyInitialized) {
@@ -579,8 +581,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       infoServer.setAttribute("fileSys", historyFS);
     }
     infoServer.start();
-
-    this.startTime = System.currentTimeMillis();
+    
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmm");
     trackerIdentifier = dateFormat.format(new Date());
 
@@ -640,7 +641,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Initialize history again if it is not initialized
     // because history was on dfs and namenode was in safemode.
     if (!historyInitialized) {
-      JobHistory.init(conf, this.localMachine); 
+      JobHistory.init(conf, this.localMachine, this.startTime); 
       historyLogDir = conf.get("hadoop.job.history.location");
       infoServer.setAttribute("historyLogDir", historyLogDir);
       historyFS = new Path(historyLogDir).getFileSystem(conf);

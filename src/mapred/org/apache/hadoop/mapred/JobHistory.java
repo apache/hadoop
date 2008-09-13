@@ -69,8 +69,6 @@ public class JobHistory {
   
   private static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
   
-  public static final String JOBTRACKER_START_TIME =
-                               String.valueOf(System.currentTimeMillis());
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
   private static String LOG_DIR = null;
@@ -114,17 +112,19 @@ public class JobHistory {
    * Initialize JobHistory files. 
    * @param conf Jobconf of the job tracker.
    * @param hostname jobtracker's hostname
+   * @param jobTrackerStartTime jobtracker's start time
    * @return true if intialized properly
    *         false otherwise
    */
-  public static boolean init(JobConf conf, String hostname){
+  public static boolean init(JobConf conf, String hostname, 
+                              long jobTrackerStartTime){
     try {
       LOG_DIR = conf.get("hadoop.job.history.location" ,
         "file:///" + new File(
         System.getProperty("hadoop.log.dir")).getAbsolutePath()
         + File.separator + "history");
       JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
-                                   JOBTRACKER_START_TIME + "_";
+                                    String.valueOf(jobTrackerStartTime) + "_";
       Path logDir = new Path(LOG_DIR);
       FileSystem fs = logDir.getFileSystem(conf);
       if (!fs.exists(logDir)){
