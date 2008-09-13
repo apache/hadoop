@@ -162,7 +162,10 @@ public class HftpFileSystem extends FileSystem {
       long atime = 0;
       try {
         modif = df.parse(attrs.getValue("modified")).getTime();
-        atime = df.parse(attrs.getValue("accesstime")).getTime();
+        String astr = attrs.getValue("accesstime");
+        if (astr != null) {
+          atime = df.parse(astr).getTime();
+        }
       } catch (ParseException e) { throw new SAXException(e); }
       FileStatus fs = "file".equals(qname)
         ? new FileStatus(
