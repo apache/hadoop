@@ -88,8 +88,8 @@ struct Version {
 }
 
 struct FieldSchema {
-  string name,
-  string type,
+  string name, // name of the field
+  string type, // type of the field. primitive types defined above, specify list<TYPE_NAME>, map<TYPE_NAME, TYPE_NAME> for lists & maps 
   string comment
 }
 
@@ -124,20 +124,20 @@ struct Order {
 }
 
 struct StorageDescriptor {
-  list<FieldSchema> cols,
-  string location,
-  string inputFormat;
-  string outputFormat;
-  bool isCompressed;
+  list<FieldSchema> cols, // required (refer to types defined above)
+  string location, // defaults to <warehouse loc>/<db loc>/tablename
+  string inputFormat; // SequenceFileInputFormat (binary) or TextInputFormat`  or custom format
+  string outputFormat; // SequenceFileOutputFormat (binary) or IgnoreKeyTextOutputFormat or custom format
+  bool isCompressed; // compressed or not
   i32 numBuckets = 32, // this must be specified if there are any dimension columns
-  SerDeInfo serdeInfo;
-  list<string> bucketCols, //reducer grouping columns and clustering columns and bucketing columns`
-  list<Order> sortCols,
-  map<string, string> parameters
+  SerDeInfo serdeInfo; // serialization and deserialization information
+  list<string> bucketCols, // reducer grouping columns and clustering columns and bucketing columns`
+  list<Order> sortCols, // sort order of the data in each bucket
+  map<string, string> parameters // any user supplied key value hash
 }
 
 struct Table {
-  string tableName,
+  string tableName, 
   string database,
   string owner,
   i32 createTime,
@@ -214,7 +214,14 @@ service ThriftHiveMetastore extends fb303.FacebookService
   list<FieldSchema> get_fields(string db_name, string table_name) throws (MetaException ouch1, UnknownTableException ouch2, UnknownDBException ouch3),
 
   // Tables
-  // create the table with the given table object in the given database
+  // create a Hive table. Following fields must be set
+  // Table.tableName
+  // Table.database (only 'default' for now until Hive QL supports databases)
+  // Table.owner (not needed, but good to have for tracking purposes)
+  // Table.sd.cols (list of field schemas)
+  // Table.sd.inputFormat ( SequenceFileInputFormat (binary like falcon tables or u_full) or TextInputFormat)
+  // Table.sd.outputFormat ( SequenceFileInputFormat (binary) or TextInputFormat)
+  // Table.sd.serdeInfo.serializationLib (SerDe class name such as org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe
   void create_table(1:Table tbl) throws(1:AlreadyExistsException ouch1, 2:InvalidObjectException ouch2, 3:MetaException ouch3, 4:NoSuchObjectException o4)
   // drops the table and all the partitions associated with it if the table has partitions
   // delete data (including partitions) if deleteData is set to true
