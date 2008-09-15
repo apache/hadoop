@@ -28,7 +28,8 @@ import java.io.DataOutput;
  * the current capacity. The hash function is the front of the md5 of the 
  * buffer. The sort order is the same as memcmp.
  */
-public class BytesWritable implements WritableComparable {
+public class BytesWritable extends BinaryComparable
+    implements WritableComparable<BinaryComparable> {
   private static final int LENGTH_BYTES = 4;
   private static final byte[] EMPTY_BYTES = {};
 
@@ -51,17 +52,35 @@ public class BytesWritable implements WritableComparable {
   
   /**
    * Get the data from the BytesWritable.
-   * @return The data is only valid between 0 and getSize() - 1.
+   * @return The data is only valid between 0 and getLength() - 1.
    */
-  public byte[] get() {
+  public byte[] getBytes() {
     return bytes;
   }
-  
+
+  /**
+   * Get the data from the BytesWritable.
+   * @deprecated Use {@link #getBytes()} instead.
+   */
+  @Deprecated
+  public byte[] get() {
+    return getBytes();
+  }
+
   /**
    * Get the current size of the buffer.
    */
-  public int getSize() {
+  public int getLength() {
     return size;
+  }
+
+  /**
+   * Get the current size of the buffer.
+   * @deprecated Use {@link #getLength()} instead.
+   */
+  @Deprecated
+  public int getSize() {
+    return getLength();
   }
   
   /**
@@ -138,31 +157,18 @@ public class BytesWritable implements WritableComparable {
   }
   
   public int hashCode() {
-    return WritableComparator.hashBytes(bytes, size);
+    return super.hashCode();
   }
-  
-  /**
-   * Define the sort order of the BytesWritable.
-   * @param right_obj The other bytes writable
-   * @return Positive if left is bigger than right, 0 if they are equal, and
-   *         negative if left is smaller than right.
-   */
-  public int compareTo(Object right_obj) {
-    BytesWritable right = ((BytesWritable) right_obj);
-    return WritableComparator.compareBytes(bytes, 0, size, 
-                                           right.bytes, 0, right.size);
-  }
-  
+
   /**
    * Are the two byte sequences equal?
    */
   public boolean equals(Object right_obj) {
-    if (right_obj instanceof BytesWritable) {
-      return compareTo(right_obj) == 0;
-    }
+    if (right_obj instanceof BytesWritable)
+      return super.equals(right_obj);
     return false;
   }
-  
+
   /**
    * Generate the stream of bytes as hex pairs separated by ' '.
    */

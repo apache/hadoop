@@ -44,7 +44,8 @@ import org.apache.commons.logging.LogFactory;
  * byte array contains valid UTF8 code, calculating the length of an encoded
  * string.
  */
-public class Text implements WritableComparable {
+public class Text extends BinaryComparable
+    implements WritableComparable<BinaryComparable> {
   private static final Log LOG= LogFactory.getLog(Text.class);
   
   private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
@@ -281,33 +282,15 @@ public class Text implements WritableComparable {
     out.write(bytes, 0, length);
   }
 
-  /** Compare two Texts bytewise using standard UTF8 ordering. */
-  public int compareTo(Object o) {
-    Text that = (Text)o;
-    if (this == that)
-      return 0;
-    else
-      return
-        WritableComparator.compareBytes(bytes, 0, length,
-                                        that.getBytes(), 0, that.getLength());
-  }
-
   /** Returns true iff <code>o</code> is a Text with the same contents.  */
   public boolean equals(Object o) {
-    if (!(o instanceof Text))
-      return false;
-    Text that = (Text)o;
-    if (this == that)
-      return true;
-    else if (this.length != that.length)
-      return false;
-    else
-      return compareTo(o) == 0;
+    if (o instanceof Text)
+      return super.equals(o);
+    return false;
   }
 
-  /** hash function */
   public int hashCode() {
-    return WritableComparator.hashBytes(bytes, length);
+    return super.hashCode();
   }
 
   /** A WritableComparator optimized for Text keys. */

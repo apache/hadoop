@@ -307,6 +307,9 @@ Trunk (unreleased changes)
     HADOOP-4147. Remove unused class JobWithTaskContext from class
     JobInProgress. (Amareshwari Sriramadasu via johan)
 
+    HADOOP-4151. Add a byte-comparable interface that both Text and 
+    BytesWritable implement. (cdouglas via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

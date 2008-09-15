@@ -43,7 +43,7 @@ class StringBytesWritable extends BytesWritable {
    * Convert BytesWritable to a String.
    */
   String getString() throws IOException {
-    return new String(get(),"UTF8");
+    return new String(getBytes(),"UTF8");
   }
 
   /** {@inheritDoc} */
@@ -59,7 +59,7 @@ class StringBytesWritable extends BytesWritable {
    * Compare to a String.
    */
   boolean equals(String str) throws IOException {
-    return WritableComparator.compareBytes(get(), 0, getSize(), 
+    return WritableComparator.compareBytes(getBytes(), 0, getLength(), 
                                    str.getBytes("UTF8"), 0, str.length()) == 0;
   }
 }

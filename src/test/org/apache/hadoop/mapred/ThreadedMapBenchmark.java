@@ -154,13 +154,13 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
                          ? random.nextInt(keySizeRange) 
                          : 0);
       randomKey.setSize(keyLength);
-      randomizeBytes(randomKey.get(), 0, randomKey.getSize());
+      randomizeBytes(randomKey.getBytes(), 0, randomKey.getLength());
       int valueLength = minValueSize 
                         + (valueSizeRange != 0 
                            ? random.nextInt(valueSizeRange) 
                            : 0);
       randomValue.setSize(valueLength);
-      randomizeBytes(randomValue.get(), 0, randomValue.getSize());
+      randomizeBytes(randomValue.getBytes(), 0, randomValue.getLength());
       output.collect(randomKey, randomValue);
       numBytesToWrite -= keyLength + valueLength;
       reporter.incrCounter(Counters.BYTES_WRITTEN, 1);

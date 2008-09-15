@@ -292,7 +292,7 @@ class MapTask extends Task {
       throw wrap;
     }
     DataInputBuffer splitBuffer = new DataInputBuffer();
-    splitBuffer.reset(split.get(), 0, split.getSize());
+    splitBuffer.reset(split.getBytes(), 0, split.getLength());
     instantiatedSplit.readFields(splitBuffer);
     
     // if it is a file split, we can give more details

@@ -593,8 +593,8 @@ public abstract class PipeMapRed {
     int valSize;
     if (value instanceof BytesWritable) {
       BytesWritable val = (BytesWritable) value;
-      bval = val.get();
-      valSize = val.getSize();
+      bval = val.getBytes();
+      valSize = val.getLength();
     } else if (value instanceof Text) {
       Text val = (Text) value;
       bval = val.getBytes();

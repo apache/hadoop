@@ -333,9 +333,9 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       stream.write(t.getBytes(), 0, len);
     } else if (obj instanceof BytesWritable) {
       BytesWritable b = (BytesWritable) obj;
-      int len = b.getSize();
+      int len = b.getLength();
       WritableUtils.writeVInt(stream, len);
-      stream.write(b.get(), 0, len);
+      stream.write(b.getBytes(), 0, len);
     } else {
       buffer.reset();
       obj.write(buffer);

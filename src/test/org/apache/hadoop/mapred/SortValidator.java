@@ -72,9 +72,9 @@ public class SortValidator extends Configured implements Tool {
   }
   
   static private byte[] pair(BytesWritable a, BytesWritable b) {
-    byte[] pairData = new byte[a.getSize()+ b.getSize()];
-    System.arraycopy(a.get(), 0, pairData, 0, a.getSize());
-    System.arraycopy(b.get(), 0, pairData, a.getSize(), b.getSize());
+    byte[] pairData = new byte[a.getLength()+ b.getLength()];
+    System.arraycopy(a.getBytes(), 0, pairData, 0, a.getLength());
+    System.arraycopy(b.getBytes(), 0, pairData, a.getLength(), b.getLength());
     return pairData;
   }
 
@@ -125,10 +125,10 @@ public class SortValidator extends Configured implements Tool {
      */
     static class RawBytesWritable extends Raw  {
       public byte[] getRawBytes(Writable bw) {
-        return ((BytesWritable)bw).get();
+        return ((BytesWritable)bw).getBytes();
       }
       public int getRawBytesLength(Writable bw) {
-        return ((BytesWritable)bw).getSize(); 
+        return ((BytesWritable)bw).getLength(); 
       }
     }
     

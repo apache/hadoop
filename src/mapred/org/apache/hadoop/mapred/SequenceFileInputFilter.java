@@ -264,7 +264,7 @@ public class SequenceFileInputFilter<K, V>
     }
         
     private long MD5Hashcode(BytesWritable key) throws DigestException {
-      return MD5Hashcode(key.get(), 0, key.getSize());
+      return MD5Hashcode(key.getBytes(), 0, key.getLength());
     }
     synchronized private long MD5Hashcode(byte[] bytes, 
                                           int start, int length) throws DigestException {

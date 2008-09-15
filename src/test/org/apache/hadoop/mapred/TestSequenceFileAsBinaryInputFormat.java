@@ -77,9 +77,9 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
         while (reader.next(bkey, bval)) {
           tkey.set(Integer.toString(r.nextInt(), 36));
           tval.set(Long.toString(r.nextLong(), 36));
-          buf.reset(bkey.get(), bkey.getSize());
+          buf.reset(bkey.getBytes(), bkey.getLength());
           cmpkey.readFields(buf);
-          buf.reset(bval.get(), bval.getSize());
+          buf.reset(bval.getBytes(), bval.getLength());
           cmpval.readFields(buf);
           assertTrue(
               "Keys don't match: " + "*" + cmpkey.toString() + ":" +

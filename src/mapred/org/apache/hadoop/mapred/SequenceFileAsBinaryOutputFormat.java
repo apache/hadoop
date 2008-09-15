@@ -61,7 +61,7 @@ public class SequenceFileAsBinaryOutputFormat
 
     public void writeUncompressedBytes(DataOutputStream outStream)
       throws IOException {
-      outStream.write(value.get(), 0, value.getSize());
+      outStream.write(value.getBytes(), 0, value.getLength());
     }
 
     public void writeCompressedBytes(DataOutputStream outStream)
@@ -71,7 +71,7 @@ public class SequenceFileAsBinaryOutputFormat
                                           + "RECORD compression"); 
     }
     public int getSize(){
-      return value.getSize();
+      return value.getLength();
     }
   }
 
@@ -160,7 +160,7 @@ public class SequenceFileAsBinaryOutputFormat
           throws IOException {
 
           wvaluebytes.reset(bvalue);
-          out.appendRaw(bkey.get(), 0, bkey.getSize(), wvaluebytes);
+          out.appendRaw(bkey.getBytes(), 0, bkey.getLength(), wvaluebytes);
           wvaluebytes.reset(null);
         }
 
