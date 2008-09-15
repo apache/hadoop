@@ -546,9 +546,6 @@ Trunk (unreleased changes)
     HADOOP-4099. Fix null pointer when using HFTP from an 0.18 server.
     (dhruba via omalley)
 
-    HADOOP-4092. Include hive sources to Eclipse configuration.
-    (Prasad Chakka via dhruba)
-
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
