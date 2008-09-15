@@ -11,19 +11,6 @@
 	<classpathentry kind="src" path="src/contrib/data_join/src/examples"/>
 	<classpathentry kind="src" path="src/contrib/streaming/src/java"/>
 	<classpathentry kind="src" path="src/contrib/streaming/src/test"/>
-	<classpathentry kind="src" path="build/contrib/hive/ql/gen-java"/>
-	<classpathentry kind="src" path="build/contrib/hive/ql/test/src"/>
-	<classpathentry kind="src" path="src/contrib/hive/metastore/src/model"/>
-	<classpathentry kind="src" path="src/contrib/hive/metastore/src/gen-javabean"/>
-	<classpathentry kind="src" path="src/contrib/hive/cli/src/java"/>
-	<classpathentry kind="src" path="src/contrib/hive/serde/src/gen-java"/>
-	<classpathentry kind="src" path="src/contrib/hive/serde/src/java"/>
-	<classpathentry kind="src" path="src/contrib/hive/metastore/src/test"/>
-	<classpathentry kind="src" path="src/contrib/hive/ql/src/java"/>
-	<classpathentry kind="src" path="src/contrib/hive/metastore/src/java"/>
-	<classpathentry excluding="test/|test/|java/|gen-java/" kind="src" path="src/contrib/hive/serde/src"/>
-	<classpathentry kind="src" path="src/contrib/hive/ql/src/test"/>
-	<classpathentry kind="src" path="src/contrib/hive/common/src/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="ANT_HOME/lib/ant.jar"/>
 	<classpathentry kind="lib" path="lib/commons-cli-2.0-SNAPSHOT.jar"/>
@@ -46,19 +33,6 @@
 	<classpathentry kind="lib" path="lib/slf4j-api-1.4.3.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.4.3.jar"/>
 	<classpathentry kind="lib" path="lib/xmlenc-0.52.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/libfb303.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/libthrift.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/ql/lib/antlr-3.0.1.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/ql/lib/antlr-runtime-3.0.1.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/ql/lib/commons-jexl-1.1.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/asm-3.1.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/derby.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/jdo2-api-2.1.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/jpox-core-1.2.2.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/jpox-enhancer-1.2.2.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/jpox-rdbms-1.2.2.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/cli/lib/jline-0.9.94.jar"/>
-	<classpathentry kind="lib" path="src/contrib/hive/lib/commons-lang-2.4.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftplet-api-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-core-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-server-1.0.0-SNAPSHOT.jar"/>
