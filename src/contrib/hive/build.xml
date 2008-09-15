@@ -130,8 +130,6 @@
     <mkdir dir="${target.example.dir}"/>
     <mkdir dir="${target.example.dir}/files"/>
     <mkdir dir="${target.example.dir}/queries"/>
-    <mkdir dir="${target.lib.dir}/py"/>
-    <mkdir dir="${target.lib.dir}/php"/>
     <exec executable="cp" failonerror="true">
       <arg line="-p '${hive.root}/bin/hive' '${target.bin.dir}'"/>
     </exec>
@@ -139,12 +137,6 @@
     <copy file="${basedir}/conf/hive-default.xml" todir="${target.conf.dir}"/>
     <copy file="${basedir}/conf/hive-log4j.properties" todir="${target.conf.dir}"/>
     <copy file="${basedir}/conf/jpox.properties" todir="${target.conf.dir}"/>
-    <copy todir="${target.lib.dir}/php">
-      <fileset dir="${hive.root}/metastore/src/gen-php"/>
-    </copy>
-    <copy todir="${target.lib.dir}/py">
-      <fileset dir="${hive.root}/metastore/src/gen-py"/>
-    </copy>
     <copy todir="${target.lib.dir}" preservelastmodified="true" flatten="true">
       <fileset dir="${hive.root}" includes="*/*.jar, */*/*.jar" excludes="**/antlr-2*,**/antlr-3*"/>
       <fileset file="${build.dir.hive}/cli/hive_cli.jar"/>
