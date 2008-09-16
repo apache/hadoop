@@ -68,14 +68,30 @@ public class TestCommandLineJobSubmission extends TestCase {
       args[3] = "build/test/testjar/testjob.jar";
       args[4] = input.toString();
       args[5] = output.toString();
-      int ret = ToolRunner.run(mr.createJobConf(),
+      
+      JobConf jobConf = mr.createJobConf();
+      //before running the job, verify that libjar is not in client classpath
+      assertTrue("libjar not in client classpath", loadLibJar(jobConf)==null);
+      int ret = ToolRunner.run(jobConf,
                                new testshell.ExternalMapReduce(), args);
+      //after running the job, verify that libjar is in the client classpath
+      assertTrue("libjar added to client classpath", loadLibJar(jobConf)!=null);
+      
       assertTrue("not failed ", ret != -1);
       f.delete();
       thisbuildDir.delete();
     } finally {
       if (dfs != null) {dfs.shutdown();};
       if (mr != null) {mr.shutdown();};
+    }
+  }
+  
+  @SuppressWarnings("unchecked")
+  private Class loadLibJar(JobConf jobConf) {
+    try {
+      return jobConf.getClassByName("testjar.ClassWordCount");
+    } catch (ClassNotFoundException e) {
+      return null;
     }
   }
 }

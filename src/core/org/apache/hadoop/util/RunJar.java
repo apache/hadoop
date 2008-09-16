@@ -27,6 +27,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.mapred.JobClient;
 
 /** Run a Hadoop job jar. */
 public class RunJar {
@@ -139,6 +140,15 @@ public class RunJar {
     if (libs != null) {
       for (int i = 0; i < libs.length; i++) {
         classPath.add(libs[i].toURL());
+      }
+    }
+    
+    //adding libjars to the classpath
+    Configuration conf = JobClient.getCommandLineConfig();
+    URL[] libJars = GenericOptionsParser.getLibJars(conf);
+    if(libJars!=null) {
+      for(URL url : libJars){
+        classPath.add(url);
       }
     }
     ClassLoader loader =

@@ -104,6 +104,16 @@ public class ExternalMapReduce extends Configured implements Tool {
     Path outDir = new Path(argv[1]);
     Path input = new Path(argv[0]);
     JobConf testConf = new JobConf(getConf(), ExternalMapReduce.class);
+    
+    //try to load a class from libjar
+    try {
+      testConf.getClassByName("testjar.ClassWordCount");
+    } catch (ClassNotFoundException e) {
+      System.out.println("Could not find class from libjar");
+      return -1;
+    }
+    
+    
     testConf.setJobName("external job");
     FileInputFormat.setInputPaths(testConf, input);
     FileOutputFormat.setOutputPath(testConf, outDir);

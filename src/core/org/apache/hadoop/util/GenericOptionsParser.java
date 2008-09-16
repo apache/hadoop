@@ -21,6 +21,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -228,6 +230,11 @@ public class GenericOptionsParser {
       if (line.hasOption("libjars")) {
         conf.set("tmpjars", 
                  validateFiles(line.getOptionValue("libjars"), conf));
+        //setting libjars in client classpath
+        ClassLoader loader = new URLClassLoader(getLibJars(conf), 
+            conf.getClassLoader());
+        Thread.currentThread().setContextClassLoader(loader);
+        conf.setClassLoader(loader);
       }
       if (line.hasOption("files")) {
         conf.set("tmpfiles", 
@@ -248,6 +255,26 @@ public class GenericOptionsParser {
       }
     }
     conf.setBoolean("mapred.used.genericoptionsparser", true);
+  }
+  
+  /**
+   * If libjars are set in the conf, parse the libjars.
+   * @param conf
+   * @return libjar urls
+   * @throws IOException
+   */
+  public static URL[] getLibJars(Configuration conf) throws IOException {
+    String jars = conf.get("tmpjars");
+    if(jars==null) {
+      return null;
+    }
+    String[] files = jars.split(",");
+    URL[] cp = new URL[files.length];
+    for (int i=0;i<cp.length;i++) {
+      Path tmp = new Path(files[i]);
+      cp[i] = FileSystem.getLocal(conf).pathToFile(tmp).toURI().toURL();
+    }
+    return cp;
   }
 
   /**
