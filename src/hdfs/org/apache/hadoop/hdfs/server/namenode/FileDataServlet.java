@@ -20,16 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -40,7 +35,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
  */
 public class FileDataServlet extends DfsServlet {
 
-  private URI createUri(DFSFileInfo i, UnixUserGroupInformation ugi,
+  private URI createUri(FileStatus i, UnixUserGroupInformation ugi,
       ClientProtocol nnproxy, String scheme)
       throws IOException, URISyntaxException {
     final DatanodeID host = pickSrcDatanode(i, nnproxy);
@@ -63,7 +58,7 @@ public class FileDataServlet extends DfsServlet {
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  private static DatanodeID pickSrcDatanode(DFSFileInfo i,
+  private static DatanodeID pickSrcDatanode(FileStatus i,
       ClientProtocol nnproxy) throws IOException {
     final LocatedBlocks blks = nnproxy.getBlockLocations(
         i.getPath().toUri().getPath(), 0, 1);
@@ -89,7 +84,7 @@ public class FileDataServlet extends DfsServlet {
     try {
       final String path = request.getPathInfo() != null
         ? request.getPathInfo() : "/";
-      DFSFileInfo info = nnproxy.getFileInfo(path);
+      FileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
         response.sendRedirect(createUri(info, ugi, nnproxy,
               request.getScheme()).toURL().toString());

@@ -41,8 +41,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -652,7 +652,7 @@ public class FSEditLog {
           String s = FSImage.readString(in);
           String d = FSImage.readString(in);
           timestamp = readLong(in);
-          DFSFileInfo dinfo = fsDir.getFileInfo(d);
+          FileStatus dinfo = fsDir.getFileInfo(d);
           fsDir.unprotectedRenameTo(s, d, timestamp);
           fsNamesys.changeLease(s, d, dinfo);
           break;

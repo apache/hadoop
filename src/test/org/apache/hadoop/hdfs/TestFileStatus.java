@@ -22,13 +22,10 @@ import java.io.*;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 
 /**
  * This class tests the FileStatus API.
@@ -83,7 +80,7 @@ public class TestFileStatus extends TestCase {
                  fs.getFileStatus(path).isDir() == true);
       
       // make sure getFileInfo returns null for files which do not exist
-      DFSFileInfo fileInfo = dfsClient.getFileInfo("/noSuchFile");
+      FileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
       assertTrue(fileInfo == null);
 
       // create a file in home directory

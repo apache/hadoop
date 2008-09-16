@@ -76,7 +76,7 @@
         return;
       }
       // directory
-      DFSFileInfo[] files = dfs.listPaths(target);
+      FileStatus[] files = dfs.listPaths(target);
       //generate a table and dump the info
       String [] headings = { "Name", "Type", "Size", "Replication", 
                               "Block Size", "Modification Time",
@@ -120,7 +120,7 @@
           String datanodeUrl = req.getRequestURL()+"?dir="+
               URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
               "&namenodeInfoPort=" + namenodeInfoPort;
-          cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
+          cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getPath().getName()+"</a>";
           cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           cols[6] = files[i].getPermission().toString();
           cols[7] = files[i].getOwner();

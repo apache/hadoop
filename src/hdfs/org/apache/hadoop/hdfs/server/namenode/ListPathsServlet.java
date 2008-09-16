@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
@@ -58,7 +58,7 @@ public class ListPathsServlet extends DfsServlet {
    * Node information includes path, modification, permission, owner and group.
    * For files, it also includes size, replication and block-size. 
    */
-  static void writeInfo(DFSFileInfo i, XMLOutputter doc) throws IOException {
+  static void writeInfo(FileStatus i, XMLOutputter doc) throws IOException {
     doc.startTag(i.isDir() ? "directory" : "file");
     doc.attribute("path", i.getPath().toUri().getPath());
     doc.attribute("modified", df.format(new Date(i.getModificationTime())));
@@ -140,7 +140,7 @@ public class ListPathsServlet extends DfsServlet {
         doc.attribute(m.getKey(), m.getValue());
       }
 
-      DFSFileInfo base = nnproxy.getFileInfo(path);
+      FileStatus base = nnproxy.getFileInfo(path);
       if ((base != null) && base.isDir()) {
         writeInfo(base, doc);
       }
@@ -150,9 +150,9 @@ public class ListPathsServlet extends DfsServlet {
       while (!pathstack.empty()) {
         String p = pathstack.pop();
         try {
-          for (DFSFileInfo i : nnproxy.getListing(p)) {
-            if (exclude.matcher(i.getName()).matches()
-                || !filter.matcher(i.getName()).matches()) {
+          for (FileStatus i : nnproxy.getListing(p)) {
+            if (exclude.matcher(i.getPath().getName()).matches()
+                || !filter.matcher(i.getPath().getName()).matches()) {
               continue;
             }
             if (recur && i.isDir()) {

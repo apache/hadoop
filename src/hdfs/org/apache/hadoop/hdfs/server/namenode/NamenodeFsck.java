@@ -35,12 +35,12 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
 /**
@@ -124,7 +124,7 @@ public class NamenodeFsck {
    */
   public void fsck() throws IOException {
     try {
-      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
+      FileStatus[] files = nn.namesystem.dir.getListing(path);
       FsckResult res = new FsckResult();
       res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
       res.totalDatanodes = nn.namesystem.getNumberOfDatanodes(
@@ -151,13 +151,13 @@ public class NamenodeFsck {
     }
   }
   
-  private void check(DFSFileInfo file, FsckResult res) throws IOException {
+  private void check(FileStatus file, FsckResult res) throws IOException {
     int minReplication = nn.namesystem.getMinReplication();
     String path = file.getPath().toString();
     boolean isOpen = false;
 
     if (file.isDir()) {
-      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
+      FileStatus[] files = nn.namesystem.dir.getListing(path);
       if (files == null) {
         return;
       }
@@ -301,7 +301,7 @@ public class NamenodeFsck {
     }
   }
   
-  private void lostFoundMove(DFSFileInfo file, LocatedBlocks blocks)
+  private void lostFoundMove(FileStatus file, LocatedBlocks blocks)
     throws IOException {
     DFSClient dfs = new DFSClient(conf);
     if (!lfInited) {

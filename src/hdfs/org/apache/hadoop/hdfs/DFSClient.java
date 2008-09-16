@@ -470,7 +470,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   OutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
     checkOpen();
-    DFSFileInfo stat = null;
+    FileStatus stat = null;
     LocatedBlock lastBlock = null;
     try {
       stat = getFileInfo(src);
@@ -561,7 +561,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    */
-  public DFSFileInfo[] listPaths(String src) throws IOException {
+  public FileStatus[] listPaths(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getListing(src);
@@ -570,7 +570,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
-  public DFSFileInfo getFileInfo(String src) throws IOException {
+  public FileStatus getFileInfo(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getFileInfo(src);
@@ -2546,7 +2546,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
      */
     DFSOutputStream(String src, int buffersize, Progressable progress,
-        LocatedBlock lastBlock, DFSFileInfo stat,
+        LocatedBlock lastBlock, FileStatus stat,
         int bytesPerChecksum) throws IOException {
       this(src, stat.getBlockSize(), progress, bytesPerChecksum);
 

@@ -24,7 +24,6 @@ import java.net.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DFSFileInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -234,7 +233,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public FileStatus[] listStatus(Path p) throws IOException {
-    DFSFileInfo[] infos = dfs.listPaths(getPathName(p));
+    FileStatus[] infos = dfs.listPaths(getPathName(p));
     if (infos == null) return null;
     FileStatus[] stats = new FileStatus[infos.length];
     for (int i = 0; i < infos.length; i++) {
@@ -398,7 +397,7 @@ public class DistributedFileSystem extends FileSystem {
    * @throws FileNotFoundException if the file does not exist.
    */
   public FileStatus getFileStatus(Path f) throws IOException {
-    DFSFileInfo fi = dfs.getFileInfo(getPathName(f));
+    FileStatus fi = dfs.getFileInfo(getPathName(f));
     if (fi != null) {
       return makeQualified(fi);
     } else {

@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     JobTracker start time to disinguish attempts of the same TIP across 
     restarts. (Amar Ramesh Kamat via ddas)
 
+    HADOOP-4007. REMOVE DFSFileInfo - FileStatus is sufficient. 
+    (Sanjay Radia via hairong)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -38,10 +39,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 38 : getEditLogSize(), rollEditLog(), rollFSImage() 
-   * moved to NamenodeProtocol.
+   * 39: removed DFSFileInfo (Use FileStatus instead)
    */
-  public static final long versionID = 38L;
+  public static final long versionID = 39L;
   
   ///////////////////////////////////////
   // File contents
@@ -253,7 +253,7 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Get a listing of the indicated directory
    */
-  public DFSFileInfo[] getListing(String src) throws IOException;
+  public FileStatus[] getListing(String src) throws IOException;
 
   ///////////////////////////////////////
   // System issues and management
@@ -398,7 +398,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public DFSFileInfo getFileInfo(String src) throws IOException;
+  public FileStatus getFileInfo(String src) throws IOException;
 
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
