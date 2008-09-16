@@ -196,7 +196,7 @@ class TaskMemoryManagerThread extends Thread {
         long currentMemUsage = pTree.getCumulativeVmem();
         long limit = ptInfo.getMemLimit();
         LOG.info("Memory usage of ProcessTree " + pId + " :" + currentMemUsage
-            + ". Limit : " + limit);
+            + "kB. Limit : " + limit + "kB");
 
         if (limit != JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT
             && currentMemUsage > limit) {
@@ -204,7 +204,7 @@ class TaskMemoryManagerThread extends Thread {
           // Clean up.
           String msg = "TaskTree [pid=" + pId + ",tipID=" + tid
               + "] is running beyond memory-limits. Current usage : "
-              + currentMemUsage + ". Limit : " + limit + ". Killing task.";
+              + currentMemUsage + "kB. Limit : " + limit + "kB. Killing task.";
           LOG.warn(msg);
           taskTracker.cleanUpOverMemoryTask(tid, msg);
 

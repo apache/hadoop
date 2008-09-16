@@ -1424,22 +1424,22 @@ creations/deletions), or "all".</description>
 <property>
   <name>mapred.tasktracker.tasks.maxmemory</name>
   <value>-1</value>
-  <description> The maximum amount of virtual memory all tasks running on a
-    tasktracker, including sub-processes they launch, can use. This value is
-    used to compute the amount of free memory available for tasks. Any task
-    scheduled on this tasktracker is guaranteed and constrained to use a 
-    share of this amount. Any task exceeding its share will be killed. 
-    If set to -1, this functionality is disabled, and mapred.task.maxmemory
-    is ignored.
+  <description> The maximum amount of virtual memory in kilobytes all tasks 
+  	running on a tasktracker, including sub-processes they launch, can use. 
+  	This value is used to compute the amount of free memory available for 
+  	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
+  	 to use a share of this amount. Any task exceeding its share will be 
+  	killed. If set to -1, this functionality is disabled, and 
+  	mapred.task.maxmemory is ignored.
   </description>
 </property>
 
 <property>
   <name>mapred.task.maxmemory</name>
   <value>-1</value>
-  <description> The maximum amount of memory any task of a job will use.
-    A task of this job will be scheduled on a tasktracker, only if the 
-    amount of free memory on the tasktracker is greater than or 
+  <description> The maximum amount of memory in kilobytes any task of a job 
+    will use. A task of this job will be scheduled on a tasktracker, only if 
+    the amount of free memory on the tasktracker is greater than or 
     equal to this value. If set to -1, tasks are assured a memory limit on
     the tasktracker equal to 
     mapred.tasktracker.tasks.maxmemory/number of slots. If the value of 

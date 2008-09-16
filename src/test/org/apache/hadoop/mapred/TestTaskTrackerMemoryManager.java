@@ -98,7 +98,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     Pattern diagMsgPattern = Pattern
         .compile("TaskTree \\[pid=[0-9]*,tipID=.*\\] is running beyond "
-            + "memory-limits. Current usage : [0-9]*. Limit : [0-9]*. Killing task.");
+            + "memory-limits. Current usage : [0-9]*kB. Limit : [0-9]*kB. Killing task.");
     Matcher mat = null;
 
     // Start cluster with proper configuration.
@@ -172,8 +172,8 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     long PER_TASK_LIMIT = 444; // Enough to kill off WordCount.
     Pattern diagMsgPattern = Pattern
         .compile("TaskTree \\[pid=[0-9]*,tipID=.*\\] is running beyond "
-            + "memory-limits. Current usage : [0-9]*. Limit : "
-            + PER_TASK_LIMIT + ". Killing task.");
+            + "memory-limits. Current usage : [0-9]*kB. Limit : "
+            + PER_TASK_LIMIT + "kB. Killing task.");
     Matcher mat = null;
 
     // Start cluster with proper configuration.

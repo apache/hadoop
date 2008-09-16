@@ -189,7 +189,7 @@ public class ProcfsBasedProcessTree {
    * Get the cumulative virtual memory used by all the processes in the
    * process-tree.
    * 
-   * @return cumulative virtual memory used by the process-tree in bytes.
+   * @return cumulative virtual memory used by the process-tree in kilobytes.
    */
   public long getCumulativeVmem() {
     long total = 0;
@@ -198,7 +198,7 @@ public class ProcfsBasedProcessTree {
         total += p.getVmem();
       }
     }
-    return total;
+    return total/1024;
   }
 
   /**

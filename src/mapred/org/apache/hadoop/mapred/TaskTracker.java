@@ -1192,7 +1192,7 @@ public class TaskTracker
   /**
    * Return the maximum amount of memory available for all tasks on 
    * this tracker
-   * @return maximum amount of virtual memory
+   * @return maximum amount of virtual memory in kilobytes
    */
   long getMaxVirtualMemoryForTasks() {
     return maxVirtualMemoryForTasks;
@@ -1208,7 +1208,7 @@ public class TaskTracker
    * and the total amount of maximum virtual memory that can be
    * used by all currently running tasks.
    * 
-   * @return amount of free virtual memory that can be assured for
+   * @return amount of free virtual memory in kilobytes that can be assured for
    * new tasks
    */
   private synchronized long findFreeVirtualMemory() {

@@ -67,7 +67,7 @@ class TaskTrackerStatus implements Writable {
     /**
      * Set the amount of free virtual memory that is available for running
      * a new task
-     * @param freeVMem amount of free virtual memory
+     * @param freeVMem amount of free virtual memory in kilobytes
      */
     void setFreeVirtualMemory(long freeVmem) {
       freeVirtualMemory = freeVmem;
@@ -80,7 +80,7 @@ class TaskTrackerStatus implements Writable {
      * If this is {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should 
      * be ignored and not used in computation.
      * 
-     *@return amount of free virtual memory.
+     *@return amount of free virtual memory in kilobytes.
      */
     long getFreeVirtualMemory() {
       return freeVirtualMemory;
@@ -88,7 +88,7 @@ class TaskTrackerStatus implements Writable {
 
     /**
      * Set the default amount of virtual memory per task.
-     * @param vmem amount of free virtual memory.
+     * @param vmem amount of free virtual memory in kilobytes.
      */
     void setDefaultVirtualMemoryPerTask(long defaultVmem) {
       defaultVirtualMemoryPerTask = defaultVmem;
@@ -102,7 +102,7 @@ class TaskTrackerStatus implements Writable {
      * {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should be ignored 
      * and not used in any computation.
      * 
-     * @return default amount of virtual memory per task. 
+     * @return default amount of virtual memory per task in kilobytes. 
      */    
     long getDefaultVirtualMemoryPerTask() {
       return defaultVirtualMemoryPerTask;

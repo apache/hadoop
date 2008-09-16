@@ -1331,7 +1331,7 @@ public class JobConf extends Configuration {
    * If set to {@link #DISABLED_VIRTUAL_MEMORY_LIMIT}, this functionality 
    * is disabled.
    * 
-   * @return maximum amount of virtual memory to divide among
+   * @return maximum amount of virtual memory in kilobytes to divide among
    * @see #getMaxVirtualMemoryForTask()
    */
   public long getMaxVirtualMemoryForTasks() {
@@ -1343,7 +1343,7 @@ public class JobConf extends Configuration {
    * Set the maximum amount of virtual memory all tasks running on a
    * tasktracker, including sub-processes they launch, can use.
    * 
-   * @param vmem maximum amount of virtual memory that can be used.
+   * @param vmem maximum amount of virtual memory in kilobytes that can be used.
    * @see #getMaxVirtualMemoryForTasks()
    */
   public void setMaxVirtualMemoryForTasks(long vmem) {
@@ -1363,7 +1363,7 @@ public class JobConf extends Configuration {
    * mapred.tasktracker.tasks.maxmemory is set to -1, this value is 
    * ignored.
    * 
-   * @return The maximum amount of memory any task of this job will use.
+   * @return The maximum amount of memory any task of this job will use, in kilobytes.
    * @see #getMaxVirtualMemoryForTasks()
    */
   public long getMaxVirtualMemoryForTask() {
@@ -1373,7 +1373,8 @@ public class JobConf extends Configuration {
   /**
    * Set the maximum amount of memory any task of this job can use.
    * 
-   * @param vmem Maximum amount of memory any task of this job can use.
+   * @param vmem Maximum amount of memory in kilobytes any task of this job 
+   * can use.
    * @see #getMaxVirtualMemoryForTask()
    */
   public void setMaxVirtualMemoryForTask(long vmem) {

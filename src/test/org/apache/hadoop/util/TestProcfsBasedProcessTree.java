@@ -39,7 +39,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
   private String shellScript;
   private static final int N = 10; // Controls the RogueTask
 
-  private static final int memoryLimit = 15000000; // bytes
+  private static final int memoryLimit = 15000; // kilobytes
   private static final long PROCESSTREE_RECONSTRUCTION_INTERVAL =
     ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL; // msec
 
@@ -125,7 +125,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
       while (true) {
         LOG.info("ProcessTree: " + p.toString());
         long mem = p.getCumulativeVmem();
-        LOG.info("Memory usage: " + mem + "bytes.");
+        LOG.info("Memory usage: " + mem + "kB.");
         if (mem > memoryLimit) {
           p.destroy();
           break;

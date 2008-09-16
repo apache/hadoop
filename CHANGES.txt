@@ -562,6 +562,9 @@ Trunk (unreleased changes)
     HADOOP-3570. Includes user specified libjar files in the client side 
     classpath path. (Sharad Agarwal via ddas)
 
+    HADOOP-4129. Changed memory limits of TaskTracker and Tasks to be in
+    KiloBytes rather than bytes. (Vinod Kumar Vavilapalli via acmurthy)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
