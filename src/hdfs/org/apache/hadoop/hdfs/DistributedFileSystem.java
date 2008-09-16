@@ -406,6 +406,11 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
+  /** {@inheritDoc} */
+  public MD5MD5CRC32FileChecksum getFileChecksum(Path f) throws IOException {
+    return dfs.getFileChecksum(getPathName(f));
+  }
+
   /** {@inheritDoc }*/
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {

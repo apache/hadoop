@@ -33,8 +33,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
 
@@ -113,6 +115,10 @@ class DataXceiver implements Runnable, FSConstants {
       case OP_COPY_BLOCK: // for balancing purpose; send to a proxy source
         copyBlock(in);
         datanode.myMetrics.copyBlockOp.inc(DataNode.now() - startTime);
+        break;
+      case OP_BLOCK_CHECKSUM: //get the checksum of a block
+        getBlockChecksum(in);
+        datanode.myMetrics.blockChecksumOp.inc(DataNode.now() - startTime);
         break;
       default:
         throw new IOException("Unknown opcode " + op + " in data stream");
@@ -413,6 +419,49 @@ class DataXceiver implements Runnable, FSConstants {
     }
   }
   
+  /**
+   * Get block checksum (MD5 of CRC32).
+   * @param in
+   */
+  void getBlockChecksum(DataInputStream in) throws IOException {
+    final Block block = new Block(in.readLong(), 0 , in.readLong());
+
+    DataOutputStream out = null;
+    final MetaDataInputStream metadataIn = datanode.data.getMetaDataInputStream(block);
+    final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
+        metadataIn, BUFFER_SIZE));
+
+    try {
+      //read metadata file
+      final BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
+      final DataChecksum checksum = header.getChecksum(); 
+      final int bytesPerCRC = checksum.getBytesPerChecksum();
+      final long crcPerBlock = (metadataIn.getLength()
+          - BlockMetadataHeader.getHeaderSize())/checksum.getChecksumSize();
+      
+      //compute block checksum
+      final MD5Hash md5 = MD5Hash.digest(checksumIn);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("block=" + block + ", bytesPerCRC=" + bytesPerCRC
+            + ", crcPerBlock=" + crcPerBlock + ", md5=" + md5);
+      }
+
+      //write reply
+      out = new DataOutputStream(
+          NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+      out.writeShort(OP_STATUS_SUCCESS);
+      out.writeInt(bytesPerCRC);
+      out.writeLong(crcPerBlock);
+      md5.write(out);
+      out.flush();
+    } finally {
+      IOUtils.closeStream(out);
+      IOUtils.closeStream(checksumIn);
+      IOUtils.closeStream(metadataIn);
+    }
+  }
+
   /**
    * Read a block from the disk and then sends it to a destination.
    * 

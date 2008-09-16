@@ -76,6 +76,8 @@ public class DataNodeMetrics implements Updater {
                 new MetricsTimeVaryingRate("writeBlockOp");
   public MetricsTimeVaryingRate readMetadataOp = 
                 new MetricsTimeVaryingRate("readMetadataOp");
+  public MetricsTimeVaryingRate blockChecksumOp = 
+                new MetricsTimeVaryingRate("blockChecksumOp");
   public MetricsTimeVaryingRate copyBlockOp = 
                 new MetricsTimeVaryingRate("copyBlockOp");
   public MetricsTimeVaryingRate replaceBlockOp = 
@@ -130,6 +132,7 @@ public class DataNodeMetrics implements Updater {
       readBlockOp.pushMetric(metricsRecord);
       writeBlockOp.pushMetric(metricsRecord);
       readMetadataOp.pushMetric(metricsRecord);
+      blockChecksumOp.pushMetric(metricsRecord);
       copyBlockOp.pushMetric(metricsRecord);
       replaceBlockOp.pushMetric(metricsRecord);
       heartbeats.pushMetric(metricsRecord);
@@ -141,6 +144,7 @@ public class DataNodeMetrics implements Updater {
     readBlockOp.resetMinMax();
     writeBlockOp.resetMinMax();
     readMetadataOp.resetMinMax();
+    blockChecksumOp.resetMinMax();
     copyBlockOp.resetMinMax();
     replaceBlockOp.resetMinMax();
     heartbeats.resetMinMax();

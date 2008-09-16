@@ -185,6 +185,29 @@ public interface DataNodeStatisticsMBean {
    */
   long getReadMetadataOpMaxTime();
   
+  /**
+   * Number of block BlockChecksum in last interval
+   * @return number of operations
+   */
+  int getBlockChecksumOpNum(); 
+
+  /**
+   * Average time for BlockChecksum Operation in last interval
+   * @return time in msec
+   */
+  long getBlockChecksumOpAverageTime();
+  
+  /**
+   *   The Minimum BlockChecksum Operation Time since reset was called
+   * @return time in msec
+   */
+  long getBlockChecksumOpMinTime();
+  
+  /**
+   *   The Maximum BlockChecksum Operation Time since reset was called
+   * @return time in msec
+   */
+  long getBlockChecksumOpMaxTime();
   
   /**
    * Number of CopyBlock Operation in last interval

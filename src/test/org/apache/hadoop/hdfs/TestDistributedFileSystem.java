@@ -18,15 +18,20 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 public class TestDistributedFileSystem extends junit.framework.TestCase {
+  private static final Random RAN = new Random();
+
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
@@ -108,6 +113,57 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     }
     finally {
       if (cluster != null) {cluster.shutdown();}
+    }
+  }
+  
+  public void testFileChecksum() throws IOException {
+    final long seed = RAN.nextLong();
+    System.out.println("seed=" + seed);
+    RAN.setSeed(seed);
+
+    final Configuration conf = new Configuration();
+    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final FileSystem fs = cluster.getFileSystem();
+
+    final String dir = "/fileChecksum";
+    final int block_size = 1024;
+    final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
+    conf.setInt("io.bytes.per.checksum", 512);
+
+    //try different number of blocks
+    for(int n = 0; n < 5; n++) {
+      //generate random data
+      final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
+      RAN.nextBytes(data);
+      System.out.println("data.length=" + data.length);
+  
+      //write data to a file
+      final Path foo = new Path(dir, "foo" + n);
+      {
+        final FSDataOutputStream out = fs.create(foo, false, buffer_size,
+            (short)2, block_size);
+        out.write(data);
+        out.close();
+      }
+      
+      //compute checksum
+      final FileChecksum foocs = fs.getFileChecksum(foo);
+      System.out.println("foocs=" + foocs);
+      
+      //write another file
+      final Path bar = new Path(dir, "bar" + n);
+      {
+        final FSDataOutputStream out = fs.create(bar, false, buffer_size,
+            (short)2, block_size);
+        out.write(data);
+        out.close();
+      }
+  
+      { //verify checksum
+        final FileChecksum barcs = fs.getFileChecksum(bar);
+        assertEquals(foocs.hashCode(), barcs.hashCode());
+        assertEquals(foocs, barcs);
+      }
     }
   }
 }

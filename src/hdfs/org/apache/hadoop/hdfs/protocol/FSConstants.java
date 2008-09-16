@@ -87,6 +87,7 @@ public interface FSConstants {
   public static final byte OP_READ_METADATA = (byte) 82;
   public static final byte OP_REPLACE_BLOCK = (byte) 83;
   public static final byte OP_COPY_BLOCK = (byte) 84;
+  public static final byte OP_BLOCK_CHECKSUM = (byte) 85;
   
   public static final int OP_STATUS_SUCCESS = 0;  
   public static final int OP_STATUS_ERROR = 1;  

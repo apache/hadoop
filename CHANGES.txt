@@ -156,6 +156,10 @@ Trunk (unreleased changes)
     HADOOP-3992. Add a synthetic load generation facility to the test
     directory. (hairong via szetszwo)
 
+    HADOOP-3981. Implement a distributed file checksum algorithm in HDFS
+    and change DistCp to use file checksum for comparing src and dst files
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-3908. Fuse-dfs: better error message if llibhdfs.so doesn't exist.

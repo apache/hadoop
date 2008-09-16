@@ -336,9 +336,10 @@ public class DistCp implements Tool {
      * be meaningful in this context.
      * @throws IOException 
      */
-    private boolean needsUpdate(FileSystem srcfs, Path srcpath,
+    private boolean needsUpdate(FileStatus srcstatus,
         FileSystem dstfs, Path dstpath) throws IOException {
-      return update && !sameFile(srcfs, srcpath, dstfs, dstpath);
+      return update && !sameFile(srcstatus.getPath().getFileSystem(job),
+          srcstatus, dstfs, dstpath);
     }
     
     private FSDataOutputStream create(Path f, Reporter reporter,
@@ -387,10 +388,8 @@ public class DistCp implements Tool {
         return;
       }
 
-      final Path srcpath = srcstat.getPath();
-      final FileSystem srcfs = srcpath.getFileSystem(job);
       if (destFileSys.exists(absdst) && !overwrite
-          && !needsUpdate(srcfs, srcpath, destFileSys, absdst)) {
+          && !needsUpdate(srcstat, destFileSys, absdst)) {
         outc.collect(null, new Text("SKIP: " + srcstat.getPath()));
         ++skipcount;
         reporter.incrCounter(Counter.SKIP, 1);
@@ -1050,8 +1049,7 @@ public class DistCp implements Tool {
             }
             else {
               //skip file if the src and the dst files are the same.
-              final Path absdst = new Path(args.dst, dst);
-              skipfile = update && sameFile(srcfs,child.getPath(),dstfs,absdst);
+              skipfile = update && sameFile(srcfs, child, dstfs, new Path(args.dst, dst));
               
               if (!skipfile) {
                 ++fileCount;
@@ -1134,15 +1132,38 @@ public class DistCp implements Tool {
   }
 
   /**
-   * Check whether the src and the dst are the same.
-   * Two files are considered as the same if they have the same size.
+   * Check whether the contents of src and dst are the same.
+   * 
+   * Return false if dstpath does not exist
+   * 
+   * If the files have different sizes, return false.
+   * 
+   * If the files have the same sizes, the file checksums will be compared.
+   * 
+   * When file checksum is not supported in any of file systems,
+   * two files are considered as the same if they have the same size.
    */
-  static private boolean sameFile(FileSystem srcfs, Path srcpath,
+  static private boolean sameFile(FileSystem srcfs, FileStatus srcstatus,
       FileSystem dstfs, Path dstpath) throws IOException {
+    FileStatus dststatus;
     try {
-      final FileChecksum srccs = srcfs.getFileChecksum(srcpath);
-      final FileChecksum dstcs = dstfs.getFileChecksum(dstpath);
-      return srccs != null && srccs.equals(dstcs);
+      dststatus = dstfs.getFileStatus(dstpath);
+    } catch(FileNotFoundException fnfe) {
+      return false;
+    }
+
+    //same length?
+    if (srcstatus.getLen() != dststatus.getLen()) {
+      return false;
+    }
+
+    //compare checksums
+    try {
+      final FileChecksum srccs = srcfs.getFileChecksum(srcstatus.getPath());
+      final FileChecksum dstcs = dstfs.getFileChecksum(dststatus.getPath());
+      //return true if checksum is not supported
+      //(i.e. some of the checksums is null)
+      return srccs == null || dstcs == null || srccs.equals(dstcs);
     } catch(FileNotFoundException fnfe) {
       return false;
     }

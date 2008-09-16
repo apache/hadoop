@@ -21,13 +21,15 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.security.*;
 
 /** A Writable for MD5 hash values.
  */
-public class MD5Hash implements WritableComparable {
+public class MD5Hash implements WritableComparable<MD5Hash> {
   public static final int MD5_LEN = 16;
+
   private static ThreadLocal<MessageDigest> DIGESTER_FACTORY = new ThreadLocal<MessageDigest>() {
     protected MessageDigest initialValue() {
       try {
@@ -87,6 +89,18 @@ public class MD5Hash implements WritableComparable {
     return digest(data, 0, data.length);
   }
 
+  /** Construct a hash value for the content from the InputStream. */
+  public static MD5Hash digest(InputStream in) throws IOException {
+    final byte[] buffer = new byte[4*1024]; 
+
+    final MessageDigest digester = DIGESTER_FACTORY.get();
+    for(int n; (n = in.read(buffer)) != -1; ) {
+      digester.update(buffer, 0, n);
+    }
+
+    return new MD5Hash(digester.digest());
+  }
+
   /** Construct a hash value for a byte array. */
   public static MD5Hash digest(byte[] data, int start, int len) {
     byte[] digest;
@@ -143,8 +157,7 @@ public class MD5Hash implements WritableComparable {
 
 
   /** Compares this object with the specified object for order.*/
-  public int compareTo(Object o) {
-    MD5Hash that = (MD5Hash)o;
+  public int compareTo(MD5Hash that) {
     return WritableComparator.compareBytes(this.digest, 0, MD5_LEN,
                                            that.digest, 0, MD5_LEN);
   }

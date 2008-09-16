@@ -1289,10 +1289,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Get the checksum of a file.
    *
    * @param f The file path
-   * @return The checksum 
+   * @return The file checksum.  The default return value is null,
+   *  which indicates that no checksum algorithm is implemented
+   *  in the corresponding FileSystem.
    */
   public FileChecksum getFileChecksum(Path f) throws IOException {
-    return new LengthFileChecksum(getFileStatus(f).getLen());
+    return null;
   }
 
   /**

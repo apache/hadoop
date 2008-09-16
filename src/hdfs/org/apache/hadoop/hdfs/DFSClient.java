@@ -580,6 +580,109 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /**
+   * Get the checksum of a file.
+   * @param src The file path
+   * @return The checksum 
+   */
+  MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
+    checkOpen();
+    
+    //get all block locations
+    final List<LocatedBlock> locatedblocks
+        = callGetBlockLocations(src, 0, Long.MAX_VALUE).getLocatedBlocks();
+    final DataOutputBuffer md5out = new DataOutputBuffer();
+    int bytesPerCRC = 0;
+    long crcPerBlock = 0;
+
+    //get block checksum for each block
+    for(int i = 0; i < locatedblocks.size(); i++) {
+      LocatedBlock lb = locatedblocks.get(i);
+      final Block block = lb.getBlock();
+      final DatanodeInfo[] datanodes = lb.getLocations();
+      
+      //try each datanode location of the block
+      final int timeout = 3000 * datanodes.length + socketTimeout;
+      boolean done = false;
+      for(int j = 0; !done && j < datanodes.length; j++) {
+        //connect to a datanode
+        final Socket sock = socketFactory.createSocket();
+        sock.connect(NetUtils.createSocketAddr(datanodes[j].getName()), timeout);
+        sock.setSoTimeout(timeout);
+
+        DataOutputStream out = new DataOutputStream(
+            new BufferedOutputStream(NetUtils.getOutputStream(sock), 
+                                     DataNode.SMALL_BUFFER_SIZE));
+        DataInputStream in = new DataInputStream(NetUtils.getInputStream(sock));
+
+        // get block MD5
+        try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("write to " + datanodes[j].getName() + ": "
+                + OP_BLOCK_CHECKSUM + ", block=" + block);
+          }
+          out.writeShort(DATA_TRANSFER_VERSION);
+          out.write(OP_BLOCK_CHECKSUM);
+          out.writeLong(block.getBlockId());
+          out.writeLong(block.getGenerationStamp());
+          out.flush();
+         
+          final short reply = in.readShort();
+          if (reply != OP_STATUS_SUCCESS) {
+            throw new IOException("Bad response " + reply + " for block "
+                + block + " from datanode " + datanodes[j].getName());
+          }
+
+          //read byte-per-checksum
+          final int bpc = in.readInt(); 
+          if (i == 0) { //first block
+            bytesPerCRC = bpc;
+          }
+          else if (bpc != bytesPerCRC) {
+            throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
+                + " but bytesPerCRC=" + bytesPerCRC);
+          }
+          
+          //read crc-per-block
+          final long cpb = in.readLong();
+          if (locatedblocks.size() > 1 && i == 0) {
+            crcPerBlock = cpb;
+          }
+
+          //read md5
+          final MD5Hash md5 = MD5Hash.read(in);
+          md5.write(md5out);
+          
+          done = true;
+
+          if (LOG.isDebugEnabled()) {
+            if (i == 0) {
+              LOG.debug("set bytesPerCRC=" + bytesPerCRC
+                  + ", crcPerBlock=" + crcPerBlock);
+            }
+            LOG.debug("got reply from " + datanodes[j].getName()
+                + ": md5=" + md5);
+          }
+        } catch (IOException ie) {
+          LOG.warn("src=" + src + ", datanodes[" + j + "].getName()="
+              + datanodes[j].getName(), ie);
+        } finally {
+          IOUtils.closeStream(in);
+          IOUtils.closeStream(out);
+          IOUtils.closeSocket(sock);        
+        }
+      }
+
+      if (!done) {
+        throw new IOException("Fail to get block MD5 for " + block);
+      }
+    }
+
+    //compute file MD5
+    final MD5Hash fileMD5 = MD5Hash.digest(md5out.getData()); 
+    return new MD5MD5CRC32FileChecksum(bytesPerCRC, crcPerBlock, fileMD5);
+  }
+
+  /**
    * Set permissions to a file or directory.
    * @param src path name.
    * @param permission

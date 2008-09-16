@@ -197,6 +197,34 @@ public class DataNodeStatistics implements DataNodeStatisticsMBean {
   /**
    * @inheritDoc
    */
+  public long getBlockChecksumOpAverageTime() {
+    return myMetrics.blockChecksumOp.getPreviousIntervalAverageTime();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public long getBlockChecksumOpMaxTime() {
+    return myMetrics.blockChecksumOp.getMaxTime();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public long getBlockChecksumOpMinTime() {
+    return myMetrics.blockChecksumOp.getMinTime();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public int getBlockChecksumOpNum() {
+    return myMetrics.blockChecksumOp.getPreviousIntervalNumOps();
+  }
+
+  /**
+   * @inheritDoc
+   */
   public long getReplaceBlockOpAverageTime() {
     return myMetrics.replaceBlockOp.getPreviousIntervalAverageTime();
   }
