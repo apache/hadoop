@@ -326,6 +326,9 @@ Trunk (unreleased changes)
     HADOOP-4174. Move fs image/edit log methods from ClientProtocol to
     NamenodeProtocol. (shv via szetszwo)
 
+    HADOOP-4181. Include a .gitignore and saveVersion.sh change to support
+    developing under git. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

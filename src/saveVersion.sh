@@ -21,10 +21,17 @@
 unset LANG
 unset LC_CTYPE
 version=$1
-revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
-url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
 user=`whoami`
 date=`date`
+if [ -d .git ]; then
+  revision=`git log -1 --pretty=oneline`
+  hostname=`hostname`
+  branch=`git br | sed -n -e 's/^* //p'`
+  url="git://$hostname/$cwd on branch $branch"
+else
+  revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
+  url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
+fi
 mkdir -p build/src/org/apache/hadoop
 cat << EOF | \
   sed -e "s/VERSION/$version/" -e "s/USER/$user/" -e "s/DATE/$date/" \
