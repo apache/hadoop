@@ -320,6 +320,9 @@ Trunk (unreleased changes)
     HADOOP-4151. Add a byte-comparable interface that both Text and 
     BytesWritable implement. (cdouglas via omalley)
 
+    HADOOP-4174. Move fs image/edit log methods from ClientProtocol to
+    NamenodeProtocol. (shv via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

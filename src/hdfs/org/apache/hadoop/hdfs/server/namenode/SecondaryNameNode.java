@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.ipc.*;
@@ -51,7 +51,7 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
  * primary NameNode.
  *
  **********************************************************/
-public class SecondaryNameNode implements FSConstants, Runnable {
+public class SecondaryNameNode implements Runnable {
     
   public static final Log LOG = 
     LogFactory.getLog(SecondaryNameNode.class.getName());
@@ -59,7 +59,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   private String fsName;
   private CheckpointStorage checkpointImage;
 
-  private ClientProtocol namenode;
+  private NamenodeProtocol namenode;
   private Configuration conf;
   private InetSocketAddress nameNodeAddr;
   private boolean shouldRun;
@@ -131,8 +131,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
 
     this.conf = conf;
     this.namenode =
-        (ClientProtocol) RPC.waitForProxy(ClientProtocol.class,
-            ClientProtocol.versionID, nameNodeAddr, conf);
+        (NamenodeProtocol) RPC.waitForProxy(NamenodeProtocol.class,
+            NamenodeProtocol.versionID, nameNodeAddr, conf);
 
     // initialize checkpoint directories
     fsName = getInfoServer();
@@ -513,7 +513,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
               "cannot access checkpoint directory.");
         StorageState curState;
         try {
-          curState = sd.analyzeStorage(StartupOption.REGULAR);
+          curState = sd.analyzeStorage(FSConstants.StartupOption.REGULAR);
           // sd is locked but not opened
           switch(curState) {
           case NON_EXISTENT:

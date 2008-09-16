@@ -22,7 +22,6 @@ import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.fs.ContentSummary;
 
@@ -39,9 +38,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 37 : Added setTimes
+   * 38 : getEditLogSize(), rollEditLog(), rollFSImage() 
+   * moved to NamenodeProtocol.
    */
-  public static final long versionID = 37L;
+  public static final long versionID = 38L;
   
   ///////////////////////////////////////
   // File contents
@@ -364,30 +364,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void refreshNodes() throws IOException;
-
-
-  /**
-   * Get the size of the current edit log (in bytes).
-   * @return The number of bytes in the current edit log.
-   * @throws IOException
-   */
-  public long getEditLogSize() throws IOException;
-
-  /**
-   * Closes the current edit log and opens a new one. The 
-   * call fails if the file system is in SafeMode.
-   * @throws IOException
-   * @return a unique token to identify this transaction.
-   */
-  public CheckpointSignature rollEditLog() throws IOException;
-
-  /**
-   * Rolls the fsImage log. It removes the old fsImage, copies the
-   * new image to fsImage, removes the old edits and renames edits.new 
-   * to edits. The call fails if any of the four files are missing.
-   * @throws IOException
-   */
-  public void rollFsImage() throws IOException;
 
   /**
    * Finalize previous upgrade.
