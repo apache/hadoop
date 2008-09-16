@@ -81,6 +81,8 @@
               "<td>Job tracker Start time</td>" +
               "<td>Job Id</td><td>Name</td><td>User</td>") ; 
     out.print("</tr>"); 
+    
+    Set<String> displayedJobs = new HashSet<String>();
     for (Path jobFile: jobFiles) {
       String decodedJobFileName = 
           JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
@@ -91,6 +93,14 @@
       String jobId = jobDetails[2] + "_" +jobDetails[3] + "_" + jobDetails[4] ;
       String user = jobDetails[5];
       String jobName = jobDetails[6];
+      
+      // Check if the job is already displayed. There can be multiple job 
+      // history files for jobs that have restarted
+      if (displayedJobs.contains(jobId)) {
+        continue;
+      } else {
+        displayedJobs.add(jobId);
+      }
       
       // Encode the logfile name again to cancel the decoding done by the browser
       String encodedJobFileName = 

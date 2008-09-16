@@ -21,9 +21,6 @@ import junit.framework.TestCase;
 import java.io.IOException;
 import java.text.ParseException;
 
-import org.apache.hadoop.mapred.Counters.Counter;
-import org.apache.hadoop.mapred.Counters.Group;
-
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
@@ -65,52 +62,8 @@ public class TestCounters extends TestCase {
       Counters.fromEscapedCompactString(compactEscapedString);
     // Check for recovery from string
     assertTrue("Recovered counter does not match on content", 
-               compareCounters(counter, recoveredCounter));
+               counter.contentEquals(recoveredCounter));
     
-  }
-  
-  // Checks for (content) equality of two Counter
-  private boolean compareCounter(Counter c1, Counter c2) {
-    return c1.getName().equals(c2.getName())
-           && c1.getDisplayName().equals(c2.getDisplayName())
-           && c1.getCounter() == c2.getCounter();
-  }
-  
-  // Checks for (content) equality of Groups
-  private boolean compareGroup(Group g1, Group g2) {
-    boolean isEqual = false;
-    if (g1 != null && g2 != null) {
-      if (g1.size() == g2.size()) {
-        isEqual = true;
-        for (String cname : g1.getCounterNames()) {
-          Counter c1 = g1.getCounterForName(cname);
-          Counter c2 = g2.getCounterForName(cname);
-          if (!compareCounter(c1, c2)) {
-            isEqual = false;
-            break;
-          }
-        }
-      }
-    }
-    return isEqual;
-  }
-  
-  // Checks for (content) equality of Counters
-  private boolean compareCounters(Counters c1, Counters c2) {
-    boolean isEqual = false;
-    if (c1 != null && c2 != null) {
-      if (c1.size() == c2.size()) {
-        isEqual = true;
-        for (Group g1 : c1) {
-          Group g2 = c2.getGroup(g1.getName());
-          if (!compareGroup(g1, g2)) {
-            isEqual = false;
-            break;
-          }
-        }
-      }
-    }
-    return isEqual;
   }
   
   public void testCounters() throws IOException {

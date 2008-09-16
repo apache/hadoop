@@ -104,6 +104,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         InputSplit[] splits;
         splits = job.getInputFormat().getSplits(job, 1);
         JobID jobId = profile.getJobID();
+        long timstamp = System.currentTimeMillis();
         
         int numReduceTasks = job.getNumReduceTasks();
         if (numReduceTasks > 1 || numReduceTasks < 0) {
@@ -116,7 +117,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
-          TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i), 0);  
+          TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i), 
+                                                  0, timstamp);  
           mapIds.add(mapId);
           buffer.reset();
           splits[i].write(buffer);
@@ -137,7 +139,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
           map_tasks -= 1;
           updateCounters(map);
         }
-        TaskAttemptID reduceId = new TaskAttemptID(new TaskID(jobId, false, 0), 0);
+        TaskAttemptID reduceId = new TaskAttemptID(new TaskID(jobId, false, 0),
+                                                   0, timstamp);
         try {
           if (numReduceTasks > 0) {
             // move map output to reduce input  
@@ -277,9 +280,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
       LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
     
-    public TaskCompletionEvent[] getMapCompletionEvents(JobID jobId
-        , int fromEventId, int maxLocs) throws IOException {
-      return TaskCompletionEvent.EMPTY_ARRAY;
+    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
+        int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
+      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY,
+                                               false);
     }
     
   }

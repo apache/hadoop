@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -92,6 +93,31 @@ public class TaskReport implements Writable {
    */ 
   void setStartTime(long startTime) {
     this.startTime = startTime;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if(o == null)
+      return false;
+    if(o.getClass().equals(TaskReport.class)) {
+      TaskReport report = (TaskReport) o;
+      return counters.contentEquals(report.getCounters())
+             && Arrays.toString(this.diagnostics)
+                      .equals(Arrays.toString(report.getDiagnostics()))
+             && this.finishTime == report.getFinishTime()
+             && this.progress == report.getProgress()
+             && this.startTime == report.getStartTime()
+             && this.state.equals(report.getState())
+             && this.taskid.equals(report.getTaskID());
+    }
+    return false; 
+  }
+
+  @Override
+  public int hashCode() {
+    return (counters.toString() + Arrays.toString(this.diagnostics) 
+            + this.finishTime + this.progress + this.startTime + this.state 
+            + this.taskid.toString()).hashCode();
   }
   //////////////////////////////////////////////
   // Writable

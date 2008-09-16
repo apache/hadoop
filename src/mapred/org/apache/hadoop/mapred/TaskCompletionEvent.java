@@ -177,6 +177,28 @@ public class TaskCompletionEvent implements Writable{
     return buf.toString();
   }
     
+  @Override
+  public boolean equals(Object o) {
+    if(o == null)
+      return false;
+    if(o.getClass().equals(TaskCompletionEvent.class)) {
+      TaskCompletionEvent event = (TaskCompletionEvent) o;
+      return this.isMap == event.isMapTask() 
+             && this.eventId == event.getEventId()
+             && this.idWithinJob == event.idWithinJob() 
+             && this.status.equals(event.getTaskStatus())
+             && this.taskId.equals(event.getTaskAttemptId()) 
+             && this.taskRunTime == event.getTaskRunTime()
+             && this.taskTrackerHttp.equals(event.getTaskTrackerHttp());
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return toString().hashCode(); 
+  }
+
   public boolean isMapTask() {
     return isMap;
   }
@@ -194,6 +216,7 @@ public class TaskCompletionEvent implements Writable{
     WritableUtils.writeEnum(out, status); 
     WritableUtils.writeString(out, taskTrackerHttp);
     WritableUtils.writeVInt(out, taskRunTime);
+    WritableUtils.writeVInt(out, eventId);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -203,5 +226,6 @@ public class TaskCompletionEvent implements Writable{
     this.status = WritableUtils.readEnum(in, Status.class);
     this.taskTrackerHttp = WritableUtils.readString(in);
     this.taskRunTime = WritableUtils.readVInt(in);
+    this.eventId = WritableUtils.readVInt(in);
   }
 }

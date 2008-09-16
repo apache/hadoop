@@ -226,9 +226,19 @@ public class StringUtils {
    * @param startTime start time
    */
   public static String formatTimeDiff(long finishTime, long startTime){
-    StringBuffer buf = new StringBuffer();
-    
     long timeDiff = finishTime - startTime; 
+    return formatTime(timeDiff); 
+  }
+  
+  /**
+   * 
+   * Given the time in long milliseconds, returns a 
+   * String in the format Xhrs, Ymins, Z sec. 
+   * 
+   * @param timeDiff The time difference to format
+   */
+  public static String formatTime(long timeDiff){
+    StringBuffer buf = new StringBuffer();
     long hours = timeDiff / (60*60*1000);
     long rem = (timeDiff % (60*60*1000));
     long minutes =  rem / (60*1000);

@@ -207,6 +207,41 @@ class TaskInProgress {
   ////////////////////////////////////
 
   /**
+   * Return the start time
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  
+  /**
+   * Return the exec start time
+   */
+  public long getExecStartTime() {
+    return execStartTime;
+  }
+  
+  /**
+   * Set the exec start time
+   */
+  public void setExecStartTime(long startTime) {
+    execStartTime = startTime;
+  }
+  
+  /**
+   * Return the exec finish time
+   */
+  public long getExecFinishTime() {
+    return execFinishTime;
+  }
+
+  /**
+   * Set the exec finish time
+   */
+  public void setExecFinishTime(long finishTime) {
+    execFinishTime = finishTime;
+  }
+  
+  /**
    * Return the parent job
    */
   public JobInProgress getJob() {
@@ -366,7 +401,7 @@ class TaskInProgress {
    * Returns whether the task attempt should be committed or not 
    */
   public boolean shouldCommit(TaskAttemptID taskid) {
-    return taskToCommit.equals(taskid);
+    return !isComplete() && taskToCommit.equals(taskid);
   }
 
   /**
@@ -510,7 +545,9 @@ class TaskInProgress {
       }
     }
 
-    this.activeTasks.remove(taskid);
+    // Note that there can be failures of tasks that are hosted on a machine 
+    // that has not yet registered with restarted jobtracker
+    boolean isPresent = this.activeTasks.remove(taskid) != null;
     
     // Since we do not fail completed reduces (whose outputs go to hdfs), we 
     // should note this failure only for completed maps, only if this taskid;
@@ -524,15 +561,17 @@ class TaskInProgress {
       resetSuccessfulTaskid();
     }
 
-
-    if (taskState == TaskStatus.State.FAILED) {
-      numTaskFailures++;
-      machinesWhereFailed.add(trackerHostName);
-      LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
-      failedRanges.add(status.getNextRecordRange());
-      skipping = startSkipping();
-    } else {
-      numKilledTasks++;
+    // recalculate the counts only if its a genuine failure
+    if (isPresent) {
+      if (taskState == TaskStatus.State.FAILED) {
+        numTaskFailures++;
+        machinesWhereFailed.add(trackerHostName);
+        LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
+        failedRanges.add(status.getNextRecordRange());
+        skipping = startSkipping();
+      } else {
+        numKilledTasks++;
+      }
     }
 
     if (numTaskFailures >= maxTaskAttempts) {
@@ -602,6 +641,7 @@ class TaskInProgress {
     //
 
     this.completes++;
+    this.execFinishTime = System.currentTimeMillis();
     recomputeProgress();
     
   }
@@ -637,6 +677,7 @@ class TaskInProgress {
     }
     this.failed = true;
     killed = true;
+    this.execFinishTime = System.currentTimeMillis();
     recomputeProgress();
   }
 
@@ -674,10 +715,15 @@ class TaskInProgress {
   void recomputeProgress() {
     if (isComplete()) {
       this.progress = 1;
-      this.execFinishTime = System.currentTimeMillis();
+      // update the counters and the state
+      TaskStatus completedStatus = taskStatuses.get(getSuccessfulTaskid());
+      this.counters = completedStatus.getCounters();
+      this.state = completedStatus.getStateString();
     } else if (failed) {
       this.progress = 0;
-      this.execFinishTime = System.currentTimeMillis();
+      // reset the counters and the state
+      this.state = "";
+      this.counters = new Counters();
     } else {
       double bestProgress = 0;
       String bestState = "";
@@ -747,7 +793,6 @@ class TaskInProgress {
    * Return a Task that can be sent to a TaskTracker for execution.
    */
   public Task getTaskToRun(String taskTracker) throws IOException {
-    Task t = null;
     if (0 == execStartTime){
       // assume task starts running now
       execStartTime = System.currentTimeMillis();
@@ -756,7 +801,7 @@ class TaskInProgress {
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
     TaskAttemptID taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
-      taskid = new TaskAttemptID( id, nextTaskId);
+      taskid = new TaskAttemptID( id, nextTaskId, jobtracker.getStartTime());
       ++nextTaskId;
     } else {
       LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + maxTaskAttempts) +
@@ -765,6 +810,16 @@ class TaskInProgress {
       return null;
     }
 
+    return addRunningTask(taskid, taskTracker);
+  }
+  
+  /**
+   * Adds a previously running task to this tip. This is used in case of 
+   * jobtracker restarts.
+   */
+  public Task addRunningTask(TaskAttemptID taskid, String taskTracker) {
+    // create the task
+    Task t = null;
     if (isMapTask()) {
       LOG.debug("attemdpt "+  numTaskFailures   +
           " sending skippedRecords "+failedRanges.getIndicesCount());

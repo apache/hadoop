@@ -56,6 +56,12 @@ Trunk (unreleased changes)
     output retention during the shuffle and reduce relative to maximum heap
     usage. (cdouglas)
 
+    HADOOP-3245. Adds the feature for supporting JobTracker restart. Running
+    jobs can be recovered from the history file. The history file format has
+    been modified to support recovery. The task attempt ID now has the 
+    JobTracker start time to disinguish attempts of the same TIP across 
+    restarts. (Amar Ramesh Kamat via ddas)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

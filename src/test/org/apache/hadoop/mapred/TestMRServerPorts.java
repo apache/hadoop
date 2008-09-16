@@ -36,16 +36,33 @@ import org.apache.hadoop.fs.FileSystem;
 public class TestMRServerPorts extends TestCase {
   TestHDFSServerPorts hdfs = new TestHDFSServerPorts();
 
+  // Runs the JT in a separate thread
+  private static class JTRunner extends Thread {
+    JobTracker jt;
+    void setJobTracker(JobTracker jt) {
+      this.jt = jt;
+    }
+
+    public void run() {
+      if (jt != null) {
+        try {
+          jt.offerService();
+        } catch (Exception ioe) {}
+      }
+    }
+  }
   /**
    * Check whether the JobTracker can be started.
    */
-  private JobTracker startJobTracker(JobConf conf) 
+  private JobTracker startJobTracker(JobConf conf, JTRunner runner) 
   throws IOException {
     conf.set("mapred.job.tracker", "localhost:0");
     conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
     JobTracker jt = null;
     try {
       jt = JobTracker.startTracker(conf);
+      runner.setJobTracker(jt);
+      runner.start();
       conf.set("mapred.job.tracker", "localhost:" + jt.getTrackerPort());
       conf.set("mapred.job.tracker.http.address", 
                             "0.0.0.0:" + jt.getInfoPort());
@@ -132,11 +149,13 @@ public class TestMRServerPorts extends TestCase {
   public void testTaskTrackerPorts() throws Exception {
     NameNode nn = null;
     JobTracker jt = null;
+    JTRunner runner = null;
     try {
       nn = hdfs.startNameNode();
 
       JobConf conf2 = new JobConf(hdfs.getConfig());
-      jt = startJobTracker(conf2);
+      runner = new JTRunner();
+      jt = startJobTracker(conf2, runner);
 
       // start job tracker on the same port as name-node
       conf2.set("mapred.task.tracker.report.address",
@@ -165,6 +184,8 @@ public class TestMRServerPorts extends TestCase {
       if (jt != null) {
         jt.fs.close();
         jt.stopTracker();
+        runner.interrupt();
+        runner.join();
       }
       hdfs.stopNameNode(nn);
     }

@@ -46,6 +46,9 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 10 changed the TaskStatus format and added reportNextRecordRange
    *            for HADOOP-153
    * Version 11 Adds RPCs for task commit as part of HADOOP-3150
+   * Version 12 getMapCompletionEvents() now also indicates if the events are 
+   *            stale or not. Hence the return type is a class that 
+   *            encapsulates the events and whether to reset events index.
    * */
 
   public static final long versionID = 11L;
@@ -117,14 +120,22 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   void fsError(TaskAttemptID taskId, String message) throws IOException;
 
   /** Called by a reduce task to get the map output locations for finished maps.
+   * Returns an update centered around the map-task-completion-events. 
+   * The update also piggybacks the information whether the events copy at the 
+   * task-tracker has changed or not. This will trigger some action at the 
+   * child-process.
    *
    * @param taskId the reduce task id
    * @param fromIndex the index starting from which the locations should be 
    * fetched
    * @param maxLocs the max number of locations to fetch
-   * @return an array of TaskCompletionEvent
+   * @param id The attempt id of the task that is trying to communicate
+   * @return A {@link MapTaskCompletionEventsUpdate} 
    */
-  TaskCompletionEvent[] getMapCompletionEvents(JobID jobId, 
-                                               int fromIndex, int maxLocs) throws IOException;
+  MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
+                                                       int fromIndex, 
+                                                       int maxLocs,
+                                                       TaskAttemptID id) 
+  throws IOException;
 
 }

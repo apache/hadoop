@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
-import java.util.Set;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.io.IntWritable;
@@ -159,6 +158,13 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       return buf.toString();
     }
     
+    // Checks for (content) equality of two (basic) counters
+    synchronized boolean contentEquals(Counter c) {
+      return name.equals(c.getName())
+             && displayName.equals(c.getDisplayName())
+             && value == c.getCounter();
+    }
+    
     /**
      * What is the current value of this counter?
      * @return the current value
@@ -263,11 +269,26 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       return buf.toString();
     }
         
-    /**
-     * Returns the names of the counters within
+    /** 
+     * Checks for (content) equality of Groups
      */
-    public synchronized Set<String> getCounterNames() {
-      return subcounters.keySet();
+    synchronized boolean contentEquals(Group g) {
+      boolean isEqual = false;
+      if (g != null) {
+        if (size() == g.size()) {
+          isEqual = true;
+          for (Map.Entry<String, Counter> entry : subcounters.entrySet()) {
+            String key = entry.getKey();
+            Counter c1 = entry.getValue();
+            Counter c2 = g.getCounterForName(key);
+            if (!c1.contentEquals(c2)) {
+              isEqual = false;
+              break;
+            }
+          }
+        }
+      }
+      return isEqual;
     }
     
     /**
@@ -706,6 +727,25 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   private static String unescape(String string) {
     return StringUtils.unEscapeString(string, StringUtils.ESCAPE_CHAR, 
                                       charsToEscape);
+  }
+  
+  synchronized boolean contentEquals(Counters counters) {
+    boolean isEqual = false;
+    if (counters != null) {
+      if (size() == counters.size()) {
+        isEqual = true;
+        for (Map.Entry<String, Group> entry : this.counters.entrySet()) {
+          String key = entry.getKey();
+          Group sourceGroup = entry.getValue();
+          Group targetGroup = counters.getGroup(key);
+          if (!sourceGroup.contentEquals(targetGroup)) {
+            isEqual = false;
+            break;
+          }
+        }
+      }
+    }
+    return isEqual;
   }
   
   public static class Application {

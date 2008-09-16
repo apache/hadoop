@@ -181,7 +181,9 @@ public class TestMiniMRWithDFS extends TestCase {
     LOG.info("runWordCount");
     // Run a word count example
     // Keeping tasks that match this pattern
-    jobConf.setKeepTaskFilesPattern(TaskAttemptID.getTaskAttemptIDsPattern(null, null, true, 1, null));
+    String pattern = 
+      TaskAttemptID.getTaskAttemptIDsPattern(null, null, true, 1, null, null);
+    jobConf.setKeepTaskFilesPattern(pattern);
     TestResult result;
     final Path inDir = new Path("./wc/input");
     final Path outDir = new Path("./wc/output");
@@ -190,8 +192,9 @@ public class TestMiniMRWithDFS extends TestCase {
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     JobID jobid = result.job.getID();
-    TaskAttemptID taskid = new TaskAttemptID(new TaskID(jobid, true, 1),0);
-    checkTaskDirectories(mr, new String[]{jobid.toString()}, new String[]{taskid.toString()});
+    String taskId = mr.getTaskAttemptId(new TaskID(jobid, true, 1), 0).toString();
+    checkTaskDirectories(mr, new String[]{jobid.toString()}, 
+                         new String[]{taskId});
     // test with maps=0
     jobConf = mr.createJobConf();
     input = "owen is oom";

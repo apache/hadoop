@@ -750,6 +750,32 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.jobtracker.restart.recover</name>
+  <value>false</value>
+  <description>"true" to enable (job) recovery upon restart,
+               "false" to start afresh
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.job.history.block.size</name>
+  <value>0</value>
+  <description>The block size of the job history file. Since the job recovery
+               uses job history, its important to dump job history to disk as 
+               soon as possible.
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.job.history.buffer.size</name>
+  <value>4096</value>
+  <description>The buffer size for the job history file. Since the job 
+               recovery uses job history, its important to frequently flush the 
+               job history to disk. This will minimize the loss in recovery.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.taskScheduler</name>
   <value>org.apache.hadoop.mapred.JobQueueTaskScheduler</value>
   <description>The class responsible for scheduling the tasks.</description>

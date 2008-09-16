@@ -56,6 +56,7 @@ class JobInProgress {
     
   JobProfile profile;
   JobStatus status;
+  Path jobFile = null;
   Path localJobFile = null;
   Path localJarFile = null;
 
@@ -130,6 +131,7 @@ class JobInProgress {
   private ResourceEstimator resourceEstimator; 
   
   long startTime;
+  long launchTime;
   long finishTime;
 
   private JobConf conf;
@@ -195,7 +197,7 @@ class JobInProgress {
                                                       +"/"+ jobid + ".jar");
     Path sysDir = new Path(this.jobtracker.getSystemDir());
     FileSystem fs = sysDir.getFileSystem(default_conf);
-    Path jobFile = new Path(sysDir, jobid + "/job.xml");
+    jobFile = new Path(sysDir, jobid + "/job.xml");
     fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
@@ -215,9 +217,6 @@ class JobInProgress {
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
-        
-    JobHistory.JobInfo.logSubmitted(jobid, conf, jobFile.toString(), 
-                                    System.currentTimeMillis()); 
         
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
     this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");
@@ -332,6 +331,12 @@ class JobInProgress {
       return;
     }
 
+    // log job info
+    JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
+                                    this.startTime);
+    // log the job priority
+    setPriority(this.priority);
+    
     //
     // read input splits and create a map per a split
     //
@@ -361,20 +366,23 @@ class JobInProgress {
       nonRunningMapCache = createCache(splits, maxLevel);
     }
         
+    // set the launch time
+    this.launchTime = System.currentTimeMillis();
+
     // if no split is returned, job is considered completed and successful
     if (numMapTasks == 0) {
       // Finished time need to be setted here to prevent this job to be retired
       // from the job tracker jobs at the next retire iteration.
-      this.finishTime = System.currentTimeMillis();
+      this.finishTime = this.launchTime;
       status.setMapProgress(1.0f);
       status.setReduceProgress(1.0f);
       status.setCleanupProgress(1.0f);
       status.setRunState(JobStatus.SUCCEEDED);
       tasksInited.set(true);
       JobHistory.JobInfo.logStarted(profile.getJobID(), 
-                                    System.currentTimeMillis(), 0, 0);
+                                    this.launchTime, 0, 0);
       JobHistory.JobInfo.logFinished(profile.getJobID(), 
-                                     System.currentTimeMillis(), 0, 0, 0, 0,
+                                     this.finishTime, 0, 0, 0, 0,
                                      getCounters());
       // Special case because the Job is not queued
       JobEndNotifier.registerNotification(this.getJobConf(), this.getStatus());
@@ -409,7 +417,8 @@ class JobInProgress {
     this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, JobStatus.RUNNING);
     tasksInited.set(true);
         
-    JobHistory.JobInfo.logStarted(profile.getJobID(), System.currentTimeMillis(), numMapTasks, numReduceTasks);
+    JobHistory.JobInfo.logStarted(profile.getJobID(), this.launchTime, 
+                                  numMapTasks, numReduceTasks);
   }
 
   /////////////////////////////////////////////////////
@@ -420,6 +429,9 @@ class JobInProgress {
   }
   public JobStatus getStatus() {
     return status;
+  }
+  public synchronized long getLaunchTime() {
+    return launchTime;
   }
   public long getStartTime() {
     return startTime;
@@ -462,6 +474,8 @@ class JobInProgress {
     } else {
       this.priority = priority;
     }
+    // log and change to the job's priority
+    JobHistory.JobInfo.logJobPriority(jobId, priority);
   }
 
   // Accessors for resources.
@@ -469,6 +483,14 @@ class JobInProgress {
     return maxVirtualMemoryForTask;
   }
   
+  // Update the job start/launch time (upon restart) and log to history
+  synchronized void updateJobTime(long startTime, long launchTime) {
+    // log and change to the job's start/launch time
+    this.startTime = startTime;
+    this.launchTime = launchTime;
+    JobHistory.JobInfo.logJobSubmitTime(jobId, startTime, launchTime);
+  }
+
   long getInputLength() {
     return inputLength;
   }
@@ -776,16 +798,7 @@ class JobInProgress {
     
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
-      runningMapTasks += 1;
-      if (maps[target].getActiveTasks().size() > 1)
-        speculativeMapTasks++;
-      if (maps[target].isFirstAttempt(result.getTaskID())) {
-        JobHistory.Task.logStarted(maps[target].getTIPId(), Values.MAP.name(),
-                                   System.currentTimeMillis(),
-                                   maps[target].getSplitNodes());
-      }
-
-      jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_MAPS, 1);
+      addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
     }
 
     return result;
@@ -888,21 +901,118 @@ class JobInProgress {
     
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
-      runningReduceTasks += 1;
-      if (reduces[target].getActiveTasks().size() > 1)
-        speculativeReduceTasks++;
-      if (reduces[target].isFirstAttempt(result.getTaskID())) {
-        JobHistory.Task.logStarted(reduces[target].getTIPId(), Values.REDUCE.name(),
-                                   System.currentTimeMillis(), "");
-      }
-
-      jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_REDUCES, 1);
+      addRunningTaskToTIP(reduces[target], result.getTaskID(), tts, true);
     }
 
     return result;
   }
+  
+  // returns the (cache)level at which the nodes matches
+  private int getMatchingLevelForNodes(Node n1, Node n2) {
+    int count = 0;
+    do {
+      if (n1.equals(n2)) {
+        return count;
+      }
+      ++count;
+      n1 = n1.getParent();
+      n2 = n2.getParent();
+    } while (n1 != null);
+    return this.maxLevel;
+  }
+
+  /**
+   * Populate the data structures as a task is scheduled.
+   * @param tip The tip for which the task is added
+   * @param id The attempt-id for the task
+   * @param tts task-tracker status
+   * @param isScheduled Whether this task is scheduled from the JT or has 
+   *        joined back upon restart
+   */
+  synchronized void addRunningTaskToTIP(TaskInProgress tip, TaskAttemptID id, 
+                                        TaskTrackerStatus tts, 
+                                        boolean isScheduled) {
+    // keeping the earlier ordering intact
+    String name;
+    Enum counter;
+    if (tip.isMapTask()) {
+      ++runningMapTasks;
+      name = Values.MAP.name();
+      counter = Counter.TOTAL_LAUNCHED_MAPS;
+      if (tip.getActiveTasks().size() > 1)
+        speculativeMapTasks++;
+    } else {
+      ++runningReduceTasks;
+      name = Values.REDUCE.name();
+      counter = Counter.TOTAL_LAUNCHED_REDUCES;
+      if (tip.getActiveTasks().size() > 1)
+        speculativeReduceTasks++;
+    }
+    // Note that the logs are for the scheduled tasks only. Tasks that join on 
+    // restart has already their logs in place.
+    if (tip.isFirstAttempt(id)) {
+      JobHistory.Task.logStarted(tip.getTIPId(), name,
+                                 tip.getExecStartTime(), "");
+    }
+    jobCounters.incrCounter(counter, 1);
     
-  private String convertTrackerNameToHostName(String trackerName) {
+    // Make an entry in the tip if the attempt is not scheduled i.e externally
+    // added
+    if (!isScheduled) {
+      tip.addRunningTask(id, tts.getTrackerName());
+    }
+
+    //TODO The only problem with these counters would be on restart.
+    // The jobtracker updates the counter only when the task that is scheduled
+    // if from a non-running tip and is local (data, rack ...). But upon restart
+    // as the reports come from the task tracker, there is no good way to infer
+    // when exactly to increment the locality counters. The only solution is to 
+    // increment the counters for all the tasks irrespective of 
+    //    - whether the tip is running or not
+    //    - whether its a speculative task or not
+    //
+    // So to simplify, increment the data locality counter whenever there is 
+    // data locality.
+    if (tip.isMapTask()) {
+      // increment the data locality counter for maps
+      Node tracker = jobtracker.getNode(tts.getHost());
+      int level = this.maxLevel;
+      // find the right level across split locations
+      for (String local : maps[tip.getIdWithinJob()].getSplitLocations()) {
+        Node datanode = jobtracker.getNode(local);
+        int newLevel = this.maxLevel;
+        if (tracker != null && datanode != null) {
+          newLevel = getMatchingLevelForNodes(tracker, datanode);
+        }
+        if (newLevel < level) {
+          level = newLevel;
+          // an optimization
+          if (level == 0) {
+            break;
+          }
+        }
+      }
+      switch (level) {
+      case 0 :
+        LOG.info("Choosing data-local task " + tip.getTIPId());
+        jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
+        break;
+      case 1:
+        LOG.info("Choosing rack-local task " + tip.getTIPId());
+        jobCounters.incrCounter(Counter.RACK_LOCAL_MAPS, 1);
+        break;
+      default :
+        // check if there is any locality
+        if (level != this.maxLevel) {
+          LOG.info("Choosing cached task at level " + level + tip.getTIPId());
+          jobCounters.incrCounter(Counter.OTHER_LOCAL_MAPS, 1);
+        }
+        break;
+      }
+    }
+  }
+    
+  static String convertTrackerNameToHostName(String trackerName) {
     // Ugly!
     // Convert the trackerName to it's host name
     int indexOfColon = trackerName.indexOf(":");
@@ -1294,18 +1404,6 @@ class JobInProgress {
               nonRunningMapCache.remove(key);
             }
 
-            if (level == 0) {
-              LOG.info("Choosing data-local task " + tip.getTIPId());
-              jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
-            } else if (level == 1){
-              LOG.info("Choosing rack-local task " + tip.getTIPId());
-              jobCounters.incrCounter(Counter.RACK_LOCAL_MAPS, 1);
-            } else {
-              LOG.info("Choosing cached task at level " + level 
-                       + tip.getTIPId());
-              jobCounters.incrCounter(Counter.OTHER_LOCAL_MAPS, 1);
-            }
-
             return tip.getIdWithinJob();
           }
         }
@@ -1376,16 +1474,6 @@ class JobInProgress {
             if (tip != null) {
               if (cacheForLevel.size() == 0) {
                 runningMapCache.remove(key);
-              }
-              if (level == 0) {
-                LOG.info("Choosing a data-local task " + tip.getTIPId() 
-                         + " for speculation");
-              } else if (level == 1){
-                LOG.info("Choosing a rack-local task " + tip.getTIPId() 
-                         + " for speculation");
-              } else {
-                LOG.info("Choosing a cached task at level " + level
-                         + tip.getTIPId() + " for speculation");
               }
               return tip.getIdWithinJob();
             }
@@ -1536,29 +1624,36 @@ class JobInProgress {
     resourceEstimator.updateWithCompletedTask(status, tip);
 
     // Update jobhistory 
-    String taskTrackerName = jobtracker.getNode(jobtracker.getTaskTracker(
-                               status.getTaskTracker()).getHost()).toString();
+    TaskTrackerStatus ttStatus = 
+      this.jobtracker.getTaskTracker(status.getTaskTracker());
+    String trackerHostname = jobtracker.getNode(ttStatus.getHost()).toString();
     if (status.getIsMap()){
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                                       taskTrackerName, tip.isCleanupTask()); 
+                                       status.getTaskTracker(), 
+                                       ttStatus.getHttpPort(), 
+                                       tip.isCleanupTask()); 
       JobHistory.MapAttempt.logFinished(status.getTaskID(), status.getFinishTime(), 
-                                        taskTrackerName, tip.isCleanupTask()); 
+                                        trackerHostname, tip.isCleanupTask(),
+                                        status.getStateString(), 
+                                        status.getCounters()); 
       JobHistory.Task.logFinished(tip.getTIPId(), 
                                   tip.isCleanupTask() ? Values.CLEANUP.name() :
                                   Values.MAP.name(), 
-                                  status.getFinishTime(),
+                                  tip.getExecFinishTime(),
                                   status.getCounters()); 
     }else{
       JobHistory.ReduceAttempt.logStarted( status.getTaskID(), status.getStartTime(), 
-                                          taskTrackerName, 
+                                          status.getTaskTracker(),
+                                          ttStatus.getHttpPort(), 
                                           tip.isCleanupTask()); 
       JobHistory.ReduceAttempt.logFinished(status.getTaskID(), status.getShuffleFinishTime(),
                                            status.getSortFinishTime(), status.getFinishTime(), 
-                                           taskTrackerName,
-                                           tip.isCleanupTask()); 
+                                           trackerHostname, tip.isCleanupTask(), 
+                                           status.getStateString(), 
+                                           status.getCounters()); 
       JobHistory.Task.logFinished(tip.getTIPId(), 
                                   tip.isCleanupTask() ? Values.CLEANUP.name() :
-                                  Values.REDUCE.name(), status.getFinishTime(),
+                                  Values.REDUCE.name(), tip.getExecFinishTime(),
                                   status.getCounters()); 
     }
         
@@ -1631,13 +1726,16 @@ class JobInProgress {
       this.status.setRunState(JobStatus.SUCCEEDED);
       this.status.setCleanupProgress(1.0f);
       this.finishTime = System.currentTimeMillis();
-      garbageCollect();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
       JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks, failedMapTasks, 
                                      failedReduceTasks, getCounters());
+      // Note that finalize will close the job history handles which garbage collect
+      // might try to finalize
+      garbageCollect();
+      
       metrics.completeJob();
     }
   }
@@ -1741,28 +1839,30 @@ class JobInProgress {
     }
         
     // update job history
-    String taskTrackerName = jobtracker.getNode(
-                               taskTrackerStatus.getHost()).toString();
+    String taskTrackerName = taskTrackerStatus.getHost();
+    long finishTime = status.getFinishTime();
     if (status.getIsMap()) {
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                taskTrackerName, tip.isCleanupTask());
+          status.getTaskTracker(), taskTrackerStatus.getHttpPort(), 
+          tip.isCleanupTask());
       if (status.getRunState() == TaskStatus.State.FAILED) {
-        JobHistory.MapAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
+        JobHistory.MapAttempt.logFailed(status.getTaskID(), finishTime,
                 taskTrackerName, status.getDiagnosticInfo(), tip.isCleanupTask());
       } else {
-        JobHistory.MapAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
+        JobHistory.MapAttempt.logKilled(status.getTaskID(), finishTime,
                 taskTrackerName, status.getDiagnosticInfo(),
                 tip.isCleanupTask());
       }
     } else {
       JobHistory.ReduceAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
-                taskTrackerName, tip.isCleanupTask());
+          status.getTaskTracker(), taskTrackerStatus.getHttpPort(), 
+          tip.isCleanupTask());
       if (status.getRunState() == TaskStatus.State.FAILED) {
-        JobHistory.ReduceAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
+        JobHistory.ReduceAttempt.logFailed(status.getTaskID(), finishTime,
                 taskTrackerName, status.getDiagnosticInfo(), 
                 tip.isCleanupTask());
       } else {
-        JobHistory.ReduceAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
+        JobHistory.ReduceAttempt.logKilled(status.getTaskID(), finishTime,
                 taskTrackerName, status.getDiagnosticInfo(), 
                 tip.isCleanupTask());
       }
@@ -1813,7 +1913,7 @@ class JobInProgress {
                                   tip.isMapTask() ? 
                                           Values.MAP.name() : 
                                           Values.REDUCE.name(),  
-                                  System.currentTimeMillis(), 
+                                          status.getFinishTime(), 
                                   status.getDiagnosticInfo());
         if (tip.isCleanupTask()) {
           // kill the other tip
@@ -1859,11 +1959,12 @@ class JobInProgress {
                                                     reason,
                                                     trackerName, phase,
                                                     null);
+    status.setFinishTime(System.currentTimeMillis());
     updateTaskStatus(tip, status, metrics);
     JobHistory.Task.logFailed(tip.getTIPId(), 
                               tip.isCleanupTask() ? Values.CLEANUP.name() : 
                               tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
-                              System.currentTimeMillis(), reason); 
+                              tip.getExecFinishTime(), reason, taskid); 
   }
        
                            
@@ -1952,6 +2053,10 @@ class JobInProgress {
       }
     }
     return null;
+  }
+  
+  synchronized int getNumTaskCompletionEvents() {
+    return taskCompletionEvents.size();
   }
     
   synchronized public TaskCompletionEvent[] getTaskCompletionEvents(

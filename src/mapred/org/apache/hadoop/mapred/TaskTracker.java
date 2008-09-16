@@ -66,6 +66,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsException;
@@ -154,6 +155,8 @@ public class TaskTracker
   volatile int mapTotal = 0;
   volatile int reduceTotal = 0;
   boolean justStarted = true;
+  // Mark reduce tasks that are shuffling to rollback their events index
+  Set<TaskAttemptID> shouldReset = new HashSet<TaskAttemptID>();
     
   //dir -> DF
   Map<String, DF> localDirsDf = new HashMap<String, DF>();
@@ -598,6 +601,23 @@ public class TaskTracker
       this.allMapEvents = new ArrayList<TaskCompletionEvent>(numMaps);
     }
       
+    /**
+     * Check if the number of events that are obtained are more than required.
+     * If yes then purge the extra ones.
+     */
+    public void purgeMapEvents(int lastKnownIndex) {
+      // Note that the sync is first on fromEventId and then on allMapEvents
+      synchronized (fromEventId) {
+        synchronized (allMapEvents) {
+          int index = 0;
+          if (allMapEvents.size() > lastKnownIndex) {
+            fromEventId.set(lastKnownIndex);
+            allMapEvents = allMapEvents.subList(0, lastKnownIndex);
+          }
+        }
+      }
+    }
+    
     public TaskCompletionEvent[] getMapEvents(int fromId, int max) {
         
       TaskCompletionEvent[] mapEvents = 
@@ -626,19 +646,22 @@ public class TaskTracker
       if (!fetchAgain && (currTime - lastFetchTime) < heartbeatInterval) {
         return false;
       }
-      int currFromEventId = fromEventId.get();
-      List <TaskCompletionEvent> recentMapEvents = 
-        queryJobTracker(fromEventId, jobId, jobClient);
-      synchronized (allMapEvents) {
-        allMapEvents.addAll(recentMapEvents);
-      }
-      lastFetchTime = currTime;
-      if (fromEventId.get() - currFromEventId >= probe_sample_size) {
-        //return true when we have fetched the full payload, indicating
-        //that we should fetch again immediately (there might be more to
-        //fetch
-        fetchAgain = true;
-        return true;
+      int currFromEventId = 0;
+      synchronized (fromEventId) {
+        currFromEventId = fromEventId.get();
+        List <TaskCompletionEvent> recentMapEvents = 
+          queryJobTracker(fromEventId, jobId, jobClient);
+        synchronized (allMapEvents) {
+          allMapEvents.addAll(recentMapEvents);
+        }
+        lastFetchTime = currTime;
+        if (fromEventId.get() - currFromEventId >= probe_sample_size) {
+          //return true when we have fetched the full payload, indicating
+          //that we should fetch again immediately (there might be more to
+          //fetch
+          fetchAgain = true;
+          return true;
+        }
       }
       fetchAgain = false;
       return false;
@@ -964,6 +987,39 @@ public class TaskTracker
         // Note the time when the heartbeat returned, use this to decide when to send the
         // next heartbeat   
         lastHeartbeat = System.currentTimeMillis();
+        
+        
+        // Check if the map-event list needs purging
+        if (heartbeatResponse.getLastKnownIndex() != null) {
+          synchronized (this) {
+            // purge the local map events list
+            for (Map.Entry<JobID, Integer> entry 
+                 : heartbeatResponse.getLastKnownIndex().entrySet()) {
+              RunningJob rjob;
+              synchronized (runningJobs) {
+                rjob = runningJobs.get(entry.getKey());          
+                if (rjob != null) {
+                  synchronized (rjob) {
+                    FetchStatus f = rjob.getFetchStatus();
+                    if (f != null) {
+                      f.purgeMapEvents(entry.getValue());
+                    }
+                  }
+                }
+              }
+            }
+
+            // Mark the reducers in shuffle for rollback
+            synchronized (shouldReset) {
+              for (Map.Entry<TaskAttemptID, TaskInProgress> entry 
+                   : runningTasks.entrySet()) {
+                if (entry.getValue().getStatus().getPhase() == Phase.SHUFFLE) {
+                  this.shouldReset.add(entry.getKey());
+                }
+              }
+            }
+          }
+        }
         
         TaskTrackerAction[] actions = heartbeatResponse.getActions();
         if(LOG.isDebugEnabled()) {
@@ -2227,10 +2283,15 @@ public class TaskTracker
     purgeTask(tip, true);
   }
 
-  public TaskCompletionEvent[] getMapCompletionEvents(JobID jobId
-      , int fromEventId, int maxLocs) throws IOException {
-      
+  public synchronized MapTaskCompletionEventsUpdate getMapCompletionEvents(
+      JobID jobId, int fromEventId, int maxLocs, TaskAttemptID id) 
+  throws IOException {
     TaskCompletionEvent[]mapEvents = TaskCompletionEvent.EMPTY_ARRAY;
+    synchronized (shouldReset) {
+      if (shouldReset.remove(id)) {
+        return new MapTaskCompletionEventsUpdate(mapEvents, true);
+      }
+    }
     RunningJob rjob;
     synchronized (runningJobs) {
       rjob = runningJobs.get(jobId);          
@@ -2243,7 +2304,7 @@ public class TaskTracker
         }
       }
     }
-    return mapEvents;
+    return new MapTaskCompletionEventsUpdate(mapEvents, false);
   }
     
   /////////////////////////////////////////////////////

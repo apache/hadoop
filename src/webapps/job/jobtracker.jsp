@@ -152,6 +152,18 @@
               "</td><td>" + status.getMaxReduceTasks() +
               "</td><td>" + tasksPerNode +
               "</td></tr></table>\n");
+
+    out.print("<br>");
+    if (tracker.hasRestarted()) {
+      out.print("<span class=\"small\"><i>");
+      if (tracker.hasRecovered()) {
+        out.print("The JobTracker got restarted and recovered back in " );
+        out.print(StringUtils.formatTime(tracker.getRecoveryDuration()));
+      } else {
+        out.print("The JobTracker got restarted and is still recovering");
+      }
+      out.print("</i></span>");
+    }
   }%>
 
 <%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>

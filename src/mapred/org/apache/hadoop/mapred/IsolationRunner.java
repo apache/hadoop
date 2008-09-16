@@ -96,9 +96,10 @@ public class IsolationRunner {
       LOG.info("Task " + taskid + " has problem " + trace);
     }
     
-    public TaskCompletionEvent[] getMapCompletionEvents(JobID jobId, 
-                                                        int fromEventId, int maxLocs) throws IOException {
-      return TaskCompletionEvent.EMPTY_ARRAY;
+    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
+        int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
+      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY, 
+                                               false);
     }
 
     public void reportNextRecordRange(TaskAttemptID taskid, 

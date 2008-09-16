@@ -52,6 +52,7 @@ public class MiniMRCluster {
     
   private String namenode;
   private UnixUserGroupInformation ugi = null;
+  private JobConf conf;
     
   private JobConf job;
   
@@ -83,6 +84,10 @@ public class MiniMRCluster {
       return tracker;
     }
     
+    public TaskAttemptID getTaskAttemptId(TaskID taskId, int attemptId) {
+      return new TaskAttemptID(taskId, attemptId, tracker.getStartTime());
+    }
+
     /**
      * Create the job tracker and run it.
      */
@@ -296,6 +301,10 @@ public class MiniMRCluster {
     return createJobConf(new JobConf());
   }
 
+  public TaskAttemptID getTaskAttemptId(TaskID taskId, int attemptId) {
+    return this.jobTracker.getTaskAttemptId(taskId, attemptId);
+  }
+
   public JobConf createJobConf(JobConf conf) {
     if(conf == null) {
       conf = new JobConf();
@@ -430,23 +439,10 @@ public class MiniMRCluster {
     this.numTaskTrackers = numTaskTrackers;
     this.namenode = namenode;
     this.ugi = ugi;
-    
-    // Create the JobTracker
-    jobTracker = new JobTrackerRunner(conf);
-    jobTrackerThread = new Thread(jobTracker);
-        
-    jobTrackerThread.start();
-    while (!jobTracker.isUp()) {
-      try {                                     // let daemons get started
-        LOG.info("Waiting for JobTracker to start...");
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {
-      }
-    }
-        
-    // Set the configuration for the task-trackers
-    this.jobTrackerPort = jobTracker.getJobTrackerPort();
-    this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
+    this.conf = conf; // this is the conf the mr starts with
+
+    // start the jobtracker
+    startJobTracker();
 
     // Create the TaskTrackers
     for (int idx = 0; idx < numTaskTrackers; idx++) {
@@ -476,6 +472,126 @@ public class MiniMRCluster {
   }
     
   /**
+   * Get the map task completion events
+   */
+  public TaskCompletionEvent[] getMapTaskCompletionEvents(JobID id, int from, 
+                                                          int max) 
+  throws IOException {
+    return jobTracker.getJobTracker().getTaskCompletionEvents(id, from, max);
+  }
+
+  /**
+   * Change the job's priority
+   */
+  public void setJobPriority(JobID jobId, JobPriority priority) {
+    jobTracker.getJobTracker().setJobPriority(jobId, priority);
+  }
+
+  /**
+   * Get the job's priority
+   */
+  public JobPriority getJobPriority(JobID jobId) {
+    return jobTracker.getJobTracker().getJob(jobId).getPriority();
+  }
+
+  /**
+   * Get the job finish time
+   */
+  public long getJobFinishTime(JobID jobId) {
+    return jobTracker.getJobTracker().getJob(jobId).getFinishTime();
+  }
+
+  /**
+   * Init the job
+   */
+  public void initializeJob(JobID jobId) throws IOException {
+    JobInProgress job = jobTracker.getJobTracker().getJob(jobId);
+    job.initTasks();
+  }
+  
+  /**
+   * Get the events list at the tasktracker
+   */
+  public MapTaskCompletionEventsUpdate 
+         getMapTaskCompletionEventsUpdates(int index, JobID jobId, int max) 
+  throws IOException {
+    String jtId = jobTracker.getJobTracker().getTrackerIdentifier();
+    long jtStart = jobTracker.getJobTracker().getStartTime();
+    TaskAttemptID dummy = 
+      new TaskAttemptID(jtId, jobId.getId(), false, 0, 0, jtStart);
+    return taskTrackerList.get(index).getTaskTracker()
+                                     .getMapCompletionEvents(jobId, 0, max, 
+                                                             dummy);
+  }
+  
+  /**
+   * Get jobtracker conf
+   */
+  public JobConf getJobTrackerConf() {
+    return this.conf;
+  }
+  
+  /**
+   * Get num events recovered
+   */
+  public int getNumEventsRecovered() {
+    return jobTracker.getJobTracker().recoveryManager.totalEventsRecovered();
+  }
+  
+  /**
+   * Start the jobtracker.
+   */
+  public void startJobTracker() {
+    //  Create the JobTracker
+    jobTracker = new JobTrackerRunner(conf);
+    jobTrackerThread = new Thread(jobTracker);
+        
+    jobTrackerThread.start();
+    while (!jobTracker.isUp()) {
+      try {                                     // let daemons get started
+        Thread.sleep(1000);
+      } catch(InterruptedException e) {
+      }
+    }
+        
+    // Set the configuration for the task-trackers
+    this.jobTrackerPort = jobTracker.getJobTrackerPort();
+    this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
+  }
+
+  /**
+   * Kill the jobtracker.
+   */
+  public void stopJobTracker() {
+    //jobTracker.exit(-1);
+    jobTracker.shutdown();
+
+    jobTrackerThread.interrupt();
+    try {
+      jobTrackerThread.join();
+    } catch (InterruptedException ex) {
+      LOG.error("Problem waiting for job tracker to finish", ex);
+    }
+  }
+
+  /**
+   * Kill the tasktracker.
+   */
+  public void stopTaskTracker(int id) {
+    taskTrackerList.get(id).shutdown();
+
+    taskTrackerThreadList.get(id).interrupt();
+    
+    try {
+      taskTrackerThreadList.get(id).join();
+      // This will break the wait until idle loop
+      taskTrackerList.get(id).isDead = true;
+    } catch (InterruptedException ex) {
+      LOG.error("Problem waiting for task tracker to finish", ex);
+    }
+  }
+  
+  /**
    * Shut down the servers.
    */
   public void shutdown() {
@@ -492,13 +608,7 @@ public class MiniMRCluster {
           LOG.error("Problem shutting down task tracker", ex);
         }
       }
-      jobTracker.shutdown();
-      jobTrackerThread.interrupt();
-      try {
-        jobTrackerThread.join();
-      } catch (InterruptedException ex) {
-        LOG.error("Problem waiting for job tracker to finish", ex);
-      }
+      stopJobTracker();
     } finally {
       File configDir = new File("build", "minimr");
       File siteFile = new File(configDir, "hadoop-site.xml");

@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +39,7 @@ class HeartbeatResponse implements Writable, Configurable {
   short responseId;
   int heartbeatInterval;
   TaskTrackerAction[] actions;
+  Map<JobID, Integer> lastKnownIndexMap = null;
 
   HeartbeatResponse() {}
   
@@ -52,6 +55,14 @@ class HeartbeatResponse implements Writable, Configurable {
   
   public short getResponseId() {
     return responseId;
+  }
+  
+  public void setLastKnownIndices(Map<JobID, Integer> lastKnownIndexMap) {
+    this.lastKnownIndexMap = lastKnownIndexMap; 
+  }
+  
+  public Map<JobID, Integer> getLastKnownIndex() {
+    return lastKnownIndexMap;
   }
   
   public void setActions(TaskTrackerAction[] actions) {
@@ -90,6 +101,16 @@ class HeartbeatResponse implements Writable, Configurable {
         action.write(out);
       }
     }
+    // Write the last map event index for the jobs
+    if (lastKnownIndexMap != null) {
+      out.writeInt(lastKnownIndexMap.size());
+      for (Map.Entry<JobID, Integer> entry : lastKnownIndexMap.entrySet()) {
+        entry.getKey().write(out);
+        out.writeInt(entry.getValue());
+      }
+    } else {
+      out.writeInt(0);
+    }
     //ObjectWritable.writeObject(out, actions, actions.getClass(), conf);
   }
   
@@ -107,6 +128,16 @@ class HeartbeatResponse implements Writable, Configurable {
       }
     } else {
       actions = null;
+    }
+    // Read the last map events index of the jobs
+    int size = in.readInt();
+    if (size != 0) {
+      lastKnownIndexMap = new HashMap<JobID, Integer>(size);
+      for (int i = 0; i < size; ++i) {
+        JobID id = JobID.read(in);
+        int count = in.readInt();
+        lastKnownIndexMap.put(id, count);
+      }
     }
     //actions = (TaskTrackerAction[]) ObjectWritable.readObject(in, conf);
   }
