@@ -34,6 +34,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.PersistenceManagerFactory;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
+import javax.jdo.datastore.DataStoreCache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,18 +71,26 @@ import org.apache.hadoop.util.StringUtils;
 public class ObjectStore implements RawStore, Configurable {
   @SuppressWarnings("nls")
   private static final String JPOX_CONFIG = "jpox.properties";
-  private static Properties prop;
+  private static Properties prop = null;
+  private static PersistenceManagerFactory pmf = null;
+  private static final Log LOG = LogFactory.getLog(ObjectStore.class.getName());
+  private static enum TXN_STATUS {
+    NO_STATE,
+    OPEN,
+    COMMITED,
+    ROLLBACK
+  }
   private boolean isInitialized = false;
   private PersistenceManager pm = null;
   private Configuration hiveConf;
-  @SuppressWarnings("nls")
-  public static final Log LOG = LogFactory.getLog(ObjectStore.class.getName());
+  private int openTrasactionCalls = 0;
+  private Transaction currentTransaction = null;
+  private TXN_STATUS transactionStatus = TXN_STATUS.NO_STATE;
   
   public ObjectStore() {}
 
   @Override
   public Configuration getConf() {
-    // TODO Auto-generated method stub
     return hiveConf;
   }
 
@@ -112,8 +121,8 @@ public class ObjectStore implements RawStore, Configurable {
   @SuppressWarnings("nls")
   private void initialize() {
     LOG.info("ObjectStore, initialize called");
-    getDataSourceProps();
-    pm = createPersistenceManager();
+    initDataSourceProps();
+    pm = getPersistenceManager();
     if(pm != null)
       isInitialized = true;
     return;
@@ -124,7 +133,10 @@ public class ObjectStore implements RawStore, Configurable {
    * jpox.properties.
    */
   @SuppressWarnings("nls")
-  private void getDataSourceProps() {
+  private void initDataSourceProps() {
+    if(prop != null) {
+      return;
+    }
     URL url= classLoader.getResource(JPOX_CONFIG);
     prop = new Properties();
     if (url == null) {
@@ -167,10 +179,26 @@ public class ObjectStore implements RawStore, Configurable {
       prop.setProperty(param, val);
     }
   }
-
-  private static PersistenceManager createPersistenceManager() {
-    PersistenceManagerFactory pmf = JDOHelper.getPersistenceManagerFactory(prop);
-    return pmf.getPersistenceManager();
+  private static PersistenceManagerFactory getPMF() {
+    if(pmf == null) {
+      pmf = JDOHelper.getPersistenceManagerFactory(prop);
+      DataStoreCache dsc = pmf.getDataStoreCache();
+      if(dsc != null) {
+        dsc.pinAll(true, MTable.class);
+        dsc.pinAll(true, MStorageDescriptor.class);
+        dsc.pinAll(true, MSerDeInfo.class);
+        dsc.pinAll(true, MPartition.class);
+        dsc.pinAll(true, MDatabase.class);
+        dsc.pinAll(true, MType.class);
+        dsc.pinAll(true, MFieldSchema.class);
+        dsc.pinAll(true, MOrder.class);
+      }
+    }
+    return pmf;
+  }
+  
+  private PersistenceManager getPersistenceManager() {
+    return getPMF().getPersistenceManager();
   }
   
   public void shutdown() {
@@ -179,16 +207,6 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
-  private int openTrasactionCalls = 0;
-  private Transaction currentTransaction = null;
-  private static enum TXN_STATUS {
-    NO_STATE,
-    OPEN,
-    COMMITED,
-    ROLLBACK
-  }
-  private TXN_STATUS transactionStatus = TXN_STATUS.NO_STATE;
-  
   /**
    * Opens a new one or the one already created
    * Every call of this function must have corresponding commit or rollback function call
@@ -621,7 +639,7 @@ public class ObjectStore implements RawStore, Configurable {
   private List<Order> convertToOrders(List<MOrder> mkeys) {
     List<Order> keys = null;
     if(mkeys != null) {
-      keys = new ArrayList<Order>(mkeys.size());
+      keys = new ArrayList<Order>();
       for (MOrder part : mkeys) {
         keys.add(new Order(part.getCol(), part.getOrder()));
       }
@@ -817,8 +835,8 @@ public class ObjectStore implements RawStore, Configurable {
       query.declareParameters("java.lang.String t1, java.lang.String t2"); 
       mparts = (List<MPartition>) query.execute(tableName.trim(), dbName.trim()); 
       pm.retrieveAll(mparts);
-      
       success = commitTransaction();
+      LOG.debug("Done e xecuting listMPartitions");
     } finally {
       if(!success) {
         rollbackTransaction();

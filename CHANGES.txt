@@ -586,6 +586,9 @@ Trunk (unreleased changes)
     HADOOP-4125. Handles Reduce cleanup tip on the web ui.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4087. Hive Metastore API for php and python clients.
+    (Prasad Chakka via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
