@@ -589,6 +589,8 @@ Trunk (unreleased changes)
     HADOOP-4087. Hive Metastore API for php and python clients.
     (Prasad Chakka via dhruba)
 
+    HADOOP-4197. Update DATA_TRANSFER_VERSION for HADOOP-3981. (szetszwo)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

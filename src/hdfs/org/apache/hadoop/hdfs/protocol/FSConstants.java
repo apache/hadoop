@@ -102,11 +102,11 @@ public interface FSConstants {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 12:
-   *    OP_READ_BLOCK includes clientName and OP_WRITE_BLOCK includes
-   *    clientName instead of path from DFSClient to Datanode
+   * Version 13:
+   *    Added a new operation, OP_BLOCK_CHECKSUM, for obtaining
+   *    the checksum of a block from a datanode.
    */
-  public static final int DATA_TRANSFER_VERSION = 12;
+  public static final int DATA_TRANSFER_VERSION = 13;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;
