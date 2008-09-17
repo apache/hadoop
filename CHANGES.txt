@@ -577,9 +577,11 @@ Trunk (unreleased changes)
     HADOOP-4139. Optimize Hive multi group-by.
     (Namin Jain via dhruba)
 
-		HADOOP-3911. Add a check to fsck options to make sure -files is not 
-		the first option to resolve conflicts with GenericOptionsParser
-		(lohit)
+    HADOOP-3911. Add a check to fsck options to make sure -files is not 
+    the first option to resolve conflicts with GenericOptionsParser
+    (lohit)
+
+    HADOOP-3623. Refactor LeaseManager. (szetszwo)
 
 Release 0.18.1 - 2008-09-17
 
