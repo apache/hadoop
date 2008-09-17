@@ -74,25 +74,31 @@ public class DFSck extends Configured implements Tool {
   }
   
   /**
+   * Print fsck usage information
+   */
+  static void printUsage() {
+    System.err.println("Usage: DFSck <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]");
+    System.err.println("\t<path>\tstart checking from this path");
+    System.err.println("\t-move\tmove corrupted files to /lost+found");
+    System.err.println("\t-delete\tdelete corrupted files");
+    System.err.println("\t-files\tprint out files being checked");
+    System.err.println("\t-openforwrite\tprint out files opened for write");
+    System.err.println("\t-blocks\tprint out block report");
+    System.err.println("\t-locations\tprint out locations for every block");
+    System.err.println("\t-racks\tprint out network topology for data-node locations");
+    System.err.println("\t\tBy default fsck ignores files opened for write, " +
+                       "use -openforwrite to report such files. They are usually " +
+                       " tagged CORRUPT or HEALTHY depending on their block " +
+                        "allocation status");
+    ToolRunner.printGenericCommandUsage(System.err);
+  }
+  /**
    * @param args
    */
   public int run(String[] args) throws Exception {
     String fsName = getInfoServer();
     if (args.length == 0) {
-      System.err.println("Usage: DFSck <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]");
-      System.err.println("\t<path>\tstart checking from this path");
-      System.err.println("\t-move\tmove corrupted files to /lost+found");
-      System.err.println("\t-delete\tdelete corrupted files");
-      System.err.println("\t-files\tprint out files being checked");
-      System.err.println("\t-openforwrite\tprint out files opened for write");
-      System.err.println("\t-blocks\tprint out block report");
-      System.err.println("\t-locations\tprint out locations for every block");
-      System.err.println("\t-racks\tprint out network topology for data-node locations");
-      System.err.println("\t\tBy default fsck ignores files opened for write, " +
-                         "use -openforwrite to report such files. They are usually " +
-                         " tagged CORRUPT or HEALTHY depending on their block " +
-                          "allocation status");
-      ToolRunner.printGenericCommandUsage(System.err);
+      printUsage();
       return -1;
     }
     StringBuffer url = new StringBuffer("http://"+fsName+"/fsck?path=");
@@ -134,7 +140,13 @@ public class DFSck extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new DFSck(new Configuration()), args);
+    // -files option is also used by GenericOptionsParser
+    // Make sure that is not the first argument for fsck
+    int res = -1;
+    if ((args.length == 0 ) || ("-files".equals(args[0]))) 
+      printUsage();
+    else
+      res = ToolRunner.run(new DFSck(new Configuration()), args);
     System.exit(res);
   }
 }
