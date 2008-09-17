@@ -574,6 +574,9 @@ Trunk (unreleased changes)
     HADOOP-4129. Changed memory limits of TaskTracker and Tasks to be in
     KiloBytes rather than bytes. (Vinod Kumar Vavilapalli via acmurthy)
 
+    HADOOP-4139. Optimize Hive multi group-by.
+    (Namin Jain via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
