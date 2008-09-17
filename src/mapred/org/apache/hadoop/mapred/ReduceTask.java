@@ -111,9 +111,9 @@ class ReduceTask extends Task {
   }
 
 
-  private Progress copyPhase = getProgress().addPhase("copy");
-  private Progress sortPhase  = getProgress().addPhase("sort");
-  private Progress reducePhase = getProgress().addPhase("reduce");
+  private Progress copyPhase;
+  private Progress sortPhase;
+  private Progress reducePhase;
   private Counters.Counter reduceInputKeyCounter = 
     getCounters().findCounter(Counter.REDUCE_INPUT_GROUPS);
   private Counters.Counter reduceInputValueCounter = 
@@ -324,6 +324,11 @@ class ReduceTask extends Task {
     job.setBoolean("mapred.skip.on", isSkipping());
     Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
 
+    if (!cleanupJob) {
+      copyPhase = getProgress().addPhase("copy");
+      sortPhase  = getProgress().addPhase("sort");
+      reducePhase = getProgress().addPhase("reduce");
+    }
     // start thread that will handle communication with parent
     startCommunicationThread(umbilical);
     final Reporter reporter = getReporter(umbilical);

@@ -70,6 +70,10 @@
     }
     TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(tipidObj)
         : null;
+    boolean isCleanup = false;
+    if (tipidObj != null) { 
+      isCleanup = job.getTaskInProgress(tipidObj).isCleanupTask();
+    }
 %>
 
 <%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
@@ -95,7 +99,7 @@
 <table border=2 cellpadding="5" cellspacing="2">
 <tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Start Time</td> 
   <%
-   if (!ts[0].getIsMap()) {
+   if (!ts[0].getIsMap() && !isCleanup) {
    %>
 <td>Shuffle Finished</td><td>Sort Finished</td>
   <%
@@ -123,7 +127,7 @@
         out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getStartTime(), 0) + "</td>");
-        if (!ts[i].getIsMap()) {
+        if (!ts[i].getIsMap() && !isCleanup) {
           out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getShuffleFinishTime(), status.getStartTime()) + "</td>");

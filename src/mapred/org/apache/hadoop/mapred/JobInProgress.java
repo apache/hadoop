@@ -2017,10 +2017,8 @@ class JobInProgress {
    */
   public synchronized TaskInProgress getTaskInProgress(TaskID tipid) {
     if (tipid.isMap()) {
-      for (int i = 0; i < cleanup.length; i++) {
-        if (tipid.equals(cleanup[i].getTIPId())){
-          return cleanup[i];
-        }
+      if (tipid.getId() == maps.length) { // cleanup map tip
+        return cleanup[0]; 
       }
       for (int i = 0; i < maps.length; i++) {
         if (tipid.equals(maps[i].getTIPId())){
@@ -2028,6 +2026,9 @@ class JobInProgress {
         }
       }
     } else {
+      if (tipid.getId() == reduces.length) { // cleanup reduce tip
+        return cleanup[1]; 
+      }
       for (int i = 0; i < reduces.length; i++) {
         if (tipid.equals(reduces[i].getTIPId())){
           return reduces[i];

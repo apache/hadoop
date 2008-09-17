@@ -583,6 +583,9 @@ Trunk (unreleased changes)
 
     HADOOP-3623. Refactor LeaseManager. (szetszwo)
 
+    HADOOP-4125. Handles Reduce cleanup tip on the web ui.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
