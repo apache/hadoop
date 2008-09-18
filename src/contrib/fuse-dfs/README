@@ -62,7 +62,7 @@ in a root shell do the following:
 
 1. add the following to /etc/fstab
 
-fuse_dfs#dfs://hadoop_server.foo.com:9000 /export/hdfs fuse -oallow_other,rw,-ousetrash 0 0
+fuse_dfs#dfs://hadoop_server.foo.com:9000 /export/hdfs fuse -oallow_other,rw,-ousetrash,-oinitchecks 0 0
 
 
 2. Mount using: `mount /export/hdfs`. Expect problems with not finding fuse_dfs. You will need to probably add this to /sbin and then problems finding the above 3 libraries. Add these using ldconfig.
@@ -83,7 +83,7 @@ rw
 -onotrash (opposite of usetrash)
 -odebug (do not daemonize - aka -d in fuse speak)
 -obig_writes (use fuse big_writes option so as to allow better performance of writes on kernels >= 2.6.26)
-
+-initchecks - have fuse-dfs try to connect to hdfs to ensure all is ok upon startup. recommended to have this  on
 The defaults are:
 
 entry,attribute_timeouts = 60 seconds
@@ -111,6 +111,7 @@ RECOMMENDATIONS
 
 3. use -obig_writes
 
+4. use -initchecks
 
 KNOWN ISSUES 
 

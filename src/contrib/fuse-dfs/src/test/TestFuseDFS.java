@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.hdfs.*;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.*;
 import java.net.*;
 
 /**
@@ -57,7 +57,7 @@ public class TestFuseDFS extends TestCase {
     String lp = System.getProperty("LD_LIBRARY_PATH") + ":" + "/usr/local/lib:" + libhdfs + ":" + jvm;
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
-		       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw" };
+                       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks" };
     final String [] envp = {
       "CLASSPATH="+  cp,
       "LD_LIBRARY_PATH=" + lp,
@@ -255,6 +255,132 @@ public class TestFuseDFS extends TestCase {
       e.printStackTrace();
     }
   }
+  /**
+   * use shell to create a dir and then use filesys to see it exists.
+   */
+  public void testDF() throws IOException,InterruptedException, Exception  {
+    try {
+      // First create a new directory with mkdirs
+      Path path = new Path("/foo");
+      Runtime r = Runtime.getRuntime();
+      String cmd = "df -kh " + mpoint + path.toString();
+      Process p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      InputStream i = p.getInputStream();
+      byte b[] = new byte[i.available()];
+      int length = i.read(b);
+      System.err.println("df output=");
+      System.err.write(b,0,b.length);
+      System.err.println("done");
+
+    } catch(Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  /**
+   * use shell to create a dir and then use filesys to see it exists.
+   */
+  public void testChown() throws IOException,InterruptedException, Exception  {
+    try {
+      // First create a new directory with mkdirs
+      Path path = new Path("/foo");
+      Runtime r = Runtime.getRuntime();
+      String cmd = "mkdir -p " + mpoint + path.toString();
+      Process p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      // check it is there
+      assertTrue(fileSys.getFileStatus(path).isDir());
+
+      cmd = "chown nobody " + mpoint + path.toString();
+      p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      cmd = "chgrp nobody " + mpoint + path.toString();
+      p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      try { Thread.sleep(1000); } catch(Exception e) { }
+
+      FileStatus foo = fileSys.getFileStatus(path);
+
+      assertTrue(foo.getOwner().equals("nobody"));
+      assertTrue(foo.getGroup().equals("nobody"));
+
+    } catch(Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  /**
+   * use shell to create a dir and then use filesys to see it exists.
+   */
+  public void testChmod() throws IOException,InterruptedException, Exception  {
+    try {
+      // First create a new directory with mkdirs
+      Path path = new Path("/foo");
+      Runtime r = Runtime.getRuntime();
+      String cmd = "mkdir -p " + mpoint + path.toString();
+      Process p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      // check it is there
+      assertTrue(fileSys.getFileStatus(path).isDir());
+
+      cmd = "chmod 777 " + mpoint + path.toString();
+      p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      FileStatus foo = fileSys.getFileStatus(path);
+      FsPermission perm = foo.getPermission();
+      assertTrue(perm.toShort() == 0777);
+
+    } catch(Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  /**
+   * use shell to create a dir and then use filesys to see it exists.
+   */
+  public void testUtimes() throws IOException,InterruptedException, Exception  {
+    try {
+      // First create a new directory with mkdirs
+      Path path = new Path("/utimetest");
+      Runtime r = Runtime.getRuntime();
+      String cmd = "touch " + mpoint + path.toString();
+      Process p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      // check it is there
+      assertTrue(fileSys.exists(path));
+
+      FileStatus foo = fileSys.getFileStatus(path);
+      long oldTime = foo.getModificationTime();
+      try { Thread.sleep(1000); } catch(Exception e) {}
+
+      cmd = "touch " + mpoint + path.toString();
+      p = r.exec(cmd);
+      assertTrue(p.waitFor() == 0);
+
+      try { Thread.sleep(1000); } catch(Exception e) {}
+      foo = fileSys.getFileStatus(path);
+      long newTime = foo.getModificationTime();
+
+      assertTrue(newTime > oldTime);
+
+    } catch(Exception e) {
+      e.printStackTrace();
+      throw e;
+    } finally {
+    }
+  }
+
 
 
   /**
@@ -288,10 +414,9 @@ public class TestFuseDFS extends TestCase {
     } catch(Exception e) {
       e.printStackTrace();
     } finally {
-      close();
+    close();
     }
   }
-
 
   /**
    * Unmount and close
@@ -331,7 +456,7 @@ public class TestFuseDFS extends TestCase {
 
       fuse_process.destroy();
       fuse_process = null;
-      if(fileSys != null) {
+        if(fileSys != null) {
         fileSys.close();
         fileSys = null;
       }

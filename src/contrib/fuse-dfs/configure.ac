@@ -29,6 +29,7 @@ FUSE_DFS_INITIALIZE([localinstall])
 AC_PREFIX_DEFAULT([`pwd`])
 
 
+
 #case $target in
 #*64*intel)
 #     OS_ARCH=intel64 ;;
@@ -38,6 +39,9 @@ AC_PREFIX_DEFAULT([`pwd`])
 #AC_SUBST(OS_ARCH)
  DEFS=""
 AC_SUBST([DEFS])
+
+AC_FUNC_GETGROUPS
+AC_TYPE_GETGROUPS
 
 ############################################################################
 # Section 2:
