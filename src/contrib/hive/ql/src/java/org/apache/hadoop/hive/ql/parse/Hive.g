@@ -97,6 +97,7 @@ TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_TABLESAMPLE;
 TOK_TMP_FILE;
+TOK_EXPLAIN;
 }
 
 
@@ -115,9 +116,18 @@ catch (RecognitionException e) {
  
 // starting rule
 statement
-    : queryStatementExpression EOF
-    | loadStatement EOF
-    | ddlStatement EOF
+	: explainStatement EOF
+	| execStatement EOF
+	;
+
+explainStatement
+	: KW_EXPLAIN (isExtended=KW_EXTENDED)? execStatement -> ^(TOK_EXPLAIN execStatement $isExtended?)
+	;
+		
+execStatement
+    : queryStatementExpression
+    | loadStatement
+    | ddlStatement
     ;
 
 loadStatement
@@ -766,6 +776,8 @@ KW_ADD: 'ADD';
 KW_COLUMNS: 'COLUMNS';
 KW_RLIKE: 'RLIKE';
 KW_REGEXP: 'REGEXP';
+KW_EXPLAIN: 'EXPLAIN';
+KW_EXTENDED: 'EXTENDED';
 
 // Operators
 

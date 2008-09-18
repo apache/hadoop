@@ -24,6 +24,7 @@ import java.io.*;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 
+@explain(displayName="Map Reduce")
 public class mapredWork implements Serializable {
   private static final long serialVersionUID = 1L;
   private String command;
@@ -31,18 +32,22 @@ public class mapredWork implements Serializable {
   //   use LinkedHashMap to make sure the iteration order is
   //   deterministic, to ease testing
   private LinkedHashMap<String,ArrayList<String>> pathToAliases;
+  
   private LinkedHashMap<String,partitionDesc> pathToPartitionInfo;
+  
   private HashMap<String,Operator<? extends Serializable>> aliasToWork;
 
   // map<->reduce interface
   // schema of the map-reduce 'key' object - this is homogeneous
   private schemaDesc keySchema;
+
   // schema of the map-reduce 'val' object - this is heterogeneous
   private HashMap<String,schemaDesc> aliasToSchema;
 
-
   private Operator<?> reducer;
+  
   private Integer numReduceTasks;
+  
   private boolean needsTagging;
 
   public mapredWork() { }
@@ -70,18 +75,24 @@ public class mapredWork implements Serializable {
   public void setCommand(final String command) {
     this.command = command;
   }
+
+  @explain(displayName="Path -> Alias", normalExplain=false)
   public LinkedHashMap<String,ArrayList<String>> getPathToAliases() {
     return this.pathToAliases;
   }
   public void setPathToAliases(final LinkedHashMap<String,ArrayList<String>> pathToAliases) {
     this.pathToAliases = pathToAliases;
   }
+
+  @explain(displayName="Path -> Partition", normalExplain=false)
   public LinkedHashMap<String,partitionDesc> getPathToPartitionInfo() {
     return this.pathToPartitionInfo;
   }
   public void setPathToPartitionInfo(final LinkedHashMap<String,partitionDesc> pathToPartitionInfo) {
     this.pathToPartitionInfo = pathToPartitionInfo;
   }
+  
+  @explain(displayName="Alias -> Map Operator Tree")
   public HashMap<String, Operator<? extends Serializable>> getAliasToWork() {
     return this.aliasToWork;
   }
@@ -101,12 +112,16 @@ public class mapredWork implements Serializable {
     this.aliasToSchema = aliasToSchema;
   }
 
+  @explain(displayName="Reduce Operator Tree")
   public Operator<?> getReducer() {
     return this.reducer;
   }
+
   public void setReducer(final Operator<?> reducer) {
     this.reducer = reducer;
   }
+
+  @explain(displayName="# Reducers")
   public Integer getNumReduceTasks() {
     return this.numReduceTasks;
   }
@@ -174,6 +189,7 @@ public class mapredWork implements Serializable {
     setAliases();
   }
 
+  @explain(displayName="Needs Tagging", normalExplain=false)
   public boolean getNeedsTagging() {
     return this.needsTagging;
   }

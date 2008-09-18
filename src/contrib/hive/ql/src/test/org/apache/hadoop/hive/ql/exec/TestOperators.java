@@ -85,7 +85,7 @@ public class TestOperators extends TestCase {
         op.process(oner);
       }
 
-      Map<Enum, Long> results = op.getStats();
+      Map<Enum<?>, Long> results = op.getStats();
       assertEquals(results.get(FilterOperator.Counter.FILTERED), Long.valueOf(4));
       assertEquals(results.get(FilterOperator.Counter.PASSED), Long.valueOf(1));
 

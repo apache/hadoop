@@ -29,6 +29,7 @@ public class SemanticAnalyzerFactory {
       throw new RuntimeException ("Empty Syntax Tree");
     } else {
       switch (tree.getToken().getType()) {
+      case HiveParser.TOK_EXPLAIN: return new ExplainSemanticAnalyzer(conf);
       case HiveParser.TOK_LOAD: return new LoadSemanticAnalyzer(conf);
       case HiveParser.TOK_CREATETABLE: 
       case HiveParser.TOK_CREATEEXTTABLE: 

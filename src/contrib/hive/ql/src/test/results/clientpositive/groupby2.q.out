@@ -1,3 +1,87 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION substr (TOK_COLREF src key) 0 1)) (TOK_SELEXPR (TOK_FUNCTIONDI count (TOK_FUNCTION substr (TOK_COLREF src value) 4))) (TOK_SELEXPR (TOK_FUNCTION concat (TOK_FUNCTION substr (TOK_COLREF src key) 0 1) (TOK_FUNCTION sum (TOK_FUNCTION substr (TOK_COLREF src value) 4))))) (TOK_GROUPBY (TOK_FUNCTION substr (TOK_COLREF src key) 0 1))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-2 depends on stages: Stage-1	
+  Stage-0 depends on stages: Stage-2	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Reduce Operator Tree:	
+        Group By Operator	
+          keys:	
+                expr: KEY.0	
+                type: class java.lang.String	
+          mode: partial1	
+        	
+              expr: count(DISTINCT KEY.1)	
+              expr: sum(KEY.1)	
+          File Output Operator	
+            table:	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+      Alias -> Map Operator Tree:	
+        src 	
+            Reduce Output Operator	
+              tag: -1	
+              key expressions:	
+                    expr: substr(key, 0, 1)	
+                    type: class java.lang.String	
+                    expr: substr(value, 4)	
+                    type: class java.lang.String	
+              # partition fields: 2147483647	
+	
+  Stage: Stage-2	
+    Map Reduce	
+      Reduce Operator Tree:	
+        Group By Operator	
+          keys:	
+                expr: KEY.0	
+                type: class java.lang.String	
+          mode: partial2	
+        	
+              expr: count(VALUE.0)	
+              expr: sum(VALUE.1)	
+          Select Operator	
+            expressions:	
+                  expr: 0	
+                  type: class java.lang.String	
+                  expr: 1	
+                  type: class java.lang.String	
+                  expr: concat(0, 2)	
+                  type: class java.lang.String	
+            File Output Operator	
+              table:	
+                  name: dest1	
+                  serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                  input format: org.apache.hadoop.mapred.TextInputFormat	
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+      Alias -> Map Operator Tree:	
+        /tmp/hive-athusoo/69737081.10001 	
+          Reduce Output Operator	
+            tag: -1	
+            key expressions:	
+                  expr: 0	
+                  type: class java.lang.String	
+            value expressions:	
+                  expr: 1	
+                  type: class java.lang.String	
+                  expr: 2	
+                  type: class java.lang.String	
+            # partition fields: 1	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+	
 0	1	00.0	
 1	71	116414.0	
 2	69	225571.0	

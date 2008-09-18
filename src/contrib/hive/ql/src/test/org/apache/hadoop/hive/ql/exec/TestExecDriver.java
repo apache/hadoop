@@ -150,8 +150,8 @@ public class TestExecDriver extends TestCase {
 
     exprNodeDesc desc = new exprNodeFuncDesc(
         TypeInfo.getPrimitiveTypeInfo(Boolean.class),
-        UDFRegistry.getUDFClass("<"),
-        UDFRegistry.getUDFMethod("<", true, String.class, Number.class),
+        FunctionRegistry.getUDFClass("<"),
+        FunctionRegistry.getUDFMethod("<", true, String.class, Number.class),
         children
     );
     return new filterDesc(desc);

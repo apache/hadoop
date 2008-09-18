@@ -29,14 +29,11 @@ package org.apache.hadoop.hive.ql.parse;
 import java.util.*;
 import org.antlr.runtime.tree.*;
 
-import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.ExprNodeEvaluator;
 import org.apache.hadoop.hive.ql.exec.ExprNodeEvaluatorFactory;
 import org.apache.hadoop.hive.ql.exec.HiveObject;
 import org.apache.hadoop.hive.ql.exec.LabeledCompositeHiveObject;
 import org.apache.hadoop.hive.ql.exec.PrimitiveHiveObject;
-import org.apache.hadoop.hive.ql.exec.UDF;
-import org.apache.hadoop.hive.ql.exec.UDFRegistry;
 import org.apache.hadoop.hive.ql.metadata.*;
 import org.apache.hadoop.hive.ql.plan.exprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.exprNodeConstantDesc;

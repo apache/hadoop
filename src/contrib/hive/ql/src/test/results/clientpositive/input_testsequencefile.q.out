@@ -1,3 +1,38 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest4_sequencefile)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key)) (TOK_SELEXPR (TOK_COLREF src value)))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Alias -> Map Operator Tree:	
+        src 	
+            Select Operator	
+              expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+                    expr: value	
+                    type: class java.lang.String	
+              File Output Operator	
+                table:	
+                    name: dest4_sequencefile	
+                    serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat	
+                    output format: org.apache.hadoop.mapred.SequenceFileOutputFormat	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest4_sequencefile	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat	
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat	
+            replace:	
+	
 238	val_238	
 86	val_86	
 311	val_311	

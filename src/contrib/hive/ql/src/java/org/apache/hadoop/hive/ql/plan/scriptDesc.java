@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Transform Operator")
 public class scriptDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String scriptCmd;
@@ -33,12 +34,16 @@ public class scriptDesc implements Serializable {
     this.scriptCmd = scriptCmd;
     this.scriptOutputInfo = scriptOutputInfo;
   }
+  
+  @explain(displayName="command")
   public String getScriptCmd() {
     return this.scriptCmd;
   }
   public void setScriptCmd(final String scriptCmd) {
     this.scriptCmd=scriptCmd;
   }
+  
+  @explain(displayName="output info")
   public tableDesc getScriptOutputInfo() {
     return this.scriptOutputInfo;
   }

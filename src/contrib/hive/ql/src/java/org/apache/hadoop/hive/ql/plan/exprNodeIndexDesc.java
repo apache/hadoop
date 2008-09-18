@@ -51,4 +51,9 @@ public class exprNodeIndexDesc extends exprNodeDesc implements Serializable {
     return this.desc.toString() + "[" + this.index + "]";
   }
   
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    return this.desc.getExprString() + "[" + this.index.getExprString() + "]";
+  }
 }

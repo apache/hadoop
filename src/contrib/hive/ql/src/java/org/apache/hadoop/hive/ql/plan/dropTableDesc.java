@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Drop Table")
 public class dropTableDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
@@ -36,6 +37,7 @@ public class dropTableDesc extends ddlDesc implements Serializable
   /**
    * @return the tableName
    */
+  @explain(displayName="table")
   public String getTableName() {
     return tableName;
   }

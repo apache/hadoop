@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe;
 
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.plan.*;
 import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -90,6 +91,19 @@ public class Utilities {
     }
   }
 
+  public static List<String> getFieldSchemaString(List<FieldSchema> fl) {
+    if (fl == null) {
+      return null;
+    }
+    
+    ArrayList<String> ret = new ArrayList<String>();
+    for(FieldSchema f: fl) {
+      ret.add(f.getName() + " " + f.getType() + 
+              (f.getComment() != null ? (" " + f.getComment()) : ""));
+    }
+    return ret;
+  }
+  
   /**
    * Java 1.5 workaround. 
    * From http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=5015403

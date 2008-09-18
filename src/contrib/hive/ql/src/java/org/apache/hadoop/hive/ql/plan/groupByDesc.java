@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.plan;
 
+@explain(displayName="Group By Operator")
 public class groupByDesc implements java.io.Serializable {
   /** Group-by Mode:
    *  COMPLETE: complete 1-phase aggregation: aggregate, evaluate
@@ -42,15 +43,33 @@ public class groupByDesc implements java.io.Serializable {
   public Mode getMode() {
     return this.mode;
   }
+  @explain(displayName="mode")
+  public String getModeString() {
+    switch(mode) {
+    case COMPLETE:
+      return "complete";
+    case PARTIAL1:
+      return "partial1";
+    case PARTIAL2:
+      return "partial2";
+    case HASH:
+      return "hash";
+    }
+  
+    return "unknown";
+  }
   public void setMode(final Mode mode) {
     this.mode = mode;
   }
+  @explain(displayName="keys")
   public java.util.ArrayList<exprNodeDesc> getKeys() {
     return this.keys;
   }
   public void setKeys(final java.util.ArrayList<exprNodeDesc> keys) {
     this.keys = keys;
   }
+  
+  @explain(displayName="")
   public java.util.ArrayList<org.apache.hadoop.hive.ql.plan.aggregationDesc> getAggregators() {
     return this.aggregators;
   }

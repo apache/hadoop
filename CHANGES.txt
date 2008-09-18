@@ -625,6 +625,9 @@ Trunk (unreleased changes)
     HADOOP-4200. Fix a bug in the test-patch.sh script.
     (Ramya R via nigel)
 
+    HADOOP-4084. Add explain plan capabilities to Hive Query Language.
+    (Ashish Thusoo via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.parse;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -28,8 +29,6 @@ import java.util.List;
 import org.antlr.runtime.tree.CommonTree;
 import org.antlr.runtime.tree.Tree;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -156,6 +155,7 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  @Override
   public void analyze(CommonTree ast, Context ctx) throws SemanticException {
     isLocal = isOverWrite = false;
     Tree from_t = ast.getChild(0);
@@ -191,7 +191,7 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
     // make sure the arguments make sense
     applyConstraints(fromURI, toURI, from_t, isLocal);
 
-    Task rTask = null;
+    Task<? extends Serializable> rTask = null;
 
     // create copy work
     if(isLocal) {

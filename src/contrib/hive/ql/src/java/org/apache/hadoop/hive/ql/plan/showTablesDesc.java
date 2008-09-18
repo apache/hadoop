@@ -19,8 +19,10 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 
+@explain(displayName="Show Tables")
 public class showTablesDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
@@ -46,6 +48,7 @@ public class showTablesDesc extends ddlDesc implements Serializable
   /**
    * @return the pattern
    */
+  @explain(displayName="pattern")
   public String getPattern() {
     return pattern;
   }
@@ -64,6 +67,15 @@ public class showTablesDesc extends ddlDesc implements Serializable
     return resFile;
   }
 
+  @explain(displayName="result file", normalExplain=false)
+  public String getResFileString() {
+    try {
+      return getResFile().getCanonicalPath();
+    }
+    catch (IOException ioe) {
+      return "error";
+    }
+  }
   /**
    * @param resFile the resFile to set
    */

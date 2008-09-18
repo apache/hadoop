@@ -1,3 +1,87 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF src))) (TOK_WHERE (< (TOK_COLREF src key) 100))) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest2)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key)) (TOK_SELEXPR (TOK_COLREF src value))) (TOK_WHERE (and (>= (TOK_COLREF src key) 100) (< (TOK_COLREF src key) 200)))) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest3 (TOK_PARTSPEC (TOK_PARTVAL ds '2008-04-08') (TOK_PARTVAL hr '12')))) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key))) (TOK_WHERE (>= (TOK_COLREF src key) 200))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Alias -> Map Operator Tree:	
+        src 	
+            Filter Operator	
+              predicate:	
+                  expr: (key < 100)	
+                  type: class java.lang.Boolean	
+              Select Operator	
+                expressions:	
+                      expr: key	
+                      type: class java.lang.String	
+                      expr: value	
+                      type: class java.lang.String	
+                File Output Operator	
+                  table:	
+                      name: dest1	
+                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                      input format: org.apache.hadoop.mapred.TextInputFormat	
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            Filter Operator	
+              predicate:	
+                  expr: ((key >= 100) and (key < 200))	
+                  type: class java.lang.Boolean	
+              Select Operator	
+                expressions:	
+                      expr: key	
+                      type: class java.lang.String	
+                      expr: value	
+                      type: class java.lang.String	
+                File Output Operator	
+                  table:	
+                      name: dest2	
+                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                      input format: org.apache.hadoop.mapred.TextInputFormat	
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            Filter Operator	
+              predicate:	
+                  expr: (key >= 200)	
+                  type: class java.lang.Boolean	
+              Select Operator	
+                expressions:	
+                      expr: key	
+                      type: class java.lang.String	
+                File Output Operator	
+                  table:	
+                      name: dest3	
+                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                      input format: org.apache.hadoop.mapred.TextInputFormat	
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+            table:	
+                name: dest2	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+            table:	
+                name: dest3	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            partition:	
+              ds 2008-04-08	
+              hr 12	
+            replace:	
+	
 86	val_86	
 27	val_27	
 98	val_98	

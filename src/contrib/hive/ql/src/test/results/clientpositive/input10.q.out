@@ -1,3 +1,15 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_DESCTABLE TEST10)	
+	
+STAGE DEPENDENCIES:	
+  Stage-0 is a root stage	
+	
+STAGE PLANS:	
+  Stage: Stage-0	
+    	
+      Describe Table	
+        table: TEST10	
+	
 key	int	
 value	string	
 ds	string	

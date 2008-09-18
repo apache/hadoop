@@ -1,3 +1,68 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_TABREF src src1) (TOK_TABREF src src2) (= (TOK_COLREF src1 key) (TOK_COLREF src2 key)))) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src1 key)) (TOK_SELEXPR (TOK_COLREF src2 value)))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Reduce Operator Tree:	
+        Join Operator	
+          condition expressions:	
+            0 {VALUE.0} {VALUE.1}	
+            1 {VALUE.0} {VALUE.1}	
+          condition map:	
+               Inner Join 0 to 1	
+          Select Operator	
+            expressions:	
+                  expr: 0	
+                  type: class java.lang.String	
+                  expr: 3	
+                  type: class java.lang.String	
+            File Output Operator	
+              table:	
+                  name: dest1	
+                  serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                  input format: org.apache.hadoop.mapred.TextInputFormat	
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+      Alias -> Map Operator Tree:	
+        src2 	
+            Reduce Output Operator	
+              tag: 1	
+              key expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+              value expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+                    expr: value	
+                    type: class java.lang.String	
+              # partition fields: 1	
+        src1 	
+            Reduce Output Operator	
+              tag: 0	
+              key expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+              value expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+                    expr: value	
+                    type: class java.lang.String	
+              # partition fields: 1	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+	
 0	val_0	
 0	val_0	
 0	val_0	

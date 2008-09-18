@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.hive.ql;
 
-import java.io.File;
 import java.io.InputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
-
 import org.antlr.runtime.tree.CommonTree;
 
 import org.apache.commons.lang.StringUtils;
@@ -37,6 +34,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.MapRedTask;
+import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.ExecDriver;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -65,15 +63,15 @@ public class Driver implements CommandProcessor {
     return terminator;
   }
   
-  public int countJobs(Collection tasks) {
+  public int countJobs(List<Task<? extends Serializable>> tasks) {
     if (tasks == null)
       return 0;
     int jobs = 0;
-    for (Object task: tasks) {
+    for (Task<? extends Serializable> task: tasks) {
       if ((task instanceof ExecDriver) || (task instanceof MapRedTask)) {
         jobs++;
       }
-      jobs += countJobs(((Task) task).getChildTasks());
+      jobs += countJobs(task.getChildTasks());
     }
     return jobs;
   }
@@ -104,11 +102,13 @@ public class Driver implements CommandProcessor {
     conf.setVar(HiveConf.ConfVars.HIVEQUERYID, command);
 
     try {
+      
+      TaskFactory.resetId();
+
       BaseSemanticAnalyzer sem;
       LOG.info("Starting command: " + command);
 
-      if (resStream != null)
-      {
+      if (resStream != null) {
         resStream.close();
         resStream = null;
       }
@@ -126,21 +126,32 @@ public class Driver implements CommandProcessor {
       // Do semantic analysis and plan generation
       sem.analyze(tree, ctx);
       LOG.info("Semantic Analysis Completed");
-      for(Task rootTask: sem.getRootTasks()) {
-        rootTask.initialize(conf);
-      }
 
       jobs = countJobs(sem.getRootTasks());
       if (jobs > 0) {
         console.printInfo("Total MapReduce jobs = " + jobs);
       }
+      
+ 
+      String jobname = Utilities.abbreviate(command, maxlen - 6);
+      int curJob = 0;
+      for(Task<? extends Serializable> rootTask: sem.getRootTasks()) {
+        // assumption that only top level tasks are map-reduce tasks
+        if ((rootTask instanceof ExecDriver) || (rootTask instanceof MapRedTask)) {
+          curJob ++;
+          if(noName) {
+            conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, jobname + "(" + curJob + "/" + jobs + ")");
+          }
+        }
+        rootTask.initialize(conf);
+      }
 
       // A very simple runtime that keeps putting runnable takss
       // on a list and when a job completes, it puts the children at the back of the list
       // while taking the job to run from the front of the list
-      Queue<Task> runnable = new LinkedList<Task>();
+      Queue<Task<? extends Serializable>> runnable = new LinkedList<Task<? extends Serializable>>();
 
-      for(Task rootTask:sem.getRootTasks()) {
+      for(Task<? extends Serializable> rootTask:sem.getRootTasks()) {
         if (runnable.offer(rootTask) == false) {
           LOG.error("Could not insert the first task into the queue");
           return (1);
@@ -148,11 +159,7 @@ public class Driver implements CommandProcessor {
       }
 
       while(runnable.peek() != null) {
-        Task tsk = runnable.remove();
-
-        if(noName) {
-          conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, Utilities.abbreviate(command, maxlen));
-        }
+        Task<? extends Serializable> tsk = runnable.remove();
 
         int exitVal = tsk.execute();
         if (exitVal != 0) {
@@ -166,13 +173,13 @@ public class Driver implements CommandProcessor {
           continue;
         }
 
-        for(Object child: tsk.getChildTasks()) {
+        for(Task<? extends Serializable> child: tsk.getChildTasks()) {
           // Check if the child is runnable
-          if (!((Task)child).isRunnable()) {
+          if (!child.isRunnable()) {
             continue;
           }
 
-          if (runnable.offer((Task)child) == false) {
+          if (runnable.offer(child) == false) {
             LOG.error("Could not add child task to queue");
           }
         }

@@ -143,12 +143,12 @@ public class RowResolver {
   public String toString() {
     StringBuffer sb = new StringBuffer();
     
-    for(Map.Entry e: rslvMap.entrySet()) {
+    for(Map.Entry<String, LinkedHashMap<String,ColumnInfo>> e: rslvMap.entrySet()) {
       String tab = (String)e.getKey();
       sb.append(tab + "{");
       HashMap<String, ColumnInfo> f_map = (HashMap<String, ColumnInfo>)e.getValue();
       if (f_map != null)
-        for(Map.Entry entry: f_map.entrySet()) {
+        for(Map.Entry<String, ColumnInfo> entry: f_map.entrySet()) {
           sb.append("(" + (String)entry.getKey() + "," + entry.getValue().toString() + ")");
         }
       sb.append("} ");

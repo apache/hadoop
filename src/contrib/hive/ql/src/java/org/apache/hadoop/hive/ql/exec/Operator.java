@@ -28,7 +28,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.apache.hadoop.hive.ql.plan.explain;
 
 /**
  * Base operator implementation
@@ -38,6 +38,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
   // Bean methods
 
   private static final long serialVersionUID = 1L;
+  
   protected List<Operator<? extends Serializable>> childOperators;
 
   public Operator() {}
@@ -57,6 +58,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
     this.conf = conf;
   }
 
+  @explain
   public T getConf() {
     return conf;
   }
@@ -96,7 +98,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
     if(childOperators == null)
       return;
 
-    for(Operator op: childOperators) {
+    for(Operator<? extends Serializable> op: childOperators) {
       op.setOutputCollector(out);
     }
   }
@@ -148,9 +150,9 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
 
 
-  public Map<Enum, Long> getStats() {
-    HashMap<Enum, Long> ret = new HashMap<Enum, Long> ();
-    for(Enum one: statsMap.keySet()) {
+  public Map<Enum<?>, Long> getStats() {
+    HashMap<Enum<?>, Long> ret = new HashMap<Enum<?>, Long> ();
+    for(Enum<?> one: statsMap.keySet()) {
       ret.put(one, Long.valueOf(statsMap.get(one).get()));
     }
     return(ret);
@@ -226,7 +228,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
   }
 
   public void resetStats() {
-    for(Enum e: statsMap.keySet()) {
+    for(Enum<?> e: statsMap.keySet()) {
       statsMap.get(e).set(0L);
     }
   }
@@ -246,7 +248,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
   }
 
   public void logStats () {
-    for(Enum e: statsMap.keySet()) {
+    for(Enum<?> e: statsMap.keySet()) {
       l4j.info(e.toString() + ":" + statsMap.get(e).toString());
     }    
   }

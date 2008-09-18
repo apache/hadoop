@@ -153,9 +153,9 @@ public class QTestUtil {
     testFiles = conf.get("test.data.files").replace('\\', '/').replace("c:", "");
     logDir = conf.get("test.log.dir");
 
-    String ow = System.getenv("overwrite");
+    String ow = System.getProperty("test.output.overwrite");
     overWrite = false;
-    if ((ow != null) && (ow.length() > 0)) {
+    if ((ow != null) && ow.equalsIgnoreCase("true")){
       overWrite = true;
     }
 
@@ -551,12 +551,26 @@ public class QTestUtil {
                          cmdArray[3] + " " + cmdArray[4] + " " + cmdArray[5]);
     }
     else {
+      System.out.println("overwritting");
       // Remove any existing output
       String [] cmdArray1 = new String[5];
       cmdArray1[0] = "rm";
       cmdArray1[1] = "-rf";
       cmdArray1[2] = (new File(outDir, tname)).getPath();
       System.out.println(cmdArray1[0] + " " + cmdArray1[1] + " " + cmdArray1[2]);
+
+      Process executor = Runtime.getRuntime().exec(cmdArray1);
+      
+      StreamPrinter outPrinter = new StreamPrinter(executor.getInputStream(), null, System.out);
+      StreamPrinter errPrinter = new StreamPrinter(executor.getErrorStream(), null, System.err);
+      
+      outPrinter.start();
+      errPrinter.start();
+      int exitVal = executor.waitFor();
+      if (exitVal != 0) {
+        return exitVal;
+      }
+
       // Capture code
       cmdArray = new String[5];
       cmdArray[0] = "cp";
@@ -581,11 +595,24 @@ public class QTestUtil {
 
   public int checkCliDriverResults(String tname) throws Exception {
     String [] cmdArray;
-    cmdArray = new String[3];
-    cmdArray[0] = "diff";
-    cmdArray[1] = (new File(logDir, tname + ".out")).getPath();
-    cmdArray[2] = (new File(outDir, tname + ".out")).getPath();
-    System.out.println(cmdArray[0] + " " + cmdArray[1] + " " + cmdArray[2]);
+
+    if (!overWrite) {
+      cmdArray = new String[5];
+      cmdArray[0] = "diff";
+      cmdArray[1] = "-I";
+      cmdArray[2] = "\\|\\(tmp/hive-.*\\)";
+      cmdArray[3] = (new File(logDir, tname + ".out")).getPath();
+      cmdArray[4] = (new File(outDir, tname + ".out")).getPath();
+      System.out.println(cmdArray[0] + " " + cmdArray[1] + " " + cmdArray[2] + " " +
+                         cmdArray[3] + " " + cmdArray[4]);
+    }
+    else {
+      cmdArray = new String[3];
+      cmdArray[0] = "cp";
+      cmdArray[1] = (new File(logDir, tname + ".out")).getPath();
+      cmdArray[2] = (new File(outDir, tname + ".out")).getPath();
+      System.out.println(cmdArray[0] + " " + cmdArray[1] + " " + cmdArray[2]);
+    }
 
     Process executor = Runtime.getRuntime().exec(cmdArray);
 

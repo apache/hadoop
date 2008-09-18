@@ -21,7 +21,7 @@ package org.apache.hadoop.hive.ql.plan;
 import java.util.*;
 import java.io.*;
 
-
+@explain(displayName="Move Operator")
 public class moveWork implements Serializable {
   private static final long serialVersionUID = 1L;
   private List<loadTableDesc> loadTableWork;
@@ -34,12 +34,15 @@ public class moveWork implements Serializable {
     this.loadTableWork = loadTableWork;
     this.loadFileWork = loadFileWork;
   }
+  @explain(displayName="tables")
   public List<loadTableDesc> getLoadTableWork() {
     return this.loadTableWork;
   }
   public void setLoadTableWork(final List<loadTableDesc> loadTableWork) {
     this.loadTableWork = loadTableWork;
   }
+  
+  @explain(displayName="files")
   public List<loadFileDesc> getLoadFileWork() {
     return this.loadFileWork;
   }

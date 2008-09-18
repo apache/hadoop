@@ -22,7 +22,9 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.ql.exec.Utilities;
 
+@explain(displayName="Create Table")
 public class createTableDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
@@ -65,6 +67,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.partCols        = partCols;
   }
 
+  @explain(displayName="name")
   public String getTableName() {
     return tableName;
   }
@@ -77,6 +80,11 @@ public class createTableDesc extends ddlDesc implements Serializable
     return cols;
   }
 
+  @explain(displayName="columns")
+  public List<String> getColsString() {
+    return Utilities.getFieldSchemaString(getCols());
+  }
+ 
   public void setCols(List<FieldSchema> cols) {
     this.cols = cols;
   }
@@ -85,10 +93,16 @@ public class createTableDesc extends ddlDesc implements Serializable
     return partCols;
   }
 
+  @explain(displayName="partition columns")
+  public List<String> getPartColsString() {
+    return Utilities.getFieldSchemaString(getPartCols());
+  }
+
   public void setPartCols(List<FieldSchema> partCols) {
     this.partCols = partCols;
   }
 
+  @explain(displayName="bucket columns")
   public List<String> getBucketCols() {
     return bucketCols;
   }
@@ -97,6 +111,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.bucketCols = bucketCols;
   }
 
+  @explain(displayName="# buckets")
   public int getNumBuckets() {
     return numBuckets;
   }
@@ -105,6 +120,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.numBuckets = numBuckets;
   }
 
+  @explain(displayName="field delimiter")
   public String getFieldDelim() {
     return fieldDelim;
   }
@@ -113,6 +129,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.fieldDelim = fieldDelim;
   }
 
+  @explain(displayName="collection delimiter")
   public String getCollItemDelim() {
     return collItemDelim;
   }
@@ -121,6 +138,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.collItemDelim = collItemDelim;
   }
 
+  @explain(displayName="map key delimiter")
   public String getMapKeyDelim() {
     return mapKeyDelim;
   }
@@ -129,6 +147,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.mapKeyDelim = mapKeyDelim;
   }
 
+  @explain(displayName="line delimiter")
   public String getLineDelim() {
     return lineDelim;
   }
@@ -137,6 +156,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.lineDelim = lineDelim;
   }
 
+  @explain(displayName="comment")
   public String getComment() {
     return comment;
   }
@@ -145,6 +165,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.comment = comment;
   }
 
+  @explain(displayName="isCompressed")
   public boolean isCompressed() {
     return isCompressed;
   }
@@ -153,6 +174,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.isCompressed = isCompressed;
   }
 
+  @explain(displayName="location")
   public String getLocation() {
     return location;
   }
@@ -161,6 +183,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.location = location;
   }
 
+  @explain(displayName="isExternal")
   public boolean isExternal() {
     return isExternal;
   }
@@ -172,6 +195,7 @@ public class createTableDesc extends ddlDesc implements Serializable
   /**
    * @return the sortCols
    */
+  @explain(displayName="sort columns")
   public List<String> getSortCols() {
     return sortCols;
   }

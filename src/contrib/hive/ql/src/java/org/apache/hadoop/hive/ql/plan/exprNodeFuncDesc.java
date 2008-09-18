@@ -24,6 +24,8 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.ql.exec.FunctionInfo;
+import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.parse.TypeInfo;
 
 /**
@@ -77,6 +79,58 @@ public class exprNodeFuncDesc extends exprNodeDesc implements Serializable {
     }
     sb.append("(");
     sb.append(")");
+    return sb.toString();
+  }
+  
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    FunctionInfo fI = FunctionRegistry.getInfo(UDFClass);
+    StringBuilder sb = new StringBuilder();
+    
+    if (fI.getOpType() == FunctionInfo.OperatorType.PREFIX ||
+        fI.isAggFunction()) {
+      sb.append(fI.getDisplayName());
+      if (!fI.isOperator()) {
+        sb.append("(");
+      }
+      else {
+        sb.append(" ");
+      }
+      
+      boolean first = true;
+      for(exprNodeDesc chld: children) {
+        if (!first) {
+          sb.append(", ");
+        }
+        first = false;
+        
+        sb.append(chld.getExprString());
+      }
+      
+      if(!fI.isOperator()) {
+        sb.append(")");
+      }
+    }
+    else if (fI.getOpType() == FunctionInfo.OperatorType.INFIX) {
+      // assert that this has only 2 children
+      assert(children.size() == 2);
+      sb.append("(");
+      sb.append(children.get(0).getExprString());
+      sb.append(" ");
+      sb.append(fI.getDisplayName());
+      sb.append(" ");
+      sb.append(children.get(1).getExprString());
+      sb.append(")");
+    }
+    else if (fI.getOpType() == FunctionInfo.OperatorType.POSTFIX) {
+      // assert for now as there should be no such case
+      assert(children.size() == 1);
+      sb.append(children.get(0).getExprString());
+      sb.append(" ");
+      sb.append(fI.getDisplayName());
+    }
+    
     return sb.toString();
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Select Operator")
 public class selectDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList;
@@ -28,6 +29,7 @@ public class selectDesc implements Serializable {
     final java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList) {
     this.colList = colList;
   }
+  @explain(displayName="expressions")
   public java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> getColList() {
     return this.colList;
   }

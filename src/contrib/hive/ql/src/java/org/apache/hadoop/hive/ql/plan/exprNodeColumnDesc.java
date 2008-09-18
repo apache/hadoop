@@ -44,4 +44,10 @@ public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   public String toString() {
     return "Column[" + column + "]";
   }
+  
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    return getColumn();
+  }
 }

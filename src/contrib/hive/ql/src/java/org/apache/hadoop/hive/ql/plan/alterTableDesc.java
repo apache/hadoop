@@ -19,10 +19,13 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.ql.exec.Utilities;
 
+@explain(displayName="Alter Table")
 public class alterTableDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
@@ -56,6 +59,7 @@ public class alterTableDesc extends ddlDesc implements Serializable
   /**
    * @return the old name of the table
    */
+  @explain(displayName="old name")
   public String getOldName() {
     return oldName;
   }
@@ -70,6 +74,7 @@ public class alterTableDesc extends ddlDesc implements Serializable
   /**
    * @return the newName
    */
+  @explain(displayName="new name")
   public String getNewName() {
     return newName;
   }
@@ -88,6 +93,17 @@ public class alterTableDesc extends ddlDesc implements Serializable
     return op;
   }
 
+  @explain(displayName="type")
+  public String getAlterTableTypeString() {
+    switch(op) {
+    case RENAME:
+      return "rename";
+    case ADDCOLS:
+      return "add columns";
+    }
+    
+    return "unknown";
+  }
   /**
    * @param op the op to set
    */
@@ -102,6 +118,10 @@ public class alterTableDesc extends ddlDesc implements Serializable
     return newCols;
   }
 
+  @explain(displayName="new columns")
+  public List<String> getNewColsString() {
+    return Utilities.getFieldSchemaString(getNewCols());
+  }
   /**
    * @param newCols the newCols to set
    */

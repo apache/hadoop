@@ -1,3 +1,84 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 2) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Path -> Alias:	
+        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 	
+      Path -> Partition:	
+        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 	
+          Partition	
+          	
+              properties:	
+                name srcbucket	
+                bucket_field_name 	
+                serialization.format 1	
+                columns key,value	
+                field_to_dimension 	
+                bucket_count 2	
+                serialization.lib simple_meta	
+                file.inputformat org.apache.hadoop.mapred.TextInputFormat	
+                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+                location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket	
+              name: srcbucket	
+              serde: simple_meta	
+              input format: org.apache.hadoop.mapred.TextInputFormat	
+              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+      Alias -> Map Operator Tree:	
+        s 	
+            Select Operator	
+              expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+                    expr: value	
+                    type: class java.lang.String	
+              File Output Operator	
+                table:	
+                    properties:	
+                      name dest1	
+                      bucket_field_name 	
+                      serialization.format 1	
+                      columns key,value	
+                      field_to_dimension 	
+                      bucket_count -1	
+                      serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                      file.inputformat org.apache.hadoop.mapred.TextInputFormat	
+                      file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+                      location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
+                    name: dest1	
+                    serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                    input format: org.apache.hadoop.mapred.TextInputFormat	
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+                directory: /tmp/hive-athusoo/447439878.10000.insclause-0	
+      Needs Tagging:	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                properties:	
+                  name dest1	
+                  bucket_field_name 	
+                  serialization.format 1	
+                  columns key,value	
+                  field_to_dimension 	
+                  bucket_count -1	
+                  serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                  file.inputformat org.apache.hadoop.mapred.TextInputFormat	
+                  file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+                  location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+            source: /tmp/hive-athusoo/447439878.10000.insclause-0	
+	
 238	val_238	
 86	val_86	
 311	val_311	

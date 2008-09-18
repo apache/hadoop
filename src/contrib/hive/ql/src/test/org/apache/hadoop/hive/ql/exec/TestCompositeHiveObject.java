@@ -111,7 +111,7 @@ public class TestCompositeHiveObject extends TestCase {
       // evaluate on row
       op.process(cr);
 
-      Map<Enum, Long> results = op.getStats();
+      Map<Enum<?>, Long> results = op.getStats();
       assertEquals(results.get(FilterOperator.Counter.FILTERED), Long.valueOf(0));
       assertEquals(results.get(FilterOperator.Counter.PASSED), Long.valueOf(1));
       System.out.println("Filter Operator ok");

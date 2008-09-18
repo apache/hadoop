@@ -30,6 +30,8 @@ public class loadDesc implements Serializable {
 
     this.sourceDir = sourceDir;
   }
+  
+  @explain(displayName="source", normalExplain=false)
   public String getSourceDir() {
     return this.sourceDir;
   }

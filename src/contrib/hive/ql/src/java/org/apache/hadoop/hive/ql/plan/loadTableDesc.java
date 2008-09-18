@@ -48,14 +48,15 @@ public class loadTableDesc extends org.apache.hadoop.hive.ql.plan.loadDesc imple
     this(sourceDir, table, partitionSpec, true);
   }
 
-
-
+  @explain(displayName="table")
   public tableDesc getTable() {
     return this.table;
   }
   public void setTable(final org.apache.hadoop.hive.ql.plan.tableDesc table) {
     this.table = table;
   }
+  
+  @explain(displayName="partition")
   public HashMap<String, String> getPartitionSpec() {
     return this.partitionSpec;
   }
@@ -63,6 +64,7 @@ public class loadTableDesc extends org.apache.hadoop.hive.ql.plan.loadDesc imple
     this.partitionSpec = partitionSpec;
   }
 
+  @explain(displayName="replace")
   public boolean getReplace() {
     return replace;
   }

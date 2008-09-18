@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Reduce Output Operator")
 public class reduceSinkDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   // these are the expressions that go into the reduce key
@@ -56,6 +57,7 @@ public class reduceSinkDesc implements Serializable {
     this.numPartitionFields = numPartitionFields;
   }
 
+  @explain(displayName="key expressions")
   public java.util.ArrayList<exprNodeDesc> getKeyCols() {
     return this.keyCols;
   }
@@ -64,6 +66,7 @@ public class reduceSinkDesc implements Serializable {
     this.keyCols=keyCols;
   }
 
+  @explain(displayName="value expressions")
   public java.util.ArrayList<exprNodeDesc> getValueCols() {
     return this.valueCols;
   }
@@ -72,12 +75,15 @@ public class reduceSinkDesc implements Serializable {
     this.valueCols=valueCols;
   }
   
+  @explain(displayName="# partition fields")
   public int getNumPartitionFields() {
     return this.numPartitionFields;
   }
   public void setNumPartitionFields(int numPartitionFields) {
     this.numPartitionFields = numPartitionFields;
   }
+  
+  @explain(displayName="tag")
   public int getTag() {
     return this.tag;
   }

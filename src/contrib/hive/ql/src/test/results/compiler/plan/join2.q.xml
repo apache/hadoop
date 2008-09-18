@@ -9,6 +9,9 @@
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <object id="MoveTask0" class="org.apache.hadoop.hive.ql.exec.MoveTask"> 
+          <void property="id"> 
+           <string>Stage-1</string> 
+          </void> 
           <void property="parentTasks"> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
@@ -35,7 +38,7 @@
                  <boolean>true</boolean> 
                 </void> 
                 <void property="sourceDir"> 
-                 <string>/tmp/hive-zshao/22157785.10000.insclause-0</string> 
+                 <string>/tmp/hive-athusoo/284681334.10000.insclause-0</string> 
                 </void> 
                 <void property="table"> 
                  <object id="tableDesc0" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -85,7 +88,7 @@
                     </void> 
                     <void method="put"> 
                      <string>location</string> 
-                     <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
+                     <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
                     </void> 
                    </object> 
                   </void> 
@@ -106,6 +109,9 @@
          </object> 
         </void> 
        </object> 
+      </void> 
+      <void property="id"> 
+       <string>Stage-3</string> 
       </void> 
       <void property="parentTasks"> 
        <object class="java.util.ArrayList"> 
@@ -470,7 +476,7 @@
         <void property="pathToAliases"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>/tmp/hive-zshao/22157785.10001</string> 
+           <string>/tmp/hive-athusoo/284681334.10001</string> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
              <string>$INTNAME</string> 
@@ -478,7 +484,7 @@
            </object> 
           </void> 
           <void method="put"> 
-           <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+           <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
              <string>src3</string> 
@@ -490,7 +496,7 @@
         <void property="pathToPartitionInfo"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>/tmp/hive-zshao/22157785.10001</string> 
+           <string>/tmp/hive-athusoo/284681334.10001</string> 
            <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
             <void property="tableDesc"> 
              <object id="tableDesc1" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -520,7 +526,7 @@
            </object> 
           </void> 
           <void method="put"> 
-           <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+           <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
            <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
             <void property="partSpec"> 
              <object class="java.util.LinkedHashMap"/> 
@@ -573,7 +579,7 @@
                 </void> 
                 <void method="put"> 
                  <string>location</string> 
-                 <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+                 <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
                 </void> 
                </object> 
               </void> 
@@ -602,7 +608,7 @@
                   <void property="conf"> 
                    <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                     <void property="dirName"> 
-                     <string>/tmp/hive-zshao/22157785.10000.insclause-0</string> 
+                     <string>/tmp/hive-athusoo/284681334.10000.insclause-0</string> 
                     </void> 
                     <void property="tableInfo"> 
                      <object idref="tableDesc0"/> 
@@ -848,6 +854,9 @@
     </void> 
    </object> 
   </void> 
+  <void property="id"> 
+   <string>Stage-2</string> 
+  </void> 
   <void property="work"> 
    <object class="org.apache.hadoop.hive.ql.plan.mapredWork"> 
     <void property="aliasToWork"> 
@@ -1091,7 +1100,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>src2</string> 
@@ -1106,7 +1115,7 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
         <void property="partSpec"> 
          <object class="java.util.LinkedHashMap"/> 
@@ -1159,7 +1168,7 @@
             </void> 
             <void method="put"> 
              <string>location</string> 
-             <string>file:/home/zshao/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+             <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
             </void> 
            </object> 
           </void> 
@@ -1184,7 +1193,7 @@
           <void property="conf"> 
            <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
             <void property="dirName"> 
-             <string>/tmp/hive-zshao/22157785.10001</string> 
+             <string>/tmp/hive-athusoo/284681334.10001</string> 
             </void> 
             <void property="tableInfo"> 
              <object idref="tableDesc1"/> 

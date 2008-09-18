@@ -1,2 +1,14 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_DESCTABLE TEST1)	
+	
+STAGE DEPENDENCIES:	
+  Stage-0 is a root stage	
+	
+STAGE PLANS:	
+  Stage: Stage-0	
+    	
+      Describe Table	
+        table: TEST1	
+	
 a	int	
 b	float	

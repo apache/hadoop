@@ -36,12 +36,16 @@ public class loadFileDesc extends loadDesc implements Serializable {
     this.targetDir = targetDir;
     this.isDfsDir = isDfsDir;
   }
+  
+  @explain(displayName="destination")
   public String getTargetDir() {
     return this.targetDir;
   }
   public void setTargetDir(final String targetDir) {
     this.targetDir=targetDir;
   }
+  
+  @explain(displayName="hdfs directory")
   public boolean getIsDfsDir() {
     return this.isDfsDir;
   }

@@ -68,7 +68,7 @@ public class TestJEXL extends TestCase {
       int basetimes = 100000;
 
       JexlContext jc = JexlHelper.createContext();
-      jc.getVars().put("__udf__concat", UDFRegistry.getUDFClass("concat").newInstance());
+      jc.getVars().put("__udf__concat", FunctionRegistry.getUDFClass("concat").newInstance());
       
       measureSpeed("1 + 2",
           basetimes * 100,

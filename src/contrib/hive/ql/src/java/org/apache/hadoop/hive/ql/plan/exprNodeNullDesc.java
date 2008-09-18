@@ -23,6 +23,8 @@ import java.io.Serializable;
 import org.apache.hadoop.hive.ql.parse.TypeInfo;
 
 public class exprNodeNullDesc extends exprNodeDesc implements Serializable {
+  
+  private static final long serialVersionUID = 1L;
 
   public exprNodeNullDesc() {
     super(new TypeInfo(Void.class));
@@ -32,4 +34,9 @@ public class exprNodeNullDesc extends exprNodeDesc implements Serializable {
     return null;
   }
 
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    return "null";
+  }
 }

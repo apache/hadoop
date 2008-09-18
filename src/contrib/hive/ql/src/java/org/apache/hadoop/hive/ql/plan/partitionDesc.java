@@ -19,11 +19,8 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
-import java.util.*;
 
-import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.metadata.Partition;
-
+@explain(displayName="Partition")
 public class partitionDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private tableDesc table;
@@ -35,12 +32,16 @@ public class partitionDesc implements Serializable {
     this.table = table;
     this.partSpec = partSpec;
   }
+  
+  @explain(displayName="")
   public tableDesc getTableDesc() {
     return this.table;
   }
   public void setTableDesc(final tableDesc table) {
     this.table = table;
   }
+  
+  @explain(displayName="partition values")
   public java.util.LinkedHashMap<String, String> getPartSpec() {
     return this.partSpec;
   }

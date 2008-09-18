@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Collect")
 public class collectDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   Integer bufferSize;

@@ -134,7 +134,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       assert (expressionTree.getChildCount() != 0);
       assert (expressionTree.getChild(0).getType() == HiveParser.Identifier);
       String functionName = expressionTree.getChild(0).getText();
-      if (UDAFRegistry.getUDAF(functionName) != null) {
+      if (FunctionRegistry.getUDAF(functionName) != null) {
         aggregations.put(expressionTree.toStringTree(), expressionTree);
         return;
       }
@@ -987,7 +987,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     for (Map.Entry<String, CommonTree> entry : aggregationTrees.entrySet()) {
       CommonTree value = entry.getValue();
       String aggName = value.getChild(0).getText();
-      Class<? extends UDAF> aggClass = UDAFRegistry.getUDAF(aggName);
+      Class<? extends UDAF> aggClass = FunctionRegistry.getUDAF(aggName);
       assert (aggClass != null);
       ArrayList<exprNodeDesc> aggParameters = new ArrayList<exprNodeDesc>();
       ArrayList<Class<?>> aggClasses = new ArrayList<Class<?>>();
@@ -1006,7 +1006,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         aggClasses.add(paraExprInfo.getType().getPrimitiveClass());
       }
 
-      if (null == UDAFRegistry.getUDAFMethod(aggName, aggClasses)) {
+      if (null == FunctionRegistry.getUDAFMethod(aggName, aggClasses)) {
         String reason = "Looking for UDAF \"" + aggName + "\" with parameters " + aggClasses;
         throw new SemanticException(ErrorMsg.INVALID_FUNCTION_SIGNATURE.getMsg((CommonTree)value.getChild(0), reason));
       }
@@ -1059,7 +1059,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     for (Map.Entry<String, CommonTree> entry : aggregationTrees.entrySet()) {
       CommonTree value = entry.getValue();
       String aggName = value.getChild(0).getText();
-      Class<? extends UDAF> aggClass = UDAFRegistry.getUDAF(aggName);
+      Class<? extends UDAF> aggClass = FunctionRegistry.getUDAF(aggName);
       assert (aggClass != null);
       ArrayList<exprNodeDesc> aggParameters = new ArrayList<exprNodeDesc>();
       ArrayList<Class<?>> aggClasses = new ArrayList<Class<?>>();
@@ -1078,7 +1078,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         aggClasses.add(paraExprInfo.getType().getPrimitiveClass());
       }
 
-      if (null == UDAFRegistry.getUDAFMethod(aggName, aggClasses)) {
+      if (null == FunctionRegistry.getUDAFMethod(aggName, aggClasses)) {
         String reason = "Looking for UDAF \"" + aggName + "\" with parameters " + aggClasses;
         throw new SemanticException(ErrorMsg.INVALID_FUNCTION_SIGNATURE.getMsg((CommonTree)value.getChild(0), reason));
       }
@@ -1288,8 +1288,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     int inputField = reduceKeys.size();
     HashMap<String, CommonTree> aggregationTrees = parseInfo
         .getAggregationExprsForClause(dest);
-    for (Map.Entry entry : aggregationTrees.entrySet()) {
-      String key = (String)entry.getKey();
+    for (Map.Entry<String, CommonTree> entry : aggregationTrees.entrySet()) {
       reduceValues.add(new exprNodeColumnDesc(TypeInfo.getPrimitiveTypeInfo(String.class),
           (Integer.valueOf(inputField)).toString()));
       inputField++;
@@ -1336,7 +1335,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     for (Map.Entry<String, CommonTree> entry : aggregationTrees.entrySet()) {
       CommonTree value = entry.getValue();
       String aggName = value.getChild(0).getText();
-      Class<? extends UDAF> aggClass = UDAFRegistry.getUDAF(aggName);
+      Class<? extends UDAF> aggClass = FunctionRegistry.getUDAF(aggName);
       assert (aggClass != null);
       ArrayList<exprNodeDesc> aggParameters = new ArrayList<exprNodeDesc>();
       String text = entry.getKey();
@@ -1535,7 +1534,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     // We have the table object here - go over the row resolver
     // and check all the types are the same
-    Vector<ColumnInfo> srcOpns = input.get(0).getRowResolver().getColumnInfos();
+    input.get(0).getRowResolver().getColumnInfos();
 
     Vector<ColumnInfo> insOpns = new Vector<ColumnInfo>();
     for (SerDeField field : dest_tab.getFields(null)) {
@@ -1836,7 +1835,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       for(int i=1; i<right.length; i++) {
         Class<?> a = commonClass;
         Class<?> b = keys.get(i).get(k).getTypeInfo().getPrimitiveClass(); 
-        commonClass = UDFRegistry.getCommonClass(a, b);
+        commonClass = FunctionRegistry.getCommonClass(a, b);
         if (commonClass == null) {
           throw new SemanticException("Cannot do equality join on different types: " + a.getClass() + " and " + b.getClass());
         }
@@ -2693,7 +2692,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       assert(childTypeInfo != null);
       argumentClasses.add(childTypeInfo.getPrimitiveClass());
     }
-    Method udfMethod = UDFRegistry.getUDFMethod(udfName, false, argumentClasses);
+    Method udfMethod = FunctionRegistry.getUDFMethod(udfName, false, argumentClasses);
     if (udfMethod == null) return null;
 
     ArrayList<exprNodeDesc> ch = new ArrayList<exprNodeDesc>();
@@ -2713,10 +2712,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         // must be implicit type conversion
         Class<?> from = argumentClasses.get(i);
         Class<?> to = pType;
-        assert(UDFRegistry.implicitConvertable(from, to));
-        Method m = UDFRegistry.getUDFMethod(to.getName(), true, from);
+        assert(FunctionRegistry.implicitConvertable(from, to));
+        Method m = FunctionRegistry.getUDFMethod(to.getName(), true, from);
         assert(m != null);
-        Class c = UDFRegistry.getUDFClass(to.getName());
+        Class<? extends UDF> c = FunctionRegistry.getUDFClass(to.getName());
         assert(c != null);
 
         // get the conversion method
@@ -2730,7 +2729,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     exprNodeFuncDesc desc = new exprNodeFuncDesc(
       TypeInfo.getPrimitiveTypeInfo(TypeInfo.generalizePrimitive(udfMethod.getReturnType())),
-      UDFRegistry.getUDFClass(udfName),
+      FunctionRegistry.getUDFClass(udfName),
       udfMethod, ch);
     return desc;
   }
@@ -2895,7 +2894,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       desc = new exprNodeIndexDesc(t, children.get(0), children.get(1));
     } else {
       // other operators or functions
-      Class<? extends UDF> udf = UDFRegistry.getUDFClass(funcText);
+      Class<? extends UDF> udf = FunctionRegistry.getUDFClass(funcText);
       if (udf == null) {
         throw new SemanticException(ErrorMsg.INVALID_FUNCTION.getMsg((CommonTree)expr.getChild(0)));
       }

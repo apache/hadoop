@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="File Output Operator")
 public class fileSinkDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String dirName;
@@ -33,12 +34,16 @@ public class fileSinkDesc implements Serializable {
     this.dirName = dirName;
     this.tableInfo = tableInfo;
   }
+  
+  @explain(displayName="directory", normalExplain=false)
   public String getDirName() {
     return this.dirName;
   }
   public void setDirName(final String dirName) {
     this.dirName = dirName;
   }
+  
+  @explain(displayName="table")
   public tableDesc getTableInfo() {
     return this.tableInfo;
   }

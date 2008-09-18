@@ -1,3 +1,66 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_COLLIST (TOK_COLREF src key) (TOK_COLREF src value)) (TOK_ALIASLIST tkey tvalue) '/bin/cat'))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue))) (TOK_WHERE (< (TOK_COLREF tmap tkey) 100))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Reduce Operator Tree:	
+        Extract	
+          Filter Operator	
+            predicate:	
+                expr: (0 < 100)	
+                type: class java.lang.Boolean	
+            Select Operator	
+              expressions:	
+                    expr: 0	
+                    type: class java.lang.String	
+                    expr: 1	
+                    type: class java.lang.String	
+              File Output Operator	
+                table:	
+                    name: dest1	
+                    serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                    input format: org.apache.hadoop.mapred.TextInputFormat	
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+      Alias -> Map Operator Tree:	
+        tmap:src 	
+            Select Operator	
+              expressions:	
+                    expr: key	
+                    type: class java.lang.String	
+                    expr: value	
+                    type: class java.lang.String	
+              Transform Operator	
+                command: /bin/cat	
+                output info:	
+                    input format: org.apache.hadoop.mapred.TextInputFormat	
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+                Reduce Output Operator	
+                  tag: -1	
+                  key expressions:	
+                        expr: tkey	
+                        type: class java.lang.String	
+                  value expressions:	
+                        expr: tkey	
+                        type: class java.lang.String	
+                        expr: tvalue	
+                        type: class java.lang.String	
+                  # partition fields: 1	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+	
 0	val_0	
 0	val_0	
 0	val_0	

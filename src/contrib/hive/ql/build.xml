@@ -61,7 +61,8 @@
               templatePath="${ql.test.template.dir}" template="TestCliDriver.vm" 
               queryDirectory="${ql.test.query.dir}/clientpositive" 
               queryFile="${qfile}"
-              resultsDirectory="${ql.test.results.dir}/clientpositive" className="TestCliDriver"/>
+              resultsDirectory="${ql.test.results.dir}/clientpositive" className="TestCliDriver"
+              logFile="${test.log.dir}/testclidrivergen.log"/>
 
   </target>
 

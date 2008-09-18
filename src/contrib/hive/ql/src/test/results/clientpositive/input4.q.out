@@ -1,3 +1,26 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_LOAD '../data/files/kv1.txt' (TOK_TAB INPUT4) LOCAL)	
+	
+STAGE DEPENDENCIES:	
+  Stage-0 is a root stage	
+  Stage-1 depends on stages: Stage-0	
+	
+STAGE PLANS:	
+  Stage: Stage-0	
+    Copy	
+      source: file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/src/contrib/hive/data/files/kv1.txt	
+      destination: file:/tmp/hive-athusoo/-494206631	
+	
+  Stage: Stage-1	
+    Move Operator	
+      tables:	
+            table:	
+                name: input4	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+	
 val_238	238	
 val_86	86	
 val_311	311	

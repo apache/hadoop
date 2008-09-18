@@ -38,5 +38,13 @@ public class exprNodeDesc implements Serializable {
     this.typeInfo = typeInfo;
   }
 
-
+  public String getExprString() {
+    assert(false);
+    return null;
+  }
+  
+  @explain(displayName="type")
+  public String getTypeString() {
+    return typeInfo.getTypeString();
+  }
 }

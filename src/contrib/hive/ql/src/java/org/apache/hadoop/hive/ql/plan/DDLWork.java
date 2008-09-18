@@ -68,6 +68,7 @@ public class DDLWork implements Serializable {
   /**
    * @return the createTblDesc
    */
+  @explain(displayName="Create Table Operator")
   public createTableDesc getCreateTblDesc() {
     return createTblDesc;
   }
@@ -82,6 +83,7 @@ public class DDLWork implements Serializable {
   /**
    * @return the dropTblDesc
    */
+  @explain(displayName="Drop Table Operator")
   public dropTableDesc getDropTblDesc() {
     return dropTblDesc;
   }
@@ -96,6 +98,7 @@ public class DDLWork implements Serializable {
   /**
    * @return the alterTblDesc
    */
+  @explain(displayName="Alter Table Operator")
   public alterTableDesc getAlterTblDesc() {
     return alterTblDesc;
   }
@@ -110,6 +113,7 @@ public class DDLWork implements Serializable {
   /**
    * @return the showTblsDesc
    */
+  @explain(displayName="Show Table Operator")
   public showTablesDesc getShowTblsDesc() {
     return showTblsDesc;
   }
@@ -124,6 +128,7 @@ public class DDLWork implements Serializable {
   /**
    * @return the descTblDesc
    */
+  @explain(displayName="Describe Table Operator")
   public descTableDesc getDescTblDesc() {
     return descTblDesc;
   }
@@ -133,5 +138,6 @@ public class DDLWork implements Serializable {
    */
   public void setDescTblDesc(descTableDesc descTblDesc) {
     this.descTblDesc = descTblDesc;
-  }  
+  }
+  
 }

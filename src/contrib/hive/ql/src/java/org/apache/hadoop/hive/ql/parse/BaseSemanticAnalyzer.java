@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.metadata.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 
 public abstract class BaseSemanticAnalyzer {
@@ -44,6 +45,7 @@ public abstract class BaseSemanticAnalyzer {
   protected final LogHelper console;
 
   protected Context ctx;
+  
   public BaseSemanticAnalyzer(HiveConf conf) throws SemanticException {
     try {
       this.conf = conf;
@@ -62,7 +64,7 @@ public abstract class BaseSemanticAnalyzer {
   }
 
   public abstract void analyze(CommonTree ast, Context ctx) throws SemanticException;
-
+  
   public List<Task<? extends Serializable>> getRootTasks() {
     return rootTasks;
   }

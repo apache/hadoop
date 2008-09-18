@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
+@explain(displayName="Filter Operator")
 public class filterDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private org.apache.hadoop.hive.ql.plan.exprNodeDesc predicate;
@@ -28,6 +29,7 @@ public class filterDesc implements Serializable {
     final org.apache.hadoop.hive.ql.plan.exprNodeDesc predicate) {
     this.predicate = predicate;
   }
+  @explain(displayName="predicate")
   public org.apache.hadoop.hive.ql.plan.exprNodeDesc getPredicate() {
     return this.predicate;
   }

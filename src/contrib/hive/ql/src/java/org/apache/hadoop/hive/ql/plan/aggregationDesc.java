@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hive.ql.plan;
 
+import org.apache.hadoop.hive.ql.exec.FunctionInfo;
+import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.UDAF;
 
 public class aggregationDesc implements java.io.Serializable {
@@ -51,5 +53,28 @@ public class aggregationDesc implements java.io.Serializable {
   }
   public void setDistinct(final boolean distinct) {
     this.distinct = distinct;
+  }
+  
+  @explain(displayName="expr")
+  public String getExprString() {
+    FunctionInfo fI = FunctionRegistry.getInfo(aggregationClass);
+    StringBuilder sb = new StringBuilder();
+    sb.append(fI.getDisplayName());
+    sb.append("(");
+    if (distinct) {
+      sb.append("DISTINCT ");
+    }
+    boolean first = true;
+    for(exprNodeDesc exp: parameters) {
+      if (!first) {
+        sb.append(", ");
+      }
+      
+      sb.append(exp.getExprString());
+      first = false;
+    }
+    sb.append(")");
+    
+    return sb.toString();
   }
 }

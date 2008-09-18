@@ -51,4 +51,9 @@ public class exprNodeFieldDesc extends exprNodeDesc implements Serializable {
     return this.desc.toString() + "." + this.fieldName;
   }
   
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    return this.desc.getExprString() + "." + this.fieldName;
+  }
 }

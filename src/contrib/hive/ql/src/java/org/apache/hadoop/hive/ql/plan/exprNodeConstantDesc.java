@@ -50,4 +50,18 @@ public class exprNodeConstantDesc extends exprNodeDesc implements Serializable {
     return "Const " + typeInfo.toString() + " " + value;
   }
   
+  @explain(displayName="expr")
+  @Override
+  public String getExprString() {
+    if (value == null) {
+      return "null";
+    }
+
+    if (typeInfo.getPrimitiveClass() == String.class) {
+      return "'" + value.toString() + "'";
+    }
+    else {
+      return value.toString();
+    }
+  }
 }

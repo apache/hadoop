@@ -23,9 +23,6 @@ import java.io.Serializable;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.hive.serde.SerDe;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 
 public class tableDesc implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -64,6 +61,8 @@ public class tableDesc implements Serializable {
   public void setOutputFileFormatClass(final Class<? extends OutputFormat> outputFileFormatClass) {
     this.outputFileFormatClass=outputFileFormatClass;
   }
+  
+  @explain(displayName="properties", normalExplain=false)
   public java.util.Properties getProperties() {
     return this.properties;
   }
@@ -73,6 +72,7 @@ public class tableDesc implements Serializable {
   /**
    * @return the serdeClassName
    */
+  @explain(displayName="serde")
   public String getSerdeClassName() {
     return this.serdeClassName;
   }
@@ -83,7 +83,18 @@ public class tableDesc implements Serializable {
     this.serdeClassName = serdeClassName;
   }
   
+  @explain(displayName="name")
   public String getTableName() {
     return this.properties.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_NAME);
+  }
+  
+  @explain(displayName="input format")
+  public String getInputFileFormatClassName() {
+    return getInputFileFormatClass().getName();
+  }
+  
+  @explain(displayName="output format")
+  public String getOutputFileFormatClassName() {
+    return getOutputFileFormatClass().getName();
   }
 }

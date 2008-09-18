@@ -41,22 +41,32 @@ public class TaskFactory {
 
   public static ArrayList<taskTuple<? extends Serializable>> taskvec;
   static {
+    id = 0;
     taskvec = new ArrayList<taskTuple<? extends Serializable>>();
     taskvec.add(new taskTuple<moveWork>(moveWork.class, MoveTask.class));
     taskvec.add(new taskTuple<copyWork>(copyWork.class, CopyTask.class));
     taskvec.add(new taskTuple<DDLWork>(DDLWork.class, DDLTask.class));
+    taskvec.add(new taskTuple<explainWork>(explainWork.class, ExplainTask.class));
     // we are taking this out to allow us to instantiate either MapRedTask or
     // ExecDriver dynamically at run time based on configuration
     // taskvec.add(new taskTuple<mapredWork>(mapredWork.class, ExecDriver.class));
   }
 
+  private static int id;
+  
+  public static void resetId() {
+    id = 0;
+  }
+  
   @SuppressWarnings("unchecked")
   public static <T extends Serializable> Task<T> get(Class<T> workClass, HiveConf conf) {
       
     for(taskTuple<? extends Serializable> t: taskvec) {
       if(t.workClass == workClass) {
         try {
-          return (Task<T>)t.taskClass.newInstance();
+          Task<T> ret = (Task<T>)t.taskClass.newInstance();
+          ret.setId("Stage-" + Integer.toString(id++));
+          return ret;
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -71,12 +81,15 @@ public class TaskFactory {
 
         // in local mode - or if otherwise so configured - always submit
         // jobs via separate jvm
+        Task<T> ret = null;
         if(conf.getVar(HiveConf.ConfVars.HADOOPJT).equals("local") ||
            viachild.equals("true")) {
-          return (Task<T>)MapRedTask.class.newInstance();
+          ret = (Task<T>)MapRedTask.class.newInstance();
         } else {
-          return (Task<T>)ExecDriver.class.newInstance();
+          ret = (Task<T>)ExecDriver.class.newInstance();
         }
+        ret.setId("Stage-" + Integer.toString(id++));
+        return ret;
       } catch (Exception e) {
         throw new RuntimeException (e.getMessage(), e);
       }

@@ -77,4 +77,33 @@ public class joinCond implements Serializable {
   public void setType(final int type) {
     this.type = type;
   }
+  
+  @explain
+  public String getJoinCondString() {
+    StringBuilder sb = new StringBuilder();
+    
+    switch(type) {
+    case joinDesc.INNER_JOIN:
+      sb.append("Inner Join ");
+      break;
+    case joinDesc.FULL_OUTER_JOIN:
+      sb.append("Outer Join ");
+      break;
+    case joinDesc.LEFT_OUTER_JOIN:
+      sb.append("Left Outer Join");
+      break;
+    case joinDesc.RIGHT_OUTER_JOIN:
+      sb.append("Right Outer Join");
+      break;
+    default:
+      sb.append("Unknow Join");
+      break;
+    }
+    
+    sb.append(left);
+    sb.append(" to ");
+    sb.append(right);
+    
+    return sb.toString();
+  }
 }

@@ -1,3 +1,46 @@
+ABSTRACT SYNTAX TREE:	
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcpart)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF srcpart key)) (TOK_SELEXPR (TOK_COLREF srcpart value)) (TOK_SELEXPR (TOK_COLREF srcpart hr)) (TOK_SELEXPR (TOK_COLREF srcpart ds))) (TOK_WHERE (and (and (< (TOK_COLREF srcpart key) 100) (= (TOK_COLREF srcpart ds) '2008-04-08')) (= (TOK_COLREF srcpart hr) '12')))))	
+	
+STAGE DEPENDENCIES:	
+  Stage-1 is a root stage	
+  Stage-0 depends on stages: Stage-1	
+	
+STAGE PLANS:	
+  Stage: Stage-1	
+    Map Reduce	
+      Alias -> Map Operator Tree:	
+        srcpart 	
+            Filter Operator	
+              predicate:	
+                  expr: (((key < 100) and (ds = '2008-04-08')) and (hr = '12'))	
+                  type: class java.lang.Boolean	
+              Select Operator	
+                expressions:	
+                      expr: key	
+                      type: class java.lang.String	
+                      expr: value	
+                      type: class java.lang.String	
+                      expr: hr	
+                      type: class java.lang.String	
+                      expr: ds	
+                      type: class java.lang.String	
+                File Output Operator	
+                  table:	
+                      name: dest1	
+                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                      input format: org.apache.hadoop.mapred.TextInputFormat	
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+	
+  Stage: Stage-0	
+    Move Operator	
+      tables:	
+            table:	
+                name: dest1	
+                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
+                input format: org.apache.hadoop.mapred.TextInputFormat	
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
+            replace:	
+	
 86	val_86	12	2008-04-08	
 27	val_27	12	2008-04-08	
 98	val_98	12	2008-04-08	

@@ -232,7 +232,7 @@ public class TypeInfo {
   
 
   public static Class<?> generalizePrimitive(Class<?> primitiveClass) {
-    if (primitiveClass == Boolean.TYPE)    primitiveClass = Boolean.class;
+    if (primitiveClass == Boolean.TYPE)   primitiveClass = Boolean.class;
     if (primitiveClass == Byte.TYPE)      primitiveClass = Byte.class; 
     if (primitiveClass == Character.TYPE) primitiveClass = Character.class; 
     if (primitiveClass == Short.TYPE)     primitiveClass = Short.class; 
@@ -244,4 +244,8 @@ public class TypeInfo {
     return primitiveClass;
   }
   
+  public String getTypeString() {
+    // TODO: Change this to print out a better user visible string
+    return toString();
+  }
 }

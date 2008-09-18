@@ -65,6 +65,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     super(conf);
   }
 
+  @Override
   public void analyze(CommonTree ast, Context ctx) throws SemanticException {
     this.ctx = ctx;
     if (ast.getToken().getType() == HiveParser.TOK_CREATETABLE)
