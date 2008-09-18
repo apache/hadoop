@@ -943,15 +943,15 @@ public class SequenceFile {
     
     /** Close the file. */
     public synchronized void close() throws IOException {
-      CodecPool.returnCompressor(compressor);
-      compressor = null;
-      
       keySerializer.close();
       uncompressedValSerializer.close();
       if (compressedValSerializer != null) {
         compressedValSerializer.close();
       }
 
+      CodecPool.returnCompressor(compressor);
+      compressor = null;
+      
       if (out != null) {
         
         // Close the underlying stream iff we own it...

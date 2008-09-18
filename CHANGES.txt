@@ -601,6 +601,9 @@ Trunk (unreleased changes)
     the interfaces to the serializer and de-serializer.
     (Zheng Shao via dhruba)
 
+    HADOOP-4195. Close compressor before returning to codec pool.
+    (acmurthy via omalley)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
