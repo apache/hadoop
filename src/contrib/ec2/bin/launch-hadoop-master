@@ -81,7 +81,7 @@ AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | gre
 # Start a master
 echo "Starting master with AMI $AMI_IMAGE"
 USER_DATA="MASTER_HOST=master,MAX_MAP_TASKS=$MAX_MAP_TASKS,MAX_REDUCE_TASKS=$MAX_REDUCE_TASKS,COMPRESS=$COMPRESS"
-INSTANCE=`ec2-run-instances $AMI_IMAGE -n 1 -g $CLUSTER_MASTER -k $KEY_NAME -d "$USER_DATA" -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
+INSTANCE=`ec2-run-instances $AMI_IMAGE -n 1 -g $CLUSTER_MASTER -k $KEY_NAME -f "$bin"/$USER_DATA_FILE -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
 echo "Waiting for instance $INSTANCE to start"
 while true; do
   printf "."

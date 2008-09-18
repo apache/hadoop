@@ -63,7 +63,7 @@ echo "Copying scripts."
 # Copy setup scripts
 scp $SSH_OPTS "$bin"/hadoop-ec2-env.sh "root@$HOSTNAME:/mnt"
 scp $SSH_OPTS "$bin"/image/create-hadoop-image-remote "root@$HOSTNAME:/mnt"
-scp $SSH_OPTS "$bin"/image/hadoop-init "root@$HOSTNAME:"
+scp $SSH_OPTS "$bin"/image/ec2-run-user-data "root@$HOSTNAME:/etc/init.d"
 
 # Copy private key and certificate (for bundling image)
 scp $SSH_OPTS $EC2_KEYDIR/pk*.pem "root@$HOSTNAME:/mnt"

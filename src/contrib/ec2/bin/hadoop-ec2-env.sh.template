@@ -51,10 +51,8 @@ S3_BUCKET=hadoop-ec2-images
 # Enable public access to JobTracker and TaskTracker web interfaces
 ENABLE_WEB_PORTS=true
 
-# Boot parameters
-MAX_MAP_TASKS=2
-MAX_REDUCE_TASKS=2
-COMPRESS=true
+# The script to run on instance boot.
+USER_DATA_FILE=hadoop-ec2-init-remote.sh
 
 # The EC2 instance type: m1.small, m1.large, m1.xlarge
 INSTANCE_TYPE="m1.small"

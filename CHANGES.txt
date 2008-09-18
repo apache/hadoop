@@ -341,6 +341,9 @@ Trunk (unreleased changes)
     HADOOP-4075. test-patch.sh now spits out ant commands that it runs.
     (Ramya R via nigel)
 
+    HADOOP-4117. Improve configurability of Hadoop EC2 instances.
+    (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

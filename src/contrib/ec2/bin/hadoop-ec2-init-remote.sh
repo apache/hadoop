@@ -1,29 +1,31 @@
-# Use parameters passed in during launch to configure Hadoop
-# expects:
-# MASTER_HOST, MAX_MAP_TASKS, MAX_REDUCE_TASKS, COMPRESS, DFS_WRITE_RETRIES
+#!/usr/bin/env bash
 
-# set defaults
-MAX_TASKS=3
-[ "$INSTANCE_TYPE" == "m1.large" ] && MAX_TASKS=6
-[ "$INSTANCE_TYPE" == "m1.xlarge" ] && MAX_TASKS=12
+################################################################################
+# Script that is run on each EC2 instance on boot. It is passed in the EC2 user
+# data, so should not exceed 16K in size.
+################################################################################
 
-MAX_MAP_TASKS=$MAX_TASKS
-MAX_REDUCE_TASKS=$MAX_TASKS
-COMPRESS="true"
-DFS_WRITE_RETRIES=3
+################################################################################
+# Initialize variables
+################################################################################
 
-wget -q -O - http://169.254.169.254/latest/user-data | tr ',' '\n' > /tmp/user-data
-source /tmp/user-data
-
-HADOOP_HOME=`ls -d /usr/local/hadoop-*`
-
-IS_MASTER="false"
-if [ "$MASTER_HOST" == "master" ]; then
- IS_MASTER="true"
+# Slaves are started after the master, and are told its address by sending a
+# modified copy of this file which sets the MASTER_HOST variable. 
+# A node  knows if it is the master or not by inspecting the security group
+# name. If it is the master then it retrieves its address using instance data.
+MASTER_HOST=%MASTER_HOST% # Interpolated before being sent to EC2 node
+SECURITY_GROUPS=`wget -q -O - http://169.254.169.254/latest/meta-data/security-groups`
+IS_MASTER=`echo $SECURITY_GROUPS | awk '{ a = match ($0, "-master$"); if (a) print "true"; else print "false"; }'`
+if [ "$IS_MASTER" == "true" ]; then
  MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/local-hostname`
 fi
 
-echo $IS_MASTER $MASTER_HOST $MAX_MAP_TASKS $MAX_REDUCE_TASKS $COMPRESS
+HADOOP_HOME=`ls -d /usr/local/hadoop-*`
+
+################################################################################
+# Hadoop configuration
+# Modify this section to customize your Hadoop cluster.
+################################################################################
 
 cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 <?xml version="1.0"?>
@@ -38,12 +40,12 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 
 <property>
   <name>fs.default.name</name>
-  <value>$MASTER_HOST:50001</value>
+  <value>hdfs://$MASTER_HOST:50001</value>
 </property>
 
 <property>
   <name>mapred.job.tracker</name>
-  <value>$MASTER_HOST:50002</value>
+  <value>hdfs://$MASTER_HOST:50002</value>
 </property>
 
 <property>
@@ -53,17 +55,17 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 
 <property>
   <name>mapred.tasktracker.map.tasks.maximum</name>
-  <value>$MAX_MAP_TASKS</value>
+  <value>3</value>
 </property>
 
 <property>
   <name>mapred.tasktracker.reduce.tasks.maximum</name>
-  <value>$MAX_REDUCE_TASKS</value>
+  <value>3</value>
 </property>
 
 <property>
   <name>mapred.output.compress</name>
-  <value>$COMPRESS</value>
+  <value>true</value>
 </property>
 
 <property>
@@ -73,7 +75,7 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 
 <property>
   <name>dfs.client.block.write.retries</name>
-  <value>$DFS_WRITE_RETRIES</value>
+  <value>3</value>
 </property>
 
 </configuration>
@@ -97,6 +99,10 @@ jvm.class=org.apache.hadoop.metrics.ganglia.GangliaContext
 jvm.period=10
 jvm.servers=$MASTER_HOST:8649
 EOF
+
+################################################################################
+# Start services
+################################################################################
 
 [ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
@@ -139,3 +145,6 @@ else
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
 fi
+
+# Run this script on next boot
+rm -f /var/ec2/ec2-run-user-data.*

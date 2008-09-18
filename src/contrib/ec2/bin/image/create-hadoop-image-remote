@@ -53,8 +53,9 @@ sed -i -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION
        -e 's|# export HADOOP_OPTS=.*|export HADOOP_OPTS=-server|' \
       /usr/local/hadoop-$HADOOP_VERSION/conf/hadoop-env.sh
 
-# Do configuration on instance startup
-echo "/root/hadoop-init" >> /etc/rc.d/rc.local
+# Run user data as script on instance startup
+chmod +x /etc/init.d/ec2-run-user-data
+echo "/etc/init.d/ec2-run-user-data" >> /etc/rc.d/rc.local
 
 # Setup root user bash environment
 echo "export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}" >> /root/.bash_profile
