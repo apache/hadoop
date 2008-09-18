@@ -329,6 +329,9 @@ Trunk (unreleased changes)
     HADOOP-4181. Include a .gitignore and saveVersion.sh change to support
     developing under git. (omalley)
 
+    HADOOP-4186. Factor LineReader out of LineRecordReader. (tomwhite via
+    omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

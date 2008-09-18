@@ -23,11 +23,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.LineRecordReader;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -130,8 +131,7 @@ public class HarFileSystem extends FilterFileSystem {
   // of archives
   public int getHarVersion() throws IOException { 
     FSDataInputStream masterIn = fs.open(masterIndex);
-    LineRecordReader.LineReader lmaster = new LineRecordReader.LineReader(
-                                              masterIn, getConf());
+    LineReader lmaster = new LineReader(masterIn, getConf());
     Text line = new Text();
     lmaster.readLine(line);
     try {
@@ -400,8 +400,7 @@ public class HarFileSystem extends FilterFileSystem {
     // in the index file
     FSDataInputStream in = fs.open(masterIndex);
     FileStatus masterStat = fs.getFileStatus(masterIndex);
-    LineRecordReader.LineReader lin = new LineRecordReader.LineReader(in,
-                                          getConf());
+    LineReader lin = new LineReader(in, getConf());
     Text line = new Text();
     long read = lin.readLine(line);
    //ignore the first line. this is the header of the index files
@@ -426,8 +425,7 @@ public class HarFileSystem extends FilterFileSystem {
       // do nothing just a read.
     }
     FSDataInputStream aIn = fs.open(archiveIndex);
-    LineRecordReader.LineReader aLin = new LineRecordReader.LineReader(aIn, 
-                                           getConf());
+    LineReader aLin = new LineReader(aIn, getConf());
     String retStr = null;
     // now start reading the real index file
      read = 0;

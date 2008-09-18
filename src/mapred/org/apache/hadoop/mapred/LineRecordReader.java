@@ -49,7 +49,9 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
 
   /**
    * A class that provides a line reader from an input stream.
+   * @deprecated Use {@link org.apache.hadoop.util.LineReader} instead.
    */
+  @Deprecated
   public static class LineReader {
     private static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
     private int bufferSize = DEFAULT_BUFFER_SIZE;
