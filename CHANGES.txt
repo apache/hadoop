@@ -631,6 +631,10 @@ Trunk (unreleased changes)
     HADOOP-4084. Add explain plan capabilities to Hive Query Language.
     (Ashish Thusoo via dhruba)
 
+    HADOOP-4121. Preserve cause for exception if the initialization of
+    HistoryViewer for JobHistory fails. (Amareshwari Sri Ramadasu via
+    acmurthy) 
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

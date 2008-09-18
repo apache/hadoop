@@ -85,7 +85,7 @@ class HistoryViewer {
       job = new JobHistory.JobInfo(jobId); 
       DefaultJobHistoryParser.parseJobTasks(jobFiles[0].toString(), job, fs);
     } catch(Exception e) {
-      throw new IOException("Not able to initialize History viewer");
+      throw new IOException("Not able to initialize History viewer", e);
     }
   }
   
