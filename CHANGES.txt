@@ -591,6 +591,10 @@ Trunk (unreleased changes)
 
     HADOOP-4197. Update DATA_TRANSFER_VERSION for HADOOP-3981. (szetszwo)
 
+    HADOOP-4138. Refactor the Hive SerDe library to better structure
+    the interfaces to the serializer and de-serializer.
+    (Zheng Shao via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
