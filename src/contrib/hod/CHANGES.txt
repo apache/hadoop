@@ -15,6 +15,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-3959. Pass options specified in resource_manager.options to
+    job submission. 
+    (Craig Macdonald and Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.18.1 - 2008-09-17
 
   INCOMPATIBLE CHANGES

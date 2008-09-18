@@ -77,6 +77,8 @@ class NodePoolDesc:
 
     self._checkRequired()
 
+    if 'options' in dict: self.dict['attrs'] = dict['options']
+
   def _checkRequired(self):
 
     if not 'id' in self.dict:

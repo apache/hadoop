@@ -97,11 +97,12 @@ class TorquePool(NodePool):
         rawAttributes['W:x'] = resourceManagementExtensions
         
         hostname = local_fqdn()
-    
-        rawAttributes['l:nodes'] = nodeSet._getNumNodes()
+   
+        # key values are expected to have string values. 
+        rawAttributes['l:nodes'] = "%s" % nodeSet._getNumNodes()
         
         if walltime:
-          rawAttributes['l:walltime'] = walltime
+          rawAttributes['l:walltime'] = "%s" % walltime
         
         #create a dict of dictionaries for 
         # various arguments of torque
