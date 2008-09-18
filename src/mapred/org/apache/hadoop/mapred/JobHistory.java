@@ -68,8 +68,12 @@ public class JobHistory {
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final String DELIMITER = " ";
   private static final String LINE_DELIMITER = ".";
+  private static final char LINE_DELIMITER_CHAR = '.';
+  private static final char[] charsToEscape = new char[] {'"', '=', 
+                                                LINE_DELIMITER_CHAR};
   private static final String KEY = "(\\w+)";
-  private static final String VALUE = "[[^\"]?]+"; // anything but a " in ""
+  // value is any character other than quote, but escaped quotes can be there
+  private static final String VALUE = "[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*"; 
   
   private static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
   
@@ -177,7 +181,10 @@ public class JobHistory {
       StringBuffer buf = new StringBuffer(); 
       while ((line = reader.readLine())!= null){
         buf.append(line); 
-        if (!line.trim().endsWith("\"" + DELIMITER + LINE_DELIMITER)){
+        if (!line.trim().endsWith(LINE_DELIMITER) || 
+            line.trim().endsWith(StringUtils.escapeString(LINE_DELIMITER,
+                          StringUtils.ESCAPE_CHAR, LINE_DELIMITER_CHAR))) {
+          buf.append("\n");
           continue; 
         }
         parseLine(buf.toString(), l);
@@ -204,9 +211,11 @@ public class JobHistory {
 
     while(matcher.find()){
       String tuple = matcher.group(0);
-      String []parts = tuple.split("=");
-      
-      parseBuffer.put(Keys.valueOf(parts[0]), parts[1].substring(1, parts[1].length() -1));
+      String []parts = StringUtils.split(tuple, StringUtils.ESCAPE_CHAR, '=');
+      String value = parts[1].substring(1, parts[1].length() -1);
+      value = StringUtils.unEscapeString(value, StringUtils.ESCAPE_CHAR,
+                                         charsToEscape);
+      parseBuffer.put(Keys.valueOf(parts[0]), value);
     }
 
     l.handle(RecordTypes.valueOf(recType), parseBuffer); 
@@ -224,6 +233,8 @@ public class JobHistory {
   
   static void log(PrintWriter out, RecordTypes recordType, Keys key, 
                   String value){
+    value = StringUtils.escapeString(value, StringUtils.ESCAPE_CHAR, 
+                                     charsToEscape);
     out.println(recordType.name() + DELIMITER + key + "=\"" + value + "\""
                 + DELIMITER + LINE_DELIMITER); 
   }
@@ -243,6 +254,8 @@ public class JobHistory {
     for(int i =0; i< keys.length; i++){
       buf.append(keys[i]);
       buf.append("=\"");
+      values[i] = StringUtils.escapeString(values[i],
+                                StringUtils.ESCAPE_CHAR, charsToEscape);
       buf.append(values[i]);
       buf.append("\"");
       buf.append(DELIMITER); 

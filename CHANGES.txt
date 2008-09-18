@@ -619,6 +619,9 @@ Trunk (unreleased changes)
     HADOOP-4195. Close compressor before returning to codec pool.
     (acmurthy via omalley)
 
+    HADOOP-2403. Escapes some special characters before logging to 
+    history files. (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
