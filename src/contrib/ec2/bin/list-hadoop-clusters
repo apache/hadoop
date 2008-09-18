@@ -23,7 +23,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-ec2-env.sh
 
 # Finding Hadoop clusters
-CLUSTERS=`ec2-describe-instances | awk '"RESERVATION" == $1 {print $4}' | grep -v -e "-master$" | sort | uniq`
+CLUSTERS=`ec2-describe-instances | awk '"RESERVATION" == $1 && $4 ~ /-master$/, "INSTANCE" == $1' | tr '\n' '\t' | grep running | cut -f4 | rev | cut -d'-' -f2- | rev`
 
 [ -z "$CLUSTERS" ] && echo "No running clusters." && exit 0
 

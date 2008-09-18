@@ -28,6 +28,7 @@ fi
 
 if [ -z $2 ]; then
   echo "Must specify the number of slaves to start."
+  exit -1
 fi
 
 if ! "$bin"/launch-hadoop-master $1 ; then

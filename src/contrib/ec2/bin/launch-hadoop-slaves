@@ -24,6 +24,7 @@ fi
 
 if [ -z $2 ]; then
   echo "Must specify the number of slaves to start."
+  exit -1
 fi
 
 CLUSTER=$1
@@ -49,6 +50,6 @@ sed -e "s|%MASTER_HOST%|$MASTER_HOST|" "$bin"/$USER_DATA_FILE > "$bin"/$USER_DAT
 
 # Start slaves
 echo "Adding $1 node(s) to cluster group $CLUSTER with AMI $AMI_IMAGE"
-ec2-run-instances $AMI_IMAGE -n "$NO_INSTANCES" -g "$CLUSTER" -k "$KEY_NAME" -f "$bin"/$USER_DATA_FILE.slave -t "$INSTANCE_TYPE" -z "$MASTER_ZONE" | grep INSTANCE | awk '{print $2}'
+ec2-run-instances $AMI_IMAGE -n "$NO_INSTANCES" -g "$CLUSTER" -k "$KEY_NAME" -f "$bin"/$USER_DATA_FILE.slave -t "$INSTANCE_TYPE" -z "$MASTER_ZONE" $KERNEL_ARG | grep INSTANCE | awk '{print $2}'
 
 rm "$bin"/$USER_DATA_FILE.slave

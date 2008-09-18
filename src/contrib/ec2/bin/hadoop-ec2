@@ -26,7 +26,7 @@ if [ $# = 0 ]; then
   echo "  launch-cluster <group> <num slaves>  launch a cluster of Hadoop EC2 instances - launch-master then launch-slaves"
   echo "  launch-master  <group>               launch or find a cluster master"
   echo "  launch-slaves  <group> <num slaves>  launch the cluster slaves"
-  echo "  terminate-cluster                    terminate all Hadoop EC2 instances"
+  echo "  terminate-cluster  <group>           terminate all Hadoop EC2 instances"
   echo "  login  <group|instance id>           login to the master node of the Hadoop EC2 cluster"
   echo "  screen <group|instance id>           start or attach 'screen' on the master node of the Hadoop EC2 cluster"
   echo "  proxy  <group|instance id>           start a socks proxy on localhost:6666 (use w/foxyproxy)"

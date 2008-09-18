@@ -344,6 +344,9 @@ Trunk (unreleased changes)
     HADOOP-4117. Improve configurability of Hadoop EC2 instances.
     (tomwhite)
 
+    HADOOP-2411. Add support for larger CPU EC2 instance types.
+    (Chris K Wensel via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
