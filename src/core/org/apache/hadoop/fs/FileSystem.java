@@ -84,7 +84,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Parse the cmd-line args, starting at i.  Remove consumed args
    * from array.  We expect param in the form:
    * '-local | -dfs <namenode:port>'
+   * @deprecated Consider using {@link GenericOptionsParser} instead.
    */
+  @Deprecated
   public static FileSystem parseArgs(String argv[], int i, Configuration conf) throws IOException {
     /**
        if (argv.length - i < 1) {

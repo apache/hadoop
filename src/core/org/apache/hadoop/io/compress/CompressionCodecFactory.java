@@ -185,7 +185,7 @@ public class CompressionCodecFactory {
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    Configuration conf = new org.apache.hadoop.mapred.JobConf();
+    Configuration conf = new Configuration();
     CompressionCodecFactory factory = new CompressionCodecFactory(conf);
     boolean encode = false;
     for(int i=0; i < args.length; ++i) {

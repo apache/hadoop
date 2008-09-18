@@ -24,10 +24,6 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.Reducer;
 
 import java.net.URI;
 
@@ -39,7 +35,8 @@ import java.net.URI;
  * </p>
  * 
  * <p>Applications specify the files, via urls (hdfs:// or http://) to be cached 
- * via the {@link JobConf}. The <code>DistributedCache</code> assumes that the
+ * via the {@link org.apache.hadoop.mapred.JobConf}.
+ * The <code>DistributedCache</code> assumes that the
  * files specified via hdfs:// urls are already present on the 
  * {@link FileSystem} at the path specified by the url.</p>
  * 
@@ -85,7 +82,8 @@ import java.net.URI;
  *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz", job);
  *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz", job);
  *     
- *     3. Use the cached files in the {@link Mapper} or {@link Reducer}:
+ *     3. Use the cached files in the {@link org.apache.hadoop.mapred.Mapper}
+ *     or {@link org.apache.hadoop.mapred.Reducer}:
  *     
  *     public static class MapClass extends MapReduceBase  
  *     implements Mapper&lt;K, V, K, V&gt; {
@@ -111,8 +109,8 @@ import java.net.URI;
  *     
  * </pre></blockquote></p>
  * 
- * @see JobConf
- * @see JobClient
+ * @see org.apache.hadoop.mapred.JobConf
+ * @see org.apache.hadoop.mapred.JobClient
  */
 public class DistributedCache {
   // cacheID to cacheStatus mapping

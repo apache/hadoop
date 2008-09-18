@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.util;
 
-import java.util.Map;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.conf.Configuration;
 
 /** 
  * A base class for running a Unix command.
@@ -65,19 +65,19 @@ abstract public class Shell {
    * 
    * It also checks to ensure that we are running on a *nix platform else 
    * (e.g. in Cygwin/Windows) it returns <code>null</code>.
-   * @param job job configuration
+   * @param conf configuration
    * @return a <code>String[]</code> with the ulimit command arguments or 
    *         <code>null</code> if we are running on a non *nix platform or
    *         if the limit is unspecified.
    */
-  public static String[] getUlimitMemoryCommand(JobConf job) {
+  public static String[] getUlimitMemoryCommand(Configuration conf) {
     // ulimit isn't supported on Windows
     if (WINDOWS) {
       return null;
     }
     
-    // get the memory limit from the JobConf
-    String ulimit = job.get("mapred.child.ulimit");
+    // get the memory limit from the configuration
+    String ulimit = conf.get("mapred.child.ulimit");
     if (ulimit == null) {
       return null;
     }
