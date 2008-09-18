@@ -80,7 +80,7 @@ static int insertEntryIntoTable(const char *key, void *data)
     if (key == NULL || data == NULL) {
         return 0;
     }
-    if(! hashTableInit()) {
+    if (! hashTableInit()) {
       return -1;
     }
     e.data = data;
@@ -218,6 +218,30 @@ int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
     return 0;
 }
 
+jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int size) {
+  const char *className = "Ljava/lang/String;";
+  jobjectArray result;
+  int i;
+  jclass arrCls = (*env)->FindClass(env, className);
+  if (arrCls == NULL) {
+    fprintf(stderr, "could not find class %s\n",className);
+    return NULL; /* exception thrown */
+  }
+  result = (*env)->NewObjectArray(env, size, arrCls,
+                                  NULL);
+  if (result == NULL) {
+    fprintf(stderr, "ERROR: could not construct new array\n");
+    return NULL; /* out of memory error thrown */
+  }
+  for (i = 0; i < size; i++) {
+    jstring jelem = (*env)->NewStringUTF(env,elements[i]);
+    if (jelem == NULL) {
+      fprintf(stderr, "ERROR: jelem == NULL\n");
+    }
+    (*env)->SetObjectArrayElement(env, result, i, jelem);
+  }
+  return result;
+}
 
 jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className, 
                                   const char *ctorSignature, ...)
@@ -262,11 +286,13 @@ jmethodID methodIdFromClass(const char *className, const char *methName,
 {
     jclass cls = globalClassReference(className, env);
     if (cls == NULL) {
+      fprintf(stderr, "could not find class %s\n", className);
       return NULL;
     }
 
     jmethodID mid = 0;
     if (!validateMethodType(methType)) {
+      fprintf(stderr, "invalid method type\n");
       return NULL;
     }
 
@@ -275,6 +301,9 @@ jmethodID methodIdFromClass(const char *className, const char *methName,
     }
     else if (methType == INSTANCE) {
         mid = (*env)->GetMethodID(env, cls, methName, methSignature);
+    }
+    if (mid == NULL) {
+      fprintf(stderr, "could not find method %s from class %s with signature %s\n",methName, className, methSignature);
     }
     return mid;
 }
@@ -389,7 +418,7 @@ JNIEnv* getJNIEnv(void)
         if (hadoopJvmArgs != NULL)  {
                 char *result = NULL;
                 result = strtok( hadoopJvmArgs, jvmArgDelims );
-                while( result != NULL ) {
+                while ( result != NULL ) {
                         noArgs++;
         		result = strtok( NULL, jvmArgDelims);
            	}
@@ -401,7 +430,7 @@ JNIEnv* getJNIEnv(void)
             char *result = NULL;
             result = strtok( hadoopJvmArgs, jvmArgDelims );	
             int argNum = 1;
-            for(;argNum < noArgs ; argNum++) {
+            for (;argNum < noArgs ; argNum++) {
                 options[argNum].optionString = result; //optHadoopArg;
             }
         }

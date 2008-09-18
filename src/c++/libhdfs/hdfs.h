@@ -55,7 +55,7 @@ extern  "C" {
      */
 
     typedef int32_t   tSize; /// size of data for read/write io ops 
-    typedef time_t    tTime; /// time type
+    typedef time_t    tTime; /// time type in seconds
     typedef int64_t   tOffset;/// offset within the file
     typedef uint16_t  tPort; /// port
     typedef enum tObjectKind {
@@ -92,6 +92,22 @@ extern  "C" {
       
 
     /** 
+     * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
+     * Connect to the hdfs.
+     * @param host A string containing either a host name, or an ip address
+     * of the namenode of a hdfs cluster. 'host' should be passed as NULL if
+     * you want to connect to local filesystem. 'host' should be passed as
+     * 'default' (and port as 0) to used the 'configured' filesystem
+     * (hadoop-site/hadoop-default.xml).
+     * @param port The port on which the server is listening.
+     * @param user the user name (this is hadoop domain user). Or NULL is equivelant to hhdfsConnect(host, port)
+     * @param groups the groups (these are hadoop domain groups)
+     * @return Returns a handle to the filesystem or NULL on error.
+     */
+     hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const char *groups[], int groups_size );
+
+
+    /** 
      * hdfsConnect - Connect to a hdfs file system.
      * Connect to the hdfs.
      * @param host A string containing either a host name, or an ip address
@@ -102,7 +118,7 @@ extern  "C" {
      * @param port The port on which the server is listening.
      * @return Returns a handle to the filesystem or NULL on error.
      */
-    hdfsFS hdfsConnect(const char* host, tPort port);
+     hdfsFS hdfsConnect(const char* host, tPort port);
 
 
     /** 
@@ -314,10 +330,14 @@ extern  "C" {
     typedef struct  {
         tObjectKind mKind;   /* file or directory */
         char *mName;         /* the name of the file */
-        tTime mLastMod;      /* the last modification time for the file*/
+        tTime mLastMod;      /* the last modification time for the file in seconds */
         tOffset mSize;       /* the size of the file in bytes */
         short mReplication;    /* the count of replicas */
         tOffset mBlockSize;  /* the block size for the file */
+        char *mOwner;        /* the owner of the file */
+        char *mGroup;        /* the group associated with the file */
+        short mPermissions;  /* the permissions associated with the file */
+        tTime mLastAccess;    /* the last access time for the file in seconds */
     } hdfsFileInfo;
 
 
@@ -402,6 +422,35 @@ extern  "C" {
      * @return Returns the total-size; -1 on error. 
      */
     tOffset hdfsGetUsed(hdfsFS fs);
+
+    /** 
+     * hdfsChown 
+     * @param fs The configured filesystem handle.
+     * @param path the path to the file or directory
+     * @param owner this is a string in Hadoop land. Set to null or "" if only setting group
+     * @param group  this is a string in Hadoop land. Set to null or "" if only setting user
+     * @return 0 on success else -1
+     */
+    int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group);
+
+    /** 
+     * hdfsChmod
+     * @param fs The configured filesystem handle.
+     * @param path the path to the file or directory
+     * @param mode the bitmask to set it to
+     * @return 0 on success else -1
+     */
+      int hdfsChmod(hdfsFS fs, const char* path, short mode);
+
+    /** 
+     * hdfsUtime
+     * @param fs The configured filesystem handle.
+     * @param path the path to the file or directory
+     * @param mtime new modification time or 0 for only set access time in seconds
+     * @param atime new access time or 0 for only set modification time in seconds
+     * @return 0 on success else -1
+     */
+    int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime);
     
 #ifdef __cplusplus
 }

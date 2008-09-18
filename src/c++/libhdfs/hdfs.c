@@ -30,16 +30,21 @@
 #define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
 #define HADOOP_OSTRM    "org/apache/hadoop/fs/FSDataOutputStream"
 #define HADOOP_STAT     "org/apache/hadoop/fs/FileStatus"
+#define HADOOP_FSPERM   "org/apache/hadoop/fs/permission/FsPermission"
+#define HADOOP_UNIX_USER_GROUP_INFO "org/apache/hadoop/security/UnixUserGroupInformation"
+#define HADOOP_USER_GROUP_INFO "org/apache/hadoop/security/UserGroupInformation"
 #define JAVA_NET_ISA    "java/net/InetSocketAddress"
 #define JAVA_NET_URI    "java/net/URI"
+#define JAVA_STRING     "java/lang/String"
 
-
+#define JAVA_VOID       "V"
 
 /* Macros for constructing method signatures */
 #define JPARAM(X)           "L" X ";"
 #define JARRPARAM(X)        "[L" X ";"
 #define JMETHOD1(X, R)      "(" X ")" R
 #define JMETHOD2(X, Y, R)   "(" X Y ")" R
+#define JMETHOD3(X, Y, Z, R)   "(" X Y Z")" R
 
 
 /**
@@ -148,7 +153,16 @@ done:
     return errnum;
 }
 
-hdfsFS hdfsConnect(const char* host, tPort port)
+
+
+
+hdfsFS hdfsConnect(const char* host, tPort port) {
+  // conect with NULL as user name/groups
+  return hdfsConnectAsUser(host, port, NULL, NULL, 0);
+}
+
+
+hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const char **groups, int groups_size )
 {
     // JAVA EQUIVALENT:
     //  FileSystem fs = FileSystem.get(new Configuration());
@@ -183,6 +197,82 @@ hdfsFS hdfsConnect(const char* host, tPort port)
         return NULL;
     }
  
+    if (user != NULL) {
+
+      if (groups == NULL || groups_size <= 0) {
+        fprintf(stderr, "ERROR: groups must not be empty/null\n");
+        errno = EINVAL;
+        return NULL;
+      }
+
+      jstring jUserString = (*env)->NewStringUTF(env, user);
+      jarray jGroups = constructNewArrayString(env, &jExc, groups, groups_size);
+      if (jGroups == NULL) {
+        errno = EINTERNAL;
+        fprintf(stderr, "ERROR: could not construct groups array\n");
+        return NULL;
+      }
+
+      jobject jUgi;
+      if ((jUgi = constructNewObjectOfClass(env, &jExc, HADOOP_UNIX_USER_GROUP_INFO, JMETHOD2(JPARAM(JAVA_STRING), JARRPARAM(JAVA_STRING), JAVA_VOID), jUserString, jGroups)) == NULL) {
+        fprintf(stderr,"failed to construct hadoop user unix group info object\n");
+        errno = errnoFromException(jExc, env, HADOOP_UNIX_USER_GROUP_INFO,
+                                   "init");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        return NULL;
+      }
+#define USE_UUGI
+#ifdef USE_UUGI
+
+      // UnixUserGroupInformation.UGI_PROPERTY_NAME
+      jstring jAttrString = (*env)->NewStringUTF(env,"hadoop.job.ugi");
+      
+      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_UNIX_USER_GROUP_INFO, "saveToConf",
+                       JMETHOD3(JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING), JPARAM(HADOOP_UNIX_USER_GROUP_INFO), JAVA_VOID),
+                       jConfiguration, jAttrString, jUgi) != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_FSPERM,
+                                   "init");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        destroyLocalReference(env, jUgi);
+        return NULL;
+      }
+
+      destroyLocalReference(env, jUserString);
+      destroyLocalReference(env, jGroups);
+      destroyLocalReference(env, jUgi);
+    }
+#else
+    
+    // what does "current" mean in the context of libhdfs ? does it mean for the last hdfs connection we used?
+    // that's why this code cannot be activated. We know the above use of the conf object should work well with 
+    // multiple connections.
+      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_USER_GROUP_INFO, "setCurrentUGI",
+                       JMETHOD1(JPARAM(HADOOP_USER_GROUP_INFO), JAVA_VOID),
+                       jUgi) != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_USER_GROUP_INFO,
+                                   "setCurrentUGI");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        destroyLocalReference(env, jUgi);
+        return NULL;
+      }
+
+      destroyLocalReference(env, jUserString);
+      destroyLocalReference(env, jGroups);
+      destroyLocalReference(env, jUgi);
+    }
+#endif      
     //Check what type of FileSystem the caller wants...
     if (host == NULL) {
         // fs = FileSytem::getLocal(conf);
@@ -314,7 +404,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
 
     jobject jFS = (jobject)fs;
 
-    if(flags & O_RDWR) {
+    if (flags & O_RDWR) {
       fprintf(stderr, "ERROR: cannot open an hdfs file in O_RDWR mode\n");
       errno = ENOTSUP;
       return NULL;
@@ -1261,6 +1351,145 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
     return (jVal.z) ? 0 : -1;
 }
 
+int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
+{
+    // JAVA EQUIVALENT:
+    //  fs.setOwner(path, owner, group)
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    if (owner == NULL && group == NULL) {
+      fprintf(stderr, "Both owner and group cannot be null in chown");
+      errno = EINVAL;
+      return -1;
+    }
+
+    jobject jFS = (jobject)fs;
+
+    jobject jPath = constructNewObjectOfPath(env, path);
+    if (jPath == NULL) {
+        return -1;
+    }
+
+    jstring jOwnerString = (*env)->NewStringUTF(env, owner); 
+    jstring jGroupString = (*env)->NewStringUTF(env, group); 
+
+    //Create the directory
+    int ret = 0;
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
+                     "setOwner", JMETHOD3(JPARAM(HADOOP_PATH), JPARAM(JAVA_STRING), JPARAM(JAVA_STRING), JAVA_VOID),
+                     jPath, jOwnerString, jGroupString) != 0) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::setOwner");
+        ret = -1;
+        goto done;
+    }
+
+ done:
+    destroyLocalReference(env, jPath);
+    destroyLocalReference(env, jOwnerString);
+    destroyLocalReference(env, jGroupString);
+
+    return ret;
+}
+
+int hdfsChmod(hdfsFS fs, const char* path, short mode)
+{
+    // JAVA EQUIVALENT:
+    //  fs.setPermission(path, FsPermission)
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    jobject jFS = (jobject)fs;
+
+    // construct jPerm = FsPermission.createImmutable(short mode);
+
+    jshort jmode = mode;
+
+    jobject jPermObj =
+      constructNewObjectOfClass(env, NULL, HADOOP_FSPERM,"(S)V",jmode);
+    if (jPermObj == NULL) {
+      return -2;
+    }
+
+    //Create an object of org.apache.hadoop.fs.Path
+    jobject jPath = constructNewObjectOfPath(env, path);
+    if (jPath == NULL) {
+      return -3;
+    }
+
+    //Create the directory
+    int ret = 0;
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
+                     "setPermission", JMETHOD2(JPARAM(HADOOP_PATH), JPARAM(HADOOP_FSPERM), JAVA_VOID),
+                     jPath, jPermObj) != 0) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileSystem::setPermission");
+        ret = -1;
+        goto done;
+    }
+
+ done:
+    destroyLocalReference(env, jPath);
+    destroyLocalReference(env, jPermObj);
+
+    return ret;
+}
+
+int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
+{
+    // JAVA EQUIVALENT:
+    //  fs.setTimes(src, mtime, atime)
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    jobject jFS = (jobject)fs;
+
+    //Create an object of org.apache.hadoop.fs.Path
+    jobject jPath = constructNewObjectOfPath(env, path);
+    if (jPath == NULL) {
+      fprintf(stderr, "could not construct path object\n");
+      return -2;
+    }
+
+    jlong jmtime = mtime * 1000;
+    jlong jatime = atime * 1000;
+
+    int ret = 0;
+    jthrowable jExc = NULL;
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
+                     "setTimes", JMETHOD3(JPARAM(HADOOP_PATH), "J", "J", JAVA_VOID),
+                     jPath, jmtime, jatime) != 0) {
+      fprintf(stderr, "call to setTime failed\n");
+      errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                 "FileSystem::setTimes");
+      ret = -1;
+      goto done;
+    }
+
+ done:
+    destroyLocalReference(env, jPath);
+    return ret;
+}
+
+
 
 
 char***
@@ -1546,7 +1775,16 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
                                    "FileStatus::getModificationTime");
         return -1;
     }
-    fileInfo->mLastMod = (tTime) (jVal.j / 1000);
+    fileInfo->mLastMod = (tTime) (jVal.j) / 1000;
+
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
+                     HADOOP_STAT, "getAccessTime", "()J") != 0) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FileStatus::getAccessTime");
+        return -1;
+    }
+    fileInfo->mLastAccess = (tTime) (jVal.j) / 1000;
+
 
     if (fileInfo->mKind == kObjectKindFile) {
         if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
@@ -1583,6 +1821,55 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     (*env)->ReleaseStringUTFChars(env, jPathName, cPathName);
     destroyLocalReference(env, jPath);
     destroyLocalReference(env, jPathName);
+    jstring     jUserName;
+    const char* cUserName;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat, HADOOP_STAT,
+                    "getOwner", "()Ljava/lang/String;")) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getOwner failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    jUserName = jVal.l;
+    cUserName = (const char*) ((*env)->GetStringUTFChars(env, jUserName, NULL));
+    fileInfo->mOwner = strdup(cUserName);
+    (*env)->ReleaseStringUTFChars(env, jUserName, cUserName);
+    destroyLocalReference(env, jUserName);
+
+    jstring     jGroupName;
+    const char* cGroupName;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat, HADOOP_STAT,
+                    "getGroup", "()Ljava/lang/String;")) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getGroup failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    jGroupName = jVal.l;
+    cGroupName = (const char*) ((*env)->GetStringUTFChars(env, jGroupName, NULL));
+    fileInfo->mGroup = strdup(cGroupName);
+    (*env)->ReleaseStringUTFChars(env, jGroupName, cGroupName);
+    destroyLocalReference(env, jGroupName);
+
+    jobject jPermission;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat, HADOOP_STAT,
+                     "getPermission", "()Lorg/apache/hadoop/fs/permission/FsPermission;") ||
+            jVal.l == NULL) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getPermission failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    jPermission = jVal.l;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jPermission, HADOOP_FSPERM,
+                         "toShort", "()S") != 0) {
+            fprintf(stderr, "Call to org.apache.hadoop.fs.permission."
+                    "FsPermission::toShort failed!\n");
+            errno = EINTERNAL;
+            return -1;
+    }
+    fileInfo->mPermissions = jVal.s;
+    destroyLocalReference(env, jPermission);
 
     return 0;
 }
@@ -1592,9 +1879,13 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
 {
     // JAVA EQUIVALENT:
     //  fs.isDirectory(f)
-    //  fs.lastModified() ??
+    //  fs.getModificationTime()
+    //  fs.getAccessTime()
     //  fs.getLength(f)
     //  f.getPath()
+    //  f.getOwner()
+    //  f.getGroup()
+    //  f.getPermission().toShort()
 
     jobject jStat;
     jvalue  jVal;

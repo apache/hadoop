@@ -101,6 +101,8 @@ char *classNameOfObject(jobject jobj, JNIEnv *env);
  * */
 JNIEnv* getJNIEnv(void);
 
+jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int size) ;
+
 #endif /*LIBHDFS_JNI_HELPER_H*/
 
 /**
