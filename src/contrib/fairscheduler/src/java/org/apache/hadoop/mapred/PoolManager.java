@@ -69,7 +69,7 @@ public class PoolManager {
 
   private String allocFile; // Path to XML file containing allocations
   private String poolNameProperty; // Jobconf property to use for determining a
-                                   // job's pool name (default: queue.name)
+                                   // job's pool name (default: mapred.job.queue.name)
   
   private Map<String, Pool> pools = new HashMap<String, Pool>();
   
@@ -80,7 +80,7 @@ public class PoolManager {
   public PoolManager(Configuration conf) throws IOException, SAXException,
       AllocationConfigurationException, ParserConfigurationException {
     this.poolNameProperty = conf.get(
-        "mapred.fairscheduler.poolnameproperty", "queue.name");
+        "mapred.fairscheduler.poolnameproperty", "mapred.job.queue.name");
     this.allocFile = conf.get("mapred.fairscheduler.allocation.file");
     if (allocFile == null) {
       LOG.warn("No mapred.fairscheduler.allocation.file given in jobconf - " +

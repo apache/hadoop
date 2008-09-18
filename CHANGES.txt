@@ -359,6 +359,9 @@ Trunk (unreleased changes)
     HADOOP-2411. Add support for larger CPU EC2 instance types.
     (Chris K Wensel via tomwhite)
 
+    HADOOP-4083. Changed the configuration attribute queue.name to
+    mapred.job.queue.name. (Hemanth Yamijala via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

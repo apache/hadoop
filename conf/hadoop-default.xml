@@ -1533,7 +1533,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>queue.name</name>
+  <name>mapred.job.queue.name</name>
   <value>default</value>
   <description> Queue to which a job is submitted. This must match one of the
     queues defined in mapred.queue.names for the system. Also, the ACL setup

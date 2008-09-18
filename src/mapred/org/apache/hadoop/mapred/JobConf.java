@@ -1388,7 +1388,7 @@ public class JobConf extends Configuration {
    * @return name of the queue
    */
   public String getQueueName() {
-    return get("queue.name", DEFAULT_QUEUE_NAME);
+    return get("mapred.job.queue.name", DEFAULT_QUEUE_NAME);
   }
   
   /**
@@ -1397,7 +1397,7 @@ public class JobConf extends Configuration {
    * @param queueName Name of the queue
    */
   public void setQueueName(String queueName) {
-    set("queue.name", queueName);
+    set("mapred.job.queue.name", queueName);
   }
   
   /** 
