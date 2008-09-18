@@ -338,6 +338,9 @@ Trunk (unreleased changes)
     HADOOP-4184. Break the module dependencies between core, hdfs, and 
     mapred. (tomwhite via omalley)
 
+    HADOOP-4075. test-patch.sh now spits out ant commands that it runs.
+    (Ramya R via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
