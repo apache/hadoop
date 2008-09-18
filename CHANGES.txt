@@ -362,6 +362,9 @@ Trunk (unreleased changes)
     HADOOP-4083. Changed the configuration attribute queue.name to
     mapred.job.queue.name. (Hemanth Yamijala via acmurthy) 
 
+    HADOOP-4194. Added the JobConf and JobID to job-related methods in
+    JobTrackerInstrumentation for better metrics. (Mac Yang via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

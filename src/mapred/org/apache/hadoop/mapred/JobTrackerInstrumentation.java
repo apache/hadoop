@@ -39,10 +39,10 @@ public class JobTrackerInstrumentation {
   public void completeReduce(TaskAttemptID taskAttemptID)
   {  }
   
-  public void submitJob() 
+  public void submitJob(JobConf conf, JobID id) 
   { }
     
-  public void completeJob() 
+  public void completeJob(JobConf conf, JobID id) 
   { }
 
 }

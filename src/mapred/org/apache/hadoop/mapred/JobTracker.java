@@ -2184,7 +2184,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
-    myInstrumentation.submitJob();
+    myInstrumentation.submitJob(this.conf, jobId);
     return job.getStatus();
   }
 

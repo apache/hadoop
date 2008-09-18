@@ -1738,7 +1738,7 @@ class JobInProgress {
       // might try to finalize
       garbageCollect();
       
-      metrics.completeJob();
+      metrics.completeJob(this.conf, this.status.getJobID());
     }
   }
   

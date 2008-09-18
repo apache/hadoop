@@ -89,11 +89,11 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
     ++numReduceTasksCompleted;
   }
     
-  public synchronized void submitJob() {
+  public synchronized void submitJob(JobConf conf, JobID id) {
     ++numJobsSubmitted;
   }
     
-  public synchronized void completeJob() {
+  public synchronized void completeJob(JobConf conf, JobID id) {
     ++numJobsCompleted;
   }
 }
