@@ -8,7 +8,6 @@
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
-  import="org.apache.hadoop.hdfs.server.namenode.JspHelper"
 %>
 
 <%
@@ -49,7 +48,7 @@
               "&type="+ kind + "&pagenum=1\">" + kind + 
               "</a></th><td align=\"right\">" + 
               StringUtils.formatPercent(completePercent, 2) +
-              JspHelper.percentageGraph((int)(completePercent * 100), 80) +
+              ServletUtil.percentageGraph((int)(completePercent * 100), 80) +
               "</td><td align=\"right\">" + 
               totalTasks + 
               "</td><td align=\"right\">" + 
@@ -165,7 +164,7 @@
                              JobPriority.valueOf(request.getParameter("prio")));
     }
     
-    if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
+    if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
         action = request.getParameter("action");
 	    if(action!=null && action.equalsIgnoreCase("confirm")) {
   	      printConfirm(out, jobId);
@@ -354,7 +353,7 @@ Change priority from <%=job.getPriority()%> to:
 
 <table border="0"> <tr>
     
-<% if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
+<% if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
     	&& runState == JobStatus.RUNNING) { %>
 	<br/><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
 <% } %>

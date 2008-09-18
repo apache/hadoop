@@ -106,7 +106,7 @@
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(c*1.0/diskBytes) +
 	      "<td class=\"pcused\">" + percentUsed +"<td class=\"pcused\">" +
-	      JspHelper.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
+	      ServletUtil.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(d.getRemaining()*1.0/diskBytes) +
               "<td title=" + "\"blocks scheduled : " + d.getBlocksScheduled() + 

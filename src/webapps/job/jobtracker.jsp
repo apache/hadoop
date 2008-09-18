@@ -12,125 +12,14 @@
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  int rowId = 0;
+  JobQueueInfo[] queues = tracker.getQueues();
+  Vector<JobInProgress> runningJobs = tracker.runningJobs();
+  Vector<JobInProgress> completedJobs = tracker.completedJobs();
+  Vector<JobInProgress> failedJobs = tracker.failedJobs();
 %>
 <%!
-  private static final String PRIVATE_ACTIONS_KEY 
-    = "webinterface.private.actions";
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
   
-  public void processButtons(JspWriter out, 
-          HttpServletRequest request,
-          HttpServletResponse response,
-          JobTracker tracker) throws IOException {
-  
-    if (JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) &&
-        request.getParameter("killJobs") != null) {
-      String[] jobs = request.getParameterValues("jobCheckBox");
-      if (jobs != null) {
-        for (String job : jobs) {
-          tracker.killJob(JobID.forName(job));
-        }
-      }
-    }
-    
-    if (request.getParameter("changeJobPriority") != null) {
-      String[] jobs = request.getParameterValues("jobCheckBox");
-      
-      if (jobs != null) {
-        JobPriority jobPri = JobPriority.valueOf(request.getParameter("setJobPriority"));
-          
-        for (String job : jobs) {
-          tracker.setJobPriority(JobID.forName(job), jobPri);
-        }
-      }
-    }
-  }
-
-  public int generateJobTable(JspWriter out, String label, Vector jobs, int refresh, int rowId) throws IOException {
-    
-    boolean isModifiable = label.equals("Running");
-
-    out.print("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
-    
-    if (jobs.size() > 0) {
-      if (isModifiable) {
-        out.print("<tr>");
-        out.print("<td><input type=\"Button\" onclick=\"selectAll()\" value=\"Select All\" id=\"checkEm\"></td>");
-        out.print("<td>");
-        if (JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
-          out.print("<input type=\"submit\" name=\"killJobs\" value=\"Kill Selected Jobs\">");
-        }
-        out.print("</td");
-        out.print("<td><nobr>");
-        out.print("<select name=\"setJobPriority\">");
-
-        for (JobPriority prio : JobPriority.values()) {
-         out.print("<option" + (JobPriority.NORMAL == prio ? " selected=\"selected\">" : ">") + prio + "</option>");
-        }
-
-        out.print("</select>");
-        out.print("<input type=\"submit\" name=\"changeJobPriority\" value=\"Change\">");
-        out.print("</nobr></td>");
-        out.print("<td colspan=\"8\">&nbsp;</td>");
-        out.print("</tr>");
-        out.print("<td>&nbsp;</td>");
-      } else {
-        out.print("<tr>");
-      }
-      
-      out.print("<td><b>Jobid</b></td><td><b>Priority</b></td><td><b>User</b></td>");
-      out.print("<td><b>Name</b></td>");
-      out.print("<td><b>Map % Complete</b></td>");
-      out.print("<td><b>Map Total</b></td>");
-      out.print("<td><b>Maps Completed</b></td>");
-      out.print("<td><b>Reduce % Complete</b></td>");
-      out.print("<td><b>Reduce Total</b></td>");
-      out.print("<td><b>Reduces Completed</b></td></tr>\n");
-      for (Iterator it = jobs.iterator(); it.hasNext(); ++rowId) {
-        JobInProgress job = (JobInProgress) it.next();
-        JobProfile profile = job.getProfile();
-        JobStatus status = job.getStatus();
-        JobID jobid = profile.getJobID();
-
-        int desiredMaps = job.desiredMaps();
-        int desiredReduces = job.desiredReduces();
-        int completedMaps = job.finishedMaps();
-        int completedReduces = job.finishedReduces();
-        String name = profile.getJobName();
-        String jobpri = job.getPriority().toString();
-        
-        if (isModifiable) {
-          out.print("<tr><td><input TYPE=\"checkbox\" onclick=\"checkButtonVerbage()\" name=\"jobCheckBox\" value=" +
-                    jobid + "></td>");
-        } else {
-            out.print("<tr>");
-        }
-
-        out.print("<td id=\"job_" + rowId + "\"><a href=\"jobdetails.jsp?jobid=" +
-                  jobid + "&refresh=" + refresh + "\">" + jobid +"</a></td>" +
-                  "<td id=\"priority_" + rowId + "\">" + jobpri + "</td>" +
-                  "<td id=\"user_" + rowId + "\">" + profile.getUser() + "</td>" + 
-                  "<td id=\"name_" + rowId + "\">" + ("".equals(name) ? "&nbsp;" : name) +
-                  "</td>" +
-                  "<td>" + StringUtils.formatPercent(status.mapProgress(),2) +
-                  JspHelper.percentageGraph(status.mapProgress()  * 100, 80) +
-                  "</td><td>" + 
-                  desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
-                  StringUtils.formatPercent(status.reduceProgress(),2) +
-                  JspHelper.percentageGraph(status.reduceProgress() * 100, 80) +
-                  "</td><td>" + 
-                  desiredReduces + "</td><td> " + completedReduces + 
-                  "</td></tr>\n");
-      }
-    } else {
-      out.print("<tr><td align=\"center\" colspan=\"8\"><i>none</i></td></tr>\n");
-    }
-    out.print("</table>\n");
-    
-    return rowId;
-  }
-
   public void generateSummaryTable(JspWriter out,
                                    JobTracker tracker) throws IOException {
     ClusterStatus status = tracker.getClusterStatus();
@@ -166,7 +55,7 @@
     }
   }%>
 
-<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
+
 <html>
 <head>
 <title><%= trackerName %> Hadoop Map/Reduce Administration</title>
@@ -175,13 +64,14 @@
 </head>
 <body>
 
-<% processButtons(out, request, response, tracker); %>
+<% JSPUtil.processButtons(request, response, tracker); %>
 
 <h1><%= trackerName %> Hadoop Map/Reduce Administration</h1>
 
 <div id="quicklinks">
   <a href="#quicklinks" onclick="toggle('quicklinks-list'); return false;">Quick Links</a>
   <ul id="quicklinks-list">
+    <li><a href="#scheduling_info">Scheduling Info</a></li>
     <li><a href="#running_jobs">Running Jobs</a></li>
     <li><a href="#completed_jobs">Completed Jobs</a></li>
     <li><a href="#failed_jobs">Failed Jobs</a></li>
@@ -203,29 +93,49 @@
  generateSummaryTable(out, tracker); 
 %>
 <hr>
-
+<h2 id="scheduling_info">Scheduling Information</h2>
+<table border="2" cellpadding="5" cellspacing="2">
+<thead style="font-weight: bold">
+<tr>
+<td> Queue Name </td>
+<td> Scheduling Information</td>
+</tr>
+</thead>
+<tbody>
+<%
+for(JobQueueInfo queue: queues) {
+  String queueName = queue.getQueueName();
+  String schedulingInformation = queue.getSchedulingInfo();
+  if(schedulingInformation == null || schedulingInformation.trim().equals("")) {
+    schedulingInformation = "NA";
+  }
+%>
+<tr>
+<td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
+<td><%=schedulingInformation.replaceAll("\n","<br/>") %>
+</td>
+</tr>
+<%
+}
+%>
+</tbody>
+</table>
+<hr/>
 <b>Filter (Jobid, Priority, User, Name)</b> <input type="text" id="filter" onkeyup="applyfilter()"> <br>
 <span class="small">Example: 'user:smith 3200' will filter by 'smith' only in the user field and '3200' in all fields</span>
 <hr>
 
 <h2 id="running_jobs">Running Jobs</h2>
-<%
-  out.print("<form action=\"/jobtracker.jsp\" onsubmit=\"return confirmAction();\" method=\"POST\">");
-  rowId = generateJobTable(out, "Running", tracker.runningJobs(), 30, rowId);
-  out.print("</form>\n");
-%>
+<%=JSPUtil.generateJobTable("Running", runningJobs, 30, 0)%>
 <hr>
 
 <h2 id="completed_jobs">Completed Jobs</h2>
-<%
-  rowId = generateJobTable(out, "Completed", tracker.completedJobs(), 0, rowId);
-%>
+<%=JSPUtil.generateJobTable("Completed", completedJobs, 0, runningJobs.size())%>
 <hr>
 
 <h2 id="failed_jobs">Failed Jobs</h2>
-<%
-    generateJobTable(out, "Failed", tracker.failedJobs(), 0, rowId);
-%>
+<%=JSPUtil.generateJobTable("Failed", failedJobs, 0, 
+    (runningJobs.size()+completedJobs.size()))%>
 <hr>
 
 <h2 id="local_logs">Local Logs</h2>

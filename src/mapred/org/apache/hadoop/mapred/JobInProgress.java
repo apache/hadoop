@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -165,6 +164,9 @@ class JobInProgress {
   // Map of mapTaskId -> no. of fetch failures
   private Map<TaskAttemptID, Integer> mapTaskIdToFetchFailuresMap =
     new TreeMap<TaskAttemptID, Integer>();
+
+  private Object schedulingInfo;
+
   
   /**
    * Create an almost empty JobInProgress, which can be used only for tests
@@ -2105,5 +2107,14 @@ class JobInProgress {
    */
   public JobID getJobID() {
     return jobId;
+  }
+  
+  public synchronized Object getSchedulingInfo() {
+    return this.schedulingInfo;
+  }
+  
+  public synchronized void setSchedulingInfo(Object schedulingInfo) {
+    this.schedulingInfo = schedulingInfo;
+    this.status.setSchedulingInfo(schedulingInfo.toString());
   }
 }

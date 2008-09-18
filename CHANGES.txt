@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-3829. Narrown down skipped records based on user acceptable value.
     (Sharad Agarwal via ddas)
 
+    HADOOP-3930. Add common interfaces for the pluggable schedulers and the
+    cli & gui clients. (Sreekanth Ramakrishnan via omalley)
+
   IMPROVEMENTS
 
     HADOOP-4104. libhdfs: add time, permission and user attribute support.

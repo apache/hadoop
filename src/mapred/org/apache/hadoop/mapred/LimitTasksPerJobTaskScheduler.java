@@ -47,7 +47,16 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
   }
   
   @Override
-  public void setConf(Configuration conf) {
+  public synchronized void start() throws IOException {
+    super.start();
+    QueueManager queueManager = taskTrackerManager.getQueueManager();
+    String queueName = queueManager.getJobQueueInfos()[0].getQueueName();
+    queueManager.setSchedulerInfo(queueName
+        ,"Maximum Tasks Per Job :: " + String.valueOf(maxTasksPerJob));
+  }
+  
+  @Override
+  public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
     maxTasksPerJob = conf.getLong(MAX_TASKS_PER_JOB_PROPERTY ,Long.MAX_VALUE);
     if (maxTasksPerJob <= 0) {

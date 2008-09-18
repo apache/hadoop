@@ -53,6 +53,7 @@ public class JobStatus implements Writable {
   private int runState;
   private long startTime;
   private String user;
+  private String schedulingInfo="";
     
   /**
    */
@@ -171,11 +172,28 @@ public class JobStatus implements Writable {
    * @return the username of the job
    */
   public synchronized String getUsername() { return this.user;}
-    
+  
+  /**
+   * Gets the Scheduling information associated to a particular Job.
+   * @return the scheduling information of the job
+   */
+  public synchronized String getSchedulingInfo() {
+   return schedulingInfo;
+  }
+
+  /**
+   * Used to set the scheduling information associated to a particular Job.
+   * 
+   * @param schedulingInfo Scheduling information of the job
+   */
+  public synchronized void setSchedulingInfo(String schedulingInfo) {
+    this.schedulingInfo = schedulingInfo;
+  }
+  
   ///////////////////////////////////////
   // Writable
   ///////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
+  public synchronized void write(DataOutput out) throws IOException {
     jobid.write(out);
     out.writeFloat(mapProgress);
     out.writeFloat(reduceProgress);
@@ -183,9 +201,10 @@ public class JobStatus implements Writable {
     out.writeInt(runState);
     out.writeLong(startTime);
     Text.writeString(out, user);
+    Text.writeString(out, schedulingInfo);
   }
 
-  public void readFields(DataInput in) throws IOException {
+  public synchronized void readFields(DataInput in) throws IOException {
     this.jobid = JobID.read(in);
     this.mapProgress = in.readFloat();
     this.reduceProgress = in.readFloat();
@@ -193,5 +212,6 @@ public class JobStatus implements Writable {
     this.runState = in.readInt();
     this.startTime = in.readLong();
     this.user = Text.readString(in);
+    this.schedulingInfo = Text.readString(in);
   }
 }

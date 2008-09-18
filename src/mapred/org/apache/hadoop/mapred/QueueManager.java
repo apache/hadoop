@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
@@ -285,6 +287,7 @@ public class QueueManager {
   public synchronized void refresh(Configuration conf) {
     queueNames.clear();
     aclsMap.clear();
+    schedulerInfoObjects.clear();
     initialize(conf);
   }
   
@@ -313,6 +316,30 @@ public class QueueManager {
   private static final void addToSet(Set<String> set, String[] elems) {
     for (String elem : elems) {
       set.add(elem);
+    }
+  }
+
+
+  synchronized JobQueueInfo[] getJobQueueInfos() {
+    ArrayList<JobQueueInfo> queueInfoList = new ArrayList<JobQueueInfo>();
+    for(String queue : queueNames) {
+      Object schedulerInfo = schedulerInfoObjects.get(queue);
+      if(schedulerInfo != null) {
+        queueInfoList.add(new JobQueueInfo(queue,schedulerInfo.toString()));
+      }else {
+        queueInfoList.add(new JobQueueInfo(queue,null));
+      }
+    }
+    return (JobQueueInfo[]) queueInfoList.toArray(new JobQueueInfo[queueInfoList
+        .size()]);
+  }
+
+  JobQueueInfo getJobQueueInfo(String queue) {
+    Object schedulingInfo = schedulerInfoObjects.get(queue);
+    if(schedulingInfo!=null){
+      return new JobQueueInfo(queue,schedulingInfo.toString());
+    }else {
+      return new JobQueueInfo(queue,null);
     }
   }
 }

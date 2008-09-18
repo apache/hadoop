@@ -211,4 +211,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     return null;
   }
 
+  @Override
+  public synchronized Collection<JobInProgress> getJobs(String queueName) {
+    return jobQueueJobInProgressListener.getJobQueue();
+  }  
 }

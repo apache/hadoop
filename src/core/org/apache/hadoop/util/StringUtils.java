@@ -606,4 +606,40 @@ public class StringUtils {
                * Long.parseLong(s.substring(0, lastpos));
     }
   }
+  
+    /**
+     * Escapes HTML Special characters present in the string.
+     * @param string
+     * @return HTML Escaped String representation
+     */
+    public static String escapeHTML(String string) {
+      if(string == null) {
+        return null;
+      }
+      StringBuffer sb = new StringBuffer();
+      boolean lastCharacterWasSpace = false;
+      char[] chars = string.toCharArray();
+      for(char c : chars) {
+        if(c == ' ') {
+          if(lastCharacterWasSpace){
+            lastCharacterWasSpace = false;
+            sb.append("&nbsp;");
+          }else {
+            lastCharacterWasSpace=true;
+            sb.append(" ");
+          }
+        }else {
+          lastCharacterWasSpace = false;
+          switch(c) {
+          case '<': sb.append("&lt;"); break;
+          case '>': sb.append("&gt;"); break;
+          case '&': sb.append("&amp;"); break;
+          case '"': sb.append("&quot;"); break;
+          default : sb.append(c);break;
+          }
+        }
+      }
+      
+      return sb.toString();
+    }
 }

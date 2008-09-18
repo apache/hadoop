@@ -48,7 +48,6 @@
   }
 %>
 
-<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
 <html>
   <head>
     <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerName%></title>
@@ -108,7 +107,7 @@
                     "&tipid=" + report.getTaskId() + "\">"  + 
                     report.getTaskId() + "</a></td>");
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) +
-        		   JspHelper.percentageGraph(report.getProgress() * 100f, 80) + "</td>");
+        		   ServletUtil.percentageGraph(report.getProgress() * 100f, 80) + "</td>");
          out.print("<td>"  + report.getState() + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 

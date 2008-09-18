@@ -2423,30 +2423,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
     
   public JobStatus[] jobsToComplete() {
-    Vector<JobStatus> v = new Vector<JobStatus>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
-      JobInProgress jip = (JobInProgress) it.next();
-      JobStatus status = jip.getStatus();
-      if (status.getRunState() == JobStatus.RUNNING 
-          || status.getRunState() == JobStatus.PREP) {
-        status.setStartTime(jip.getStartTime());
-        status.setUsername(jip.getProfile().getUser());
-        v.add(status);
-      }
-    }
-    return v.toArray(new JobStatus[v.size()]);
+    return getJobStatus(jobs.values(), true);
   } 
   
   public JobStatus[] getAllJobs() {
-    Vector<JobStatus> v = new Vector<JobStatus>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
-      JobInProgress jip = (JobInProgress) it.next();
-      JobStatus status = jip.getStatus();
-      status.setStartTime(jip.getStartTime());
-      status.setUsername(jip.getProfile().getUser());
-      v.add(status);
-    }
-    return v.toArray(new JobStatus[v.size()]);
+    return getJobStatus(jobs.values(),false);
   }
     
   /**
@@ -2622,6 +2603,44 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  @Override
+  public JobQueueInfo[] getQueues() throws IOException {
+    return queueManager.getJobQueueInfos();
+  }
 
 
+  @Override
+  public JobQueueInfo getQueueInfo(String queue) throws IOException {
+    return queueManager.getJobQueueInfo(queue);
+  }
+
+  @Override
+  public JobStatus[] getJobsFromQueue(String queue) throws IOException {
+    Collection<JobInProgress> jips = taskScheduler.getJobs(queue);
+    return getJobStatus(jips,false);
+  }
+  
+  private synchronized JobStatus[] getJobStatus(Collection<JobInProgress> jips,
+      boolean toComplete) {
+    if(jips == null || jips.isEmpty()) {
+      return new JobStatus[]{};
+    }
+    ArrayList<JobStatus> jobStatusList = new ArrayList<JobStatus>();
+    for(JobInProgress jip : jips) {
+      JobStatus status = jip.getStatus();
+      status.setStartTime(jip.getStartTime());
+      status.setUsername(jip.getProfile().getUser());
+      if(toComplete) {
+        if(status.getRunState() == JobStatus.RUNNING || 
+            status.getRunState() == JobStatus.PREP) {
+          jobStatusList.add(status);
+        }
+      }else {
+        jobStatusList.add(status);
+      }
+    }
+    return (JobStatus[]) jobStatusList.toArray(
+        new JobStatus[jobStatusList.size()]);
+  }
+  
 }

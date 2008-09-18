@@ -66,7 +66,8 @@ if [ $# = 0 ]; then
   echo "  jobtracker           run the MapReduce job Tracker node" 
   echo "  pipes                run a Pipes job"
   echo "  tasktracker          run a MapReduce task Tracker node" 
-  echo "  job                  manipulate MapReduce jobs" 
+  echo "  job                  manipulate MapReduce jobs"
+  echo "  queue                get information regarding JobQueues" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
@@ -198,6 +199,8 @@ elif [ "$COMMAND" = "tasktracker" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_TASKTRACKER_OPTS"
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
+elif [ "$COMMAND" = "queue" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobQueueClient
 elif [ "$COMMAND" = "pipes" ] ; then
   CLASS=org.apache.hadoop.mapred.pipes.Submitter
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"

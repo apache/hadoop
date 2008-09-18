@@ -186,6 +186,54 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
   }
 
+  /**
+   * Top level scheduling information to be set to the queueManager
+   */
+  
+  
+  private static class SchedulingInfo {
+    private QueueSchedulingInfo mqsi;
+    private QueueSchedulingInfo rqsi;
+    private boolean supportsPriority;
+    
+    public SchedulingInfo(QueueSchedulingInfo mqsi, 
+        QueueSchedulingInfo rqsi, boolean supportsPriority ) {
+      this.mqsi = mqsi;
+      this.rqsi = rqsi;
+      this.supportsPriority=supportsPriority;
+    }
+    
+    @Override
+    public String toString(){
+      String queue = mqsi.queueName;
+      StringBuffer sb = new StringBuffer();
+      sb.append("Guaranteed Capacity Maps (%) :");
+      sb.append(mqsi.guaranteedCapacityPercent);
+      sb.append("\n");
+      sb.append("Guaranteed Capacity Reduces (%) :");
+      sb.append(rqsi.guaranteedCapacityPercent);
+      sb.append("\n");
+      sb.append(String.format("Current Capacity Maps : %d \n",
+          mqsi.guaranteedCapacity));
+      sb.append(String.format("Current Capacity Reduces : %d \n",
+          rqsi.guaranteedCapacity));
+      sb.append(String.format("User Limit : %d \n",mqsi.ulMin));
+      sb.append(String.format("Reclaim Time limit : %d \n",mqsi.reclaimTime));
+      sb.append(String.format("Number of Running Maps : %d \n", 
+          mqsi.numRunningTasks));
+      sb.append(String.format("Number of Running Reduces : %d \n", 
+          rqsi.numRunningTasks));
+      sb.append(String.format("Number of Waiting Maps : %d \n", 
+          mqsi.numPendingTasks));
+      sb.append(String.format("Number of Waiting Reduces : %d \n", 
+          rqsi.numPendingTasks));
+      sb.append(String.format("Priority Supported : %s \n",
+          supportsPriority?"YES":"NO"));      
+      return sb.toString();
+    }
+  }
+  
+  
   /** 
    * This class handles the scheduling algorithms. 
    * The algos are the same for both Map and Reduce tasks. 
@@ -702,6 +750,10 @@ class CapacityTaskScheduler extends TaskScheduler {
       }
       LOG.debug(s);
     }
+    
+    public QueueSchedulingInfo getQueueSchedulingInfo(String queueName) {
+      return this.queueInfoMap.get(queueName) ;
+    }
 
   }
 
@@ -917,7 +969,8 @@ class CapacityTaskScheduler extends TaskScheduler {
       rmConf = new CapacitySchedulerConf();
     }
     // read queue info from config file
-    Set<String> queues = taskTrackerManager.getQueueManager().getQueues();
+    QueueManager queueManager = taskTrackerManager.getQueueManager();
+    Set<String> queues = queueManager.getQueues();
     float totalCapacity = 0.0f;
     for (String queueName: queues) {
       float gc = rmConf.getGuaranteedCapacity(queueName); 
@@ -935,6 +988,11 @@ class CapacityTaskScheduler extends TaskScheduler {
       // create the queues of job objects
       boolean supportsPrio = rmConf.isPrioritySupported(queueName);
       jobQueuesManager.createQueue(queueName, supportsPrio);
+      
+      SchedulingInfo schedulingInfo = new SchedulingInfo(
+          mapScheduler.getQueueSchedulingInfo(queueName),reduceScheduler.getQueueSchedulingInfo(queueName),supportsPrio);
+      queueManager.setSchedulerInfo(queueName, schedulingInfo);
+      
     }
     if (totalCapacity > 100.0) {
       throw new IllegalArgumentException("Sum of queue capacities over 100% at "
@@ -1063,6 +1121,22 @@ class CapacityTaskScheduler extends TaskScheduler {
     mapScheduler.jobRemoved(job);
     reduceScheduler.jobRemoved(job);
   }
+  
+  @Override
+  public synchronized Collection<JobInProgress> getJobs(String queueName) {
+    Collection<JobInProgress> jobCollection = 
+      jobQueuesManager.getRunningJobQueue(queueName);
+    if(jobCollection == null) {
+      jobCollection = new ArrayList<JobInProgress>();
+    }
+    Collection<JobInProgress> waitingJobs = 
+      jobQueuesManager.getWaitingJobQueue(queueName);
+    if(waitingJobs != null) {
+      jobCollection.addAll(waitingJobs);
+    }
+    return jobCollection;
+  }
+
   
 }
 

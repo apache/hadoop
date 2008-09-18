@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -685,5 +686,11 @@ public class FairScheduler extends TaskScheduler {
     JobInfo info = infos.get(job);
     if (info == null) return false;
     return info.runnable;
+  }
+
+  @Override
+  public synchronized Collection<JobInProgress> getJobs(String queueName) {
+    Pool myJobPool = poolMgr.getPool(queueName);
+    return myJobPool.getJobs();
   }
 }

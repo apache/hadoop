@@ -9,7 +9,6 @@
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
   import="org.apache.hadoop.util.*"
-  import="org.apache.hadoop.hdfs.server.namenode.JspHelper"
 %>
 <%!static SimpleDateFormat dateFormat = new SimpleDateFormat(
       "d-MMM-yyyy HH:mm:ss");
@@ -41,7 +40,7 @@
     
     JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
     
-    boolean privateActions = JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY,
+    boolean privateActions = JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY,
         false);
     if (privateActions) {
       String action = request.getParameter("action");
@@ -76,7 +75,7 @@
     }
 %>
 
-<%@page import="org.apache.hadoop.hdfs.server.namenode.JspHelper"%>
+
 <html>
 <head>
   <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
@@ -123,7 +122,7 @@
         }
         out.print("<td>" + status.getRunState() + "</td>");
         out.print("<td>" + StringUtils.formatPercent(status.getProgress(), 2)
-          + JspHelper.percentageGraph(status.getProgress() * 100f, 80) + "</td>");
+          + ServletUtil.percentageGraph(status.getProgress() * 100f, 80) + "</td>");
         out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getStartTime(), 0) + "</td>");

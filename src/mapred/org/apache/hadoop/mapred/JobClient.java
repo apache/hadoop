@@ -1554,10 +1554,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
     System.out.printf("%d jobs currently running\n", jobs.length);
     System.out.printf("JobId\tState\tStartTime\tUserName\n");
-    for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobID(), job.getRunState(),
-          job.getStartTime(), job.getUsername());
-    }
+    displayJobList(jobs);
   }
     
   /**
@@ -1568,14 +1565,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     JobStatus[] jobs = getAllJobs();
     if (jobs == null)
       jobs = new JobStatus[0];
-
     System.out.printf("%d jobs submitted\n", jobs.length);
     System.out.printf("States are:\n\tRunning : 1\tSucceded : 2" +
-                       "\tFailed : 3\tPrep : 4\n");
-    System.out.printf("JobId\tState\tStartTime\tUserName\n");
+    "\tFailed : 3\tPrep : 4\n");
+    displayJobList(jobs);
+  }
+
+  void displayJobList(JobStatus[] jobs) {
+    System.out.printf("JobId\tState\tStartTime\tUserName\tSchedulingInfo\n");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobID(), job.getRunState(),
-          job.getStartTime(), job.getUsername());
+      System.out.printf("%s\t%d\t%d\t%s\t%s\n", job.getJobID(), job.getRunState(),
+          job.getStartTime(), job.getUsername(),job.getSchedulingInfo());
     }
   }
 
@@ -1610,6 +1610,42 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
     return sysDir;
   }
+  
+  
+  /**
+   * Return an array of queue information objects about all the Job Queues
+   * configured.
+   * 
+   * @return Array of JobQueueInfo objects
+   * @throws IOException
+   */
+  public JobQueueInfo[] getQueues() throws IOException {
+    return jobSubmitClient.getQueues();
+  }
+  
+  /**
+   * Gets all the jobs which were added to particular Job Queue
+   * 
+   * @param queueName name of the Job Queue
+   * @return Array of jobs present in the job queue
+   * @throws IOException
+   */
+  
+  public JobStatus[] getJobsFromQueue(String queueName) throws IOException {
+    return jobSubmitClient.getJobsFromQueue(queueName);
+  }
+  
+  /**
+   * Gets the queue information associated to a particular Job Queue
+   * 
+   * @param queueName name of the job queue.
+   * @return Queue information associated to particular queue.
+   * @throws IOException
+   */
+  public JobQueueInfo getQueueInfo(String queueName) throws IOException {
+    return jobSubmitClient.getQueueInfo(queueName);
+  }
+  
 
   /**
    */

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configurable;
@@ -81,5 +82,13 @@ abstract class TaskScheduler implements Configurable {
    */
   public abstract List<Task> assignTasks(TaskTrackerStatus taskTracker)
     throws IOException;
-  
+
+  /**
+   * Returns a collection of jobs in an order which is specific to 
+   * the particular scheduler.
+   * @param queueName
+   * @return
+   */
+  public abstract Collection<JobInProgress> getJobs(String queueName);
+    
 }

@@ -43,8 +43,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 11: changed JobProfile to include the queue name for HADOOP-3698
    * Version 12: Added getCleanupTaskReports and 
    *             cleanupProgress to JobStatus as part of HADOOP-3150
+   * Version 13: Added getJobQueueInfos and getJobQueueInfo(queue name)
+   *             and getAllJobs(queue) as a part of HADOOP-3930
    */
-  public static final long versionID = 12L;
+  public static final long versionID = 13L;
 
   /**
    * Allocate a name for the job.
@@ -158,5 +160,29 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @return the system directory where job-specific files are to be placed.
    */
   public String getSystemDir();  
-
+  
+  /**
+   * Gets set of Job Queues associated with the Job Tracker
+   * 
+   * @return Array of the Job Queue Information Object
+   * @throws IOException 
+   */
+  public JobQueueInfo[] getQueues() throws IOException;
+  
+  /**
+   * Gets scheduling information associated with the particular Job queue
+   * 
+   * @param queue Queue Name
+   * @return Scheduling Information of the Queue
+   * @throws IOException 
+   */
+  public JobQueueInfo getQueueInfo(String queue) throws IOException;
+  
+  /**
+   * Gets all the jobs submitted to the particular Queue
+   * @param queue Queue name
+   * @return array of JobStatus for the submitted jobs
+   * @throws IOException
+   */
+  public JobStatus[] getJobsFromQueue(String queue) throws IOException;
 }
