@@ -134,9 +134,6 @@ creations/deletions), or "all".</td>
 <td><a name="fs.har.impl">fs.har.impl</a></td><td>org.apache.hadoop.fs.HarFileSystem</td><td>The filesystem for Hadoop archives. </td>
 </tr>
 <tr>
-<td><a name="fs.inmemory.size.mb">fs.inmemory.size.mb</a></td><td>75</td><td>The size of the in-memory filsystem instance in MB</td>
-</tr>
-<tr>
 <td><a name="fs.checkpoint.dir">fs.checkpoint.dir</a></td><td>${hadoop.tmp.dir}/dfs/namesecondary</td><td>Determines where on the local filesystem the DFS secondary
       name node should store the temporary images to merge.
       If this is a comma-delimited list of directories then the image is
@@ -465,6 +462,23 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
+<td><a name="mapred.jobtracker.restart.recover">mapred.jobtracker.restart.recover</a></td><td>false</td><td>"true" to enable (job) recovery upon restart,
+               "false" to start afresh
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.job.history.block.size">mapred.jobtracker.job.history.block.size</a></td><td>0</td><td>The block size of the job history file. Since the job recovery
+               uses job history, its important to dump job history to disk as 
+               soon as possible.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.job.history.buffer.size">mapred.jobtracker.job.history.buffer.size</a></td><td>4096</td><td>The buffer size for the job history file. Since the job 
+               recovery uses job history, its important to frequently flush the 
+               job history to disk. This will minimize the loss in recovery.
+  </td>
+</tr>
+<tr>
 <td><a name="mapred.jobtracker.taskScheduler">mapred.jobtracker.taskScheduler</a></td><td>org.apache.hadoop.mapred.JobQueueTaskScheduler</td><td>The class responsible for scheduling the tasks.</td>
 </tr>
 <tr>
@@ -556,6 +570,25 @@ creations/deletions), or "all".</td>
   we initiate the in-memory merge and spill to disk. A value of 0 or less than
   0 indicates we want to DON'T have any threshold and instead depend only on
   the ramfs's memory consumption to trigger the merge.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.job.shuffle.merge.percent">mapred.job.shuffle.merge.percent</a></td><td>0.66</td><td>The usage threshold at which an in-memory merge will be
+  initiated, expressed as a percentage of the total memory allocated to
+  storing in-memory map outputs, as defined by
+  mapred.job.shuffle.input.buffer.percent.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.job.shuffle.input.buffer.percent">mapred.job.shuffle.input.buffer.percent</a></td><td>0.70</td><td>The percentage of memory to be allocated from the maximum heap
+  size to storing map outputs during the shuffle.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.job.reduce.input.buffer.percent">mapred.job.reduce.input.buffer.percent</a></td><td>0.0</td><td>The percentage of memory- relative to the maximum heap size- to
+  retain map outputs during the reduce. When the shuffle is concluded, any
+  remaining map outputs in memory must consume less than this threshold before
+  the reduce can begin.
   </td>
 </tr>
 <tr>
@@ -846,19 +879,19 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.tasktracker.tasks.maxmemory">mapred.tasktracker.tasks.maxmemory</a></td><td>-1</td><td> The maximum amount of virtual memory all tasks running on a
-    tasktracker, including sub-processes they launch, can use. This value is
-    used to compute the amount of free memory available for tasks. Any task
-    scheduled on this tasktracker is guaranteed and constrained to use a 
-    share of this amount. Any task exceeding its share will be killed. 
-    If set to -1, this functionality is disabled, and mapred.task.maxmemory
-    is ignored.
+<td><a name="mapred.tasktracker.tasks.maxmemory">mapred.tasktracker.tasks.maxmemory</a></td><td>-1</td><td> The maximum amount of virtual memory in kilobytes all tasks 
+  	running on a tasktracker, including sub-processes they launch, can use. 
+  	This value is used to compute the amount of free memory available for 
+  	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
+  	 to use a share of this amount. Any task exceeding its share will be 
+  	killed. If set to -1, this functionality is disabled, and 
+  	mapred.task.maxmemory is ignored.
   </td>
 </tr>
 <tr>
-<td><a name="mapred.task.maxmemory">mapred.task.maxmemory</a></td><td>-1</td><td> The maximum amount of memory any task of a job will use.
-    A task of this job will be scheduled on a tasktracker, only if the 
-    amount of free memory on the tasktracker is greater than or 
+<td><a name="mapred.task.maxmemory">mapred.task.maxmemory</a></td><td>-1</td><td> The maximum amount of memory in kilobytes any task of a job 
+    will use. A task of this job will be scheduled on a tasktracker, only if 
+    the amount of free memory on the tasktracker is greater than or 
     equal to this value. If set to -1, tasks are assured a memory limit on
     the tasktracker equal to 
     mapred.tasktracker.tasks.maxmemory/number of slots. If the value of 

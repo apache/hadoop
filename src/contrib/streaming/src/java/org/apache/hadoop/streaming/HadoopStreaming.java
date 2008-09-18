@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.IOException;
+import org.apache.hadoop.util.ToolRunner;
 
 /** The main entrypoint. Usually invoked with the script bin/hadoopStreaming
  * or bin/hadoop har hadoop-streaming.jar args.
@@ -26,11 +26,10 @@ import java.io.IOException;
  */
 public class HadoopStreaming {
 
-  public static void main(String[] args) throws IOException {
-    boolean mayExit = true;
+  public static void main(String[] args) throws Exception {
     int returnStatus = 0;
-    StreamJob job = new StreamJob(args, mayExit);
-    returnStatus = job.go();
+    StreamJob job = new StreamJob();
+    returnStatus = ToolRunner.run(job, args);
     if (returnStatus != 0) {
       System.err.println("Streaming Job Failed!");
       System.exit(returnStatus);

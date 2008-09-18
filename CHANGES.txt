@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     HADOOP-4007. REMOVE DFSFileInfo - FileStatus is sufficient. 
     (Sanjay Radia via hairong)
 
+    HADOOP-3722. Fixed Hadoop Streaming and Hadoop Pipes to use the Tool
+    interface and GenericOptionsParser. (Enis Soztutar via acmurthy) 
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

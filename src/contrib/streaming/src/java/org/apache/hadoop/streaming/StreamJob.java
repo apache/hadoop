@@ -68,12 +68,14 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorCombiner;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorReducer;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
 
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
  */
-public class StreamJob {
+public class StreamJob implements Tool {
 
   protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());
   final static String REDUCE_NONE = "NONE";
@@ -91,11 +93,47 @@ public class StreamJob {
                                                                 "-jobconf", "(n=v) Optional. Add or override a JobConf property.", 'D'); 
   private MultiPropertyOption cmdenv = new MultiPropertyOption(
                                                                "-cmdenv", "(n=v) Pass env.var to streaming commands.", 'E');  
-  
+  /**@deprecated use StreamJob() with ToolRunner or set the 
+   * Configuration using {@link #setConf(Configuration)} and 
+   * run with {@link #run(String[])}.  
+   */
+  @Deprecated
   public StreamJob(String[] argv, boolean mayExit) {
-    setupOptions();
+    this();
     argv_ = argv;
-    mayExit_ = mayExit;
+    this.config_ = new Configuration();
+  }
+  
+  public StreamJob() {
+    setupOptions();
+  }
+  
+  @Override
+  public Configuration getConf() {
+    return config_;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.config_ = conf;
+  }
+  
+  @Override
+  public int run(String[] args) throws Exception {
+    try {
+      this.argv_ = args;
+      init();
+  
+      preProcessArgs();
+      parseArgv();
+      postProcessArgs();
+  
+      setJobConf();
+      return submitAndMonitorJob();
+    }catch (IllegalArgumentException ex) {
+      //ignore, since log will already be printed
+      return 1;
+    }
   }
   
   /**
@@ -103,16 +141,16 @@ public class StreamJob {
    * intializes the job conf and submits the job
    * to the jobtracker
    * @throws IOException
+   * @deprecated use {@link #run(String[])} instead.
    */
+  @Deprecated
   public int go() throws IOException {
-    init();
-
-    preProcessArgs();
-    parseArgv();
-    postProcessArgs();
-
-    setJobConf();
-    return submitAndMonitorJob();
+    try {
+      return run(argv_);
+    }
+    catch (Exception ex) {
+      throw new IOException(ex.getMessage());
+    }
   }
   
   protected void init() {
@@ -129,11 +167,7 @@ public class StreamJob {
   }
 
   void postProcessArgs() throws IOException {
-    if (cluster_ == null) {
-      // hadoop-default.xml is standard, hadoop-local.xml is not.
-      cluster_ = "default";
-    }
-    hadoopAliasConf_ = "hadoop-" + getClusterNick() + ".xml";
+    
     if (inputSpecs_.size() == 0) {
       fail("Required argument: -input <name>");
     }
@@ -193,21 +227,13 @@ public class StreamJob {
     return cmd;
   }
 
-  String getHadoopAliasConfFile() {
-    return new File(getHadoopClientHome() + "/conf", hadoopAliasConf_).getAbsolutePath();
-  }
-
   void parseArgv(){
     CommandLine cmdLine = null; 
     try{
       cmdLine = parser.parse(argv_);
     }catch(Exception oe){
       LOG.error(oe.getMessage());
-      if (detailedUsage_) {
-        exitUsage(true);
-      } else {
-        exitUsage(false);
-      }
+      exitUsage(argv_.length > 0 && "-info".equals(argv_[0]));
     }
     
     if (cmdLine != null){
@@ -222,20 +248,14 @@ public class StreamJob {
       comCmd_ = (String)cmdLine.getValue("-combiner"); 
       redCmd_ = (String)cmdLine.getValue("-reducer"); 
       
-      packageFiles_.addAll(cmdLine.getValues("-file"));
-      
-      cluster_ = (String)cmdLine.getValue("-cluster");
-      
-      configPath_.addAll(cmdLine.getValues("-config"));
-      
+      if(!cmdLine.getValues("-file").isEmpty()) {
+        packageFiles_.addAll(cmdLine.getValues("-file"));
+      }
+         
       String fsName = (String)cmdLine.getValue("-dfs");
       if (null != fsName){
-        userJobConfProps_.put("fs.default.name", fsName);        
-      }
-      
-      String jt = (String)cmdLine.getValue("mapred.job.tracker");
-      if (null != jt){
-        userJobConfProps_.put("fs.default.name", jt);        
+        LOG.warn("-dfs option is deprecated, please use -fs instead.");
+        config_.set("fs.default.name", fsName);
       }
       
       additionalConfSpec_ = (String)cmdLine.getValue("-additionalconfspec"); 
@@ -248,14 +268,16 @@ public class StreamJob {
       reduceDebugSpec_ = (String)cmdLine.getValue("-reducedebug");
       
       List<String> car = cmdLine.getValues("-cacheArchive"); 
-      if (null != car){
+      if (null != car && !car.isEmpty()){
+        LOG.warn("-cacheArchive option is deprecated, please use -archives instead.");
         for(String s : car){
           cacheArchives = (cacheArchives == null)?s :cacheArchives + "," + s;  
         }
       }
 
       List<String> caf = cmdLine.getValues("-cacheFile"); 
-      if (null != caf){
+      if (null != caf && !caf.isEmpty()){
+        LOG.warn("-cacheFile option is deprecated, please use -files instead.");
         for(String s : caf){
           cacheFiles = (cacheFiles == null)?s :cacheFiles + "," + s;  
         }
@@ -264,10 +286,11 @@ public class StreamJob {
       List<String> jobConfArgs = (List<String>)cmdLine.getValue(jobconf); 
       List<String> envArgs = (List<String>)cmdLine.getValue(cmdenv); 
       
-      if (null != jobConfArgs){
+      if (null != jobConfArgs && !jobConfArgs.isEmpty()){
+        LOG.warn("-jobconf option is deprecated, please use -D instead.");
         for(String s : jobConfArgs){
           String []parts = s.split("=", 2); 
-          userJobConfProps_.put(parts[0], parts[1]);
+          config_.set(parts[0], parts[1]);
         }
       }
       if (null != envArgs){
@@ -278,8 +301,8 @@ public class StreamJob {
           addTaskEnvironment_ += s;
         }
       }
-    }else if (detailedUsage_) {
-      exitUsage(true);
+    }else {
+      exitUsage(argv_.length > 0 && "-info".equals(argv_[0]));
     }
   }
 
@@ -454,38 +477,37 @@ public class StreamJob {
   public void exitUsage(boolean detailed) {
     //         1         2         3         4         5         6         7
     //1234567890123456789012345678901234567890123456789012345678901234567890123456789
+    
+    System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar \\");
+    System.out.println("          $HADOOP_HOME/hadoop-streaming.jar [options]");
+    System.out.println("Options:");
+    System.out.println("  -input    <path>     DFS input file(s) for the Map step");
+    System.out.println("  -output   <path>     DFS output directory for the Reduce step");
+    System.out.println("  -mapper   <cmd|JavaClassName>      The streaming command to run");
+    System.out.println("  -combiner <JavaClassName> Combiner has to be a Java class");
+    System.out.println("  -reducer  <cmd|JavaClassName>      The streaming command to run");
+    System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
+    System.out.println("  -inputformat TextInputFormat(default)|SequenceFileAsTextInputFormat|JavaClassName Optional.");
+    System.out.println("  -outputformat TextOutputFormat(default)|JavaClassName  Optional.");
+    System.out.println("  -partitioner JavaClassName  Optional.");
+    System.out.println("  -numReduceTasks <num>  Optional.");
+    System.out.println("  -inputreader <spec>  Optional.");
+    System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
+    System.out.println("  -mapdebug <path>  Optional. " +
+    "To run this script when a map task fails ");
+    System.out.println("  -reducedebug <path>  Optional." +
+    " To run this script when a reduce task fails ");
+    System.out.println("  -verbose");
+    System.out.println();
+    GenericOptionsParser.printGenericCommandUsage(System.out);
+
     if (!detailed) {
-      System.out.println("Usage: $HADOOP_HOME/bin/hadoop [--config dir] jar \\");
-      System.out.println("          $HADOOP_HOME/hadoop-streaming.jar [options]");
-      System.out.println("Options:");
-      System.out.println("  -input    <path>     DFS input file(s) for the Map step");
-      System.out.println("  -output   <path>     DFS output directory for the Reduce step");
-      System.out.println("  -mapper   <cmd|JavaClassName>      The streaming command to run");
-      System.out.println("  -combiner <JavaClassName> Combiner has to be a Java class");
-      System.out.println("  -reducer  <cmd|JavaClassName>      The streaming command to run");
-      System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
-      System.out.println("  -dfs    <h:p>|local  Optional. Override DFS configuration");
-      System.out.println("  -jt     <h:p>|local  Optional. Override JobTracker configuration");
-      System.out.println("  -additionalconfspec specfile  Optional.");
-      System.out.println("  -inputformat TextInputFormat(default)|SequenceFileAsTextInputFormat|JavaClassName Optional.");
-      System.out.println("  -outputformat TextOutputFormat(default)|JavaClassName  Optional.");
-      System.out.println("  -partitioner JavaClassName  Optional.");
-      System.out.println("  -numReduceTasks <num>  Optional.");
-      System.out.println("  -inputreader <spec>  Optional.");
-      System.out.println("  -jobconf  <n>=<v>    Optional. Add or override a JobConf property");
-      System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
-      System.out.println("  -mapdebug <path>  Optional. " +
-                                "To run this script when a map task fails ");
-      System.out.println("  -reducedebug <path>  Optional." +
-                             " To run this script when a reduce task fails ");
-      System.out.println("  -cacheFile fileNameURI");
-      System.out.println("  -cacheArchive fileNameURI");
-      System.out.println("  -verbose");
       System.out.println();      
       System.out.println("For more details about these options:");
       System.out.println("Use $HADOOP_HOME/bin/hadoop jar build/hadoop-streaming.jar -info");
       fail("");
     }
+    System.out.println();
     System.out.println("In -input: globbing on <path> is supported and can have multiple -input");
     System.out.println("Default Map input format: a line is a record in UTF-8");
     System.out.println("  the key part ends at first TAB, the rest of the line is the value");
@@ -498,7 +520,7 @@ public class StreamJob {
     System.out.println("  The location of this working directory is unspecified.");
     System.out.println();
     System.out.println("To set the number of reduce tasks (num. of output files):");
-    System.out.println("  -jobconf mapred.reduce.tasks=10");
+    System.out.println("  -D mapred.reduce.tasks=10");
     System.out.println("To skip the sort/combine/shuffle/sort/reduce step:");
     System.out.println("  Use -numReduceTasks 0");
     System.out
@@ -509,24 +531,24 @@ public class StreamJob {
     System.out.println("  This equivalent -reducer NONE");
     System.out.println();
     System.out.println("To speed up the last maps:");
-    System.out.println("  -jobconf mapred.map.tasks.speculative.execution=true");
+    System.out.println("  -D mapred.map.tasks.speculative.execution=true");
     System.out.println("To speed up the last reduces:");
-    System.out.println("  -jobconf mapred.reduce.tasks.speculative.execution=true");
+    System.out.println("  -D mapred.reduce.tasks.speculative.execution=true");
     System.out.println("To name the job (appears in the JobTracker Web UI):");
-    System.out.println("  -jobconf mapred.job.name='My Job' ");
+    System.out.println("  -D mapred.job.name='My Job' ");
     System.out.println("To change the local temp directory:");
-    System.out.println("  -jobconf dfs.data.dir=/tmp/dfs");
-    System.out.println("  -jobconf stream.tmpdir=/tmp/streaming");
+    System.out.println("  -D dfs.data.dir=/tmp/dfs");
+    System.out.println("  -D stream.tmpdir=/tmp/streaming");
     System.out.println("Additional local temp directories with -cluster local:");
-    System.out.println("  -jobconf mapred.local.dir=/tmp/local");
-    System.out.println("  -jobconf mapred.system.dir=/tmp/system");
-    System.out.println("  -jobconf mapred.temp.dir=/tmp/temp");
+    System.out.println("  -D mapred.local.dir=/tmp/local");
+    System.out.println("  -D mapred.system.dir=/tmp/system");
+    System.out.println("  -D mapred.temp.dir=/tmp/temp");
     System.out.println("To treat tasks with non-zero exit status as SUCCEDED:");    
-    System.out.println("  -jobconf stream.non.zero.exit.is.failure=false");
+    System.out.println("  -D stream.non.zero.exit.is.failure=false");
     System.out.println("Use a custom hadoopStreaming build along a standard hadoop install:");
     System.out.println("  $HADOOP_HOME/bin/hadoop jar /path/my-hadoop-streaming.jar [...]\\");
     System.out
-      .println("    [...] -jobconf stream.shipped.hadoopstreaming=/path/my-hadoop-streaming.jar");
+      .println("    [...] -D stream.shipped.hadoopstreaming=/path/my-hadoop-streaming.jar");
     System.out.println("For more details about jobconf parameters see:");
     System.out.println("  http://wiki.apache.org/hadoop/JobConfFile");
     System.out.println("To set an environement variable in a streaming command:");
@@ -544,13 +566,9 @@ public class StreamJob {
     fail("");
   }
 
-  public void fail(String message) {
-    if (mayExit_) {
-      System.err.println(message);
-      throw new RuntimeException(message);
-    } else {
-      throw new IllegalArgumentException(message);
-    }
+  public void fail(String message) {    
+    System.err.println(message);
+    throw new IllegalArgumentException(message);
   }
 
   // --------------------------------------------
@@ -565,17 +583,12 @@ public class StreamJob {
   }
 
   protected boolean isLocalHadoop() {
-    boolean local;
-    if (jobConf_ == null) {
-      local = getClusterNick().equals("local");
-    } else {
-      local = StreamUtil.isLocalJobTracker(jobConf_);
-    }
-    return local;
+    return StreamUtil.isLocalJobTracker(jobConf_);
   }
 
+  @Deprecated
   protected String getClusterNick() {
-    return cluster_;
+    return "default";
   }
 
   /** @return path to the created Jar file or null if no files are necessary.
@@ -589,8 +602,7 @@ public class StreamJob {
     // First try an explicit spec: it's too hard to find our own location in this case:
     // $HADOOP_HOME/bin/hadoop jar /not/first/on/classpath/custom-hadoop-streaming.jar
     // where findInClasspath() would find the version of hadoop-streaming.jar in $HADOOP_HOME
-    String runtimeClasses = userJobConfProps_.get("stream.shipped.hadoopstreaming"); // jar or class dir
-    System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.hadoopstreaming");
+    String runtimeClasses = config_.get("stream.shipped.hadoopstreaming"); // jar or class dir
     
     if (runtimeClasses == null) {
       runtimeClasses = StreamUtil.findInClasspath(StreamJob.class.getName());
@@ -632,25 +644,6 @@ public class StreamJob {
     builder.merge(packageFiles_, unjarFiles, jobJarName);
     return jobJarName;
   }
-
-  /**
-   * This method sets the user jobconf variable specified
-   * by user using -jobconf key=value
-   * @param doEarlyProps
-   */
-  protected void setUserJobConfProps(boolean doEarlyProps) {
-    Iterator it = userJobConfProps_.keySet().iterator();
-    while (it.hasNext()) {
-      String key = (String) it.next();
-      String val = userJobConfProps_.get(key);
-      boolean earlyName = key.equals("fs.default.name");
-      earlyName |= key.equals("stream.shipped.hadoopstreaming");
-      if (doEarlyProps == earlyName) {
-        msg("xxxJobConf: set(" + key + ", " + val + ") early=" + doEarlyProps);
-        jobConf_.set(key, val);
-      }
-    }
-  }
   
   /**
    * get the uris of all the files/caches
@@ -663,21 +656,9 @@ public class StreamJob {
   }
   
   protected void setJobConf() throws IOException {
-    msg("hadoopAliasConf_ = " + hadoopAliasConf_);
-    config_ = new Configuration();
-    if (!cluster_.equals("default")) {
-      config_.addResource(new Path(getHadoopAliasConfFile()));
-    } else {
-      // use only defaults: hadoop-default.xml and hadoop-site.xml
-    }
-    System.out.println("additionalConfSpec_:" + additionalConfSpec_);
     if (additionalConfSpec_ != null) {
+      LOG.warn("-additionalconfspec option is deprecated, please use -conf instead.");
       config_.addResource(new Path(additionalConfSpec_));
-    }
-    Iterator it = configPath_.iterator();
-    while (it.hasNext()) {
-      String pathName = (String) it.next();
-      config_.addResource(new Path(pathName));
     }
 
     // general MapRed job properties
@@ -685,8 +666,6 @@ public class StreamJob {
     
     // All streaming jobs get the task timeout value
     // from the configuration settings.
-
-    setUserJobConfProps(true);
 
     // The correct FS must be set before this is called!
     // (to resolve local vs. dfs drive letter differences) 
@@ -802,7 +781,6 @@ public class StreamJob {
       }
     }
     
-    setUserJobConfProps(false);
     FileOutputFormat.setOutputPath(jobConf_, new Path(output_));
     fmt = null;
     if (outputFormatSpec_!= null) {
@@ -1027,7 +1005,6 @@ public class StreamJob {
     }
   }
 
-  protected boolean mayExit_;
   protected String[] argv_;
   protected boolean verbose_;
   protected boolean detailedUsage_;
@@ -1047,18 +1024,15 @@ public class StreamJob {
   protected boolean hasSimpleInputSpecs_;
   protected ArrayList packageFiles_ = new ArrayList(); // <String>
   protected ArrayList shippedCanonFiles_ = new ArrayList(); // <String>
-  protected TreeMap<String, String> userJobConfProps_ = new TreeMap<String, String>(); 
+  //protected TreeMap<String, String> userJobConfProps_ = new TreeMap<String, String>(); 
   protected String output_;
   protected String mapCmd_;
   protected String comCmd_;
   protected String redCmd_;
-  protected String cluster_;
   protected String cacheFiles;
   protected String cacheArchives;
   protected URI[] fileURIs;
   protected URI[] archiveURIs;
-  protected ArrayList configPath_ = new ArrayList(); // <String>
-  protected String hadoopAliasConf_;
   protected String inReaderSpec_;
   protected String inputFormatSpec_;
   protected String outputFormatSpec_;
@@ -1079,4 +1053,5 @@ public class StreamJob {
   protected JobID jobId_;
   protected static String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
     "Please specify a different link name for all of your caching URIs";
+
 }

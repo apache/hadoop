@@ -35,8 +35,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /**
  * <code>GenericOptionsParser</code> is a utility to parse command line
@@ -165,7 +165,7 @@ public class GenericOptionsParser {
    * Specify properties of each generic option
    */
   @SuppressWarnings("static-access")
-  private Options buildGeneralOptions(Options opts) {
+  private static Options buildGeneralOptions(Options opts) {
     Option fs = OptionBuilder.withArgName("local|namenode:port")
     .hasArg()
     .withDescription("specify a namenode")
@@ -224,7 +224,10 @@ public class GenericOptionsParser {
       conf.set("mapred.job.tracker", line.getOptionValue("jt"));
     }
     if (line.hasOption("conf")) {
-      conf.addResource(new Path(line.getOptionValue("conf")));
+      String[] values = line.getOptionValues("conf");
+      for(String value : values) {
+        conf.addResource(new Path(value));
+      }
     }
     try {
       if (line.hasOption("libjars")) {
@@ -356,6 +359,7 @@ public class GenericOptionsParser {
    * @param out stream to print the usage message to.
    */
   public static void printGenericCommandUsage(PrintStream out) {
+    
     out.println("Generic options supported are");
     out.println("-conf <configuration file>     specify an application configuration file");
     out.println("-D <property=value>            use value for given property");

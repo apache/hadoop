@@ -35,7 +35,6 @@ output directory. The cli for the main looks like:
 
 <pre>
 bin/hadoop pipes \
-  [-conf <i>path</i>] \
   [-input <i>inputDir</i>] \
   [-output <i>outputDir</i>] \
   [-jar <i>applicationJarFile</i>] \
@@ -44,8 +43,16 @@ bin/hadoop pipes \
   [-partitioner <i>class</i>] \
   [-reduce <i>class</i>] \
   [-writer <i>class</i>] \
-  [-program <i>program url</i>]
+  [-program <i>program url</i>] \ 
+  [-conf <i>configuration file</i>] \
+  [-D <i>property=value</i>] \
+  [-fs <i>local|namenode:port</i>] \
+  [-jt <i>local|jobtracker:port</i>] \
+  [-files <i>comma separated list of files</i>] \ 
+  [-libjars <i>comma separated list of jars</i>] \
+  [-archives <i>comma separated list of archives</i>] 
 </pre>
+
 
 <p>
 
