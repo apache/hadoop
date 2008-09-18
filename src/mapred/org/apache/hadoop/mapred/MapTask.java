@@ -201,6 +201,7 @@ class MapTask extends Task {
   class SkippingRecordReader<K, V> extends TrackedRecordReader<K,V> {
     private SkipRangeIterator skipIt;
     private SequenceFile.Writer skipWriter;
+    private boolean toWriteSkipRecs;
     private TaskUmbilicalProtocol umbilical;
     private Counters.Counter skipRecCounter;
     private long recIndex = -1;
@@ -210,24 +211,33 @@ class MapTask extends Task {
       super(raw,counters);
       this.umbilical = umbilical;
       this.skipRecCounter = counters.findCounter(Counter.MAP_SKIPPED_RECORDS);
-      skipIt = getFailedRanges().skipRangeIterator();
+      this.toWriteSkipRecs = toWriteSkipRecs() &&  
+        SkipBadRecords.getSkipOutputPath(conf)!=null;
+      skipIt = getSkipRanges().skipRangeIterator();
     }
     
     public synchronized boolean next(K key, V value)
     throws IOException {
+      if(!skipIt.hasNext()) {
+        LOG.warn("Further records got skipped.");
+        return false;
+      }
       boolean ret = moveToNext(key, value);
       long nextRecIndex = skipIt.next();
-      long skip = nextRecIndex - recIndex;
-      for(int i=0;i<skip && ret;i++) {
-      	writeSkippedRec(key, value);
-        ret = moveToNext(key, value);
+      long skip = 0;
+      while(recIndex<nextRecIndex && ret) {
+        if(toWriteSkipRecs) {
+          writeSkippedRec(key, value);
+        }
+      	ret = moveToNext(key, value);
+        skip++;
       }
       //close the skip writer once all the ranges are skipped
       if(skip>0 && skipIt.skippedAllRanges() && skipWriter!=null) {
         skipWriter.close();
       }
       skipRecCounter.increment(skip);
-      reportNextRecordRange(umbilical, nextRecIndex);
+      reportNextRecordRange(umbilical, recIndex);
       if (ret) {
         incrCounters();
       }

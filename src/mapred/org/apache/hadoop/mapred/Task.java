@@ -109,14 +109,15 @@ abstract class Task implements Writable, Configurable {
   TaskStatus taskStatus;                          // current status of the task
   protected boolean cleanupJob = false;
   
-  //failed ranges from previous attempts
-  private SortedRanges failedRanges = new SortedRanges();
+  //skip ranges based on failed ranges from previous attempts
+  private SortedRanges skipRanges = new SortedRanges();
   private boolean skipping = false;
+  private boolean writeSkipRecs = true;
   
   //currently processing record start index
   private volatile long currentRecStartIndex; 
   private Iterator<Long> currentRecIndexIterator = 
-    failedRanges.skipRangeIterator();
+    skipRanges.skipRangeIterator();
   
   protected JobConf conf;
   protected MapOutputFile mapOutputFile = new MapOutputFile();
@@ -190,19 +191,31 @@ abstract class Task implements Writable, Configurable {
   }
   
   /**
-   * Get failed ranges.
-   * @return recordsToSkip
+   * Get whether to write skip records.
    */
-  public SortedRanges getFailedRanges() {
-    return failedRanges;
+  protected boolean toWriteSkipRecs() {
+    return writeSkipRecs;
+  }
+      
+  /**
+   * Set whether to write skip records.
+   */
+  protected void setWriteSkipRecs(boolean writeSkipRecs) {
+    this.writeSkipRecs = writeSkipRecs;
+  }
+  
+  /**
+   * Get skipRanges.
+   */
+  public SortedRanges getSkipRanges() {
+    return skipRanges;
   }
 
   /**
-   * Set failed ranges.
-   * @param recordsToSkip
+   * Set skipRanges.
    */
-  public void setFailedRanges(SortedRanges failedRanges) {
-    this.failedRanges = failedRanges;
+  public void setSkipRanges(SortedRanges skipRanges) {
+    this.skipRanges = skipRanges;
   }
 
   /**
@@ -236,9 +249,10 @@ abstract class Task implements Writable, Configurable {
     taskId.write(out);
     out.writeInt(partition);
     taskStatus.write(out);
-    failedRanges.write(out);
+    skipRanges.write(out);
     out.writeBoolean(skipping);
     out.writeBoolean(cleanupJob);
+    out.writeBoolean(writeSkipRecs);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
@@ -246,11 +260,12 @@ abstract class Task implements Writable, Configurable {
     partition = in.readInt();
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 
-    failedRanges.readFields(in);
-    currentRecIndexIterator = failedRanges.skipRangeIterator();
+    skipRanges.readFields(in);
+    currentRecIndexIterator = skipRanges.skipRangeIterator();
     currentRecStartIndex = currentRecIndexIterator.next();
     skipping = in.readBoolean();
     cleanupJob = in.readBoolean();
+    writeSkipRecs = in.readBoolean();
   }
 
   @Override
@@ -435,9 +450,9 @@ abstract class Task implements Writable, Configurable {
           if (counters != null) {
             counters.incrCounter(group, counter, amount);
           }
-          if(skipping && Counters.Application.GROUP.equals(group) && (
-              Counters.Application.MAP_PROCESSED_RECORDS.equals(counter) ||
-              Counters.Application.REDUCE_PROCESSED_RECORDS.equals(counter))) {
+          if(skipping && SkipBadRecords.COUNTER_GROUP.equals(group) && (
+              SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS.equals(counter) ||
+              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS.equals(counter))) {
             //if application reports the processed records, move the 
             //currentRecStartIndex to the next.
             //currentRecStartIndex is the start index which has not yet been 

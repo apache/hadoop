@@ -747,14 +747,4 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     }
     return isEqual;
   }
-  
-  public static class Application {
-    //special counters which are written by the application and are 
-    //used by the framework.
-    public static final String GROUP = "ApplicationCounters";
-    public static final String MAP_PROCESSED_RECORDS = "MapProcessedRecords";
-    public static final String REDUCE_PROCESSED_RECORDS = 
-      "ReduceProcessedRecords";
-    
-  }
 }

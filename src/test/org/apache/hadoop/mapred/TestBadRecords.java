@@ -72,7 +72,8 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(1);
     conf.setInt("mapred.task.timeout", 30*1000);
-    SkipBadRecords.setEnabled(conf, true);
+    SkipBadRecords.setMapperMaxSkipRecords(conf, Long.MAX_VALUE);
+    SkipBadRecords.setReducerMaxSkipGroups(conf, Long.MAX_VALUE);
     
     SkipBadRecords.setAttemptsToStartSkipping(conf,0);
     //the no of attempts to successfully complete the task depends 

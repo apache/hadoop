@@ -32,7 +32,8 @@ public class MapRunner<K1, V1, K2, V2>
   @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
     this.mapper = ReflectionUtils.newInstance(job.getMapperClass(), job);
-    this.incrProcCount = job.getBoolean("mapred.skip.on", false) && 
+    //increment processed counter only if skipping feature is enabled
+    this.incrProcCount = SkipBadRecords.getMapperMaxSkipRecords(job)>0 && 
       SkipBadRecords.getAutoIncrMapperProcCount(job);
   }
 
@@ -48,8 +49,8 @@ public class MapRunner<K1, V1, K2, V2>
         // map pair to output
         mapper.map(key, value, output, reporter);
         if(incrProcCount) {
-          reporter.incrCounter(Counters.Application.GROUP, 
-              Counters.Application.MAP_PROCESSED_RECORDS, 1);
+          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+              SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS, 1);
         }
       }
     } finally {

@@ -1203,15 +1203,6 @@ creations/deletions), or "all".</description>
   </property>
   
   <property>
-    <name>mapred.skip.mode.enabled</name>
-    <value>false</value>
-    <description> Indicates whether skipping of bad records is enabled or not.
-    If enabled the framework will try to find bad records and skip  
-    them on further attempts.
-    </description>
-  </property>
-  
-  <property>
     <name>mapred.skip.attempts.to.start.skipping</name>
     <value>2</value>
     <description> The number of Task attempts AFTER which skip mode 
@@ -1227,7 +1218,7 @@ creations/deletions), or "all".</description>
     <name>mapred.skip.map.auto.incr.proc.count</name>
     <value>true</value>
     <description> The flag which if set to true, 
-    Counters.Application.MAP_PROCESSED_RECORDS is incremented 
+    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
     by MapRunner after invoking the map function. This value must be set to 
     false for applications which process the records asynchronously 
     or buffer the input records. For example streaming. 
@@ -1239,11 +1230,50 @@ creations/deletions), or "all".</description>
     <name>mapred.skip.reduce.auto.incr.proc.count</name>
     <value>true</value>
     <description> The flag which if set to true, 
-    Counters.Application.REDUCE_PROCESSED_RECORDS is incremented 
+    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
     by framework after invoking the reduce function. This value must be set to 
     false for applications which process the records asynchronously 
     or buffer the input records. For example streaming. 
     In such cases applications should increment this counter on their own.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.out.dir</name>
+    <value></value>
+    <description> If no value is specified here, the skipped records are 
+    written to the output directory at _logs/skip.
+    User can stop writing skipped records by giving the value "none". 
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.skip.map.max.skip.records</name>
+    <value>0</value>
+    <description> The number of acceptable skip records surrounding the bad 
+    record PER bad record in mapper. The number includes the bad record as well.
+    To turn the feature of detection/skipping of bad records off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever records(depends on application) get skipped are 
+    acceptable.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.reduce.max.skip.groups</name>
+    <value>0</value>
+    <description> The number of acceptable skip groups surrounding the bad 
+    group PER bad group in reducer. The number includes the bad group as well.
+    To turn the feature of detection/skipping of bad groups off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever groups(depends on application) get skipped are 
+    acceptable.
     </description>
   </property>
 

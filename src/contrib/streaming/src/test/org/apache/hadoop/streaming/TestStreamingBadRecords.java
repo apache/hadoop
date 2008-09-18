@@ -51,7 +51,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     Arrays.asList("hey022","hey023","hey099");
   
   private static final List<String> REDUCER_BAD_RECORDS = 
-    Arrays.asList("hey001","hey024");
+    Arrays.asList("hey001","hey018");
   
   private static final String badMapper = 
     StreamUtil.makeJavaCommand(BadApp.class, new String[]{});
@@ -86,6 +86,33 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     throws Exception {
     LOG.info(runningJob.getCounters().toString());
     assertTrue(runningJob.isSuccessful());
+    
+    if(validateCount) {
+     //validate counters
+      String counterGrp = "org.apache.hadoop.mapred.Task$Counter";
+      Counters counters = runningJob.getCounters();
+      assertEquals(counters.findCounter(counterGrp, "MAP_SKIPPED_RECORDS").
+          getCounter(),MAPPER_BAD_RECORDS.size());
+      
+      int mapRecs = INPUTSIZE - MAPPER_BAD_RECORDS.size();
+      assertEquals(counters.findCounter(counterGrp, "MAP_INPUT_RECORDS").
+          getCounter(),mapRecs);
+      assertEquals(counters.findCounter(counterGrp, "MAP_OUTPUT_RECORDS").
+          getCounter(),mapRecs);
+      
+      int redRecs = mapRecs - REDUCER_BAD_RECORDS.size();
+      assertEquals(counters.findCounter(counterGrp, "REDUCE_SKIPPED_RECORDS").
+          getCounter(),REDUCER_BAD_RECORDS.size());
+      assertEquals(counters.findCounter(counterGrp, "REDUCE_SKIPPED_GROUPS").
+          getCounter(),REDUCER_BAD_RECORDS.size());
+      assertEquals(counters.findCounter(counterGrp, "REDUCE_INPUT_GROUPS").
+          getCounter(),redRecs);
+      assertEquals(counters.findCounter(counterGrp, "REDUCE_INPUT_RECORDS").
+          getCounter(),redRecs);
+      assertEquals(counters.findCounter(counterGrp, "REDUCE_OUTPUT_RECORDS").
+          getCounter(),redRecs);
+    }
+    
     List<String> badRecs = new ArrayList<String>();
     badRecs.addAll(MAPPER_BAD_RECORDS);
     badRecs.addAll(REDUCER_BAD_RECORDS);
@@ -118,42 +145,6 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     }
   }
 
-  public void testDisableSkip() throws Exception {
-    JobConf clusterConf = createJobConf();
-    createInput();
-    int attSkip =0;
-    SkipBadRecords.setAttemptsToStartSkipping(clusterConf,attSkip);
-    //the no of attempts to successfully complete the task depends 
-    //on the no of bad records.
-    int mapperAttempts = attSkip+1+MAPPER_BAD_RECORDS.size();
-    int reducerAttempts = attSkip+1+REDUCER_BAD_RECORDS.size();
-    String[] args =  new String[] {
-      "-input", (new Path(getInputDir(), "text.txt")).toString(),
-      "-output", getOutputDir().toString(),
-      "-mapper", badMapper,
-      "-reducer", badReducer,
-      "-verbose",
-      "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
-      "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
-      "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
-      "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
-      "-jobconf", "mapred.skip.mode.enabled=false",
-      "-jobconf", "mapred.map.tasks=1",
-      "-jobconf", "mapred.reduce.tasks=1",
-      "-jobconf", "mapred.task.timeout=30000",
-      "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
-      "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
-      "-jobconf", "mapred.job.tracker.http.address="
-                    +clusterConf.get("mapred.job.tracker.http.address"),
-      "-jobconf", "stream.debug=set",
-      "-jobconf", "keep.failed.task.files=true",
-      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
-    };
-    StreamJob job = new StreamJob(args, false);      
-    job.go();
-    assertFalse(job.running_.isSuccessful());
-  }
-  
   public void testSkip() throws Exception {
     JobConf clusterConf = createJobConf();
     createInput();
@@ -172,9 +163,11 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
       "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
+      "-jobconf", "mapred.skip.out.dir=none",
       "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
       "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
-      "-jobconf", "mapred.skip.mode.enabled=true",
+      "-jobconf", "mapred.skip.map.max.skip.records="+Long.MAX_VALUE,
+      "-jobconf", "mapred.skip.reduce.max.skip.groups="+Long.MAX_VALUE,
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "mapred.reduce.tasks=1",
       "-jobconf", "mapred.task.timeout=30000",
@@ -189,6 +182,41 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     StreamJob job = new StreamJob(args, false);      
     job.go();
     validateOutput(job.running_, false);
+    //validate that there is no skip directory as it has been set to "none"
+    assertTrue(SkipBadRecords.getSkipOutputPath(job.jobConf_)==null);
+  }
+  
+  public void testNarrowDown() throws Exception {
+    createInput();
+    JobConf clusterConf = createJobConf();
+    String[] args =  new String[] {
+      "-input", (new Path(getInputDir(), "text.txt")).toString(),
+      "-output", getOutputDir().toString(),
+      "-mapper", badMapper,
+      "-reducer", badReducer,
+      "-verbose",
+      "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
+      "-jobconf", "mapred.skip.attempts.to.start.skipping=1",
+      "-jobconf", "mapred.map.max.attempts=12",
+      "-jobconf", "mapred.reduce.max.attempts=8",
+      "-jobconf", "mapred.skip.map.max.skip.records=1",
+      "-jobconf", "mapred.skip.reduce.max.skip.groups=1",
+      "-jobconf", "mapred.map.tasks=1",
+      "-jobconf", "mapred.reduce.tasks=1",
+      "-jobconf", "mapred.task.timeout=30000",
+      "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
+      "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
+      "-jobconf", "mapred.job.tracker.http.address="
+                    +clusterConf.get("mapred.job.tracker.http.address"),
+      "-jobconf", "stream.debug=set",
+      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
+    };
+    StreamJob job = new StreamJob(args, false);      
+    job.go();
+    
+    validateOutput(job.running_, true);
+    assertTrue(SkipBadRecords.getSkipOutputPath(job.jobConf_)!=null);
   }
   
   static class App{
@@ -198,9 +226,9 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       if(args.length>0) {
         isReducer = Boolean.parseBoolean(args[0]);
       }
-      String counter = Counters.Application.MAP_PROCESSED_RECORDS;
+      String counter = SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS;
       if(isReducer) {
-        counter = Counters.Application.REDUCE_PROCESSED_RECORDS;
+        counter = SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS;
       }
       BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
       String line;
@@ -209,8 +237,8 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
         processLine(line);
         count++;
         if(count>=10) {
-          System.err.println("reporter:counter:"+Counters.Application.GROUP+","+
-              counter+","+count);
+          System.err.println("reporter:counter:"+SkipBadRecords.COUNTER_GROUP+
+              ","+counter+","+count);
           count = 0;
         }
       }

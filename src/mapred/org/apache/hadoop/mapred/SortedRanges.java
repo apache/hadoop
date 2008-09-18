@@ -61,6 +61,14 @@ class SortedRanges implements Writable{
   }
   
   /**
+   * Get the sorted set of ranges.
+   * @return ranges
+   */
+  synchronized SortedSet<Range> getRanges() {
+  	return ranges;
+ 	}
+  
+  /**
    * Add the range indices. It is ensured that the added range 
    * doesn't overlap the existing ranges. If it overlaps, the 
    * existing overlapping ranges are removed and a single range 
@@ -304,7 +312,7 @@ class SortedRanges implements Writable{
   static class SkipRangeIterator implements Iterator<Long> {
     Iterator<Range> rangeIterator;
     Range range = new Range();
-    long currentIndex = -1;
+    long next = -1;
     
     /**
      * Constructor
@@ -312,6 +320,7 @@ class SortedRanges implements Writable{
      */
     SkipRangeIterator(Iterator<Range> rangeIterator) {
       this.rangeIterator = rangeIterator;
+      doNext();
     }
     
     /**
@@ -320,7 +329,7 @@ class SortedRanges implements Writable{
      *         <code>false</code> otherwise.
      */
     public synchronized boolean hasNext() {
-      return currentIndex<Long.MAX_VALUE;
+      return next<Long.MAX_VALUE;
     }
     
     /**
@@ -328,22 +337,27 @@ class SortedRanges implements Writable{
      * @return next index
      */
     public synchronized Long next() {
-      currentIndex++;
-      LOG.debug("currentIndex "+currentIndex +"   "+range);
+      long ci = next;
+      doNext();
+      return ci;
+    }
+    
+    private void doNext() {
+      next++;
+      LOG.debug("currentIndex "+next +"   "+range);
       skipIfInRange();
-      while(currentIndex>=range.getEndIndex() && rangeIterator.hasNext()) {
+      while(next>=range.getEndIndex() && rangeIterator.hasNext()) {
         range = rangeIterator.next();
         skipIfInRange();
       }
-      return currentIndex;
     }
     
     private void skipIfInRange() {
-      if(currentIndex>=range.getStartIndex() && 
-          currentIndex<range.getEndIndex()) {
+      if(next>=range.getStartIndex() && 
+          next<range.getEndIndex()) {
         //need to skip the range
-        LOG.warn("Skipping index " + currentIndex +"-" + range.getEndIndex());
-        currentIndex = range.getEndIndex();
+        LOG.warn("Skipping index " + next +"-" + range.getEndIndex());
+        next = range.getEndIndex();
         
       }
     }
@@ -354,7 +368,7 @@ class SortedRanges implements Writable{
      *         <code>false</code> otherwise.
      */
     synchronized boolean skippedAllRanges() {
-      return !rangeIterator.hasNext() && currentIndex>=range.getEndIndex();
+      return !rangeIterator.hasNext() && next>range.getEndIndex();
     }
     
     /**

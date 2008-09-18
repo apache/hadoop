@@ -255,10 +255,12 @@ class ReduceTask extends Task {
      private TaskUmbilicalProtocol umbilical;
      private Counters.Counter skipGroupCounter;
      private Counters.Counter skipRecCounter;
-     private long recIndex = -1;
+     private long grpIndex = -1;
      private Class<KEY> keyClass;
      private Class<VALUE> valClass;
      private SequenceFile.Writer skipWriter;
+     private boolean toWriteSkipRecs;
+     private boolean hasNext;
      
      public SkippingReduceValuesIterator(RawKeyValueIterator in,
          RawComparator<KEY> comparator, Class<KEY> keyClass,
@@ -270,9 +272,11 @@ class ReduceTask extends Task {
          getCounters().findCounter(Counter.REDUCE_SKIPPED_GROUPS);
        this.skipRecCounter = 
          getCounters().findCounter(Counter.REDUCE_SKIPPED_RECORDS);
+       this.toWriteSkipRecs = toWriteSkipRecs() &&  
+         SkipBadRecords.getSkipOutputPath(conf)!=null;
        this.keyClass = keyClass;
        this.valClass = valClass;
-       skipIt = getFailedRanges().skipRangeIterator();
+       skipIt = getSkipRanges().skipRangeIterator();
        mayBeSkip();
      }
      
@@ -281,26 +285,40 @@ class ReduceTask extends Task {
        mayBeSkip();
      }
      
+     boolean more() { 
+       return super.more() && hasNext; 
+     }
+     
      private void mayBeSkip() throws IOException {
-       recIndex++;
-       long nextRecIndex = skipIt.next();
-       long skip = nextRecIndex - recIndex;
+       hasNext = skipIt.hasNext();
+       if(!hasNext) {
+         LOG.warn("Further groups got skipped.");
+         return;
+       }
+       grpIndex++;
+       long nextGrpIndex = skipIt.next();
+       long skip = 0;
        long skipRec = 0;
-       for(int i=0;i<skip && super.more();i++) {
+       while(grpIndex<nextGrpIndex && super.more()) {
          while (hasNext()) {
-           writeSkippedRec(getKey(), moveToNext());
+           VALUE value = moveToNext();
+           if(toWriteSkipRecs) {
+             writeSkippedRec(getKey(), value);
+           }
            skipRec++;
          }
          super.nextKey();
-         recIndex++;
+         grpIndex++;
+         skip++;
        }
+       
        //close the skip writer once all the ranges are skipped
        if(skip>0 && skipIt.skippedAllRanges() && skipWriter!=null) {
          skipWriter.close();
        }
        skipGroupCounter.increment(skip);
        skipRecCounter.increment(skipRec);
-       reportNextRecordRange(umbilical, nextRecIndex);
+       reportNextRecordRange(umbilical, grpIndex);
      }
      
      @SuppressWarnings("unchecked")
@@ -390,7 +408,8 @@ class ReduceTask extends Task {
     try {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
-      boolean incrProcCount = isSkipping() &&
+      //increment processed counter only if skipping feature is enabled
+      boolean incrProcCount = SkipBadRecords.getReducerMaxSkipGroups(job)>0 &&
         SkipBadRecords.getAutoIncrReducerProcCount(job);
       
       ReduceValuesIterator values = isSkipping() ? 
@@ -405,8 +424,8 @@ class ReduceTask extends Task {
         reduceInputKeyCounter.increment(1);
         reducer.reduce(values.getKey(), values, collector, reporter);
         if(incrProcCount) {
-          reporter.incrCounter(Counters.Application.GROUP, 
-              Counters.Application.REDUCE_PROCESSED_RECORDS, 1);
+          reporter.incrCounter(SkipBadRecords.COUNTER_GROUP, 
+              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS, 1);
         }
         values.nextKey();
         values.informReduceProgress();

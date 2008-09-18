@@ -90,7 +90,6 @@ public class TestReduceFetch extends TestCase {
     FileInputFormat.setInputPaths(conf, new Path("/in"));
     final Path outp = new Path("/out");
     FileOutputFormat.setOutputPath(conf, outp);
-    SkipBadRecords.setEnabled(conf, false);
     RunningJob job = null;
     try {
       job = JobClient.runJob(conf);

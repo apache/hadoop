@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.net.Node;
 
 
@@ -77,7 +78,8 @@ class TaskInProgress {
   private int completes = 0;
   private boolean failed = false;
   private boolean killed = false;
-  private volatile SortedRanges failedRanges = new SortedRanges();
+  private long maxSkipRecords = 0;
+  private FailedRanges failedRanges = new FailedRanges();
   private volatile boolean skipping = false;
   private boolean cleanup = false; 
    
@@ -127,6 +129,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     this.partition = partition;
+    this.maxSkipRecords = SkipBadRecords.getMapperMaxSkipRecords(conf);
     setMaxTaskAttempts();
     init(jobid);
   }
@@ -144,6 +147,7 @@ class TaskInProgress {
     this.jobtracker = jobtracker;
     this.job = job;
     this.conf = conf;
+    this.maxSkipRecords = SkipBadRecords.getReducerMaxSkipGroups(conf);
     setMaxTaskAttempts();
     init(jobid);
   }
@@ -467,6 +471,11 @@ class TaskInProgress {
       LOG.info("Error from "+taskid+": "+diagInfo);
       addDiagnosticInfo(taskid, diagInfo);
     }
+    
+    if(skipping) {
+      failedRanges.updateState(status);
+    }
+    
     if (oldStatus != null) {
       TaskStatus.State oldState = oldStatus.getRunState();
       TaskStatus.State newState = status.getRunState();
@@ -566,9 +575,13 @@ class TaskInProgress {
       if (taskState == TaskStatus.State.FAILED) {
         numTaskFailures++;
         machinesWhereFailed.add(trackerHostName);
-        LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
-        failedRanges.add(status.getNextRecordRange());
-        skipping = startSkipping();
+        if(maxSkipRecords>0) {
+          //skipping feature enabled
+          LOG.debug("TaskInProgress adding" + status.getNextRecordRange());
+          failedRanges.add(status.getNextRecordRange());
+          skipping = startSkipping();
+        }
+
       } else {
         numKilledTasks++;
       }
@@ -584,7 +597,7 @@ class TaskInProgress {
    * Get whether to start skipping mode. 
    */
   private boolean startSkipping() {
-    if(SkipBadRecords.getEnabled(conf) && 
+    if(maxSkipRecords>0 && 
         numTaskFailures>=SkipBadRecords.getAttemptsToStartSkipping(conf)) {
       return true;
     }
@@ -832,8 +845,12 @@ class TaskInProgress {
       t.setCleanupTask();
     }
     t.setConf(conf);
-    t.setFailedRanges(failedRanges);
+    LOG.debug("Launching task with skipRanges:"+failedRanges.getSkipRanges());
+    t.setSkipRanges(failedRanges.getSkipRanges());
     t.setSkipping(skipping);
+    if(failedRanges.isTestAttempt()) {
+      t.setWriteSkipRecs(false);
+    }
     tasks.put(taskid, t);
 
     activeTasks.put(taskid, taskTracker);
@@ -937,6 +954,100 @@ class TaskInProgress {
   
   public void clearSplit() {
     rawSplit.clearBytes();
+  }
+  
+  /**
+   * This class keeps the records to be skipped during further executions 
+   * based on failed records from all the previous attempts.
+   * It also narrow down the skip records if it is more than the 
+   * acceptable value by dividing the failed range into half. In this case one 
+   * half is executed in the next attempt (test attempt). 
+   * In the test attempt, only the test range gets executed, others get skipped. 
+   * Based on the success/failure of the test attempt, the range is divided 
+   * further.
+   */
+  private class FailedRanges {
+    private SortedRanges skipRanges = new SortedRanges();
+    private Divide divide;
+    
+    synchronized SortedRanges getSkipRanges() {
+      if(divide!=null) {
+        return divide.skipRange;
+      }
+      return skipRanges;
+    }
+    
+    synchronized boolean isTestAttempt() {
+      return divide!=null;
+    }
+    
+    synchronized long getIndicesCount() {
+      if(isTestAttempt()) {
+        return divide.skipRange.getIndicesCount();
+      }
+      return skipRanges.getIndicesCount();
+    }
+    
+    synchronized void updateState(TaskStatus status){
+      if (isTestAttempt() && 
+          (status.getRunState() == TaskStatus.State.SUCCEEDED)) {
+        divide.testPassed = true;
+        //since it was the test attempt we need to set it to failed
+        //as it worked only on the test range
+        status.setRunState(TaskStatus.State.FAILED);
+        
+      }
+    }
+    
+    synchronized void add(Range failedRange) {
+      LOG.warn("FailedRange:"+ failedRange);
+      if(divide!=null) {
+        LOG.warn("FailedRange:"+ failedRange +"  test:"+divide.test +
+            "  pass:"+divide.testPassed);
+        if(divide.testPassed) {
+          //test range passed
+          //other range would be bad. test it
+          failedRange = divide.other;
+        }
+        else {
+          //test range failed
+          //other range would be good.
+          failedRange = divide.test;
+        }
+        //reset
+        divide = null;
+      }
+      
+      if(maxSkipRecords==0 || failedRange.getLength()<=maxSkipRecords) {
+        skipRanges.add(failedRange);
+      } else {
+        //start dividing the range to narrow down the skipped
+        //records until maxSkipRecords are met OR all attempts
+        //get exhausted
+        divide = new Divide(failedRange);
+      }
+    }
+    
+    class Divide {
+      private final SortedRanges skipRange;
+      private final Range test;
+      private final Range other;
+      private boolean testPassed;
+      Divide(Range range){
+        long half = range.getLength()/2;
+        test = new Range(range.getStartIndex(), half);
+        other = new Range(test.getEndIndex(), range.getLength()-half);
+        //construct the skip range from the skipRanges
+        skipRange = new SortedRanges();
+        for(Range r : skipRanges.getRanges()) {
+          skipRange.add(r);
+        }
+        skipRange.add(new Range(0,test.getStartIndex()));
+        skipRange.add(new Range(test.getEndIndex(), 
+            (Long.MAX_VALUE-test.getEndIndex())));
+      }
+    }
+    
   }
 
   TreeMap<TaskAttemptID, String> getActiveTasks() {
