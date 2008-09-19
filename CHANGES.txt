@@ -684,6 +684,9 @@ Trunk (unreleased changes)
     HADOOP-4213. Fixes NPE in TestLimitTasksPerJobTaskScheduler.
     (Sreekanth Ramakrishnan via ddas)
 
+    HADOOP-4077. Setting access and modification time for a file
+    requires write permissions on the file. (dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

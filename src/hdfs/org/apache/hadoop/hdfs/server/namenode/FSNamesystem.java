@@ -869,14 +869,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             " Please set dfs.support.accessTime configuration parameter.");
     }
     //
-    // The caller needs to have read-access to set access times
-    // and write access to set modification times.
+    // The caller needs to have write access to set access & modification times.
     if (isPermissionEnabled) {
-      if (mtime == -1) {
-        checkPathAccess(src, FsAction.READ);
-      } else {
-        checkPathAccess(src, FsAction.WRITE);
-      }
+      checkPathAccess(src, FsAction.WRITE);
     }
     INodeFile inode = dir.getFileINode(src);
     if (inode != null) {
@@ -887,6 +882,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                       Server.getRemoteIp(),
                       "setTimes", src, null, stat);
       }
+    } else {
+      throw new FileNotFoundException("File " + src + " does not exist.");
     }
   }
 

@@ -400,6 +400,8 @@ public class TestDFSPermission extends TestCase {
           filePermission[i]);
       testSetReplication(ugi, files[i], ancestorPermission[i],
           parentPermission[i], filePermission[i]);
+      testSetTimes(ugi, files[i], ancestorPermission[i],
+          parentPermission[i], filePermission[i]);
       testStats(ugi, files[i], ancestorPermission[i], parentPermission[i]);
       testList(ugi, files[i], dirs[i], ancestorPermission[i],
           parentPermission[i], filePermission[i]);
@@ -655,6 +657,34 @@ public class TestDFSPermission extends TestCase {
     replicatorVerifier.set(path, ancestorPermission, parentPermission,
         filePermission);
     replicatorVerifier.verifyPermission(ugi);
+  }
+
+  /* A class that verifies the permission checking is correct for 
+   * setTimes */
+  private class SetTimesPermissionVerifier extends PermissionVerifier {
+    @Override
+    void setOpPermission() {
+      this.opParentPermission = SEARCH_MASK;
+      this.opPermission = WRITE_MASK;
+    }
+
+    @Override
+    void call() throws IOException {
+      fs.setTimes(path, 100, 100);
+      fs.setTimes(path, -1, 100);
+      fs.setTimes(path, 100, -1);
+    }
+  }
+
+  private SetTimesPermissionVerifier timesVerifier =
+    new SetTimesPermissionVerifier();
+  /* test if the permission checking of setReplication is correct */
+  private void testSetTimes(UnixUserGroupInformation ugi, Path path,
+      short ancestorPermission, short parentPermission, short filePermission)
+      throws Exception {
+    timesVerifier.set(path, ancestorPermission, parentPermission,
+        filePermission);
+    timesVerifier.verifyPermission(ugi);
   }
 
   /* A class that verifies the permission checking is correct for isDirectory,
