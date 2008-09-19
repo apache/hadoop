@@ -180,7 +180,7 @@ class HistoryViewer {
     if (Values.REDUCE.name().equals(taskType)) {
       taskList.append("\tShuffleFinished\tSortFinished");
     }
-    taskList.append("\tFinishTime\tHostName\tError");
+    taskList.append("\tFinishTime\tHostName\tError\tTaskLogs");
     taskList.append("\n====================================================");
     System.out.println(taskList.toString());
     for (JobHistory.Task task : tasks.values()) {
@@ -206,6 +206,8 @@ class HistoryViewer {
           taskList.append("\t"); 
           taskList.append(attempt.get(Keys.HOSTNAME)).append("\t");
           taskList.append(attempt.get(Keys.ERROR));
+          String taskLogsUrl = JobHistory.getTaskLogsUrl(attempt);
+          taskList.append(taskLogsUrl != null ? taskLogsUrl : "n/a");
           System.out.println(taskList.toString());
         }
       }

@@ -153,11 +153,15 @@
         }
         out.print("</pre></td>");
         out.print("<td>");
-        if (taskAttemptTracker == null) {
+        String taskLogUrl = null;
+        if (taskTracker != null ) {
+        	taskLogUrl = TaskLogServlet.getTaskLogUrl(taskTracker.getHost(),
+        						String.valueOf(taskTracker.getHttpPort()),
+        						status.getTaskID().toString());
+      	}
+        if (taskLogUrl == null) {
           out.print("n/a");
         } else {
-          String taskLogUrl = taskAttemptTracker + "/tasklog?taskid="
-            + status.getTaskID();
           String tailFourKBUrl = taskLogUrl + "&start=-4097";
           String tailEightKBUrl = taskLogUrl + "&start=-8193";
           String entireLogUrl = taskLogUrl + "&all=true";

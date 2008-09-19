@@ -55,10 +55,13 @@
         out.print("</pre></td>");
         
         out.print("<td>");
+        String taskLogUrl = null;
         if (taskTracker != null) {
-          String taskLogUrl = "http://" + taskTracker.getHost() + ":" +
-          	taskTracker.getHttpPort() + "/tasklog?taskid=" + 
-          	statuses[i].getTaskID();
+          taskLogUrl = TaskLogServlet.getTaskLogUrl(taskTracker.getHost(),
+                                String.valueOf(taskTracker.getHttpPort()),
+                                statuses[i].getTaskID().toString());
+        }
+        if (taskLogUrl != null) {
           String tailFourKBUrl = taskLogUrl + "&start=-4097";
           String tailEightKBUrl = taskLogUrl + "&start=-8193";
           String entireLogUrl = taskLogUrl;

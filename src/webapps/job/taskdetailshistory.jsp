@@ -37,7 +37,7 @@
 <%
   }
 %>
-<td>Finish Time</td><td>Host</td><td>Error</td></tr>
+<td>Finish Time</td><td>Host</td><td>Error</td><td>Task Logs</td></tr>
 <%
   for (JobHistory.TaskAttempt attempt : task.getTaskAttempts().values()) {
     printTaskAttempt(attempt, type, out);
@@ -84,6 +84,21 @@
               taskAttempt.getLong(Keys.START_TIME) ) + "</td>"); 
     out.print("<td>" + taskAttempt.get(Keys.HOSTNAME) + "</td>");
     out.print("<td>" + taskAttempt.get(Keys.ERROR) + "</td>");
+
+    // Print task log urls
+    out.print("<td>");	
+    String taskLogsUrl = JobHistory.getTaskLogsUrl(taskAttempt);
+    if (taskLogsUrl != null) {
+	    String tailFourKBUrl = taskLogsUrl + "&start=-4097";
+	    String tailEightKBUrl = taskLogsUrl + "&start=-8193";
+	    String entireLogUrl = taskLogsUrl + "&all=true";
+	    out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
+	    out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
+	    out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
+    } else {
+        out.print("n/a");
+    }
+    out.print("</td>");
     out.print("</tr>"); 
   }
 %>

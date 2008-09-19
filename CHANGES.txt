@@ -386,6 +386,9 @@ Trunk (unreleased changes)
     priorities, also allow it to be manipulated via the web-ui. (Hemanth
     Yamijala via acmurthy) 
 
+    HADOOP-2165. Augmented JobHistory to include the URIs to the tasks'
+    userlogs. (Vinod Kumar Vavilapalli via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

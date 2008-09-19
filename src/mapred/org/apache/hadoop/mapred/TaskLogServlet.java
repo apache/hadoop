@@ -41,6 +41,19 @@ public class TaskLogServlet extends HttpServlet {
   }
 
   /**
+   * Construct the taskLogUrl
+   * @param taskTrackerHostName
+   * @param httpPort
+   * @param taskAttemptID
+   * @return the taskLogUrl
+   */
+  public static String getTaskLogUrl(String taskTrackerHostName,
+      String httpPort, String taskAttemptID) {
+    return ("http://" + taskTrackerHostName + ":" + httpPort
+        + "/tasklog?taskid=" + taskAttemptID);
+  }
+
+  /**
    * Find the next quotable character in the given array.
    * @param data the bytes to look in
    * @param offset the first index to look in

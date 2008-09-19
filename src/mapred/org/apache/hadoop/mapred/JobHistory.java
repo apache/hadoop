@@ -1526,4 +1526,25 @@ public class JobHistory {
       isRunning = false; 
     }
   }
+
+  /**
+   * Return the TaskLogsUrl of a particular TaskAttempt
+   * 
+   * @param attempt
+   * @return the taskLogsUrl. null if http-port or tracker-name or
+   *         task-attempt-id are unavailable.
+   */
+  public static String getTaskLogsUrl(JobHistory.TaskAttempt attempt) {
+    if (attempt.get(Keys.HTTP_PORT).equals("")
+        || attempt.get(Keys.TRACKER_NAME).equals("")
+        || attempt.get(Keys.TASK_ATTEMPT_ID).equals("")) {
+      return null;
+    }
+
+    String taskTrackerName =
+        JobInProgress.convertTrackerNameToHostName(
+            attempt.get(Keys.TRACKER_NAME)).substring("tracker_".length());
+    return TaskLogServlet.getTaskLogUrl(taskTrackerName, attempt
+        .get(Keys.HTTP_PORT), attempt.get(Keys.TASK_ATTEMPT_ID));
+  }
 }
