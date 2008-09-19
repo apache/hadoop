@@ -18,17 +18,25 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.log4j.Appender;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 /**
  * A simple logger to handle the task-specific user logs.
@@ -50,8 +58,130 @@ public class TaskLog {
   }
 
   public static File getTaskLogFile(TaskAttemptID taskid, LogName filter) {
-    return new File(new File(LOG_DIR, taskid.toString()), filter.toString());
+    return new File(getBaseDir(taskid.toString()), filter.toString());
   }
+  public static File getRealTaskLogFileLocation(TaskAttemptID taskid, 
+      LogName filter) {
+    LogFileDetail l;
+    try {
+      l = getTaskLogFileDetail(taskid, filter);
+    } catch (IOException ie) {
+      LOG.error("getTaskLogFileDetail threw an exception " + ie);
+      return null;
+    }
+    return new File(getBaseDir(l.location), filter.toString());
+  }
+  private static class LogFileDetail {
+    final static String LOCATION = "LOG_DIR:";
+    String location;
+    long start;
+    long length;
+  }
+  
+  private static LogFileDetail getTaskLogFileDetail(TaskAttemptID taskid,
+      LogName filter) throws IOException {
+    File indexFile = new File(getBaseDir(taskid.toString()), "log.index");
+    BufferedReader fis = new BufferedReader(new java.io.FileReader(indexFile));
+    //the format of the index file is
+    //LOG_DIR: <the dir where the task logs are really stored>
+    //stdout:<start-offset in the stdout file> <length>
+    //stderr:<start-offset in the stderr file> <length>
+    //syslog:<start-offset in the syslog file> <length>
+    LogFileDetail l = new LogFileDetail();
+    String str = fis.readLine();
+    if (str == null) { //the file doesn't have anything
+      throw new IOException ("Index file for the log of " + taskid+" doesn't exist.");
+    }
+    l.location = str.substring(str.indexOf(LogFileDetail.LOCATION)+
+        LogFileDetail.LOCATION.length());
+    //special cases are the debugout and profile.out files. They are guaranteed
+    //to be associated with each task attempt since jvm reuse is disabled
+    //when profiling/debugging is enabled
+    if (filter.equals(LogName.DEBUGOUT) || filter.equals(LogName.PROFILE)) {
+      l.length = new File(getBaseDir(l.location), filter.toString()).length();
+      l.start = 0;
+      fis.close();
+      return l;
+    }
+    str = fis.readLine();
+    while (str != null) {
+      //look for the exact line containing the logname
+      if (str.contains(filter.toString())) {
+        str = str.substring(filter.toString().length()+1);
+        String[] startAndLen = str.split(" ");
+        l.start = Long.parseLong(startAndLen[0]);
+        l.length = Long.parseLong(startAndLen[1]);
+        break;
+      }
+      str = fis.readLine();
+    }
+    fis.close();
+    return l;
+  }
+  
+  public static File getIndexFile(String taskid) {
+    return new File(getBaseDir(taskid), "log.index");
+  }
+  private static File getBaseDir(String taskid) {
+    return new File(LOG_DIR, taskid);
+  }
+  private static long prevOutLength;
+  private static long prevErrLength;
+  private static long prevLogLength;
+  
+  private static void writeToIndexFile(TaskAttemptID firstTaskid) 
+  throws IOException {
+    File indexFile = getIndexFile(currentTaskid.toString());
+    BufferedOutputStream bos = 
+      new BufferedOutputStream(new FileOutputStream(indexFile,false));
+    DataOutputStream dos = new DataOutputStream(bos);
+    //the format of the index file is
+    //LOG_DIR: <the dir where the task logs are really stored>
+    //STDOUT: <start-offset in the stdout file> <length>
+    //STDERR: <start-offset in the stderr file> <length>
+    //SYSLOG: <start-offset in the syslog file> <length>    
+    dos.writeBytes(LogFileDetail.LOCATION + firstTaskid.toString()+"\n"+
+        LogName.STDOUT.toString()+":");
+    dos.writeBytes(Long.toString(prevOutLength)+" ");
+    dos.writeBytes(Long.toString(getTaskLogFile(firstTaskid, LogName.STDOUT)
+        .length() - prevOutLength)+"\n"+LogName.STDERR+":");
+    dos.writeBytes(Long.toString(prevErrLength)+" ");
+    dos.writeBytes(Long.toString(getTaskLogFile(firstTaskid, LogName.STDERR)
+        .length() - prevErrLength)+"\n"+LogName.SYSLOG.toString()+":");
+    dos.writeBytes(Long.toString(prevLogLength)+" ");
+    dos.writeBytes(Long.toString(getTaskLogFile(firstTaskid, LogName.SYSLOG)
+        .length() - prevLogLength)+"\n");
+    dos.close();
+  }
+  private static void resetPrevLengths(TaskAttemptID firstTaskid) {
+    prevOutLength = getTaskLogFile(firstTaskid, LogName.STDOUT).length();
+    prevErrLength = getTaskLogFile(firstTaskid, LogName.STDERR).length();
+    prevLogLength = getTaskLogFile(firstTaskid, LogName.SYSLOG).length();
+  }
+  private volatile static TaskAttemptID currentTaskid = null;
+  @SuppressWarnings("unchecked")
+  public synchronized static void syncLogs(TaskAttemptID firstTaskid, TaskAttemptID taskid) 
+  throws IOException {
+    System.out.flush();
+    System.err.flush();
+    Enumeration<Logger> allLoggers = LogManager.getCurrentLoggers();
+    while (allLoggers.hasMoreElements()) {
+      Logger l = allLoggers.nextElement();
+      Enumeration<Appender> allAppenders = l.getAllAppenders();
+      while (allAppenders.hasMoreElements()) {
+        Appender a = allAppenders.nextElement();
+        if (a instanceof TaskLogAppender) {
+          ((TaskLogAppender)a).flush();
+        }
+      }
+    }
+    if (currentTaskid != taskid) {
+      currentTaskid = taskid;
+      resetPrevLengths(firstTaskid);
+    }
+    writeToIndexFile(firstTaskid);
+  }
+  
   
   /**
    * The filter for userlogs.
@@ -133,9 +263,9 @@ public class TaskLog {
     public Reader(TaskAttemptID taskid, LogName kind, 
                   long start, long end) throws IOException {
       // find the right log file
-      File filename = getTaskLogFile(taskid, kind);
+      LogFileDetail fileDetail = getTaskLogFileDetail(taskid, kind);
       // calculate the start and stop
-      long size = filename.length();
+      long size = fileDetail.length;
       if (start < 0) {
         start += size + 1;
       }
@@ -144,8 +274,11 @@ public class TaskLog {
       }
       start = Math.max(0, Math.min(start, size));
       end = Math.max(0, Math.min(end, size));
+      start += fileDetail.start;
+      end += fileDetail.start;
       bytesRemaining = end - start;
-      file = new FileInputStream(filename);
+      file = new FileInputStream(new File(getBaseDir(fileDetail.location), 
+          kind.toString()));
       // skip upto start
       long pos = 0;
       while (pos < start) {

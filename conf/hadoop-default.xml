@@ -957,6 +957,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.job.reuse.jvm.num.tasks</name>
+  <value>1</value>
+  <description>How many tasks to run per jvm. If set to -1, there is
+  no limit. 
+  </description>
+</property>
+
+<property>
   <name>mapred.min.split.size</name>
   <value>0</value>
   <description>The minimum size chunk that map input should be split

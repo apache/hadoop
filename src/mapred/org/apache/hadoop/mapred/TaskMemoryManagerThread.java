@@ -27,6 +27,7 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker;
@@ -235,30 +236,43 @@ class TaskMemoryManagerThread extends Thread {
    * @return the pid of the task process.
    */
   private String getPid(TaskAttemptID tipID) {
-    Path pidFileName = getPidFilePath(tipID);
+    Path pidFileName = getPidFilePath(tipID, taskTracker.getJobConf());
     if (pidFileName == null) {
       return null;
     }
     return ProcfsBasedProcessTree.getPidFromPidFile(pidFileName.toString());
   }
 
-  private LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+  private static LocalDirAllocator lDirAlloc = 
+    new LocalDirAllocator("mapred.local.dir");
 
   /**
    * Get the pidFile path of a Task
    * @param tipID
    * @return pidFile's Path
    */
-  Path getPidFilePath(TaskAttemptID tipID) {
+  public static Path getPidFilePath(TaskAttemptID tipID, JobConf conf) {
     Path pidFileName = null;
     try {
+      //this actually need not use a localdirAllocator since the PID
+      //files are really small..
       pidFileName = lDirAlloc.getLocalPathToRead(
           (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + tipID),
-          taskTracker.getJobConf());
+          conf);
     } catch (IOException i) {
       // PID file is not there
       LOG.debug("Failed to get pidFile name for " + tipID);
     }
     return pidFileName;
+  }
+  public void removePidFile(TaskAttemptID tid) {
+    if (taskTracker.isTaskMemoryManagerEnabled()) {
+      Path pidFilePath = getPidFilePath(tid, taskTracker.getJobConf());
+      if (pidFilePath != null) {
+        try {
+          FileSystem.getLocal(taskTracker.getJobConf()).delete(pidFilePath, false);
+        } catch(IOException ie) {}
+      }
+    }
   }
 }

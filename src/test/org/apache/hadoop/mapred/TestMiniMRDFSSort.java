@@ -72,14 +72,12 @@ public class TestMiniMRDFSSort extends TestCase {
     // Run Sort-Validator
     assertEquals(ToolRunner.run(job, new SortValidator(), svArgs), 0);
   }
-
+  Configuration conf = new Configuration();
   public void testMapReduceSort() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
     try {
-      Configuration conf = new Configuration();
-
       // set io.sort.mb and fsinmemory.size.mb to lower value in test
       conf.setInt("io.sort.mb", 5);
       conf.setInt("fs.inmemory.size.mb", 20);
@@ -103,5 +101,8 @@ public class TestMiniMRDFSSort extends TestCase {
       }
     }
   }
-  
+  public void testMapReduceSortWithJvmReuse() throws Exception {
+    conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
+    testMapReduceSort();
+  }
 }

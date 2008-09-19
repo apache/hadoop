@@ -61,6 +61,10 @@ public class TaskLogAppender extends FileAppender {
       }
     }
   }
+  
+  public void flush() {
+    qw.flush();
+  }
 
   @Override
   public synchronized void close() {

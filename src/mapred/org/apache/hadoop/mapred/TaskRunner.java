@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
@@ -43,11 +42,16 @@ abstract class TaskRunner extends Thread {
     LogFactory.getLog(TaskRunner.class);
 
   volatile boolean killed = false;
-  private ShellCommandExecutor shexec; // shell terminal for running the task
   private Task t;
+  private Object lock = new Object();
+  private volatile boolean done = false;
+  private int exitCode = -1;
+  private boolean exitCodeSet = false;
+  
   private TaskTracker tracker;
 
   protected JobConf conf;
+  JvmManager jvmManager;
 
   /** 
    * for cleaning up old map outputs
@@ -60,6 +64,7 @@ abstract class TaskRunner extends Thread {
     this.conf = conf;
     this.mapOutputFile = new MapOutputFile(t.getJobID());
     this.mapOutputFile.setConf(conf);
+    this.jvmManager = tracker.getJvmManagerInstance();
   }
 
   public Task getTask() { return t; }
@@ -78,7 +83,7 @@ abstract class TaskRunner extends Thread {
    */
   public void close() throws IOException {}
 
-  private String stringifyPathArray(Path[] p){
+  private static String stringifyPathArray(Path[] p){
     if (p == null){
       return null;
     }
@@ -143,7 +148,8 @@ abstract class TaskRunner extends Thread {
                                                   true, Long.parseLong(
                                                         archivesTimestamps[i]),
                                                   new Path(workDir.
-                                                        getAbsolutePath()));
+                                                        getAbsolutePath()), 
+                                                  false);
             
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
@@ -171,7 +177,8 @@ abstract class TaskRunner extends Thread {
                                                   false, Long.parseLong(
                                                            fileTimestamps[i]),
                                                   new Path(workDir.
-                                                        getAbsolutePath()));
+                                                        getAbsolutePath()), 
+                                                  false);
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
@@ -185,17 +192,7 @@ abstract class TaskRunner extends Thread {
           out.close();
         }
       }
-    
-      // create symlinks for all the files in job cache dir in current
-      // workingdir for streaming
-      try{
-        DistributedCache.createAllSymlink(conf, jobCacheDir, 
-                                          workDir);
-      } catch(IOException ie){
-        // Do not exit even if symlinks have not been created.
-        LOG.warn(StringUtils.stringifyException(ie));
-      }
-      
+          
       if (!prepare()) {
         return;
       }
@@ -366,7 +363,7 @@ abstract class TaskRunner extends Thread {
       }
 
       // Add main class and its arguments 
-      vargs.add(TaskTracker.Child.class.getName());  // main of Child
+      vargs.add(Child.class.getName());  // main of Child
       // pass umbilical address
       InetSocketAddress address = tracker.getTaskTrackerReportAddress();
       vargs.add(address.getAddress().getHostAddress()); 
@@ -395,9 +392,7 @@ abstract class TaskRunner extends Thread {
       File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
       stdout.getParentFile().mkdirs();
       tracker.getTaskTrackerInstrumentation().reportTaskLaunch(taskid, stdout, stderr);
-      List<String> wrappedCommand = 
-        TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize, pidFile);
-      LOG.debug("child jvm command : " + wrappedCommand.toString());
+
       Map<String, String> env = new HashMap<String, String>();
       StringBuffer ldLibraryPath = new StringBuffer();
       ldLibraryPath.append(workDir.toString());
@@ -408,9 +403,26 @@ abstract class TaskRunner extends Thread {
         ldLibraryPath.append(oldLdLibraryPath);
       }
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
-      // Run the task as child of the parent TaskTracker process
-      runChild(wrappedCommand, workDir, env, taskid);
-
+      tracker.taskInitialized(t.getTaskID());
+      LOG.info("Task ID: " + t.getTaskID() +" initialized");
+      jvmManager.launchJvm(t.getJobID(), t.isMapTask(), 
+          jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
+              workDir, env, pidFile, conf));
+      synchronized (lock) {
+        while (!done) {
+          lock.wait();
+        }
+      }
+      tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
+      if (exitCodeSet) {
+        if (!killed && exitCode != 0) {
+          if (exitCode == 65) {
+            tracker.getTaskTrackerInstrumentation().taskFailedPing(t.getTaskID());
+          }
+          throw new IOException("Task process exit with nonzero status of " +
+              exitCode + ".");
+        }
+      }
     } catch (FSError e) {
       LOG.fatal("FSError", e);
       try {
@@ -445,31 +457,76 @@ abstract class TaskRunner extends Thread {
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
       tracker.reportTaskFinished(t.getTaskID(), false);
+      if (t.isMapTask()) {
+        tracker.addFreeMapSlot();
+      } else {
+        tracker.addFreeReduceSlot();
+      }
     }
   }
-
-  /**
-   * Run the child process
-   */
-  private void runChild(List<String> args, File dir,
-                        Map<String, String> env,
-                        TaskAttemptID taskid) throws IOException {
-
-    shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir, env);
-    try {
-      shexec.execute();
-    } catch (IOException ioe) {
-      // do nothing
-      // error and output are appropriately redirected
-    } finally { // handle the exit code
-      int exit_code = shexec.getExitCode();
-      tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
-      if (!killed && exit_code != 0) {
-        if (exit_code == 65) {
-          tracker.getTaskTrackerInstrumentation().taskFailedPing(t.getTaskID());
+  
+  //Mostly for setting up the symlinks. Note that when we setup the distributed
+  //cache, we didn't create the symlinks. This is done on a per task basis
+  //by the currently executing task.
+  public static void setupWorkDir(JobConf conf) throws IOException {
+    File workDir = new File(".").getAbsoluteFile();
+    FileUtil.fullyDelete(workDir);
+    if (DistributedCache.getSymlink(conf)) {
+      URI[] archives = DistributedCache.getCacheArchives(conf);
+      URI[] files = DistributedCache.getCacheFiles(conf);
+      Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
+      Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+      if (archives != null) {
+        for (int i = 0; i < archives.length; i++) {
+          String link = archives[i].getFragment();
+          if (link != null) {
+            link = workDir.toString() + Path.SEPARATOR + link;
+            File flink = new File(link);
+            if (!flink.exists()) {
+              FileUtil.symLink(localArchives[i].toString(), link);
+            }
+          }
         }
-        throw new IOException("Task process exit with nonzero status of " +
-                              exit_code + ": "+ shexec);
+      }
+      if (files != null) {
+        for (int i = 0; i < files.length; i++) {
+          String link = files[i].getFragment();
+          if (link != null) {
+            link = workDir.toString() + Path.SEPARATOR + link;
+            File flink = new File(link);
+            if (!flink.exists()) {
+              FileUtil.symLink(localFiles[i].toString(), link);
+            }
+          }
+        }
+      }
+    }
+    File jobCacheDir = null;
+    if (conf.getJar() != null) {
+      jobCacheDir = new File(
+          new Path(conf.getJar()).getParent().toString());
+    }
+
+    // create symlinks for all the files in job cache dir in current
+    // workingdir for streaming
+    try{
+      DistributedCache.createAllSymlink(conf, jobCacheDir,
+          workDir);
+    } catch(IOException ie){
+      // Do not exit even if symlinks have not been created.
+      LOG.warn(StringUtils.stringifyException(ie));
+    }
+    // add java.io.tmpdir given by mapred.child.tmp
+    String tmp = conf.get("mapred.child.tmp", "./tmp");
+    Path tmpDir = new Path(tmp);
+
+    // if temp directory path is not absolute
+    // prepend it with workDir.
+    if (!tmpDir.isAbsolute()) {
+      tmpDir = new Path(workDir.toString(), tmp);
+      FileSystem localFs = FileSystem.getLocal(conf);
+      if (!localFs.mkdirs(tmpDir) && !localFs.getFileStatus(tmpDir).isDir()){
+        throw new IOException("Mkdirs failed to create " + tmpDir.toString());
       }
     }
   }
@@ -478,13 +535,17 @@ abstract class TaskRunner extends Thread {
    * Kill the child process
    */
   public void kill() {
-    if (shexec != null) {
-      Process process = shexec.getProcess();
-      if (process != null) {
-        process.destroy();
-      }
-    }
     killed = true;
+    jvmManager.taskKilled(this);
   }
-
+  public void signalDone() {
+    synchronized (lock) {
+      done = true;
+      lock.notify();
+    }
+  }
+  public void setExitCode(int exitCode) {
+    this.exitCodeSet = true;
+    this.exitCode = exitCode;
+  }
 }

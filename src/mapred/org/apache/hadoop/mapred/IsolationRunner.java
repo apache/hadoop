@@ -35,6 +35,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JvmTask;
 
 public class IsolationRunner {
   private static final Log LOG = 
@@ -58,7 +59,7 @@ public class IsolationRunner {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
-    public Task getTask(TaskAttemptID taskid) throws IOException {
+    public JvmTask getTask(JVMId jvmId, TaskAttemptID taskId) throws IOException {
       return null;
     }
 

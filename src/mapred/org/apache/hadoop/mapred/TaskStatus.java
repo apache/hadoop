@@ -41,11 +41,11 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   // what state is the task in?
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
-                            COMMIT_PENDING}
+                            COMMIT_PENDING, INITIALIZED}
     
   private TaskAttemptID taskid;
   private float progress;
-  private State runState;
+  private volatile State runState;
   private String diagnosticInfo;
   private String stateString;
   private String taskTracker;

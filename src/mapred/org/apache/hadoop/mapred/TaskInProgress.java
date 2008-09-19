@@ -485,7 +485,9 @@ class TaskInProgress {
       // and is addressed better at the TaskTracker to ensure this.
       // @see {@link TaskTracker.transmitHeartbeat()}
       if ((newState != TaskStatus.State.RUNNING && 
-           newState != TaskStatus.State.COMMIT_PENDING ) && 
+           newState != TaskStatus.State.COMMIT_PENDING && 
+           newState != TaskStatus.State.INITIALIZED &&
+           newState != TaskStatus.State.UNASSIGNED) && 
           (oldState == newState)) {
         LOG.warn("Recieved duplicate status update of '" + newState + 
                  "' for '" + taskid + "' of TIP '" + getTIPId() + "'");
@@ -496,7 +498,9 @@ class TaskInProgress {
       // We have seen out of order status messagesmoving tasks from complete
       // to running. This is a spot fix, but it should be addressed more
       // globally.
-      if (newState == TaskStatus.State.RUNNING &&
+      if ((newState == TaskStatus.State.RUNNING || 
+          newState == TaskStatus.State.UNASSIGNED ||
+          newState == TaskStatus.State.INITIALIZED) &&
           (oldState == TaskStatus.State.FAILED || 
            oldState == TaskStatus.State.KILLED || 
            oldState == TaskStatus.State.SUCCEEDED ||
@@ -708,7 +712,9 @@ class TaskInProgress {
   boolean killTask(TaskAttemptID taskId, boolean shouldFail) {
     TaskStatus st = taskStatuses.get(taskId);
     if(st != null && (st.getRunState() == TaskStatus.State.RUNNING
-        || st.getRunState() == TaskStatus.State.COMMIT_PENDING)
+        || st.getRunState() == TaskStatus.State.COMMIT_PENDING ||
+        st.getRunState() == TaskStatus.State.INITIALIZED ||
+        st.getRunState() == TaskStatus.State.UNASSIGNED)
         && tasksToKill.put(taskId, shouldFail) == null ) {
       String logStr = "Request received to " + (shouldFail ? "fail" : "kill") 
                       + " task '" + taskId + "' by user";

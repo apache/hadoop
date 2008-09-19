@@ -108,6 +108,7 @@ abstract class Task implements Writable, Configurable {
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
   protected boolean cleanupJob = false;
+  private Thread pingProgressThread;
   
   //skip ranges based on failed ranges from previous attempts
   private SortedRanges skipRanges = new SortedRanges();
@@ -344,7 +345,7 @@ abstract class Task implements Writable, Configurable {
    * let the parent know that it's alive. It also pings the parent to see if it's alive. 
    */
   protected void startCommunicationThread(final TaskUmbilicalProtocol umbilical) {
-    Thread thread = new Thread(new Runnable() {
+    pingProgressThread = new Thread(new Runnable() {
         public void run() {
           final int MAX_RETRIES = 3;
           int remainingRetries = MAX_RETRIES;
@@ -407,8 +408,8 @@ abstract class Task implements Writable, Configurable {
           }
         }
       }, "Comm thread for "+taskId);
-    thread.setDaemon(true);
-    thread.start();
+    pingProgressThread.setDaemon(true);
+    pingProgressThread.start();
     LOG.debug(getTaskID() + " Progress/ping thread started");
   }
 
@@ -596,6 +597,10 @@ abstract class Task implements Writable, Configurable {
       commit(umbilical, outputCommitter);
     }
     taskDone.set(true);
+    pingProgressThread.interrupt();
+    try {
+      pingProgressThread.join();
+    } catch (InterruptedException ie) {}
     sendLastUpdate(umbilical);
     //signal the tasktracker that we are done
     sendDone(umbilical);

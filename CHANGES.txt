@@ -180,6 +180,11 @@ Trunk (unreleased changes)
 
     HADOOP-4176. Implement getFileChecksum(Path) in HftpFileSystem. (szetszwo)
 
+    HADOOP-249. Reuse JVMs across Map-Reduce Tasks. 
+    Configuration changes to hadoop-default.xml:
+      add mapred.job.reuse.jvm.num.tasks
+    (Devaraj Das via acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).

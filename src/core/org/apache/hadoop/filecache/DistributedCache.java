@@ -152,6 +152,42 @@ public class DistributedCache {
                                    boolean isArchive, long confFileStamp,
                                    Path currentWorkDir) 
   throws IOException {
+    return getLocalCache(cache, conf, baseDir, fileStatus, isArchive, 
+        confFileStamp, currentWorkDir, true);
+  }
+  /**
+   * Get the locally cached file or archive; it could either be 
+   * previously cached (and valid) or copy it from the {@link FileSystem} now.
+   * 
+   * @param cache the cache to be localized, this should be specified as 
+   * new URI(hdfs://hostname:port/absolute_path_to_file#LINKNAME). If no schema 
+   * or hostname:port is provided the file is assumed to be in the filesystem
+   * being used in the Configuration
+   * @param conf The Confguration file which contains the filesystem
+   * @param baseDir The base cache Dir where you wnat to localize the files/archives
+   * @param fileStatus The file status on the dfs.
+   * @param isArchive if the cache is an archive or a file. In case it is an
+   *  archive with a .zip or .jar or .tar or .tgz or .tar.gz extension it will
+   *  be unzipped/unjarred/untarred automatically 
+   *  and the directory where the archive is unzipped/unjarred/untarred is
+   *  returned as the Path.
+   *  In case of a file, the path to the file is returned
+   * @param confFileStamp this is the hdfs file modification timestamp to verify that the 
+   * file to be cached hasn't changed since the job started
+   * @param currentWorkDir this is the directory where you would want to create symlinks 
+   * for the locally cached files/archives
+   * @param honorSymLinkConf if this is false, then the symlinks are not
+   * created even if conf says so (this is required for an optimization in task
+   * launches
+   * @return the path to directory where the archives are unjarred in case of archives,
+   * the path to the file where the file is copied locally 
+   * @throws IOException
+   */
+  public static Path getLocalCache(URI cache, Configuration conf, 
+      Path baseDir, FileStatus fileStatus,
+      boolean isArchive, long confFileStamp,
+      Path currentWorkDir, boolean honorSymLinkConf) 
+  throws IOException {
     String cacheId = makeRelative(cache, conf);
     CacheStatus lcacheStatus;
     Path localizedPath;
@@ -162,10 +198,10 @@ public class DistributedCache {
         lcacheStatus = new CacheStatus(new Path(baseDir, new Path(cacheId)));
         cachedArchives.put(cacheId, lcacheStatus);
       }
-      
+
       synchronized (lcacheStatus) {
         localizedPath = localizeCache(conf, cache, confFileStamp, lcacheStatus, 
-                                      fileStatus, isArchive, currentWorkDir);
+            fileStatus, isArchive, currentWorkDir, honorSymLinkConf);
         lcacheStatus.refcount++;
       }
     }
@@ -180,6 +216,7 @@ public class DistributedCache {
     }
     return localizedPath;
   }
+
   
   /**
    * Get the locally cached file or archive; it could either be 
@@ -292,9 +329,9 @@ public class DistributedCache {
                                     CacheStatus cacheStatus,
                                     FileStatus fileStatus,
                                     boolean isArchive, 
-                                    Path currentWorkDir) 
+                                    Path currentWorkDir,boolean honorSymLinkConf) 
   throws IOException {
-    boolean doSymlink = getSymlink(conf);
+    boolean doSymlink = honorSymLinkConf && getSymlink(conf);
     if(cache.getFragment() == null) {
     	doSymlink = false;
     }

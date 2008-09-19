@@ -208,7 +208,7 @@ class TaskTrackerStatus implements Writable {
       if (ts.getIsMap() &&
           ((state == TaskStatus.State.RUNNING) ||
            (state == TaskStatus.State.UNASSIGNED) ||
-           (state == TaskStatus.State.COMMIT_PENDING))) {
+           (state == TaskStatus.State.INITIALIZED))) {
         mapCount++;
       }
     }
@@ -226,7 +226,7 @@ class TaskTrackerStatus implements Writable {
       if ((!ts.getIsMap()) &&
           ((state == TaskStatus.State.RUNNING) ||  
            (state == TaskStatus.State.UNASSIGNED) ||
-           (state == TaskStatus.State.COMMIT_PENDING))) {
+           (state == TaskStatus.State.INITIALIZED))) {
         reduceCount++;
       }
     }

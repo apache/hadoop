@@ -326,6 +326,23 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * Sets the number of tasks that a spawned task JVM should run
+   * before it exits
+   * @param numTasks the number of tasks to execute; defaults to 1;
+   * -1 signifies no limit
+   */
+  public void setNumTasksToExecutePerJvm(int numTasks) {
+    setInt("mapred.job.reuse.jvm.num.tasks", numTasks);
+  }
+  
+  /**
+   * Get the number of tasks that a spawned JVM should execute
+   */
+  public int getNumTasksToExecutePerJvm() {
+    return getInt("mapred.job.reuse.jvm.num.tasks", 1);
+  }
+  
+  /**
    * Get the {@link InputFormat} implementation for the map-reduce job,
    * defaults to {@link TextInputFormat} if not specified explicity.
    * 

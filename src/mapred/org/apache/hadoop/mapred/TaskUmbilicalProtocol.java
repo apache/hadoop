@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapred.JvmTask;
 
 /** Protocol that task child process uses to contact its parent process.  The
  * parent is a daemon which which polls the central master for a new map or
@@ -49,12 +50,19 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 12 getMapCompletionEvents() now also indicates if the events are 
    *            stale or not. Hence the return type is a class that 
    *            encapsulates the events and whether to reset events index.
+   * Version 13 changed the getTask method signature for HADOOP-249
    * */
 
-  public static final long versionID = 11L;
+  public static final long versionID = 13L;
   
-  /** Called when a child task process starts, to get its task.*/
-  Task getTask(TaskAttemptID taskid) throws IOException;
+  /**
+   * Called when a child task process starts, to get its task.
+   * @param jvmId the ID of this JVM w.r.t the tasktracker that launched it
+   * @param taskid the first taskid that the JVM runs
+   * @return Task object
+   * @throws IOException 
+   */
+  JvmTask getTask(JVMId jvmId, TaskAttemptID taskid) throws IOException;
 
   /**
    * Report child's progress to parent.

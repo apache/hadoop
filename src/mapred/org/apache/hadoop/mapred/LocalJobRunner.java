@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobTrackerMetricsInst;
+import org.apache.hadoop.mapred.JvmTask;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
@@ -206,7 +207,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     // TaskUmbilicalProtocol methods
 
-    public Task getTask(TaskAttemptID taskid) { return null; }
+    public JvmTask getTask(JVMId jvmId, TaskAttemptID taskId) { return null; }
 
     public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
     throws IOException, InterruptedException {
