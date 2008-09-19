@@ -272,8 +272,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return hints;
   }
 
-  private LocatedBlocks callGetBlockLocations(String src, long start, 
-      long length) throws IOException {
+  private static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
+      String src, long start, long length) throws IOException {
     try {
       return namenode.getBlockLocations(src, start, length);
     } catch(RemoteException re) {
@@ -296,7 +296,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException {
-    LocatedBlocks blocks = callGetBlockLocations(src, start, length);
+    LocatedBlocks blocks = callGetBlockLocations(namenode, src, start, length);
     if (blocks == null) {
       return new BlockLocation[0];
     }
@@ -583,13 +583,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * Get the checksum of a file.
    * @param src The file path
    * @return The checksum 
+   * @see DistributedFileSystem#getFileChecksum(Path)
    */
   MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
-    
+    return getFileChecksum(src, namenode, socketFactory, socketTimeout);    
+  }
+
+  /**
+   * Get the checksum of a file.
+   * @param src The file path
+   * @return The checksum 
+   */
+  public static MD5MD5CRC32FileChecksum getFileChecksum(String src,
+      ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout
+      ) throws IOException {
     //get all block locations
     final List<LocatedBlock> locatedblocks
-        = callGetBlockLocations(src, 0, Long.MAX_VALUE).getLocatedBlocks();
+        = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE).getLocatedBlocks();
     final DataOutputBuffer md5out = new DataOutputBuffer();
     int bytesPerCRC = 0;
     long crcPerBlock = 0;
@@ -1369,7 +1380,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * Grab the open-file info from namenode
      */
     synchronized void openInfo() throws IOException {
-      LocatedBlocks newInfo = callGetBlockLocations(src, 0, prefetchSize);
+      LocatedBlocks newInfo = callGetBlockLocations(namenode, src, 0, prefetchSize);
       if (newInfo == null) {
         throw new IOException("Cannot open filename " + src);
       }
@@ -1428,7 +1439,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
         // fetch more blocks
         LocatedBlocks newBlocks;
-        newBlocks = callGetBlockLocations(src, offset, prefetchSize);
+        newBlocks = callGetBlockLocations(namenode, src, offset, prefetchSize);
         assert (newBlocks != null) : "Could not find target position " + offset;
         locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
       }
@@ -1467,7 +1478,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           blk = locatedBlocks.get(blockIdx);
         if (blk == null || curOff < blk.getStartOffset()) {
           LocatedBlocks newBlocks;
-          newBlocks = callGetBlockLocations(src, curOff, remaining);
+          newBlocks = callGetBlockLocations(namenode, src, curOff, remaining);
           locatedBlocks.insertRange(blockIdx, newBlocks.getLocatedBlocks());
           continue;
         }

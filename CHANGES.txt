@@ -178,6 +178,8 @@ Trunk (unreleased changes)
     HADOOP-3930. Add common interfaces for the pluggable schedulers and the
     cli & gui clients. (Sreekanth Ramakrishnan via omalley)
 
+    HADOOP-4176. Implement getFileChecksum(Path) in HftpFileSystem. (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).

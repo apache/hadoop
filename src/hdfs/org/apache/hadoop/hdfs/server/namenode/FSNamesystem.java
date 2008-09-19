@@ -372,6 +372,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.infoServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
     this.infoServer.addInternalServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
     this.infoServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
+    this.infoServer.addInternalServlet("checksum", "/fileChecksum/*",
+        FileChecksumServlets.RedirectServlet.class);
     this.infoServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info

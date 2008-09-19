@@ -43,11 +43,13 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
@@ -235,6 +237,51 @@ public class HftpFileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f) throws IOException {
     LsParser lsparser = new LsParser();
     return lsparser.getFileStatus(f);
+  }
+
+  private class ChecksumParser extends DefaultHandler {
+    private FileChecksum filechecksum;
+
+    /** {@inheritDoc} */
+    public void startElement(String ns, String localname, String qname,
+                Attributes attrs) throws SAXException {
+      if (!MD5MD5CRC32FileChecksum.class.getName().equals(qname)) {
+        if (RemoteException.class.getSimpleName().equals(qname)) {
+          throw new SAXException(RemoteException.valueOf(attrs));
+        }
+        throw new SAXException("Unrecognized entry: " + qname);
+      }
+
+      filechecksum = MD5MD5CRC32FileChecksum.valueOf(attrs);
+    }
+
+    private FileChecksum getFileChecksum(Path f) throws IOException {
+      final HttpURLConnection connection = openConnection(
+          "/fileChecksum" + f, "ugi=" + ugi);
+      try {
+        final XMLReader xr = XMLReaderFactory.createXMLReader();
+        xr.setContentHandler(this);
+
+        connection.setRequestMethod("GET");
+        connection.connect();
+
+        xr.parse(new InputSource(connection.getInputStream()));
+      } catch(SAXException e) {
+        final Exception embedded = e.getException();
+        if (embedded != null && embedded instanceof IOException) {
+          throw (IOException)embedded;
+        }
+        throw new IOException("invalid xml directory content", e);
+      } finally {
+        connection.disconnect();
+      }
+      return filechecksum;
+    }
+  }
+
+  /** {@inheritDoc} */
+  public FileChecksum getFileChecksum(Path f) throws IOException {
+    return new ChecksumParser().getFileChecksum(f);
   }
 
   @Override
