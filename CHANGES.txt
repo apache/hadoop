@@ -703,6 +703,9 @@ Trunk (unreleased changes)
     HADOOP-3592. Fix a couple of possible file leaks in FileUtil
     (Bill de hOra via rangadi)
 
+    HADOOP-4120. Hive interactive shell records the time taken by a 
+    query.  (Raghotham Murthy via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

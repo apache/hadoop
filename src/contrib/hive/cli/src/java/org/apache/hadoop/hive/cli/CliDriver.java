@@ -28,6 +28,9 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.Driver;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 
 public class CliDriver {
 
@@ -193,8 +196,16 @@ public class CliDriver {
     String historyFile = System.getProperty("user.home") + File.separator  + HISTORYFILE;
     reader.setHistory(new History(new File(historyFile)));
     int ret = 0;
+    Log LOG = LogFactory.getLog("CliDriver");
+    LogHelper console = new LogHelper(LOG);
     while ((line = reader.readLine(prompt+"> ")) != null) {
+      long start = System.currentTimeMillis();
       ret = processLine(line);
+      long end = System.currentTimeMillis();
+      if (end > start) {
+        double timeTaken = (double)(end-start)/1000.0;
+        console.printInfo("Time taken: " + timeTaken + " seconds", null);
+      }
     }
 
     System.exit(ret);
