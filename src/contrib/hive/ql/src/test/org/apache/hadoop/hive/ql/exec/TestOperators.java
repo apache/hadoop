@@ -22,54 +22,60 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 
-import org.apache.hadoop.hive.serde.*;
-import org.apache.hadoop.hive.serde.thrift.*;
-import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
 import org.apache.hadoop.hive.ql.plan.*;
-import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.serde.thrift.columnsetSerDe;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 
 public class TestOperators extends TestCase {
 
   // this is our row to test expressions on
-  protected HiveObject [] r;
+  protected InspectableObject [] r;
 
   protected void setUp() {
-    r = new HiveObject [5];
+    r = new InspectableObject [5];
+    ArrayList<String> names = new ArrayList<String>(3);
+    names.add("col0");
+    names.add("col1");
+    names.add("col2");
+    ArrayList<ObjectInspector> objectInspectors = new ArrayList<ObjectInspector>(3);
+    objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(String.class));
+    objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(String.class));
+    objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(String.class));
     for(int i=0; i<5; i++) {
       ArrayList<String> data = new ArrayList<String> ();
       data.add(""+i);
       data.add(""+(i+1));
       data.add(""+(i+2));
-      ColumnSet cs = new ColumnSet(data);
       try {
-        r[i] = new TableHiveObject(cs, new columnsetSerDe());
-      } catch (Exception e) {
+        r[i] = new InspectableObject();
+        r[i].o = data;
+        r[i].oi = ObjectInspectorFactory.getStandardStructObjectInspector(names, objectInspectors);
+      } catch (Throwable e) {
         throw new RuntimeException (e);
       }
     }
   }
 
-  public void testBaseFilterOperator() throws Exception {
+  public void testBaseFilterOperator() throws Throwable {
     try {
-      exprNodeDesc col0 = new exprNodeColumnDesc(String.class, "col[0]");
-      exprNodeDesc col1 = new exprNodeColumnDesc(String.class, "col[1]");
-      exprNodeDesc col2 = new exprNodeColumnDesc(String.class, "col[2]");
+      System.out.println("Testing Filter Operator");
+      exprNodeDesc col0 = new exprNodeColumnDesc(String.class, "col0");
+      exprNodeDesc col1 = new exprNodeColumnDesc(String.class, "col1");
+      exprNodeDesc col2 = new exprNodeColumnDesc(String.class, "col2");
       exprNodeDesc zero = new exprNodeConstantDesc(Number.class, Long.valueOf(0));
       exprNodeDesc func1 = SemanticAnalyzer.getFuncExprNodeDesc(">", col2, col1);
-      System.out.println("func1 = " + func1);
       exprNodeDesc func2 = SemanticAnalyzer.getFuncExprNodeDesc("==", col0, zero);
-      System.out.println("func2 = " + func2);
       exprNodeDesc func3 = SemanticAnalyzer.getFuncExprNodeDesc("&&", func1, func2); 
       assert(func3 != null);
       filterDesc filterCtx = new filterDesc(func3);
@@ -81,12 +87,14 @@ public class TestOperators extends TestCase {
       // runtime initialization
       op.initialize(null);
 
-      for(HiveObject oner: r) {
-        op.process(oner);
+      for(InspectableObject oner: r) {
+        op.process(oner.o, oner.oi);
       }
 
       Map<Enum<?>, Long> results = op.getStats();
+      System.out.println("filtered = " + results.get(FilterOperator.Counter.FILTERED));
       assertEquals(results.get(FilterOperator.Counter.FILTERED), Long.valueOf(4));
+      System.out.println("passed = " + results.get(FilterOperator.Counter.PASSED));
       assertEquals(results.get(FilterOperator.Counter.PASSED), Long.valueOf(1));
 
       /*
@@ -96,21 +104,22 @@ public class TestOperators extends TestCase {
       */
       System.out.println("Filter Operator ok");
 
-    } catch (Exception e) {
+    } catch (Throwable e) {
       e.printStackTrace();
       throw e;
     }
   }
 
-  public void testFileSinkOperator() throws Exception {
+  public void testFileSinkOperator() throws Throwable {
     try {
+      System.out.println("Testing FileSink Operator");
       // col1
-      exprNodeDesc exprDesc1 = new exprNodeColumnDesc(TypeInfo.getPrimitiveTypeInfo(String.class),
-          "col[1]");
+      exprNodeDesc exprDesc1 = new exprNodeColumnDesc(TypeInfoFactory.getPrimitiveTypeInfo(String.class),
+          "col1");
 
       // col2
       ArrayList<exprNodeDesc> exprDesc2children = new ArrayList<exprNodeDesc>();
-      exprNodeDesc expr1 = new exprNodeColumnDesc(String.class, "col[0]");
+      exprNodeDesc expr1 = new exprNodeColumnDesc(String.class, "col0");
       exprNodeDesc expr2 = new exprNodeConstantDesc("1");
       exprNodeDesc exprDesc2 = SemanticAnalyzer.getFuncExprNodeDesc("concat", expr1, expr2);
 
@@ -135,26 +144,27 @@ public class TestOperators extends TestCase {
 
       // evaluate on row
       for(int i=0; i<5; i++) {
-        op.process(r[i]);
+        op.process(r[i].o, r[i].oi);
       }
       op.close(false);
 
       System.out.println("FileSink Operator ok");
 
-    } catch (Exception e) {
+    } catch (Throwable e) {
       e.printStackTrace();
       throw e;
     }
   }
 
 
-  public void testScriptOperator() throws Exception {
+  public void testScriptOperator() throws Throwable {
     try {
+      System.out.println("Testing Script Operator");
       // col1
-      exprNodeDesc exprDesc1 = new exprNodeColumnDesc(String.class, "col[1]");
+      exprNodeDesc exprDesc1 = new exprNodeColumnDesc(String.class, "col1");
 
       // col2
-      exprNodeDesc expr1 = new exprNodeColumnDesc(String.class, "col[0]");
+      exprNodeDesc expr1 = new exprNodeColumnDesc(String.class, "col0");
       exprNodeDesc expr2 = new exprNodeConstantDesc("1");
       exprNodeDesc exprDesc2 = SemanticAnalyzer.getFuncExprNodeDesc("concat", expr1, expr2);
 
@@ -166,15 +176,10 @@ public class TestOperators extends TestCase {
       Operator<selectDesc> op = OperatorFactory.get(selectDesc.class);
       op.setConf(selectCtx);
 
-
       // scriptOperator to echo the output of the select
-      Properties p = new Properties ();
-      p.setProperty(Constants.SERIALIZATION_FORMAT, "9");
-      tableDesc td = new tableDesc(columnsetSerDe.class, 
-                                   TextInputFormat.class, 
-                                   IgnoreKeyTextOutputFormat.class,
-                                   p);
-      scriptDesc sd = new scriptDesc ("cat", td);
+      tableDesc scriptOutput = PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "a,b");
+      tableDesc scriptInput  = PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "a,b");
+      scriptDesc sd = new scriptDesc("cat", scriptOutput, scriptInput);
       Operator<scriptDesc> sop = OperatorFactory.get(scriptDesc.class);
       sop.setConf(sd);
       ArrayList<Operator<? extends Serializable>> nextScriptOp = new ArrayList<Operator<? extends Serializable>> ();
@@ -199,43 +204,48 @@ public class TestOperators extends TestCase {
 
       // evaluate on row
       for(int i=0; i<5; i++) {
-        op.process(r[i]);
+        op.process(r[i].o, r[i].oi);
       }
       op.close(false);
 
+      InspectableObject io = new InspectableObject();
       for(int i=0; i<5; i++) {
-        HiveObject ho = cdop.retrieve();
-        ColumnSet c = (ColumnSet) ho.getJavaObject();
-        //        System.out.println("Obtained:" + c.col.get(0) + "," + c.col.get(1) + " and wanted " + ""+(i+1) + "," + (i) + "1");
-        assertEquals(c.col.get(0), ""+(i+1));
-        assertEquals(c.col.get(1), (i) + "1");
+        cdop.retrieve(io);
+        System.out.println("[" + i + "] io.o=" + io.o);
+        System.out.println("[" + i + "] io.oi=" + io.oi);
+        StructObjectInspector soi = (StructObjectInspector)io.oi;
+        assert(soi != null);
+        StructField a = soi.getStructFieldRef("a");
+        StructField b = soi.getStructFieldRef("b");
+        assertEquals(""+(i+1), soi.getStructFieldData(io.o, a));
+        assertEquals((i) + "1", soi.getStructFieldData(io.o, b));
       }
 
       System.out.println("Script Operator ok");
 
-    } catch (Exception e) {
+    } catch (Throwable e) {
       e.printStackTrace();
       throw e;
     }
   }
 
-  public void testMapOperator() throws Exception {
+  public void testMapOperator() throws Throwable {
     try {
+      System.out.println("Testing Map Operator");
       // initialize configuration
       Configuration hconf = new JobConf(TestOperators.class);
       HiveConf.setVar(hconf, HiveConf.ConfVars.HADOOPMAPFILENAME, "hdfs:///testDir/testFile");
 
       // initialize pathToAliases
       ArrayList<String> aliases = new ArrayList<String> ();
-      aliases.add("a"); aliases.add("b");
+      aliases.add("a");
+      aliases.add("b");
       LinkedHashMap<String, ArrayList<String>> pathToAliases = new LinkedHashMap<String, ArrayList<String>> ();
       pathToAliases.put("/testDir", aliases);
 
       // initialize pathToTableInfo
-      tableDesc td = new tableDesc(org.apache.hadoop.hive.serde.thrift.columnsetSerDe.class, 
-                                   TextInputFormat.class, 
-                                   IgnoreKeyTextOutputFormat.class,
-                                   new Properties ());
+      // Default: treat the table as a single column "col" 
+      tableDesc td = Utilities.defaultTd;
       partitionDesc pd = new partitionDesc(td, null);
       LinkedHashMap<String,org.apache.hadoop.hive.ql.plan.partitionDesc> pathToPartitionInfo = new
         LinkedHashMap<String,org.apache.hadoop.hive.ql.plan.partitionDesc> ();
@@ -263,22 +273,25 @@ public class TestOperators extends TestCase {
       mo.initialize(hconf);
 
       Text tw = new Text();
+      InspectableObject io1 = new InspectableObject();
+      InspectableObject io2 = new InspectableObject();
       for(int i=0; i<5; i++) {
-        tw.set("" + i + "\001" + (i+1) + "\001" + (i+2));
+        String answer = "[[" + i + ", " + (i+1) + ", " + (i+2) + "]]";
+        
+        tw.set("" + i + "\u0001" + (i+1) + "\u0001"+ (i+2));
         mo.process((Writable)tw);
-        HiveObject ho1 = cdop1.retrieve();
-        HiveObject ho2 = cdop2.retrieve();
-        ColumnSet c = (ColumnSet) ho1.getJavaObject();
-        assertEquals(c.col.get(0) + "\001" + c.col.get(1) + "\001" + c.col.get(2),
-                     tw.toString());
-        c = (ColumnSet) ho2.getJavaObject();
-        assertEquals(c.col.get(0) + "\001" + c.col.get(1) + "\001" + c.col.get(2),
-                     tw.toString());
+        cdop1.retrieve(io1);
+        cdop2.retrieve(io2);
+        System.out.println("io1.o.toString() = " + io1.o.toString());
+        System.out.println("io2.o.toString() = " + io2.o.toString());
+        System.out.println("answer.toString() = " + answer.toString());
+        assertEquals(answer.toString(), io1.o.toString());
+        assertEquals(answer.toString(), io2.o.toString());
       }
 
       System.out.println("Map Operator ok");
 
-    } catch (Exception e) {
+    } catch (Throwable e) {
       e.printStackTrace();
       throw (e);
     }

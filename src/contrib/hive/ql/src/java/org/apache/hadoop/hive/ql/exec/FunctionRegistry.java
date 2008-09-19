@@ -29,8 +29,8 @@ import java.util.Map;
 import java.lang.Void;
 
 import org.apache.hadoop.hive.ql.exec.FunctionInfo.OperatorType;
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
 import org.apache.hadoop.hive.ql.udf.*;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 
 public class FunctionRegistry {
 
@@ -252,7 +252,7 @@ public class FunctionRegistry {
 
         for(int i=0; i<argumentClasses.size() && match; i++) {
           if (argumentClasses.get(i) == Void.class) continue;
-          Class<?> accepted = TypeInfo.generalizePrimitive(argumentTypeInfos[i]);
+          Class<?> accepted = ObjectInspectorUtils.generalizePrimitive(argumentTypeInfos[i]);
           if (accepted.isAssignableFrom(argumentClasses.get(i))) {
             // do nothing if match
           } else if (!exact && implicitConvertable(argumentClasses.get(i), accepted)) {

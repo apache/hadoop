@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
 
 public class exprNodeFieldDesc extends exprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;

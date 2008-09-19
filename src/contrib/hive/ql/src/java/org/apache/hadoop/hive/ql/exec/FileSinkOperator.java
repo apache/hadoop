@@ -23,16 +23,14 @@ import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.util.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.fileSinkDesc;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
-import org.apache.hadoop.hive.serde.SerDe;
-import org.apache.hadoop.hive.serde.SerDeException;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.Serializer;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 /**
  * File Sink operator implementation
@@ -49,7 +47,7 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
   transient protected FileSystem fs;
   transient protected Path outPath;
   transient protected Path finalPath;
-  transient protected SerDe serDe;
+  transient protected Serializer serializer;
   transient protected BytesWritable commonKey = new BytesWritable();
   
   private void commit() throws IOException {
@@ -79,13 +77,31 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     try {
+      serializer = (Serializer)conf.getTableInfo().getDeserializerClass().newInstance();
+      serializer.initialize(null, conf.getTableInfo().getProperties());
+      
+      JobConf jc;
+      if(hconf instanceof JobConf) {
+        jc = (JobConf)hconf;
+      } else {
+        // test code path
+        jc = new JobConf(hconf, ExecDriver.class);
+      }
+
       fs = FileSystem.get(hconf);
       finalPath = new Path(conf.getDirName(), Utilities.getTaskId(hconf));
       outPath = new Path(conf.getDirName(), "_tmp."+Utilities.getTaskId(hconf));
-      OutputFormat outputFormat = conf.getTableInfo().getOutputFileFormatClass().newInstance();
+      OutputFormat<?, ?> outputFormat = conf.getTableInfo().getOutputFileFormatClass().newInstance();
+      final Class<? extends Writable> outputClass = serializer.getSerializedClass();
+      boolean isCompressed = FileOutputFormat.getCompressOutput(jc);
 
+      // The reason to keep these instead of using OutputFormat.getRecordWriter() is that
+      // getRecordWriter does not give us enough control over the file name that we create.
       if(outputFormat instanceof IgnoreKeyTextOutputFormat) {
-        final FSDataOutputStream outStream = fs.create(outPath);
+        if(isCompressed) {
+          finalPath = new Path(conf.getDirName(), Utilities.getTaskId(hconf) + ".gz");
+        }
+        final OutputStream outStream = Utilities.createCompressedStream(jc, fs.create(outPath));
         outWriter = new RecordWriter () {
             public void write(Writable r) throws IOException {
               Text tr = (Text)r;
@@ -98,7 +114,7 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
           };
       } else if (outputFormat instanceof SequenceFileOutputFormat) {
         final SequenceFile.Writer outStream =
-          SequenceFile.createWriter(fs, hconf, outPath, BytesWritable.class, Text.class);
+            Utilities.createSequenceWriter(jc, fs, outPath, BytesWritable.class, outputClass);
         outWriter = new RecordWriter () {
             public void write(Writable r) throws IOException {
               outStream.append(commonKey, r);
@@ -109,20 +125,22 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
           };
       } else {
         // should never come here - we should be catching this in ddl command
-        assert(false);
+        throw new HiveException ("Illegal outputformat: " + outputFormat.getClass().getName());
       }
-      serDe = conf.getTableInfo().getSerdeClass().newInstance();
+    } catch (HiveException e) {
+      throw e;
     } catch (Exception e) {
       e.printStackTrace();
       throw new HiveException(e);
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
+  Writable recordValue; 
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
     try {
       // user SerDe to serialize r, and write it out
-      Writable value = serDe.serialize(r.getJavaObject());
-      outWriter.write(value);
+      recordValue = serializer.serialize(row, rowInspector);
+      outWriter.write(recordValue);
     } catch (IOException e) {
       throw new HiveException (e);
     } catch (SerDeException e) {

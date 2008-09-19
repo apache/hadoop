@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.RowSchema;
-import org.apache.hadoop.hive.serde.ExpressionUtils;
 
 /**
  * Implementation of the Row Resolver
@@ -51,6 +50,7 @@ public class RowResolver {
   }
   
   public void put(String tab_alias, String col_alias, ColumnInfo colInfo) {
+    col_alias = col_alias.toLowerCase();
     if (rowSchema.getSignature() == null) {
       rowSchema.setSignature(new Vector<ColumnInfo>());
     }
@@ -75,34 +75,14 @@ public class RowResolver {
   }
 
   public ColumnInfo get(String tab_alias, String col_alias) {
+    col_alias = col_alias.toLowerCase();
     HashMap<String, ColumnInfo> f_map = rslvMap.get(tab_alias);
     if (f_map == null) {
       return null;
     }
-    ColumnInfo resInfo = f_map.get(col_alias.toLowerCase());
-    if(resInfo == null) {
-      // case insensitive search on column names but ANTLR Tokens are upppercase
-      // TODO: need to fix this in a better way
-      resInfo = f_map.get(col_alias);
-    }
-    if (resInfo == null) {
-      List<String> exprs = ExpressionUtils.decomposeComplexExpression(col_alias);
-      // Is this a complex field?
-      if (exprs.size() == 2) {
-        String topLevelField = exprs.get(0);
-        String suffix = exprs.get(1);
-        ColumnInfo info = f_map.get(topLevelField.toLowerCase());
-        if(info == null) {
-          info = f_map.get(topLevelField);
-        }
-        resInfo = new ColumnInfo(info.getInternalName() + suffix, 
-                                 info.getType().getFieldType(suffix),
-                                 info.getIsVirtual());
-      }
-    }
-    return resInfo; 
+    return f_map.get(col_alias);
   }
-   
+
   public Vector<ColumnInfo> getColumnInfos() {
     return rowSchema.getSignature();
   }

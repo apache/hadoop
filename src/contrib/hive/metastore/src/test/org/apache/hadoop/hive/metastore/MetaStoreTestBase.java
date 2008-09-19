@@ -101,7 +101,7 @@ public class MetaStoreTestBase extends TestCase {
     Properties schema = new Properties();
     schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_NAME,name);
     schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_DB, db);
-    schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_SERDE, org.apache.hadoop.hive.metastore.api.Constants.META_SERDE);
+    //schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_SERDE, org.apache.hadoop.hive.metastore.api.Constants.META_SERDE);
     schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_COLUMNS, "foo,bar");
     schema.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT,"\t");
     //Path tPath = whRoot_.suffix("/" + db + ".db/" + name);

@@ -21,7 +21,8 @@ package org.apache.hadoop.hive.ql.exec;
 import java.lang.Class;
 import java.io.*;
 
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 
 /**
  * Implementation for ColumnInfo which contains the internal name for the 
@@ -55,7 +56,7 @@ public class ColumnInfo implements Serializable {
   
   public ColumnInfo(String internalName, Class type, boolean isVirtual) {
     this.internalName = internalName;
-    this.type = TypeInfo.getPrimitiveTypeInfo(type);
+    this.type = TypeInfoFactory.getPrimitiveTypeInfo(type);
     this.isVirtual = isVirtual;
   }
   

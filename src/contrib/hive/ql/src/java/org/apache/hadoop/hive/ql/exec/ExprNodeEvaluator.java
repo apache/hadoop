@@ -19,16 +19,21 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 public abstract class ExprNodeEvaluator {
-  /**
-   * @return plain old java object
-   **/
-  public abstract Object evaluateToObject(HiveObject row) throws HiveException;
 
   /**
-   * @return encapsulated Hive Object
-   **/
-  public abstract HiveObject evaluate(HiveObject row) throws HiveException;
-  
+   * Evaluate the expression given the row and rowInspector. 
+   * @param result   result.o and result.oi will be set inside the method.
+   */
+  public abstract void evaluate(Object row, ObjectInspector rowInspector, InspectableObject result) throws HiveException;
+
+  /**
+   * Metadata evaluation. Return the inspector for the expression, given the rowInspector.
+   * This method must return the same value as result.oi in evaluate(...) call with the same rowInspector.   
+   */
+  public abstract ObjectInspector evaluateInspector(ObjectInspector rowInspector) throws HiveException;
+
 }

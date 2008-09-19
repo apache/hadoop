@@ -1,108 +1,110 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_RIGHTOUTERJOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src src1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src1 key) c1) (TOK_SELEXPR (TOK_COLREF src1 value) c2)) (TOK_WHERE (and (> (TOK_COLREF src1 key) 10) (< (TOK_COLREF src1 key) 20))))) a) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src src2)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src2 key) c3) (TOK_SELEXPR (TOK_COLREF src2 value) c4)) (TOK_WHERE (and (> (TOK_COLREF src2 key) 15) (< (TOK_COLREF src2 key) 25))))) b) (= (TOK_COLREF a c1) (TOK_COLREF b c3)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF a c1) c1) (TOK_SELEXPR (TOK_COLREF a c2) c2) (TOK_SELEXPR (TOK_COLREF b c3) c3) (TOK_SELEXPR (TOK_COLREF b c4) c4)))) c)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF c c1)) (TOK_SELEXPR (TOK_COLREF c c2)) (TOK_SELEXPR (TOK_COLREF c c3)) (TOK_SELEXPR (TOK_COLREF c c4)))))	
-	
-STAGE DEPENDENCIES:	
-  Stage-1 is a root stage	
-  Stage-0 depends on stages: Stage-1	
-	
-STAGE PLANS:	
-  Stage: Stage-1	
-    Map Reduce	
-      Reduce Operator Tree:	
-        Join Operator	
-          condition expressions:	
-            0 {VALUE.0} {VALUE.1}	
-            1 {VALUE.0} {VALUE.1}	
-          condition map:	
-               Right Outer Join0 to 1	
-          Select Operator	
-            expressions:	
-                  expr: 0	
-                  type: class java.lang.String	
-                  expr: 1	
-                  type: class java.lang.String	
-                  expr: 2	
-                  type: class java.lang.String	
-                  expr: 3	
-                  type: class java.lang.String	
-            Select Operator	
-              expressions:	
-                    expr: 0	
-                    type: class java.lang.String	
-                    expr: 1	
-                    type: class java.lang.String	
-                    expr: 2	
-                    type: class java.lang.String	
-                    expr: 3	
-                    type: class java.lang.String	
-              File Output Operator	
-                table:	
-                    name: dest1	
-                    serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                    input format: org.apache.hadoop.mapred.TextInputFormat	
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-      Alias -> Map Operator Tree:	
-        c:b:src2 	
-            Filter Operator	
-              predicate:	
-                  expr: ((key > 15) and (key < 25))	
-                  type: class java.lang.Boolean	
-              Select Operator	
-                expressions:	
-                      expr: key	
-                      type: class java.lang.String	
-                      expr: value	
-                      type: class java.lang.String	
-                Reduce Output Operator	
-                  tag: 1	
-                  key expressions:	
-                        expr: 0	
-                        type: class java.lang.String	
-                  value expressions:	
-                        expr: 0	
-                        type: class java.lang.String	
-                        expr: 1	
-                        type: class java.lang.String	
-                  # partition fields: 1	
-        c:a:src1 	
-            Filter Operator	
-              predicate:	
-                  expr: ((key > 10) and (key < 20))	
-                  type: class java.lang.Boolean	
-              Select Operator	
-                expressions:	
-                      expr: key	
-                      type: class java.lang.String	
-                      expr: value	
-                      type: class java.lang.String	
-                Reduce Output Operator	
-                  tag: 0	
-                  key expressions:	
-                        expr: 0	
-                        type: class java.lang.String	
-                  value expressions:	
-                        expr: 0	
-                        type: class java.lang.String	
-                        expr: 1	
-                        type: class java.lang.String	
-                  # partition fields: 1	
-	
-  Stage: Stage-0	
-    Move Operator	
-      tables:	
-            table:	
-                name: dest1	
-                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                input format: org.apache.hadoop.mapred.TextInputFormat	
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-            replace:	
-	
-17	val_17	17	val_17	
-18	val_18	18	val_18	
-18	val_18	18	val_18	
-18	val_18	18	val_18	
-18	val_18	18	val_18	
-19	val_19	19	val_19	
-NULL	NULL	20	val_20	
-NULL	NULL	24	val_24	
-NULL	NULL	24	val_24	
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_RIGHTOUTERJOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src src1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src1 key) c1) (TOK_SELEXPR (TOK_COLREF src1 value) c2)) (TOK_WHERE (and (> (TOK_COLREF src1 key) 10) (< (TOK_COLREF src1 key) 20))))) a) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src src2)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src2 key) c3) (TOK_SELEXPR (TOK_COLREF src2 value) c4)) (TOK_WHERE (and (> (TOK_COLREF src2 key) 15) (< (TOK_COLREF src2 key) 25))))) b) (= (TOK_COLREF a c1) (TOK_COLREF b c3)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF a c1) c1) (TOK_SELEXPR (TOK_COLREF a c2) c2) (TOK_SELEXPR (TOK_COLREF b c3) c3) (TOK_SELEXPR (TOK_COLREF b c4) c4)))) c)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF c c1)) (TOK_SELEXPR (TOK_COLREF c c2)) (TOK_SELEXPR (TOK_COLREF c c3)) (TOK_SELEXPR (TOK_COLREF c c4)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Reduce Operator Tree:
+        Join Operator
+          condition expressions:
+            0 {VALUE.0} {VALUE.1}
+            1 {VALUE.0} {VALUE.1}
+          condition map:
+               Right Outer Join0 to 1
+          Select Operator
+            expressions:
+                  expr: 0
+                  type: string
+                  expr: 1
+                  type: string
+                  expr: 2
+                  type: string
+                  expr: 3
+                  type: string
+            Select Operator
+              expressions:
+                    expr: 0
+                    type: string
+                    expr: 1
+                    type: string
+                    expr: 2
+                    type: string
+                    expr: 3
+                    type: string
+              File Output Operator
+                table:
+                    name: dest1
+                    serde: simple_meta
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+      Alias -> Map Operator Tree:
+        c:b:src2 
+            Filter Operator
+              predicate:
+                  expr: ((key > 15) and (key < 25))
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                Reduce Output Operator
+                  tag: 1
+                  key expressions:
+                        expr: 0
+                        type: string
+                  value expressions:
+                        expr: 0
+                        type: string
+                        expr: 1
+                        type: string
+                  # partition fields: 1
+        c:a:src1 
+            Filter Operator
+              predicate:
+                  expr: ((key > 10) and (key < 20))
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                Reduce Output Operator
+                  tag: 0
+                  key expressions:
+                        expr: 0
+                        type: string
+                  value expressions:
+                        expr: 0
+                        type: string
+                        expr: 1
+                        type: string
+                  # partition fields: 1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            table:
+                name: dest1
+                serde: simple_meta
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+            replace:
+
+
+17	val_17	17	val_17
+18	val_18	18	val_18
+18	val_18	18	val_18
+18	val_18	18	val_18
+18	val_18	18	val_18
+19	val_19	19	val_19
+NULL	NULL	20	val_20
+NULL	NULL	24	val_24
+NULL	NULL	24	val_24
+

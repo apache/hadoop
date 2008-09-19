@@ -36,11 +36,13 @@ import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.OperatorFactory;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
 import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
-import org.apache.hadoop.hive.ql.plan.*;
 import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
+import org.apache.hadoop.hive.ql.plan.*;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 
-import org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe;
+import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 
 
 /**
@@ -145,11 +147,11 @@ public class TestExecDriver extends TestCase {
 
   private filterDesc getTestFilterDesc(String column) {
     ArrayList<exprNodeDesc> children = new ArrayList<exprNodeDesc>();
-    children.add(new exprNodeColumnDesc(TypeInfo.getPrimitiveTypeInfo(String.class), column));
-    children.add(new exprNodeConstantDesc(TypeInfo.getPrimitiveTypeInfo(Number.class), Long.valueOf(100)));
+    children.add(new exprNodeColumnDesc(TypeInfoFactory.getPrimitiveTypeInfo(String.class), column));
+    children.add(new exprNodeConstantDesc(TypeInfoFactory.getPrimitiveTypeInfo(Number.class), Long.valueOf(100)));
 
     exprNodeDesc desc = new exprNodeFuncDesc(
-        TypeInfo.getPrimitiveTypeInfo(Boolean.class),
+        TypeInfoFactory.getPrimitiveTypeInfo(Boolean.class),
         FunctionRegistry.getUDFClass("<"),
         FunctionRegistry.getUDFMethod("<", true, String.class, Number.class),
         children
@@ -181,10 +183,8 @@ public class TestExecDriver extends TestCase {
 
     Operator<scriptDesc> op2 = OperatorFactory.get
       (new scriptDesc("/bin/cat",
-                      new tableDesc(MetadataTypedColumnsetSerDe.class,
-                                    null, null,
-                                    Utilities.makeProperties("serialization.format", "9",
-                                                             "columns", "key,value"))),
+          PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "key,value"),
+          PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "key,value")),
        op3);
 
 
@@ -201,7 +201,7 @@ public class TestExecDriver extends TestCase {
 
     // map-side work
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "value")),
         1));
@@ -225,7 +225,7 @@ public class TestExecDriver extends TestCase {
 
     // map-side work
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "key"),
                            new exprNodeColumnDesc(String.class, "value")),
@@ -257,7 +257,7 @@ public class TestExecDriver extends TestCase {
 
     // map-side work
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList
         (new exprNodeColumnDesc(String.class, "value")), Byte.valueOf((byte)0),
@@ -266,7 +266,7 @@ public class TestExecDriver extends TestCase {
     Utilities.addMapWork(mr, src, "a", op1);
 
     Operator<reduceSinkDesc> op2 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Byte.valueOf((byte)1),
@@ -287,7 +287,11 @@ public class TestExecDriver extends TestCase {
       (new selectDesc
        (Utilities.makeList
         (new exprNodeColumnDesc(String.class, Utilities.ReduceField.ALIAS.toString()),
-         new exprNodeColumnDesc(String.class, Utilities.ReduceField.VALUE.toString() + ".0"))), op4);
+         new exprNodeFieldDesc(TypeInfoFactory.getPrimitiveTypeInfo(String.class),
+             new exprNodeColumnDesc(TypeInfoFactory.getListTypeInfo(
+                 TypeInfoFactory.getPrimitiveTypeInfo(String.class)),
+                 Utilities.ReduceField.VALUE.toString()),
+             "0"))), op4);
 
     mr.setReducer(op5);
   }
@@ -299,19 +303,17 @@ public class TestExecDriver extends TestCase {
     // map-side work
 
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey"),
                            new exprNodeColumnDesc(String.class, "tvalue")),
         1));
 
     Operator<scriptDesc> op0 = OperatorFactory.get
-      (new scriptDesc("\'/bin/cat\'",
-                      new tableDesc(MetadataTypedColumnsetSerDe.class,
-                                    TextInputFormat.class, 
-                                    IgnoreKeyTextOutputFormat.class,
-                                    Utilities.makeProperties("serialization.format", "9",
-                                                             "columns", "tkey,tvalue"))), op1);
+    (new scriptDesc("/bin/cat",
+        PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "tkey,tvalue"),
+        PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "key,value")),
+     op1);
 
     Operator<selectDesc> op4 = OperatorFactory.get(new selectDesc(
                                      Utilities.makeList(new exprNodeColumnDesc(String.class, "key"),
@@ -337,7 +339,7 @@ public class TestExecDriver extends TestCase {
     // map-side work
 
     Operator<reduceSinkDesc> op0 = OperatorFactory.get
-      (new reduceSinkDesc
+      (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "0")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "0"),
                            new exprNodeColumnDesc(String.class, "1")),
@@ -367,19 +369,17 @@ public class TestExecDriver extends TestCase {
     // map-side work
 
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
-      (new reduceSinkDesc
-       (Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey")),
+      (PlanUtils.getReduceSinkDesc(
+        Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey"),
                            new exprNodeColumnDesc(String.class, "tvalue")),
-       1));
+        1));
 
     Operator<scriptDesc> op0 = OperatorFactory.get
       (new scriptDesc("\'/bin/cat\'",
-                      new tableDesc(org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe.class,
-                                    TextInputFormat.class, 
-                                    IgnoreKeyTextOutputFormat.class,
-                                    Utilities.makeProperties("serialization.format", "9",
-                                                             "columns", "tkey,tvalue"))), op1);
+          PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "tkey,tvalue"),
+          PlanUtils.getDefaultTableDesc("" + Utilities.tabCode, "tkey,tvalue")),
+       op1);
 
     Operator<selectDesc> op4 = OperatorFactory.get(new selectDesc(
                                      Utilities.makeList(new exprNodeColumnDesc(String.class, "key"),

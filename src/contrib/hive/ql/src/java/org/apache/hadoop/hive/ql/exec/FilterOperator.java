@@ -23,6 +23,8 @@ import java.io.*;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.hive.ql.plan.filterDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -33,18 +35,20 @@ public class FilterOperator extends Operator <filterDesc> implements Serializabl
   private static final long serialVersionUID = 1L;
   public static enum Counter {FILTERED, PASSED}
   transient private final LongWritable filtered_count, passed_count;
-  transient private ExprNodeEvaluator eval;
-
+  transient private ExprNodeEvaluator conditionEvaluator;
+  transient private InspectableObject conditionInspectableObject;  
+  
   public FilterOperator () {
     super();
     filtered_count = new LongWritable();
     passed_count = new LongWritable();
+    conditionInspectableObject = new InspectableObject();
   }
 
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     try {
-      this.eval = ExprNodeEvaluatorFactory.get(conf.getPredicate());
+      this.conditionEvaluator = ExprNodeEvaluatorFactory.get(conf.getPredicate());
       statsMap.put(Counter.FILTERED, filtered_count);
       statsMap.put(Counter.PASSED, passed_count);
     } catch (Throwable e) {
@@ -53,11 +57,12 @@ public class FilterOperator extends Operator <filterDesc> implements Serializabl
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
     try {
-      Boolean ret = (Boolean)(eval.evaluateToObject(r));
+      conditionEvaluator.evaluate(row, rowInspector, conditionInspectableObject);
+      Boolean ret = (Boolean)(conditionInspectableObject.o);
       if (Boolean.TRUE.equals(ret)) {
-        forward(r);
+        forward(row, rowInspector);
         passed_count.set(passed_count.get()+1);
       } else {
         filtered_count.set(filtered_count.get()+1);
@@ -65,9 +70,7 @@ public class FilterOperator extends Operator <filterDesc> implements Serializabl
     } catch (ClassCastException e) {
       e.printStackTrace();
       throw new HiveException("Non Boolean return Object type: " +
-                              eval.evaluateToObject(r).getClass().getName());
-    } catch (NullPointerException e) {
-      throw new HiveException("NullPointerException in FilterOperator ", e);
+          conditionInspectableObject.o.getClass().getName());
     }
   }
 }

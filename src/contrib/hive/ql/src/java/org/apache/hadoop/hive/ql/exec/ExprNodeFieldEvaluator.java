@@ -20,29 +20,59 @@ package org.apache.hadoop.hive.ql.exec;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeFieldDesc;
-import org.apache.hadoop.hive.serde.SerDeField;
+
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 
 public class ExprNodeFieldEvaluator extends ExprNodeEvaluator {
 
   protected exprNodeFieldDesc desc;
-  transient ExprNodeEvaluator evaluator;
-  transient SerDeField field;
+  transient ExprNodeEvaluator leftEvaluator;
+  transient InspectableObject leftInspectableObject;
+  transient StructObjectInspector cachedLeftObjectInspector;
+  transient StructField field;
+  transient ObjectInspector fieldObjectInspector;
   
   public ExprNodeFieldEvaluator(exprNodeFieldDesc desc) {
     this.desc = desc;
-    evaluator = ExprNodeEvaluatorFactory.get(desc.getDesc());
+    leftEvaluator = ExprNodeEvaluatorFactory.get(desc.getDesc());
+    field = null;
+    leftInspectableObject = new InspectableObject();
   }
 
+  public void evaluate(Object row, ObjectInspector rowInspector,
+      InspectableObject result) throws HiveException {
+    
+    assert(result != null);
+    // Get the result in leftInspectableObject
+    leftEvaluator.evaluate(row, rowInspector, leftInspectableObject);
 
-  public Object evaluateToObject(HiveObject row)  throws HiveException {
-    return evaluate(row).getJavaObject();
-  }
-
-  public HiveObject evaluate(HiveObject row) throws HiveException {
-    HiveObject ho = evaluator.evaluate(row);
     if (field == null) {
-      field = ho.getFieldFromExpression(desc.getFieldName());
+      cachedLeftObjectInspector = (StructObjectInspector)leftInspectableObject.oi;
+      field = cachedLeftObjectInspector.getStructFieldRef(desc.getFieldName());
+      fieldObjectInspector = field.getFieldObjectInspector();
+    } else {
+      assert(cachedLeftObjectInspector == leftInspectableObject.oi);
     }
-    return ho.get(field);
+    result.oi = fieldObjectInspector;
+    result.o = cachedLeftObjectInspector.getStructFieldData(leftInspectableObject.o, field); 
   }
+
+  public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
+      throws HiveException {
+    // If this is the first row, or the dynamic structure of the evaluatorInspectableObject 
+    // is different from the previous row 
+    leftInspectableObject.oi = leftEvaluator.evaluateInspector(rowInspector);
+    if (field == null) {
+      cachedLeftObjectInspector = (StructObjectInspector)leftInspectableObject.oi;
+      field = cachedLeftObjectInspector.getStructFieldRef(desc.getFieldName());
+      fieldObjectInspector = field.getFieldObjectInspector();
+    } else {
+      assert(cachedLeftObjectInspector == leftInspectableObject.oi);      
+    }
+    return fieldObjectInspector;
+  }
+
 }

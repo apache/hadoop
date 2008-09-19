@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Map.Entry;
 
@@ -140,28 +141,31 @@ public class ObjectStore implements RawStore, Configurable {
     URL url= classLoader.getResource(JPOX_CONFIG);
     prop = new Properties();
     if (url == null) {
-      LOG.info(JPOX_CONFIG + " not found");
-      //throw new RuntimeException("Properties file not found " + JPOX_CONFIG);
+      LOG.info(JPOX_CONFIG + " not found.");
     } else {
       LOG.info("found resource " + JPOX_CONFIG + " at " + url);
       try {
         InputStream is = url.openStream();
         if (is == null) {
-          throw new RuntimeException("Properties file not found " + JPOX_CONFIG);
+          throw new RuntimeException("Properties file " + url + " couldn't be opened");
         }
-
         prop.load(is);
       } catch (IOException ex) {
         throw new RuntimeException("could not load: " + JPOX_CONFIG, ex);
       }
     }
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_CONNECTION_URL);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_CONNECTION_DRIVER_NAME);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_CONNECTION_USER_NAME);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_CONNECTION_PASSWORD);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_NONTRANSACTIONAL_READ);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_DETACH_ALL_ON_COMMIT);
-    addHiveConfProperty(javax.jdo.Constants.PROPERTY_PERSISTENCE_MANAGER_FACTORY_CLASS);
+    
+    Iterator<Map.Entry<String, String>> iter = hiveConf.iterator();
+    while(iter.hasNext()) {
+      Map.Entry<String, String> e = iter.next();
+      if(e.getKey().contains("jpox") || e.getKey().contains("jdo")) {
+        Object prevVal = prop.setProperty(e.getKey(), e.getValue());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Overriding " + e.getKey() + " value " + prevVal 
+              + " from  jpox.properties with " + e.getValue());
+        }
+      }
+    }
 
     if(LOG.isDebugEnabled()) {
       for (Entry<Object, Object> e: prop.entrySet()) {
@@ -170,15 +174,6 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
-  /**
-   * Overwrites the default jpox.properties attribute with what is specified in hive-default.xml
-   */
-  private void addHiveConfProperty(String param) {
-    String val = null;
-    if( (val=hiveConf.get(param)) != null) {
-      prop.setProperty(param, val);
-    }
-  }
   private static PersistenceManagerFactory getPMF() {
     if(pmf == null) {
       pmf = JDOHelper.getPersistenceManagerFactory(prop);
@@ -232,7 +227,7 @@ public class ObjectStore implements RawStore, Configurable {
    */
   @SuppressWarnings("nls")
   public boolean commitTransaction() {
-    assert(this.openTrasactionCalls > 1);
+    assert(this.openTrasactionCalls >= 1);
     if(!currentTransaction.isActive()) {
       throw new RuntimeException("Commit is called, but transaction is not active. Either there are" +
           "mismatching open and close calls or rollback was called in the same trasaction");
@@ -259,8 +254,10 @@ public class ObjectStore implements RawStore, Configurable {
    * Rolls back the current transaction if it is active
    */
   public void rollbackTransaction() {
-    assert(this.openTrasactionCalls > 1);
-    this.openTrasactionCalls--;
+    if(this.openTrasactionCalls < 1) {
+      return;
+    }
+    this.openTrasactionCalls = 0;
     if(currentTransaction.isActive() && transactionStatus != TXN_STATUS.ROLLBACK) {
       transactionStatus = TXN_STATUS.ROLLBACK;
        // could already be rolled back
@@ -271,7 +268,7 @@ public class ObjectStore implements RawStore, Configurable {
   public boolean createDatabase(Database db) {
     boolean success = false;
     boolean commited = false;
-    MDatabase mdb = new MDatabase(db.getName().toLowerCase(), db.getLocationUri());
+    MDatabase mdb = new MDatabase(db.getName().toLowerCase(), db.getDescription());
     try {
       openTransaction();
       pm.makePersistent(mdb);
@@ -326,7 +323,7 @@ public class ObjectStore implements RawStore, Configurable {
         rollbackTransaction();
       }
     }
-    return new Database(db.getName(), db.getLocation());
+    return new Database(db.getName(), db.getDescription());
   }
 
   public boolean dropDatabase(String dbname) {
@@ -587,10 +584,10 @@ public class ObjectStore implements RawStore, Configurable {
     if(tbl == null) return null;
     MDatabase mdb = null;
     try {
-      mdb = this.getMDatabase(tbl.getDatabase());
+      mdb = this.getMDatabase(tbl.getDbName());
     } catch (NoSuchObjectException e) {
       LOG.error(StringUtils.stringifyException(e));
-      throw new InvalidObjectException("Database " + tbl.getDatabase() + " doesn't exsit.");
+      throw new InvalidObjectException("Database " + tbl.getDbName() + " doesn't exsit.");
     }
     return new MTable(tbl.getTableName().toLowerCase(),
         mdb,
@@ -650,26 +647,14 @@ public class ObjectStore implements RawStore, Configurable {
   private SerDeInfo converToSerDeInfo(MSerDeInfo ms) throws MetaException {
    if(ms == null) throw new MetaException("Invalid SerDeInfo object");
    return new SerDeInfo(ms.getName(),
-       ms.getSerializationFormat(),
-       ms.getSerializationClass(),
        ms.getSerializationLib(),
-       ms.getFieldDelim(),
-       ms.getCollectionItemDelim(),
-       ms.getMapKeyDelim(),
-       ms.getLineDelim(),
        ms.getParameters()); 
   }
   
   private MSerDeInfo converToMSerDeInfo(SerDeInfo ms) throws MetaException {
     if(ms == null) throw new MetaException("Invalid SerDeInfo object");
     return new MSerDeInfo(ms.getName(),
-        ms.getSerializationFormat(),
-        ms.getSerializationClass(),
         ms.getSerializationLib(),
-        ms.getFieldDelim(),
-        ms.getCollectionItemDelim(),
-        ms.getMapKeyDelim(),
-        ms.getLineDelim(),
         ms.getParameters()); 
    }
   
@@ -697,7 +682,7 @@ public class ObjectStore implements RawStore, Configurable {
         sd.getLocation(),
         sd.getInputFormat(),
         sd.getOutputFormat(),
-        sd.isIsCompressed(),
+        sd.isCompressed(),
         sd.getNumBuckets(),
         converToMSerDeInfo(sd.getSerdeInfo()),
         sd.getBucketCols(),
@@ -762,7 +747,7 @@ public class ObjectStore implements RawStore, Configurable {
     if(part == null) {
       return null;
     }
-    MTable mt = getMTable(part.getDatabase(), part.getTableName());
+    MTable mt = getMTable(part.getDbName(), part.getTableName());
     if(mt == null) {
       throw new InvalidObjectException("Partition doesn't have a valid table or database name");
     }
@@ -822,6 +807,34 @@ public class ObjectStore implements RawStore, Configurable {
     return parts;
   }
 
+
+  //TODO:pc implement max
+  public List<String> listPartitionNames(String dbName, String tableName, short max) throws MetaException {
+    List<String> pns = new ArrayList<String>();
+    boolean success = false;
+    try {
+      openTransaction();
+      LOG.debug("Executing getPartitionNames");
+      dbName = dbName.toLowerCase();
+      tableName = tableName.toLowerCase();
+      Query q = pm.newQuery("select partitionName from org.apache.hadoop.hive.metastore.model.MPartition where table.database.name == t1 && table.tableName == t2");
+      q.declareParameters("java.lang.String t1, java.lang.String t2");
+      q.setResult("partitionName");
+      Collection names = (Collection) q.execute(dbName.trim(), tableName.trim());
+      pns = new ArrayList<String>(); 
+      for (Iterator i = names.iterator (); i.hasNext ();) {
+          pns.add((String) i.next ()); 
+      }
+      success = commitTransaction();
+    } finally {
+      if(!success) {
+        rollbackTransaction();
+        success = false;
+      }
+    }
+    return pns;
+  }
+  
   // TODO:pc implement max
   private List<MPartition> listMPartitions(String dbName, String tableName, int max) {
     boolean success = false;
@@ -853,11 +866,11 @@ public class ObjectStore implements RawStore, Configurable {
       openTransaction();
       name = name.toLowerCase();
       dbname = dbname.toLowerCase();
-      MTable newt = this.getMTable(newTable.getDatabase(), newTable.getTableName());
+      MTable newt = this.getMTable(newTable.getDbName(), newTable.getTableName());
       if(newt != null) {
-        if(!newTable.getTableName().equals(name) || !newTable.getDatabase().equals(dbname)) {
+        if(!newTable.getTableName().equals(name) || !newTable.getDbName().equals(dbname)) {
           // if the old table and new table aren't the same
-          throw new InvalidObjectException("new table " + newTable.getDatabase() +" already exists");
+          throw new InvalidObjectException("new table " + newTable.getDbName() +" already exists");
         }
       }
       newt = convertToMTable(newTable);

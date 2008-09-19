@@ -1,43 +1,45 @@
-a	int	
-b	float	
-a	array<int>	
-b	float	
-c	map<float,int>	
-src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test3a	test3b	
-ABSTRACT SYNTAX TREE:	
-  (TOK_ALTERTABLE_ADDCOLS TEST3b (TOK_TABCOLLIST (TOK_TABCOL X TOK_FLOAT)))	
-	
-STAGE DEPENDENCIES:	
-  Stage-0 is a root stage	
-	
-STAGE PLANS:	
-  Stage: Stage-0	
-    	
-      Alter Table	
-        old name: TEST3b	
-        type: add columns	
-        new columns: a array<int>, b float, c map<float,int>, X float	
-	
-a	array<int>	
-b	float	
-c	map<float,int>	
-x	float	
-ABSTRACT SYNTAX TREE:	
-  (TOK_ALTERTABLE_RENAME TEST3b TEST3c)	
-	
-STAGE DEPENDENCIES:	
-  Stage-0 is a root stage	
-	
-STAGE PLANS:	
-  Stage: Stage-0	
-    	
-      Alter Table	
-        old name: TEST3b	
-        new name: TEST3c	
-        type: rename	
-	
-a	array<int>	
-b	float	
-c	map<float,int>	
-x	float	
-src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test3a	test3c	
+a	int
+b	float
+a	array<int>
+b	float
+c	map<float,int>
+src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test3a	test3b
+ABSTRACT SYNTAX TREE:
+  (TOK_ALTERTABLE_ADDCOLS TEST3b (TOK_TABCOLLIST (TOK_TABCOL X TOK_FLOAT)))
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+      Alter Table Operator:
+        Alter Table
+          old name: TEST3b
+          type: add columns
+          new columns: a array<int>, b float, c map<float,int>, X float
+
+
+a	array<int>
+b	float
+c	map<float,int>
+x	float
+ABSTRACT SYNTAX TREE:
+  (TOK_ALTERTABLE_RENAME TEST3b TEST3c)
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+      Alter Table Operator:
+        Alter Table
+          old name: TEST3b
+          new name: TEST3c
+          type: rename
+
+
+a	array<int>
+b	float
+c	map<float,int>
+x	float
+src	src1	src_sequencefile	src_thrift	srcbucket	srcpart	test3a	test3c

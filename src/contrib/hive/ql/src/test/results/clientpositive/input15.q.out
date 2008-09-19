@@ -1,18 +1,20 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_CREATETABLE TEST15 (TOK_TABCOLLIST (TOK_TABCOL key TOK_INT) (TOK_TABCOL value TOK_STRING)) (TOK_TABLEROWFORMAT (TOK_TABLEROWFORMATFIELD '\t')))	
-	
-STAGE DEPENDENCIES:	
-  Stage-0 is a root stage	
-	
-STAGE PLANS:	
-  Stage: Stage-0	
-      Create Table Operator:	
-        Create Table	
-          isExternal:	
-          name: TEST15	
-          field delimiter: 		
-          isCompressed:	
-          # buckets: -1	
-          columns: key int, value string	
-	
-Table TEST15 does not exist	
+ABSTRACT SYNTAX TREE:
+  (TOK_CREATETABLE TEST15 (TOK_TABCOLLIST (TOK_TABCOL key TOK_INT) (TOK_TABCOL value TOK_STRING)) (TOK_TABLEROWFORMAT (TOK_TABLEROWFORMATFIELD '\t')))
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+      Create Table Operator:
+        Create Table
+          isExternal:
+          name: TEST15
+          # buckets: -1
+          field delimiter: 	
+          isSequenceFile:
+          columns: key int, value string
+
+
+key	int
+value	string

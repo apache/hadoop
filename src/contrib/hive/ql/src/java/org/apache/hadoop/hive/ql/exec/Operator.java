@@ -23,6 +23,8 @@ import java.io.*;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.mapredWork;
+import org.apache.hadoop.hive.serde2.SerDeUtils;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.conf.Configuration;
@@ -86,7 +88,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   transient protected HashMap<Enum<?>, LongWritable> statsMap = new HashMap<Enum<?>, LongWritable> ();
   transient protected OutputCollector out;
-  transient protected Log l4j;
+  transient protected Log LOG = LogFactory.getLog(this.getClass().getName());;
   transient protected mapredWork gWork;
   transient protected String alias;
   transient protected String joinAlias;
@@ -159,50 +161,47 @@ public abstract class Operator <T extends Serializable> implements Serializable 
   }
 
   public void initialize (Configuration hconf) throws HiveException {
-    l4j = LogFactory.getLog(this.getClass().getName());
-    l4j.info("Initializing Self");
+    LOG.info("Initializing Self");
     
     if(childOperators == null) {
       return;
     }
-    l4j.info("Initializing children:");
+    LOG.info("Initializing children:");
     for(Operator<? extends Serializable> op: childOperators) {
       op.initialize(hconf);
     }    
-    l4j.info("Initialization Done");
+    LOG.info("Initialization Done");
   }
 
-  public abstract void process(HiveObject r) throws HiveException;
+  public abstract void process(Object row, ObjectInspector rowInspector) throws HiveException;
  
   // If a operator wants to do some work at the beginning of a group
   public void startGroup() throws HiveException {
-    l4j = LogFactory.getLog(this.getClass().getName());
-    l4j.trace("Starting group");
+    LOG.debug("Starting group");
     
     if (childOperators == null)
       return;
     
-    l4j.trace("Starting group for children:");
+    LOG.debug("Starting group for children:");
     for (Operator<? extends Serializable> op: childOperators)
       op.startGroup();
     
-    l4j.trace("Start group Done");
+    LOG.debug("Start group Done");
   }  
   
   // If a operator wants to do some work at the beginning of a group
   public void endGroup() throws HiveException
   {
-     l4j = LogFactory.getLog(this.getClass().getName());
-    l4j.trace("Ending group");
+    LOG.debug("Ending group");
     
     if (childOperators == null)
       return;
     
-    l4j.trace("Ending group for children:");
+    LOG.debug("Ending group for children:");
     for (Operator<? extends Serializable> op: childOperators)
       op.endGroup();
     
-    l4j.trace("Start group Done");
+    LOG.debug("End group Done");
   }
 
   public void close(boolean abort) throws HiveException {
@@ -218,12 +217,13 @@ public abstract class Operator <T extends Serializable> implements Serializable 
     }
   }
 
-  protected void forward(HiveObject r) throws HiveException {
+  protected void forward(Object row, ObjectInspector rowInspector) throws HiveException {
+    
     if(childOperators == null) {
       return;
     }
     for(Operator<? extends Serializable> o: childOperators) {
-      o.process(r);
+      o.process(row, rowInspector);
     }
   }
 
@@ -249,7 +249,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   public void logStats () {
     for(Enum<?> e: statsMap.keySet()) {
-      l4j.info(e.toString() + ":" + statsMap.get(e).toString());
+      LOG.info(e.toString() + ":" + statsMap.get(e).toString());
     }    
   }
 

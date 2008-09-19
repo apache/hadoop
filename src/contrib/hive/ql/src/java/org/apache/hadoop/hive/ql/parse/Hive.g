@@ -92,11 +92,14 @@ TOK_TABLEROWFORMATFIELD;
 TOK_TABLEROWFORMATCOLLITEMS;
 TOK_TABLEROWFORMATMAPKEYS;
 TOK_TABLEROWFORMATLINES;
-TOK_TBLCOMPRESSED;
+TOK_TBLSEQUENCEFILE;
 TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_TABLESAMPLE;
 TOK_TMP_FILE;
+TOK_TABSORTCOLNAMEASC;
+TOK_TABSORTCOLNAMEDESC;
+TOK_CHARSETLITERAL;
 TOK_CREATEFUNCTION;
 TOK_EXPLAIN;
 }
@@ -146,9 +149,9 @@ ddlStatement
     ;
 
 createStatement
-    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE name=Identifier LPAREN columnNameTypeList RPAREN tableComment? tablePartition? tableBuckets? tableRowFormat? tableCompress? tableLocation?
-    -> {$ext == null}? ^(TOK_CREATETABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableCompress? tableLocation?)
-    ->                 ^(TOK_CREATEEXTTABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableCompress? tableLocation?)
+    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE name=Identifier LPAREN columnNameTypeList RPAREN tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?
+    -> {$ext == null}? ^(TOK_CREATETABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
+    ->                 ^(TOK_CREATEEXTTABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
     ;
 
 dropStatement
@@ -200,7 +203,7 @@ tablePartition
 
 tableBuckets
     :
-      KW_CLUSTERED KW_BY LPAREN bucketCols=columnNameList RPAREN (KW_SORTED KW_BY LPAREN sortCols=columnNameList RPAREN)? KW_INTO num=Number KW_BUCKETS 
+      KW_CLUSTERED KW_BY LPAREN bucketCols=columnNameList RPAREN (KW_SORTED KW_BY LPAREN sortCols=columnNameOrderList RPAREN)? KW_INTO num=Number KW_BUCKETS 
     -> ^(TOK_TABLEBUCKETS $bucketCols $sortCols? $num)
     ;
 
@@ -234,9 +237,9 @@ tableRowFormatLinesIdentifier
     -> ^(TOK_TABLEROWFORMATLINES $linesIdnt)
     ;
 
-tableCompress
+tableFileFormat
     :
-      KW_STORED KW_AS KW_COMPRESSED  -> TOK_TBLCOMPRESSED
+      KW_STORED KW_AS KW_SEQUENCEFILE  -> TOK_TBLSEQUENCEFILE
     ;
 
 tableLocation
@@ -255,6 +258,16 @@ columnNameList
 columnName
     :
       Identifier
+    ;
+
+columnNameOrderList
+    : columnNameOrder (COMMA columnNameOrder)* -> ^(TOK_TABCOLNAME columnNameOrder+)
+    ;
+
+columnNameOrder
+    : Identifier (asc=KW_ASC | desc=KW_DESC)? 
+    -> {$desc == null}? ^(TOK_TABSORTCOLNAMEASC Identifier)
+    ->                  ^(TOK_TABSORTCOLNAMEDESC Identifier)
     ;
 
 columnNameType
@@ -538,9 +551,14 @@ constant
     :
     Number
     | StringLiteral
+    | charSetStringLiteral
     | booleanValue 
-     ;
+    ;
 
+charSetStringLiteral
+    :
+    csName=CharSetName csLiteral=CharSetLiteral -> ^(TOK_CHARSETLITERAL $csName $csLiteral)
+    ;
 
 expression:
     precedenceOrExpression
@@ -772,7 +790,7 @@ KW_ITEMS: 'ITEMS';
 KW_KEYS: 'KEYS';
 KW_LINES: 'LINES';
 KW_STORED: 'STORED';
-KW_COMPRESSED: 'COMPRESSED';
+KW_SEQUENCEFILE: 'SEQUENCEFILE';
 KW_LOCATION: 'LOCATION';
 KW_TABLESAMPLE: 'TABLESAMPLE';
 KW_BUCKET: 'BUCKET';
@@ -825,6 +843,11 @@ Letter
     ;
 
 fragment
+HexDigit
+    : 'a'..'f' | 'A'..'F' 
+    ;
+
+fragment
 Digit
     :
     '0'..'9'
@@ -841,6 +864,12 @@ StringLiteral
     '\'' (~'\'')* '\'' ( '\'' (~'\'')* '\'' )*
     ;
 
+CharSetLiteral
+    :    
+    StringLiteral 
+    | '0' 'X' (HexDigit|Digit)+
+    ;
+
 Number
     :
     (Digit)+ ( DOT (Digit)* (Exponent)? | Exponent)?
@@ -848,7 +877,12 @@ Number
 
 Identifier
     :
-    (Letter | Digit | '_')+
+    (Letter | Digit) (Letter | Digit | '_')*
+    ;
+
+CharSetName
+    :
+    '_' (Letter | Digit | '_' | '-' | '.' | ':' )+
     ;
 
 WS  :  (' '|'\r'|'\t'|'\n') {$channel=HIDDEN;}
@@ -858,3 +892,5 @@ COMMENT
   : '--' (~('\n'|'\r'))*
     { $channel=HIDDEN; }
   ;
+
+

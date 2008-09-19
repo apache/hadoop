@@ -90,4 +90,6 @@ public interface RawStore extends Configurable {
       throws InvalidObjectException, MetaException;
 
   public List<String> getTables(String dbName, String pattern) throws MetaException;
+
+  public abstract List<String> listPartitionNames(String db_name, String tbl_name, short max_parts) throws MetaException;
 }

@@ -104,7 +104,7 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
       columnNames = Arrays.asList(columnProperty.split(","));
       cachedObjectInspector = MetadataListStructObjectInspector.getInstance(columnNames);
     }
-    System.out.println(getClass().getName() + ": initialized with columnNames: " + columnNames );
+    LOG.info(getClass().getName() + ": initialized with columnNames: " + columnNames );
   }
 
   public static Object deserialize(ColumnSet c, String row, String sep, String nullString) throws Exception {

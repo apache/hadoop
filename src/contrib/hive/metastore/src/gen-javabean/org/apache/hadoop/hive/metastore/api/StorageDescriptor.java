@@ -21,7 +21,7 @@ private List<FieldSchema> cols;
 private String location;
 private String inputFormat;
 private String outputFormat;
-private boolean isCompressed;
+private boolean compressed;
 private int numBuckets;
 private SerDeInfo serdeInfo;
 private List<String> bucketCols;
@@ -34,7 +34,7 @@ public boolean cols = false;
 public boolean location = false;
 public boolean inputFormat = false;
 public boolean outputFormat = false;
-public boolean isCompressed = false;
+public boolean compressed = false;
 public boolean numBuckets = false;
 public boolean serdeInfo = false;
 public boolean bucketCols = false;
@@ -52,7 +52,7 @@ List<FieldSchema> cols,
 String location,
 String inputFormat,
 String outputFormat,
-boolean isCompressed,
+boolean compressed,
 int numBuckets,
 SerDeInfo serdeInfo,
 List<String> bucketCols,
@@ -68,8 +68,8 @@ this.inputFormat = inputFormat;
 this.__isset.inputFormat = true;
 this.outputFormat = outputFormat;
 this.__isset.outputFormat = true;
-this.isCompressed = isCompressed;
-this.__isset.isCompressed = true;
+this.compressed = compressed;
+this.__isset.compressed = true;
 this.numBuckets = numBuckets;
 this.__isset.numBuckets = true;
 this.serdeInfo = serdeInfo;
@@ -151,17 +151,17 @@ public void unsetOutputFormat() {
 this.__isset.outputFormat = false;
 }
 
-public boolean isIsCompressed() {
-return this.isCompressed;
+public boolean isCompressed() {
+return this.compressed;
 }
 
-public void setIsCompressed(boolean isCompressed) {
-this.isCompressed = isCompressed;
-this.__isset.isCompressed = true;
+public void setCompressed(boolean compressed) {
+this.compressed = compressed;
+this.__isset.compressed = true;
 }
 
-public void unsetIsCompressed() {
-this.__isset.isCompressed = false;
+public void unsetCompressed() {
+this.__isset.compressed = false;
 }
 
 public int getNumBuckets() {
@@ -325,12 +325,12 @@ if (!this.outputFormat.equals(that.outputFormat))
   return false;
 }
 
-boolean this_present_isCompressed = true;
-boolean that_present_isCompressed = true;
-if (this_present_isCompressed || that_present_isCompressed) {
-if (!(this_present_isCompressed && that_present_isCompressed))
+boolean this_present_compressed = true;
+boolean that_present_compressed = true;
+if (this_present_compressed || that_present_compressed) {
+if (!(this_present_compressed && that_present_compressed))
   return false;
-if (this.isCompressed != that.isCompressed)
+if (this.compressed != that.compressed)
   return false;
 }
 
@@ -397,7 +397,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.LIST) {
       {
         TList _list9 = iprot.readListBegin();
@@ -416,7 +416,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
+  case 2:
     if (field.type == TType.STRING) {
       this.location = iprot.readString();
       this.__isset.location = true;
@@ -424,7 +424,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -3:
+  case 3:
     if (field.type == TType.STRING) {
       this.inputFormat = iprot.readString();
       this.__isset.inputFormat = true;
@@ -432,7 +432,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -4:
+  case 4:
     if (field.type == TType.STRING) {
       this.outputFormat = iprot.readString();
       this.__isset.outputFormat = true;
@@ -440,15 +440,15 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -5:
+  case 5:
     if (field.type == TType.BOOL) {
-      this.isCompressed = iprot.readBool();
-      this.__isset.isCompressed = true;
+      this.compressed = iprot.readBool();
+      this.__isset.compressed = true;
     } else { 
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -6:
+  case 6:
     if (field.type == TType.I32) {
       this.numBuckets = iprot.readI32();
       this.__isset.numBuckets = true;
@@ -456,7 +456,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -7:
+  case 7:
     if (field.type == TType.STRUCT) {
       this.serdeInfo = new SerDeInfo();
       this.serdeInfo.read(iprot);
@@ -465,7 +465,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -8:
+  case 8:
     if (field.type == TType.LIST) {
       {
         TList _list12 = iprot.readListBegin();
@@ -483,7 +483,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -9:
+  case 9:
     if (field.type == TType.LIST) {
       {
         TList _list15 = iprot.readListBegin();
@@ -502,7 +502,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -10:
+  case 10:
     if (field.type == TType.MAP) {
       {
         TMap _map18 = iprot.readMapBegin();
@@ -538,7 +538,7 @@ TField field = new TField();
 if (this.cols != null) {
 field.name = "cols";
 field.type = TType.LIST;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 {
   oprot.writeListBegin(new TList(TType.STRUCT, this.cols.size()));
@@ -552,7 +552,7 @@ oprot.writeFieldEnd();
 if (this.location != null) {
 field.name = "location";
 field.type = TType.STRING;
-field.id = -2;
+field.id = 2;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.location);
 oprot.writeFieldEnd();
@@ -560,7 +560,7 @@ oprot.writeFieldEnd();
 if (this.inputFormat != null) {
 field.name = "inputFormat";
 field.type = TType.STRING;
-field.id = -3;
+field.id = 3;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.inputFormat);
 oprot.writeFieldEnd();
@@ -568,27 +568,27 @@ oprot.writeFieldEnd();
 if (this.outputFormat != null) {
 field.name = "outputFormat";
 field.type = TType.STRING;
-field.id = -4;
+field.id = 4;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.outputFormat);
 oprot.writeFieldEnd();
 }
-field.name = "isCompressed";
+field.name = "compressed";
 field.type = TType.BOOL;
-field.id = -5;
+field.id = 5;
 oprot.writeFieldBegin(field);
-oprot.writeBool(this.isCompressed);
+oprot.writeBool(this.compressed);
 oprot.writeFieldEnd();
 field.name = "numBuckets";
 field.type = TType.I32;
-field.id = -6;
+field.id = 6;
 oprot.writeFieldBegin(field);
 oprot.writeI32(this.numBuckets);
 oprot.writeFieldEnd();
 if (this.serdeInfo != null) {
 field.name = "serdeInfo";
 field.type = TType.STRUCT;
-field.id = -7;
+field.id = 7;
 oprot.writeFieldBegin(field);
 this.serdeInfo.write(oprot);
 oprot.writeFieldEnd();
@@ -596,7 +596,7 @@ oprot.writeFieldEnd();
 if (this.bucketCols != null) {
 field.name = "bucketCols";
 field.type = TType.LIST;
-field.id = -8;
+field.id = 8;
 oprot.writeFieldBegin(field);
 {
   oprot.writeListBegin(new TList(TType.STRING, this.bucketCols.size()));
@@ -610,7 +610,7 @@ oprot.writeFieldEnd();
 if (this.sortCols != null) {
 field.name = "sortCols";
 field.type = TType.LIST;
-field.id = -9;
+field.id = 9;
 oprot.writeFieldBegin(field);
 {
   oprot.writeListBegin(new TList(TType.STRUCT, this.sortCols.size()));
@@ -624,7 +624,7 @@ oprot.writeFieldEnd();
 if (this.parameters != null) {
 field.name = "parameters";
 field.type = TType.MAP;
-field.id = -10;
+field.id = 10;
 oprot.writeFieldBegin(field);
 {
   oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.parameters.size()));
@@ -650,8 +650,8 @@ sb.append(",inputFormat:");
 sb.append(this.inputFormat);
 sb.append(",outputFormat:");
 sb.append(this.outputFormat);
-sb.append(",isCompressed:");
-sb.append(this.isCompressed);
+sb.append(",compressed:");
+sb.append(this.compressed);
 sb.append(",numBuckets:");
 sb.append(this.numBuckets);
 sb.append(",serdeInfo:");

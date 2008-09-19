@@ -35,10 +35,13 @@
                  <boolean>true</boolean> 
                 </void> 
                 <void property="sourceDir"> 
-                 <string>/tmp/hive-athusoo/737889012.10000.insclause-0</string> 
+                 <string>/tmp/hive-zshao/399409523.10000.insclause-0</string> 
                 </void> 
                 <void property="table"> 
                  <object id="tableDesc0" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                  <void property="deserializerClass"> 
+                   <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                  </void> 
                   <void property="inputFileFormatClass"> 
                    <class>org.apache.hadoop.mapred.TextInputFormat</class> 
                   </void> 
@@ -85,12 +88,9 @@
                     </void> 
                     <void method="put"> 
                      <string>location</string> 
-                     <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
+                     <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
                     </void> 
                    </object> 
-                  </void> 
-                  <void property="serdeClass"> 
-                   <class>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</class> 
                   </void> 
                   <void property="serdeClassName"> 
                    <string>simple_meta</string> 
@@ -122,12 +122,37 @@
         <void property="aliasToWork"> 
          <object class="java.util.HashMap"> 
           <void method="put"> 
-           <string>/tmp/hive-athusoo/737889012.10001</string> 
+           <string>/tmp/hive-zshao/399409523.10001</string> 
            <object class="org.apache.hadoop.hive.ql.exec.ReduceSinkOperator"> 
             <void property="conf"> 
              <object class="org.apache.hadoop.hive.ql.plan.reduceSinkDesc"> 
               <void property="keyCols"> 
                <object class="java.util.ArrayList"/> 
+              </void> 
+              <void property="keySerializeInfo"> 
+               <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                <void property="deserializerClass"> 
+                 <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                </void> 
+                <void property="inputFileFormatClass"> 
+                 <class>org.apache.hadoop.mapred.TextInputFormat</class> 
+                </void> 
+                <void property="outputFileFormatClass"> 
+                 <class>org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat</class> 
+                </void> 
+                <void property="properties"> 
+                 <object class="java.util.Properties"> 
+                  <void method="put"> 
+                   <string>columns</string> 
+                   <string></string> 
+                  </void> 
+                  <void method="put"> 
+                   <string>serialization.format</string> 
+                   <string>1</string> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
               </void> 
               <void property="tag"> 
                <int>-1</int> 
@@ -140,7 +165,11 @@
                    <string>0</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object id="TypeInfo0" class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                   <object id="PrimitiveTypeInfo0" class="org.apache.hadoop.hive.ql.typeinfo.PrimitiveTypeInfo"> 
+                    <void property="primitiveClass"> 
+                     <class>java.lang.String</class> 
+                    </void> 
+                   </object> 
                   </void> 
                  </object> 
                 </void> 
@@ -150,7 +179,7 @@
                    <string>1</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -160,7 +189,7 @@
                    <string>2</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -170,7 +199,7 @@
                    <string>3</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -180,7 +209,32 @@
                    <string>4</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="valueSerializeInfo"> 
+               <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                <void property="deserializerClass"> 
+                 <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                </void> 
+                <void property="inputFileFormatClass"> 
+                 <class>org.apache.hadoop.mapred.TextInputFormat</class> 
+                </void> 
+                <void property="outputFileFormatClass"> 
+                 <class>org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat</class> 
+                </void> 
+                <void property="properties"> 
+                 <object class="java.util.Properties"> 
+                  <void method="put"> 
+                   <string>columns</string> 
+                   <string>0,1,2,3,4</string> 
+                  </void> 
+                  <void method="put"> 
+                   <string>serialization.format</string> 
+                   <string>1</string> 
                   </void> 
                  </object> 
                 </void> 
@@ -198,7 +252,7 @@
                    <string>VALUE.0</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -208,7 +262,7 @@
                    <string>VALUE.1</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -218,7 +272,7 @@
                    <string>VALUE.2</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -228,7 +282,7 @@
                    <string>VALUE.3</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -238,7 +292,7 @@
                    <string>VALUE.4</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -253,10 +307,10 @@
         <void property="pathToAliases"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>/tmp/hive-athusoo/737889012.10001</string> 
+           <string>/tmp/hive-zshao/399409523.10001</string> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
-             <string>/tmp/hive-athusoo/737889012.10001</string> 
+             <string>/tmp/hive-zshao/399409523.10001</string> 
             </void> 
            </object> 
           </void> 
@@ -265,10 +319,13 @@
         <void property="pathToPartitionInfo"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>/tmp/hive-athusoo/737889012.10001</string> 
+           <string>/tmp/hive-zshao/399409523.10001</string> 
            <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
             <void property="tableDesc"> 
              <object id="tableDesc1" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+              <void property="deserializerClass"> 
+               <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+              </void> 
               <void property="inputFileFormatClass"> 
                <class>org.apache.hadoop.mapred.TextInputFormat</class> 
               </void> 
@@ -286,9 +343,6 @@
                  <string>1</string> 
                 </void> 
                </object> 
-              </void> 
-              <void property="serdeClass"> 
-               <class>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</class> 
               </void> 
              </object> 
             </void> 
@@ -309,7 +363,7 @@
                   <void property="conf"> 
                    <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                     <void property="dirName"> 
-                     <string>/tmp/hive-athusoo/737889012.10000.insclause-0</string> 
+                     <string>/tmp/hive-zshao/399409523.10000.insclause-0</string> 
                     </void> 
                     <void property="tableInfo"> 
                      <object idref="tableDesc0"/> 
@@ -326,7 +380,7 @@
                          <string>0</string> 
                         </void> 
                         <void property="type"> 
-                         <object idref="TypeInfo0"/> 
+                         <object idref="PrimitiveTypeInfo0"/> 
                         </void> 
                        </object> 
                       </void> 
@@ -336,7 +390,7 @@
                          <string>1</string> 
                         </void> 
                         <void property="type"> 
-                         <object idref="TypeInfo0"/> 
+                         <object idref="PrimitiveTypeInfo0"/> 
                         </void> 
                        </object> 
                       </void> 
@@ -346,7 +400,7 @@
                          <string>2</string> 
                         </void> 
                         <void property="type"> 
-                         <object idref="TypeInfo0"/> 
+                         <object idref="PrimitiveTypeInfo0"/> 
                         </void> 
                        </object> 
                       </void> 
@@ -356,7 +410,7 @@
                          <string>3</string> 
                         </void> 
                         <void property="type"> 
-                         <object idref="TypeInfo0"/> 
+                         <object idref="PrimitiveTypeInfo0"/> 
                         </void> 
                        </object> 
                       </void> 
@@ -366,7 +420,7 @@
                          <string>4</string> 
                         </void> 
                         <void property="type"> 
-                         <object idref="TypeInfo0"/> 
+                         <object idref="PrimitiveTypeInfo0"/> 
                         </void> 
                        </object> 
                       </void> 
@@ -388,7 +442,7 @@
                      <string>1</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -398,7 +452,7 @@
                      <string>2</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -408,7 +462,7 @@
                      <string>0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -418,7 +472,7 @@
                      <string>4</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -428,7 +482,7 @@
                      <string>3</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -464,7 +518,7 @@
                      <string>VALUE.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -485,7 +539,7 @@
                      <string>VALUE.1</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -506,7 +560,7 @@
                      <string>VALUE.2</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -527,7 +581,7 @@
                      <string>VALUE.3</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -548,7 +602,7 @@
                      <string>VALUE.4</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -578,7 +632,7 @@
                  <string>0</string> 
                 </void> 
                 <void property="type"> 
-                 <object idref="TypeInfo0"/> 
+                 <object idref="PrimitiveTypeInfo0"/> 
                 </void> 
                </object> 
               </void> 
@@ -588,7 +642,7 @@
                  <string>1</string> 
                 </void> 
                 <void property="type"> 
-                 <object idref="TypeInfo0"/> 
+                 <object idref="PrimitiveTypeInfo0"/> 
                 </void> 
                </object> 
               </void> 
@@ -598,7 +652,7 @@
                  <string>2</string> 
                 </void> 
                 <void property="type"> 
-                 <object idref="TypeInfo0"/> 
+                 <object idref="PrimitiveTypeInfo0"/> 
                 </void> 
                </object> 
               </void> 
@@ -608,7 +662,7 @@
                  <string>3</string> 
                 </void> 
                 <void property="type"> 
-                 <object idref="TypeInfo0"/> 
+                 <object idref="PrimitiveTypeInfo0"/> 
                 </void> 
                </object> 
               </void> 
@@ -618,7 +672,7 @@
                  <string>4</string> 
                 </void> 
                 <void property="type"> 
-                 <object idref="TypeInfo0"/> 
+                 <object idref="PrimitiveTypeInfo0"/> 
                 </void> 
                </object> 
               </void> 
@@ -678,14 +732,18 @@
                        <string>value</string> 
                       </void> 
                       <void property="typeInfo"> 
-                       <object id="TypeInfo1" class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                       <object idref="PrimitiveTypeInfo0"/> 
                       </void> 
                      </object> 
                     </void> 
                     <void method="add"> 
                      <object class="org.apache.hadoop.hive.ql.plan.exprNodeConstantDesc"> 
                       <void property="typeInfo"> 
-                       <object class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                       <object class="org.apache.hadoop.hive.ql.typeinfo.PrimitiveTypeInfo"> 
+                        <void property="primitiveClass"> 
+                         <class>java.lang.Integer</class> 
+                        </void> 
+                       </object> 
                       </void> 
                       <void property="value"> 
                        <int>4</int> 
@@ -695,7 +753,32 @@
                    </object> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="keySerializeInfo"> 
+               <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                <void property="deserializerClass"> 
+                 <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                </void> 
+                <void property="inputFileFormatClass"> 
+                 <class>org.apache.hadoop.mapred.TextInputFormat</class> 
+                </void> 
+                <void property="outputFileFormatClass"> 
+                 <class>org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat</class> 
+                </void> 
+                <void property="properties"> 
+                 <object class="java.util.Properties"> 
+                  <void method="put"> 
+                   <string>columns</string> 
+                   <string>0</string> 
+                  </void> 
+                  <void method="put"> 
+                   <string>serialization.format</string> 
+                   <string>1</string> 
                   </void> 
                  </object> 
                 </void> 
@@ -715,7 +798,7 @@
                    <string>key</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object id="TypeInfo2" class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -725,7 +808,32 @@
                    <string>value</string> 
                   </void> 
                   <void property="typeInfo"> 
-                   <object idref="TypeInfo1"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
+                  </void> 
+                 </object> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="valueSerializeInfo"> 
+               <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                <void property="deserializerClass"> 
+                 <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                </void> 
+                <void property="inputFileFormatClass"> 
+                 <class>org.apache.hadoop.mapred.TextInputFormat</class> 
+                </void> 
+                <void property="outputFileFormatClass"> 
+                 <class>org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat</class> 
+                </void> 
+                <void property="properties"> 
+                 <object class="java.util.Properties"> 
+                  <void method="put"> 
+                   <string>columns</string> 
+                   <string>0,1</string> 
+                  </void> 
+                  <void method="put"> 
+                   <string>serialization.format</string> 
+                   <string>1</string> 
                   </void> 
                  </object> 
                 </void> 
@@ -743,7 +851,7 @@
                    <string>KEY.0</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -753,7 +861,7 @@
                    <string>VALUE.0</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo2"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -763,7 +871,7 @@
                    <string>VALUE.1</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo1"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -785,7 +893,7 @@
                <string>key</string> 
               </void> 
               <void property="type"> 
-               <object idref="TypeInfo2"/> 
+               <object idref="PrimitiveTypeInfo0"/> 
               </void> 
              </object> 
             </void> 
@@ -795,7 +903,7 @@
                <string>value</string> 
               </void> 
               <void property="type"> 
-               <object idref="TypeInfo1"/> 
+               <object idref="PrimitiveTypeInfo0"/> 
               </void> 
              </object> 
             </void> 
@@ -810,7 +918,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>src</string> 
@@ -822,13 +930,16 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
         <void property="partSpec"> 
          <object class="java.util.LinkedHashMap"/> 
         </void> 
         <void property="tableDesc"> 
          <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+          <void property="deserializerClass"> 
+           <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+          </void> 
           <void property="inputFileFormatClass"> 
            <class>org.apache.hadoop.mapred.TextInputFormat</class> 
           </void> 
@@ -875,12 +986,9 @@
             </void> 
             <void method="put"> 
              <string>location</string> 
-             <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+             <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
             </void> 
            </object> 
-          </void> 
-          <void property="serdeClass"> 
-           <class>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</class> 
           </void> 
           <void property="serdeClassName"> 
            <string>simple_meta</string> 
@@ -904,7 +1012,7 @@
               <void property="conf"> 
                <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                 <void property="dirName"> 
-                 <string>/tmp/hive-athusoo/737889012.10001</string> 
+                 <string>/tmp/hive-zshao/399409523.10001</string> 
                 </void> 
                 <void property="tableInfo"> 
                  <object idref="tableDesc1"/> 
@@ -921,7 +1029,7 @@
                      <string>0</string> 
                     </void> 
                     <void property="type"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -931,7 +1039,7 @@
                      <string>1</string> 
                     </void> 
                     <void property="type"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -941,7 +1049,7 @@
                      <string>2</string> 
                     </void> 
                     <void property="type"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -951,7 +1059,7 @@
                      <string>3</string> 
                     </void> 
                     <void property="type"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -961,7 +1069,7 @@
                      <string>4</string> 
                     </void> 
                     <void property="type"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -993,7 +1101,7 @@
                      <string>KEY.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -1014,7 +1122,7 @@
                      <string>KEY.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -1035,7 +1143,7 @@
                      <string>KEY.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -1056,7 +1164,7 @@
                      <string>KEY.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
@@ -1077,7 +1185,7 @@
                      <string>KEY.0</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 

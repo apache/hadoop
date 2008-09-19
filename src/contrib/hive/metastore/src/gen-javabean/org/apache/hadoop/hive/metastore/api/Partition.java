@@ -18,7 +18,7 @@ import com.facebook.thrift.transport.*;
 
 public class Partition implements TBase, java.io.Serializable {
 private List<String> values;
-private String database;
+private String dbName;
 private String tableName;
 private int createTime;
 private int lastAccessTime;
@@ -28,7 +28,7 @@ private Map<String,String> parameters;
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean values = false;
-public boolean database = false;
+public boolean dbName = false;
 public boolean tableName = false;
 public boolean createTime = false;
 public boolean lastAccessTime = false;
@@ -41,7 +41,7 @@ public Partition() {
 
 public Partition(
 List<String> values,
-String database,
+String dbName,
 String tableName,
 int createTime,
 int lastAccessTime,
@@ -51,8 +51,8 @@ Map<String,String> parameters)
 this();
 this.values = values;
 this.__isset.values = true;
-this.database = database;
-this.__isset.database = true;
+this.dbName = dbName;
+this.__isset.dbName = true;
 this.tableName = tableName;
 this.__isset.tableName = true;
 this.createTime = createTime;
@@ -95,17 +95,17 @@ this.values = null;
 this.__isset.values = false;
 }
 
-public String getDatabase() {
-return this.database;
+public String getDbName() {
+return this.dbName;
 }
 
-public void setDatabase(String database) {
-this.database = database;
-this.__isset.database = true;
+public void setDbName(String dbName) {
+this.dbName = dbName;
+this.__isset.dbName = true;
 }
 
-public void unsetDatabase() {
-this.__isset.database = false;
+public void unsetDbName() {
+this.__isset.dbName = false;
 }
 
 public String getTableName() {
@@ -208,12 +208,12 @@ if (!this.values.equals(that.values))
   return false;
 }
 
-boolean this_present_database = true && (this.database != null);
-boolean that_present_database = true && (that.database != null);
-if (this_present_database || that_present_database) {
-if (!(this_present_database && that_present_database))
+boolean this_present_dbName = true && (this.dbName != null);
+boolean that_present_dbName = true && (that.dbName != null);
+if (this_present_dbName || that_present_dbName) {
+if (!(this_present_dbName && that_present_dbName))
   return false;
-if (!this.database.equals(that.database))
+if (!this.dbName.equals(that.dbName))
   return false;
 }
 
@@ -280,7 +280,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.LIST) {
       {
         TList _list35 = iprot.readListBegin();
@@ -298,15 +298,15 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
+  case 2:
     if (field.type == TType.STRING) {
-      this.database = iprot.readString();
-      this.__isset.database = true;
+      this.dbName = iprot.readString();
+      this.__isset.dbName = true;
     } else { 
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -3:
+  case 3:
     if (field.type == TType.STRING) {
       this.tableName = iprot.readString();
       this.__isset.tableName = true;
@@ -314,7 +314,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -4:
+  case 4:
     if (field.type == TType.I32) {
       this.createTime = iprot.readI32();
       this.__isset.createTime = true;
@@ -322,7 +322,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -5:
+  case 5:
     if (field.type == TType.I32) {
       this.lastAccessTime = iprot.readI32();
       this.__isset.lastAccessTime = true;
@@ -330,7 +330,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -6:
+  case 6:
     if (field.type == TType.STRUCT) {
       this.sd = new StorageDescriptor();
       this.sd.read(iprot);
@@ -339,7 +339,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -7:
+  case 7:
     if (field.type == TType.MAP) {
       {
         TMap _map38 = iprot.readMapBegin();
@@ -375,7 +375,7 @@ TField field = new TField();
 if (this.values != null) {
 field.name = "values";
 field.type = TType.LIST;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 {
   oprot.writeListBegin(new TList(TType.STRING, this.values.size()));
@@ -386,38 +386,38 @@ oprot.writeFieldBegin(field);
 }
 oprot.writeFieldEnd();
 }
-if (this.database != null) {
-field.name = "database";
+if (this.dbName != null) {
+field.name = "dbName";
 field.type = TType.STRING;
-field.id = -2;
+field.id = 2;
 oprot.writeFieldBegin(field);
-oprot.writeString(this.database);
+oprot.writeString(this.dbName);
 oprot.writeFieldEnd();
 }
 if (this.tableName != null) {
 field.name = "tableName";
 field.type = TType.STRING;
-field.id = -3;
+field.id = 3;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.tableName);
 oprot.writeFieldEnd();
 }
 field.name = "createTime";
 field.type = TType.I32;
-field.id = -4;
+field.id = 4;
 oprot.writeFieldBegin(field);
 oprot.writeI32(this.createTime);
 oprot.writeFieldEnd();
 field.name = "lastAccessTime";
 field.type = TType.I32;
-field.id = -5;
+field.id = 5;
 oprot.writeFieldBegin(field);
 oprot.writeI32(this.lastAccessTime);
 oprot.writeFieldEnd();
 if (this.sd != null) {
 field.name = "sd";
 field.type = TType.STRUCT;
-field.id = -6;
+field.id = 6;
 oprot.writeFieldBegin(field);
 this.sd.write(oprot);
 oprot.writeFieldEnd();
@@ -425,7 +425,7 @@ oprot.writeFieldEnd();
 if (this.parameters != null) {
 field.name = "parameters";
 field.type = TType.MAP;
-field.id = -7;
+field.id = 7;
 oprot.writeFieldBegin(field);
 {
   oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.parameters.size()));
@@ -445,8 +445,8 @@ public String toString() {
 StringBuilder sb = new StringBuilder("Partition(");
 sb.append("values:");
 sb.append(this.values);
-sb.append(",database:");
-sb.append(this.database);
+sb.append(",dbName:");
+sb.append(this.dbName);
 sb.append(",tableName:");
 sb.append(this.tableName);
 sb.append(",createTime:");

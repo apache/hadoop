@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hive.ql;
 
-import java.io.InputStream;
+import java.io.DataInput;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 import org.antlr.runtime.tree.CommonTree;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hive.ql.exec.MapRedTask;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.ExecDriver;
+import org.apache.hadoop.hive.serde.ByteStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 
 import org.apache.commons.logging.Log;
@@ -45,23 +47,14 @@ import org.apache.commons.logging.LogFactory;
 public class Driver implements CommandProcessor {
 
   static final private Log LOG = LogFactory.getLog("hive.ql.Driver");
-  static final private int separator  = Utilities.ctrlaCode;
-  static final private int terminator = Utilities.newLineCode;
   static final private int MAX_ROWS   = 100;
+  ByteStream.Output bos = new ByteStream.Output();
   
-  private ParseDriver pd;
-  private HiveConf conf;
-  private InputStream resStream;
-  private LogHelper console;
-  private Context   ctx;
-  
-  public static int getSeparator() {
-    return separator;
-  }
-
-  public static int getTerminator() {
-    return terminator;
-  }
+  private ParseDriver  pd;
+  private HiveConf     conf;
+  private DataInput    resStream;
+  private LogHelper    console;
+  private Context      ctx;
   
   public int countJobs(List<Task<? extends Serializable>> tasks) {
     if (tasks == null)
@@ -108,12 +101,9 @@ public class Driver implements CommandProcessor {
       BaseSemanticAnalyzer sem;
       LOG.info("Starting command: " + command);
 
-      if (resStream != null) {
-        resStream.close();
-        resStream = null;
-      }
       ctx.clear();
-
+      resStream = null;
+      
       pd = new ParseDriver();
       CommonTree tree = pd.parse(command);
 
@@ -200,95 +190,71 @@ public class Driver implements CommandProcessor {
         conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, "");
       } 
     }
-    if (jobs > 0) {
-      console.printInfo("OK");
-    }
+
+    console.printInfo("OK");
     return (0);
   }
   
   
-  public boolean getResults(Vector<Vector<String>> res) {
-
+  public boolean getResults(Vector<Vector<String>> res) 
+  {
     if (resStream == null)
       resStream = ctx.getStream();
     if (resStream == null) return false;
     
-    int sizeArr = 128;
-    char[] tmpCharArr = new char[sizeArr];
-    
-    for (int numRows = 0; numRows < MAX_ROWS; numRows++)
+    int numRows = 0;
+    Vector<String> row = new Vector<String>();
+
+    while (numRows < MAX_ROWS)
     {
-      if (resStream == null) {
-        if (numRows > 0) {
+      if (resStream == null) 
+      {
+        if (numRows > 0)
           return true;
-        }
-        else {
+        else
           return false;
-        }
       }
-      boolean eof = false;
-      Vector<String> row = new Vector<String>();
-      String col;
-      int len = 0;
-      while (true) {
-        char c;
-        try {
-          int i = resStream.read();
-          if (i == -1)
-          {
-            eof = true;
-            break;
-          }
-          
-          c = (char)i;
-          
-          if (c == terminator) {
-            col = new String(tmpCharArr, 0, len);
-            len = 0;
-            row.add(col.equals(Utilities.nullStringStorage) ? null : col);
-            res.add(row);
-            break;
-          }
-          else if (c == separator) {
-            col = new String(tmpCharArr, 0, len);
-            len = 0;
-            row.add(col.equals(Utilities.nullStringStorage) ? null : col);
-          }
-          else
-          {
-            if (sizeArr == len)
-            {
-              char[] tmp = new char[2*sizeArr];
-              sizeArr *= 2;
-              for (int idx = 0; idx < len; idx++)
-                tmp[idx] = tmpCharArr[idx];
-              tmpCharArr = tmp;
-            }
-            tmpCharArr[len++] = c;
-          }
-          
-        } 
-        catch (java.io.IOException e) {
-          console.printError("FAILED: Unknown exception : " + e.getMessage(),
-                             "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
-          return false;
-        }
+
+      String col = null;
+      bos.reset();
+      Utilities.streamStatus ss = Utilities.streamStatus.NORMAL;
+      try
+      {
+        ss = Utilities.readColumn(resStream, bos);
+        if (bos.getCount() > 0)
+          col = new String(bos.getData(), 0, bos.getCount(), "UTF-8");
+        else if (ss == Utilities.streamStatus.NORMAL)
+          col = Utilities.NSTR;
+      } catch (IOException e) {
+        console.printError("FAILED: Unexpected IO exception : " + e.getMessage());
+        res = null;
+        return false;
       }
       
-      if (eof)
+      if ((ss == Utilities.streamStatus.EOF) || 
+          (ss == Utilities.streamStatus.TERMINATED))
       {
-        if (len > 0)
-        {
-          col = new String(tmpCharArr, 0, len);
-          len = 0;
+        if (col != null) 
           row.add(col.equals(Utilities.nullStringStorage) ? null : col);
-          res.add(row);
-        }
+        else if (row.size() != 0) 
+          row.add(null);
 
-        resStream = ctx.getStream();
+        numRows++;
+        res.add(row);
+        row = new Vector<String>();
+        col = null;
+
+        if (ss == Utilities.streamStatus.EOF) 
+          resStream = ctx.getStream();
       }
+      else if (ss == Utilities.streamStatus.NORMAL)
+      {
+        row.add(col.equals(Utilities.nullStringStorage) ? null : col);
+        col = null;
+      }
+      else
+        assert false;
     }
-    
     return true;
   }
 }

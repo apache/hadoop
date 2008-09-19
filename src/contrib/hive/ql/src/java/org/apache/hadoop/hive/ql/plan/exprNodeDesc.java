@@ -20,15 +20,19 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 
 public class exprNodeDesc implements Serializable {  
   private static final long serialVersionUID = 1L;
-  transient TypeInfo typeInfo;
+  TypeInfo typeInfo;
   
   public exprNodeDesc() {}
   public exprNodeDesc(TypeInfo typeInfo) {
     this.typeInfo = typeInfo;
+    if (typeInfo == null) {
+      throw new RuntimeException("typeInfo cannot be null!");
+    }
   }
   
   public TypeInfo getTypeInfo() {
@@ -45,6 +49,6 @@ public class exprNodeDesc implements Serializable {
   
   @explain(displayName="type")
   public String getTypeString() {
-    return typeInfo.getTypeString();
+    return typeInfo.getTypeName();
   }
 }

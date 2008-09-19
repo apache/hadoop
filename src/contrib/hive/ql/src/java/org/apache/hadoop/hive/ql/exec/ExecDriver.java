@@ -147,15 +147,8 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     FileOutputFormat.setOutputPath(job, new Path(jobScratchDir));
     job.setMapperClass(ExecMapper.class);
 
-    if(!work.getNeedsTagging()) {
-      job.setMapOutputValueClass(NoTagWritableHiveObject.class);
-      job.setMapOutputKeyClass(NoTagWritableComparableHiveObject.class);    
-      job.setOutputKeyComparatorClass(NoTagHiveObjectComparator.class);
-    } else {
-      job.setMapOutputValueClass(WritableHiveObject.class);
-      job.setMapOutputKeyClass(WritableComparableHiveObject.class);    
-      job.setOutputKeyComparatorClass(HiveObjectComparator.class);
-    }
+    job.setMapOutputValueClass(Text.class);
+    job.setMapOutputKeyClass(HiveKey.class);    
 
     job.setNumReduceTasks(work.getNumReduceTasks().intValue());
     job.setReducerClass(ExecReducer.class);

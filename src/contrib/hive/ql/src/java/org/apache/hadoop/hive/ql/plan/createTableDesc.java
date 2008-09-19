@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 
 @explain(displayName="Create Table")
@@ -33,23 +34,23 @@ public class createTableDesc extends ddlDesc implements Serializable
   List<FieldSchema>   cols;
   List<FieldSchema>   partCols;
   List<String>        bucketCols;
-  List<String>        sortCols;
+  List<Order>         sortCols;
   int                 numBuckets;
   String              fieldDelim;
   String              collItemDelim;
   String              mapKeyDelim;
   String              lineDelim;
   String              comment;
-  boolean             isCompressed;
+  boolean             isSequenceFile;
   String              location;
   
   public createTableDesc(String tableName, boolean isExternal, 
                          List<FieldSchema> cols, List<FieldSchema> partCols,
-                         List<String> bucketCols, List<String> sortCols, 
+                         List<String> bucketCols, List<Order> sortCols, 
                          int numBuckets, String fieldDelim, 
                          String collItemDelim,
                          String mapKeyDelim, String lineDelim, 
-                         String comment, boolean isCompressed, 
+                         String comment, boolean isSequenceFile, 
                          String location) {
     this.tableName       = tableName;
     this.isExternal      = isExternal;
@@ -59,7 +60,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.cols            = cols;
     this.comment         = comment;
     this.fieldDelim      = fieldDelim;
-    this.isCompressed    = isCompressed;
+    this.isSequenceFile    = isSequenceFile;
     this.lineDelim       = lineDelim;
     this.location        = location;
     this.mapKeyDelim     = mapKeyDelim;
@@ -165,13 +166,13 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.comment = comment;
   }
 
-  @explain(displayName="isCompressed")
-  public boolean isCompressed() {
-    return isCompressed;
+  @explain(displayName="isSequenceFile")  
+  public boolean isSequenceFile() {
+    return isSequenceFile;
   }
 
-  public void setCompressed(boolean isCompressed) {
-    this.isCompressed = isCompressed;
+  public void setSequenceFile(boolean isSequenceFile) {
+    this.isSequenceFile = isSequenceFile;
   }
 
   @explain(displayName="location")
@@ -196,14 +197,14 @@ public class createTableDesc extends ddlDesc implements Serializable
    * @return the sortCols
    */
   @explain(displayName="sort columns")
-  public List<String> getSortCols() {
+  public List<Order> getSortCols() {
     return sortCols;
   }
 
   /**
    * @param sortCols the sortCols to set
    */
-  public void setSortCols(List<String> sortCols) {
+  public void setSortCols(List<Order> sortCols) {
     this.sortCols = sortCols;
   }
 }

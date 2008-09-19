@@ -20,14 +20,17 @@ package org.apache.hadoop.hive.ql.exec;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeIndexDesc;
-import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 public class ExprNodeIndexEvaluator extends ExprNodeEvaluator {
 
   protected exprNodeIndexDesc expr;
   transient ExprNodeEvaluator mainEvaluator;
+  transient InspectableObject mainInspectableObject = new InspectableObject();
   transient ExprNodeEvaluator indexEvaluator;
-  transient SerDeField field;
+  transient InspectableObject indexInspectableObject = new InspectableObject();
   
   public ExprNodeIndexEvaluator(exprNodeIndexDesc expr) {
     this.expr = expr;
@@ -35,18 +38,22 @@ public class ExprNodeIndexEvaluator extends ExprNodeEvaluator {
     indexEvaluator = ExprNodeEvaluatorFactory.get(expr.getIndex());
   }
 
-  public Object evaluateToObject(HiveObject row)  throws HiveException {
-    return evaluate(row).getJavaObject();
+  public void evaluate(Object row, ObjectInspector rowInspector,
+      InspectableObject result) throws HiveException {
+    
+    assert(result != null);
+    mainEvaluator.evaluate(row, rowInspector, mainInspectableObject);
+    indexEvaluator.evaluate(row, rowInspector, indexInspectableObject);
+    int index = ((Number)indexInspectableObject.o).intValue();
+    
+    ListObjectInspector loi = (ListObjectInspector)mainInspectableObject.oi;
+    result.oi = loi.getListElementObjectInspector();
+    result.o = loi.getListElement(mainInspectableObject.o, index);
   }
 
-  public HiveObject evaluate(HiveObject row) throws HiveException {
-    HiveObject ho = mainEvaluator.evaluate(row);
-    if (field == null || !(indexEvaluator instanceof ExprNodeConstantEvaluator)) {
-      // TODO: This optimization is wrong because of the field implementation inside HiveObject.
-      // The problem is that at the second "[" (after "c"), "field" caches both "index1" and 
-      // "index2" in "a.b[index1].c[index2]", while it should only cache "index2".
-      field = ho.getFieldFromExpression("[" + indexEvaluator.evaluateToObject(row) + "]");
-    }
-    return ho.get(field);
+  public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
+      throws HiveException {
+    return ((ListObjectInspector)mainEvaluator.evaluateInspector(rowInspector)).getListElementObjectInspector();
   }
+
 }

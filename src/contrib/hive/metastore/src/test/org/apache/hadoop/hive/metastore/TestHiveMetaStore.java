@@ -25,7 +25,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.Constants;
+import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
@@ -91,12 +91,12 @@ public class TestHiveMetaStore extends TestCase {
     assertTrue("Unable to create type " + typeName, ret);
   
     Table tbl = new Table();
-    tbl.setDatabase(dbName);
+    tbl.setDbName(dbName);
     tbl.setTableName(tblName);
     StorageDescriptor sd = new StorageDescriptor(); 
     tbl.setSd(sd);
     sd.setCols(typ1.getFields());
-    sd.setIsCompressed(false);
+    sd.setCompressed(false);
     sd.setNumBuckets(1);
     sd.setParameters(new HashMap<String, String>());
     sd.getParameters().put("test_param_1", "Use this for comments etc");
@@ -104,7 +104,8 @@ public class TestHiveMetaStore extends TestCase {
     sd.getBucketCols().add("name");
     sd.setSerdeInfo(new SerDeInfo());
     sd.getSerdeInfo().setName(tbl.getTableName());
-    sd.getSerdeInfo().setSerializationFormat("3");
+    sd.getSerdeInfo().setParameters(new HashMap<String, String>());
+    sd.getSerdeInfo().getParameters().put(Constants.SERIALIZATION_FORMAT, "1");
     sd.setSortCols(new ArrayList<Order>());
   
     tbl.setPartitionKeys(new ArrayList<FieldSchema>(2));
@@ -114,7 +115,7 @@ public class TestHiveMetaStore extends TestCase {
     client.createTable(tbl);
   
     Partition part = new Partition();
-    part.setDatabase(dbName);
+    part.setDbName(dbName);
     part.setTableName(tblName);
     part.setValues(vals);
     part.setParameters(new HashMap<String, String>());
@@ -160,7 +161,7 @@ public class TestHiveMetaStore extends TestCase {
     Database db = client.getDatabase("test1");
     
     assertEquals("name of returned db is different from that of inserted db", "test1", db.getName());
-    assertEquals("location of the returned db is different from that of inserted db", "strange_loc", db.getLocationUri());
+    assertEquals("location of the returned db is different from that of inserted db", "strange_loc", db.getDescription());
     
     boolean ret2 = client.createDatabase("test2", "another_strange_loc");
     assertTrue("Unable to create the databse", ret2);
@@ -168,7 +169,7 @@ public class TestHiveMetaStore extends TestCase {
     Database db2 = client.getDatabase("test2");
     
     assertEquals("name of returned db is different from that of inserted db", "test2", db2.getName());
-    assertEquals("location of the returned db is different from that of inserted db", "another_strange_loc", db2.getLocationUri());
+    assertEquals("location of the returned db is different from that of inserted db", "another_strange_loc", db2.getDescription());
     
     List<String> dbs = client.getDatabases();
     
@@ -288,12 +289,12 @@ public class TestHiveMetaStore extends TestCase {
     assertTrue("Unable to create type " + typeName, ret);
     
     Table tbl = new Table();
-    tbl.setDatabase(dbName);
+    tbl.setDbName(dbName);
     tbl.setTableName(tblName);
     StorageDescriptor sd = new StorageDescriptor();
     tbl.setSd(sd);
     sd.setCols(typ1.getFields());
-    sd.setIsCompressed(false);
+    sd.setCompressed(false);
     sd.setNumBuckets(1);
     sd.setParameters(new HashMap<String, String>());
     sd.getParameters().put("test_param_1", "Use this for comments etc");
@@ -301,30 +302,32 @@ public class TestHiveMetaStore extends TestCase {
     sd.getBucketCols().add("name");
     sd.setSerdeInfo(new SerDeInfo());
     sd.getSerdeInfo().setName(tbl.getTableName());
-    sd.getSerdeInfo().setSerializationFormat("1");
+    sd.getSerdeInfo().setParameters(new HashMap<String, String>());
+    sd.getSerdeInfo().getParameters().put(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "1");
     
     client.createTable(tbl);
     
     Table tbl2 = client.getTable(dbName, tblName);
     assertNotNull(tbl2);
-    assertEquals(tbl2.getDatabase(), dbName);
+    assertEquals(tbl2.getDbName(), dbName);
     assertEquals(tbl2.getTableName(), tblName);
     assertEquals(tbl2.getSd().getCols().size(), typ1.getFields().size());
-    assertEquals(tbl2.getSd().isIsCompressed(), false);
+    assertEquals(tbl2.getSd().isCompressed(), false);
     assertEquals(tbl2.getSd().getNumBuckets(), 1);
     assertEquals(tbl2.getSd().getLocation(), tbl.getSd().getLocation());
     assertNotNull(tbl2.getSd().getSerdeInfo());
-    assertEquals(tbl2.getSd().getSerdeInfo().getSerializationFormat(), "1");
+    sd.getSerdeInfo().setParameters(new HashMap<String, String>());
+    sd.getSerdeInfo().getParameters().put(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "1");
     
     tbl.setTableName(tblName2);
     client.createTable(tbl);
   
     Table tbl3 = client.getTable(dbName, tblName2);
     assertNotNull(tbl3);
-    assertEquals(tbl3.getDatabase(), dbName);
+    assertEquals(tbl3.getDbName(), dbName);
     assertEquals(tbl3.getTableName(), tblName2);
     assertEquals(tbl3.getSd().getCols().size(), typ1.getFields().size());
-    assertEquals(tbl3.getSd().isIsCompressed(), false);
+    assertEquals(tbl3.getSd().isCompressed(), false);
     assertEquals(tbl3.getSd().getNumBuckets(), 1);
     assertEquals(tbl3.getSd().getLocation(), tbl.getSd().getLocation());
     
@@ -369,12 +372,12 @@ public class TestHiveMetaStore extends TestCase {
       assertTrue("Unable to create type " + typeName, ret);
   
       Table tbl = new Table();
-      tbl.setDatabase(dbName);
+      tbl.setDbName(dbName);
       tbl.setTableName(tblName);
       StorageDescriptor sd = new StorageDescriptor();
       tbl.setSd(sd);
       sd.setCols(typ1.getFields());
-      sd.setIsCompressed(false);
+      sd.setCompressed(false);
       sd.setNumBuckets(1);
       sd.setParameters(new HashMap<String, String>());
       sd.getParameters().put("test_param_1", "Use this for comments etc");
@@ -382,19 +385,20 @@ public class TestHiveMetaStore extends TestCase {
       sd.getBucketCols().add("name");
       sd.setSerdeInfo(new SerDeInfo());
       sd.getSerdeInfo().setName(tbl.getTableName());
-      sd.getSerdeInfo().setSerializationFormat("9");
+      sd.getSerdeInfo().setParameters(new HashMap<String, String>());
+      sd.getSerdeInfo().getParameters().put(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "9");
   
       tbl.setPartitionKeys(new ArrayList<FieldSchema>(2));
-      tbl.getPartitionKeys().add(new FieldSchema("ds", Constants.DATE_TYPE_NAME, ""));
-      tbl.getPartitionKeys().add(new FieldSchema("hr", Constants.INT_TYPE_NAME, ""));
+      tbl.getPartitionKeys().add(new FieldSchema("ds", org.apache.hadoop.hive.serde.Constants.DATE_TYPE_NAME, ""));
+      tbl.getPartitionKeys().add(new FieldSchema("hr", org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME, ""));
   
       client.createTable(tbl);
   
       Table tbl2 = client.getTable(dbName, tblName);
-      assertEquals(tbl2.getDatabase(), dbName);
+      assertEquals(tbl2.getDbName(), dbName);
       assertEquals(tbl2.getTableName(), tblName);
       assertEquals(tbl2.getSd().getCols().size(), typ1.getFields().size());
-      assertFalse(tbl2.getSd().isIsCompressed());
+      assertFalse(tbl2.getSd().isCompressed());
       assertEquals(tbl2.getSd().getNumBuckets(), 1);
   
       assertEquals("Use this for comments etc", tbl2.getSd().getParameters().get("test_param_1"));

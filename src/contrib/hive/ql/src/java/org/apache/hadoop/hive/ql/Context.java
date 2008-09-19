@@ -18,24 +18,20 @@
 
 package org.apache.hadoop.hive.ql;
 
-import java.io.File;
+import java.io.DataInput;
 import java.io.IOException;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.util.StringUtils;
 
 public class Context {
-  private File resFile;
+  private Path resFile;
   private Path resDir;
   private FileSystem fs;
   static final private Log LOG = LogFactory.getLog("hive.ql.Context");
@@ -57,14 +53,14 @@ public class Context {
   /**
    * @return the resFile
    */
-  public File getResFile() {
+  public Path getResFile() {
     return resFile;
   }
 
   /**
    * @param resFile the resFile to set
    */
-  public void setResFile(File resFile) {
+  public void setResFile(Path resFile) {
     this.resFile = resFile;
     resDir = null;
     resDirPaths = null;
@@ -105,10 +101,7 @@ public class Context {
     {
       try
       {
-        FileOutputStream outStream = new FileOutputStream(resFile);
-        outStream.close();
-      } catch (FileNotFoundException e) {
-        LOG.info("Context clear error: " + StringUtils.stringifyException(e));
+      	fs.delete(resFile, false);
       } catch (IOException e) {
         LOG.info("Context clear error: " + StringUtils.stringifyException(e));
       }
@@ -120,7 +113,7 @@ public class Context {
     resDirPaths = null;
   }
 
-  public InputStream getStream() {
+  public DataInput getStream() {
     try
     {
       if (!initialized) {
@@ -128,7 +121,7 @@ public class Context {
         if ((resFile == null) && (resDir == null)) return null;
       
         if (resFile != null)
-          return (InputStream)(new FileInputStream(resFile));
+          return (DataInput)fs.open(resFile);
         
         FileStatus status = fs.getFileStatus(resDir);
         assert status.isDir();
@@ -140,7 +133,7 @@ public class Context {
             resDirPaths[pos++] = resFS.getPath();
         if (pos == 0) return null;
         
-        return (InputStream)fs.open(resDirPaths[resDirFilesNum++]);
+        return (DataInput)fs.open(resDirPaths[resDirFilesNum++]);
       }
       else {
         return getNextStream();
@@ -154,12 +147,12 @@ public class Context {
     }
   }
 
-  private InputStream getNextStream() {
+  private DataInput getNextStream() {
     try
     {
       if (resDir != null && resDirFilesNum < resDirPaths.length && 
           (resDirPaths[resDirFilesNum] != null))
-        return (InputStream)fs.open(resDirPaths[resDirFilesNum++]);
+        return (DataInput)fs.open(resDirPaths[resDirFilesNum++]);
     } catch (FileNotFoundException e) {
       LOG.info("getNextStream error: " + StringUtils.stringifyException(e));
       return null;

@@ -21,7 +21,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print 'Usage: ' + sys.argv[0] + ' [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]'
   print ''
   print 'Functions:'
-  print '  bool create_database(string name, string location_uri)'
+  print '  bool create_database(string name, string description)'
   print '  Database get_database(string name)'
   print '  bool drop_database(string name)'
   print '   get_databases()'
@@ -34,16 +34,13 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print '  void drop_table(string dbname, string name, bool deleteData)'
   print '   get_tables(string db_name, string pattern)'
   print '  Table get_table(string dbname, string tbl_name)'
-  print '  bool set_table_parameters(string dbname, string tbl_name,  params)'
   print '  void alter_table(string dbname, string tbl_name, Table new_tbl)'
-  print '  void truncate_table(string db_name, string table_name, string partition)'
-  print '   cat(string db_name, string table_name, string partition, i32 high)'
   print '  Partition add_partition(Partition new_part)'
   print '  Partition append_partition(string db_name, string tbl_name,  part_vals)'
   print '  bool drop_partition(string db_name, string tbl_name,  part_vals, bool deleteData)'
   print '  Partition get_partition(string db_name, string tbl_name,  part_vals)'
   print '   get_partitions(string db_name, string tbl_name, i16 max_parts)'
-  print '  bool set_partition_parameters(string db_name, string tbl_name, string pname,  params)'
+  print '   get_partition_names(string db_name, string tbl_name, i16 max_parts)'
   print '  bool alter_partitions(StorageDescriptor sd,  parts)'
   print '  bool create_index(Index index_def)'
   print ''
@@ -172,29 +169,11 @@ elif cmd == 'get_table':
     sys.exit(1)
   pp.pprint(client.get_table(args[0],args[1],))
 
-elif cmd == 'set_table_parameters':
-  if len(args) != 3:
-    print 'set_table_parameters requires 3 args'
-    sys.exit(1)
-  pp.pprint(client.set_table_parameters(args[0],args[1],eval(args[2]),))
-
 elif cmd == 'alter_table':
   if len(args) != 3:
     print 'alter_table requires 3 args'
     sys.exit(1)
   pp.pprint(client.alter_table(args[0],args[1],eval(args[2]),))
-
-elif cmd == 'truncate_table':
-  if len(args) != 3:
-    print 'truncate_table requires 3 args'
-    sys.exit(1)
-  pp.pprint(client.truncate_table(args[0],args[1],args[2],))
-
-elif cmd == 'cat':
-  if len(args) != 4:
-    print 'cat requires 4 args'
-    sys.exit(1)
-  pp.pprint(client.cat(args[0],args[1],args[2],eval(args[3]),))
 
 elif cmd == 'add_partition':
   if len(args) != 1:
@@ -226,11 +205,11 @@ elif cmd == 'get_partitions':
     sys.exit(1)
   pp.pprint(client.get_partitions(args[0],args[1],eval(args[2]),))
 
-elif cmd == 'set_partition_parameters':
-  if len(args) != 4:
-    print 'set_partition_parameters requires 4 args'
+elif cmd == 'get_partition_names':
+  if len(args) != 3:
+    print 'get_partition_names requires 3 args'
     sys.exit(1)
-  pp.pprint(client.set_partition_parameters(args[0],args[1],args[2],eval(args[3]),))
+  pp.pprint(client.get_partition_names(args[0],args[1],eval(args[2]),))
 
 elif cmd == 'alter_partitions':
   if len(args) != 2:

@@ -114,7 +114,7 @@ public class Version implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case -1:
+        case 1:
           if (field.type == TType.STRING) {
             this.version = iprot.readString();
             this.__isset.version = true;
@@ -122,7 +122,7 @@ public class Version implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -2:
+        case 2:
           if (field.type == TType.STRING) {
             this.comments = iprot.readString();
             this.__isset.comments = true;
@@ -146,7 +146,7 @@ public class Version implements TBase, java.io.Serializable {
     if (this.version != null) {
       field.name = "version";
       field.type = TType.STRING;
-      field.id = -1;
+      field.id = 1;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.version);
       oprot.writeFieldEnd();
@@ -154,7 +154,7 @@ public class Version implements TBase, java.io.Serializable {
     if (this.comments != null) {
       field.name = "comments";
       field.type = TType.STRING;
-      field.id = -2;
+      field.id = 2;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.comments);
       oprot.writeFieldEnd();

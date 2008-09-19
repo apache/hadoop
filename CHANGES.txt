@@ -210,6 +210,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4205. hive: metastore and ql to use the refactored SerDe library.
+    (zshao)
+
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).
     (Pete Wyckoff through zshao)
 

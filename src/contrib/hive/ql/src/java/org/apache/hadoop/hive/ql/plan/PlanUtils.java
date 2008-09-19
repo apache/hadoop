@@ -21,6 +21,11 @@ package org.apache.hadoop.hive.ql.plan;
 import java.util.*;
 import java.io.*;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
+import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.mapred.TextInputFormat;
 
 public class PlanUtils {
 
@@ -37,4 +42,52 @@ public class PlanUtils {
                           null,
                           Integer.valueOf (1));
   }
+  
+  public static tableDesc getDefaultTableDesc(String separatorCode, String columns) {
+    return new tableDesc(
+        MetadataTypedColumnsetSerDe.class,
+        TextInputFormat.class,
+        IgnoreKeyTextOutputFormat.class,
+        Utilities.makeProperties(
+            org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, separatorCode,
+            "columns", columns));    
+  }
+  public static tableDesc getDefaultTableDesc(String separatorCode) {
+    return new tableDesc(
+        MetadataTypedColumnsetSerDe.class,
+        TextInputFormat.class,
+        IgnoreKeyTextOutputFormat.class,
+        Utilities.makeProperties(
+            org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, separatorCode));    
+  }
+
+  
+  // We will make reduce key and reduce value TableDesc with configurable SerDes   
+  public static reduceSinkDesc getReduceSinkDesc(ArrayList<exprNodeDesc> keyCols,
+      ArrayList<exprNodeDesc> valueCols, int numPartitionFields) {
+     
+     return new reduceSinkDesc(keyCols, valueCols, numPartitionFields,
+         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(keyCols.size())),
+         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(valueCols.size())));
+  }
+  
+  // We will make reduce key and reduce value TableDesc with configurable SerDes   
+  public static reduceSinkDesc getReduceSinkDesc(ArrayList<exprNodeDesc> keyCols,
+      ArrayList<exprNodeDesc> valueCols, int tag, int numPartitionFields) {
+     
+     return new reduceSinkDesc(keyCols, valueCols, tag, numPartitionFields,
+         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(keyCols.size())),
+         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(valueCols.size())));
+  }
+
+  // We should read the TableDesc from gWork when it is available.   
+  public static tableDesc getReduceKeyDesc(mapredWork gWork) {
+     return getDefaultTableDesc("" + Utilities.ctrlaCode);
+  }
+
+  // We should read the TableDesc from gWork when it is available.   
+  public static tableDesc getReduceValueDesc(mapredWork gWork, int tag) {
+     return getDefaultTableDesc("" + Utilities.ctrlaCode);
+  }
+  
 }

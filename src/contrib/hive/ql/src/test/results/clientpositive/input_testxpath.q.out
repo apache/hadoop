@@ -1,45 +1,47 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR ([ (TOK_COLREF src_thrift lint) 1)) (TOK_SELEXPR (. ([ (TOK_COLREF src_thrift lintstring) 0) mystring)))))	
-	
-STAGE DEPENDENCIES:	
-  Stage-1 is a root stage	
-  Stage-0 depends on stages: Stage-1	
-	
-STAGE PLANS:	
-  Stage: Stage-1	
-    Map Reduce	
-      Alias -> Map Operator Tree:	
-        src_thrift 	
-            Select Operator	
-              expressions:	
-                    expr: lint[1]	
-                    type: class java.lang.Integer	
-                    expr: lintstring[0].mystring	
-                    type: class java.lang.String	
-              File Output Operator	
-                table:	
-                    name: dest1	
-                    serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                    input format: org.apache.hadoop.mapred.TextInputFormat	
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-	
-  Stage: Stage-0	
-    Move Operator	
-      tables:	
-            table:	
-                name: dest1	
-                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                input format: org.apache.hadoop.mapred.TextInputFormat	
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-            replace:	
-	
-0	0	
-2	1	
-4	8	
-6	27	
-8	64	
-10	125	
-12	216	
-14	343	
-16	512	
-18	729	
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR ([ (TOK_COLREF src_thrift lint) 1)) (TOK_SELEXPR (. ([ (TOK_COLREF src_thrift lintstring) 0) mystring)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src_thrift 
+            Select Operator
+              expressions:
+                    expr: lint[1]
+                    type: int
+                    expr: lintstring[0].mystring
+                    type: string
+              File Output Operator
+                table:
+                    name: dest1
+                    serde: simple_meta
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            table:
+                name: dest1
+                serde: simple_meta
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+            replace:
+
+
+0	0
+2	1
+4	8
+6	27
+8	64
+10	125
+12	216
+14	343
+16	512
+18	729
+

@@ -1,277 +1,282 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 5 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))	
-	
-STAGE DEPENDENCIES:	
-  Stage-1 is a root stage	
-  Stage-0 depends on stages: Stage-1	
-	
-STAGE PLANS:	
-  Stage: Stage-1	
-    Map Reduce	
-      Path -> Alias:	
-        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 	
-      Path -> Partition:	
-        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 	
-          Partition	
-          	
-              properties:	
-                name srcbucket	
-                bucket_field_name 	
-                serialization.format 1	
-                columns key,value	
-                field_to_dimension 	
-                bucket_count 2	
-                serialization.lib simple_meta	
-                file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket	
-              name: srcbucket	
-              serde: simple_meta	
-              input format: org.apache.hadoop.mapred.TextInputFormat	
-              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-      Alias -> Map Operator Tree:	
-        s 	
-            Filter Operator	
-              predicate:	
-                  expr: (((default_sample_hashfn(key) & 2147483647) % 5) = 1)	
-                  type: class java.lang.Boolean	
-              Select Operator	
-                expressions:	
-                      expr: key	
-                      type: class java.lang.String	
-                      expr: value	
-                      type: class java.lang.String	
-                File Output Operator	
-                  table:	
-                      properties:	
-                        name dest1	
-                        bucket_field_name 	
-                        serialization.format 1	
-                        columns key,value	
-                        field_to_dimension 	
-                        bucket_count -1	
-                        serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                        file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                        file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                        location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
-                      name: dest1	
-                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                      input format: org.apache.hadoop.mapred.TextInputFormat	
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                  directory: /tmp/hive-athusoo/238899095.10000.insclause-0	
-      Needs Tagging:	
-	
-  Stage: Stage-0	
-    Move Operator	
-      tables:	
-            table:	
-                properties:	
-                  name dest1	
-                  bucket_field_name 	
-                  serialization.format 1	
-                  columns key,value	
-                  field_to_dimension 	
-                  bucket_count -1	
-                  serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                  file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                  file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                  location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
-                name: dest1	
-                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                input format: org.apache.hadoop.mapred.TextInputFormat	
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-            replace:	
-            source: /tmp/hive-athusoo/238899095.10000.insclause-0	
-	
-165	val_165	
-255	val_255	
-278	val_278	
-273	val_273	
-37	val_37	
-327	val_327	
-82	val_82	
-403	val_403	
-417	val_417	
-430	val_430	
-219	val_219	
-287	val_287	
-237	val_237	
-174	val_174	
-494	val_494	
-174	val_174	
-417	val_417	
-377	val_377	
-309	val_309	
-205	val_205	
-345	val_345	
-129	val_129	
-386	val_386	
-192	val_192	
-138	val_138	
-430	val_430	
-278	val_278	
-318	val_318	
-241	val_241	
-138	val_138	
-8	val_8	
-179	val_179	
-129	val_129	
-322	val_322	
-197	val_197	
-96	val_96	
-165	val_165	
-327	val_327	
-205	val_205	
-156	val_156	
-282	val_282	
-197	val_197	
-318	val_318	
-318	val_318	
-87	val_87	
-179	val_179	
-395	val_395	
-282	val_282	
-138	val_138	
-19	val_19	
-435	val_435	
-273	val_273	
-309	val_309	
-327	val_327	
-331	val_331	
-395	val_395	
-336	val_336	
-322	val_322	
-160	val_160	
-430	val_430	
-458	val_458	
-78	val_78	
-41	val_41	
-223	val_223	
-449	val_449	
-228	val_228	
-138	val_138	
-453	val_453	
-64	val_64	
-69	val_69	
-368	val_368	
-296	val_296	
-219	val_219	
-485	val_485	
-223	val_223	
-480	val_480	
-467	val_467	
-331	val_331	
-403	val_403	
-480	val_480	
-291	val_291	
-255	val_255	
-200	val_200	
-237	val_237	
-417	val_417	
-444	val_444	
-480	val_480	
-214	val_214	
-462	val_462	
-133	val_133	
-421	val_421	
-462	val_462	
-458	val_458	
-273	val_273	
-183	val_183	
-28	val_28	
-37	val_37	
-403	val_403	
-200	val_200	
-179	val_180	
-291	val_292	
-241	val_242	
-287	val_288	
-246	val_247	
-278	val_279	
-296	val_297	
-147	val_148	
-273	val_274	
-106	val_107	
-421	val_422	
-133	val_134	
-110	val_111	
-485	val_486	
-241	val_242	
-408	val_409	
-476	val_477	
-494	val_495	
-485	val_486	
-50	val_51	
-3	val_4	
-101	val_102	
-331	val_332	
-390	val_391	
-165	val_166	
-304	val_305	
-264	val_265	
-129	val_130	
-453	val_454	
-421	val_422	
-82	val_83	
-467	val_468	
-147	val_148	
-291	val_292	
-426	val_427	
-386	val_387	
-129	val_130	
-246	val_247	
-197	val_198	
-390	val_391	
-23	val_24	
-480	val_481	
-480	val_481	
-331	val_332	
-183	val_184	
-318	val_319	
-476	val_477	
-174	val_175	
-87	val_88	
-264	val_265	
-336	val_337	
-340	val_341	
-390	val_391	
-363	val_364	
-19	val_20	
-241	val_242	
-363	val_364	
-395	val_396	
-386	val_387	
-8	val_9	
-313	val_314	
-381	val_382	
-69	val_70	
-322	val_323	
-241	val_242	
-32	val_33	
-192	val_193	
-205	val_206	
-138	val_139	
-160	val_161	
-174	val_175	
-412	val_413	
-494	val_495	
-287	val_288	
-435	val_436	
-151	val_152	
-156	val_157	
-462	val_463	
-87	val_88	
-408	val_409	
-412	val_413	
-151	val_152	
-156	val_157	
-228	val_229	
-363	val_364	
-46	val_47	
-78	val_79	
-82	val_83	
-430	val_431	
-309	val_310	
-138	val_139	
-91	val_92	
-395	val_396	
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 5 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Path -> Alias:
+        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+      Path -> Partition:
+        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+          Partition
+          
+              properties:
+                name srcbucket
+                bucket_field_name 
+                serialization.format 1
+                columns key,value
+                field_to_dimension 
+                bucket_count 2
+                serialization.lib simple_meta
+                file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket
+              name: srcbucket
+              serde: simple_meta
+              input format: org.apache.hadoop.mapred.TextInputFormat
+              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+      Alias -> Map Operator Tree:
+        s 
+            Filter Operator
+              predicate:
+                  expr: (((default_sample_hashfn(key) & 2147483647) % 5) = 1)
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                File Output Operator
+                  table:
+                      properties:
+                        name dest1
+                        bucket_field_name 
+                        serialization.format 1
+                        columns key,value
+                        SORTBUCKETCOLSPREFIX TRUE
+                        field_to_dimension 
+                        bucket_count -1
+                        serialization.lib simple_meta
+                        file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                        file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                      name: dest1
+                      serde: simple_meta
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  directory: /tmp/hive-zshao/824052972.10000.insclause-0
+      Needs Tagging:
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            table:
+                properties:
+                  name dest1
+                  bucket_field_name 
+                  serialization.format 1
+                  columns key,value
+                  SORTBUCKETCOLSPREFIX TRUE
+                  field_to_dimension 
+                  bucket_count -1
+                  serialization.lib simple_meta
+                  file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                  file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                name: dest1
+                serde: simple_meta
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+            replace:
+            source: /tmp/hive-zshao/824052972.10000.insclause-0
+
+
+165	val_165
+255	val_255
+278	val_278
+273	val_273
+37	val_37
+327	val_327
+82	val_82
+403	val_403
+417	val_417
+430	val_430
+219	val_219
+287	val_287
+237	val_237
+174	val_174
+494	val_494
+174	val_174
+417	val_417
+377	val_377
+309	val_309
+205	val_205
+345	val_345
+129	val_129
+386	val_386
+192	val_192
+138	val_138
+430	val_430
+278	val_278
+318	val_318
+241	val_241
+138	val_138
+8	val_8
+179	val_179
+129	val_129
+322	val_322
+197	val_197
+96	val_96
+165	val_165
+327	val_327
+205	val_205
+156	val_156
+282	val_282
+197	val_197
+318	val_318
+318	val_318
+87	val_87
+179	val_179
+395	val_395
+282	val_282
+138	val_138
+19	val_19
+435	val_435
+273	val_273
+309	val_309
+327	val_327
+331	val_331
+395	val_395
+336	val_336
+322	val_322
+160	val_160
+430	val_430
+458	val_458
+78	val_78
+41	val_41
+223	val_223
+449	val_449
+228	val_228
+138	val_138
+453	val_453
+64	val_64
+69	val_69
+368	val_368
+296	val_296
+219	val_219
+485	val_485
+223	val_223
+480	val_480
+467	val_467
+331	val_331
+403	val_403
+480	val_480
+291	val_291
+255	val_255
+200	val_200
+237	val_237
+417	val_417
+444	val_444
+480	val_480
+214	val_214
+462	val_462
+133	val_133
+421	val_421
+462	val_462
+458	val_458
+273	val_273
+183	val_183
+28	val_28
+37	val_37
+403	val_403
+200	val_200
+
+179	val_180
+291	val_292
+241	val_242
+287	val_288
+246	val_247
+278	val_279
+296	val_297
+147	val_148
+273	val_274
+106	val_107
+421	val_422
+133	val_134
+110	val_111
+485	val_486
+241	val_242
+408	val_409
+476	val_477
+494	val_495
+485	val_486
+50	val_51
+3	val_4
+101	val_102
+331	val_332
+390	val_391
+165	val_166
+304	val_305
+264	val_265
+129	val_130
+453	val_454
+421	val_422
+82	val_83
+467	val_468
+147	val_148
+291	val_292
+426	val_427
+386	val_387
+129	val_130
+246	val_247
+197	val_198
+390	val_391
+23	val_24
+480	val_481
+480	val_481
+331	val_332
+183	val_184
+318	val_319
+476	val_477
+174	val_175
+87	val_88
+264	val_265
+336	val_337
+340	val_341
+390	val_391
+363	val_364
+19	val_20
+241	val_242
+363	val_364
+395	val_396
+386	val_387
+8	val_9
+313	val_314
+381	val_382
+69	val_70
+322	val_323
+241	val_242
+32	val_33
+192	val_193
+205	val_206
+138	val_139
+160	val_161
+174	val_175
+412	val_413
+494	val_495
+287	val_288
+435	val_436
+151	val_152
+156	val_157
+462	val_463
+87	val_88
+408	val_409
+412	val_413
+151	val_152
+156	val_157
+228	val_229
+363	val_364
+46	val_47
+78	val_79
+82	val_83
+430	val_431
+309	val_310
+138	val_139
+91	val_92
+395	val_396
+

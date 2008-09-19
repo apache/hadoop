@@ -42,6 +42,7 @@ public class MapRedTask extends Task<mapredWork> implements Serializable {
   public int execute() {
 
     try {
+      // enable assertion
       String hadoopExec = conf.getVar(HiveConf.ConfVars.HADOOPBIN);
       String hiveJar = conf.getJar();
       String hiveConfArgs = ExecDriver.generateCmdLine(conf);

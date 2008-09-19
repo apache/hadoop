@@ -25,7 +25,7 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 
 public class UDFOPOr extends UDF {
 
-  private static Log LOG = LogFactory.getLog("org.apache.hadoop.hive.ql.udf.UDFOPOr");
+  private static Log LOG = LogFactory.getLog(UDFOPOr.class.getName());
 
   public UDFOPOr() {
   }
@@ -40,6 +40,6 @@ public class UDFOPOr extends UDF {
       r = Boolean.TRUE;
     }
     // LOG.info("evaluate(" + a + "," + b + ")=" + r);
-    return null;
+    return r;
   }
 }

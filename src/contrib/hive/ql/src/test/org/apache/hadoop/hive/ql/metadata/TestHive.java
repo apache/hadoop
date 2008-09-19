@@ -27,16 +27,18 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.DB;
-import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
 import org.apache.hadoop.hive.ql.thrift.Complex;
-import org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe;
-import org.apache.hadoop.hive.serde.thrift.ThriftSerDe;
+import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
+import org.apache.hadoop.hive.serde2.ThriftDeserializer;
+import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
+
+import com.facebook.thrift.protocol.TBinaryProtocol;
 
 public class TestHive extends TestCase {
   private Hive hm;
@@ -98,7 +100,8 @@ public class TestHive extends TestCase {
       }
 
       List<FieldSchema>  partCols = new ArrayList<FieldSchema>();
-      partCols.add(new FieldSchema("ds", Constants.STRING_TYPE_NAME, "partition column, date but in string format as date type is not yet supported in QL"));
+      partCols.add(new FieldSchema("ds", Constants.STRING_TYPE_NAME, 
+          "partition column, date but in string format as date type is not yet supported in QL"));
       tbl.setPartCols(partCols);
 
       tbl.setNumBuckets((short) 512);
@@ -106,13 +109,12 @@ public class TestHive extends TestCase {
       tbl.setRetention(10);
 
       // set output format parameters (these are not supported by QL but only for demo purposes)
-      tbl.setIsCompressed(false);
-      tbl.setFieldDelim("1");
-      tbl.setLineDelim("\n");
-      tbl.setMapKeyDelim("3"); // ^D
-      tbl.setCollectionItemDelim("2");
+      tbl.setSerdeParam(Constants.FIELD_DELIM, "1");
+      tbl.setSerdeParam(Constants.LINE_DELIM, "\n");
+      tbl.setSerdeParam(Constants.MAPKEY_DELIM, "3");
+      tbl.setSerdeParam(Constants.COLLECTION_DELIM, "2");
 
-      tbl.setSerializationFormat("1");
+      tbl.setSerdeParam(Constants.FIELD_DELIM, "1");
       tbl.setSerializationLib(MetadataTypedColumnsetSerDe.class.getName());
 
       // create table
@@ -135,7 +137,7 @@ public class TestHive extends TestCase {
         // now that URI is set correctly, set the original table's uri and then compare the two tables
         tbl.setDataLocation(ft.getDataLocation());
         assertTrue("Tables  doesn't match: " + tableName, ft.getTTable().equals(tbl.getTTable()));
-        assertEquals("Serde is not set correctly", tbl.getSerDe().getShortName(), ft.getSerDe().getShortName());
+        assertEquals("Serde is not set correctly", tbl.getDeserializer().getShortName(), ft.getDeserializer().getShortName());
       } catch (HiveException e) {
         e.printStackTrace();
         assertTrue("Unable to fetch table correctly: " + tableName, false);
@@ -171,9 +173,9 @@ public class TestHive extends TestCase {
       Table tbl = new Table(tableName);
       tbl.setInputFormatClass(SequenceFileInputFormat.class.getName());
       tbl.setOutputFormatClass(SequenceFileOutputFormat.class.getName());
-      tbl.setSerializationLib(ThriftSerDe.class.getName());
-      tbl.setSerializationClass(Complex.class.getName());
-      tbl.setSerializationFormat(com.facebook.thrift.protocol.TBinaryProtocol.class.getName());
+      tbl.setSerializationLib(ThriftDeserializer.class.getName());
+      tbl.setSerdeParam(Constants.SERIALIZATION_CLASS, Complex.class.getName());
+      tbl.setSerdeParam(Constants.SERIALIZATION_FORMAT, TBinaryProtocol.class.getName());
       try {
         hm.createTable(tbl);
       } catch (HiveException e) {
@@ -193,7 +195,7 @@ public class TestHive extends TestCase {
         // now that URI is set correctly, set the original table's uri and then compare the two tables
         tbl.setDataLocation(ft.getDataLocation());
         assertTrue("Tables  doesn't match: " + tableName, ft.getTTable().equals(tbl.getTTable()));
-        assertEquals("Serde is not set correctly", tbl.getSerDe().getShortName(), ft.getSerDe().getShortName());
+        assertEquals("Serde is not set correctly", tbl.getDeserializer().getShortName(), ft.getDeserializer().getShortName());
       } catch (HiveException e) {
         System.err.println(StringUtils.stringifyException(e));
         assertTrue("Unable to fetch table correctly: " + tableName, false);
@@ -208,12 +210,12 @@ public class TestHive extends TestCase {
 
   private static Table createTestTable(String dbName, String tableName) throws HiveException {
     Table tbl = new Table(tableName);
-    tbl.getTTable().setDatabase(dbName);
+    tbl.getTTable().setDbName(dbName);
     tbl.setInputFormatClass(SequenceFileInputFormat.class.getName());
     tbl.setOutputFormatClass(SequenceFileOutputFormat.class.getName());
-    tbl.setSerializationLib(ThriftSerDe.class.getName());
-    tbl.setSerializationClass(Complex.class.getName());
-    tbl.setSerializationFormat(com.facebook.thrift.protocol.TBinaryProtocol.class.getName());
+    tbl.setSerializationLib(ThriftDeserializer.class.getName());
+    tbl.setSerdeParam(Constants.SERIALIZATION_CLASS, Complex.class.getName());
+    tbl.setSerdeParam(Constants.SERIALIZATION_FORMAT, TBinaryProtocol.class.getName());
     return tbl;
   }
 

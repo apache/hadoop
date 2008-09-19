@@ -87,9 +87,11 @@ public interface IMetaStoreClient {
    * @throws TException
    * @see org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Iface#list_partitions(java.lang.String, java.lang.String, short)
    */
-  public List<Partition> listPartitions(String tbl_name, String db_name, short max_parts)
+  public List<Partition> listPartitions(String db_name, String tbl_name, short max_parts)
       throws NoSuchObjectException, MetaException, TException;
 
+  public List<String> listPartitionNames(String db_name, String tbl_name, short max_parts)
+    throws  MetaException, TException;
   /**
    * @param tbl
    * @return

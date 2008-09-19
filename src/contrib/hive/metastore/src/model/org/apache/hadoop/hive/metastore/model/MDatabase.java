@@ -27,7 +27,7 @@ package org.apache.hadoop.hive.metastore.model;
  */
 public class MDatabase {
   private String name;
-  private String location;
+  private String description;
 
   /**
    * Default construction to keep jpox/jdo happy
@@ -41,7 +41,7 @@ public class MDatabase {
    */
   public MDatabase(String name, String location) {
     this.name = name;
-    this.location = location;
+    this.description = location;
   }
 
   /**
@@ -59,16 +59,17 @@ public class MDatabase {
   }
 
   /**
-   * @return the location
+   * @return the description
    */
-  public String getLocation() {
-    return location;
+  public String getDescription() {
+    return description;
   }
 
   /**
-   * @param location the location to set
+   * @param description the description to set
    */
-  public void setLocation(String location) {
-    this.location = location;
+  public void setDescription(String description) {
+    this.description = description;
   }
+
 }

@@ -23,6 +23,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * ObjectInspectorFactory is the primary way to create new ObjectInspector instances.
  * 
@@ -31,6 +34,8 @@ import java.util.Map;
  */
 public class ObjectInspectorUtils {
 
+  private static Log LOG = LogFactory.getLog(ObjectInspectorUtils.class.getName());
+  
   /** This function defines the list of PrimitiveClasses that we support. 
    *  A PrimitiveClass should support java serialization/deserialization.
    */
@@ -58,7 +63,37 @@ public class ObjectInspectorUtils {
     return primitiveClass;
   }
   
-
+  /**
+   * Get the short name for the types
+   */
+  public static String getClassShortName(String className) {
+    String result = className;
+    
+    if (result.equals(String.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME;
+    } else if (result.equals(Integer.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME;
+    } else if (result.equals(Float.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.FLOAT_TYPE_NAME;
+    } else if (result.equals(Double.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.DOUBLE_TYPE_NAME;
+    } else if (result.equals(Long.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.BIGINT_TYPE_NAME;
+    } else if (result.equals(java.sql.Date.class.getName())) {
+      result = org.apache.hadoop.hive.serde.Constants.DATE_TYPE_NAME;
+    } else {
+      LOG.warn("unsupported class: " + className);
+    }
+    
+    // Remove prefix
+    String prefix = "java.lang.";
+    if (result.startsWith(prefix)) {
+      result = result.substring(prefix.length());
+    }
+    
+    return result;
+  }
+  
   static ArrayList<ArrayList<String>> integerArrayCache = new ArrayList<ArrayList<String>>();
   /**
    * Returns an array of Integer strings, starting from "0".

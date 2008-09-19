@@ -19,12 +19,22 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.plan.PlanUtils;
 import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.reduceSinkDesc;
+import org.apache.hadoop.hive.ql.plan.tableDesc;
 import org.apache.hadoop.hive.ql.io.*;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.Serializer;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.io.Text;
 
 /**
  * Reduce Sink Operator sends output to the reduce stage
@@ -34,10 +44,14 @@ public class ReduceSinkOperator extends TerminalOperator <reduceSinkDesc> implem
   private static final long serialVersionUID = 1L;
   transient protected ExprNodeEvaluator[] keyEval;
   transient protected ExprNodeEvaluator[] valueEval;
-  transient WritableComparableHiveObject wcho;
-  transient WritableHiveObject who;
-  transient boolean keyIsSingleton, valueIsSingleton;
-
+  
+  // TODO: we use MetadataTypedColumnsetSerDe for now, till DynamicSerDe is ready
+  transient Serializer keySerializer;
+  transient Serializer valueSerializer;
+  transient int tag;
+  transient byte[] tagByte = new byte[1];
+  transient int numPartitionFields; 
+  
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     try {
@@ -46,61 +60,99 @@ public class ReduceSinkOperator extends TerminalOperator <reduceSinkDesc> implem
       for(exprNodeDesc e: conf.getKeyCols()) {
         keyEval[i++] = ExprNodeEvaluatorFactory.get(e);
       }
-      keyIsSingleton = false; //(i == 1);
 
       valueEval = new ExprNodeEvaluator[conf.getValueCols().size()];
       i=0;
       for(exprNodeDesc e: conf.getValueCols()) {
         valueEval[i++] = ExprNodeEvaluatorFactory.get(e);
       }
-      valueIsSingleton = false; //(i == 1);
 
-      // TODO: Use NaiiveSerializer for now 
-      // Once we make sure CompositeHiveObject.getJavaObject() returns a Java List,
-      // we will use MetadataTypedSerDe to serialize the data, instead of using
-      // NaiiveSerializer.
-      int tag = conf.getTag();
-      if(tag == -1) {
-        who = new NoTagWritableHiveObject(null, new NaiiveSerializer());
-        wcho = new NoTagWritableComparableHiveObject(null, new NaiiveSerializer());
-        l4j.info("Using tag = -1");
-      } else {
-        l4j.info("Using tag = " + tag);
-        who = new WritableHiveObject(tag, null, new NaiiveSerializer());
-        wcho = new WritableComparableHiveObject(tag, null, new NaiiveSerializer());
-      }
+      tag = conf.getTag();
+      tagByte[0] = (byte)tag;
+      LOG.info("Using tag = " + tag);
 
+      tableDesc keyTableDesc = conf.getKeySerializeInfo();
+      keySerializer = (Serializer)keyTableDesc.getDeserializerClass().newInstance();
+      keySerializer.initialize(null, keyTableDesc.getProperties());
+      
+      tableDesc valueTableDesc = conf.getValueSerializeInfo();
+      valueSerializer = (Serializer)valueTableDesc.getDeserializerClass().newInstance();
+      valueSerializer.initialize(null, valueTableDesc.getProperties());
+      
       // Set the number of key fields to be used in the partitioner.
-      WritableComparableHiveObject.setNumPartitionFields(conf.getNumPartitionFields());
+      numPartitionFields = conf.getNumPartitionFields();
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
-    if(keyIsSingleton) {
-      wcho.setHo(keyEval[0].evaluate(r));
-    } else {
-      CompositeHiveObject nr = new CompositeHiveObject (keyEval.length);
-      for(ExprNodeEvaluator e: keyEval) {
-        nr.addHiveObject(e.evaluate(r));
-      }
-      wcho.setHo(nr);
-    }
-
-    if(valueIsSingleton) {
-      who.setHo(valueEval[0].evaluate(r));
-    } else {
-      CompositeHiveObject nr = new CompositeHiveObject (valueEval.length);
-      for(ExprNodeEvaluator e: valueEval) {
-        nr.addHiveObject(e.evaluate(r));
-      }
-      who.setHo(nr);
-    }
-
+  transient InspectableObject tempInspectableObject = new InspectableObject();
+  transient HiveKey keyWritable = new HiveKey();
+  transient Text valueText;
+  
+  transient ObjectInspector keyObjectInspector;
+  transient ObjectInspector valueObjectInspector;
+  transient ArrayList<ObjectInspector> keyFieldsObjectInspectors = new ArrayList<ObjectInspector>();
+  transient ArrayList<ObjectInspector> valueFieldsObjectInspectors = new ArrayList<ObjectInspector>();
+  
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
+    // TODO: use DynamicSerDe when that is ready
     try {
-      out.collect(wcho, who);
+      // Generate hashCode for the tuple
+      int keyHashCode = 0;
+      if (numPartitionFields == -1) {
+        keyHashCode = (int)(Math.random() * Integer.MAX_VALUE);
+      }
+      ArrayList<Object> keys = new ArrayList<Object>(keyEval.length);
+      for(ExprNodeEvaluator e: keyEval) {
+        e.evaluate(row, rowInspector, tempInspectableObject);
+        keys.add(tempInspectableObject.o);
+        if (numPartitionFields == keys.size()) {
+          keyHashCode = keys.hashCode();
+        }
+        if (keyObjectInspector == null) {
+          keyFieldsObjectInspectors.add(tempInspectableObject.oi);
+        }
+      }
+      if (numPartitionFields > keys.size()) {
+        keyHashCode = keys.hashCode();
+      }
+      if (keyObjectInspector == null) {
+        keyObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
+            ObjectInspectorUtils.getIntegerArray(keyFieldsObjectInspectors.size()),
+            keyFieldsObjectInspectors);
+      }
+      Text key = (Text)keySerializer.serialize(keys, keyObjectInspector);
+      if (tag == -1) {
+        keyWritable.set(key.getBytes(), 0, key.getLength());
+      } else {
+        int keyLength = key.getLength();
+        keyWritable.setSize(keyLength+1);
+        System.arraycopy(key.getBytes(), 0, keyWritable.get(), 0, keyLength);
+        keyWritable.get()[keyLength] = tagByte[0];
+      }
+      keyWritable.setHashCode(keyHashCode);
+      
+      ArrayList<String> values = new ArrayList<String>(valueEval.length);
+      for(ExprNodeEvaluator e: valueEval) {
+        e.evaluate(row, rowInspector, tempInspectableObject);
+        values.add(tempInspectableObject.o == null ? null : tempInspectableObject.o.toString());
+        if (valueObjectInspector == null) {
+          valueFieldsObjectInspectors.add(tempInspectableObject.oi);
+        }
+      }
+      if (valueObjectInspector == null) {
+        valueObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
+            ObjectInspectorUtils.getIntegerArray(valueFieldsObjectInspectors.size()),
+            valueFieldsObjectInspectors);
+      }
+      valueText = (Text)valueSerializer.serialize(values, valueObjectInspector);
+    } catch (SerDeException e) {
+      throw new HiveException(e);
+    }
+    try {
+      out.collect(keyWritable, valueText);
     } catch (IOException e) {
       throw new HiveException (e);
     }

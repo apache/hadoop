@@ -25,7 +25,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-athusoo/275397500.10000.insclause-0</string> 
+             <string>/tmp/hive-zshao/147290682.10000.insclause-0</string> 
             </void> 
             <void property="targetDir"> 
              <string>../../../../build/contrib/hive/ql/test/data/warehouse/union.out</string> 
@@ -72,10 +72,13 @@
                         <void property="conf"> 
                          <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                           <void property="dirName"> 
-                           <string>/tmp/hive-athusoo/275397500.10000.insclause-0</string> 
+                           <string>/tmp/hive-zshao/147290682.10000.insclause-0</string> 
                           </void> 
                           <void property="tableInfo"> 
                            <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+                            <void property="deserializerClass"> 
+                             <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+                            </void> 
                             <void property="inputFileFormatClass"> 
                              <class>org.apache.hadoop.mapred.TextInputFormat</class> 
                             </void> 
@@ -89,9 +92,6 @@
                                <string>1</string> 
                               </void> 
                              </object> 
-                            </void> 
-                            <void property="serdeClass"> 
-                             <class>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</class> 
                             </void> 
                            </object> 
                           </void> 
@@ -107,7 +107,11 @@
                                <string>0</string> 
                               </void> 
                               <void property="type"> 
-                               <object id="TypeInfo0" class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                               <object id="PrimitiveTypeInfo0" class="org.apache.hadoop.hive.ql.typeinfo.PrimitiveTypeInfo"> 
+                                <void property="primitiveClass"> 
+                                 <class>java.lang.String</class> 
+                                </void> 
+                               </object> 
                               </void> 
                              </object> 
                             </void> 
@@ -117,7 +121,7 @@
                                <string>1</string> 
                               </void> 
                               <void property="type"> 
-                               <object id="TypeInfo1" class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                               <object idref="PrimitiveTypeInfo0"/> 
                               </void> 
                              </object> 
                             </void> 
@@ -139,7 +143,7 @@
                            <string>0</string> 
                           </void> 
                           <void property="typeInfo"> 
-                           <object idref="TypeInfo0"/> 
+                           <object idref="PrimitiveTypeInfo0"/> 
                           </void> 
                          </object> 
                         </void> 
@@ -149,7 +153,7 @@
                            <string>1</string> 
                           </void> 
                           <void property="typeInfo"> 
-                           <object idref="TypeInfo1"/> 
+                           <object idref="PrimitiveTypeInfo0"/> 
                           </void> 
                          </object> 
                         </void> 
@@ -178,7 +182,7 @@
                        <string>key</string> 
                       </void> 
                       <void property="typeInfo"> 
-                       <object idref="TypeInfo0"/> 
+                       <object idref="PrimitiveTypeInfo0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -188,7 +192,7 @@
                        <string>value</string> 
                       </void> 
                       <void property="typeInfo"> 
-                       <object idref="TypeInfo1"/> 
+                       <object idref="PrimitiveTypeInfo0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -206,7 +210,7 @@
                        <string>0</string> 
                       </void> 
                       <void property="type"> 
-                       <object idref="TypeInfo0"/> 
+                       <object idref="PrimitiveTypeInfo0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -216,7 +220,7 @@
                        <string>1</string> 
                       </void> 
                       <void property="type"> 
-                       <object idref="TypeInfo1"/> 
+                       <object idref="PrimitiveTypeInfo0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -256,14 +260,18 @@
                      <string>key</string> 
                     </void> 
                     <void property="typeInfo"> 
-                     <object idref="TypeInfo0"/> 
+                     <object idref="PrimitiveTypeInfo0"/> 
                     </void> 
                    </object> 
                   </void> 
                   <void method="add"> 
                    <object class="org.apache.hadoop.hive.ql.plan.exprNodeConstantDesc"> 
                     <void property="typeInfo"> 
-                     <object class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                     <object class="org.apache.hadoop.hive.ql.typeinfo.PrimitiveTypeInfo"> 
+                      <void property="primitiveClass"> 
+                       <class>java.lang.Integer</class> 
+                      </void> 
+                     </object> 
                     </void> 
                     <void property="value"> 
                      <int>100</int> 
@@ -273,7 +281,11 @@
                  </object> 
                 </void> 
                 <void property="typeInfo"> 
-                 <object class="org.apache.hadoop.hive.ql.parse.TypeInfo"/> 
+                 <object class="org.apache.hadoop.hive.ql.typeinfo.PrimitiveTypeInfo"> 
+                  <void property="primitiveClass"> 
+                   <class>java.lang.Boolean</class> 
+                  </void> 
+                 </object> 
                 </void> 
                </object> 
               </void> 
@@ -289,7 +301,7 @@
                    <string>key</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo0"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -299,7 +311,7 @@
                    <string>value</string> 
                   </void> 
                   <void property="type"> 
-                   <object idref="TypeInfo1"/> 
+                   <object idref="PrimitiveTypeInfo0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -325,7 +337,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>unioninput:src</string> 
@@ -337,13 +349,16 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
         <void property="partSpec"> 
          <object class="java.util.LinkedHashMap"/> 
         </void> 
         <void property="tableDesc"> 
          <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
+          <void property="deserializerClass"> 
+           <class>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</class> 
+          </void> 
           <void property="inputFileFormatClass"> 
            <class>org.apache.hadoop.mapred.TextInputFormat</class> 
           </void> 
@@ -390,12 +405,9 @@
             </void> 
             <void method="put"> 
              <string>location</string> 
-             <string>file:/home/athusoo/apacheprojects/hadoop-core-trunk_ws3/build/contrib/hive/ql/test/data/warehouse/src</string> 
+             <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
             </void> 
            </object> 
-          </void> 
-          <void property="serdeClass"> 
-           <class>org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe</class> 
           </void> 
           <void property="serdeClassName"> 
            <string>simple_meta</string> 

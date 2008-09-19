@@ -1,587 +1,592 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 2 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))	
-	
-STAGE DEPENDENCIES:	
-  Stage-1 is a root stage	
-  Stage-0 depends on stages: Stage-1	
-	
-STAGE PLANS:	
-  Stage: Stage-1	
-    Map Reduce	
-      Path -> Alias:	
-        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 	
-      Path -> Partition:	
-        file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 	
-          Partition	
-          	
-              properties:	
-                name srcbucket	
-                bucket_field_name 	
-                serialization.format 1	
-                columns key,value	
-                field_to_dimension 	
-                bucket_count 2	
-                serialization.lib simple_meta	
-                file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket	
-              name: srcbucket	
-              serde: simple_meta	
-              input format: org.apache.hadoop.mapred.TextInputFormat	
-              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-      Alias -> Map Operator Tree:	
-        s 	
-            Filter Operator	
-              predicate:	
-                  expr: (((default_sample_hashfn(key) & 2147483647) % 2) = 1)	
-                  type: class java.lang.Boolean	
-              Select Operator	
-                expressions:	
-                      expr: key	
-                      type: class java.lang.String	
-                      expr: value	
-                      type: class java.lang.String	
-                File Output Operator	
-                  table:	
-                      properties:	
-                        name dest1	
-                        bucket_field_name 	
-                        serialization.format 1	
-                        columns key,value	
-                        field_to_dimension 	
-                        bucket_count -1	
-                        serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                        file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                        file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                        location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
-                      name: dest1	
-                      serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                      input format: org.apache.hadoop.mapred.TextInputFormat	
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                  directory: /tmp/hive-athusoo/24880210.10000.insclause-0	
-      Needs Tagging:	
-	
-  Stage: Stage-0	
-    Move Operator	
-      tables:	
-            table:	
-                properties:	
-                  name dest1	
-                  bucket_field_name 	
-                  serialization.format 1	
-                  columns key,value	
-                  field_to_dimension 	
-                  bucket_count -1	
-                  serialization.lib org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                  file.inputformat org.apache.hadoop.mapred.TextInputFormat	
-                  file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-                  location file:/home/athusoo/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1	
-                name: dest1	
-                serde: org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe	
-                input format: org.apache.hadoop.mapred.TextInputFormat	
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-            replace:	
-            source: /tmp/hive-athusoo/24880210.10000.insclause-0	
-	
-238	val_238	
-311	val_311	
-27	val_27	
-409	val_409	
-278	val_278	
-98	val_98	
-265	val_265	
-193	val_193	
-401	val_401	
-128	val_128	
-146	val_146	
-429	val_429	
-469	val_469	
-281	val_281	
-209	val_209	
-403	val_403	
-166	val_166	
-430	val_430	
-252	val_252	
-292	val_292	
-287	val_287	
-153	val_153	
-193	val_193	
-494	val_494	
-207	val_207	
-199	val_199	
-399	val_399	
-247	val_247	
-489	val_489	
-162	val_162	
-377	val_377	
-397	val_397	
-342	val_342	
-195	val_195	
-113	val_113	
-155	val_155	
-203	val_203	
-339	val_339	
-128	val_128	
-311	val_311	
-302	val_302	
-205	val_205	
-438	val_438	
-489	val_489	
-157	val_157	
-221	val_221	
-92	val_92	
-111	val_111	
-47	val_47	
-72	val_72	
-427	val_427	
-399	val_399	
-382	val_382	
-498	val_498	
-386	val_386	
-469	val_469	
-54	val_54	
-216	val_216	
-430	val_430	
-278	val_278	
-289	val_289	
-221	val_221	
-65	val_65	
-311	val_311	
-137	val_137	
-241	val_241	
-83	val_83	
-333	val_333	
-180	val_180	
-12	val_12	
-230	val_230	
-67	val_67	
-384	val_384	
-489	val_489	
-353	val_353	
-373	val_373	
-272	val_272	
-348	val_348	
-58	val_58	
-230	val_230	
-348	val_348	
-463	val_463	
-179	val_179	
-119	val_119	
-496	val_496	
-322	val_322	
-197	val_197	
-393	val_393	
-454	val_454	
-100	val_100	
-298	val_298	
-199	val_199	
-191	val_191	
-418	val_418	
-96	val_96	
-230	val_230	
-205	val_205	
-120	val_120	
-131	val_131	
-43	val_43	
-436	val_436	
-469	val_469	
-308	val_308	
-481	val_481	
-98	val_98	
-197	val_197	
-409	val_409	
-470	val_470	
-137	val_137	
-85	val_85	
-490	val_490	
-87	val_87	
-364	val_364	
-179	val_179	
-395	val_395	
-238	val_238	
-72	val_72	
-90	val_90	
-10	val_10	
-306	val_306	
-272	val_272	
-331	val_331	
-401	val_401	
-452	val_452	
-177	val_177	
-5	val_5	
-317	val_317	
-395	val_395	
-58	val_58	
-168	val_168	
-34	val_34	
-229	val_229	
-472	val_472	
-322	val_322	
-498	val_498	
-160	val_160	
-195	val_195	
-430	val_430	
-119	val_119	
-489	val_489	
-458	val_458	
-78	val_78	
-76	val_76	
-41	val_41	
-223	val_223	
-492	val_492	
-449	val_449	
-218	val_218	
-30	val_30	
-209	val_209	
-76	val_76	
-74	val_74	
-342	val_342	
-69	val_69	
-230	val_230	
-368	val_368	
-296	val_296	
-113	val_113	
-216	val_216	
-344	val_344	
-274	val_274	
-485	val_485	
-223	val_223	
-256	val_256	
-263	val_263	
-70	val_70	
-487	val_487	
-401	val_401	
-191	val_191	
-5	val_5	
-438	val_438	
-128	val_128	
-467	val_467	
-432	val_432	
-229	val_229	
-469	val_469	
-463	val_463	
-283	val_283	
-331	val_331	
-193	val_193	
-335	val_335	
-104	val_104	
-366	val_366	
-175	val_175	
-403	val_403	
-483	val_483	
-409	val_409	
-401	val_401	
-258	val_258	
-90	val_90	
-203	val_203	
-348	val_348	
-12	val_12	
-201	val_201	
-164	val_164	
-454	val_454	
-478	val_478	
-298	val_298	
-164	val_164	
-382	val_382	
-5	val_5	
-70	val_70	
-397	val_397	
-351	val_351	
-104	val_104	
-70	val_70	
-438	val_438	
-119	val_119	
-414	val_414	
-360	val_360	
-199	val_199	
-120	val_120	
-429	val_429	
-443	val_443	
-230	val_230	
-478	val_478	
-317	val_317	
-333	val_333	
-207	val_207	
-249	val_249	
-265	val_265	
-83	val_83	
-353	val_353	
-214	val_214	
-133	val_133	
-175	val_175	
-454	val_454	
-375	val_375	
-401	val_401	
-421	val_421	
-407	val_407	
-384	val_384	
-256	val_256	
-67	val_67	
-384	val_384	
-379	val_379	
-18	val_18	
-492	val_492	
-100	val_100	
-298	val_298	
-9	val_9	
-498	val_498	
-146	val_146	
-458	val_458	
-362	val_362	
-186	val_186	
-285	val_285	
-348	val_348	
-18	val_18	
-281	val_281	
-344	val_344	
-469	val_469	
-315	val_315	
-348	val_348	
-414	val_414	
-126	val_126	
-90	val_90	
-403	val_403	
-474	val_475	
-281	val_282	
-179	val_180	
-135	val_136	
-423	val_424	
-245	val_246	
-425	val_426	
-241	val_242	
-177	val_178	
-272	val_273	
-287	val_288	
-373	val_374	
-447	val_448	
-443	val_444	
-175	val_176	
-278	val_279	
-296	val_297	
-126	val_127	
-249	val_250	
-21	val_22	
-441	val_442	
-106	val_107	
-371	val_372	
-153	val_154	
-490	val_491	
-421	val_422	
-243	val_244	
-128	val_129	
-10	val_11	
-133	val_134	
-333	val_334	
-391	val_392	
-485	val_486	
-241	val_242	
-85	val_86	
-335	val_336	
-476	val_477	
-494	val_495	
-94	val_95	
-485	val_486	
-393	val_394	
-409	val_410	
-50	val_51	
-265	val_266	
-128	val_129	
-63	val_64	
-344	val_345	
-135	val_136	
-3	val_4	
-331	val_332	
-209	val_210	
-281	val_282	
-56	val_57	
-254	val_255	
-304	val_305	
-238	val_239	
-492	val_493	
-289	val_290	
-421	val_422	
-58	val_59	
-5	val_6	
-249	val_250	
-438	val_439	
-360	val_361	
-467	val_468	
-175	val_176	
-429	val_430	
-281	val_282	
-16	val_17	
-119	val_120	
-492	val_493	
-120	val_121	
-306	val_307	
-393	val_394	
-427	val_428	
-386	val_387	
-65	val_66	
-388	val_389	
-184	val_185	
-375	val_376	
-191	val_192	
-197	val_198	
-122	val_123	
-438	val_439	
-351	val_352	
-23	val_24	
-328	val_329	
-382	val_383	
-342	val_343	
-102	val_103	
-487	val_488	
-331	val_332	
-409	val_410	
-463	val_464	
-177	val_178	
-399	val_400	
-476	val_477	
-258	val_259	
-252	val_253	
-87	val_88	
-340	val_341	
-443	val_444	
-407	val_408	
-355	val_356	
-164	val_165	
-104	val_105	
-117	val_118	
-326	val_327	
-47	val_48	
-241	val_242	
-450	val_451	
-140	val_141	
-212	val_213	
-308	val_309	
-30	val_31	
-405	val_406	
-119	val_120	
-49	val_50	
-153	val_154	
-21	val_22	
-157	val_158	
-416	val_417	
-199	val_200	
-375	val_376	
-89	val_90	
-395	val_396	
-386	val_387	
-454	val_455	
-364	val_365	
-89	val_90	
-461	val_462	
-52	val_53	
-168	val_169	
-384	val_385	
-313	val_314	
-324	val_325	
-69	val_70	
-245	val_246	
-328	val_329	
-322	val_323	
-122	val_123	
-241	val_242	
-469	val_470	
-384	val_385	
-76	val_77	
-104	val_105	
-481	val_482	
-32	val_33	
-58	val_59	
-351	val_352	
-70	val_71	
-443	val_444	
-399	val_400	
-205	val_206	
-52	val_53	
-21	val_22	
-317	val_318	
-209	val_210	
-429	val_430	
-160	val_161	
-267	val_268	
-454	val_455	
-76	val_77	
-412	val_413	
-16	val_17	
-375	val_376	
-489	val_490	
-126	val_127	
-274	val_275	
-494	val_495	
-216	val_217	
-470	val_471	
-302	val_303	
-119	val_120	
-375	val_376	
-391	val_392	
-287	val_288	
-450	val_451	
-375	val_376	
-12	val_13	
-384	val_385	
-29	val_30	
-151	val_152	
-52	val_53	
-300	val_301	
-21	val_22	
-104	val_105	
-436	val_437	
-61	val_62	
-407	val_408	
-335	val_336	
-164	val_165	
-371	val_372	
-432	val_433	
-496	val_497	
-355	val_356	
-144	val_145	
-87	val_88	
-382	val_383	
-348	val_349	
-122	val_123	
-427	val_428	
-292	val_293	
-182	val_183	
-474	val_475	
-353	val_354	
-52	val_53	
-414	val_415	
-261	val_262	
-65	val_66	
-371	val_372	
-256	val_257	
-292	val_293	
-412	val_413	
-49	val_50	
-478	val_479	
-243	val_244	
-151	val_152	
-100	val_101	
-401	val_402	
-117	val_118	
-137	val_138	
-162	val_163	
-276	val_277	
-78	val_79	
-379	val_380	
-410	val_411	
-157	val_158	
-100	val_101	
-407	val_408	
-371	val_372	
-308	val_309	
-430	val_431	
-135	val_136	
-76	val_77	
-300	val_301	
-337	val_338	
-478	val_479	
-1	val_2	
-89	val_90	
-29	val_30	
-285	val_286	
-227	val_228	
-395	val_396	
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 2 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Path -> Alias:
+        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+      Path -> Partition:
+        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+          Partition
+          
+              properties:
+                name srcbucket
+                bucket_field_name 
+                serialization.format 1
+                columns key,value
+                field_to_dimension 
+                bucket_count 2
+                serialization.lib simple_meta
+                file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket
+              name: srcbucket
+              serde: simple_meta
+              input format: org.apache.hadoop.mapred.TextInputFormat
+              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+      Alias -> Map Operator Tree:
+        s 
+            Filter Operator
+              predicate:
+                  expr: (((default_sample_hashfn(key) & 2147483647) % 2) = 1)
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                File Output Operator
+                  table:
+                      properties:
+                        name dest1
+                        bucket_field_name 
+                        serialization.format 1
+                        columns key,value
+                        SORTBUCKETCOLSPREFIX TRUE
+                        field_to_dimension 
+                        bucket_count -1
+                        serialization.lib simple_meta
+                        file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                        file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                      name: dest1
+                      serde: simple_meta
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  directory: /tmp/hive-zshao/4031240.10000.insclause-0
+      Needs Tagging:
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            table:
+                properties:
+                  name dest1
+                  bucket_field_name 
+                  serialization.format 1
+                  columns key,value
+                  SORTBUCKETCOLSPREFIX TRUE
+                  field_to_dimension 
+                  bucket_count -1
+                  serialization.lib simple_meta
+                  file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                  file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                name: dest1
+                serde: simple_meta
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+            replace:
+            source: /tmp/hive-zshao/4031240.10000.insclause-0
+
+
+238	val_238
+311	val_311
+27	val_27
+409	val_409
+278	val_278
+98	val_98
+265	val_265
+193	val_193
+401	val_401
+128	val_128
+146	val_146
+429	val_429
+469	val_469
+281	val_281
+209	val_209
+403	val_403
+166	val_166
+430	val_430
+252	val_252
+292	val_292
+287	val_287
+153	val_153
+193	val_193
+494	val_494
+207	val_207
+199	val_199
+399	val_399
+247	val_247
+489	val_489
+162	val_162
+377	val_377
+397	val_397
+342	val_342
+195	val_195
+113	val_113
+155	val_155
+203	val_203
+339	val_339
+128	val_128
+311	val_311
+302	val_302
+205	val_205
+438	val_438
+489	val_489
+157	val_157
+221	val_221
+92	val_92
+111	val_111
+47	val_47
+72	val_72
+427	val_427
+399	val_399
+382	val_382
+498	val_498
+386	val_386
+469	val_469
+54	val_54
+216	val_216
+430	val_430
+278	val_278
+289	val_289
+221	val_221
+65	val_65
+311	val_311
+137	val_137
+241	val_241
+83	val_83
+333	val_333
+180	val_180
+12	val_12
+230	val_230
+67	val_67
+384	val_384
+489	val_489
+353	val_353
+373	val_373
+272	val_272
+348	val_348
+58	val_58
+230	val_230
+348	val_348
+463	val_463
+179	val_179
+119	val_119
+496	val_496
+322	val_322
+197	val_197
+393	val_393
+454	val_454
+100	val_100
+298	val_298
+199	val_199
+191	val_191
+418	val_418
+96	val_96
+230	val_230
+205	val_205
+120	val_120
+131	val_131
+43	val_43
+436	val_436
+469	val_469
+308	val_308
+481	val_481
+98	val_98
+197	val_197
+409	val_409
+470	val_470
+137	val_137
+85	val_85
+490	val_490
+87	val_87
+364	val_364
+179	val_179
+395	val_395
+238	val_238
+72	val_72
+90	val_90
+10	val_10
+306	val_306
+272	val_272
+331	val_331
+401	val_401
+452	val_452
+177	val_177
+5	val_5
+317	val_317
+395	val_395
+58	val_58
+168	val_168
+34	val_34
+229	val_229
+472	val_472
+322	val_322
+498	val_498
+160	val_160
+195	val_195
+430	val_430
+119	val_119
+489	val_489
+458	val_458
+78	val_78
+76	val_76
+41	val_41
+223	val_223
+492	val_492
+449	val_449
+218	val_218
+30	val_30
+209	val_209
+76	val_76
+74	val_74
+342	val_342
+69	val_69
+230	val_230
+368	val_368
+296	val_296
+113	val_113
+216	val_216
+344	val_344
+274	val_274
+485	val_485
+223	val_223
+256	val_256
+263	val_263
+70	val_70
+487	val_487
+401	val_401
+191	val_191
+5	val_5
+438	val_438
+128	val_128
+467	val_467
+432	val_432
+229	val_229
+469	val_469
+463	val_463
+283	val_283
+331	val_331
+193	val_193
+335	val_335
+104	val_104
+366	val_366
+175	val_175
+403	val_403
+483	val_483
+409	val_409
+401	val_401
+258	val_258
+90	val_90
+203	val_203
+348	val_348
+12	val_12
+201	val_201
+164	val_164
+454	val_454
+478	val_478
+298	val_298
+164	val_164
+382	val_382
+5	val_5
+70	val_70
+397	val_397
+351	val_351
+104	val_104
+70	val_70
+438	val_438
+119	val_119
+414	val_414
+360	val_360
+199	val_199
+120	val_120
+429	val_429
+443	val_443
+230	val_230
+478	val_478
+317	val_317
+333	val_333
+207	val_207
+249	val_249
+265	val_265
+83	val_83
+353	val_353
+214	val_214
+133	val_133
+175	val_175
+454	val_454
+375	val_375
+401	val_401
+421	val_421
+407	val_407
+384	val_384
+256	val_256
+67	val_67
+384	val_384
+379	val_379
+18	val_18
+492	val_492
+100	val_100
+298	val_298
+9	val_9
+498	val_498
+146	val_146
+458	val_458
+362	val_362
+186	val_186
+285	val_285
+348	val_348
+18	val_18
+281	val_281
+344	val_344
+469	val_469
+315	val_315
+348	val_348
+414	val_414
+126	val_126
+90	val_90
+403	val_403
+
+474	val_475
+281	val_282
+179	val_180
+135	val_136
+423	val_424
+245	val_246
+425	val_426
+241	val_242
+177	val_178
+272	val_273
+287	val_288
+373	val_374
+447	val_448
+443	val_444
+175	val_176
+278	val_279
+296	val_297
+126	val_127
+249	val_250
+21	val_22
+441	val_442
+106	val_107
+371	val_372
+153	val_154
+490	val_491
+421	val_422
+243	val_244
+128	val_129
+10	val_11
+133	val_134
+333	val_334
+391	val_392
+485	val_486
+241	val_242
+85	val_86
+335	val_336
+476	val_477
+494	val_495
+94	val_95
+485	val_486
+393	val_394
+409	val_410
+50	val_51
+265	val_266
+128	val_129
+63	val_64
+344	val_345
+135	val_136
+3	val_4
+331	val_332
+209	val_210
+281	val_282
+56	val_57
+254	val_255
+304	val_305
+238	val_239
+492	val_493
+289	val_290
+421	val_422
+58	val_59
+5	val_6
+249	val_250
+438	val_439
+360	val_361
+467	val_468
+175	val_176
+429	val_430
+281	val_282
+16	val_17
+119	val_120
+492	val_493
+120	val_121
+306	val_307
+393	val_394
+427	val_428
+386	val_387
+65	val_66
+388	val_389
+184	val_185
+375	val_376
+191	val_192
+197	val_198
+122	val_123
+438	val_439
+351	val_352
+23	val_24
+328	val_329
+382	val_383
+342	val_343
+102	val_103
+487	val_488
+331	val_332
+409	val_410
+463	val_464
+177	val_178
+399	val_400
+476	val_477
+258	val_259
+252	val_253
+87	val_88
+340	val_341
+443	val_444
+407	val_408
+355	val_356
+164	val_165
+104	val_105
+117	val_118
+326	val_327
+47	val_48
+241	val_242
+450	val_451
+140	val_141
+212	val_213
+308	val_309
+30	val_31
+405	val_406
+119	val_120
+49	val_50
+153	val_154
+21	val_22
+157	val_158
+416	val_417
+199	val_200
+375	val_376
+89	val_90
+395	val_396
+386	val_387
+454	val_455
+364	val_365
+89	val_90
+461	val_462
+52	val_53
+168	val_169
+384	val_385
+313	val_314
+324	val_325
+69	val_70
+245	val_246
+328	val_329
+322	val_323
+122	val_123
+241	val_242
+469	val_470
+384	val_385
+76	val_77
+104	val_105
+481	val_482
+32	val_33
+58	val_59
+351	val_352
+70	val_71
+443	val_444
+399	val_400
+205	val_206
+52	val_53
+21	val_22
+317	val_318
+209	val_210
+429	val_430
+160	val_161
+267	val_268
+454	val_455
+76	val_77
+412	val_413
+16	val_17
+375	val_376
+489	val_490
+126	val_127
+274	val_275
+494	val_495
+216	val_217
+470	val_471
+302	val_303
+119	val_120
+375	val_376
+391	val_392
+287	val_288
+450	val_451
+375	val_376
+12	val_13
+384	val_385
+29	val_30
+151	val_152
+52	val_53
+300	val_301
+21	val_22
+104	val_105
+436	val_437
+61	val_62
+407	val_408
+335	val_336
+164	val_165
+371	val_372
+432	val_433
+496	val_497
+355	val_356
+144	val_145
+87	val_88
+382	val_383
+348	val_349
+122	val_123
+427	val_428
+292	val_293
+182	val_183
+474	val_475
+353	val_354
+52	val_53
+414	val_415
+261	val_262
+65	val_66
+371	val_372
+256	val_257
+292	val_293
+412	val_413
+49	val_50
+478	val_479
+243	val_244
+151	val_152
+100	val_101
+401	val_402
+117	val_118
+137	val_138
+162	val_163
+276	val_277
+78	val_79
+379	val_380
+410	val_411
+157	val_158
+100	val_101
+407	val_408
+371	val_372
+308	val_309
+430	val_431
+135	val_136
+76	val_77
+300	val_301
+337	val_338
+478	val_479
+1	val_2
+89	val_90
+29	val_30
+285	val_286
+227	val_228
+395	val_396
+

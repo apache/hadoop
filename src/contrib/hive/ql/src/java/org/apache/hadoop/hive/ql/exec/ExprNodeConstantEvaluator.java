@@ -20,20 +20,30 @@ package org.apache.hadoop.hive.ql.exec;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeConstantDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 
 public class ExprNodeConstantEvaluator extends ExprNodeEvaluator {
 
   protected exprNodeConstantDesc expr;
-
+  transient ObjectInspector objectInspector;
+  
   public ExprNodeConstantEvaluator(exprNodeConstantDesc expr) {
     this.expr = expr;
+    objectInspector = ObjectInspectorFactory.getStandardPrimitiveObjectInspector(expr.getTypeInfo().getPrimitiveClass());
   }
 
-  public Object evaluateToObject(HiveObject row)  throws HiveException {
-    return expr.getValue();
+  public void evaluate(Object row, ObjectInspector rowInspector,
+      InspectableObject result) throws HiveException {
+    assert(result != null);
+    result.o = expr.getValue();
+    result.oi = objectInspector;
   }
 
-  public HiveObject evaluate(HiveObject r) throws HiveException {
-    return new PrimitiveHiveObject(evaluateToObject(r));
+  public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
+      throws HiveException {
+    return objectInspector;
   }
 }

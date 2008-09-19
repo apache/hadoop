@@ -26,6 +26,11 @@ public class reduceSinkDesc implements Serializable {
   // these are the expressions that go into the reduce key
   private java.util.ArrayList<exprNodeDesc> keyCols;
   private java.util.ArrayList<exprNodeDesc> valueCols;
+  // Describe how to serialize the key
+  private tableDesc keySerializeInfo;
+  // Describe how to serialize the value
+  private tableDesc valueSerializeInfo;
+  
   private int tag;
   
   // The partition key will be the first #numPartitionFields of keyCols
@@ -36,25 +41,33 @@ public class reduceSinkDesc implements Serializable {
   public reduceSinkDesc() { }
 
   public reduceSinkDesc
-  (final java.util.ArrayList<exprNodeDesc> keyCols,
-   final java.util.ArrayList<exprNodeDesc> valueCols,
-   final int numPartitionFields) {
-  this.keyCols = keyCols;
-  this.valueCols = valueCols;
-  this.tag = -1;
-  this.numPartitionFields = numPartitionFields;
-}
+    (final java.util.ArrayList<exprNodeDesc> keyCols,
+     final java.util.ArrayList<exprNodeDesc> valueCols,
+     final int numPartitionFields,
+     final tableDesc keySerializeInfo,
+     final tableDesc valueSerializeInfo) {
+    this.keyCols = keyCols;
+    this.valueCols = valueCols;
+    this.tag = -1;
+    this.numPartitionFields = numPartitionFields;
+    this.keySerializeInfo = keySerializeInfo;
+    this.valueSerializeInfo = valueSerializeInfo;
+  }
 
   public reduceSinkDesc
     (java.util.ArrayList<exprNodeDesc> keyCols,
      java.util.ArrayList<exprNodeDesc> valueCols,
      int tag,
-     int numPartitionFields) {
+     int numPartitionFields,
+     final tableDesc keySerializeInfo,
+     final tableDesc valueSerializeInfo) {
     this.keyCols = keyCols;
     this.valueCols = valueCols;
     assert tag != -1;
     this.tag = tag;
     this.numPartitionFields = numPartitionFields;
+    this.keySerializeInfo = keySerializeInfo;
+    this.valueSerializeInfo = valueSerializeInfo;
   }
 
   @explain(displayName="key expressions")
@@ -89,6 +102,22 @@ public class reduceSinkDesc implements Serializable {
   }
   public void setTag(int tag) {
     this.tag = tag;
+  }
+
+  public tableDesc getKeySerializeInfo() {
+    return keySerializeInfo;
+  }
+
+  public void setKeySerializeInfo(tableDesc keySerializeInfo) {
+    this.keySerializeInfo = keySerializeInfo;
+  }
+
+  public tableDesc getValueSerializeInfo() {
+    return valueSerializeInfo;
+  }
+
+  public void setValueSerializeInfo(tableDesc valueSerializeInfo) {
+    this.valueSerializeInfo = valueSerializeInfo;
   }
   
 }

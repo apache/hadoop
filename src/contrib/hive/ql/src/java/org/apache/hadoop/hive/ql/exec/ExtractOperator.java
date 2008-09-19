@@ -22,6 +22,8 @@ import java.io.*;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.extractDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -31,13 +33,15 @@ import org.apache.hadoop.conf.Configuration;
 public class ExtractOperator extends Operator<extractDesc> implements Serializable {
   private static final long serialVersionUID = 1L;
   transient protected ExprNodeEvaluator eval;
+  transient protected InspectableObject result = new InspectableObject();
 
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     eval = ExprNodeEvaluatorFactory.get(conf.getCol());
   }
 
-  public void process(HiveObject r) throws HiveException {
-    forward (eval.evaluate(r));
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
+    eval.evaluate(row, rowInspector, result);
+    forward(result.o, result.oi);
   }
 }

@@ -31,10 +31,12 @@ import org.apache.hadoop.hive.ql.plan.mapredWork;
 import org.apache.hadoop.hive.ql.plan.tableDesc;
 import org.apache.hadoop.hive.ql.plan.partitionDesc;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.serde.ConstantTypedSerDeField;
-import org.apache.hadoop.hive.serde.SerDe;
-import org.apache.hadoop.hive.serde.SerDeException;
-import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDe;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 
 
 /**
@@ -48,9 +50,16 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
   private static final long serialVersionUID = 1L;
   public static enum Counter {DESERIALIZE_ERRORS}
   transient private LongWritable deserialize_error_count = new LongWritable ();
-  transient private SerDe decoder;
-  transient private ArrayList<String> partCols;
-  transient private ArrayList<SerDeField> partFields;
+  transient private Deserializer deserializer;
+  
+  transient private Object row;
+  transient private Object[] rowWithPart;
+  transient private StructObjectInspector rowObjectInspector;
+
+  transient private List<String> partNames;
+  transient private List<String> partValues;
+  transient private List<ObjectInspector> partObjectInspectors;
+  
 
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
@@ -66,12 +75,12 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
         // pick up work corresponding to this configuration path
         List<String> aliases = conf.getPathToAliases().get(onefile);
         for(String onealias: aliases) {
-          l4j.info("Adding alias " + onealias + " to work list for file " + fpath.toUri().getPath());
+          LOG.info("Adding alias " + onealias + " to work list for file " + fpath.toUri().getPath());
           todo.add(conf.getAliasToWork().get(onealias));
         }
 
         // initialize decoder once based on what table we are processing
-        if(decoder != null) {
+        if(deserializer != null) {
           continue;
         }
 
@@ -83,7 +92,7 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
         HiveConf.setVar(hconf, HiveConf.ConfVars.HIVETABLENAME, String.valueOf(p.getProperty("name")));
         HiveConf.setVar(hconf, HiveConf.ConfVars.HIVEPARTITIONNAME, String.valueOf(partSpec));
         try {
-          Class sdclass = td.getSerdeClass();
+          Class sdclass = td.getDeserializerClass();
           if(sdclass == null) {
             String className = td.getSerdeClassName();
             if ((className == "") || (className == null)) {
@@ -91,28 +100,40 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
             }
             sdclass = MapOperator.class.getClassLoader().loadClass(className);
           }
-          decoder = (SerDe) sdclass.newInstance();
-          decoder.initialize(hconf, p);
-
+          deserializer = (Deserializer) sdclass.newInstance();
+          deserializer.initialize(hconf, p);
+          rowObjectInspector = (StructObjectInspector)deserializer.getObjectInspector();
+          
           // Next check if this table has partitions and if so
           // get the list of partition names as well as allocate
           // the serdes for the partition columns
           String pcols = p.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_PARTITION_COLUMNS);
           if (pcols != null && pcols.length() > 0) {
-            partCols = new ArrayList<String>();
-            partFields = new ArrayList<SerDeField>();
-            String[] part_keys = pcols.trim().split("/");
-            for(String key: part_keys) {
-              partCols.add(key);
-              partFields.add(new ConstantTypedSerDeField(key, partSpec.get(key)));
+            partNames = new ArrayList<String>();
+            partValues = new ArrayList<String>();
+            partObjectInspectors = new ArrayList<ObjectInspector>();
+            String[] partKeys = pcols.trim().split("/");
+            for(String key: partKeys) {
+              partNames.add(key);
+              partValues.add(partSpec.get(key));
+              partObjectInspectors.add(
+                  ObjectInspectorFactory.getStandardPrimitiveObjectInspector(String.class));
             }
+            StructObjectInspector partObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(partNames, partObjectInspectors);
+            
+            rowWithPart = new Object[2];
+            rowWithPart[1] = partValues;
+            rowObjectInspector = ObjectInspectorFactory.getUnionStructObjectInspector(
+                Arrays.asList(new StructObjectInspector[]{
+                    rowObjectInspector, 
+                    partObjectInspector}));
           }
           else {
-            partCols = null;
-            partFields = null;
+            partNames = null;
+            partValues = null;
           }
 
-          l4j.info("Got partitions: " + pcols);
+          LOG.info("Got partitions: " + pcols);
         } catch (SerDeException e) {
           e.printStackTrace();
           throw new HiveException (e);
@@ -129,7 +150,7 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
     if(todo.size() == 0) {
       // didn't find match for input file path in configuration!
       // serious problem ..
-      l4j.error("Configuration does not have any alias for path: " + fpath.toUri().getPath());
+      LOG.error("Configuration does not have any alias for path: " + fpath.toUri().getPath());
       throw new HiveException("Configuration and input path are inconsistent");
     }
 
@@ -146,19 +167,24 @@ public class MapOperator extends Operator <mapredWork> implements Serializable {
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
-    throw new RuntimeException("Should not be called!");
-  }
-
   public void process(Writable value) throws HiveException {
     try {
-      Object ev = decoder.deserialize(value);
-      HiveObject ho = new TableHiveObject(ev, decoder, partCols, partFields);
-      forward(ho);
+      if (partNames == null) {
+        row = deserializer.deserialize(value);
+        forward(row, rowObjectInspector);
+      } else {
+        rowWithPart[0] = deserializer.deserialize(value);
+        forward(rowWithPart, rowObjectInspector);
+      }
     } catch (SerDeException e) {
       // TODO: policy on deserialization errors
       deserialize_error_count.set(deserialize_error_count.get()+1);
       throw new HiveException (e);
     }
+  }
+
+  public void process(Object row, ObjectInspector rowInspector)
+      throws HiveException {
+    throw new HiveException("Hive 2 Internal error: should not be called!");
   }
 }

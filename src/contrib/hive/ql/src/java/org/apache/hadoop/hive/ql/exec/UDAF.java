@@ -21,7 +21,6 @@ package org.apache.hadoop.hive.ql.exec;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 //import org.apache.hadoop.hive.serde.ReflectionSerDe;
-import org.apache.hadoop.hive.serde.SerDeException;
 
 /**
  * Base class for all User-defined Aggregation Function (UDAF) classes.

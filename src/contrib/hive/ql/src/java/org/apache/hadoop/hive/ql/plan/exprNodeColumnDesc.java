@@ -20,7 +20,8 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 
 public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -32,7 +33,7 @@ public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
     this.column = column;
   }
   public exprNodeColumnDesc(Class<?> c, String column) {
-    super(TypeInfo.getPrimitiveTypeInfo(c));
+    super(TypeInfoFactory.getPrimitiveTypeInfo(c));
     this.column = column;
   }
   public String getColumn() {

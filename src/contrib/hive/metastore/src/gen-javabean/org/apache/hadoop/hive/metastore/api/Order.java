@@ -114,7 +114,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.STRING) {
       this.col = iprot.readString();
       this.__isset.col = true;
@@ -122,7 +122,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
+  case 2:
     if (field.type == TType.I32) {
       this.order = iprot.readI32();
       this.__isset.order = true;
@@ -146,14 +146,14 @@ TField field = new TField();
 if (this.col != null) {
 field.name = "col";
 field.type = TType.STRING;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.col);
 oprot.writeFieldEnd();
 }
 field.name = "order";
 field.type = TType.I32;
-field.id = -2;
+field.id = 2;
 oprot.writeFieldBegin(field);
 oprot.writeI32(this.order);
 oprot.writeFieldEnd();

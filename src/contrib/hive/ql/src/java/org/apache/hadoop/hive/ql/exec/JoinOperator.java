@@ -22,7 +22,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.Vector;
@@ -32,8 +31,11 @@ import org.apache.hadoop.hive.ql.plan.exprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.joinCond;
 import org.apache.hadoop.hive.ql.plan.joinDesc;
-import org.apache.hadoop.hive.serde.SerDeField;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 
 /**
  * Join operator implementation.
@@ -43,35 +45,29 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
   // a list of value expressions for each alias are maintained 
   public static class JoinExprMap {
     ExprNodeEvaluator[] valueFields;
-    List<SerDeField> listFields;
 
-    public JoinExprMap(ExprNodeEvaluator[] valueFields,
-        List<SerDeField> listFields) {
+    public JoinExprMap(ExprNodeEvaluator[] valueFields) {
       this.valueFields = valueFields;
-      this.listFields = listFields;
     }
 
     public ExprNodeEvaluator[] getValueFields() {
       return valueFields;
     }
 
-    public List<SerDeField> getListFields() {
-      return listFields;
-    }
   }
 
   public static class IntermediateObject{
-    CompositeHiveObject[] objs;
+    ArrayList<Object>[] objs;
     int curSize;
 
-    public IntermediateObject(CompositeHiveObject[] objs, int curSize) {
+    public IntermediateObject(ArrayList<Object>[] objs, int curSize) {
       this.objs  = objs;
       this.curSize = curSize;
     }
 
-    public CompositeHiveObject[] getObjs() { return objs; }
+    public ArrayList<Object>[] getObjs() { return objs; }
     public int getCurSize() { return curSize; }
-    public void pushObj(CompositeHiveObject obj) { objs[curSize++] = obj; }
+    public void pushObj(ArrayList<Object> obj) { objs[curSize++] = obj; }
     public void popObj() { curSize--; }
   }
 
@@ -81,23 +77,24 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
   transient static protected Byte[] order; // order in which the results should be outputted
   transient protected joinCond[] condn;
   transient protected boolean noOuterJoin;
-  transient private HiveObject[] dummyObj; // for outer joins, contains the potential nulls for the concerned aliases
-  transient private Vector<CompositeHiveObject>[] dummyObjVectors;
-  transient private Stack<Iterator<CompositeHiveObject>> iterators;
+  transient private Object[] dummyObj; // for outer joins, contains the potential nulls for the concerned aliases
+  transient private Vector<ArrayList<Object>>[] dummyObjVectors;
+  transient private Stack<Iterator<ArrayList<Object>>> iterators;
   transient private int totalSz; // total size of the composite object
-
+  transient ObjectInspector joinOutputObjectInspector;
+  
   static
   {
     aliasField = ExprNodeEvaluatorFactory.get(new exprNodeColumnDesc(String.class, Utilities.ReduceField.ALIAS.toString()));
   }
   
-  HashMap<Byte, Vector<CompositeHiveObject>> storage;
+  HashMap<Byte, Vector<ArrayList<Object>>> storage;
 
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     totalSz = 0;
     // Map that contains the rows for each alias
-    storage = new HashMap<Byte, Vector<CompositeHiveObject>>();
+    storage = new HashMap<Byte, Vector<ArrayList<Object>>>();
     
     numValues = conf.getExprs().size();
     joinExprs = new HashMap<Byte, JoinExprMap>();
@@ -123,51 +120,61 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
       for (int j = 0; j < sz; j++)
         valueFields[j] = ExprNodeEvaluatorFactory.get(expr.get(j));
 
-      joinExprs.put(key, new JoinExprMap(valueFields, CompositeHiveObject
-          .getFields(sz)));
+      joinExprs.put(key, new JoinExprMap(valueFields));
     }
 
-    dummyObj = new HiveObject[numValues];
+    ArrayList<ObjectInspector> structFieldObjectInspectors = new ArrayList<ObjectInspector>(totalSz);
+    for(int i=0; i<totalSz; i++) {
+      structFieldObjectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(String.class));
+    }
+    joinOutputObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
+        ObjectInspectorUtils.getIntegerArray(totalSz), structFieldObjectInspectors);
+
+    dummyObj = new Object[numValues];
     dummyObjVectors = new Vector[numValues];
 
     int pos = 0;
     for (Byte alias : order) {
       int sz = map.get(alias).size();
-      CompositeHiveObject nr = new CompositeHiveObject(sz);
+      ArrayList<Object> nr = new ArrayList<Object>(sz);
 
       for (int j = 0; j < sz; j++)
-        nr.addHiveObject(null);
+        nr.add(null);
 
       dummyObj[pos] = nr;
-      Vector<CompositeHiveObject> values = new Vector<CompositeHiveObject>();
-      values.add((CompositeHiveObject) dummyObj[pos]);
+      Vector<ArrayList<Object>> values = new Vector<ArrayList<Object>>();
+      values.add((ArrayList<Object>) dummyObj[pos]);
       dummyObjVectors[pos] = values;
       pos++;
     }
 
-    iterators = new Stack<Iterator<CompositeHiveObject>>();
+    iterators = new Stack<Iterator<ArrayList<Object>>>();
   }
 
   public void startGroup() throws HiveException {
-    l4j.trace("Join: Starting new group");
+    LOG.trace("Join: Starting new group");
     storage.clear();
     for (Byte alias : order)
-      storage.put(alias, new Vector<CompositeHiveObject>());
+      storage.put(alias, new Vector<ArrayList<Object>>());
   }
 
-  public void process(HiveObject row) throws HiveException {
+  InspectableObject tempAliasInspectableObject = new InspectableObject();
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
     try {
       // get alias
-      Byte alias = (Byte) (aliasField.evaluate(row).getJavaObject());
+      aliasField.evaluate(row, rowInspector, tempAliasInspectableObject);
+      Byte alias = (Byte) (tempAliasInspectableObject.o);
 
       // get the expressions for that alias
       JoinExprMap exmap = joinExprs.get(alias);
       ExprNodeEvaluator[] valueFields = exmap.getValueFields();
 
       // Compute the values
-      CompositeHiveObject nr = new CompositeHiveObject(valueFields.length);
-      for (ExprNodeEvaluator vField : valueFields)
-        nr.addHiveObject(vField.evaluate(row));
+      ArrayList<Object> nr = new ArrayList<Object>(valueFields.length);
+      for (ExprNodeEvaluator vField : valueFields) {
+        vField.evaluate(row, rowInspector, tempAliasInspectableObject);
+        nr.add(tempAliasInspectableObject.o);
+      }
 
       // Add the value to the vector
       storage.get(alias).add(nr);
@@ -178,30 +185,29 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
   }
 
   private void createForwardJoinObject(IntermediateObject intObj, boolean[] nullsArr) throws HiveException {
-    CompositeHiveObject nr = new CompositeHiveObject(totalSz);
+    ArrayList<Object> nr = new ArrayList<Object>(totalSz);
     for (int i = 0; i < numValues; i++) {
       Byte alias = order[i];
       int sz = joinExprs.get(alias).getValueFields().length;
-      if (nullsArr[i])
-        for (int j = 0; j < sz; j++)
-          nr.addHiveObject(null);
-      else
-      {
-        List <SerDeField> fields = joinExprs.get(alias).getListFields();
-        CompositeHiveObject obj = intObj.getObjs()[i];
-        for (int j = 0; j < sz; j++)
-          nr.addHiveObject(obj.get(fields.get(j)));
+      if (nullsArr[i]) {
+        for (int j = 0; j < sz; j++) {
+          nr.add(null);
+        }
+      } else {
+        ArrayList<Object> obj = intObj.getObjs()[i];
+        for (int j = 0; j < sz; j++) {
+          nr.add(obj.get(j));
+        }
       }
     }
-
-    forward(nr);
+    forward(nr, joinOutputObjectInspector);
   }
 
   private void copyOldArray(boolean[] src, boolean[] dest) {
     for (int i = 0; i < src.length; i++) dest[i] = src[i];
   }
 
-  private Vector<boolean[]> joinObjectsInnerJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, CompositeHiveObject newObj, IntermediateObject intObj, int left, boolean newObjNull)
+  private Vector<boolean[]> joinObjectsInnerJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, ArrayList<Object> newObj, IntermediateObject intObj, int left, boolean newObjNull)
   {
     if (newObjNull) return resNulls;
     Iterator<boolean[]> nullsIter = inputNulls.iterator();
@@ -219,7 +225,7 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
     return resNulls;
   }
   
-  private Vector<boolean[]> joinObjectsLeftOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, CompositeHiveObject newObj, IntermediateObject intObj, int left, boolean newObjNull)
+  private Vector<boolean[]> joinObjectsLeftOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, ArrayList<Object> newObj, IntermediateObject intObj, int left, boolean newObjNull)
   {
     Iterator<boolean[]> nullsIter = inputNulls.iterator();
     while (nullsIter.hasNext())
@@ -237,7 +243,7 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
     return resNulls;
   }
 
-  private Vector<boolean[]> joinObjectsRightOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, CompositeHiveObject newObj, IntermediateObject intObj, int left, boolean newObjNull)
+  private Vector<boolean[]> joinObjectsRightOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, ArrayList<Object> newObj, IntermediateObject intObj, int left, boolean newObjNull)
   {
     if (newObjNull) return resNulls;
     boolean allOldObjsNull = true;
@@ -276,7 +282,7 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
     return resNulls;
   }
 
-  private Vector<boolean[]> joinObjectsFullOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, CompositeHiveObject newObj, IntermediateObject intObj, int left, boolean newObjNull)
+  private Vector<boolean[]> joinObjectsFullOuterJoin(Vector<boolean[]> resNulls, Vector<boolean[]> inputNulls, ArrayList<Object> newObj, IntermediateObject intObj, int left, boolean newObjNull)
   {
     if (newObjNull) {
       Iterator<boolean[]> nullsIter = inputNulls.iterator();
@@ -344,7 +350,7 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
    * list of nulls is changed appropriately. The list will contain all non-nulls
    * for a inner join. The outer joins are processed appropriately.
    */
-  private Vector<boolean[]> joinObjects(Vector<boolean[]> inputNulls, CompositeHiveObject newObj, IntermediateObject intObj, int joinPos)
+  private Vector<boolean[]> joinObjects(Vector<boolean[]> inputNulls, ArrayList<Object> newObj, IntermediateObject intObj, int joinPos)
   {
     Vector<boolean[]> resNulls = new Vector<boolean[]>();
     boolean newObjNull = newObj == dummyObj[joinPos] ? true : false;
@@ -395,11 +401,11 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
   private void genObject(Vector<boolean[]> inputNulls, int aliasNum, IntermediateObject intObj) 
     throws HiveException {
     if (aliasNum < numValues) {
-      Iterator<CompositeHiveObject> aliasRes = storage.get(order[aliasNum])
+      Iterator<ArrayList<Object>> aliasRes = storage.get(order[aliasNum])
         .iterator();
       iterators.push(aliasRes);
       while (aliasRes.hasNext()) {
-        CompositeHiveObject newObj = aliasRes.next();
+        ArrayList<Object> newObj = aliasRes.next();
         intObj.pushObj(newObj);
         Vector<boolean[]> newNulls = joinObjects(inputNulls, newObj, intObj, aliasNum);
         genObject(newNulls, aliasNum + 1, intObj);
@@ -424,20 +430,24 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
    */
   public void endGroup() throws HiveException {
     try {
-      l4j.trace("Join Op: endGroup called");
+      LOG.trace("Join Op: endGroup called: numValues=" + numValues);
 
       // does any result need to be emitted
       for (int i = 0; i < numValues; i++) {
         Byte alias = order[i];
         if (storage.get(alias).iterator().hasNext() == false) {
-          if (noOuterJoin)
+          if (noOuterJoin) {
+            LOG.trace("No data for alias=" + i);
             return;
-          else
+          } else {
             storage.put(alias, dummyObjVectors[i]);
+          }
         }
       }
 
-      genObject(null, 0, new IntermediateObject(new CompositeHiveObject[numValues], 0));
+      LOG.trace("calling genObject");
+      genObject(null, 0, new IntermediateObject(new ArrayList[numValues], 0));
+      LOG.trace("called genObject");
     } catch (Exception e) {
       e.printStackTrace();
       throw new HiveException(e);
@@ -449,7 +459,7 @@ public class JoinOperator extends Operator<joinDesc> implements Serializable {
    * 
    */
   public void close(boolean abort) throws HiveException {
-    l4j.trace("Join Op close");
+    LOG.trace("Join Op close");
     super.close(abort);
   }
 }

@@ -22,6 +22,7 @@ import java.io.*;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.forwardDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -35,7 +36,9 @@ public class ForwardOperator extends  Operator<forwardDesc>  implements Serializ
     // nothing to do really ..
   }
 
-  public void process(HiveObject r) throws HiveException {
-    forward(r);
+  @Override
+  public void process(Object row, ObjectInspector rowInspector)
+      throws HiveException {
+    forward(row, rowInspector);    
   }
 }

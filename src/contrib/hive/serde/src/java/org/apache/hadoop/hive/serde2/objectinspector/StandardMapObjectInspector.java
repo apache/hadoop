@@ -75,7 +75,8 @@ class StandardMapObjectInspector implements MapObjectInspector {
   }
 
   public String getTypeName() {
-    return "map<" + mapKeyObjectInspector.getTypeName() + "," 
+    return org.apache.hadoop.hive.serde.Constants.MAP_TYPE_NAME 
+        + "<" + mapKeyObjectInspector.getTypeName() + "," 
         + mapValueObjectInspector.getTypeName() + ">";
   }
 

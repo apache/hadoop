@@ -20,7 +20,7 @@ public class Index implements TBase, java.io.Serializable {
 private String indexName;
 private int indexType;
 private String tableName;
-private String databaseName;
+private String dbName;
 private List<String> colNames;
 
 public final Isset __isset = new Isset();
@@ -28,7 +28,7 @@ public static final class Isset implements java.io.Serializable {
 public boolean indexName = false;
 public boolean indexType = false;
 public boolean tableName = false;
-public boolean databaseName = false;
+public boolean dbName = false;
 public boolean colNames = false;
 }
 
@@ -39,7 +39,7 @@ public Index(
 String indexName,
 int indexType,
 String tableName,
-String databaseName,
+String dbName,
 List<String> colNames)
 {
 this();
@@ -49,8 +49,8 @@ this.indexType = indexType;
 this.__isset.indexType = true;
 this.tableName = tableName;
 this.__isset.tableName = true;
-this.databaseName = databaseName;
-this.__isset.databaseName = true;
+this.dbName = dbName;
+this.__isset.dbName = true;
 this.colNames = colNames;
 this.__isset.colNames = true;
 }
@@ -94,17 +94,17 @@ public void unsetTableName() {
 this.__isset.tableName = false;
 }
 
-public String getDatabaseName() {
-return this.databaseName;
+public String getDbName() {
+return this.dbName;
 }
 
-public void setDatabaseName(String databaseName) {
-this.databaseName = databaseName;
-this.__isset.databaseName = true;
+public void setDbName(String dbName) {
+this.dbName = dbName;
+this.__isset.dbName = true;
 }
 
-public void unsetDatabaseName() {
-this.__isset.databaseName = false;
+public void unsetDbName() {
+this.__isset.dbName = false;
 }
 
 public int getColNamesSize() {
@@ -176,12 +176,12 @@ if (!this.tableName.equals(that.tableName))
   return false;
 }
 
-boolean this_present_databaseName = true && (this.databaseName != null);
-boolean that_present_databaseName = true && (that.databaseName != null);
-if (this_present_databaseName || that_present_databaseName) {
-if (!(this_present_databaseName && that_present_databaseName))
+boolean this_present_dbName = true && (this.dbName != null);
+boolean that_present_dbName = true && (that.dbName != null);
+if (this_present_dbName || that_present_dbName) {
+if (!(this_present_dbName && that_present_dbName))
   return false;
-if (!this.databaseName.equals(that.databaseName))
+if (!this.dbName.equals(that.dbName))
   return false;
 }
 
@@ -212,7 +212,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.STRING) {
       this.indexName = iprot.readString();
       this.__isset.indexName = true;
@@ -220,7 +220,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
+  case 2:
     if (field.type == TType.I32) {
       this.indexType = iprot.readI32();
       this.__isset.indexType = true;
@@ -228,7 +228,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -3:
+  case 3:
     if (field.type == TType.STRING) {
       this.tableName = iprot.readString();
       this.__isset.tableName = true;
@@ -236,15 +236,15 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -4:
+  case 4:
     if (field.type == TType.STRING) {
-      this.databaseName = iprot.readString();
-      this.__isset.databaseName = true;
+      this.dbName = iprot.readString();
+      this.__isset.dbName = true;
     } else { 
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -5:
+  case 5:
     if (field.type == TType.LIST) {
       {
         TList _list44 = iprot.readListBegin();
@@ -278,37 +278,37 @@ TField field = new TField();
 if (this.indexName != null) {
 field.name = "indexName";
 field.type = TType.STRING;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.indexName);
 oprot.writeFieldEnd();
 }
 field.name = "indexType";
 field.type = TType.I32;
-field.id = -2;
+field.id = 2;
 oprot.writeFieldBegin(field);
 oprot.writeI32(this.indexType);
 oprot.writeFieldEnd();
 if (this.tableName != null) {
 field.name = "tableName";
 field.type = TType.STRING;
-field.id = -3;
+field.id = 3;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.tableName);
 oprot.writeFieldEnd();
 }
-if (this.databaseName != null) {
-field.name = "databaseName";
+if (this.dbName != null) {
+field.name = "dbName";
 field.type = TType.STRING;
-field.id = -4;
+field.id = 4;
 oprot.writeFieldBegin(field);
-oprot.writeString(this.databaseName);
+oprot.writeString(this.dbName);
 oprot.writeFieldEnd();
 }
 if (this.colNames != null) {
 field.name = "colNames";
 field.type = TType.LIST;
-field.id = -5;
+field.id = 5;
 oprot.writeFieldBegin(field);
 {
   oprot.writeListBegin(new TList(TType.STRING, this.colNames.size()));
@@ -331,8 +331,8 @@ sb.append(",indexType:");
 sb.append(this.indexType);
 sb.append(",tableName:");
 sb.append(this.tableName);
-sb.append(",databaseName:");
-sb.append(this.databaseName);
+sb.append(",dbName:");
+sb.append(this.dbName);
 sb.append(",colNames:");
 sb.append(this.colNames);
 sb.append(")");

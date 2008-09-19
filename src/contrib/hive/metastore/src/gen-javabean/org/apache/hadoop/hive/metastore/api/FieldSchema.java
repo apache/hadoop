@@ -141,7 +141,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case -1:
+        case 1:
           if (field.type == TType.STRING) {
             this.name = iprot.readString();
             this.__isset.name = true;
@@ -149,7 +149,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -2:
+        case 2:
           if (field.type == TType.STRING) {
             this.type = iprot.readString();
             this.__isset.type = true;
@@ -157,7 +157,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -3:
+        case 3:
           if (field.type == TType.STRING) {
             this.comment = iprot.readString();
             this.__isset.comment = true;
@@ -181,7 +181,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
     if (this.name != null) {
       field.name = "name";
       field.type = TType.STRING;
-      field.id = -1;
+      field.id = 1;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.name);
       oprot.writeFieldEnd();
@@ -189,7 +189,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
     if (this.type != null) {
       field.name = "type";
       field.type = TType.STRING;
-      field.id = -2;
+      field.id = 2;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.type);
       oprot.writeFieldEnd();
@@ -197,7 +197,7 @@ public class FieldSchema implements TBase, java.io.Serializable {
     if (this.comment != null) {
       field.name = "comment";
       field.type = TType.STRING;
-      field.id = -3;
+      field.id = 3;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.comment);
       oprot.writeFieldEnd();

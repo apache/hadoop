@@ -303,7 +303,7 @@ public class FileStore implements RawStore {
   public void createTable(Table tbl) throws InvalidObjectException, MetaException {
     Properties p = MetaStoreUtils.getSchema(tbl);
     try {
-      DB db = new DB(tbl.getDatabase(), conf);
+      DB db = new DB(tbl.getDbName(), conf);
       RWTable.create(db, tbl.getTableName(), p, conf);
     } catch (UnknownDBException e) {
       throw new InvalidObjectException(e.getMessage());
@@ -325,7 +325,7 @@ public class FileStore implements RawStore {
   public Table getTable(String dbName, String tableName) throws MetaException {
     try {
       Properties p = new DB(dbName, conf).getTable(tableName, true).getSchema();
-      return MetaStoreUtils.getTable(p);
+      return MetaStoreUtils.getTable(conf, p);
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
       throw new MetaException(e.getMessage());
@@ -390,6 +390,13 @@ public class FileStore implements RawStore {
   @Override
   public void shutdown() {
     // no-op
+  }
+
+  @Override
+  public List<String> listPartitionNames(String db_name, String tbl_name, short max_parts)
+      throws MetaException {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 };

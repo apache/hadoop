@@ -7,8 +7,6 @@
 from thrift.Thrift import *
 from ttypes import *
 
-META_SERDE = 'com.facebook.serde.simple_meta.MetadataTypedColumnsetSerDe'
-
 META_TABLE_COLUMNS = 'columns'
 
 BUCKET_FIELD_NAME = 'bucket_field_name'
@@ -25,58 +23,9 @@ META_TABLE_LOCATION = 'location'
 
 META_TABLE_SERDE = 'serde'
 
-SERIALIZATION_FORMAT = 'serialization.format'
-
-SERIALIZATION_CLASS = 'serialization.class'
-
-SERIALIZATION_LIB = 'serialization.lib'
-
 META_TABLE_PARTITION_COLUMNS = 'partition_columns'
 
 FILE_INPUT_FORMAT = 'file.inputformat'
 
 FILE_OUTPUT_FORMAT = 'file.outputformat'
-
-KEY_COMMENTS = 'key_comments'
-
-VERSION_0_1 = '0.1'
-
-TINYINT_TYPE_NAME = 'tinyint'
-
-INT_TYPE_NAME = 'int'
-
-BIGINT_TYPE_NAME = 'bigint'
-
-FLOAT_TYPE_NAME = 'float'
-
-DOUBLE_TYPE_NAME = 'double'
-
-STRING_TYPE_NAME = 'string'
-
-DATE_TYPE_NAME = 'date'
-
-DATETIME_TYPE_NAME = 'datetime'
-
-TIMESTAMP_TYPE_NAME = 'timestamp'
-
-LIST_TYPE_NAME = 'list'
-
-MAP_TYPE_NAME = 'map'
-
-PrimitiveTypes = set([
-  'tinyint',
-  'int',
-  'bigint',
-  'float',
-  'double',
-  'string',
-  'date',
-  'datetime',
-  'timestamp',
-])
-
-CollectionTypes = set([
-  'list',
-  'map',
-])
 

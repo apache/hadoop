@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.ql.plan.explain;
 import org.apache.hadoop.hive.ql.plan.explainWork;
 import org.apache.hadoop.util.StringUtils;
@@ -43,9 +45,9 @@ public class ExplainTask extends Task<explainWork> implements Serializable {
   public int execute() {
     
     try {
-      // If this is an explain plan then return from here
-      PrintStream out = new PrintStream(new FileOutputStream(work.getResFile()));
-
+    	OutputStream outS = FileSystem.get(conf).create(work.getResFile());
+    	PrintStream out = new PrintStream(outS);
+    	
       // Print out the parse AST
       outputAST(work.getAstStringTree(), out, 0);
       out.println();
@@ -55,7 +57,8 @@ public class ExplainTask extends Task<explainWork> implements Serializable {
       
       // Go over all the tasks and dump out the plans
       outputStagePlans(out, work.getRootTasks(), 0);
-
+      out.close();
+      
       return (0);
     }
     catch (Exception e) {

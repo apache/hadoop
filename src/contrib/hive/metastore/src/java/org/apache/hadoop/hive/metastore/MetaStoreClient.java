@@ -319,7 +319,7 @@ public class MetaStoreClient implements IMetaStoreClient {
 
   public Table getTable(String tableName) throws MetaException, TException, NoSuchObjectException {
     Properties schema = this.getSchema(tableName);
-    return MetaStoreUtils.getTable(schema);
+    return MetaStoreUtils.getTable(conf, schema);
   }
 
   //These will disappear when the server is unified for both filestore and dbstore
@@ -392,7 +392,7 @@ public class MetaStoreClient implements IMetaStoreClient {
   private Partition getPartitionObject(String dbName, String tableName, List<String> partVals)
       throws MetaException, TException, NoSuchObjectException {
     Properties schema = this.getSchema(tableName);
-    Table tbl = MetaStoreUtils.getTable(schema);
+    Table tbl = MetaStoreUtils.getTable(conf, schema);
     List<FieldSchema> partKeys = tbl.getPartitionKeys();
     if(partKeys.size() != partVals.size()) {
       throw new MetaException("Invalid partition key values: " + partVals);
@@ -407,7 +407,7 @@ public class MetaStoreClient implements IMetaStoreClient {
     Path partPath = wh.getPartitionPath(dbName, tableName, pm);
     Partition tPartition = new Partition();
     tPartition.setValues(partVals);
-    tPartition.setSd(tbl.getSd());
+    tPartition.setSd(tbl.getSd()); // TODO: get a copy
     tPartition.setParameters(new HashMap<String, String>());
     tPartition.getSd().setLocation(partPath.toString());
     return tPartition;
@@ -430,6 +430,13 @@ public class MetaStoreClient implements IMetaStoreClient {
   public boolean dropDatabase(String name) throws MetaException, TException {
     // TODO Auto-generated method stub
     return false;
+  }
+
+  @Override
+  public List<String> listPartitionNames(String db_name, String tbl_name, short max_parts)
+      throws MetaException, TException {
+    // TODO Auto-generated method stub
+    return new ArrayList<String>();
   }
 
 }

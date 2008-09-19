@@ -37,7 +37,6 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
-import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -158,7 +157,7 @@ public class Hive {
     tbl.setOutputFormatClass(fileOutputFormat.getName());
 
     for (String col: columns) {
-      FieldSchema field = new FieldSchema(col, Constants.STRING_TYPE_NAME, "default string type");
+      FieldSchema field = new FieldSchema(col, org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME, "default");
       tbl.getCols().add(field);
     }
 
@@ -166,11 +165,11 @@ public class Hive {
       for (String partCol : partCols) {
         FieldSchema part = new FieldSchema();
         part.setName(partCol);
-        part.setType(Constants.STRING_TYPE_NAME); // default partition key
+        part.setType(org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME); // default partition key
         tbl.getPartCols().add(part);
       }
     }
-    tbl.setSerializationLib(org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe.shortName());
+    tbl.setSerializationLib(org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.shortName());
     tbl.setNumBuckets(bucketCount);
     createTable(tbl);
   }
@@ -281,6 +280,8 @@ public class Hive {
     try {
       // first get a schema (in key / vals)
       Properties p = MetaStoreUtils.getSchema(tTable);
+      // Map hive1 to hive3 class names, can be removed when migration is done.
+      p = MetaStoreUtils.hive1Tohive3ClassNames(p);
       table.setSchema(p);
       table.setTTable(tTable);
       table.setInputFormatClass((Class<? extends InputFormat<WritableComparable, Writable>>)
@@ -289,16 +290,18 @@ public class Hive {
       table.setOutputFormatClass((Class<? extends OutputFormat<WritableComparable, Writable>>)
           Class.forName(table.getSchema().getProperty(org.apache.hadoop.hive.metastore.api.Constants.FILE_OUTPUT_FORMAT,
               org.apache.hadoop.mapred.SequenceFileOutputFormat.class.getName()))); 
-      table.setSerDe(MetaStoreUtils.getSerDe(getConf(), p));
+      table.setDeserializer(MetaStoreUtils.getDeserializer(getConf(), p));
       table.setDataLocation(new URI(tTable.getSd().getLocation()));
     } catch(Exception e) {
       LOG.error(StringUtils.stringifyException(e));
       throw new HiveException(e);
     }
-    String sf = table.getSerializationFormat();
-    char[] b = sf.toCharArray();
-    if ((b.length == 1) && (b[0] < 10)){ // ^A, ^B, ^C, ^D, \t
-      table.setSerializationFormat(Integer.toString(b[0]));
+    String sf = table.getSerdeParam(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT);
+    if(sf != null) {
+      char[] b = sf.toCharArray();
+      if ((b.length == 1) && (b[0] < 10)){ // ^A, ^B, ^C, ^D, \t
+        table.setSerdeParam(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, Integer.toString(b[0]));
+      }
     }
     table.checkValidity();
     return table;
@@ -459,6 +462,17 @@ public class Hive {
     }
     return new Partition(tbl, tpart);
   }
+  
+  public List<String> getPartitionNames(String dbName, String tblName, short max) throws HiveException {
+    List names = null;
+    try {
+      names = msc.listPartitionNames(dbName, tblName, max);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw new HiveException(e);
+    }
+    return names;
+  }
 
   /**
    * get all the partitions that the table has
@@ -494,7 +508,7 @@ public class Hive {
       // create an empty partition. 
       // HACK, HACK. SemanticAnalyzer code requires that an empty partition when the table is not partitioned
       org.apache.hadoop.hive.metastore.api.Partition tPart = new org.apache.hadoop.hive.metastore.api.Partition();
-      tPart.setSd(tbl.getTTable().getSd());
+      tPart.setSd(tbl.getTTable().getSd()); // TODO: get a copy
       Partition part = new Partition(tbl, tPart);
       ArrayList<Partition> parts = new ArrayList<Partition>(1);
       parts.add(part);

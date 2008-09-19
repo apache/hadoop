@@ -20,7 +20,8 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+
 
 public class exprNodeIndexDesc extends exprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -30,6 +31,11 @@ public class exprNodeIndexDesc extends exprNodeDesc implements Serializable {
   public exprNodeIndexDesc() {}
   public exprNodeIndexDesc(TypeInfo typeInfo, exprNodeDesc desc, exprNodeDesc index) {
     super(typeInfo);
+    this.desc = desc;
+    this.index = index;    
+  }
+  public exprNodeIndexDesc(exprNodeDesc desc, exprNodeDesc index) {
+    super(desc.getTypeInfo().getListElementTypeInfo());
     this.desc = desc;
     this.index = index;    
   }

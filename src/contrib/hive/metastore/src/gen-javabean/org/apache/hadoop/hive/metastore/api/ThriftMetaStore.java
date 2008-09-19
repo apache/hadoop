@@ -19,7 +19,7 @@ import com.facebook.thrift.transport.*;
 public class ThriftMetaStore {
 
 /**
- * This interface is the live.
+ * This interface is deprecated.
  */
 public interface Iface extends com.facebook.fb303.FacebookService.Iface {
 
@@ -1176,14 +1176,14 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list99 = iprot.readListBegin();
-          this.success = new ArrayList<FieldSchema>(_list99.size);
-          for (int _i100 = 0; _i100 < _list99.size; ++_i100)
+          TList _list89 = iprot.readListBegin();
+          this.success = new ArrayList<FieldSchema>(_list89.size);
+          for (int _i90 = 0; _i90 < _list89.size; ++_i90)
           {
-            FieldSchema _elem101 = new FieldSchema();
-            _elem101 = new FieldSchema();
-            _elem101.read(iprot);
-            this.success.add(_elem101);
+            FieldSchema _elem91 = new FieldSchema();
+            _elem91 = new FieldSchema();
+            _elem91.read(iprot);
+            this.success.add(_elem91);
           }
           iprot.readListEnd();
         }
@@ -1241,8 +1241,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-      for (FieldSchema _iter102 : this.success)      {
-        _iter102.write(oprot);
+      for (FieldSchema _iter92 : this.success)      {
+        _iter92.write(oprot);
       }
       oprot.writeListEnd();
     }
@@ -1630,13 +1630,13 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list103 = iprot.readListBegin();
-          this.success = new ArrayList<String>(_list103.size);
-          for (int _i104 = 0; _i104 < _list103.size; ++_i104)
+          TList _list93 = iprot.readListBegin();
+          this.success = new ArrayList<String>(_list93.size);
+          for (int _i94 = 0; _i94 < _list93.size; ++_i94)
           {
-            String _elem105 = null;
-            _elem105 = iprot.readString();
-            this.success.add(_elem105);
+            String _elem95 = null;
+            _elem95 = iprot.readString();
+            this.success.add(_elem95);
           }
           iprot.readListEnd();
         }
@@ -1694,8 +1694,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-      for (String _iter106 : this.success)      {
-        oprot.writeString(_iter106);
+      for (String _iter96 : this.success)      {
+        oprot.writeString(_iter96);
       }
       oprot.writeListEnd();
     }
@@ -2034,15 +2034,15 @@ while (true)
     case 0:
       if (field.type == TType.MAP) {
         {
-          TMap _map107 = iprot.readMapBegin();
-          this.success = new HashMap<String,String>(2*_map107.size);
-          for (int _i108 = 0; _i108 < _map107.size; ++_i108)
+          TMap _map97 = iprot.readMapBegin();
+          this.success = new HashMap<String,String>(2*_map97.size);
+          for (int _i98 = 0; _i98 < _map97.size; ++_i98)
           {
-            String _key109;
-            String _val110;
-            _key109 = iprot.readString();
-            _val110 = iprot.readString();
-            this.success.put(_key109, _val110);
+            String _key99;
+            String _val100;
+            _key99 = iprot.readString();
+            _val100 = iprot.readString();
+            this.success.put(_key99, _val100);
           }
           iprot.readMapEnd();
         }
@@ -2100,9 +2100,9 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.success.size()));
-      for (String _iter111 : this.success.keySet())      {
-        oprot.writeString(_iter111);
-        oprot.writeString(this.success.get(_iter111));
+      for (String _iter101 : this.success.keySet())      {
+        oprot.writeString(_iter101);
+        oprot.writeString(this.success.get(_iter101));
       }
       oprot.writeMapEnd();
     }
@@ -2313,15 +2313,15 @@ while (true)
     case -3:
       if (field.type == TType.MAP) {
         {
-          TMap _map112 = iprot.readMapBegin();
-          this.schema = new HashMap<String,String>(2*_map112.size);
-          for (int _i113 = 0; _i113 < _map112.size; ++_i113)
+          TMap _map102 = iprot.readMapBegin();
+          this.schema = new HashMap<String,String>(2*_map102.size);
+          for (int _i103 = 0; _i103 < _map102.size; ++_i103)
           {
-            String _key114;
-            String _val115;
-            _key114 = iprot.readString();
-            _val115 = iprot.readString();
-            this.schema.put(_key114, _val115);
+            String _key104;
+            String _val105;
+            _key104 = iprot.readString();
+            _val105 = iprot.readString();
+            this.schema.put(_key104, _val105);
           }
           iprot.readMapEnd();
         }
@@ -2366,9 +2366,9 @@ if (this.schema != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.schema.size()));
-    for (String _iter116 : this.schema.keySet())    {
-      oprot.writeString(_iter116);
-      oprot.writeString(this.schema.get(_iter116));
+    for (String _iter106 : this.schema.keySet())    {
+      oprot.writeString(_iter106);
+      oprot.writeString(this.schema.get(_iter106));
     }
     oprot.writeMapEnd();
   }
@@ -2764,15 +2764,15 @@ while (true)
     case -3:
       if (field.type == TType.MAP) {
         {
-          TMap _map117 = iprot.readMapBegin();
-          this.schema = new HashMap<String,String>(2*_map117.size);
-          for (int _i118 = 0; _i118 < _map117.size; ++_i118)
+          TMap _map107 = iprot.readMapBegin();
+          this.schema = new HashMap<String,String>(2*_map107.size);
+          for (int _i108 = 0; _i108 < _map107.size; ++_i108)
           {
-            String _key119;
-            String _val120;
-            _key119 = iprot.readString();
-            _val120 = iprot.readString();
-            this.schema.put(_key119, _val120);
+            String _key109;
+            String _val110;
+            _key109 = iprot.readString();
+            _val110 = iprot.readString();
+            this.schema.put(_key109, _val110);
           }
           iprot.readMapEnd();
         }
@@ -2817,9 +2817,9 @@ if (this.schema != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.schema.size()));
-    for (String _iter121 : this.schema.keySet())    {
-      oprot.writeString(_iter121);
-      oprot.writeString(this.schema.get(_iter121));
+    for (String _iter111 : this.schema.keySet())    {
+      oprot.writeString(_iter111);
+      oprot.writeString(this.schema.get(_iter111));
     }
     oprot.writeMapEnd();
   }
@@ -4507,13 +4507,13 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list122 = iprot.readListBegin();
-          this.success = new ArrayList<String>(_list122.size);
-          for (int _i123 = 0; _i123 < _list122.size; ++_i123)
+          TList _list112 = iprot.readListBegin();
+          this.success = new ArrayList<String>(_list112.size);
+          for (int _i113 = 0; _i113 < _list112.size; ++_i113)
           {
-            String _elem124 = null;
-            _elem124 = iprot.readString();
-            this.success.add(_elem124);
+            String _elem114 = null;
+            _elem114 = iprot.readString();
+            this.success.add(_elem114);
           }
           iprot.readListEnd();
         }
@@ -4571,8 +4571,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-      for (String _iter125 : this.success)      {
-        oprot.writeString(_iter125);
+      for (String _iter115 : this.success)      {
+        oprot.writeString(_iter115);
       }
       oprot.writeListEnd();
     }
@@ -4803,13 +4803,13 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list126 = iprot.readListBegin();
-          this.success = new ArrayList<String>(_list126.size);
-          for (int _i127 = 0; _i127 < _list126.size; ++_i127)
+          TList _list116 = iprot.readListBegin();
+          this.success = new ArrayList<String>(_list116.size);
+          for (int _i117 = 0; _i117 < _list116.size; ++_i117)
           {
-            String _elem128 = null;
-            _elem128 = iprot.readString();
-            this.success.add(_elem128);
+            String _elem118 = null;
+            _elem118 = iprot.readString();
+            this.success.add(_elem118);
           }
           iprot.readListEnd();
         }
@@ -4849,8 +4849,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-      for (String _iter129 : this.success)      {
-        oprot.writeString(_iter129);
+      for (String _iter119 : this.success)      {
+        oprot.writeString(_iter119);
       }
       oprot.writeListEnd();
     }
@@ -5304,13 +5304,13 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list130 = iprot.readListBegin();
-          this.success = new ArrayList<String>(_list130.size);
-          for (int _i131 = 0; _i131 < _list130.size; ++_i131)
+          TList _list120 = iprot.readListBegin();
+          this.success = new ArrayList<String>(_list120.size);
+          for (int _i121 = 0; _i121 < _list120.size; ++_i121)
           {
-            String _elem132 = null;
-            _elem132 = iprot.readString();
-            this.success.add(_elem132);
+            String _elem122 = null;
+            _elem122 = iprot.readString();
+            this.success.add(_elem122);
           }
           iprot.readListEnd();
         }
@@ -5368,8 +5368,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-      for (String _iter133 : this.success)      {
-        oprot.writeString(_iter133);
+      for (String _iter123 : this.success)      {
+        oprot.writeString(_iter123);
       }
       oprot.writeListEnd();
     }

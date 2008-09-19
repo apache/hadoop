@@ -22,32 +22,33 @@ import java.io.Serializable;
 
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.hive.serde.SerDe;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDe;
 
 public class tableDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  private Class<? extends SerDe> serdeClass;
+  private Class<? extends Deserializer> deserializerClass;
   private Class<? extends InputFormat> inputFileFormatClass;
   private Class<? extends OutputFormat> outputFileFormatClass;
   private java.util.Properties properties;
   private String serdeClassName;
   public tableDesc() { }
   public tableDesc(
-      final Class<? extends SerDe> serdeClass,
+      final Class<? extends Deserializer> serdeClass,
       final Class<? extends InputFormat> inputFileFormatClass,
       final Class<? extends OutputFormat> class1,
       final java.util.Properties properties) {
-    this.serdeClass = serdeClass;
+    this.deserializerClass = serdeClass;
     this.inputFileFormatClass = inputFileFormatClass;
     this.outputFileFormatClass = class1;
     this.properties = properties;
     this.serdeClassName = properties.getProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_LIB);;
   }
-  public Class<? extends SerDe> getSerdeClass() {
-    return this.serdeClass;
+  public Class<? extends Deserializer> getDeserializerClass() {
+    return this.deserializerClass;
   }
-  public void setSerdeClass(final Class<? extends SerDe> serdeClass) {
-    this.serdeClass = serdeClass;
+  public void setDeserializerClass(final Class<? extends Deserializer> serdeClass) {
+    this.deserializerClass = serdeClass;
   }
   public Class<? extends InputFormat> getInputFileFormatClass() {
     return this.inputFileFormatClass;

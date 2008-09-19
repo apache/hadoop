@@ -43,7 +43,7 @@ class StandardPrimitiveObjectInspector implements PrimitiveObjectInspector {
   }
 
   public String getTypeName() {
-    return primitiveClass.getName();
+    return ObjectInspectorUtils.getClassShortName(primitiveClass.getName());
   }
 
 }

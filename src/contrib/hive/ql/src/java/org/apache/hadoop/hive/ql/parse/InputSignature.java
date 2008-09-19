@@ -23,6 +23,8 @@ import java.lang.Class;
 import java.lang.Object;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 
 /**
  * The input signature of a function or operator. The signature basically consists
@@ -57,7 +59,7 @@ public class InputSignature {
     
     if (classList.length != 0) {
       for(Class<?> cl: classList) {
-        typeArray.add(TypeInfo.getPrimitiveTypeInfo(cl));
+        typeArray.add(TypeInfoFactory.getPrimitiveTypeInfo(cl));
       }
     }
   }

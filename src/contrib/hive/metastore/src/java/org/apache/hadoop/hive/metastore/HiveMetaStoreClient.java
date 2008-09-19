@@ -20,31 +20,24 @@ package org.apache.hadoop.hive.metastore;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
-import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.ExistingDependentsException;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.SerDeInfo;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore;
 import org.apache.hadoop.hive.metastore.api.Type;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
-import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -54,8 +47,7 @@ import com.facebook.thrift.transport.TTransport;
 import com.facebook.thrift.transport.TTransportException;
 
 /**
- * Metastore Client.
- * TODO: rename this as MetaStoreClient and remove the interface as it is not needed 
+ * Hive Metastore Client.
  */
 public class HiveMetaStoreClient implements IMetaStoreClient {
   ThriftHiveMetastore.Iface client = null;
@@ -451,70 +443,6 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
     return client.get_type(name);
   }
 
-  @SuppressWarnings("unused")
-  // Will be removed after testing
-  private void createTable(String tableName, Properties schema) throws MetaException,
-      UnknownTableException, TException {
-    Table t = new Table();
-    t.setSd(new StorageDescriptor());
-    t.setTableName(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_NAME));
-    t.getSd().setLocation(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_LOCATION));
-    t.getSd().setInputFormat(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.FILE_INPUT_FORMAT,
-          org.apache.hadoop.mapred.SequenceFileInputFormat.class.getName())); 
-    t.getSd().setOutputFormat(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.FILE_OUTPUT_FORMAT,
-          org.apache.hadoop.mapred.SequenceFileOutputFormat.class.getName())); 
-    t.setPartitionKeys(new ArrayList<FieldSchema>());
-    t.setDatabase(MetaStoreUtils.DEFAULT_DATABASE_NAME);
-    String part_cols_str = schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_PARTITION_COLUMNS);
-    if (part_cols_str != null && (part_cols_str.trim().length() != 0)) {
-      String [] part_keys = part_cols_str.trim().split("/");
-      for (String key: part_keys) {
-        FieldSchema part = new FieldSchema();
-        part.setName(key);
-        part.setType(Constants.STRING_TYPE_NAME); // default partition key
-        t.getPartitionKeys().add(part);
-      }
-    }
-    t.getSd().setNumBuckets(Integer.parseInt(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.BUCKET_COUNT, "-1")));
-    String bucketFieldName = schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.BUCKET_FIELD_NAME);
-    if ((bucketFieldName != null) && (bucketFieldName.trim().length() != 0)) {
-      t.getSd().setBucketCols(new ArrayList<String>(1));
-      t.getSd().getBucketCols().add(bucketFieldName);
-    }
-    
-    t.getSd().setSerdeInfo(new SerDeInfo());
-    t.getSd().getSerdeInfo().setName(t.getTableName());
-    t.getSd().getSerdeInfo().setSerializationClass(schema.getProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_CLASS)); 
-    t.getSd().getSerdeInfo().setSerializationFormat(schema.getProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT)); 
-    t.getSd().getSerdeInfo().setSerializationLib(schema.getProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_LIB));
-    if(t.getSd().getSerdeInfo().getSerializationClass() == null || (t.getSd().getSerdeInfo().getSerializationClass().length() == 0)) {
-      t.getSd().getSerdeInfo().setSerializationClass(schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_SERDE));
-    }
-    
-    // hack hack TODO:pc need to create a type and then associate the type name 
-    String colstr = schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_COLUMNS);
-    List<FieldSchema>  fields = new ArrayList<FieldSchema>();
-    t.getSd().setCols(fields);
-    if(colstr != null) {
-      String[] cols =  colstr.split(",");
-      for (String colName : cols) {
-        FieldSchema col = new FieldSchema(colName, Constants.STRING_TYPE_NAME, "default string type");
-        fields.add(col);
-      }
-    } 
-    
-    if(fields.size() == 0) {
-      fields.add(new FieldSchema("__SERDE__", t.getSd().getSerdeInfo().getSerializationLib(), ""));
-    }
-    
-    // finally create table
-    try {
-      this.createTable(t);
-    } catch (Exception e) {
-      MetaStoreUtils.logAndThrowMetaException(e);
-    }
-  }
-
   public List<String> getTables(String dbname, String tablePattern) throws MetaException {
     try {
       return client.get_tables(dbname, tablePattern);
@@ -541,6 +469,13 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
 
   public Table getTable(String tableName) throws MetaException, TException, NoSuchObjectException {
     return getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, tableName);
+  }
+
+  @Override
+  public List<String> listPartitionNames(String dbName, String tblName, short max)
+      throws MetaException, TException {
+    // TODO Auto-generated method stub
+    return client.get_partition_names(dbName, tblName, max);
   }
 
 }

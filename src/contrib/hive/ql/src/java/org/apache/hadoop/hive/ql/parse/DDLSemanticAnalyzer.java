@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.hive.ql.parse;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
-import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Order;
 
 import org.antlr.runtime.tree.CommonTree;
 
@@ -35,11 +36,11 @@ import org.apache.hadoop.hive.ql.plan.showTablesDesc;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.serde.Constants;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.File;
 import java.util.*;
 
 public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
@@ -76,12 +77,12 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
        analyzeDropTable(ast);
     else if (ast.getToken().getType() == HiveParser.TOK_DESCTABLE)
     {
-      ctx.setResFile(new File(getTmpFileName()));
+      ctx.setResFile(new Path(getTmpFileName()));
       analyzeDescribeTable(ast);
     }
     else if (ast.getToken().getType() == HiveParser.TOK_SHOWTABLES)
     {
-      ctx.setResFile(new File(getTmpFileName()));
+      ctx.setResFile(new Path(getTmpFileName()));
       analyzeShowTables(ast);
     }
     else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_RENAME)
@@ -97,14 +98,14 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     List<FieldSchema> cols          = getColumns(colList);
     List<FieldSchema> partCols      = null;
     List<String>      bucketCols    = null;
-    List<String>      sortCols      = null;
+    List<Order>       sortCols      = null;
     int               numBuckets    = -1;
     String            fieldDelim    = null;
     String            collItemDelim = null;
     String            mapKeyDelim   = null;
     String            lineDelim     = null;
     String            comment       = null;
-    boolean           isCompressed  = false;
+    boolean           isSequenceFile  = false;
     String            location      = null;
 
     LOG.info("Creating table" + tableName);
@@ -125,7 +126,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
             numBuckets = (Integer.valueOf(child.getChild(1).getText())).intValue();
           else
           {
-            sortCols = getColumnNames((CommonTree)child.getChild(1));
+            sortCols = getColumnNamesOrder((CommonTree)child.getChild(1));
             numBuckets = (Integer.valueOf(child.getChild(2).getText())).intValue();
           }
           break;
@@ -151,8 +152,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
             }
           }
           break;
-        case HiveParser.TOK_TBLCOMPRESSED:
-          isCompressed = true;
+        case HiveParser.TOK_TBLSEQUENCEFILE:
+          isSequenceFile = true;
           break;
         case HiveParser.TOK_TABLELOCATION:
           location = unescapeSQLString(child.getChild(0).getText());
@@ -165,7 +166,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       new createTableDesc(tableName, isExt, cols, partCols, bucketCols, 
                           sortCols, numBuckets,
                           fieldDelim, collItemDelim, mapKeyDelim, lineDelim,
-                          comment, isCompressed, location);
+                          comment, isSequenceFile, location);
 
     validateCreateTable(crtTblDesc);
     rootTasks.add(TaskFactory.get(new DDLWork(crtTblDesc), conf));
@@ -212,9 +213,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     if (crtTblDesc.getSortCols() != null)
     {
       // all columns in cluster and sort are valid columns
-      Iterator<String> sortCols = crtTblDesc.getSortCols().iterator();
+      Iterator<Order> sortCols = crtTblDesc.getSortCols().iterator();
       while (sortCols.hasNext()) {
-        String sortCol = sortCols.next();
+        String sortCol = sortCols.next().getCol();
         boolean found = false;
         Iterator<String> colNamesIter = colNames.iterator();
         while (colNamesIter.hasNext()) {
@@ -288,7 +289,21 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     int numCh = ast.getChildCount();
     for (int i = 0; i < numCh; i++) {
       CommonTree child = (CommonTree)ast.getChild(i);
-      colList.add(child.getChild(0).getText());
+      colList.add(child.getText());
+    }
+    return colList;
+  }
+
+  private List<Order> getColumnNamesOrder(CommonTree ast)
+  {
+    List<Order> colList = new ArrayList<Order>();
+    int numCh = ast.getChildCount();
+    for (int i = 0; i < numCh; i++) {
+      CommonTree child = (CommonTree)ast.getChild(i);
+      if (child.getToken().getType() == HiveParser.TOK_TABSORTCOLNAMEASC)
+        colList.add(new Order(child.getChild(0).getText(), 1));
+      else
+        colList.add(new Order(child.getChild(0).getText(), 0));
     }
     return colList;
   }

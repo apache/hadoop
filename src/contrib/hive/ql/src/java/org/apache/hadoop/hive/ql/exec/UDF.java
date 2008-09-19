@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
-import org.apache.hadoop.hive.ql.metadata.HiveException;
-
 /**
  * A dummy User-defined function (UDF) for the use with Hive.
  * 

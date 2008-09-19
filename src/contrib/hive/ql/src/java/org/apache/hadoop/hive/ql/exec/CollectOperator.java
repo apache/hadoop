@@ -23,6 +23,9 @@ import java.io.*;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.collectDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -31,26 +34,41 @@ import org.apache.hadoop.conf.Configuration;
 public class CollectOperator extends Operator <collectDesc> implements Serializable {
 
   private static final long serialVersionUID = 1L;
-  transient protected ArrayList<HiveObject> objList;
+  transient protected ArrayList<Object> rowList;
+  transient protected ArrayList<ObjectInspector> rowInspectorList;
   transient int maxSize;
 
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
-    objList = new ArrayList<HiveObject> ();
+    rowList = new ArrayList<Object> ();
+    rowInspectorList = new ArrayList<ObjectInspector> ();
     maxSize = conf.getBufferSize().intValue();
   }
 
-  public void process(HiveObject r) throws HiveException {
-    if(objList.size() < maxSize) {
-      objList.add(r);
+  public void process(Object row, ObjectInspector rowInspector)
+      throws HiveException {
+    if(rowList.size() < maxSize) {
+      // Create a standard copy of the object.
+      // In the future we can optimize this by doing copy-on-write.
+      // Here we always copy the object so that other operators can reuse the object for the next row. 
+      Object o = ObjectInspectorUtils.getStandardObject(row, rowInspector);
+      ObjectInspector oi = ObjectInspectorUtils.getStandardObjectInspector(rowInspector);
+      rowList.add(o);
+      rowInspectorList.add(oi);
     }
-    forward(r);
+    forward(row, rowInspector);
   }
   
-  public HiveObject retrieve() {
-    if(objList.isEmpty())
-      return null;
-    return objList.remove(0);
+  public void retrieve(InspectableObject result) {
+    assert(result != null);
+    if (rowList.isEmpty()) {
+      result.o = null;
+      result.oi = null;
+    } else {
+      result.o = rowList.remove(0);
+      result.oi = rowInspectorList.remove(0);
+    }
   }
+
 
 }

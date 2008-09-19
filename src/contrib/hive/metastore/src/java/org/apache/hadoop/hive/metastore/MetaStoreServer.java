@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,9 +38,12 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.ThriftMetaStore;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.hadoop.hive.metastore.api.UnknownTableException;
-import org.apache.hadoop.hive.serde.SerDe;
-import org.apache.hadoop.hive.serde.SerDeException;
-import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 import org.apache.hadoop.util.StringUtils;
 
 import com.facebook.fb303.FacebookBase;
@@ -298,66 +299,12 @@ public class MetaStoreServer extends ThriftMetaStore {
     }
 
 
-    /**
-     * normalizeType
-     *
-     * For pretty printing
-     *
-     * @param type a type name
-     * @return cleaned up - remove Java.lang and make numbers into int , ...
-     */
-    public String normalizeType(String type) {
-      Pattern tpat = Pattern.compile("java.lang.");
-      Matcher m = tpat.matcher(type);
-      type = m.replaceFirst("");
-      String ret = type;
-      if(type.equals("String")) {
-        ret = "string";
-      }  else if(type.equals("Integer")) {
-        ret = "int";
-      }
-      return ret;
-
-    }
-
-
-    /**
-     * hfToStrting
-     *
-     * Converts a basic SerDe's type to a string. It doesn't do any recursion.
-     *
-     * @param f the hive field - cannot be null!
-     * @return a string representation of the field's type
-     * @exception MetaException - if the SerDe raises it or the field is null
-     *
-     */
-    private String hfToString(SerDeField f) throws MetaException {
-      String ret;
-
-      try {
-        if(f.isPrimitive()) {
-          ret = this.normalizeType(f.getType().getName());
-        } else if(f.isList()) {
-          ret = "List<" +  this.normalizeType(f.getListElementType().getName()) + ">";
-        } else if(f.isMap()) {
-          ret = "Map<" + this.normalizeType(f.getMapKeyType().getName()) + "," +
-            this.normalizeType(f.getMapValueType().getName()) + ">";
-        } else {
-          // complex type and we just show the type name of the complex type
-          ret = f.getName();
-        }
-      }  catch(Exception e) {
-        StringUtils.stringifyException(e);
-        throw new MetaException(e.getMessage());
-      }
-      return ret;
-    }
     public ArrayList<FieldSchema> get_fields(String db, String table_name) throws MetaException,UnknownTableException, UnknownDBException {
 
       ArrayList<FieldSchema> str_fields = new ArrayList<FieldSchema>();
       String [] names = table_name.split("\\.");
       String base_table_name = names[0];
-      List<SerDeField> hive_fields = new ArrayList<SerDeField>();
+      String last_name = names[names.length-1];
 
       AbstractMap<String,String> schema_map = get_schema(base_table_name); // will throw UnknownTableException if not found
       Properties p = new Properties();
@@ -367,40 +314,41 @@ public class MetaStoreServer extends ThriftMetaStore {
       }
       // xxx
 
-      SerDeField hf = null;
-
       try {
         //            Table t = Table.readTable(p, this.db);
-        SerDe s = MetaStoreUtils.getSerDe( conf_, p);
-
+        Deserializer s = MetaStoreUtils.getDeserializer( conf_, p);
+        ObjectInspector oi = s.getObjectInspector();
+        
         // recurse down the type.subtype.subsubtype expression until at the desired type
         for(int i =  1; i < names.length; i++) {
-          hf = s.getFieldFromExpression(hf,names[i]);
+          if (!(oi instanceof StructObjectInspector)) {
+            oi = s.getObjectInspector();
+            break;
+          }
+          StructObjectInspector soi = (StructObjectInspector)oi;
+          StructField sf = soi.getStructFieldRef(names[i]);
+          if (sf == null) {
+            // If invalid field, then return the schema of the table
+            oi = s.getObjectInspector();
+            break;
+          } else {
+            oi = sf.getFieldObjectInspector();
+          }
         }
 
         // rules on how to recurse the SerDe based on its type
-        if(hf != null && hf.isPrimitive()) {
-          hive_fields.add(hf);
-        } else if(hf != null && hf.isList()) {
-          // don't remember why added this rule??
-          // should just be a hive_fields.add(hf)
-          try {
-            hive_fields = s.getFields(hf);
-          } catch(Exception e) {
-            hive_fields.add(hf);
-          }
-        } else if(hf != null && hf.isMap()) {
-          hive_fields.add(hf);
+        if (oi.getCategory() != Category.STRUCT) {
+          str_fields.add(new FieldSchema(last_name, oi.getTypeName(), "automatically generated"));
         } else {
-          hive_fields = s.getFields(hf);
-        }
-
-        for(SerDeField field: hive_fields) {
-          String name = field.getName();
-          String schema = this.hfToString(field);
-          str_fields.add(new FieldSchema(name, schema, "automatically generated"));
+          List<? extends StructField> fields = ((StructObjectInspector)oi).getAllStructFieldRefs();
+          for(int i=0; i<fields.size(); i++) {
+            String fieldName = fields.get(i).getFieldName();
+            String fieldTypeName = fields.get(i).getFieldObjectInspector().getTypeName();
+            str_fields.add(new FieldSchema(fieldName, fieldTypeName, "automatically generated"));
+          }
         }
         return str_fields;
+
       } catch(SerDeException e) {
         StringUtils.stringifyException(e);
         MetaException m = new MetaException();

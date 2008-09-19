@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
+import java.io.DataOutput;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
@@ -27,7 +27,10 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
@@ -47,6 +50,9 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hive.ql.metadata.InvalidTableException;
+import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.serde.Constants;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.facebook.thrift.TException;
@@ -72,8 +78,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
     // Create the db
     Hive db;
+    FileSystem fs;
     try {
       db = Hive.get(conf);
+      fs = FileSystem.get(conf);
 
       createTableDesc crtTbl = work.getCreateTblDesc();
       if (crtTbl != null) {
@@ -91,21 +99,19 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         if (crtTbl.getNumBuckets() != -1)
           tblStorDesc.setNumBuckets(crtTbl.getNumBuckets());
         if (crtTbl.getFieldDelim() != null)
-          tbl.setFieldDelim(crtTbl.getFieldDelim());
-
+          tbl.setSerdeParam(Constants.FIELD_DELIM, crtTbl.getFieldDelim());
         if (crtTbl.getCollItemDelim() != null)
-          tbl.setCollectionItemDelim(crtTbl.getCollItemDelim());
+          tbl.setSerdeParam(Constants.COLLECTION_DELIM, crtTbl.getCollItemDelim());
         if (crtTbl.getMapKeyDelim() != null)
-          tbl.setMapKeyDelim(crtTbl.getMapKeyDelim());
+          tbl.setSerdeParam(Constants.MAPKEY_DELIM, crtTbl.getMapKeyDelim());
         if (crtTbl.getLineDelim() != null)
-          tbl.setLineDelim(crtTbl.getLineDelim());
+          tbl.setSerdeParam(Constants.LINE_DELIM, crtTbl.getLineDelim());
         if (crtTbl.getComment() != null)
           tbl.setProperty("comment", crtTbl.getComment());
         if (crtTbl.getLocation() != null)
           tblStorDesc.setLocation(crtTbl.getLocation());
 
-        tbl.setIsCompressed(crtTbl.isCompressed());
-        if (crtTbl.isCompressed()) {
+        if (crtTbl.isSequenceFile()) {
           tbl.setInputFormatClass(SequenceFileInputFormat.class);
           tbl.setOutputFormatClass(SequenceFileOutputFormat.class);
         }
@@ -116,7 +122,42 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
         if (crtTbl.isExternal())
           tbl.setProperty("EXTERNAL", "TRUE");
-        
+
+        // If the sorted columns is a superset of bucketed columns, store this fact. It can be later used to
+        // optimize some group-by queries. Note that, the order does not matter as long as it in the first
+        // 'n' columns where 'n' is the length of the bucketed columns.
+        if ((tbl.getBucketCols() != null) && (tbl.getSortCols() != null))
+        {
+          List<String> bucketCols = tbl.getBucketCols();
+          List<Order> sortCols = tbl.getSortCols();
+
+          if (sortCols.size() >= bucketCols.size())
+          {
+            boolean found = true;
+
+            Iterator<String> iterBucketCols = bucketCols.iterator();
+            while (iterBucketCols.hasNext())
+            {
+              String bucketCol = iterBucketCols.next();
+              boolean colFound = false;
+              for (int i = 0; i < bucketCols.size(); i++)
+              {
+                if (bucketCol.equals(sortCols.get(i).getCol())) {
+                  colFound = true;
+                  break;
+                }
+              }
+              if (colFound == false)
+              {
+                found = false;
+                break;
+              }
+            }
+            if (found)
+              tbl.setProperty("SORTBUCKETCOLSPREFIX", "TRUE");
+          }
+        }
+
         // create the table
         db.createTable(tbl);
         return 0;
@@ -162,21 +203,24 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           LOG.info("DDLTask: got data for " +  tbl.getName());
           
           // write the results in the file
-          FileOutputStream outStream = new FileOutputStream(descTbl.getResFile());
+          DataOutput os = (DataOutput)fs.create(descTbl.getResFile());
           List<FieldSchema> cols = tbl.getCols();
           Iterator<FieldSchema> iterCols = cols.iterator();
+          boolean firstCol = true;
           while (iterCols.hasNext())
           {
+            if (!firstCol)
+              os.write(terminator);
             FieldSchema col = iterCols.next();
-            outStream.write(col.getName().getBytes());
-            outStream.write(separator);
-            outStream.write(col.getType().getBytes());
+            os.write(col.getName().getBytes("UTF-8"));
+            os.write(separator);
+            os.write(col.getType().getBytes("UTF-8"));
             if (col.getComment() != null)
             {
-              outStream.write(separator);
-              outStream.write(col.getComment().getBytes());
+              os.write(separator);
+              os.write(col.getComment().getBytes("UTF-8"));
             }
-            outStream.write(terminator);
+            firstCol = false;
           }
 
           // also return the partitioning columns
@@ -184,19 +228,20 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           Iterator<FieldSchema> iterPartCols = partCols.iterator();
           while (iterPartCols.hasNext())
           {
+            os.write(terminator);
             FieldSchema col = iterPartCols.next();
-            outStream.write(col.getName().getBytes());
-            outStream.write(separator);
-            outStream.write(col.getType().getBytes());
+            os.write(col.getName().getBytes("UTF-8"));
+            os.write(separator);
+            os.write(col.getType().getBytes("UTF-8"));
             if (col.getComment() != null)
             {
-              outStream.write(separator);
-              outStream.write(col.getComment().getBytes());
+              os.write(separator);
+              os.write(col.getComment().getBytes("UTF-8"));
             }
-            outStream.write(terminator);
           }
-          outStream.close();
           LOG.info("DDLTask: written data for " +  tbl.getName());
+          ((FSDataOutputStream)os).close();
+          
         } catch (FileNotFoundException e) {
           LOG.info("describe table: " + StringUtils.stringifyException(e));
           return 1;
@@ -212,10 +257,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         if (!found)
         {
           try {
-            FileOutputStream outStream = new FileOutputStream(descTbl.getResFile());
+            DataOutput outStream = (DataOutput)fs.open(descTbl.getResFile());
             String errMsg = "Table " + descTbl.getTableName() + " does not exist";
-            outStream.write(errMsg.getBytes());
-            outStream.close();
+            outStream.write(errMsg.getBytes("UTF-8"));
+            ((FSDataOutputStream)outStream).close();
           } catch (FileNotFoundException e) {
             LOG.info("describe table: " + StringUtils.stringifyException(e));
             return 1;
@@ -243,7 +288,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         
         // write the results in the file
         try {
-          FileOutputStream outStream = new FileOutputStream(showTbls.getResFile());
+          DataOutput outStream = (DataOutput)fs.create(showTbls.getResFile());
           SortedSet<String> sortedTbls = new TreeSet<String>(tbls);
           Iterator<String> iterTbls = sortedTbls.iterator();
           boolean firstCol = true;
@@ -251,10 +296,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           {
             if (!firstCol)
               outStream.write(separator);
-            outStream.write(iterTbls.next().getBytes());
+            outStream.write(iterTbls.next().getBytes("UTF-8"));
             firstCol = false;
           }
-          outStream.write(terminator);
+          ((FSDataOutputStream)outStream).close();
         } catch (FileNotFoundException e) {
           LOG.info("show table: " + StringUtils.stringifyException(e));
           return 1;

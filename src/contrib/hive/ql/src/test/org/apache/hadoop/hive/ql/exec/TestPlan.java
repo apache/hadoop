@@ -26,11 +26,11 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
-import org.apache.hadoop.hive.ql.parse.TypeInfo;
 import org.apache.hadoop.hive.ql.plan.*;
+import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
-import org.apache.hadoop.hive.serde.thrift.columnsetSerDe;
+import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
 
 
 public class TestPlan extends TestCase {
@@ -42,8 +42,8 @@ public class TestPlan extends TestCase {
 
     try {
       // initialize a complete map reduce configuration
-      exprNodeDesc expr1 = new exprNodeColumnDesc(TypeInfo.getPrimitiveTypeInfo(String.class), F1);
-      exprNodeDesc expr2 = new exprNodeColumnDesc(TypeInfo.getPrimitiveTypeInfo(String.class), F2);
+      exprNodeDesc expr1 = new exprNodeColumnDesc(TypeInfoFactory.getPrimitiveTypeInfo(String.class), F1);
+      exprNodeDesc expr2 = new exprNodeColumnDesc(TypeInfoFactory.getPrimitiveTypeInfo(String.class), F2);
       exprNodeDesc filterExpr = SemanticAnalyzer.getFuncExprNodeDesc("==", expr1, expr2);
 
       filterDesc filterCtx = new filterDesc(filterExpr);
@@ -55,10 +55,7 @@ public class TestPlan extends TestCase {
       LinkedHashMap<String, ArrayList<String>> pa = new LinkedHashMap<String, ArrayList<String>> ();
       pa.put("/tmp/testfolder", aliasList);
 
-      tableDesc tblDesc = new tableDesc(columnsetSerDe.class, 
-                                        TextInputFormat.class, 
-                                        IgnoreKeyTextOutputFormat.class,
-                                        new Properties());
+      tableDesc tblDesc = Utilities.defaultTd;
       partitionDesc partDesc = new partitionDesc(tblDesc, null);
       LinkedHashMap<String, partitionDesc> pt = new LinkedHashMap<String, partitionDesc> ();
       pt.put("/tmp/testfolder", partDesc);

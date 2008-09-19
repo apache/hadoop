@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.parse;
 import java.util.*;
 import java.io.File;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
+
 
 public abstract class BaseSemanticAnalyzer {
   protected String scratchDir;
@@ -79,7 +81,39 @@ public abstract class BaseSemanticAnalyzer {
     }
     return val;
   }
-  
+
+  public static String charSetString(String charSetName, String charSetString) 
+    throws SemanticException {
+    try
+    {
+      // The character set name starts with a _, so strip that
+      charSetName = charSetName.substring(1);
+      if (charSetString.charAt(0) == '\'')
+        return new String(unescapeSQLString(charSetString).getBytes(), charSetName);
+      else                                       // hex input is also supported
+      {
+        assert charSetString.charAt(0) == '0';
+        assert charSetString.charAt(1) == 'x';
+        charSetString = charSetString.substring(2);
+        
+        byte[] bArray = new byte[charSetString.length()/2];
+        int j = 0;
+        for (int i = 0; i < charSetString.length(); i += 2)
+        {
+          int val = Character.digit(charSetString.charAt(i), 16) * 16 + Character.digit(charSetString.charAt(i+1), 16);
+          if (val > 127)
+            val = val - 256;
+          bArray[j++] = new Integer(val).byteValue();
+        }
+
+        String res = new String(bArray, charSetName);
+        return res;
+      } 
+    } catch (UnsupportedEncodingException e) {
+      throw new SemanticException(e);
+    }
+  }
+
   @SuppressWarnings("nls")
   public static String unescapeSQLString(String b) {
     assert(b.charAt(0) == '\'');

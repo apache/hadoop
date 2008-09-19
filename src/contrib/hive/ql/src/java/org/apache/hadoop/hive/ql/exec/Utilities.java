@@ -32,7 +32,11 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.plan.*;
@@ -40,8 +44,11 @@ import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 
 @SuppressWarnings("nls")
 public class Utilities {
@@ -49,9 +56,10 @@ public class Utilities {
   /**
    * The object in the reducer are composed of these top level fields
    */
-  public static enum ReduceField { KEY, VALUE, ALIAS };
 
+  public static enum ReduceField { KEY, VALUE, ALIAS };
   private static volatile mapredWork gWork = null;
+  static final private Log LOG = LogFactory.getLog("hive.ql.exec.Utilities");
 
   public static void clearMapRedWork (Configuration job) {
     try {
@@ -113,7 +121,7 @@ public class Utilities {
       protected Expression instantiate(Object oldInstance, Encoder out) {
       return new Expression(Enum.class,
                             "valueOf",
-                            new Object[] { oldInstance.getClass(), ((Enum) oldInstance).name() });
+                            new Object[] { oldInstance.getClass(), ((Enum<?>) oldInstance).name() });
     }
     protected boolean mutatesTo(Object oldInstance, Object newInstance) {
       return oldInstance == newInstance;
@@ -190,21 +198,13 @@ public class Utilities {
   public static tableDesc defaultTd;
   static {
     // by default we expect ^A separated strings
-    Properties p = new Properties ();
-    p.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "" + Utilities.ctrlaCode);
-    defaultTd = new tableDesc(MetadataTypedColumnsetSerDe.class,
-        TextInputFormat.class, 
-        IgnoreKeyTextOutputFormat.class, p);
+    defaultTd = PlanUtils.getDefaultTableDesc("" + Utilities.ctrlaCode);
   }
 
   public static tableDesc defaultTabTd;
   static {
-    // by default we expect ^A separated strings
-    Properties p = new Properties ();
-    p.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "" + Utilities.tabCode);
-    defaultTabTd = new tableDesc(MetadataTypedColumnsetSerDe.class,
-        TextInputFormat.class, 
-        IgnoreKeyTextOutputFormat.class, p);
+    // Default tab-separated tableDesc
+    defaultTabTd = PlanUtils.getDefaultTableDesc("" + Utilities.tabCode);
   }
   
   public final static int newLineCode = 10;
@@ -289,7 +289,7 @@ public class Utilities {
   }
 
   public static tableDesc getTableDesc(Table tbl) {
-    return (new tableDesc (tbl.getSerDe().getClass(), tbl.getInputFormatClass(), tbl.getOutputFormatClass(), tbl.getSchema()));
+    return (new tableDesc (tbl.getDeserializer().getClass(), tbl.getInputFormatClass(), tbl.getOutputFormatClass(), tbl.getSchema()));
   }
 
 
@@ -297,12 +297,12 @@ public class Utilities {
     return (new partitionDesc (getTableDesc(part.getTable()), part.getSpec()));
   }
 
-  public static void addMapWork(mapredWork mr, Table tbl, String alias, Operator work) {
+  public static void addMapWork(mapredWork mr, Table tbl, String alias, Operator<?> work) {
     mr.addMapWork(tbl.getDataLocation().getPath(), alias, work, 
                   new partitionDesc(getTableDesc(tbl), null));
   }
 
-  private static String getOpTreeSkel_helper(Operator op, String indent) {
+  private static String getOpTreeSkel_helper(Operator<?> op, String indent) {
     if (op == null)
       return "";
   
@@ -312,13 +312,13 @@ public class Utilities {
     sb.append("\n");
     if (op.getChildOperators() != null)
       for(Object child: op.getChildOperators()) {
-        sb.append(getOpTreeSkel_helper((Operator)child, indent + "  "));
+        sb.append(getOpTreeSkel_helper((Operator<?>)child, indent + "  "));
       }
 
     return sb.toString();
   }
 
-  public static String getOpTreeSkel(Operator op) {
+  public static String getOpTreeSkel(Operator<?> op) {
     return getOpTreeSkel_helper(op, "");
   }
 
@@ -379,5 +379,60 @@ public class Utilities {
     String prefix = StringUtils.abbreviate(str, max-suffix.length());
 
     return prefix+suffix;
+  }
+
+  public final static String NSTR = "";
+  public static enum streamStatus {EOF, TERMINATED, NORMAL}
+  public static streamStatus readColumn(DataInput in, OutputStream out) throws IOException {
+
+    while (true) {
+      int b;
+      try {
+        b = (int)in.readByte();
+      } catch (EOFException e) {
+        return streamStatus.EOF;
+      }
+
+      if (b == Utilities.newLineCode) {
+        return streamStatus.TERMINATED;
+      }
+
+      if (b == Utilities.ctrlaCode) {
+        return streamStatus.NORMAL;
+      }
+
+      out.write(b);
+    }
+    // Unreachable
+  }
+  
+  public static OutputStream createCompressedStream(JobConf jc,
+                                                    OutputStream out) throws IOException {
+    boolean isCompressed = FileOutputFormat.getCompressOutput(jc);
+    if(isCompressed) {
+      Class<? extends CompressionCodec> codecClass =
+        FileOutputFormat.getOutputCompressorClass(jc, DefaultCodec.class);
+      CompressionCodec codec = (CompressionCodec)
+        ReflectionUtils.newInstance(codecClass, jc);
+      return codec.createOutputStream(out);
+    } else {
+      return (out);
+    }
+  }
+
+  public static SequenceFile.Writer createSequenceWriter(JobConf jc, FileSystem fs,
+                                                         Path file, Class<?> keyClass,
+                                                         Class<?> valClass) throws IOException {
+    CompressionCodec codec = null;
+    CompressionType compressionType = CompressionType.NONE;
+    if (SequenceFileOutputFormat.getCompressOutput(jc)) {
+      compressionType = SequenceFileOutputFormat.getOutputCompressionType(jc);
+      Class codecClass = SequenceFileOutputFormat.getOutputCompressorClass(jc, DefaultCodec.class);
+      codec = (CompressionCodec) 
+        ReflectionUtils.newInstance(codecClass, jc);
+    }
+    return (SequenceFile.createWriter(fs, jc, file,
+                                      keyClass, valClass, compressionType, codec));
+
   }
 }

@@ -71,7 +71,8 @@ class StandardListObjectInspector implements ListObjectInspector {
   }
 
   public String getTypeName() {
-    return "list<" + listElementObjectInspector.getTypeName() + ">";
+    return org.apache.hadoop.hive.serde.Constants.LIST_TYPE_NAME 
+        + "<" + listElementObjectInspector.getTypeName() + ">";
   }
 
 }

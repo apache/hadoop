@@ -144,7 +144,7 @@ public class Warehouse {
 
   public static String makePartName(List<FieldSchema> partCols, List<String> vals) throws MetaException {
     if ((partCols.size() != vals.size()) || (partCols.size() == 0)) {
-      throw new MetaException("Invalid key & values");
+      throw new MetaException("Invalid partition key & values");
     }
     StringBuilder name = new StringBuilder();
     for(int i=0; i< partCols.size(); i++) {

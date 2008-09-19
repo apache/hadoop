@@ -25,10 +25,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.plan.scriptDesc;
-import org.apache.hadoop.hive.ql.plan.tableDesc;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.serde.*;
-import org.apache.hadoop.hive.ql.io.*;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.SerDe;
+import org.apache.hadoop.hive.serde2.Serializer;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.StringUtils;
@@ -50,8 +52,10 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
   transient Thread errThread;
   transient Process scriptPid;
   transient Configuration hconf;
-  transient SerDe decoder;
-  transient HiveObjectSerializer hos;
+  // Input to the script
+  transient Serializer scriptInputSerializer;
+  // Output from the script
+  transient Deserializer scriptOutputDeserializer;
   transient volatile Throwable scriptError = null;
 
   /**
@@ -93,24 +97,18 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
     try {
       this.hconf = hconf;
 
-      tableDesc td = conf.getScriptOutputInfo();
-      if(td == null) {
-        td = Utilities.defaultTabTd;
-      }
-      decoder = td.getSerdeClass().newInstance();
-      decoder.initialize(hconf, td.getProperties());
+      scriptOutputDeserializer = conf.getScriptOutputInfo().getDeserializerClass().newInstance();
+      scriptOutputDeserializer.initialize(hconf, conf.getScriptOutputInfo().getProperties());
 
-      hos = new NaiiveJSONSerializer();
-      Properties p = new Properties ();
-      p.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, ""+Utilities.tabCode);
-      hos.initialize(p);
+      scriptInputSerializer = (Serializer)conf.getScriptInputInfo().getDeserializerClass().newInstance();
+      scriptInputSerializer.initialize(hconf, conf.getScriptInputInfo().getProperties());
 
       String [] cmdArgs = splitArgs(conf.getScriptCmd());
       String [] wrappedCmdArgs = addWrapper(cmdArgs);
-      l4j.info("Executing " + Arrays.asList(wrappedCmdArgs));
-      l4j.info("tablename=" + hconf.get(HiveConf.ConfVars.HIVETABLENAME.varname));
-      l4j.info("partname=" + hconf.get(HiveConf.ConfVars.HIVEPARTITIONNAME.varname));
-      l4j.info("alias=" + alias);
+      LOG.info("Executing " + Arrays.asList(wrappedCmdArgs));
+      LOG.info("tablename=" + hconf.get(HiveConf.ConfVars.HIVETABLENAME.varname));
+      LOG.info("partname=" + hconf.get(HiveConf.ConfVars.HIVEPARTITIONNAME.varname));
+      LOG.info("alias=" + alias);
 
       ProcessBuilder pb = new ProcessBuilder(wrappedCmdArgs);
       Map<String, String> env = pb.environment();
@@ -121,7 +119,8 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
       scriptOut = new DataOutputStream(new BufferedOutputStream(scriptPid.getOutputStream()));
       scriptIn = new DataInputStream(new BufferedInputStream(scriptPid.getInputStream()));
       scriptErr = new DataInputStream(new BufferedInputStream(scriptPid.getErrorStream()));
-      outThread = new StreamThread(scriptIn, new OutputStreamProcessor (), "OutputProcessor");
+      outThread = new StreamThread(scriptIn, new OutputStreamProcessor(
+          scriptOutputDeserializer.getObjectInspector()), "OutputProcessor");
       outThread.start();
       errThread = new StreamThread(scriptErr, new ErrorStreamProcessor (), "ErrorProcessor");
       errThread.start();
@@ -132,14 +131,22 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
+  Text text = new Text();
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
     if(scriptError != null) {
       throw new HiveException(scriptError);
     }
     try {
-      hos.serialize(r, scriptOut);
+      text = (Text) scriptInputSerializer.serialize(row, rowInspector);
+      scriptOut.write(text.getBytes(), 0, text.getLength());
+      scriptOut.write(Utilities.newLineCode);
+    } catch (SerDeException e) {
+      LOG.error("Error in serializing the row: " + e.getMessage());
+      scriptError = e;
+      serialize_error_count.set(serialize_error_count.get() + 1);
+      throw new HiveException(e);
     } catch (IOException e) {
-      l4j.error("Error in writing to script: " + e.getMessage());
+      LOG.error("Error in writing to script: " + e.getMessage());
       scriptError = e;
       throw new HiveException(e);
     }
@@ -155,17 +162,12 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
         scriptOut.close();
         int exitVal = scriptPid.waitFor();
         if (exitVal != 0) {
-          l4j.error("Script failed with code " + exitVal);
+          LOG.error("Script failed with code " + exitVal);
           new_abort = true;
         };
       } catch (IOException e) {
         new_abort = true;
       } catch (InterruptedException e) { }
-    }
-
-    // the underlying hive object serializer keeps track of serialization errors
-    if(hos != null) {
-      serialize_error_count.set(hos.getWriteErrorCount());
     }
 
     try {
@@ -190,17 +192,19 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
 
 
   class OutputStreamProcessor implements StreamProcessor {
-    public OutputStreamProcessor () {}
+    Object row;
+    ObjectInspector rowInspector;
+    public OutputStreamProcessor(ObjectInspector rowInspector) {
+      this.rowInspector = rowInspector;
+    }
     public void processLine(Text line) throws HiveException {
-      HiveObject ho;
       try {
-        Object ev = decoder.deserialize(line);
-        ho = new TableHiveObject(ev, decoder);
+        row = scriptOutputDeserializer.deserialize(line);
       } catch (SerDeException e) {
         deserialize_error_count.set(deserialize_error_count.get()+1);
         return;
       }
-      forward(ho);
+      forward(row, rowInspector);
     }
     public void close() {
     }
@@ -243,11 +247,11 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
           }
           proc.processLine(row);
         }
-        l4j.info("StreamThread "+name+" done");
+        LOG.info("StreamThread "+name+" done");
 
       } catch (Throwable th) {
         scriptError = th;
-        l4j.warn(StringUtils.stringifyException(th));
+        LOG.warn(StringUtils.stringifyException(th));
       } finally {
         try {
           if(lineReader != null) {
@@ -256,8 +260,8 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
           in.close();
           proc.close();
         } catch (Exception e) {
-          l4j.warn(name + ": error in closing ..");
-          l4j.warn(StringUtils.stringifyException(e));
+          LOG.warn(name + ": error in closing ..");
+          LOG.warn(StringUtils.stringifyException(e));
         }
       }
     }

@@ -24,15 +24,20 @@ import java.io.Serializable;
 public class scriptDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String scriptCmd;
+  // Describe how to deserialize data back from user script
   private tableDesc scriptOutputInfo;
+  // Describe how to serialize data out to user script
+  private tableDesc scriptInputInfo;
 
   public scriptDesc() { }
   public scriptDesc(
     final String scriptCmd,
-    final tableDesc scriptOutputInfo) {
+    final tableDesc scriptOutputInfo,
+    final tableDesc scriptInputInfo) {
 
     this.scriptCmd = scriptCmd;
     this.scriptOutputInfo = scriptOutputInfo;
+    this.scriptInputInfo = scriptInputInfo;
   }
   
   @explain(displayName="command")
@@ -49,5 +54,11 @@ public class scriptDesc implements Serializable {
   }
   public void setScriptOutputInfo(final tableDesc scriptOutputInfo) {
     this.scriptOutputInfo = scriptOutputInfo;
+  }
+  public tableDesc getScriptInputInfo() {
+    return scriptInputInfo;
+  }
+  public void setScriptInputInfo(tableDesc scriptInputInfo) {
+    this.scriptInputInfo = scriptInputInfo;
   }
 }

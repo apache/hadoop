@@ -69,7 +69,10 @@ public class ReflectionStructObjectInspector implements StructObjectInspector {
   }
   
   /**
-   * This method is only intended to be used by Utilities class in this package.
+   * This method is only intended to be used by the Utilities class in this package.
+   * This creates an uninitialized ObjectInspector so the Utilities class can put it into
+   * a cache before it initializes when it might look up the cache for member fields that
+   * might be of the same type (e.g. recursive type like linked list and trees).
    */
   ReflectionStructObjectInspector() {
   }

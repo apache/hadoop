@@ -18,25 +18,13 @@ import com.facebook.thrift.transport.*;
 
 public class SerDeInfo implements TBase, java.io.Serializable {
 private String name;
-private String serializationFormat;
-private String serializationClass;
 private String serializationLib;
-private String fieldDelim;
-private String collectionItemDelim;
-private String mapKeyDelim;
-private String lineDelim;
 private Map<String,String> parameters;
 
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean name = false;
-public boolean serializationFormat = false;
-public boolean serializationClass = false;
 public boolean serializationLib = false;
-public boolean fieldDelim = false;
-public boolean collectionItemDelim = false;
-public boolean mapKeyDelim = false;
-public boolean lineDelim = false;
 public boolean parameters = false;
 }
 
@@ -45,32 +33,14 @@ public SerDeInfo() {
 
 public SerDeInfo(
 String name,
-String serializationFormat,
-String serializationClass,
 String serializationLib,
-String fieldDelim,
-String collectionItemDelim,
-String mapKeyDelim,
-String lineDelim,
 Map<String,String> parameters)
 {
 this();
 this.name = name;
 this.__isset.name = true;
-this.serializationFormat = serializationFormat;
-this.__isset.serializationFormat = true;
-this.serializationClass = serializationClass;
-this.__isset.serializationClass = true;
 this.serializationLib = serializationLib;
 this.__isset.serializationLib = true;
-this.fieldDelim = fieldDelim;
-this.__isset.fieldDelim = true;
-this.collectionItemDelim = collectionItemDelim;
-this.__isset.collectionItemDelim = true;
-this.mapKeyDelim = mapKeyDelim;
-this.__isset.mapKeyDelim = true;
-this.lineDelim = lineDelim;
-this.__isset.lineDelim = true;
 this.parameters = parameters;
 this.__isset.parameters = true;
 }
@@ -88,32 +58,6 @@ public void unsetName() {
 this.__isset.name = false;
 }
 
-public String getSerializationFormat() {
-return this.serializationFormat;
-}
-
-public void setSerializationFormat(String serializationFormat) {
-this.serializationFormat = serializationFormat;
-this.__isset.serializationFormat = true;
-}
-
-public void unsetSerializationFormat() {
-this.__isset.serializationFormat = false;
-}
-
-public String getSerializationClass() {
-return this.serializationClass;
-}
-
-public void setSerializationClass(String serializationClass) {
-this.serializationClass = serializationClass;
-this.__isset.serializationClass = true;
-}
-
-public void unsetSerializationClass() {
-this.__isset.serializationClass = false;
-}
-
 public String getSerializationLib() {
 return this.serializationLib;
 }
@@ -125,58 +69,6 @@ this.__isset.serializationLib = true;
 
 public void unsetSerializationLib() {
 this.__isset.serializationLib = false;
-}
-
-public String getFieldDelim() {
-return this.fieldDelim;
-}
-
-public void setFieldDelim(String fieldDelim) {
-this.fieldDelim = fieldDelim;
-this.__isset.fieldDelim = true;
-}
-
-public void unsetFieldDelim() {
-this.__isset.fieldDelim = false;
-}
-
-public String getCollectionItemDelim() {
-return this.collectionItemDelim;
-}
-
-public void setCollectionItemDelim(String collectionItemDelim) {
-this.collectionItemDelim = collectionItemDelim;
-this.__isset.collectionItemDelim = true;
-}
-
-public void unsetCollectionItemDelim() {
-this.__isset.collectionItemDelim = false;
-}
-
-public String getMapKeyDelim() {
-return this.mapKeyDelim;
-}
-
-public void setMapKeyDelim(String mapKeyDelim) {
-this.mapKeyDelim = mapKeyDelim;
-this.__isset.mapKeyDelim = true;
-}
-
-public void unsetMapKeyDelim() {
-this.__isset.mapKeyDelim = false;
-}
-
-public String getLineDelim() {
-return this.lineDelim;
-}
-
-public void setLineDelim(String lineDelim) {
-this.lineDelim = lineDelim;
-this.__isset.lineDelim = true;
-}
-
-public void unsetLineDelim() {
-this.__isset.lineDelim = false;
 }
 
 public int getParametersSize() {
@@ -226,66 +118,12 @@ if (!this.name.equals(that.name))
   return false;
 }
 
-boolean this_present_serializationFormat = true && (this.serializationFormat != null);
-boolean that_present_serializationFormat = true && (that.serializationFormat != null);
-if (this_present_serializationFormat || that_present_serializationFormat) {
-if (!(this_present_serializationFormat && that_present_serializationFormat))
-  return false;
-if (!this.serializationFormat.equals(that.serializationFormat))
-  return false;
-}
-
-boolean this_present_serializationClass = true && (this.serializationClass != null);
-boolean that_present_serializationClass = true && (that.serializationClass != null);
-if (this_present_serializationClass || that_present_serializationClass) {
-if (!(this_present_serializationClass && that_present_serializationClass))
-  return false;
-if (!this.serializationClass.equals(that.serializationClass))
-  return false;
-}
-
 boolean this_present_serializationLib = true && (this.serializationLib != null);
 boolean that_present_serializationLib = true && (that.serializationLib != null);
 if (this_present_serializationLib || that_present_serializationLib) {
 if (!(this_present_serializationLib && that_present_serializationLib))
   return false;
 if (!this.serializationLib.equals(that.serializationLib))
-  return false;
-}
-
-boolean this_present_fieldDelim = true && (this.fieldDelim != null);
-boolean that_present_fieldDelim = true && (that.fieldDelim != null);
-if (this_present_fieldDelim || that_present_fieldDelim) {
-if (!(this_present_fieldDelim && that_present_fieldDelim))
-  return false;
-if (!this.fieldDelim.equals(that.fieldDelim))
-  return false;
-}
-
-boolean this_present_collectionItemDelim = true && (this.collectionItemDelim != null);
-boolean that_present_collectionItemDelim = true && (that.collectionItemDelim != null);
-if (this_present_collectionItemDelim || that_present_collectionItemDelim) {
-if (!(this_present_collectionItemDelim && that_present_collectionItemDelim))
-  return false;
-if (!this.collectionItemDelim.equals(that.collectionItemDelim))
-  return false;
-}
-
-boolean this_present_mapKeyDelim = true && (this.mapKeyDelim != null);
-boolean that_present_mapKeyDelim = true && (that.mapKeyDelim != null);
-if (this_present_mapKeyDelim || that_present_mapKeyDelim) {
-if (!(this_present_mapKeyDelim && that_present_mapKeyDelim))
-  return false;
-if (!this.mapKeyDelim.equals(that.mapKeyDelim))
-  return false;
-}
-
-boolean this_present_lineDelim = true && (this.lineDelim != null);
-boolean that_present_lineDelim = true && (that.lineDelim != null);
-if (this_present_lineDelim || that_present_lineDelim) {
-if (!(this_present_lineDelim && that_present_lineDelim))
-  return false;
-if (!this.lineDelim.equals(that.lineDelim))
   return false;
 }
 
@@ -316,7 +154,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.STRING) {
       this.name = iprot.readString();
       this.__isset.name = true;
@@ -324,23 +162,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
-    if (field.type == TType.STRING) {
-      this.serializationFormat = iprot.readString();
-      this.__isset.serializationFormat = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -3:
-    if (field.type == TType.STRING) {
-      this.serializationClass = iprot.readString();
-      this.__isset.serializationClass = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -4:
+  case 2:
     if (field.type == TType.STRING) {
       this.serializationLib = iprot.readString();
       this.__isset.serializationLib = true;
@@ -348,39 +170,7 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -5:
-    if (field.type == TType.STRING) {
-      this.fieldDelim = iprot.readString();
-      this.__isset.fieldDelim = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -6:
-    if (field.type == TType.STRING) {
-      this.collectionItemDelim = iprot.readString();
-      this.__isset.collectionItemDelim = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -7:
-    if (field.type == TType.STRING) {
-      this.mapKeyDelim = iprot.readString();
-      this.__isset.mapKeyDelim = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -8:
-    if (field.type == TType.STRING) {
-      this.lineDelim = iprot.readString();
-      this.__isset.lineDelim = true;
-    } else { 
-      TProtocolUtil.skip(iprot, field.type);
-    }
-    break;
-  case -9:
+  case 3:
     if (field.type == TType.MAP) {
       {
         TMap _map4 = iprot.readMapBegin();
@@ -416,71 +206,23 @@ TField field = new TField();
 if (this.name != null) {
 field.name = "name";
 field.type = TType.STRING;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.name);
-oprot.writeFieldEnd();
-}
-if (this.serializationFormat != null) {
-field.name = "serializationFormat";
-field.type = TType.STRING;
-field.id = -2;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.serializationFormat);
-oprot.writeFieldEnd();
-}
-if (this.serializationClass != null) {
-field.name = "serializationClass";
-field.type = TType.STRING;
-field.id = -3;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.serializationClass);
 oprot.writeFieldEnd();
 }
 if (this.serializationLib != null) {
 field.name = "serializationLib";
 field.type = TType.STRING;
-field.id = -4;
+field.id = 2;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.serializationLib);
-oprot.writeFieldEnd();
-}
-if (this.fieldDelim != null) {
-field.name = "fieldDelim";
-field.type = TType.STRING;
-field.id = -5;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.fieldDelim);
-oprot.writeFieldEnd();
-}
-if (this.collectionItemDelim != null) {
-field.name = "collectionItemDelim";
-field.type = TType.STRING;
-field.id = -6;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.collectionItemDelim);
-oprot.writeFieldEnd();
-}
-if (this.mapKeyDelim != null) {
-field.name = "mapKeyDelim";
-field.type = TType.STRING;
-field.id = -7;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.mapKeyDelim);
-oprot.writeFieldEnd();
-}
-if (this.lineDelim != null) {
-field.name = "lineDelim";
-field.type = TType.STRING;
-field.id = -8;
-oprot.writeFieldBegin(field);
-oprot.writeString(this.lineDelim);
 oprot.writeFieldEnd();
 }
 if (this.parameters != null) {
 field.name = "parameters";
 field.type = TType.MAP;
-field.id = -9;
+field.id = 3;
 oprot.writeFieldBegin(field);
 {
   oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.parameters.size()));
@@ -500,20 +242,8 @@ public String toString() {
 StringBuilder sb = new StringBuilder("SerDeInfo(");
 sb.append("name:");
 sb.append(this.name);
-sb.append(",serializationFormat:");
-sb.append(this.serializationFormat);
-sb.append(",serializationClass:");
-sb.append(this.serializationClass);
 sb.append(",serializationLib:");
 sb.append(this.serializationLib);
-sb.append(",fieldDelim:");
-sb.append(this.fieldDelim);
-sb.append(",collectionItemDelim:");
-sb.append(this.collectionItemDelim);
-sb.append(",mapKeyDelim:");
-sb.append(this.mapKeyDelim);
-sb.append(",lineDelim:");
-sb.append(this.lineDelim);
 sb.append(",parameters:");
 sb.append(this.parameters);
 sb.append(")");

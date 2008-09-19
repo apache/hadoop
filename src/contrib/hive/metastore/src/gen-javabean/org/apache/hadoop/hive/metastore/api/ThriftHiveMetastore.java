@@ -19,11 +19,11 @@ import com.facebook.thrift.transport.*;
 public class ThriftHiveMetastore {
 
 /**
- * This interface is NOT live yet.
+ * This interface is live.
  */
 public interface Iface extends com.facebook.fb303.FacebookService.Iface {
 
-public boolean create_database(String name, String location_uri) throws AlreadyExistsException, MetaException, TException;
+public boolean create_database(String name, String description) throws AlreadyExistsException, MetaException, TException;
 
 public Database get_database(String name) throws NoSuchObjectException, MetaException, TException;
 
@@ -49,13 +49,7 @@ public List<String> get_tables(String db_name, String pattern) throws MetaExcept
 
 public Table get_table(String dbname, String tbl_name) throws MetaException, NoSuchObjectException, TException;
 
-public boolean set_table_parameters(String dbname, String tbl_name, Map<String,String> params) throws NoSuchObjectException, MetaException, TException;
-
 public void alter_table(String dbname, String tbl_name, Table new_tbl) throws InvalidOperationException, MetaException, TException;
-
-public void truncate_table(String db_name, String table_name, String partition) throws MetaException, UnknownTableException, UnknownDBException, TException;
-
-public List<String> cat(String db_name, String table_name, String partition, int high) throws MetaException, UnknownDBException, UnknownTableException, TException;
 
 public Partition add_partition(Partition new_part) throws InvalidObjectException, AlreadyExistsException, MetaException, TException;
 
@@ -67,7 +61,7 @@ public Partition get_partition(String db_name, String tbl_name, List<String> par
 
 public List<Partition> get_partitions(String db_name, String tbl_name, short max_parts) throws NoSuchObjectException, MetaException, TException;
 
-public boolean set_partition_parameters(String db_name, String tbl_name, String pname, Map<String,String> params) throws NoSuchObjectException, MetaException, TException;
+public List<String> get_partition_names(String db_name, String tbl_name, short max_parts) throws MetaException, TException;
 
 public boolean alter_partitions(StorageDescriptor sd, List<String> parts) throws InvalidOperationException, MetaException, TException;
 
@@ -86,18 +80,18 @@ public Client(TProtocol iprot, TProtocol oprot)
 super(iprot, oprot);
 }
 
-public boolean create_database(String name, String location_uri) throws AlreadyExistsException, MetaException, TException
+public boolean create_database(String name, String description) throws AlreadyExistsException, MetaException, TException
 {
-send_create_database(name, location_uri);
+send_create_database(name, description);
 return recv_create_database();
 }
 
-public void send_create_database(String name, String location_uri) throws TException
+public void send_create_database(String name, String description) throws TException
 {
 oprot_.writeMessageBegin(new TMessage("create_database", TMessageType.CALL, seqid_));
 create_database_args args = new create_database_args();
 args.name = name;
-args.location_uri = location_uri;
+args.description = description;
 args.write(oprot_);
 oprot_.writeMessageEnd();
 oprot_.getTransport().flush();
@@ -592,47 +586,6 @@ if (result.__isset.o2) {
 throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_table failed: unknown result");
 }
 
-public boolean set_table_parameters(String dbname, String tbl_name, Map<String,String> params) throws NoSuchObjectException, MetaException, TException
-{
-send_set_table_parameters(dbname, tbl_name, params);
-return recv_set_table_parameters();
-}
-
-public void send_set_table_parameters(String dbname, String tbl_name, Map<String,String> params) throws TException
-{
-oprot_.writeMessageBegin(new TMessage("set_table_parameters", TMessageType.CALL, seqid_));
-set_table_parameters_args args = new set_table_parameters_args();
-args.dbname = dbname;
-args.tbl_name = tbl_name;
-args.params = params;
-args.write(oprot_);
-oprot_.writeMessageEnd();
-oprot_.getTransport().flush();
-}
-
-public boolean recv_set_table_parameters() throws NoSuchObjectException, MetaException, TException
-{
-TMessage msg = iprot_.readMessageBegin();
-if (msg.type == TMessageType.EXCEPTION) {
-  TApplicationException x = TApplicationException.read(iprot_);
-  iprot_.readMessageEnd();
-  throw x;
-}
-set_table_parameters_result result = new set_table_parameters_result();
-result.read(iprot_);
-iprot_.readMessageEnd();
-if (result.__isset.success) {
-  return result.success;
-}
-if (result.__isset.o1) {
-  throw result.o1;
-}
-if (result.__isset.o2) {
-  throw result.o2;
-}
-throw new TApplicationException(TApplicationException.MISSING_RESULT, "set_table_parameters failed: unknown result");
-}
-
 public void alter_table(String dbname, String tbl_name, Table new_tbl) throws InvalidOperationException, MetaException, TException
 {
 send_alter_table(dbname, tbl_name, new_tbl);
@@ -669,92 +622,6 @@ if (result.__isset.o2) {
   throw result.o2;
 }
 return;
-}
-
-public void truncate_table(String db_name, String table_name, String partition) throws MetaException, UnknownTableException, UnknownDBException, TException
-{
-send_truncate_table(db_name, table_name, partition);
-recv_truncate_table();
-}
-
-public void send_truncate_table(String db_name, String table_name, String partition) throws TException
-{
-oprot_.writeMessageBegin(new TMessage("truncate_table", TMessageType.CALL, seqid_));
-truncate_table_args args = new truncate_table_args();
-args.db_name = db_name;
-args.table_name = table_name;
-args.partition = partition;
-args.write(oprot_);
-oprot_.writeMessageEnd();
-oprot_.getTransport().flush();
-}
-
-public void recv_truncate_table() throws MetaException, UnknownTableException, UnknownDBException, TException
-{
-TMessage msg = iprot_.readMessageBegin();
-if (msg.type == TMessageType.EXCEPTION) {
-  TApplicationException x = TApplicationException.read(iprot_);
-  iprot_.readMessageEnd();
-  throw x;
-}
-truncate_table_result result = new truncate_table_result();
-result.read(iprot_);
-iprot_.readMessageEnd();
-if (result.__isset.ouch1) {
-  throw result.ouch1;
-}
-if (result.__isset.ouch2) {
-  throw result.ouch2;
-}
-if (result.__isset.ouch3) {
-  throw result.ouch3;
-}
-return;
-}
-
-public List<String> cat(String db_name, String table_name, String partition, int high) throws MetaException, UnknownDBException, UnknownTableException, TException
-{
-send_cat(db_name, table_name, partition, high);
-return recv_cat();
-}
-
-public void send_cat(String db_name, String table_name, String partition, int high) throws TException
-{
-oprot_.writeMessageBegin(new TMessage("cat", TMessageType.CALL, seqid_));
-cat_args args = new cat_args();
-args.db_name = db_name;
-args.table_name = table_name;
-args.partition = partition;
-args.high = high;
-args.write(oprot_);
-oprot_.writeMessageEnd();
-oprot_.getTransport().flush();
-}
-
-public List<String> recv_cat() throws MetaException, UnknownDBException, UnknownTableException, TException
-{
-TMessage msg = iprot_.readMessageBegin();
-if (msg.type == TMessageType.EXCEPTION) {
-  TApplicationException x = TApplicationException.read(iprot_);
-  iprot_.readMessageEnd();
-  throw x;
-}
-cat_result result = new cat_result();
-result.read(iprot_);
-iprot_.readMessageEnd();
-if (result.__isset.success) {
-  return result.success;
-}
-if (result.__isset.ouch1) {
-  throw result.ouch1;
-}
-if (result.__isset.ouch2) {
-  throw result.ouch2;
-}
-if (result.__isset.ouch3) {
-  throw result.ouch3;
-}
-throw new TApplicationException(TApplicationException.MISSING_RESULT, "cat failed: unknown result");
 }
 
 public Partition add_partition(Partition new_part) throws InvalidObjectException, AlreadyExistsException, MetaException, TException
@@ -964,26 +831,25 @@ if (result.__isset.o2) {
 throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_partitions failed: unknown result");
 }
 
-public boolean set_partition_parameters(String db_name, String tbl_name, String pname, Map<String,String> params) throws NoSuchObjectException, MetaException, TException
+public List<String> get_partition_names(String db_name, String tbl_name, short max_parts) throws MetaException, TException
 {
-send_set_partition_parameters(db_name, tbl_name, pname, params);
-return recv_set_partition_parameters();
+send_get_partition_names(db_name, tbl_name, max_parts);
+return recv_get_partition_names();
 }
 
-public void send_set_partition_parameters(String db_name, String tbl_name, String pname, Map<String,String> params) throws TException
+public void send_get_partition_names(String db_name, String tbl_name, short max_parts) throws TException
 {
-oprot_.writeMessageBegin(new TMessage("set_partition_parameters", TMessageType.CALL, seqid_));
-set_partition_parameters_args args = new set_partition_parameters_args();
+oprot_.writeMessageBegin(new TMessage("get_partition_names", TMessageType.CALL, seqid_));
+get_partition_names_args args = new get_partition_names_args();
 args.db_name = db_name;
 args.tbl_name = tbl_name;
-args.pname = pname;
-args.params = params;
+args.max_parts = max_parts;
 args.write(oprot_);
 oprot_.writeMessageEnd();
 oprot_.getTransport().flush();
 }
 
-public boolean recv_set_partition_parameters() throws NoSuchObjectException, MetaException, TException
+public List<String> recv_get_partition_names() throws MetaException, TException
 {
 TMessage msg = iprot_.readMessageBegin();
 if (msg.type == TMessageType.EXCEPTION) {
@@ -991,19 +857,16 @@ if (msg.type == TMessageType.EXCEPTION) {
   iprot_.readMessageEnd();
   throw x;
 }
-set_partition_parameters_result result = new set_partition_parameters_result();
+get_partition_names_result result = new get_partition_names_result();
 result.read(iprot_);
 iprot_.readMessageEnd();
 if (result.__isset.success) {
   return result.success;
 }
-if (result.__isset.o1) {
-  throw result.o1;
-}
 if (result.__isset.o2) {
   throw result.o2;
 }
-throw new TApplicationException(TApplicationException.MISSING_RESULT, "set_partition_parameters failed: unknown result");
+throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_partition_names failed: unknown result");
 }
 
 public boolean alter_partitions(StorageDescriptor sd, List<String> parts) throws InvalidOperationException, MetaException, TException
@@ -1104,16 +967,13 @@ processMap_.put("create_table", new create_table());
 processMap_.put("drop_table", new drop_table());
 processMap_.put("get_tables", new get_tables());
 processMap_.put("get_table", new get_table());
-processMap_.put("set_table_parameters", new set_table_parameters());
 processMap_.put("alter_table", new alter_table());
-processMap_.put("truncate_table", new truncate_table());
-processMap_.put("cat", new cat());
 processMap_.put("add_partition", new add_partition());
 processMap_.put("append_partition", new append_partition());
 processMap_.put("drop_partition", new drop_partition());
 processMap_.put("get_partition", new get_partition());
 processMap_.put("get_partitions", new get_partitions());
-processMap_.put("set_partition_parameters", new set_partition_parameters());
+processMap_.put("get_partition_names", new get_partition_names());
 processMap_.put("alter_partitions", new alter_partitions());
 processMap_.put("create_index", new create_index());
 }
@@ -1146,7 +1006,7 @@ public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TExcepti
   iprot.readMessageEnd();
   create_database_result result = new create_database_result();
   try {
-    result.success = iface_.create_database(args.name, args.location_uri);
+    result.success = iface_.create_database(args.name, args.description);
     result.__isset.success = true;
   } catch (AlreadyExistsException o1) {
     result.o1 = o1;
@@ -1461,31 +1321,6 @@ public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TExcepti
 
 }
 
-private class set_table_parameters implements ProcessFunction {
-public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-{
-  set_table_parameters_args args = new set_table_parameters_args();
-  args.read(iprot);
-  iprot.readMessageEnd();
-  set_table_parameters_result result = new set_table_parameters_result();
-  try {
-    result.success = iface_.set_table_parameters(args.dbname, args.tbl_name, args.params);
-    result.__isset.success = true;
-  } catch (NoSuchObjectException o1) {
-    result.o1 = o1;
-    result.__isset.o1 = true;
-  } catch (MetaException o2) {
-    result.o2 = o2;
-    result.__isset.o2 = true;
-  }
-  oprot.writeMessageBegin(new TMessage("set_table_parameters", TMessageType.REPLY, seqid));
-  result.write(oprot);
-  oprot.writeMessageEnd();
-  oprot.getTransport().flush();
-}
-
-}
-
 private class alter_table implements ProcessFunction {
 public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
 {
@@ -1503,61 +1338,6 @@ public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TExcepti
     result.__isset.o2 = true;
   }
   oprot.writeMessageBegin(new TMessage("alter_table", TMessageType.REPLY, seqid));
-  result.write(oprot);
-  oprot.writeMessageEnd();
-  oprot.getTransport().flush();
-}
-
-}
-
-private class truncate_table implements ProcessFunction {
-public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-{
-  truncate_table_args args = new truncate_table_args();
-  args.read(iprot);
-  iprot.readMessageEnd();
-  truncate_table_result result = new truncate_table_result();
-  try {
-    iface_.truncate_table(args.db_name, args.table_name, args.partition);
-  } catch (MetaException ouch1) {
-    result.ouch1 = ouch1;
-    result.__isset.ouch1 = true;
-  } catch (UnknownTableException ouch2) {
-    result.ouch2 = ouch2;
-    result.__isset.ouch2 = true;
-  } catch (UnknownDBException ouch3) {
-    result.ouch3 = ouch3;
-    result.__isset.ouch3 = true;
-  }
-  oprot.writeMessageBegin(new TMessage("truncate_table", TMessageType.REPLY, seqid));
-  result.write(oprot);
-  oprot.writeMessageEnd();
-  oprot.getTransport().flush();
-}
-
-}
-
-private class cat implements ProcessFunction {
-public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-{
-  cat_args args = new cat_args();
-  args.read(iprot);
-  iprot.readMessageEnd();
-  cat_result result = new cat_result();
-  try {
-    result.success = iface_.cat(args.db_name, args.table_name, args.partition, args.high);
-    result.__isset.success = true;
-  } catch (MetaException ouch1) {
-    result.ouch1 = ouch1;
-    result.__isset.ouch1 = true;
-  } catch (UnknownDBException ouch2) {
-    result.ouch2 = ouch2;
-    result.__isset.ouch2 = true;
-  } catch (UnknownTableException ouch3) {
-    result.ouch3 = ouch3;
-    result.__isset.ouch3 = true;
-  }
-  oprot.writeMessageBegin(new TMessage("cat", TMessageType.REPLY, seqid));
   result.write(oprot);
   oprot.writeMessageEnd();
   oprot.getTransport().flush();
@@ -1693,24 +1473,21 @@ public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TExcepti
 
 }
 
-private class set_partition_parameters implements ProcessFunction {
+private class get_partition_names implements ProcessFunction {
 public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
 {
-  set_partition_parameters_args args = new set_partition_parameters_args();
+  get_partition_names_args args = new get_partition_names_args();
   args.read(iprot);
   iprot.readMessageEnd();
-  set_partition_parameters_result result = new set_partition_parameters_result();
+  get_partition_names_result result = new get_partition_names_result();
   try {
-    result.success = iface_.set_partition_parameters(args.db_name, args.tbl_name, args.pname, args.params);
+    result.success = iface_.get_partition_names(args.db_name, args.tbl_name, args.max_parts);
     result.__isset.success = true;
-  } catch (NoSuchObjectException o1) {
-    result.o1 = o1;
-    result.__isset.o1 = true;
   } catch (MetaException o2) {
     result.o2 = o2;
     result.__isset.o2 = true;
   }
-  oprot.writeMessageBegin(new TMessage("set_partition_parameters", TMessageType.REPLY, seqid));
+  oprot.writeMessageBegin(new TMessage("get_partition_names", TMessageType.REPLY, seqid));
   result.write(oprot);
   oprot.writeMessageEnd();
   oprot.getTransport().flush();
@@ -1772,12 +1549,12 @@ public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TExcepti
 
 public static class create_database_args implements TBase, java.io.Serializable {
 private String name;
-private String location_uri;
+private String description;
 
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean name = false;
-public boolean location_uri = false;
+public boolean description = false;
 }
 
 public create_database_args() {
@@ -1785,13 +1562,13 @@ public create_database_args() {
 
 public create_database_args(
 String name,
-String location_uri)
+String description)
 {
 this();
 this.name = name;
 this.__isset.name = true;
-this.location_uri = location_uri;
-this.__isset.location_uri = true;
+this.description = description;
+this.__isset.description = true;
 }
 
 public String getName() {
@@ -1807,17 +1584,17 @@ public void unsetName() {
 this.__isset.name = false;
 }
 
-public String getLocation_uri() {
-return this.location_uri;
+public String getDescription() {
+return this.description;
 }
 
-public void setLocation_uri(String location_uri) {
-this.location_uri = location_uri;
-this.__isset.location_uri = true;
+public void setDescription(String description) {
+this.description = description;
+this.__isset.description = true;
 }
 
-public void unsetLocation_uri() {
-this.__isset.location_uri = false;
+public void unsetDescription() {
+this.__isset.description = false;
 }
 
 public boolean equals(Object that) {
@@ -1841,12 +1618,12 @@ if (this_present_name || that_present_name) {
     return false;
 }
 
-boolean this_present_location_uri = true && (this.location_uri != null);
-boolean that_present_location_uri = true && (that.location_uri != null);
-if (this_present_location_uri || that_present_location_uri) {
-  if (!(this_present_location_uri && that_present_location_uri))
+boolean this_present_description = true && (this.description != null);
+boolean that_present_description = true && (that.description != null);
+if (this_present_description || that_present_description) {
+  if (!(this_present_description && that_present_description))
     return false;
-  if (!this.location_uri.equals(that.location_uri))
+  if (!this.description.equals(that.description))
     return false;
 }
 
@@ -1878,8 +1655,8 @@ while (true)
       break;
     case 2:
       if (field.type == TType.STRING) {
-        this.location_uri = iprot.readString();
-        this.__isset.location_uri = true;
+        this.description = iprot.readString();
+        this.__isset.description = true;
       } else { 
         TProtocolUtil.skip(iprot, field.type);
       }
@@ -1905,12 +1682,12 @@ if (this.name != null) {
   oprot.writeString(this.name);
   oprot.writeFieldEnd();
 }
-if (this.location_uri != null) {
-  field.name = "location_uri";
+if (this.description != null) {
+  field.name = "description";
   field.type = TType.STRING;
   field.id = 2;
   oprot.writeFieldBegin(field);
-  oprot.writeString(this.location_uri);
+  oprot.writeString(this.description);
   oprot.writeFieldEnd();
 }
 oprot.writeFieldStop();
@@ -1921,8 +1698,8 @@ public String toString() {
 StringBuilder sb = new StringBuilder("create_database_args(");
 sb.append("name:");
 sb.append(this.name);
-sb.append(",location_uri:");
-sb.append(this.location_uri);
+sb.append(",description:");
+sb.append(this.description);
 sb.append(")");
 return sb.toString();
 }
@@ -6276,453 +6053,6 @@ return sb.toString();
 
 }
 
-public static class set_table_parameters_args implements TBase, java.io.Serializable {
-private String dbname;
-private String tbl_name;
-private Map<String,String> params;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean dbname = false;
-public boolean tbl_name = false;
-public boolean params = false;
-}
-
-public set_table_parameters_args() {
-}
-
-public set_table_parameters_args(
-String dbname,
-String tbl_name,
-Map<String,String> params)
-{
-this();
-this.dbname = dbname;
-this.__isset.dbname = true;
-this.tbl_name = tbl_name;
-this.__isset.tbl_name = true;
-this.params = params;
-this.__isset.params = true;
-}
-
-public String getDbname() {
-return this.dbname;
-}
-
-public void setDbname(String dbname) {
-this.dbname = dbname;
-this.__isset.dbname = true;
-}
-
-public void unsetDbname() {
-this.__isset.dbname = false;
-}
-
-public String getTbl_name() {
-return this.tbl_name;
-}
-
-public void setTbl_name(String tbl_name) {
-this.tbl_name = tbl_name;
-this.__isset.tbl_name = true;
-}
-
-public void unsetTbl_name() {
-this.__isset.tbl_name = false;
-}
-
-public int getParamsSize() {
-return (this.params == null) ? 0 : this.params.size();
-}
-
-public void putToParams(String key, String val) {
-if (this.params == null) {
-  this.params = new HashMap<String,String>();
-}
-this.params.put(key, val);
-this.__isset.params = true;
-}
-
-public Map<String,String> getParams() {
-return this.params;
-}
-
-public void setParams(Map<String,String> params) {
-this.params = params;
-this.__isset.params = true;
-}
-
-public void unsetParams() {
-this.params = null;
-this.__isset.params = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof set_table_parameters_args)
-  return this.equals((set_table_parameters_args)that);
-return false;
-}
-
-public boolean equals(set_table_parameters_args that) {
-if (that == null)
-  return false;
-
-boolean this_present_dbname = true && (this.dbname != null);
-boolean that_present_dbname = true && (that.dbname != null);
-if (this_present_dbname || that_present_dbname) {
-  if (!(this_present_dbname && that_present_dbname))
-    return false;
-  if (!this.dbname.equals(that.dbname))
-    return false;
-}
-
-boolean this_present_tbl_name = true && (this.tbl_name != null);
-boolean that_present_tbl_name = true && (that.tbl_name != null);
-if (this_present_tbl_name || that_present_tbl_name) {
-  if (!(this_present_tbl_name && that_present_tbl_name))
-    return false;
-  if (!this.tbl_name.equals(that.tbl_name))
-    return false;
-}
-
-boolean this_present_params = true && (this.params != null);
-boolean that_present_params = true && (that.params != null);
-if (this_present_params || that_present_params) {
-  if (!(this_present_params && that_present_params))
-    return false;
-  if (!this.params.equals(that.params))
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 1:
-      if (field.type == TType.STRING) {
-        this.dbname = iprot.readString();
-        this.__isset.dbname = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
-      if (field.type == TType.STRING) {
-        this.tbl_name = iprot.readString();
-        this.__isset.tbl_name = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 3:
-      if (field.type == TType.MAP) {
-        {
-          TMap _map65 = iprot.readMapBegin();
-          this.params = new HashMap<String,String>(2*_map65.size);
-          for (int _i66 = 0; _i66 < _map65.size; ++_i66)
-          {
-            String _key67;
-            String _val68;
-            _key67 = iprot.readString();
-            _val68 = iprot.readString();
-            this.params.put(_key67, _val68);
-          }
-          iprot.readMapEnd();
-        }
-        this.__isset.params = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("set_table_parameters_args");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-if (this.dbname != null) {
-  field.name = "dbname";
-  field.type = TType.STRING;
-  field.id = 1;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.dbname);
-  oprot.writeFieldEnd();
-}
-if (this.tbl_name != null) {
-  field.name = "tbl_name";
-  field.type = TType.STRING;
-  field.id = 2;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.tbl_name);
-  oprot.writeFieldEnd();
-}
-if (this.params != null) {
-  field.name = "params";
-  field.type = TType.MAP;
-  field.id = 3;
-  oprot.writeFieldBegin(field);
-  {
-    oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.params.size()));
-    for (String _iter69 : this.params.keySet())    {
-      oprot.writeString(_iter69);
-      oprot.writeString(this.params.get(_iter69));
-    }
-    oprot.writeMapEnd();
-  }
-  oprot.writeFieldEnd();
-}
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("set_table_parameters_args(");
-sb.append("dbname:");
-sb.append(this.dbname);
-sb.append(",tbl_name:");
-sb.append(this.tbl_name);
-sb.append(",params:");
-sb.append(this.params);
-sb.append(")");
-return sb.toString();
-}
-
-}
-
-public static class set_table_parameters_result implements TBase, java.io.Serializable {
-private boolean success;
-private NoSuchObjectException o1;
-private MetaException o2;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean success = false;
-public boolean o1 = false;
-public boolean o2 = false;
-}
-
-public set_table_parameters_result() {
-}
-
-public set_table_parameters_result(
-boolean success,
-NoSuchObjectException o1,
-MetaException o2)
-{
-this();
-this.success = success;
-this.__isset.success = true;
-this.o1 = o1;
-this.__isset.o1 = true;
-this.o2 = o2;
-this.__isset.o2 = true;
-}
-
-public boolean isSuccess() {
-return this.success;
-}
-
-public void setSuccess(boolean success) {
-this.success = success;
-this.__isset.success = true;
-}
-
-public void unsetSuccess() {
-this.__isset.success = false;
-}
-
-public NoSuchObjectException getO1() {
-return this.o1;
-}
-
-public void setO1(NoSuchObjectException o1) {
-this.o1 = o1;
-this.__isset.o1 = true;
-}
-
-public void unsetO1() {
-this.o1 = null;
-this.__isset.o1 = false;
-}
-
-public MetaException getO2() {
-return this.o2;
-}
-
-public void setO2(MetaException o2) {
-this.o2 = o2;
-this.__isset.o2 = true;
-}
-
-public void unsetO2() {
-this.o2 = null;
-this.__isset.o2 = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof set_table_parameters_result)
-  return this.equals((set_table_parameters_result)that);
-return false;
-}
-
-public boolean equals(set_table_parameters_result that) {
-if (that == null)
-  return false;
-
-boolean this_present_success = true;
-boolean that_present_success = true;
-if (this_present_success || that_present_success) {
-  if (!(this_present_success && that_present_success))
-    return false;
-  if (this.success != that.success)
-    return false;
-}
-
-boolean this_present_o1 = true && (this.o1 != null);
-boolean that_present_o1 = true && (that.o1 != null);
-if (this_present_o1 || that_present_o1) {
-  if (!(this_present_o1 && that_present_o1))
-    return false;
-  if (!this.o1.equals(that.o1))
-    return false;
-}
-
-boolean this_present_o2 = true && (this.o2 != null);
-boolean that_present_o2 = true && (that.o2 != null);
-if (this_present_o2 || that_present_o2) {
-  if (!(this_present_o2 && that_present_o2))
-    return false;
-  if (!this.o2.equals(that.o2))
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 0:
-      if (field.type == TType.BOOL) {
-        this.success = iprot.readBool();
-        this.__isset.success = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 1:
-      if (field.type == TType.STRUCT) {
-        this.o1 = new NoSuchObjectException();
-        this.o1.read(iprot);
-        this.__isset.o1 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
-      if (field.type == TType.STRUCT) {
-        this.o2 = new MetaException();
-        this.o2.read(iprot);
-        this.__isset.o2 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("set_table_parameters_result");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-
-if (this.__isset.success) {
-  field.name = "success";
-  field.type = TType.BOOL;
-  field.id = 0;
-  oprot.writeFieldBegin(field);
-  oprot.writeBool(this.success);
-  oprot.writeFieldEnd();
-} else if (this.__isset.o1) {
-  if (this.o1 != null) {
-    field.name = "o1";
-    field.type = TType.STRUCT;
-    field.id = 1;
-    oprot.writeFieldBegin(field);
-    this.o1.write(oprot);
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.o2) {
-  if (this.o2 != null) {
-    field.name = "o2";
-    field.type = TType.STRUCT;
-    field.id = 2;
-    oprot.writeFieldBegin(field);
-    this.o2.write(oprot);
-    oprot.writeFieldEnd();
-  }
-}
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("set_table_parameters_result(");
-sb.append("success:");
-sb.append(this.success);
-sb.append(",o1:");
-sb.append(this.o1.toString());
-sb.append(",o2:");
-sb.append(this.o2.toString());
-sb.append(")");
-return sb.toString();
-}
-
-}
-
 public static class alter_table_args implements TBase, java.io.Serializable {
 private String dbname;
 private String tbl_name;
@@ -7090,966 +6420,6 @@ sb.append("o1:");
 sb.append(this.o1.toString());
 sb.append(",o2:");
 sb.append(this.o2.toString());
-sb.append(")");
-return sb.toString();
-}
-
-}
-
-public static class truncate_table_args implements TBase, java.io.Serializable {
-private String db_name;
-private String table_name;
-private String partition;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean db_name = false;
-public boolean table_name = false;
-public boolean partition = false;
-}
-
-public truncate_table_args() {
-}
-
-public truncate_table_args(
-String db_name,
-String table_name,
-String partition)
-{
-this();
-this.db_name = db_name;
-this.__isset.db_name = true;
-this.table_name = table_name;
-this.__isset.table_name = true;
-this.partition = partition;
-this.__isset.partition = true;
-}
-
-public String getDb_name() {
-return this.db_name;
-}
-
-public void setDb_name(String db_name) {
-this.db_name = db_name;
-this.__isset.db_name = true;
-}
-
-public void unsetDb_name() {
-this.__isset.db_name = false;
-}
-
-public String getTable_name() {
-return this.table_name;
-}
-
-public void setTable_name(String table_name) {
-this.table_name = table_name;
-this.__isset.table_name = true;
-}
-
-public void unsetTable_name() {
-this.__isset.table_name = false;
-}
-
-public String getPartition() {
-return this.partition;
-}
-
-public void setPartition(String partition) {
-this.partition = partition;
-this.__isset.partition = true;
-}
-
-public void unsetPartition() {
-this.__isset.partition = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof truncate_table_args)
-  return this.equals((truncate_table_args)that);
-return false;
-}
-
-public boolean equals(truncate_table_args that) {
-if (that == null)
-  return false;
-
-boolean this_present_db_name = true && (this.db_name != null);
-boolean that_present_db_name = true && (that.db_name != null);
-if (this_present_db_name || that_present_db_name) {
-  if (!(this_present_db_name && that_present_db_name))
-    return false;
-  if (!this.db_name.equals(that.db_name))
-    return false;
-}
-
-boolean this_present_table_name = true && (this.table_name != null);
-boolean that_present_table_name = true && (that.table_name != null);
-if (this_present_table_name || that_present_table_name) {
-  if (!(this_present_table_name && that_present_table_name))
-    return false;
-  if (!this.table_name.equals(that.table_name))
-    return false;
-}
-
-boolean this_present_partition = true && (this.partition != null);
-boolean that_present_partition = true && (that.partition != null);
-if (this_present_partition || that_present_partition) {
-  if (!(this_present_partition && that_present_partition))
-    return false;
-  if (!this.partition.equals(that.partition))
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 1:
-      if (field.type == TType.STRING) {
-        this.db_name = iprot.readString();
-        this.__isset.db_name = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
-      if (field.type == TType.STRING) {
-        this.table_name = iprot.readString();
-        this.__isset.table_name = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 3:
-      if (field.type == TType.STRING) {
-        this.partition = iprot.readString();
-        this.__isset.partition = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("truncate_table_args");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-if (this.db_name != null) {
-  field.name = "db_name";
-  field.type = TType.STRING;
-  field.id = 1;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.db_name);
-  oprot.writeFieldEnd();
-}
-if (this.table_name != null) {
-  field.name = "table_name";
-  field.type = TType.STRING;
-  field.id = 2;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.table_name);
-  oprot.writeFieldEnd();
-}
-if (this.partition != null) {
-  field.name = "partition";
-  field.type = TType.STRING;
-  field.id = 3;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.partition);
-  oprot.writeFieldEnd();
-}
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("truncate_table_args(");
-sb.append("db_name:");
-sb.append(this.db_name);
-sb.append(",table_name:");
-sb.append(this.table_name);
-sb.append(",partition:");
-sb.append(this.partition);
-sb.append(")");
-return sb.toString();
-}
-
-}
-
-public static class truncate_table_result implements TBase, java.io.Serializable {
-private MetaException ouch1;
-private UnknownTableException ouch2;
-private UnknownDBException ouch3;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean ouch1 = false;
-public boolean ouch2 = false;
-public boolean ouch3 = false;
-}
-
-public truncate_table_result() {
-}
-
-public truncate_table_result(
-MetaException ouch1,
-UnknownTableException ouch2,
-UnknownDBException ouch3)
-{
-this();
-this.ouch1 = ouch1;
-this.__isset.ouch1 = true;
-this.ouch2 = ouch2;
-this.__isset.ouch2 = true;
-this.ouch3 = ouch3;
-this.__isset.ouch3 = true;
-}
-
-public MetaException getOuch1() {
-return this.ouch1;
-}
-
-public void setOuch1(MetaException ouch1) {
-this.ouch1 = ouch1;
-this.__isset.ouch1 = true;
-}
-
-public void unsetOuch1() {
-this.ouch1 = null;
-this.__isset.ouch1 = false;
-}
-
-public UnknownTableException getOuch2() {
-return this.ouch2;
-}
-
-public void setOuch2(UnknownTableException ouch2) {
-this.ouch2 = ouch2;
-this.__isset.ouch2 = true;
-}
-
-public void unsetOuch2() {
-this.ouch2 = null;
-this.__isset.ouch2 = false;
-}
-
-public UnknownDBException getOuch3() {
-return this.ouch3;
-}
-
-public void setOuch3(UnknownDBException ouch3) {
-this.ouch3 = ouch3;
-this.__isset.ouch3 = true;
-}
-
-public void unsetOuch3() {
-this.ouch3 = null;
-this.__isset.ouch3 = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof truncate_table_result)
-  return this.equals((truncate_table_result)that);
-return false;
-}
-
-public boolean equals(truncate_table_result that) {
-if (that == null)
-  return false;
-
-boolean this_present_ouch1 = true && (this.ouch1 != null);
-boolean that_present_ouch1 = true && (that.ouch1 != null);
-if (this_present_ouch1 || that_present_ouch1) {
-  if (!(this_present_ouch1 && that_present_ouch1))
-    return false;
-  if (!this.ouch1.equals(that.ouch1))
-    return false;
-}
-
-boolean this_present_ouch2 = true && (this.ouch2 != null);
-boolean that_present_ouch2 = true && (that.ouch2 != null);
-if (this_present_ouch2 || that_present_ouch2) {
-  if (!(this_present_ouch2 && that_present_ouch2))
-    return false;
-  if (!this.ouch2.equals(that.ouch2))
-    return false;
-}
-
-boolean this_present_ouch3 = true && (this.ouch3 != null);
-boolean that_present_ouch3 = true && (that.ouch3 != null);
-if (this_present_ouch3 || that_present_ouch3) {
-  if (!(this_present_ouch3 && that_present_ouch3))
-    return false;
-  if (!this.ouch3.equals(that.ouch3))
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 1:
-      if (field.type == TType.STRUCT) {
-        this.ouch1 = new MetaException();
-        this.ouch1.read(iprot);
-        this.__isset.ouch1 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
-      if (field.type == TType.STRUCT) {
-        this.ouch2 = new UnknownTableException();
-        this.ouch2.read(iprot);
-        this.__isset.ouch2 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 3:
-      if (field.type == TType.STRUCT) {
-        this.ouch3 = new UnknownDBException();
-        this.ouch3.read(iprot);
-        this.__isset.ouch3 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("truncate_table_result");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-
-if (this.__isset.ouch1) {
-  if (this.ouch1 != null) {
-    field.name = "ouch1";
-    field.type = TType.STRUCT;
-    field.id = 1;
-    oprot.writeFieldBegin(field);
-    this.ouch1.write(oprot);
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.ouch2) {
-  if (this.ouch2 != null) {
-    field.name = "ouch2";
-    field.type = TType.STRUCT;
-    field.id = 2;
-    oprot.writeFieldBegin(field);
-    this.ouch2.write(oprot);
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.ouch3) {
-  if (this.ouch3 != null) {
-    field.name = "ouch3";
-    field.type = TType.STRUCT;
-    field.id = 3;
-    oprot.writeFieldBegin(field);
-    this.ouch3.write(oprot);
-    oprot.writeFieldEnd();
-  }
-}
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("truncate_table_result(");
-sb.append("ouch1:");
-sb.append(this.ouch1.toString());
-sb.append(",ouch2:");
-sb.append(this.ouch2.toString());
-sb.append(",ouch3:");
-sb.append(this.ouch3.toString());
-sb.append(")");
-return sb.toString();
-}
-
-}
-
-public static class cat_args implements TBase, java.io.Serializable {
-private String db_name;
-private String table_name;
-private String partition;
-private int high;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean db_name = false;
-public boolean table_name = false;
-public boolean partition = false;
-public boolean high = false;
-}
-
-public cat_args() {
-}
-
-public cat_args(
-String db_name,
-String table_name,
-String partition,
-int high)
-{
-this();
-this.db_name = db_name;
-this.__isset.db_name = true;
-this.table_name = table_name;
-this.__isset.table_name = true;
-this.partition = partition;
-this.__isset.partition = true;
-this.high = high;
-this.__isset.high = true;
-}
-
-public String getDb_name() {
-return this.db_name;
-}
-
-public void setDb_name(String db_name) {
-this.db_name = db_name;
-this.__isset.db_name = true;
-}
-
-public void unsetDb_name() {
-this.__isset.db_name = false;
-}
-
-public String getTable_name() {
-return this.table_name;
-}
-
-public void setTable_name(String table_name) {
-this.table_name = table_name;
-this.__isset.table_name = true;
-}
-
-public void unsetTable_name() {
-this.__isset.table_name = false;
-}
-
-public String getPartition() {
-return this.partition;
-}
-
-public void setPartition(String partition) {
-this.partition = partition;
-this.__isset.partition = true;
-}
-
-public void unsetPartition() {
-this.__isset.partition = false;
-}
-
-public int getHigh() {
-return this.high;
-}
-
-public void setHigh(int high) {
-this.high = high;
-this.__isset.high = true;
-}
-
-public void unsetHigh() {
-this.__isset.high = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof cat_args)
-  return this.equals((cat_args)that);
-return false;
-}
-
-public boolean equals(cat_args that) {
-if (that == null)
-  return false;
-
-boolean this_present_db_name = true && (this.db_name != null);
-boolean that_present_db_name = true && (that.db_name != null);
-if (this_present_db_name || that_present_db_name) {
-  if (!(this_present_db_name && that_present_db_name))
-    return false;
-  if (!this.db_name.equals(that.db_name))
-    return false;
-}
-
-boolean this_present_table_name = true && (this.table_name != null);
-boolean that_present_table_name = true && (that.table_name != null);
-if (this_present_table_name || that_present_table_name) {
-  if (!(this_present_table_name && that_present_table_name))
-    return false;
-  if (!this.table_name.equals(that.table_name))
-    return false;
-}
-
-boolean this_present_partition = true && (this.partition != null);
-boolean that_present_partition = true && (that.partition != null);
-if (this_present_partition || that_present_partition) {
-  if (!(this_present_partition && that_present_partition))
-    return false;
-  if (!this.partition.equals(that.partition))
-    return false;
-}
-
-boolean this_present_high = true;
-boolean that_present_high = true;
-if (this_present_high || that_present_high) {
-  if (!(this_present_high && that_present_high))
-    return false;
-  if (this.high != that.high)
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 1:
-      if (field.type == TType.STRING) {
-        this.db_name = iprot.readString();
-        this.__isset.db_name = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
-      if (field.type == TType.STRING) {
-        this.table_name = iprot.readString();
-        this.__isset.table_name = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 3:
-      if (field.type == TType.STRING) {
-        this.partition = iprot.readString();
-        this.__isset.partition = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case -1:
-      if (field.type == TType.I32) {
-        this.high = iprot.readI32();
-        this.__isset.high = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("cat_args");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-if (this.db_name != null) {
-  field.name = "db_name";
-  field.type = TType.STRING;
-  field.id = 1;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.db_name);
-  oprot.writeFieldEnd();
-}
-if (this.table_name != null) {
-  field.name = "table_name";
-  field.type = TType.STRING;
-  field.id = 2;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.table_name);
-  oprot.writeFieldEnd();
-}
-if (this.partition != null) {
-  field.name = "partition";
-  field.type = TType.STRING;
-  field.id = 3;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.partition);
-  oprot.writeFieldEnd();
-}
-field.name = "high";
-field.type = TType.I32;
-field.id = -1;
-oprot.writeFieldBegin(field);
-oprot.writeI32(this.high);
-oprot.writeFieldEnd();
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("cat_args(");
-sb.append("db_name:");
-sb.append(this.db_name);
-sb.append(",table_name:");
-sb.append(this.table_name);
-sb.append(",partition:");
-sb.append(this.partition);
-sb.append(",high:");
-sb.append(this.high);
-sb.append(")");
-return sb.toString();
-}
-
-}
-
-public static class cat_result implements TBase, java.io.Serializable {
-private List<String> success;
-private MetaException ouch1;
-private UnknownDBException ouch2;
-private UnknownTableException ouch3;
-
-public final Isset __isset = new Isset();
-public static final class Isset implements java.io.Serializable {
-public boolean success = false;
-public boolean ouch1 = false;
-public boolean ouch2 = false;
-public boolean ouch3 = false;
-}
-
-public cat_result() {
-}
-
-public cat_result(
-List<String> success,
-MetaException ouch1,
-UnknownDBException ouch2,
-UnknownTableException ouch3)
-{
-this();
-this.success = success;
-this.__isset.success = true;
-this.ouch1 = ouch1;
-this.__isset.ouch1 = true;
-this.ouch2 = ouch2;
-this.__isset.ouch2 = true;
-this.ouch3 = ouch3;
-this.__isset.ouch3 = true;
-}
-
-public int getSuccessSize() {
-return (this.success == null) ? 0 : this.success.size();
-}
-
-public java.util.Iterator<String> getSuccessIterator() {
-return (this.success == null) ? null : this.success.iterator();
-}
-
-public void addToSuccess(String elem) {
-if (this.success == null) {
-  this.success = new ArrayList<String>();
-}
-this.success.add(elem);
-this.__isset.success = true;
-}
-
-public List<String> getSuccess() {
-return this.success;
-}
-
-public void setSuccess(List<String> success) {
-this.success = success;
-this.__isset.success = true;
-}
-
-public void unsetSuccess() {
-this.success = null;
-this.__isset.success = false;
-}
-
-public MetaException getOuch1() {
-return this.ouch1;
-}
-
-public void setOuch1(MetaException ouch1) {
-this.ouch1 = ouch1;
-this.__isset.ouch1 = true;
-}
-
-public void unsetOuch1() {
-this.ouch1 = null;
-this.__isset.ouch1 = false;
-}
-
-public UnknownDBException getOuch2() {
-return this.ouch2;
-}
-
-public void setOuch2(UnknownDBException ouch2) {
-this.ouch2 = ouch2;
-this.__isset.ouch2 = true;
-}
-
-public void unsetOuch2() {
-this.ouch2 = null;
-this.__isset.ouch2 = false;
-}
-
-public UnknownTableException getOuch3() {
-return this.ouch3;
-}
-
-public void setOuch3(UnknownTableException ouch3) {
-this.ouch3 = ouch3;
-this.__isset.ouch3 = true;
-}
-
-public void unsetOuch3() {
-this.ouch3 = null;
-this.__isset.ouch3 = false;
-}
-
-public boolean equals(Object that) {
-if (that == null)
-  return false;
-if (that instanceof cat_result)
-  return this.equals((cat_result)that);
-return false;
-}
-
-public boolean equals(cat_result that) {
-if (that == null)
-  return false;
-
-boolean this_present_success = true && (this.success != null);
-boolean that_present_success = true && (that.success != null);
-if (this_present_success || that_present_success) {
-  if (!(this_present_success && that_present_success))
-    return false;
-  if (!this.success.equals(that.success))
-    return false;
-}
-
-boolean this_present_ouch1 = true && (this.ouch1 != null);
-boolean that_present_ouch1 = true && (that.ouch1 != null);
-if (this_present_ouch1 || that_present_ouch1) {
-  if (!(this_present_ouch1 && that_present_ouch1))
-    return false;
-  if (!this.ouch1.equals(that.ouch1))
-    return false;
-}
-
-boolean this_present_ouch2 = true && (this.ouch2 != null);
-boolean that_present_ouch2 = true && (that.ouch2 != null);
-if (this_present_ouch2 || that_present_ouch2) {
-  if (!(this_present_ouch2 && that_present_ouch2))
-    return false;
-  if (!this.ouch2.equals(that.ouch2))
-    return false;
-}
-
-boolean this_present_ouch3 = true && (this.ouch3 != null);
-boolean that_present_ouch3 = true && (that.ouch3 != null);
-if (this_present_ouch3 || that_present_ouch3) {
-  if (!(this_present_ouch3 && that_present_ouch3))
-    return false;
-  if (!this.ouch3.equals(that.ouch3))
-    return false;
-}
-
-return true;
-}
-
-public int hashCode() {
-return 0;
-}
-
-public void read(TProtocol iprot) throws TException {
-TField field;
-iprot.readStructBegin();
-while (true)
-{
-  field = iprot.readFieldBegin();
-  if (field.type == TType.STOP) { 
-    break;
-  }
-  switch (field.id)
-  {
-    case 0:
-      if (field.type == TType.LIST) {
-        {
-          TList _list70 = iprot.readListBegin();
-          this.success = new ArrayList<String>(_list70.size);
-          for (int _i71 = 0; _i71 < _list70.size; ++_i71)
-          {
-            String _elem72 = null;
-            _elem72 = iprot.readString();
-            this.success.add(_elem72);
-          }
-          iprot.readListEnd();
-        }
-        this.__isset.success = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case -2:
-      if (field.type == TType.STRUCT) {
-        this.ouch1 = new MetaException();
-        this.ouch1.read(iprot);
-        this.__isset.ouch1 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case -3:
-      if (field.type == TType.STRUCT) {
-        this.ouch2 = new UnknownDBException();
-        this.ouch2.read(iprot);
-        this.__isset.ouch2 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case -4:
-      if (field.type == TType.STRUCT) {
-        this.ouch3 = new UnknownTableException();
-        this.ouch3.read(iprot);
-        this.__isset.ouch3 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    default:
-      TProtocolUtil.skip(iprot, field.type);
-      break;
-  }
-  iprot.readFieldEnd();
-}
-iprot.readStructEnd();
-}
-
-public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("cat_result");
-oprot.writeStructBegin(struct);
-TField field = new TField();
-
-if (this.__isset.success) {
-  if (this.success != null) {
-    field.name = "success";
-    field.type = TType.LIST;
-    field.id = 0;
-    oprot.writeFieldBegin(field);
-    {
-      oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-      for (String _iter73 : this.success)      {
-        oprot.writeString(_iter73);
-      }
-      oprot.writeListEnd();
-    }
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.ouch1) {
-  if (this.ouch1 != null) {
-    field.name = "ouch1";
-    field.type = TType.STRUCT;
-    field.id = -2;
-    oprot.writeFieldBegin(field);
-    this.ouch1.write(oprot);
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.ouch2) {
-  if (this.ouch2 != null) {
-    field.name = "ouch2";
-    field.type = TType.STRUCT;
-    field.id = -3;
-    oprot.writeFieldBegin(field);
-    this.ouch2.write(oprot);
-    oprot.writeFieldEnd();
-  }
-} else if (this.__isset.ouch3) {
-  if (this.ouch3 != null) {
-    field.name = "ouch3";
-    field.type = TType.STRUCT;
-    field.id = -4;
-    oprot.writeFieldBegin(field);
-    this.ouch3.write(oprot);
-    oprot.writeFieldEnd();
-  }
-}
-oprot.writeFieldStop();
-oprot.writeStructEnd();
-}
-
-public String toString() {
-StringBuilder sb = new StringBuilder("cat_result(");
-sb.append("success:");
-sb.append(this.success);
-sb.append(",ouch1:");
-sb.append(this.ouch1.toString());
-sb.append(",ouch2:");
-sb.append(this.ouch2.toString());
-sb.append(",ouch3:");
-sb.append(this.ouch3.toString());
 sb.append(")");
 return sb.toString();
 }
@@ -8596,13 +6966,13 @@ while (true)
     case 3:
       if (field.type == TType.LIST) {
         {
-          TList _list74 = iprot.readListBegin();
-          this.part_vals = new ArrayList<String>(_list74.size);
-          for (int _i75 = 0; _i75 < _list74.size; ++_i75)
+          TList _list65 = iprot.readListBegin();
+          this.part_vals = new ArrayList<String>(_list65.size);
+          for (int _i66 = 0; _i66 < _list65.size; ++_i66)
           {
-            String _elem76 = null;
-            _elem76 = iprot.readString();
-            this.part_vals.add(_elem76);
+            String _elem67 = null;
+            _elem67 = iprot.readString();
+            this.part_vals.add(_elem67);
           }
           iprot.readListEnd();
         }
@@ -8647,8 +7017,8 @@ if (this.part_vals != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeListBegin(new TList(TType.STRING, this.part_vals.size()));
-    for (String _iter77 : this.part_vals)    {
-      oprot.writeString(_iter77);
+    for (String _iter68 : this.part_vals)    {
+      oprot.writeString(_iter68);
     }
     oprot.writeListEnd();
   }
@@ -9123,13 +7493,13 @@ while (true)
     case 3:
       if (field.type == TType.LIST) {
         {
-          TList _list78 = iprot.readListBegin();
-          this.part_vals = new ArrayList<String>(_list78.size);
-          for (int _i79 = 0; _i79 < _list78.size; ++_i79)
+          TList _list69 = iprot.readListBegin();
+          this.part_vals = new ArrayList<String>(_list69.size);
+          for (int _i70 = 0; _i70 < _list69.size; ++_i70)
           {
-            String _elem80 = null;
-            _elem80 = iprot.readString();
-            this.part_vals.add(_elem80);
+            String _elem71 = null;
+            _elem71 = iprot.readString();
+            this.part_vals.add(_elem71);
           }
           iprot.readListEnd();
         }
@@ -9182,8 +7552,8 @@ if (this.part_vals != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeListBegin(new TList(TType.STRING, this.part_vals.size()));
-    for (String _iter81 : this.part_vals)    {
-      oprot.writeString(_iter81);
+    for (String _iter72 : this.part_vals)    {
+      oprot.writeString(_iter72);
     }
     oprot.writeListEnd();
   }
@@ -9587,13 +7957,13 @@ while (true)
     case 3:
       if (field.type == TType.LIST) {
         {
-          TList _list82 = iprot.readListBegin();
-          this.part_vals = new ArrayList<String>(_list82.size);
-          for (int _i83 = 0; _i83 < _list82.size; ++_i83)
+          TList _list73 = iprot.readListBegin();
+          this.part_vals = new ArrayList<String>(_list73.size);
+          for (int _i74 = 0; _i74 < _list73.size; ++_i74)
           {
-            String _elem84 = null;
-            _elem84 = iprot.readString();
-            this.part_vals.add(_elem84);
+            String _elem75 = null;
+            _elem75 = iprot.readString();
+            this.part_vals.add(_elem75);
           }
           iprot.readListEnd();
         }
@@ -9638,8 +8008,8 @@ if (this.part_vals != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeListBegin(new TList(TType.STRING, this.part_vals.size()));
-    for (String _iter85 : this.part_vals)    {
-      oprot.writeString(_iter85);
+    for (String _iter76 : this.part_vals)    {
+      oprot.writeString(_iter76);
     }
     oprot.writeListEnd();
   }
@@ -10181,14 +8551,14 @@ while (true)
     case 0:
       if (field.type == TType.LIST) {
         {
-          TList _list86 = iprot.readListBegin();
-          this.success = new ArrayList<Partition>(_list86.size);
-          for (int _i87 = 0; _i87 < _list86.size; ++_i87)
+          TList _list77 = iprot.readListBegin();
+          this.success = new ArrayList<Partition>(_list77.size);
+          for (int _i78 = 0; _i78 < _list77.size; ++_i78)
           {
-            Partition _elem88 = new Partition();
-            _elem88 = new Partition();
-            _elem88.read(iprot);
-            this.success.add(_elem88);
+            Partition _elem79 = new Partition();
+            _elem79 = new Partition();
+            _elem79.read(iprot);
+            this.success.add(_elem79);
           }
           iprot.readListEnd();
         }
@@ -10237,8 +8607,8 @@ if (this.__isset.success) {
     oprot.writeFieldBegin(field);
     {
       oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-      for (Partition _iter89 : this.success)      {
-        _iter89.write(oprot);
+      for (Partition _iter80 : this.success)      {
+        _iter80.write(oprot);
       }
       oprot.writeListEnd();
     }
@@ -10281,38 +8651,35 @@ return sb.toString();
 
 }
 
-public static class set_partition_parameters_args implements TBase, java.io.Serializable {
+public static class get_partition_names_args implements TBase, java.io.Serializable {
 private String db_name;
 private String tbl_name;
-private String pname;
-private Map<String,String> params;
+private short max_parts;
 
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean db_name = false;
 public boolean tbl_name = false;
-public boolean pname = false;
-public boolean params = false;
+public boolean max_parts = false;
 }
 
-public set_partition_parameters_args() {
+public get_partition_names_args() {
+this.max_parts = -1;
+
 }
 
-public set_partition_parameters_args(
+public get_partition_names_args(
 String db_name,
 String tbl_name,
-String pname,
-Map<String,String> params)
+short max_parts)
 {
 this();
 this.db_name = db_name;
 this.__isset.db_name = true;
 this.tbl_name = tbl_name;
 this.__isset.tbl_name = true;
-this.pname = pname;
-this.__isset.pname = true;
-this.params = params;
-this.__isset.params = true;
+this.max_parts = max_parts;
+this.__isset.max_parts = true;
 }
 
 public String getDb_name() {
@@ -10341,54 +8708,28 @@ public void unsetTbl_name() {
 this.__isset.tbl_name = false;
 }
 
-public String getPname() {
-return this.pname;
+public short getMax_parts() {
+return this.max_parts;
 }
 
-public void setPname(String pname) {
-this.pname = pname;
-this.__isset.pname = true;
+public void setMax_parts(short max_parts) {
+this.max_parts = max_parts;
+this.__isset.max_parts = true;
 }
 
-public void unsetPname() {
-this.__isset.pname = false;
-}
-
-public int getParamsSize() {
-return (this.params == null) ? 0 : this.params.size();
-}
-
-public void putToParams(String key, String val) {
-if (this.params == null) {
-  this.params = new HashMap<String,String>();
-}
-this.params.put(key, val);
-this.__isset.params = true;
-}
-
-public Map<String,String> getParams() {
-return this.params;
-}
-
-public void setParams(Map<String,String> params) {
-this.params = params;
-this.__isset.params = true;
-}
-
-public void unsetParams() {
-this.params = null;
-this.__isset.params = false;
+public void unsetMax_parts() {
+this.__isset.max_parts = false;
 }
 
 public boolean equals(Object that) {
 if (that == null)
   return false;
-if (that instanceof set_partition_parameters_args)
-  return this.equals((set_partition_parameters_args)that);
+if (that instanceof get_partition_names_args)
+  return this.equals((get_partition_names_args)that);
 return false;
 }
 
-public boolean equals(set_partition_parameters_args that) {
+public boolean equals(get_partition_names_args that) {
 if (that == null)
   return false;
 
@@ -10410,21 +8751,12 @@ if (this_present_tbl_name || that_present_tbl_name) {
     return false;
 }
 
-boolean this_present_pname = true && (this.pname != null);
-boolean that_present_pname = true && (that.pname != null);
-if (this_present_pname || that_present_pname) {
-  if (!(this_present_pname && that_present_pname))
+boolean this_present_max_parts = true;
+boolean that_present_max_parts = true;
+if (this_present_max_parts || that_present_max_parts) {
+  if (!(this_present_max_parts && that_present_max_parts))
     return false;
-  if (!this.pname.equals(that.pname))
-    return false;
-}
-
-boolean this_present_params = true && (this.params != null);
-boolean that_present_params = true && (that.params != null);
-if (this_present_params || that_present_params) {
-  if (!(this_present_params && that_present_params))
-    return false;
-  if (!this.params.equals(that.params))
+  if (this.max_parts != that.max_parts)
     return false;
 }
 
@@ -10463,29 +8795,9 @@ while (true)
       }
       break;
     case 3:
-      if (field.type == TType.STRING) {
-        this.pname = iprot.readString();
-        this.__isset.pname = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 4:
-      if (field.type == TType.MAP) {
-        {
-          TMap _map90 = iprot.readMapBegin();
-          this.params = new HashMap<String,String>(2*_map90.size);
-          for (int _i91 = 0; _i91 < _map90.size; ++_i91)
-          {
-            String _key92;
-            String _val93;
-            _key92 = iprot.readString();
-            _val93 = iprot.readString();
-            this.params.put(_key92, _val93);
-          }
-          iprot.readMapEnd();
-        }
-        this.__isset.params = true;
+      if (field.type == TType.I16) {
+        this.max_parts = iprot.readI16();
+        this.__isset.max_parts = true;
       } else { 
         TProtocolUtil.skip(iprot, field.type);
       }
@@ -10500,7 +8812,7 @@ iprot.readStructEnd();
 }
 
 public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("set_partition_parameters_args");
+TStruct struct = new TStruct("get_partition_names_args");
 oprot.writeStructBegin(struct);
 TField field = new TField();
 if (this.db_name != null) {
@@ -10519,103 +8831,82 @@ if (this.tbl_name != null) {
   oprot.writeString(this.tbl_name);
   oprot.writeFieldEnd();
 }
-if (this.pname != null) {
-  field.name = "pname";
-  field.type = TType.STRING;
-  field.id = 3;
-  oprot.writeFieldBegin(field);
-  oprot.writeString(this.pname);
-  oprot.writeFieldEnd();
-}
-if (this.params != null) {
-  field.name = "params";
-  field.type = TType.MAP;
-  field.id = 4;
-  oprot.writeFieldBegin(field);
-  {
-    oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.params.size()));
-    for (String _iter94 : this.params.keySet())    {
-      oprot.writeString(_iter94);
-      oprot.writeString(this.params.get(_iter94));
-    }
-    oprot.writeMapEnd();
-  }
-  oprot.writeFieldEnd();
-}
+field.name = "max_parts";
+field.type = TType.I16;
+field.id = 3;
+oprot.writeFieldBegin(field);
+oprot.writeI16(this.max_parts);
+oprot.writeFieldEnd();
 oprot.writeFieldStop();
 oprot.writeStructEnd();
 }
 
 public String toString() {
-StringBuilder sb = new StringBuilder("set_partition_parameters_args(");
+StringBuilder sb = new StringBuilder("get_partition_names_args(");
 sb.append("db_name:");
 sb.append(this.db_name);
 sb.append(",tbl_name:");
 sb.append(this.tbl_name);
-sb.append(",pname:");
-sb.append(this.pname);
-sb.append(",params:");
-sb.append(this.params);
+sb.append(",max_parts:");
+sb.append(this.max_parts);
 sb.append(")");
 return sb.toString();
 }
 
 }
 
-public static class set_partition_parameters_result implements TBase, java.io.Serializable {
-private boolean success;
-private NoSuchObjectException o1;
+public static class get_partition_names_result implements TBase, java.io.Serializable {
+private List<String> success;
 private MetaException o2;
 
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean success = false;
-public boolean o1 = false;
 public boolean o2 = false;
 }
 
-public set_partition_parameters_result() {
+public get_partition_names_result() {
 }
 
-public set_partition_parameters_result(
-boolean success,
-NoSuchObjectException o1,
+public get_partition_names_result(
+List<String> success,
 MetaException o2)
 {
 this();
 this.success = success;
 this.__isset.success = true;
-this.o1 = o1;
-this.__isset.o1 = true;
 this.o2 = o2;
 this.__isset.o2 = true;
 }
 
-public boolean isSuccess() {
+public int getSuccessSize() {
+return (this.success == null) ? 0 : this.success.size();
+}
+
+public java.util.Iterator<String> getSuccessIterator() {
+return (this.success == null) ? null : this.success.iterator();
+}
+
+public void addToSuccess(String elem) {
+if (this.success == null) {
+  this.success = new ArrayList<String>();
+}
+this.success.add(elem);
+this.__isset.success = true;
+}
+
+public List<String> getSuccess() {
 return this.success;
 }
 
-public void setSuccess(boolean success) {
+public void setSuccess(List<String> success) {
 this.success = success;
 this.__isset.success = true;
 }
 
 public void unsetSuccess() {
+this.success = null;
 this.__isset.success = false;
-}
-
-public NoSuchObjectException getO1() {
-return this.o1;
-}
-
-public void setO1(NoSuchObjectException o1) {
-this.o1 = o1;
-this.__isset.o1 = true;
-}
-
-public void unsetO1() {
-this.o1 = null;
-this.__isset.o1 = false;
 }
 
 public MetaException getO2() {
@@ -10635,30 +8926,21 @@ this.__isset.o2 = false;
 public boolean equals(Object that) {
 if (that == null)
   return false;
-if (that instanceof set_partition_parameters_result)
-  return this.equals((set_partition_parameters_result)that);
+if (that instanceof get_partition_names_result)
+  return this.equals((get_partition_names_result)that);
 return false;
 }
 
-public boolean equals(set_partition_parameters_result that) {
+public boolean equals(get_partition_names_result that) {
 if (that == null)
   return false;
 
-boolean this_present_success = true;
-boolean that_present_success = true;
+boolean this_present_success = true && (this.success != null);
+boolean that_present_success = true && (that.success != null);
 if (this_present_success || that_present_success) {
   if (!(this_present_success && that_present_success))
     return false;
-  if (this.success != that.success)
-    return false;
-}
-
-boolean this_present_o1 = true && (this.o1 != null);
-boolean that_present_o1 = true && (that.o1 != null);
-if (this_present_o1 || that_present_o1) {
-  if (!(this_present_o1 && that_present_o1))
-    return false;
-  if (!this.o1.equals(that.o1))
+  if (!this.success.equals(that.success))
     return false;
 }
 
@@ -10690,23 +8972,24 @@ while (true)
   switch (field.id)
   {
     case 0:
-      if (field.type == TType.BOOL) {
-        this.success = iprot.readBool();
+      if (field.type == TType.LIST) {
+        {
+          TList _list81 = iprot.readListBegin();
+          this.success = new ArrayList<String>(_list81.size);
+          for (int _i82 = 0; _i82 < _list81.size; ++_i82)
+          {
+            String _elem83 = null;
+            _elem83 = iprot.readString();
+            this.success.add(_elem83);
+          }
+          iprot.readListEnd();
+        }
         this.__isset.success = true;
       } else { 
         TProtocolUtil.skip(iprot, field.type);
       }
       break;
     case 1:
-      if (field.type == TType.STRUCT) {
-        this.o1 = new NoSuchObjectException();
-        this.o1.read(iprot);
-        this.__isset.o1 = true;
-      } else { 
-        TProtocolUtil.skip(iprot, field.type);
-      }
-      break;
-    case 2:
       if (field.type == TType.STRUCT) {
         this.o2 = new MetaException();
         this.o2.read(iprot);
@@ -10725,31 +9008,30 @@ iprot.readStructEnd();
 }
 
 public void write(TProtocol oprot) throws TException {
-TStruct struct = new TStruct("set_partition_parameters_result");
+TStruct struct = new TStruct("get_partition_names_result");
 oprot.writeStructBegin(struct);
 TField field = new TField();
 
 if (this.__isset.success) {
-  field.name = "success";
-  field.type = TType.BOOL;
-  field.id = 0;
-  oprot.writeFieldBegin(field);
-  oprot.writeBool(this.success);
-  oprot.writeFieldEnd();
-} else if (this.__isset.o1) {
-  if (this.o1 != null) {
-    field.name = "o1";
-    field.type = TType.STRUCT;
-    field.id = 1;
+  if (this.success != null) {
+    field.name = "success";
+    field.type = TType.LIST;
+    field.id = 0;
     oprot.writeFieldBegin(field);
-    this.o1.write(oprot);
+    {
+      oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
+      for (String _iter84 : this.success)      {
+        oprot.writeString(_iter84);
+      }
+      oprot.writeListEnd();
+    }
     oprot.writeFieldEnd();
   }
 } else if (this.__isset.o2) {
   if (this.o2 != null) {
     field.name = "o2";
     field.type = TType.STRUCT;
-    field.id = 2;
+    field.id = 1;
     oprot.writeFieldBegin(field);
     this.o2.write(oprot);
     oprot.writeFieldEnd();
@@ -10760,11 +9042,9 @@ oprot.writeStructEnd();
 }
 
 public String toString() {
-StringBuilder sb = new StringBuilder("set_partition_parameters_result(");
+StringBuilder sb = new StringBuilder("get_partition_names_result(");
 sb.append("success:");
 sb.append(this.success);
-sb.append(",o1:");
-sb.append(this.o1.toString());
 sb.append(",o2:");
 sb.append(this.o2.toString());
 sb.append(")");
@@ -10901,13 +9181,13 @@ while (true)
     case 2:
       if (field.type == TType.LIST) {
         {
-          TList _list95 = iprot.readListBegin();
-          this.parts = new ArrayList<String>(_list95.size);
-          for (int _i96 = 0; _i96 < _list95.size; ++_i96)
+          TList _list85 = iprot.readListBegin();
+          this.parts = new ArrayList<String>(_list85.size);
+          for (int _i86 = 0; _i86 < _list85.size; ++_i86)
           {
-            String _elem97 = null;
-            _elem97 = iprot.readString();
-            this.parts.add(_elem97);
+            String _elem87 = null;
+            _elem87 = iprot.readString();
+            this.parts.add(_elem87);
           }
           iprot.readListEnd();
         }
@@ -10944,8 +9224,8 @@ if (this.parts != null) {
   oprot.writeFieldBegin(field);
   {
     oprot.writeListBegin(new TList(TType.STRING, this.parts.size()));
-    for (String _iter98 : this.parts)    {
-      oprot.writeString(_iter98);
+    for (String _iter88 : this.parts)    {
+      oprot.writeString(_iter88);
     }
     oprot.writeListEnd();
   }

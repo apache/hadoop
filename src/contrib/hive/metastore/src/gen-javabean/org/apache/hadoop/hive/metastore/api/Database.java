@@ -18,12 +18,12 @@ import com.facebook.thrift.transport.*;
 
 public class Database implements TBase, java.io.Serializable {
 private String name;
-private String locationUri;
+private String description;
 
 public final Isset __isset = new Isset();
 public static final class Isset implements java.io.Serializable {
 public boolean name = false;
-public boolean locationUri = false;
+public boolean description = false;
 }
 
 public Database() {
@@ -31,13 +31,13 @@ public Database() {
 
 public Database(
 String name,
-String locationUri)
+String description)
 {
 this();
 this.name = name;
 this.__isset.name = true;
-this.locationUri = locationUri;
-this.__isset.locationUri = true;
+this.description = description;
+this.__isset.description = true;
 }
 
 public String getName() {
@@ -53,17 +53,17 @@ public void unsetName() {
 this.__isset.name = false;
 }
 
-public String getLocationUri() {
-return this.locationUri;
+public String getDescription() {
+return this.description;
 }
 
-public void setLocationUri(String locationUri) {
-this.locationUri = locationUri;
-this.__isset.locationUri = true;
+public void setDescription(String description) {
+this.description = description;
+this.__isset.description = true;
 }
 
-public void unsetLocationUri() {
-this.__isset.locationUri = false;
+public void unsetDescription() {
+this.__isset.description = false;
 }
 
 public boolean equals(Object that) {
@@ -87,12 +87,12 @@ if (!this.name.equals(that.name))
   return false;
 }
 
-boolean this_present_locationUri = true && (this.locationUri != null);
-boolean that_present_locationUri = true && (that.locationUri != null);
-if (this_present_locationUri || that_present_locationUri) {
-if (!(this_present_locationUri && that_present_locationUri))
+boolean this_present_description = true && (this.description != null);
+boolean that_present_description = true && (that.description != null);
+if (this_present_description || that_present_description) {
+if (!(this_present_description && that_present_description))
   return false;
-if (!this.locationUri.equals(that.locationUri))
+if (!this.description.equals(that.description))
   return false;
 }
 
@@ -114,7 +114,7 @@ if (field.type == TType.STOP) {
 }
 switch (field.id)
 {
-  case -1:
+  case 1:
     if (field.type == TType.STRING) {
       this.name = iprot.readString();
       this.__isset.name = true;
@@ -122,10 +122,10 @@ switch (field.id)
       TProtocolUtil.skip(iprot, field.type);
     }
     break;
-  case -2:
+  case 2:
     if (field.type == TType.STRING) {
-      this.locationUri = iprot.readString();
-      this.__isset.locationUri = true;
+      this.description = iprot.readString();
+      this.__isset.description = true;
     } else { 
       TProtocolUtil.skip(iprot, field.type);
     }
@@ -146,17 +146,17 @@ TField field = new TField();
 if (this.name != null) {
 field.name = "name";
 field.type = TType.STRING;
-field.id = -1;
+field.id = 1;
 oprot.writeFieldBegin(field);
 oprot.writeString(this.name);
 oprot.writeFieldEnd();
 }
-if (this.locationUri != null) {
-field.name = "locationUri";
+if (this.description != null) {
+field.name = "description";
 field.type = TType.STRING;
-field.id = -2;
+field.id = 2;
 oprot.writeFieldBegin(field);
-oprot.writeString(this.locationUri);
+oprot.writeString(this.description);
 oprot.writeFieldEnd();
 }
 oprot.writeFieldStop();
@@ -167,8 +167,8 @@ public String toString() {
 StringBuilder sb = new StringBuilder("Database(");
 sb.append("name:");
 sb.append(this.name);
-sb.append(",locationUri:");
-sb.append(this.locationUri);
+sb.append(",description:");
+sb.append(this.description);
 sb.append(")");
 return sb.toString();
 }

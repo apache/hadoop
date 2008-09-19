@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
-import java.util.ArrayList;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeFuncDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class ExprNodeFuncEvaluator extends ExprNodeEvaluator {
@@ -32,41 +35,60 @@ public class ExprNodeFuncEvaluator extends ExprNodeEvaluator {
   private static final Log LOG = LogFactory.getLog(ExprNodeFuncEvaluator.class.getName());
   
   protected exprNodeFuncDesc expr;
-  transient ArrayList<ExprNodeEvaluator> evaluators;
-  transient Object[] children;
+  transient ExprNodeEvaluator[] paramEvaluators;
+  transient InspectableObject[] paramInspectableObjects;
+  transient Object[] paramValues;
   transient UDF udf;
+  transient Method udfMethod;
+  transient ObjectInspector outputObjectInspector;
   
   public ExprNodeFuncEvaluator(exprNodeFuncDesc expr) {
     this.expr = expr;
     assert(expr != null);
     Class<?> c = expr.getUDFClass();
-    LOG.info(c.toString());
+    udfMethod = expr.getUDFMethod();
+    LOG.debug(c.toString());
+    LOG.debug(udfMethod.toString());
     udf = (UDF)ReflectionUtils.newInstance(expr.getUDFClass(), null);
-    evaluators = new ArrayList<ExprNodeEvaluator>();
-    for(int i=0; i<expr.getChildren().size(); i++) {
-      evaluators.add(ExprNodeEvaluatorFactory.get(expr.getChildren().get(i)));
+    int paramNumber = expr.getChildren().size();
+    paramEvaluators = new ExprNodeEvaluator[paramNumber];
+    paramInspectableObjects  = new InspectableObject[paramNumber];
+    for(int i=0; i<paramNumber; i++) {
+      paramEvaluators[i] = ExprNodeEvaluatorFactory.get(expr.getChildren().get(i));
+      paramInspectableObjects[i] = new InspectableObject();
     }
-    children = new Object[expr.getChildren().size()];  
+    paramValues = new Object[expr.getChildren().size()];
+    outputObjectInspector = ObjectInspectorFactory.getStandardPrimitiveObjectInspector(
+        udfMethod.getReturnType());
   }
 
-  public Object evaluateToObject(HiveObject row)  throws HiveException {
+  public void evaluate(Object row, ObjectInspector rowInspector,
+      InspectableObject result) throws HiveException {
+    if (result == null) {
+      throw new HiveException("result cannot be null.");
+    }
     // Evaluate all children first
-    for(int i=0; i<evaluators.size(); i++) {
-      Object o = evaluators.get(i).evaluateToObject(row);
-      children[i] = o;
+    for(int i=0; i<paramEvaluators.length; i++) {
+      paramEvaluators[i].evaluate(row, rowInspector, paramInspectableObjects[i]);
+      paramValues[i] = paramInspectableObjects[i].o;
     }
     try {
-      return expr.getUDFMethod().invoke(udf, children);
+      result.o = udfMethod.invoke(udf, paramValues);
+      result.oi = outputObjectInspector;
     } catch (Exception e) {
-      throw new HiveException("Unable to execute UDF function " + udf.getClass() + " " 
-          + expr.getUDFMethod() + " on inputs " + "(" + children.length + ") " + Arrays.asList(children) + ": " + e.getMessage(), e);
+      if (e instanceof HiveException) {
+        throw (HiveException)e;
+      } else if (e instanceof RuntimeException) {
+        throw (RuntimeException)e;
+      } else {
+        throw new HiveException("Unable to execute UDF function " + udf.getClass() + " " 
+          + udfMethod + " on inputs " + "(" + paramValues.length + ") " + Arrays.asList(paramValues) + ": " + e.getMessage(), e);
+      }
     }
   }
 
-  public HiveObject evaluate(HiveObject row) throws HiveException {
-    Object obj = evaluateToObject(row);
-    if (obj == null)
-      return new NullHiveObject();
-    return new PrimitiveHiveObject(obj);
+  public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
+      throws HiveException {
+    return outputObjectInspector;
   }
 }

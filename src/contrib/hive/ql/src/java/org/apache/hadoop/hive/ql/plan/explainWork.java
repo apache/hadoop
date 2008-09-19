@@ -18,23 +18,23 @@
 
 package org.apache.hadoop.hive.ql.plan;
 
-import java.io.File;
 import java.io.Serializable;
 import java.util.List;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.Task;
 
 public class explainWork implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private File resFile;
+  private Path resFile;
   private List<Task<? extends Serializable>> rootTasks;
   private String astStringTree;
   boolean extended;
   
   public explainWork() { }
   
-  public explainWork(File resFile, 
+  public explainWork(Path resFile, 
                      List<Task<? extends Serializable>> rootTasks,
                      String astStringTree,
                      boolean extended) {
@@ -44,11 +44,11 @@ public class explainWork implements Serializable {
     this.extended = extended;
   }
   
-  public File getResFile() {
+  public Path getResFile() {
     return resFile;
   }
   
-  public void setResFile(File resFile) {
+  public void setResFile(Path resFile) {
     this.resFile = resFile;
   }
   

@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.parse;
 import java.io.File;
 
 import org.antlr.runtime.tree.CommonTree;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
@@ -44,7 +45,7 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
       extended = true;
     }
     
-    ctx.setResFile(new File(getTmpFileName()));
+    ctx.setResFile(new Path(getTmpFileName()));
     
     rootTasks.add(TaskFactory.get(new explainWork(ctx.getResFile(),
                                                   sem.getRootTasks(),

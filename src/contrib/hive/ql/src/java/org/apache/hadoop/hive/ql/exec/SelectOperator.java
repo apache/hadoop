@@ -19,10 +19,14 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.selectDesc;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -33,26 +37,54 @@ public class SelectOperator extends Operator <selectDesc> implements Serializabl
   private static final long serialVersionUID = 1L;
   transient protected ExprNodeEvaluator[] eval;
 
+  transient ArrayList<Object> output;
+  transient ArrayList<ObjectInspector> outputFieldObjectInspectors;
+  transient ObjectInspector outputObjectInspector;
+  transient InspectableObject tempInspectableObject;
+  
+  boolean firstRow;
+  
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     try {
-      eval = new ExprNodeEvaluator[conf.getColList().size()];
-      int i=0;
-      for(exprNodeDesc e: conf.getColList()) {
-        eval[i++] = ExprNodeEvaluatorFactory.get(e);
+      ArrayList<exprNodeDesc> colList = conf.getColList();
+      eval = new ExprNodeEvaluator[colList.size()];
+      for(int i=0; i<colList.size(); i++) {
+        assert(colList.get(i) != null);
+        eval[i] = ExprNodeEvaluatorFactory.get(colList.get(i));
       }
+      output = new ArrayList<Object>(eval.length);
+      outputFieldObjectInspectors = new ArrayList<ObjectInspector>(eval.length);
+      for(int j=0; j<eval.length; j++) {
+        output.add(null);
+        outputFieldObjectInspectors.add(null);
+      }
+      tempInspectableObject = new InspectableObject();      
+      firstRow = true;
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
     }
   }
 
-  public void process(HiveObject r) throws HiveException {
-    CompositeHiveObject nr = new CompositeHiveObject (eval.length);
-    for(ExprNodeEvaluator e: eval) {
-      HiveObject ho = e.evaluate(r);
-      nr.addHiveObject(ho);
+  public void process(Object row, ObjectInspector rowInspector)
+      throws HiveException {
+    for(int i=0; i<eval.length; i++) {
+      eval[i].evaluate(row, rowInspector, tempInspectableObject);
+      output.set(i, tempInspectableObject.o);
+      if (firstRow) {
+        outputFieldObjectInspectors.set(i, tempInspectableObject.oi);
+      }
     }
-    forward(nr);
+    if (firstRow) {
+      firstRow = false;
+      ArrayList<String> fieldNames = new ArrayList<String>(eval.length);
+      for(int i=0; i<eval.length; i++) {
+        fieldNames.add(Integer.valueOf(i).toString());
+      }
+      outputObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
+        fieldNames, outputFieldObjectInspectors);
+    }
+    forward(output, outputObjectInspector);
   }
 }

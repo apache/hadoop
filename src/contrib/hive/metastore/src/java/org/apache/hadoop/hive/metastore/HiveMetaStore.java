@@ -19,11 +19,8 @@
 package org.apache.hadoop.hive.metastore;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,9 +43,8 @@ import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore;
 import org.apache.hadoop.hive.metastore.api.Type;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.hadoop.hive.metastore.api.UnknownTableException;
-import org.apache.hadoop.hive.serde.SerDe;
-import org.apache.hadoop.hive.serde.SerDeException;
-import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -64,7 +60,7 @@ import com.facebook.thrift.transport.TServerTransport;
 import com.facebook.thrift.transport.TTransportFactory;
 
 /**
- * TODO:pc remove application logic to a separate interface. rename to MetaStoreServer
+ * TODO:pc remove application logic to a separate interface. 
  */
 public class HiveMetaStore extends ThriftHiveMetastore {
   
@@ -271,7 +267,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
       public void create_table(Table tbl) throws AlreadyExistsException, MetaException, InvalidObjectException {
         this.incrementCounter("create_table");
-        logStartFunction("create_table: db=" + tbl.getDatabase() + " tbl=" + tbl.getTableName());
+        logStartFunction("create_table: db=" + tbl.getDbName() + " tbl=" + tbl.getTableName());
         boolean success = false;
         if(!MetaStoreUtils.validateName(tbl.getTableName())) {
           throw new InvalidObjectException(tbl.getTableName() + " is not a valid object name");
@@ -280,17 +276,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           getMS().openTransaction();
           Path tblPath = null;
           if(tbl.getSd().getLocation() == null || tbl.getSd().getLocation().isEmpty()) {
-            tblPath = wh.getDefaultTablePath(tbl.getDatabase(), tbl.getTableName());
+            tblPath = wh.getDefaultTablePath(tbl.getDbName(), tbl.getTableName());
             tbl.getSd().setLocation(tblPath.toString());
           } else {
             tblPath = new Path(tbl.getSd().getLocation());
           }
           // get_table checks whether database exists, it should be moved here
-          try {
-            if(get_table(tbl.getDatabase(), tbl.getTableName()) != null) {
-              throw new AlreadyExistsException("Table " + tbl.getTableName() + " already exists");
-            }
-          } catch (NoSuchObjectException e) {
+          if(is_table_exists(tbl.getDbName(), tbl.getTableName())) {
+            throw new AlreadyExistsException("Table " + tbl.getTableName() + " already exists");
           }
           getMS().createTable(tbl);
           if(wh.mkdirs(tblPath)) {
@@ -301,6 +294,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           if(!success) {
             getMS().rollbackTransaction();
           }
+        }
+      }
+      
+      public boolean is_table_exists(String dbname, String name) throws MetaException {
+        try {
+          return (get_table(dbname, name) != null);
+        } catch (NoSuchObjectException e) {
+          return false;
         }
       }
       
@@ -362,16 +363,16 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         try {
           getMS().openTransaction();
           part = new Partition();
-          part.setDatabase(dbName);
+          part.setDbName(dbName);
           part.setTableName(tableName);
           part.setValues(part_vals);
 
-          Partition old_part = this.get_partition(part.getDatabase(), part.getTableName(), part.getValues());
+          Partition old_part = this.get_partition(part.getDbName(), part.getTableName(), part.getValues());
           if( old_part != null) {
             throw new AlreadyExistsException("Partition already exists:" + part);
           }
           
-          Table tbl = getMS().getTable(part.getDatabase(), part.getTableName());
+          Table tbl = getMS().getTable(part.getDbName(), part.getTableName());
           if(tbl == null) {
             throw new InvalidObjectException("Unable to add partition because table or database do not exist");
           }
@@ -393,19 +394,43 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         }
         return part;
       }
+      
+      public int add_partitions(List<Partition> parts) throws MetaException, InvalidObjectException, AlreadyExistsException {
+        this.incrementCounter("add_partition");
+        if(parts.size() == 0) {
+          return 0;
+        }
+        String db = parts.get(0).getDbName();
+        String tbl = parts.get(0).getTableName();
+        logStartFunction("add_partitions", db, tbl);
+        boolean success = false;
+        try {
+          getMS().openTransaction();
+          for (Partition part : parts) {
+            this.add_partition(part);
+          }
+          success = true;
+          getMS().commitTransaction();
+        } finally {
+          if(!success) {
+            getMS().rollbackTransaction();
+          }
+        }
+        return parts.size();
+      }
 
       public Partition add_partition(Partition part) throws InvalidObjectException,
           AlreadyExistsException, MetaException {
         this.incrementCounter("add_partition");
-        logStartFunction("add_partition", part.getDatabase(), part.getTableName());
+        logStartFunction("add_partition", part.getDbName(), part.getTableName());
         boolean success = false;
         try {
           getMS().openTransaction();
-          Partition old_part = this.get_partition(part.getDatabase(), part.getTableName(), part.getValues());
+          Partition old_part = this.get_partition(part.getDbName(), part.getTableName(), part.getValues());
           if( old_part != null) {
             throw new AlreadyExistsException("Partition already exists:" + part);
           }
-          Table tbl = getMS().getTable(part.getDatabase(), part.getTableName());
+          Table tbl = getMS().getTable(part.getDbName(), part.getTableName());
           if(tbl == null) {
             throw new InvalidObjectException("Unable to add partition because table or database do not exist");
           }
@@ -445,6 +470,12 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         this.incrementCounter("get_partitions");
         logStartFunction("get_partitions", db_name, tbl_name);
         return getMS().getPartitions(db_name, tbl_name, max_parts);
+      }
+      
+      public List<String> get_partition_names(String db_name, String tbl_name, short max_parts) throws MetaException {
+        this.incrementCounter("get_partition_names");
+        logStartFunction("get_partition_names", db_name, tbl_name);
+        return getMS().listPartitionNames(db_name, tbl_name, max_parts);
       }
 
       public boolean alter_partitions(StorageDescriptor sd, List<String> parts) throws InvalidOperationException,
@@ -491,90 +522,19 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       }
 
       @Override
-      public List<String> cat(String db_name, String table_name, String partition, int high)
-          throws MetaException, UnknownDBException, UnknownTableException {
-        this.incrementCounter("cat");
-        logStartFunction("cat: db=" + db_name + " tbl=" + table_name + " part=" + partition + " high=" + high);
-        // TODO Auto-generated method stub
-        throw new MetaException("Not implemented. Please use select * query instead");
-      }
-
-      @Override
       public List<String> get_tables(String dbname, String pattern) throws MetaException {
         this.incrementCounter("get_tables");
         logStartFunction("get_tables: db=" + dbname + " pat=" + pattern);
         return getMS().getTables(dbname, pattern);
       }
 
-      @Override
-      public void truncate_table(String db_name, String table_name, String partition)
-          throws MetaException, UnknownTableException, UnknownDBException {
-        // TODO Auto-generated method stub
-        this.incrementCounter("truncate_table");
-        logStartFunction("truncate_table: db=" + db_name + " tbl=" + table_name);
-      }
-      
-      /**
-       * normalizeType
-       *
-       * For pretty printing
-       *
-       * @param type a type name
-       * @return cleaned up - remove Java.lang and make numbers into int , ...
-       */
-      public String normalizeType(String type) {
-        Pattern tpat = Pattern.compile("java.lang.");
-        Matcher m = tpat.matcher(type);
-        type = m.replaceFirst("");
-        String ret = type;
-        if(type.equals("String")) {
-          ret = "string";
-        }  else if(type.equals("Integer")) {
-          ret = "int";
-        }
-        return ret;
 
-      }
-
-      /**
-       * hfToStrting
-       *
-       * Converts a basic SerDe's type to a string. It doesn't do any recursion.
-       *
-       * @param f the hive field - cannot be null!
-       * @return a string representation of the field's type
-       * @exception MetaException - if the SerDe raises it or the field is null
-       *
-       */
-      private String hfToString(SerDeField f) throws MetaException {
-        String ret;
-
-        try {
-          if(f.isPrimitive()) {
-            ret = this.normalizeType(f.getType().getName());
-          } else if(f.isList()) {
-            ret = "List<" +  this.normalizeType(f.getListElementType().getName()) + ">";
-          } else if(f.isMap()) {
-            ret = "Map<" + this.normalizeType(f.getMapKeyType().getName()) + "," +
-              this.normalizeType(f.getMapValueType().getName()) + ">";
-          } else {
-            // complex type and we just show the type name of the complex type
-            ret = f.getName();
-          }
-        }  catch(Exception e) {
-          StringUtils.stringifyException(e);
-          throw new MetaException(e.getMessage());
-        }
-        return ret;
-      }
-
-      public ArrayList<FieldSchema> get_fields(String db, String tableName) throws MetaException,UnknownTableException, UnknownDBException {
+      public List<FieldSchema> get_fields(String db, String tableName) 
+        throws MetaException,UnknownTableException, UnknownDBException {
         this.incrementCounter("get_fields");
         logStartFunction("get_fields: db=" + db + "tbl=" + tableName);
-        ArrayList<FieldSchema> str_fields = new ArrayList<FieldSchema>();
         String [] names = tableName.split("\\.");
         String base_table_name = names[0];
-        List<SerDeField> hive_fields = new ArrayList<SerDeField>();
 
         Table tbl;
         try {
@@ -582,39 +542,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         } catch (NoSuchObjectException e) {
           throw new UnknownTableException(e.getMessage());
         }
-        SerDeField hf = null;
         try {
-          // TODO:pc getSerDe requires 'columns' field in some cases and this doesn't supply
-          SerDe s = MetaStoreUtils.getSerDe(this.hiveConf, tbl);
-
-          // recurse down the type.subtype.subsubtype expression until at the desired type
-          for(int i =  1; i < names.length; i++) {
-            hf = s.getFieldFromExpression(hf,names[i]);
-          }
-
-          // rules on how to recurse the SerDe based on its type
-          if(hf != null && hf.isPrimitive()) {
-            hive_fields.add(hf);
-          } else if(hf != null && hf.isList()) {
-            // don't remember why added this rule??
-            // should just be a hive_fields.add(hf)
-            try {
-              hive_fields = s.getFields(hf);
-            } catch(Exception e) {
-              hive_fields.add(hf);
-            }
-          } else if(hf != null && hf.isMap()) {
-            hive_fields.add(hf);
-          } else {
-            hive_fields = s.getFields(hf);
-          }
-
-          for(SerDeField field: hive_fields) {
-            String name = field.getName();
-            String schema = this.hfToString(field);
-            str_fields.add(new FieldSchema(name, schema, "automatically generated"));
-          }
-          return str_fields;
+          Deserializer s = MetaStoreUtils.getDeserializer(this.hiveConf, tbl);
+          return MetaStoreUtils.getFieldsFromDeserializer(tableName, s);
         } catch(SerDeException e) {
           StringUtils.stringifyException(e);
           throw new MetaException(e.getMessage());

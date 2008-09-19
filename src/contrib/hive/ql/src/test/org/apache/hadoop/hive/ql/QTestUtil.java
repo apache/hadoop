@@ -18,39 +18,50 @@
 
 package org.apache.hadoop.hive.ql;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.PrintStream;
+import java.io.Serializable;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.net.URI;
 
-import org.apache.hadoop.fs.FileSystem;
+import org.antlr.runtime.tree.CommonTree;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.cli.CliDriver;
 import org.apache.hadoop.hive.cli.CliSessionState;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.Constants;
+import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.ql.thrift.Complex;
-import org.apache.hadoop.hive.serde.thrift.ThriftSerDe;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.hive.ql.Context;
-
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
 import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
-import org.apache.hadoop.hive.ql.exec.Task;
-import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.hive.ql.thrift.Complex;
+import org.apache.hadoop.hive.serde.Constants;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.TextInputFormat;
 
-import org.antlr.runtime.*;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import org.apache.hadoop.hive.serde2.ThriftDeserializer;
+
 import org.antlr.runtime.tree.*;
 
 public class QTestUtil {
@@ -266,9 +277,9 @@ public class QTestUtil {
     Table srcThrift = new Table("src_thrift");
     srcThrift.setInputFormatClass(SequenceFileInputFormat.class.getName());
     srcThrift.setOutputFormatClass(SequenceFileOutputFormat.class.getName());
-    srcThrift.setSerializationLib(ThriftSerDe.class.getName());
-    srcThrift.setSerializationClass(Complex.class.getName());
-    srcThrift.setSerializationFormat(com.facebook.thrift.protocol.TBinaryProtocol.class.getName());
+    srcThrift.setSerializationLib(ThriftDeserializer.shortName());
+    srcThrift.setSerdeParam(Constants.SERIALIZATION_CLASS, Complex.class.getName());
+    srcThrift.setSerdeParam(Constants.SERIALIZATION_FORMAT, TBinaryProtocol.class.getName());
     db.createTable(srcThrift);
     srcTables.add("src_thrift");
     
@@ -360,7 +371,7 @@ public class QTestUtil {
     outf = new File(logDir);
     outf = new File(outf, qf.getName().concat(".out"));
     FileOutputStream fo = new FileOutputStream(outf);
-    ss.out = new PrintStream(fo);
+    ss.out = new PrintStream(fo, true, "UTF-8");
     ss.setIsSilent(true);
     cliDriver = new CliDriver(ss);
     SessionState.start(ss);
@@ -371,15 +382,13 @@ public class QTestUtil {
   }
 
   public int executeClient(String tname) {
-    return cliDriver.processLine(qMap.get(tname));
+    return CliDriver.processLine(qMap.get(tname));
   }
 
   public void convertSequenceFileToTextFile() throws Exception {
     // Create an instance of hive in order to create the tables
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
     db = Hive.get(conf);
-    FileSystem fs = FileSystem.get(conf);
-    
     // Create dest4 to replace dest4_sequencefile
     LinkedList<String> cols = new LinkedList<String>();
     cols.add("key");
@@ -532,7 +541,7 @@ public class QTestUtil {
     System.out.println("warehousePath = " + warehousePath.toString() + " localPath = " + localPath.toString());
 
     if (FileSystem.getLocal(conf).exists(localPath)) {
-      FileSystem.getLocal(conf).delete(localPath);
+      FileSystem.getLocal(conf).delete(localPath, true);
     }
 
     copyDirectoryToLocal(warehousePath, localPath);
@@ -600,7 +609,7 @@ public class QTestUtil {
       cmdArray = new String[5];
       cmdArray[0] = "diff";
       cmdArray[1] = "-I";
-      cmdArray[2] = "\\|\\(tmp/hive-.*\\)";
+      cmdArray[2] = "\\(file:\\)\\|\\(tmp/hive-.*\\)";
       cmdArray[3] = (new File(logDir, tname + ".out")).getPath();
       cmdArray[4] = (new File(outDir, tname + ".out")).getPath();
       System.out.println(cmdArray[0] + " " + cmdArray[1] + " " + cmdArray[2] + " " +

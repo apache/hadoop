@@ -185,7 +185,7 @@ public class Type implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case -1:
+        case 1:
           if (field.type == TType.STRING) {
             this.name = iprot.readString();
             this.__isset.name = true;
@@ -193,7 +193,7 @@ public class Type implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -2:
+        case 2:
           if (field.type == TType.STRING) {
             this.type1 = iprot.readString();
             this.__isset.type1 = true;
@@ -201,7 +201,7 @@ public class Type implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -3:
+        case 3:
           if (field.type == TType.STRING) {
             this.type2 = iprot.readString();
             this.__isset.type2 = true;
@@ -209,7 +209,7 @@ public class Type implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case -4:
+        case 4:
           if (field.type == TType.LIST) {
             {
               TList _list0 = iprot.readListBegin();
@@ -244,7 +244,7 @@ public class Type implements TBase, java.io.Serializable {
     if (this.name != null) {
       field.name = "name";
       field.type = TType.STRING;
-      field.id = -1;
+      field.id = 1;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.name);
       oprot.writeFieldEnd();
@@ -253,7 +253,7 @@ public class Type implements TBase, java.io.Serializable {
       if (this.__isset.type1) {
       field.name = "type1";
       field.type = TType.STRING;
-      field.id = -2;
+      field.id = 2;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.type1);
       oprot.writeFieldEnd();
@@ -263,7 +263,7 @@ public class Type implements TBase, java.io.Serializable {
     if (this.__isset.type2) {
     field.name = "type2";
     field.type = TType.STRING;
-    field.id = -3;
+    field.id = 3;
     oprot.writeFieldBegin(field);
     oprot.writeString(this.type2);
     oprot.writeFieldEnd();
@@ -273,7 +273,7 @@ if (this.fields != null) {
   if (this.__isset.fields) {
   field.name = "fields";
   field.type = TType.LIST;
-  field.id = -4;
+  field.id = 4;
   oprot.writeFieldBegin(field);
   {
     oprot.writeListBegin(new TList(TType.STRUCT, this.fields.size()));

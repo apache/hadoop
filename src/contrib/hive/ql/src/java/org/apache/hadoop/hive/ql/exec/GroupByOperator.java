@@ -28,7 +28,9 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.aggregationDesc;
 import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.groupByDesc;
-import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -47,15 +49,18 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
   transient protected Method[] aggregationsAggregateMethods;
   transient protected Method[] aggregationsEvaluateMethods;
 
-  transient protected List<SerDeField> choKeyFields;
+  transient protected ArrayList<ObjectInspector> objectInspectors;
+  transient protected ObjectInspector outputObjectInspector;
 
   // Used by sort-based GroupBy: Mode = COMPLETE, PARTIAL1, PARTIAL2
-  transient protected CompositeHiveObject currentKeys;
+  transient protected ArrayList<Object> currentKeys;
   transient protected UDAF[] aggregations;
   transient protected Object[][] aggregationsParametersLastInvoke;
 
   // Used by hash-based GroupBy: Mode = HASH
-  transient protected HashMap<CompositeHiveObject, UDAF[]> hashAggregations;
+  transient protected HashMap<ArrayList<Object>, UDAF[]> hashAggregations;
+  
+  transient boolean firstRow;
   
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
@@ -124,8 +129,20 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
         aggregationsParametersLastInvoke = new Object[conf.getAggregators().size()][];
         aggregations = newAggregations();
       } else {
-        hashAggregations = new HashMap<CompositeHiveObject, UDAF[]>();
+        hashAggregations = new HashMap<ArrayList<Object>, UDAF[]>();
       }
+      // init objectInspectors
+      int totalFields = keyFields.length + aggregationClasses.length;
+      objectInspectors = new ArrayList<ObjectInspector>(totalFields);
+      for(int i=0; i<keyFields.length; i++) {
+        objectInspectors.add(null);
+      }
+      for(int i=0; i<aggregationClasses.length; i++) {
+        objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(
+            aggregationsEvaluateMethods[i].getReturnType()));
+      }
+      
+      firstRow = true;
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
@@ -141,12 +158,15 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
     return aggs;
   }
 
-  protected void updateAggregations(UDAF[] aggs, HiveObject row, Object[][] lastInvoke) throws Exception {
+  InspectableObject tempInspectableObject = new InspectableObject();
+  
+  protected void updateAggregations(UDAF[] aggs, Object row, ObjectInspector rowInspector, Object[][] lastInvoke) throws Exception {
     for(int ai=0; ai<aggs.length; ai++) {
       // Calculate the parameters 
       Object[] o = new Object[aggregationParameterFields[ai].length];
       for(int pi=0; pi<aggregationParameterFields[ai].length; pi++) {
-        o[pi] = aggregationParameterFields[ai][pi].evaluateToObject(row);
+        aggregationParameterFields[ai][pi].evaluate(row, rowInspector, tempInspectableObject);
+        o[pi] = tempInspectableObject.o; 
       }
       // Update the aggregations.
       if (aggregationIsDistinct[ai] && lastInvoke != null) {
@@ -170,36 +190,48 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
     }
   }
   
-  public void process(HiveObject row) throws HiveException {
+  public void process(Object row, ObjectInspector rowInspector) throws HiveException {
     
     try {
       // Compute the keys
-      ArrayList<HiveObject> keys = new ArrayList<HiveObject>(keyFields.length);
+      ArrayList<Object> newKeys = new ArrayList<Object>(keyFields.length);
       for (int i = 0; i < keyFields.length; i++) {
-        keys.add(keyFields[i].evaluate(row));
+        keyFields[i].evaluate(row, rowInspector, tempInspectableObject);
+        newKeys.add(tempInspectableObject.o);
+        if (firstRow) {
+          objectInspectors.set(i, tempInspectableObject.oi);
+        }
       }
-      CompositeHiveObject newKeys = new CompositeHiveObject(keys); 
-      
+      if (firstRow) {
+        firstRow = false;
+        ArrayList<String> fieldNames = new ArrayList<String>(objectInspectors.size());
+        for(int i=0; i<objectInspectors.size(); i++) {
+          fieldNames.add(Integer.valueOf(i).toString());
+        }
+        outputObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
+          fieldNames, objectInspectors);
+      }
       // Prepare aggs for updating
       UDAF[] aggs = null;
       Object[][] lastInvoke = null;
       if (aggregations != null) {
         // sort-based aggregation
         // Need to forward?
-        if (currentKeys != null && !newKeys.equals(currentKeys)) {
-            forward(currentKeys, aggregations);
+        boolean keysAreEqual = newKeys.equals(currentKeys);
+        if (currentKeys != null && !keysAreEqual) {
+          forward(currentKeys, aggregations);
         }
         // Need to update the keys?
-        if (currentKeys == null || !newKeys.equals(currentKeys)) {
-            currentKeys = newKeys;
-            // init aggregations
-            for(UDAF aggregation: aggregations) {
-                aggregation.init();
-            }
-            // clear parameters in last-invoke
-            for(int i=0; i<aggregationsParametersLastInvoke.length; i++) {
-              aggregationsParametersLastInvoke[i] = null;
-            }
+        if (currentKeys == null || !keysAreEqual) {
+          currentKeys = newKeys;
+          // init aggregations
+          for(UDAF aggregation: aggregations) {
+            aggregation.init();
+          }
+          // clear parameters in last-invoke
+          for(int i=0; i<aggregationsParametersLastInvoke.length; i++) {
+            aggregationsParametersLastInvoke[i] = null;
+          }
         }
         aggs = aggregations;
         lastInvoke = aggregationsParametersLastInvoke;
@@ -215,7 +247,7 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
       }
 
       // Update the aggs
-      updateAggregations(aggs, row, lastInvoke);
+      updateAggregations(aggs, row, rowInspector, lastInvoke);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -230,23 +262,16 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
    *          The keys in the record
    * @throws HiveException
    */
-  protected void forward(CompositeHiveObject keys, UDAF[] aggs) throws Exception {
-    if (choKeyFields == null) {
-      // init choKeyFields
-      choKeyFields = new ArrayList<SerDeField>();
-      for (int i = 0; i < keyFields.length; i++) {
-        choKeyFields.add(keys.getFieldFromExpression(Integer.valueOf(i).toString()));
-      }
+  protected void forward(ArrayList<Object> keys, UDAF[] aggs) throws Exception {
+    int totalFields = keys.size() + aggs.length;
+    List<Object> a = new ArrayList<Object>(totalFields);
+    for(int i=0; i<keys.size(); i++) {
+      a.add(keys.get(i));
     }
-    int totalFields = keys.width + aggs.length;
-    CompositeHiveObject cho = new CompositeHiveObject(totalFields);
-    for (int i = 0; i < keys.width; i++) {
-      cho.addHiveObject(keys.get(choKeyFields.get(i)));
+    for(int i=0; i<aggs.length; i++) {
+      a.add(aggregationsEvaluateMethods[i].invoke(aggs[i]));
     }
-    for (int i = 0; i < aggs.length; i++) {
-      cho.addHiveObject(new PrimitiveHiveObject(aggregationsEvaluateMethods[i].invoke(aggs[i])));
-    }
-    forward(cho);
+    forward(a, outputObjectInspector);
   }
   
   /**
@@ -263,7 +288,7 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
           }
         } else if (hashAggregations != null) {
           // hash-based aggregations
-          for (CompositeHiveObject key: hashAggregations.keySet()) {
+          for (ArrayList<Object> key: hashAggregations.keySet()) {
             forward(key, hashAggregations.get(key));
           }
         } else {
@@ -278,4 +303,5 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
     }
     super.close(abort);
   }
+
 }

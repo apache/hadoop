@@ -1,42 +1,43 @@
-ABSTRACT SYNTAX TREE:	
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF src))) (TOK_WHERE (< (TOK_COLREF src key) 100)))) unioninput)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR '../../../../build/contrib/hive/ql/test/data/warehouse/union.out')) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF unioninput)))))	
-	
-STAGE DEPENDENCIES:	
-  Stage-1 is a root stage	
-  Stage-0 depends on stages: Stage-1	
-	
-STAGE PLANS:	
-  Stage: Stage-1	
-    Map Reduce	
-      Alias -> Map Operator Tree:	
-        unioninput:src 	
-            Filter Operator	
-              predicate:	
-                  expr: (key < 100)	
-                  type: class java.lang.Boolean	
-              Select Operator	
-                expressions:	
-                      expr: key	
-                      type: class java.lang.String	
-                      expr: value	
-                      type: class java.lang.String	
-                Select Operator	
-                  expressions:	
-                        expr: 0	
-                        type: class java.lang.String	
-                        expr: 1	
-                        type: class java.lang.String	
-                  File Output Operator	
-                    table:	
-                        input format: org.apache.hadoop.mapred.TextInputFormat	
-                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat	
-	
-  Stage: Stage-0	
-    Move Operator	
-      files:	
-            destination: ../../../../build/contrib/hive/ql/test/data/warehouse/union.out	
-            hdfs directory:	
-	
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF src))) (TOK_WHERE (< (TOK_COLREF src key) 100)))) unioninput)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR '../../../../build/contrib/hive/ql/test/data/warehouse/union.out')) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF unioninput)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        unioninput:src 
+            Filter Operator
+              predicate:
+                  expr: (key < 100)
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                Select Operator
+                  expressions:
+                        expr: 0
+                        type: string
+                        expr: 1
+                        type: string
+                  File Output Operator
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Move Operator
+      files:
+            destination: ../../../../build/contrib/hive/ql/test/data/warehouse/union.out
+            hdfs directory:
+
+
 86val_86
 27val_27
 98val_98

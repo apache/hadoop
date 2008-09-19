@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 
 /**
  * A Hive Table Partition: is a fundamental storage unit within a Table
@@ -46,6 +49,13 @@ public class Partition {
 
     private Table table;
     private org.apache.hadoop.hive.metastore.api.Partition tPartition;
+    /**
+     * @return the tPartition
+     */
+    public org.apache.hadoop.hive.metastore.api.Partition getTPartition() {
+      return tPartition;
+    }
+
     private LinkedHashMap<String, String> spec;
     
     private Path partPath;
@@ -54,7 +64,7 @@ public class Partition {
     Partition(Table tbl, org.apache.hadoop.hive.metastore.api.Partition tp) throws HiveException {
       this.table = tbl;
       this.tPartition = tp;
-      String partName = "";
+      partName = "";
       if(table.isPartitioned()) {
         try {
           partName = Warehouse.makePartName(tbl.getPartCols(), tp.getValues());
@@ -83,7 +93,14 @@ public class Partition {
       this.table = tbl;
       // initialize the tPartition(thrift object) with the data from path and  table
       this.tPartition = new org.apache.hadoop.hive.metastore.api.Partition();
-      this.tPartition.setSd(tbl.getTTable().getSd());
+      this.tPartition.setDbName(tbl.getDbName());
+      this.tPartition.setTableName(tbl.getName());
+      StorageDescriptor sd = tbl.getTTable().getSd();
+      StorageDescriptor psd = new StorageDescriptor(
+          sd.getCols(), sd.getLocation(), sd.getInputFormat(), sd.getOutputFormat(),
+          sd.isCompressed(), sd.getNumBuckets(), sd.getSerdeInfo(), sd.getBucketCols(),
+          sd.getSortCols(), new HashMap<String, String>());
+      this.tPartition.setSd(psd);
       // change the partition location
       if(table.isPartitioned()) {
         this.partPath = path;
@@ -93,11 +110,16 @@ public class Partition {
         this.partPath = table.getPath();
       }
       spec = makeSpecFromPath();
-      tPartition.getSd().setLocation(partPath.toString());
+      psd.setLocation(this.partPath.toString());
       List<String> partVals = new ArrayList<String> ();
       tPartition.setValues(partVals);
       for (FieldSchema field : tbl.getPartCols()) {
         partVals.add(spec.get(field.getName()));
+      }
+      try {
+        this.partName = Warehouse.makePartName(tbl.getPartCols(), partVals);
+      } catch (MetaException e) {
+        throw new HiveException("Invalid partition key values", e);
       }
     }
     
@@ -162,8 +184,7 @@ public class Partition {
     }
 
     public String getName() {
-        // starting to look really ugly now
-        return getPath()[0].toString();
+        return partName;
     }
 
     public Table getTable() {
@@ -242,6 +263,8 @@ public class Partition {
      * mapping from a Path to the bucket number if any
      */
     private static Pattern bpattern = Pattern.compile("part-([0-9][0-9][0-9][0-9][0-9])");
+
+    private String partName;
     @SuppressWarnings("nls")
     public static int getBucketNum(Path p) {
         Matcher m = bpattern.matcher(p.getName());
