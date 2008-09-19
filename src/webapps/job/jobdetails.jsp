@@ -226,6 +226,13 @@
                   "<br>\n");
         out.print("<b>Failed in:</b> " + StringUtils.formatTimeDiff(
             job.getFinishTime(), job.getStartTime()) + "<br>\n");
+      } else if (runState == JobStatus.KILLED) {
+        out.print("<b>Status:</b> Killed<br>\n");
+        out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
+        out.print("<b>Killed at:</b> " + new Date(job.getFinishTime()) +
+                  "<br>\n");
+        out.print("<b>Killed in:</b> " + StringUtils.formatTimeDiff(
+            job.getFinishTime(), job.getStartTime()) + "<br>\n");
       }
     }
     out.print("<b>Job Cleanup:</b>");

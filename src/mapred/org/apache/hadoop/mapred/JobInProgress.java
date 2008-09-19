@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,6 +84,7 @@ class JobInProgress {
   int failedReduceTIPs = 0;
   private volatile boolean launchedCleanup = false;
   private volatile boolean jobKilled = false;
+  private volatile boolean jobFailed = false;
 
   JobPriority priority = JobPriority.NORMAL;
   JobTracker jobtracker = null;
@@ -868,7 +870,7 @@ class JobInProgress {
       return false;
     }
     // check if job has failed or killed
-    if (jobKilled) {
+    if (jobKilled || jobFailed) {
       return true;
     }
     // Check if all maps and reducers have finished.
@@ -1697,10 +1699,13 @@ class JobInProgress {
       }
       //
       // The Job is done
-      //
-      // if the job is killed, then mark the job failed.
+      // if the job is failed, then mark the job failed.
+      if (jobFailed) {
+        terminateJob(JobStatus.FAILED);
+      }
+      // if the job is killed, then mark the job killed.
       if (jobKilled) {
-        killJob();
+        terminateJob(JobStatus.KILLED);
       }
       else {
         jobComplete(metrics);
@@ -1742,24 +1747,31 @@ class JobInProgress {
     }
   }
   
-  private synchronized void killJob() {
-    if ((status.getRunState() == JobStatus.RUNNING) ||
-        (status.getRunState() == JobStatus.PREP)) {
-      this.status = new JobStatus(status.getJobID(),
-                          1.0f, 1.0f, 1.0f, JobStatus.FAILED);
+  private synchronized void terminateJob(int jobState) {
+    if ((status.getRunState() == JobStatus.RUNNING)
+        || (status.getRunState() == JobStatus.PREP)) {
       this.finishTime = System.currentTimeMillis();
-      JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
-              this.finishedMapTasks, this.finishedReduceTasks);
+      if (jobState == JobStatus.FAILED) {
+        this.status = new JobStatus(status.getJobID(), 1.0f, 1.0f, 1.0f,
+            JobStatus.FAILED);
+        JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime,
+            this.finishedMapTasks, this.finishedReduceTasks);
+      } else if (jobState == JobStatus.KILLED) {
+        this.status = new JobStatus(status.getJobID(), 1.0f, 1.0f, 1.0f,
+            JobStatus.KILLED);
+        JobHistory.JobInfo.logKilled(this.status.getJobID(), finishTime,
+            this.finishedMapTasks, this.finishedReduceTasks);
+      }
       garbageCollect();
     }
   }
-
+  
   /**
    * Kill the job and all its component tasks.
    */
-  public synchronized void kill() {
-    if ((status.getRunState() == JobStatus.RUNNING) ||
-         (status.getRunState() == JobStatus.PREP)) {
+  private synchronized void terminate(int jobState) {
+    if ((status.getRunState() == JobStatus.RUNNING)
+        || (status.getRunState() == JobStatus.PREP)) {
       LOG.info("Killing job '" + this.status.getJobID() + "'");
       this.runningMapTasks = 0;
       this.runningReduceTasks = 0;
@@ -1772,8 +1784,26 @@ class JobInProgress {
       for (int i = 0; i < reduces.length; i++) {
         reduces[i].kill();
       }
-      jobKilled = true;
+      if (jobState == JobStatus.FAILED) {
+        jobFailed = true;
+      } else if (jobState == JobStatus.KILLED) {
+        jobKilled = true;
+      }
     }
+  }
+  
+  /**
+   * Kill the job and all its component tasks.
+   */
+  public synchronized void kill() {
+    terminate(JobStatus.KILLED);
+  }
+  
+  /**
+   * Fails the job and all its component tasks.
+   */
+  synchronized void fail() {
+    terminate(JobStatus.FAILED);
   }
   
   /**
@@ -1924,9 +1954,9 @@ class JobInProgress {
           } else {
             cleanup[0].kill();
           }
-          killJob();
+          terminateJob(JobStatus.FAILED);
         } else {
-          kill();
+          terminate(JobStatus.FAILED);
         }
       }
       

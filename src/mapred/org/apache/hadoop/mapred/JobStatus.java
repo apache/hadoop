@@ -45,6 +45,7 @@ public class JobStatus implements Writable {
   public static final int SUCCEEDED = 2;
   public static final int FAILED = 3;
   public static final int PREP = 4;
+  public static final int KILLED = 5;
 
   private JobID jobid;
   private float mapProgress;

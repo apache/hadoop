@@ -188,6 +188,8 @@ Trunk (unreleased changes)
     HADOOP-4070. Provide a mechanism in Hive for registering UDFs from the
     query language. (tomwhite)
 
+    HADOOP-3924. Adds a KILLED job status (Subramaniam Krishnan via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).

@@ -41,7 +41,8 @@ public class HadoopJob {
    */
   public enum JobState {
     PREPARE(JobStatus.PREP), RUNNING(JobStatus.RUNNING), FAILED(
-        JobStatus.FAILED), SUCCEEDED(JobStatus.SUCCEEDED);
+        JobStatus.FAILED), SUCCEEDED(JobStatus.SUCCEEDED), KILLED(
+        JobStatus.KILLED);
 
     final int state;
 
@@ -59,6 +60,8 @@ public class HadoopJob {
           return FAILED;
         case JobStatus.SUCCEEDED:
           return SUCCEEDED;
+        case JobStatus.KILLED:
+          return KILLED;  
         default:
           return null;
       }
@@ -200,6 +203,8 @@ public class HadoopJob {
     if (this.completed) {
       if (this.successful) {
         return JobState.SUCCEEDED;
+      } else if (this.killed) {
+        return JobState.KILLED;
       } else {
         return JobState.FAILED;
       }
@@ -228,6 +233,13 @@ public class HadoopJob {
    */
   public boolean isCompleted() {
     return this.completed;
+  }
+  
+  /**
+   * @return
+   */
+  public boolean isKilled() {
+    return this.killed;
   }
 
   /**
@@ -281,6 +293,7 @@ public class HadoopJob {
       this.counters = running.getCounters();
       this.completed = running.isComplete();
       this.successful = running.isSuccessful();
+      this.killed = running.isKilled();
       this.mapProgress = running.mapProgress();
       this.reduceProgress = running.reduceProgress();
       // running.getTaskCompletionEvents(fromEvent);
