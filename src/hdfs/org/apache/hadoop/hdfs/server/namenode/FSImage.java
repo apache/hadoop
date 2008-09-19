@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -893,9 +892,13 @@ public class FSImage extends Storage {
         }
         
         // get quota only when the node is a directory
-        long quota = -1L;
+        long nsQuota = -1L;
         if (imgVersion <= -16 && blocks == null) {
-          quota = in.readLong();
+          nsQuota = in.readLong();
+        }
+        long dsQuota = -1L;
+        if (imgVersion <= -18 && blocks == null) {
+          dsQuota = in.readLong();
         }
         
         PermissionStatus permissions = fsNamesys.getUpgradePermission();
@@ -904,8 +907,8 @@ public class FSImage extends Storage {
         }
         if (path.length() == 0) { // it is the root
           // update the root's attributes
-          if (quota != -1) {
-            fsDir.rootDir.setQuota(quota);
+          if (nsQuota != -1 || dsQuota != -1) {
+            fsDir.rootDir.setQuota(nsQuota, dsQuota);
           }
           fsDir.rootDir.setModificationTime(modificationTime);
           fsDir.rootDir.setPermissionStatus(permissions);
@@ -918,7 +921,8 @@ public class FSImage extends Storage {
         }
         // add new inode
         parentINode = fsDir.addToParent(path, parentINode, permissions,
-            blocks, replication, modificationTime, atime, quota, blockSize);
+                                        blocks, replication, modificationTime, 
+                                        atime, nsQuota, dsQuota, blockSize);
       }
       
       // load datanode info
@@ -927,8 +931,6 @@ public class FSImage extends Storage {
       // load Files Under Construction
       this.loadFilesUnderConstruction(imgVersion, in, fsNamesys);
       
-      // update the count of each directory with quota
-      fsDir.updateCountForINodeWithQuota();
     } finally {
       in.close();
     }
@@ -968,6 +970,8 @@ public class FSImage extends Storage {
       numEdits += FSEditLog.loadFSEdits(edits);
       edits.close();
     }
+    // update the counts.
+    FSNamesystem.getFSNamesystem().dir.updateCountForINodeWithQuota();    
     return numEdits;
   }
 
@@ -1109,7 +1113,8 @@ public class FSImage extends Storage {
       out.writeLong(0);   // access time
       out.writeLong(0);   // preferred block size
       out.writeInt(-1);    // # of blocks
-      out.writeLong(node.getQuota());
+      out.writeLong(node.getNsQuota());
+      out.writeLong(node.getDsQuota());
       FILE_PERM.fromShort(node.getFsPermissionShort());
       PermissionStatus.write(out, node.getUserName(),
                              node.getGroupName(),

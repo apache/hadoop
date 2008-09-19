@@ -34,7 +34,8 @@ public class Count extends Command {
       "Count the number of directories, files and bytes under the paths",
       "that match the specified file pattern.  The output columns are:",
       "DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or",
-      "QUOTA REMAINING_QUATA DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME");
+      "QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA ",
+      "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME");
   
   private boolean qOption;
 

@@ -190,6 +190,8 @@ public class INodeDirectory extends INode {
    *         deepest INodes. The array size will be the number of expected
    *         components in the path, and non existing components will be
    *         filled with null
+   *         
+   * @see #getExistingPathINodes(byte[][], INode[])
    */
   INode[] getExistingPathINodes(String path) {
     byte[][] components = getPathComponents(path);
@@ -206,7 +208,7 @@ public class INodeDirectory extends INode {
    * @param node INode to insert
    * @param inheritPermission inherit permission from parent?
    * @return  null if the child with this name already exists; 
-   *          inserted INode, otherwise
+   *          node, otherwise
    */
   <T extends INode> T addChild(final T node, boolean inheritPermission) {
     if (inheritPermission) {
@@ -300,17 +302,15 @@ public class INodeDirectory extends INode {
     return parent;
   }
 
-  /**
-   */
-  long numItemsInTree() {
-    long total = 1L;
-    if (children == null) {
-      return total;
+  /** {@inheritDoc} */
+  DirCounts spaceConsumedInTree(DirCounts counts) {
+    counts.nsCount += 1;
+    if (children != null) {
+      for (INode child : children) {
+        child.spaceConsumedInTree(counts);
+      }
     }
-    for (INode child : children) {
-      total += child.numItemsInTree();
-    }
-    return total;
+    return counts;    
   }
 
   /** {@inheritDoc} */

@@ -130,9 +130,40 @@ public class INodeFile extends INode {
     }
     summary[0] += bytes;
     summary[1]++;
+    summary[3] += diskspaceConsumed();
     return summary;
   }
 
+  
+
+  @Override
+  DirCounts spaceConsumedInTree(DirCounts counts) {
+    counts.nsCount += 1;
+    counts.dsCount += diskspaceConsumed();
+    return counts;
+  }
+
+  long diskspaceConsumed() {
+    return diskspaceConsumed(blocks);
+  }
+  
+  long diskspaceConsumed(Block[] blkArr) {
+    long size = 0;
+    for (Block blk : blkArr) {
+      if (blk != null) {
+        size += blk.getNumBytes();
+      }
+    }
+    /* If the last block is being written to, use prefferedBlockSize
+     * rather than the actual block size.
+     */
+    if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
+        isUnderConstruction()) {
+      size += preferredBlockSize - blocks[blocks.length-1].getNumBytes();
+    }
+    return size * blockReplication;
+  }
+  
   /**
    * Get the preferred block size of the file.
    * @return the number of bytes

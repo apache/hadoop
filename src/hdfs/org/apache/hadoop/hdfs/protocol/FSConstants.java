@@ -116,6 +116,10 @@ public interface FSConstants {
   // Chunk the block Invalidate message
   public static final int BLOCK_INVALIDATE_CHUNK = 100;
 
+  // Long that indicates "leave current quota unchanged"
+  public static final long QUOTA_DONT_SET = Long.MAX_VALUE;
+  public static final long QUOTA_RESET = -1L;
+  
   //
   // Timeouts, constants
   //
@@ -190,7 +194,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -17;
+  public static final int LAYOUT_VERSION = -18;
   // Current version: 
-  // Support Access time on files
+  // Support disk space quotas
 }

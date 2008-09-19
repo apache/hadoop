@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
-import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ContentSummary;
@@ -31,8 +27,6 @@ import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
@@ -46,6 +40,23 @@ public abstract class INode implements Comparable<byte[]> {
   protected long modificationTime;
   protected int accessTime; // precise to the last hour
 
+  /** Simple wrapper for two counters : 
+   *  nsCount (namespace consumed) and dsCount (diskspace consumed).
+   */
+  static class DirCounts {
+    long nsCount = 0;
+    long dsCount = 0;
+    
+    /** returns namespace count */
+    long getNsCount() {
+      return nsCount;
+    }
+    /** returns diskspace count */
+    long getDsCount() {
+      return dsCount;
+    }
+  }
+  
   //Only updated by updatePermissionStatus(...).
   //Other codes should not modify it.
   private long permission;
@@ -173,12 +184,13 @@ public abstract class INode implements Comparable<byte[]> {
 
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {
-    long[] a = computeContentSummary(new long[]{0,0,0});
-    return new ContentSummary(a[0], a[1], a[2], getQuota());
+    long[] a = computeContentSummary(new long[]{0,0,0,0});
+    return new ContentSummary(a[0], a[1], a[2], getNsQuota(), 
+                              a[3], getDsQuota());
   }
   /**
    * @return an array of three longs. 
-   * 0: length, 1: file count, 2: directory count
+   * 0: length, 1: file count, 2: directory count 3: disk space
    */
   abstract long[] computeContentSummary(long[] summary);
   
@@ -186,19 +198,25 @@ public abstract class INode implements Comparable<byte[]> {
    * Get the quota set for this inode
    * @return the quota if it is set; -1 otherwise
    */
-  long getQuota() {
+  long getNsQuota() {
     return -1;
   }
 
-  /**
-   * Get the total number of names in the tree
-   * rooted at this inode including the root
-   * @return The total number of names in this tree
-   */
-  long numItemsInTree() {
-    return 1;
+  long getDsQuota() {
+    return -1;
   }
-    
+  
+  boolean isQuotaSet() {
+    return getNsQuota() >= 0 || getDsQuota() >= 0;
+  }
+  
+  /**
+   * Adds total nubmer of names and total disk space taken under 
+   * this tree to counts.
+   * Returns updated counts object.
+   */
+  abstract DirCounts spaceConsumedInTree(DirCounts counts);
+  
   /**
    * Get local file name
    * @return local file name

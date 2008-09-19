@@ -20,23 +20,33 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 
-/** This class is for the error when an attempt to add an inode to namespace 
- * violates the quota restriction of any inode on the path to the newly added
- * inode.
+/** 
+ * This exception is thrown when modification to HDFS results in violation
+ * of a directory quota. A directory quota might be namespace quota (limit 
+ * on number of files and directories) or a diskspace quota (limit on space 
+ * taken by all the file under the directory tree). <br> <br>
+ * 
+ * The message for the exception specifies the the directory where the quota
+ * was violated and actual quotas.
  */
 public final class QuotaExceededException extends IOException {
   private static final long serialVersionUID = 1L;
   private String pathName;
-  private long quota;
-  private long count;
+  private long nsQuota;
+  private long nsCount;
+  private long dsQuota;
+  private long diskspace;
   
   public QuotaExceededException(String msg) {
     super(msg);
   }
   
-  public QuotaExceededException(long quota, long count) {
-    this.quota = quota;
-    this.count = count;
+  public QuotaExceededException(long nsQuota, long nsCount,
+                                long dsQuota, long diskspace) {
+    this.nsQuota = nsQuota;
+    this.nsCount = nsCount;
+    this.dsQuota = dsQuota;
+    this.diskspace = diskspace;
   }
   
   public void setPathName(String path) {
@@ -47,7 +57,9 @@ public final class QuotaExceededException extends IOException {
     String msg = super.getMessage();
     if (msg == null) {
       return "The quota" + (pathName==null?"":(" of " + pathName)) + 
-          " is exceeded: quota=" + quota + " count=" + count;
+          " is exceeded: namespace quota=" + nsQuota + " file count=" + 
+          nsCount + ", diskspace quota=" + dsQuota + 
+          " diskspace=" + diskspace; 
     } else {
       return msg;
     }

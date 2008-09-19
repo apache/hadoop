@@ -75,6 +75,9 @@ Trunk (unreleased changes)
     DFS Used%: DFS used space/Present Capacity
     (Suresh Srinivas via hairong)
 
+    HADOOP-3938. Disk space quotas for HDFS. This is similar to namespace
+    quotas in 0.18. (rangadi)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

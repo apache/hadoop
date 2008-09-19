@@ -39,9 +39,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 39: removed DFSFileInfo (Use FileStatus instead)
+   * 40: added disk space quotas.
    */
-  public static final long versionID = 39L;
+  public static final long versionID = 40L;
   
   ///////////////////////////////////////
   // File contents
@@ -409,21 +409,24 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Set the quota for a directory.
    * @param path  The string representation of the path to the directory
-   * @param quota The limit of the number of names in the tree rooted 
-   *              at the directory
+   * @param namespaceQuota Limit on the number of names in the tree rooted 
+   *                       at the directory
+   * @param diskspaceQuota Limit on disk space occupied all the files under
+   *                       this directory. 
+   * <br><br>
+   *                       
+   * The quota can have three types of values : (1) 0 or more will set 
+   * the quota to that value, (2) {@link FSConstants#QUOTA_DONT_SET}  implies 
+   * the quota will not be changed, and (3) {@link FSConstants#QUOTA_RESET} 
+   * implies the quota will be reset. Any other value is a runtime error.
+   *                        
    * @throws FileNotFoundException if the path is a file or 
    *                               does not exist 
    * @throws QuotaExceededException if the directory size 
    *                                is greater than the given quota
    */
-  public void setQuota(String path, long quota) throws IOException;
-  
-  /**
-   * Remove the quota for a directory
-   * @param path The string representation of the path to the directory
-   * @throws FileNotFoundException if the path is not a directory
-   */
-  public void clearQuota(String path) throws IOException;
+  public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
+                      throws IOException;
   
   /**
    * Write all metadata for this file into persistent storage.

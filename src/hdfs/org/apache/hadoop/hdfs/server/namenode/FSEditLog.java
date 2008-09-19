@@ -62,9 +62,12 @@ public class FSEditLog {
   private static final byte OP_SET_OWNER = 8;
   private static final byte OP_CLOSE = 9;    // close after write
   private static final byte OP_SET_GENSTAMP = 10;    // store genstamp
-  private static final byte OP_SET_QUOTA = 11; // set a directory's quota
-  private static final byte OP_CLEAR_QUOTA = 12; // clear a directory's quota
+  /* The following two are not used any more. Should be removed once
+   * LAST_UPGRADABLE_LAYOUT_VERSION is -17 or newer. */
+  private static final byte OP_SET_NS_QUOTA = 11; // set namespace quota
+  private static final byte OP_CLEAR_NS_QUOTA = 12; // clear namespace quota
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
+  private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -732,23 +735,34 @@ public class FSEditLog {
               FSImage.readString(in), FSImage.readString(in));
           break;
         }
-        case OP_SET_QUOTA: {
+        case OP_SET_NS_QUOTA: {
           if (logVersion > -16) {
             throw new IOException("Unexpected opcode " + opcode
                 + " for version " + logVersion);
           }
           fsDir.unprotectedSetQuota(FSImage.readString(in), 
-              readLongWritable(in) );
+                                    readLongWritable(in), 
+                                    FSConstants.QUOTA_DONT_SET);
           break;
         }
-        case OP_CLEAR_QUOTA: {
+        case OP_CLEAR_NS_QUOTA: {
           if (logVersion > -16) {
             throw new IOException("Unexpected opcode " + opcode
                 + " for version " + logVersion);
           }
-          fsDir.unprotectedClearQuota(FSImage.readString(in));
+          fsDir.unprotectedSetQuota(FSImage.readString(in),
+                                    FSConstants.QUOTA_RESET,
+                                    FSConstants.QUOTA_DONT_SET);
           break;
         }
+
+        case OP_SET_QUOTA:
+          fsDir.unprotectedSetQuota(FSImage.readString(in),
+                                    readLongWritable(in),
+                                    readLongWritable(in));
+                                      
+          break;
+
         case OP_TIMES: {
           numOpTimes++;
           int length = in.readInt();
@@ -1016,23 +1030,16 @@ public class FSEditLog {
             FSEditLog.toLogReplication(replication));
   }
   
-  /** Add set quota record to edit log
+  /** Add set namespace quota record to edit log
    * 
    * @param src the string representation of the path to a directory
    * @param quota the directory size limit
    */
-  void logSetQuota(String src, long quota) {
-    logEdit(OP_SET_QUOTA, new UTF8(src), new LongWritable(quota));
+  void logSetQuota(String src, long nsQuota, long dsQuota) {
+    logEdit(OP_SET_QUOTA, new UTF8(src), 
+            new LongWritable(nsQuota), new LongWritable(dsQuota));
   }
 
-  /** Add clear quota record to edit log
-   * 
-   * @param src the string representation of the path to a directory
-   */
-  void logClearQuota(String src) {
-    logEdit(OP_CLEAR_QUOTA, new UTF8(src));
-  }
-  
   /**  Add set permissions record to edit log */
   void logSetPermissions(String src, FsPermission permissions) {
     logEdit(OP_SET_PERMISSIONS, new UTF8(src), permissions);

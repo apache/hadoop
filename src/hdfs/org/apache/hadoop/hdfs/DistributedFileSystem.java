@@ -206,22 +206,12 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getContentSummary(getPathName(f));
   }
 
-  /** Clear a directory's quota
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#clearQuota(String)
+  /** Set a directory's quotas
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long, long) 
    */
-  public void clearQuota(Path src) throws IOException {
-    dfs.clearQuota(getPathName(src));
-  }
-  
-  /** Set a directory's quota
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long) 
-   */
-  public void setQuota(Path src, long quota) throws IOException {
-    if (quota <= 0) {
-      throw new IllegalArgumentException("Quota should be a positive number: "
-          + quota);
-    }
-    dfs.setQuota(getPathName(src), quota);
+  public void setQuota(Path src, long namespaceQuota, long diskspaceQuota) 
+                       throws IOException {
+    dfs.setQuota(getPathName(src), namespaceQuota, diskspaceQuota);
   }
   
   private FileStatus makeQualified(FileStatus f) {

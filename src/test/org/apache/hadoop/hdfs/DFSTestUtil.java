@@ -24,9 +24,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Random;
 import junit.framework.TestCase;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -124,18 +124,24 @@ public class DFSTestUtil extends TestCase {
       throw new IOException("Mkdirs failed to create " + 
                             fileName.getParent().toString());
     }
-    FSDataOutputStream out = fs.create(fileName, replFactor);
-    byte[] toWrite = new byte[1024];
-    Random rb = new Random(seed);
-    long bytesToWrite = fileLen;
-    while (bytesToWrite>0) {
-     rb.nextBytes(toWrite);
-     int bytesToWriteNext = (1024<bytesToWrite)?1024:(int)bytesToWrite;
+    FSDataOutputStream out = null;
+    try {
+      out = fs.create(fileName, replFactor);
+      byte[] toWrite = new byte[1024];
+      Random rb = new Random(seed);
+      long bytesToWrite = fileLen;
+      while (bytesToWrite>0) {
+        rb.nextBytes(toWrite);
+        int bytesToWriteNext = (1024<bytesToWrite)?1024:(int)bytesToWrite;
 
-     out.write(toWrite, 0, bytesToWriteNext);
-     bytesToWrite -= bytesToWriteNext;
+        out.write(toWrite, 0, bytesToWriteNext);
+        bytesToWrite -= bytesToWriteNext;
+      }
+      out.close();
+      out = null;
+    } finally {
+      IOUtils.closeStream(out);
     }
-    out.close();
   }
   
   /** check if the files have been copied correctly. */

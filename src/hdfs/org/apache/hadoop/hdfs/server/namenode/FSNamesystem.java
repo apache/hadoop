@@ -296,7 +296,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Initialize FSNamesystem.
    */
-  private synchronized void initialize(NameNode nn, Configuration conf) throws IOException {
+  private void initialize(NameNode nn, Configuration conf) throws IOException {
     this.systemStart = now();
     this.startTime = new Date(systemStart); 
     setConfigurationParameters(conf);
@@ -417,7 +417,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Initializes some of the members from configuration
    */
-  private synchronized void setConfigurationParameters(Configuration conf) 
+  private void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
     fsNamesystemObject = this;
     try {
@@ -1269,13 +1269,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // Allocate a new block and record it in the INode. 
     synchronized (this) {
-      INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
+      INode[] pathINodes = dir.getExistingPathINodes(src);
+      int inodesLen = pathINodes.length;
+      checkLease(src, clientName, pathINodes[inodesLen-1]);
+      INodeFileUnderConstruction pendingFile  = (INodeFileUnderConstruction) 
+                                                pathINodes[inodesLen - 1];
+                                                           
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
 
       // allocate new block record block locations in INode.
-      newBlock = allocateBlock(src, pendingFile);
+      newBlock = allocateBlock(src, pathINodes);
       pendingFile.setTargets(targets);
       
       for (DatanodeDescriptor dn : targets) {
@@ -1305,11 +1310,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return true;
   }
   
-  // make sure that we still have the lease on this file
-  private INodeFileUnderConstruction checkLease(String src, String holder
-      ) throws IOException {
-    INode file = dir.getFileINode(src);
-    if (file == null) {
+  // make sure that we still have the lease on this file.
+  private INodeFileUnderConstruction checkLease(String src, String holder) 
+                                                      throws IOException {
+    INodeFile file = dir.getFileINode(src);
+    checkLease(src, holder, file);
+    return (INodeFileUnderConstruction)file;
+  }
+
+  private void checkLease(String src, String holder, INode file) 
+                                                     throws IOException {
+
+    if (file == null || file.isDirectory()) {
       Lease lease = leaseManager.getLease(new StringBytesWritable(holder));
       throw new LeaseExpiredException("No lease on " + src +
                                       " File does not exist. " +
@@ -1330,7 +1342,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
           + pendingFile.getClientName() + " but is accessed by " + holder);
     }
-    return pendingFile;    
   }
 
   /**
@@ -1403,14 +1414,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     
   /**
    * Allocate a block at the given pending filename
+   * 
+   * @param src path to the file
+   * @param indoes INode representing each of the components of src. 
+   *        <code>inodes[inodes.length-1]</code> is the INode for the file.
    */
-  private Block allocateBlock(String src, INode file) throws IOException {
+  private Block allocateBlock(String src, INode[] inodes) throws IOException {
     Block b = null;
     do {
       b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 
                     getGenerationStamp());
     } while (isValidBlock(b));
-    b = dir.addBlock(src, file, b);
+    b = dir.addBlock(src, inodes, b);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
                                  +src+ ". "+b);
     return b;
@@ -1727,32 +1742,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Set the quota for a directory.
-   * @param path The string representation of the path to the directory
-   * @param quota The limit of the number of names in or below the directory
-   * @throws IOException if the path is not a directory or the number of
-   * existing names in or below the directory is greater than the given quota
+   * Set the namespace quota and diskspace quota for a directory.
+   * See {@link ClientProtocol#setQuota(String, long, long)} for the 
+   * contract.
    */
-  void setQuota(String path, long quota) throws IOException {
+  void setQuota(String path, long nsQuota, long dsQuota) throws IOException {
     if (isPermissionEnabled) {
       checkSuperuserPrivilege();
     }
     
-    dir.setQuota(path, quota);
-    getEditLog().logSync();
-  }
-  
-  /**
-   * Remove the quota for a directory
-   * @param path The string representation of the path to the directory
-   * @throws IOException if the path is not a directory
-   */
-  void clearQuota(String path) throws IOException {
-    if (isPermissionEnabled) {
-      checkSuperuserPrivilege();
-    }
-    
-    dir.clearQuota(path);
+    dir.setQuota(path, nsQuota, dsQuota);
     getEditLog().logSync();
   }
   
@@ -2836,6 +2835,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
             }
           } catch (IOException e) {
             LOG.warn("Error in deleting bad block " + block + e);
+          }
+        }
+        
+        //Updated space consumed if required.
+        INodeFile file = (storedBlock != null) ? storedBlock.getINode() : null;
+        long diff = (file == null) ? 0 :
+                    (file.getPreferredBlockSize() - storedBlock.getNumBytes());
+        
+        if (diff > 0 && file.isUnderConstruction() &&
+            cursize < storedBlock.getNumBytes()) {
+          try {
+            String path = /* For finding parents */ 
+              leaseManager.findPath((INodeFileUnderConstruction)file);
+            dir.updateSpaceConsumed(path, 0, -diff*file.getReplication());
+          } catch (IOException e) {
+            LOG.warn("Unexpected exception while updating disk space : " +
+                     e.getMessage());
           }
         }
       }

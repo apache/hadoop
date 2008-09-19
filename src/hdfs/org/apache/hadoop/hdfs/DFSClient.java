@@ -500,7 +500,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     try {
       return namenode.setReplication(src, replication);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     QuotaExceededException.class);
     }
   }
 
@@ -840,32 +841,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /**
-   * Remove the quota for a directory
-   * @param path The string representation of the path to the directory
-   * @throws FileNotFoundException if the path is not a directory
+   * Sets or resets quotas for a directory.
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long, long)
    */
-  void clearQuota(String src) throws IOException {
-    try {
-      namenode.clearQuota(src);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+  void setQuota(String src, long namespaceQuota, long diskspaceQuota) 
+                                                 throws IOException {
+    // sanity check
+    if ((namespaceQuota <= 0 && namespaceQuota != FSConstants.QUOTA_DONT_SET &&
+         namespaceQuota != FSConstants.QUOTA_RESET) ||
+        (diskspaceQuota <= 0 && diskspaceQuota != FSConstants.QUOTA_DONT_SET &&
+         diskspaceQuota != FSConstants.QUOTA_RESET)) {
+      throw new IllegalArgumentException("Invalid values for quota : " +
+                                         namespaceQuota + " and " + 
+                                         diskspaceQuota);
+                                         
     }
-  }
-  
-  /**
-   * Set the quota for a directory.
-   * @param path  The string representation of the path to the directory
-   * @param quota The limit of the number of names in the tree rooted 
-   *              at the directory
-   * @throws FileNotFoundException if the path is a file or 
-   *                               does not exist 
-   * @throws QuotaExceededException if the directory size 
-   *                                is greater than the given quota
-   */
-  void setQuota(String src, long quota) throws IOException {
+    
     try {
-      namenode.setQuota(src, quota);
+      namenode.setQuota(src, namespaceQuota, diskspaceQuota);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
@@ -2008,7 +2001,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private DatanodeInfo[] nodes = null; // list of targets for current block
     private volatile boolean hasError = false;
     private volatile int errorIndex = 0;
-    private IOException lastException = null;
+    private volatile IOException lastException = null;
     private long artificialSlowdown = 0;
     private long lastFlushOffset = -1; // offset when flush was invoked
     private boolean persistBlocks = false; // persist blocks on namenode
@@ -2016,6 +2009,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
     private volatile boolean appendChunk = false;   // appending to existing partial block
 
+    private void setLastException(IOException e) {
+      if (lastException == null) {
+        lastException = e;
+      }
+    }
+    
     private class Packet {
       ByteBuffer buffer;           // only one of buf and buffer is non-null
       byte[]  buf;
@@ -2206,6 +2205,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             } catch (Throwable e) {
               LOG.warn("DataStreamer Exception: " + 
                        StringUtils.stringifyException(e));
+              if (e instanceof IOException) {
+                setLastException((IOException)e);
+              }
               hasError = true;
             }
           }
@@ -2334,6 +2336,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           } catch (Exception e) {
             if (!closed) {
               hasError = true;
+              if (e instanceof IOException) {
+                setLastException((IOException)e);
+              }
               LOG.warn("DFSOutputStream ResponseProcessor exception " + 
                        " for block " + block +
                         StringUtils.stringifyException(e));
@@ -2395,8 +2400,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       while (!success && clientRunning) {
         DatanodeInfo[] newnodes = null;
         if (nodes == null) {
-          lastException = new IOException("Could not get block locations. " +
-                                          "Aborting...");
+          String msg = "Could not get block locations. Aborting...";
+          LOG.warn(msg);
+          setLastException(new IOException(msg));
           closed = true;
           if (streamer != null) streamer.close();
           return false;
@@ -2473,6 +2479,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
 
         this.hasError = false;
+        lastException = null;
         errorIndex = 0;
         success = createBlockOutputStream(nodes, clientName, true);
       }
@@ -2646,6 +2653,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       boolean success;
       do {
         hasError = false;
+        lastException = null;
         errorIndex = 0;
         retry = false;
         nodes = null;
@@ -2756,6 +2764,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
         }
         hasError = true;
+        setLastException(ie);
         blockReplyStream = null;
         return false;  // error
       }
@@ -2771,6 +2780,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           try {
             return namenode.addBlock(src, clientName);
           } catch (RemoteException e) {
+            IOException ue = 
+              e.unwrapRemoteException(FileNotFoundException.class,
+                                      AccessControlException.class,
+                                      QuotaExceededException.class);
+            if (ue != e) { 
+              throw ue; // no need to retry these exceptions
+            }
+            
             if (--retries == 0 && 
                 !NotReplicatedYetException.class.getName().
                 equals(e.getClassName())) {

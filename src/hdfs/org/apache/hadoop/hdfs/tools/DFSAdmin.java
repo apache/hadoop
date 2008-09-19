@@ -94,7 +94,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.clearQuota(path);
+      dfs.setQuota(path, FSConstants.QUOTA_RESET, FSConstants.QUOTA_DONT_SET);
     }
   }
   
@@ -141,7 +141,111 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, quota);
+      dfs.setQuota(path, quota, FSConstants.QUOTA_DONT_SET);
+    }
+  }
+  
+  /** A class that supports command clearSpaceQuota */
+  private static class ClearSpaceQuotaCommand extends DFSAdminCommand {
+    private static final String NAME = "clrSpaceQuota";
+    private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
+    private static final String DESCRIPTION = USAGE + ": " +
+    "\tClear the disk space quota for each directory <dirName>.\n" +
+    "\t\tBest effort for the directory. with fault reported if\n" +
+    "\t\t1. the directory does not exist or is a file, or\n" +
+    "\t\t2. user is not an administrator.\n" +
+    "\t\tIt does not fault if the directory has no quota.";
+    
+    /** Constructor */
+    ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
+      super(fs);
+      CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE);
+      List<String> parameters = c.parse(args, pos);
+      this.args = parameters.toArray(new String[parameters.size()]);
+    }
+    
+    /** Check if a command is the clrQuota command
+     * 
+     * @param cmd A string representation of a command starting with "-"
+     * @return true if this is a clrQuota command; false otherwise
+     */
+    public static boolean matches(String cmd) {
+      return ("-"+NAME).equals(cmd); 
+    }
+
+    @Override
+    public String getCommandName() {
+      return NAME;
+    }
+
+    @Override
+    public void run(Path path) throws IOException {
+      dfs.setQuota(path, FSConstants.QUOTA_DONT_SET, FSConstants.QUOTA_RESET);
+    }
+  }
+  
+  /** A class that supports command setQuota */
+  private static class SetSpaceQuotaCommand extends DFSAdminCommand {
+    private static final String NAME = "setSpaceQuota";
+    private static final String USAGE =
+      "-"+NAME+" <quota> <dirname>...<dirname>";
+    private static final String DESCRIPTION = USAGE +
+      "\tSet the dik space quota <quota> for each directory <dirName>.\n" + 
+      "\t\tThe directory quota is a long integer that puts a hard limit " +
+      "on the number of names in the directory tree.\n" +
+      "\t\tQuota can also be speciefied with MB, GB, or TB suffix" +
+      " (e.g. 100GB, 20TB).\n" + 
+      "\t\tBest effort for the directory, with faults reported if\n" +
+      "\t\t1. N is not a positive integer, or\n" +
+      "\t\t2. user is not an administrator, or\n" +
+      "\t\t3. the directory does not exist or is a file, or\n" +
+      "\t\t4. the directory would immediately exceed the new space quota.";
+    
+    private long quota; // the quota to be set
+    
+    /** Constructor */
+    SetSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
+      super(fs);
+      CommandFormat c = new CommandFormat(NAME, 2, Integer.MAX_VALUE);
+      List<String> parameters = c.parse(args, pos);
+      long multiplier = 1;
+      String str = parameters.remove(0).trim();
+      if (str.endsWith("TB")) {
+        multiplier = 1024 * 1024 * 1024 * 1024;
+      } else if (str.endsWith("GB")) {
+        multiplier = 1024 * 1024 * 1024;
+      } else if (str.endsWith("MB")) {
+        multiplier = 1024 * 1024;
+      }
+      if (multiplier != 1) {
+        str = str.substring(0, str.length()-2);
+      }
+      
+      quota = Long.parseLong(str);
+      if (quota > Long.MAX_VALUE/multiplier) {
+        throw new IllegalArgumentException("quota exceeds Long.MAX_VALUE!");
+      }
+      quota *= multiplier;
+      this.args = parameters.toArray(new String[parameters.size()]);
+    }
+    
+    /** Check if a command is the setQuota command
+     * 
+     * @param cmd A string representation of a command starting with "-"
+     * @return true if this is a count command; false otherwise
+     */
+    public static boolean matches(String cmd) {
+      return ("-"+NAME).equals(cmd); 
+    }
+
+    @Override
+    public String getCommandName() {
+      return NAME;
+    }
+
+    @Override
+    public void run(Path path) throws IOException {
+      dfs.setQuota(path, FSConstants.QUOTA_DONT_SET, quota);
     }
   }
   
@@ -293,6 +397,8 @@ public class DFSAdmin extends FsShell {
       "\t[-refreshNodes]\n" +
       "\t[" + SetQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
+      "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
+      "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -354,6 +460,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(SetQuotaCommand.DESCRIPTION);
     } else if (ClearQuotaCommand.matches(cmd)) {
       System.out.println(ClearQuotaCommand.DESCRIPTION);
+    } else if (SetSpaceQuotaCommand.matches(cmd)) {
+      System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
+    } else if (ClearSpaceQuotaCommand.matches(cmd)) {
+      System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -366,6 +476,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(metaSave);
       System.out.println(SetQuotaCommand.DESCRIPTION);
       System.out.println(ClearQuotaCommand.DESCRIPTION);
+      System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
+      System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -478,6 +590,12 @@ public class DFSAdmin extends FsShell {
     } else if (ClearQuotaCommand.matches(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " ["+ClearQuotaCommand.USAGE+"]");
+    } else if (SetSpaceQuotaCommand.matches(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [" + SetSpaceQuotaCommand.USAGE+"]");
+    } else if (ClearSpaceQuotaCommand.matches(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " ["+ClearSpaceQuotaCommand.USAGE+"]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -488,6 +606,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-metasave filename]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
+      System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
+      System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -576,6 +696,10 @@ public class DFSAdmin extends FsShell {
         exitCode = new ClearQuotaCommand(argv, i, fs).runAll();
       } else if (SetQuotaCommand.matches(cmd)) {
         exitCode = new SetQuotaCommand(argv, i, fs).runAll();
+      } else if (ClearSpaceQuotaCommand.matches(cmd)) {
+        exitCode = new ClearSpaceQuotaCommand(argv, i, fs).runAll();
+      } else if (SetSpaceQuotaCommand.matches(cmd)) {
+        exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
