@@ -709,6 +709,9 @@ Trunk (unreleased changes)
     HADOOP-4120. Hive interactive shell records the time taken by a 
     query.  (Raghotham Murthy via dhruba)
 
+    HADOOP-4090. The hive scripts pick up hadoop from HADOOP_HOME
+    and then the path. (Raghotham Murthy via dhruba)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

@@ -65,14 +65,19 @@ CLASSPATH=${CLASSPATH}:${AUX_CLASSPATH}
 # pass classpath to hadoop
 export HADOOP_CLASSPATH=${CLASSPATH}
 
-# point to the first available hadoop instance
+# check for hadoop in the path
 HADOOP_IN_PATH=`which hadoop 2>/dev/null`
-HADOOP=${HADOOP:-$HADOOP_IN_PATH}
-if [ "$HADOOP" == "" ]; then
-  echo "Cannot find hadoop installation: 'hadoop' must be in your path or specified via \$HADOOP";
+if [ -f ${HADOOP_IN_PATH} ]; then
+  HADOOP_DIR=`dirname "$HADOOP_IN_PATH"`/..
+fi
+# HADOOP_HOME env variable overrides hadoop in the path
+HADOOP_HOME=${HADOOP_HOME:-$HADOOP_DIR}
+if [ "$HADOOP_HOME" == "" ]; then
+  echo "Cannot find hadoop installation: \$HADOOP_HOME must be set or hadoop must be in the path";
   exit 4;
 fi
 
+HADOOP=$HADOOP_HOME/bin/hadoop
 if [ ! -f ${HADOOP} ]; then
   echo "Cannot find hadoop installation: \"$HADOOP\" does not exist";
   exit 4;
