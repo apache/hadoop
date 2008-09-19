@@ -422,7 +422,7 @@
   </target>
 
   <target name="compile-examples" 
-          depends="compile-core,compile-c++-examples">
+          depends="compile-core,compile-tools,compile-c++-examples">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${examples.dir}"
@@ -434,7 +434,10 @@
      source="${javac.version}"
      deprecation="${javac.deprecation}">
       <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="classpath"/>
+      <classpath>
+        <path refid="classpath"/>
+        <pathelement location="${build.tools}"/>
+      </classpath>
     </javac>    
   </target>
 
@@ -852,6 +855,7 @@
             <include name="*/lib/*.jar" />
           </fileset>
           <pathelement path="${java.class.path}"/>
+          <pathelement location="${build.tools}"/>
         </classpath>
 
     	<group title="Core" packages="org.apache.*"/>

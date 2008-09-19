@@ -19,10 +19,12 @@
 package org.apache.hadoop.examples;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
@@ -30,6 +32,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapred.lib.TotalOrderPartitioner;
+import org.apache.hadoop.tools.InputSampler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -43,9 +47,10 @@ import org.apache.hadoop.util.ToolRunner;
  *            [-outFormat <i>output format class</i>] 
  *            [-outKey <i>output key class</i>] 
  *            [-outValue <i>output value class</i>] 
+ *            [-totalOrder <i>pcnt</i> <i>num samples</i> <i>max splits</i>]
  *            <i>in-dir</i> <i>out-dir</i> 
  */
-public class Sort extends Configured implements Tool {
+public class Sort<K,V> extends Configured implements Tool {
 
   static int printUsage() {
     System.out.println("sort [-m <maps>] [-r <reduces>] " +
@@ -53,6 +58,7 @@ public class Sort extends Configured implements Tool {
                        "[-outFormat <output format class>] " + 
                        "[-outKey <output key class>] " +
                        "[-outValue <output value class>] " +
+                       "[-totalOrder <pcnt> <num samples> <max splits>] " +
                        "<input> <output>");
     ToolRunner.printGenericCommandUsage(System.out);
     return -1;
@@ -87,6 +93,7 @@ public class Sort extends Configured implements Tool {
     Class<? extends WritableComparable> outputKeyClass = BytesWritable.class;
     Class<? extends Writable> outputValueClass = BytesWritable.class;
     List<String> otherArgs = new ArrayList<String>();
+    InputSampler.Sampler<K,V> sampler = null;
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-m".equals(args[i])) {
@@ -105,6 +112,13 @@ public class Sort extends Configured implements Tool {
         } else if ("-outValue".equals(args[i])) {
           outputValueClass = 
             Class.forName(args[++i]).asSubclass(Writable.class);
+        } else if ("-totalOrder".equals(args[i])) {
+          double pcnt = Double.parseDouble(args[++i]);
+          int numSamples = Integer.parseInt(args[++i]);
+          int maxSplits = Integer.parseInt(args[++i]);
+          if (0 >= maxSplits) maxSplits = Integer.MAX_VALUE;
+          sampler =
+            new InputSampler.RandomSampler<K,V>(pcnt, numSamples, maxSplits);
         } else {
           otherArgs.add(args[i]);
         }
@@ -135,6 +149,20 @@ public class Sort extends Configured implements Tool {
     }
     FileInputFormat.setInputPaths(jobConf, otherArgs.get(0));
     FileOutputFormat.setOutputPath(jobConf, new Path(otherArgs.get(1)));
+
+    if (sampler != null) {
+      System.out.println("Sampling input to effect total-order sort...");
+      jobConf.setPartitionerClass(TotalOrderPartitioner.class);
+      Path inputDir = FileInputFormat.getInputPaths(jobConf)[0];
+      inputDir = inputDir.makeQualified(inputDir.getFileSystem(jobConf));
+      Path partitionFile = new Path(inputDir, "_sortPartitioning");
+      TotalOrderPartitioner.setPartitionFile(jobConf, partitionFile);
+      InputSampler.<K,V>writePartitionFile(jobConf, sampler);
+      URI partitionUri = new URI(partitionFile.toString() +
+                                 "#" + "_sortPartitioning");
+      DistributedCache.addCacheFile(partitionUri, jobConf);
+      DistributedCache.createSymlink(jobConf);
+    }
 
     System.out.println("Running on " +
         cluster.getTaskTrackers() +

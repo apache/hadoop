@@ -122,6 +122,9 @@ fi
 if [ -d "$HADOOP_HOME/build/test/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/test/classes
 fi
+if [ -d "$HADOOP_HOME/build/tools" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/tools
+fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
@@ -218,6 +221,10 @@ elif [ "$COMMAND" = "daemonlog" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "archive" ] ; then
   CLASS=org.apache.hadoop.tools.HadoopArchives
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "sampler" ] ; then
+  CLASS=org.apache.hadoop.tools.InputSampler
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else

@@ -199,6 +199,9 @@ Trunk (unreleased changes)
     allow Map-Reduce applications to work with databases. (Fredrik Hedberg and
     Enis Soztutar via acmurthy)
 
+    HADOOP-3019. A new library to support total order partitions.
+    (cdouglas via omalley)
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).
