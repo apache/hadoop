@@ -660,6 +660,9 @@ Trunk (unreleased changes)
     HistoryViewer for JobHistory fails. (Amareshwari Sri Ramadasu via
     acmurthy) 
 
+    HADOOP-4213. Fixes NPE in TestLimitTasksPerJobTaskScheduler.
+    (Sreekanth Ramakrishnan via ddas)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

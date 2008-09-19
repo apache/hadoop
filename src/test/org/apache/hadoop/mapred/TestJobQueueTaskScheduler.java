@@ -96,11 +96,14 @@ public class TestJobQueueTaskScheduler extends TestCase {
     int maxReduceTasksPerTracker = 2;
     List<JobInProgressListener> listeners =
       new ArrayList<JobInProgressListener>();
+    QueueManager queueManager;
     
     private Map<String, TaskTrackerStatus> trackers =
       new HashMap<String, TaskTrackerStatus>();
 
     public FakeTaskTrackerManager() {
+      JobConf conf = new JobConf();
+      queueManager = new QueueManager(conf);
       trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
           new ArrayList<TaskStatus>(), 0,
           maxMapTasksPerTracker, maxReduceTasksPerTracker));
@@ -141,7 +144,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     
     @Override
     public QueueManager getQueueManager() {
-      return null;
+      return queueManager;
     }
     
     @Override
