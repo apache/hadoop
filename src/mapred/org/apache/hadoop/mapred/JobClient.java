@@ -62,7 +62,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -268,7 +267,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public synchronized boolean isComplete() throws IOException {
       updateStatus();
       return (status.getRunState() == JobStatus.SUCCEEDED ||
-              status.getRunState() == JobStatus.FAILED);
+              status.getRunState() == JobStatus.FAILED ||
+              status.getRunState() == JobStatus.KILLED);
     }
 
     /**
@@ -291,6 +291,14 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
     }
 
+    /**
+     * Tells the service to get the state of the current job.
+     */
+    public synchronized int getJobState() throws IOException {
+      updateStatus();
+      return status.getRunState();
+    }
+    
     /**
      * Tells the service to terminate the current job.
      */

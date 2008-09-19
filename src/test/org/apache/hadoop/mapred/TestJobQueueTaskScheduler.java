@@ -228,6 +228,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     submitJobs(1, JobStatus.PREP);
     submitJobs(1, JobStatus.SUCCEEDED);
     submitJobs(1, JobStatus.FAILED);
+    submitJobs(1, JobStatus.KILLED);
     assertNull(scheduler.assignTasks(tracker("tt1")));
   }
   

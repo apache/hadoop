@@ -109,7 +109,7 @@ public interface RunningJob {
    * @throws IOException
    */
   public boolean isSuccessful() throws IOException;
-
+  
   /**
    * Blocks until the job is complete.
    * 
@@ -117,6 +117,14 @@ public interface RunningJob {
    */
   public void waitForCompletion() throws IOException;
 
+  /**
+   * Returns the current state of the Job.
+   * {@link JobStatus}
+   * 
+   * @throws IOException
+   */
+  public int getJobState() throws IOException;
+  
   /**
    * Kill the running job.  Blocks until all job tasks have been
    * killed as well.  If the job is no longer running, it simply returns.

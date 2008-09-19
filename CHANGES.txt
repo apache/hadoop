@@ -205,6 +205,9 @@ Trunk (unreleased changes)
     HADOOP-3019. A new library to support total order partitions.
     (cdouglas via omalley)
 
+    HADOOP-3924. Added a 'KILLED' job status. (Subramaniam Krishnan via
+    acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).

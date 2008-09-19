@@ -58,7 +58,7 @@ class EagerTaskInitializationListener extends JobInProgressListener {
           LOG.error("Job initialization failed:\n" +
                     StringUtils.stringifyException(t));
           if (job != null) {
-            job.kill();
+            job.fail();
           }
         }
       }

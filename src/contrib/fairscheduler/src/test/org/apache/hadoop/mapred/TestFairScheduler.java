@@ -31,6 +31,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 
 public class TestFairScheduler extends TestCase {
@@ -334,6 +335,7 @@ public class TestFairScheduler extends TestCase {
     submitJobs(1, JobStatus.PREP, 10, 10);
     submitJobs(1, JobStatus.SUCCEEDED, 10, 10);
     submitJobs(1, JobStatus.FAILED, 10, 10);
+    submitJobs(1, JobStatus.KILLED, 10, 10);
     assertNull(scheduler.assignTasks(tracker("tt1")));
     advanceTime(100); // Check that we still don't assign jobs after an update
     assertNull(scheduler.assignTasks(tracker("tt1")));
