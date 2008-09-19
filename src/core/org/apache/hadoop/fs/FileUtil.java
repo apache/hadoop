@@ -201,9 +201,17 @@ public class FileUtil {
              deleteSource, overwrite, conf);
       }
     } else if (srcFS.isFile(src)) {
-      InputStream in = srcFS.open(src);
-      OutputStream out = dstFS.create(dst, overwrite);
-      IOUtils.copyBytes(in, out, conf, true);
+      InputStream in=null;
+      OutputStream out = null;
+      try {
+        in = srcFS.open(src);
+        out = dstFS.create(dst, overwrite);
+        IOUtils.copyBytes(in, out, conf, true);
+      } catch (IOException e) {
+        IOUtils.closeStream(out);
+        IOUtils.closeStream(in);
+        throw e;
+      }
     } else {
       throw new IOException(src.toString() + ": No such file or directory");
     }
@@ -271,8 +279,17 @@ public class FileUtil {
              deleteSource, conf);
       }
     } else if (src.isFile()) {
-      InputStream in = new FileInputStream(src);
-      IOUtils.copyBytes(in, dstFS.create(dst), conf);
+      InputStream in = null;
+      OutputStream out =null;
+      try {
+        in = new FileInputStream(src);
+        out = dstFS.create(dst);
+        IOUtils.copyBytes(in, out, conf);
+      } catch (IOException e) {
+        IOUtils.closeStream( out );
+        IOUtils.closeStream( in );
+        throw e;
+      }
     } else {
       throw new IOException(src.toString() + 
                             ": No such file or directory");
