@@ -45,7 +45,6 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             cleanupProgress to JobStatus as part of HADOOP-3150
    * Version 13: Added getJobQueueInfos and getJobQueueInfo(queue name)
    *             and getAllJobs(queue) as a part of HADOOP-3930
-   * Version 14: Added KILLED status to JobStatus as part of HADOOP-3924
    */
   public static final long versionID = 13L;
 

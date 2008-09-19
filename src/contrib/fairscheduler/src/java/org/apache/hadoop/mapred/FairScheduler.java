@@ -34,7 +34,6 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -329,8 +328,7 @@ public class FairScheduler extends TaskScheduler {
     List<JobInProgress> toRemove = new ArrayList<JobInProgress>();
     for (JobInProgress job: infos.keySet()) { 
       int runState = job.getStatus().getRunState();
-      if (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED
-          || runState == JobStatus.KILLED) {
+      if (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED) {
         toRemove.add(job);
       }
     }

@@ -920,37 +920,6 @@ public class JobHistory {
       }
     }
     /**
-     * Logs job killed event. Closes the job history log file.
-     * 
-     * @param jobid
-     *          job id
-     * @param timestamp
-     *          time when job killed was issued in ms.
-     * @param finishedMaps
-     *          no finished map tasks.
-     * @param finishedReduces
-     *          no of finished reduce tasks.
-     */
-    public static void logKilled(JobID jobid, long timestamp, int finishedMaps,
-        int finishedReduces) {
-      if (!disableHistory) {
-        String logFileKey = JOBTRACKER_UNIQUE_STRING + jobid;
-        ArrayList<PrintWriter> writer = openJobs.get(logFileKey);
-
-        if (null != writer) {
-          JobHistory.log(writer, RecordTypes.Job, new Keys[] { Keys.JOBID,
-              Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS,
-              Keys.FINISHED_REDUCES }, new String[] { jobid.toString(),
-              String.valueOf(timestamp), Values.KILLED.name(),
-              String.valueOf(finishedMaps), String.valueOf(finishedReduces) });
-          for (PrintWriter out : writer) {
-            out.close();
-          }
-          openJobs.remove(logFileKey);
-        }
-      }
-    }
-    /**
      * Log job's priority. 
      * @param jobid job id
      * @param priority Jobs priority 
@@ -967,6 +936,7 @@ public class JobHistory {
         }
       }
     }
+
     /**
      * Log job's submit-time/launch-time 
      * @param jobid job id
@@ -990,7 +960,6 @@ public class JobHistory {
       }
     }
   }
-  
   /**
    * Helper class for logging or reading back events related to Task's start, finish or failure. 
    * All events logged by this class are logged in a separate file per job in 

@@ -29,8 +29,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1541,8 +1541,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
               int rjobRunState = 
                 rjob.getStatus().getRunState();
               if (rjobRunState == JobStatus.SUCCEEDED || 
-                  rjobRunState == JobStatus.FAILED ||
-                  rjobRunState == JobStatus.KILLED) {
+                  rjobRunState == JobStatus.FAILED) {
                 // Ok, this call to removeTaskEntries
                 // is dangerous is some very very obscure
                 // cases; e.g. when rjob completed, hit
@@ -1629,8 +1628,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     for (Iterator it = jobs.values().iterator(); it.hasNext();) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
-      if ((status.getRunState() == JobStatus.FAILED)
-          || (status.getRunState() == JobStatus.KILLED)) {
+      if (status.getRunState() == JobStatus.FAILED) {
         v.add(jip);
       }
     }
