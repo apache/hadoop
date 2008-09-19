@@ -46,6 +46,7 @@ public class TaskFactory {
     taskvec.add(new taskTuple<moveWork>(moveWork.class, MoveTask.class));
     taskvec.add(new taskTuple<copyWork>(copyWork.class, CopyTask.class));
     taskvec.add(new taskTuple<DDLWork>(DDLWork.class, DDLTask.class));
+    taskvec.add(new taskTuple<FunctionWork>(FunctionWork.class, FunctionTask.class));
     taskvec.add(new taskTuple<explainWork>(explainWork.class, ExplainTask.class));
     // we are taking this out to allow us to instantiate either MapRedTask or
     // ExecDriver dynamically at run time based on configuration

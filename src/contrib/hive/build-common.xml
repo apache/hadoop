@@ -169,6 +169,8 @@
       <classpath refid="test.classpath"/>
     </javac>
   </target>
+	
+  <target name="test-jar" depends="compile-test"/>
 
   <target name="test-conditions">
     <condition property="qfile" value="">
@@ -200,7 +202,8 @@
   <target name="gen-test"/>
 
   <!-- target to run the tests -->
-  <target name="test" depends="test-conditions,gen-test,compile-test,test-init">
+  <target name="test"
+  	depends="test-conditions,gen-test,compile-test,test-jar,test-init">
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no"
@@ -212,6 +215,7 @@
       <sysproperty key="test.output.overwrite" value="${overwrite}"/>
       <sysproperty key="log4j.configuration" value="file://${test.data.dir}/conf/hive-log4j.properties"/>
       <sysproperty key="derby.stream.error.file" value="${test.build.dir}/derby.log"/>
+      <sysproperty key="hive.aux.jars.path" value="file://${test.build.dir}/test-udfs.jar"/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">

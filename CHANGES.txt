@@ -185,6 +185,9 @@ Trunk (unreleased changes)
       add mapred.job.reuse.jvm.num.tasks
     (Devaraj Das via acmurthy) 
 
+    HADOOP-4070. Provide a mechanism in Hive for registering UDFs from the
+    query language. (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).

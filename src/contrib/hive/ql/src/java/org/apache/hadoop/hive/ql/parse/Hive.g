@@ -97,6 +97,7 @@ TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_TABLESAMPLE;
 TOK_TMP_FILE;
+TOK_CREATEFUNCTION;
 TOK_EXPLAIN;
 }
 
@@ -141,6 +142,7 @@ ddlStatement
     | alterStatement
     | descStatement
     | showStatement
+    | createFunctionStatement
     ;
 
 createStatement
@@ -174,6 +176,11 @@ descStatement
 
 showStatement
     : KW_SHOW KW_TABLES showStmtIdentifier?  -> ^(TOK_SHOWTABLES showStmtIdentifier?)
+    ;
+    
+createFunctionStatement
+    : KW_CREATE KW_TEMPORARY KW_FUNCTION Identifier KW_AS StringLiteral
+    -> ^(TOK_CREATEFUNCTION Identifier StringLiteral)
     ;
 
 showStmtIdentifier
@@ -776,6 +783,8 @@ KW_ADD: 'ADD';
 KW_COLUMNS: 'COLUMNS';
 KW_RLIKE: 'RLIKE';
 KW_REGEXP: 'REGEXP';
+KW_TEMPORARY: 'TEMPORARY';
+KW_FUNCTION: 'FUNCTION';
 KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
 

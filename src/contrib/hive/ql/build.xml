@@ -98,6 +98,13 @@
       <classpath refid="classpath"/>
     </javac>
   </target>
+	
+  <target name="test-jar" depends="compile-test">
+    <delete file="${test.build.dir}/test-udfs.jar"/> 
+    <jar jarfile="${test.build.dir}/test-udfs.jar">
+    	<fileset dir="${test.build.classes}" includes="**/udf/*.class"/>
+    </jar>
+  </target>
  
   <!-- Override jar target to specify main class and compiler stuff -->
 

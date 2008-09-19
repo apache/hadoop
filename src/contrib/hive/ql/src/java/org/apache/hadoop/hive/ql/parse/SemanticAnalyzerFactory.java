@@ -39,6 +39,8 @@ public class SemanticAnalyzerFactory {
       case HiveParser.TOK_ALTERTABLE_RENAME:
       case HiveParser.TOK_SHOWTABLES: 
         return new DDLSemanticAnalyzer(conf);
+      case HiveParser.TOK_CREATEFUNCTION: 
+        return new FunctionSemanticAnalyzer(conf);
       default: return new SemanticAnalyzer(conf);
       }
     }
