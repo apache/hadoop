@@ -403,6 +403,9 @@ Trunk (unreleased changes)
     HADOOP-3514. Inline the CRCs in intermediate files as opposed to reading
     it from a different .crc file. (Jothi Padmanabhan via ddas)
 
+    HADOOP-3638. Caches the iFile index files in memory to reduce seeks
+    (Jothi Padmanabhan via ddas)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

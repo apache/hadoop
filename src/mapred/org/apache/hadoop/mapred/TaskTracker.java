@@ -207,6 +207,8 @@ public class TaskTracker
    * Number of maptask completion events locations to poll for at one time
    */  
   private int probe_sample_size = 500;
+
+  private IndexCache indexCache;
     
   /*
    * A list of commitTaskActions for whom commit response has been received 
@@ -475,6 +477,7 @@ public class TaskTracker
                                     (maxCurrentMapTasks + 
                                         maxCurrentReduceTasks);
     }
+    this.indexCache = new IndexCache(this.fConf);
     // start the taskMemoryManager thread only if enabled
     setTaskMemoryManagerEnabledFlag();
     if (isTaskMemoryManagerEnabled()) {
@@ -1347,6 +1350,10 @@ public class TaskTracker
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
           tip.jobHasFinished(false);
+          Task t = tip.getTask();
+          if (t.isMapTask()) {
+            indexCache.removeMap(tip.getTask().getTaskID().toString());
+          }
         }
         // Delete the job directory for this  
         // task if the job is done/failed
@@ -1381,6 +1388,9 @@ public class TaskTracker
       // removing the job if it's the last task
       removeTaskFromJob(tip.getTask().getJobID(), tip);
       tip.jobHasFinished(wasFailure);
+      if (tip.getTask().isMapTask()) {
+        indexCache.removeMap(tip.getTask().getTaskID().toString());
+      }
     }
   }
 
@@ -2748,7 +2758,6 @@ public class TaskTracker
       // true iff IOException was caused by attempt to access input
       boolean isInputException = true;
       OutputStream outStream = null;
-      FSDataInputStream indexIn = null;
       FSDataInputStream mapOutputIn = null;
  
       IFileInputStream checksumInputStream = null;
@@ -2756,6 +2765,9 @@ public class TaskTracker
       long totalRead = 0;
       ShuffleServerMetrics shuffleMetrics = (ShuffleServerMetrics)
                                       context.getAttribute("shuffleServerMetrics");
+      TaskTracker tracker = 
+        (TaskTracker) context.getAttribute("task.tracker");
+
       try {
         shuffleMetrics.serverHandlerBusy();
         outStream = response.getOutputStream();
@@ -2781,20 +2793,13 @@ public class TaskTracker
          * Read the index file to get the information about where
          * the map-output for the given reducer is available. 
          */
-        //open index file
-        indexIn = fileSys.open(indexFileName);
-
-        //seek to the correct offset for the given reduce
-        indexIn.seek(reduce * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH);
+       IndexRecord info = 
+          tracker.indexCache.getIndexInformation(mapId, reduce,indexFileName);
           
-        //read the offset and length of the partition data
-        final long startOffset = indexIn.readLong();
-        final long rawPartLength = indexIn.readLong();
-        final long partLength = indexIn.readLong();
+        final long startOffset = info.startOffset;
+        final long rawPartLength = info.rawLength;
+        final long partLength = info.partLength;
 
-        indexIn.close();
-        indexIn = null;
-          
         //set the custom "Raw-Map-Output-Length" http header to 
         //the raw (decompressed) length
         response.setHeader(RAW_MAP_OUTPUT_LENGTH, Long.toString(rawPartLength));
@@ -2859,8 +2864,6 @@ public class TaskTracker
                  rawPartLength + " from " + startOffset + " with (" + 
                  firstKeyLength + ", " + firstValueLength + ")");
       } catch (IOException ie) {
-        TaskTracker tracker = 
-          (TaskTracker) context.getAttribute("task.tracker");
         Log log = (Log) context.getAttribute("log");
         String errorMsg = ("getMapOutput(" + mapId + "," + reduceId + 
                            ") failed :\n"+
@@ -2873,10 +2876,6 @@ public class TaskTracker
         shuffleMetrics.failedOutput();
         throw ie;
       } finally {
-        if (indexIn != null) {
-          indexIn.close();
-        }
-
         if (checksumInputStream != null) {
           checksumInputStream.close();
         }

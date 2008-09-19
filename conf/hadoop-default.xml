@@ -1551,4 +1551,12 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>mapred.tasktracker.indexcache.mb</name>
+  <value>10</value>
+  <description> The maximum memory that a task tracker allows for the 
+    index cache that is used when serving map outputs to reducers.
+  </description>
+</property>
+
 </configuration>
