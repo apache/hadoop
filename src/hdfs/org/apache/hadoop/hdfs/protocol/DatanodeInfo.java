@@ -91,8 +91,20 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /** The raw capacity. */
   public long getCapacity() { return capacity; }
   
+  /** The present capacity available for DFS. */
+  public long getPresentCapacity() { return dfsUsed + remaining; }
+  
   /** The used space by the data node. */
   public long getDfsUsed() { return dfsUsed; }
+
+  /** The used space by the data node as percentage of present capacity */
+  public float getDfsUsedPercent() { 
+    if (getPresentCapacity() <= 0) {
+      return 100;
+    }
+
+    return ((float)dfsUsed * 100.0f)/(float)getPresentCapacity(); 
+  }
 
   /** The raw free space. */
   public long getRemaining() { return remaining; }

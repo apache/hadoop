@@ -3241,11 +3241,32 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
+   * Total raw bytes including non-dfs used space.
+   */
+  public long getPresentCapacity() {
+    synchronized (heartbeats) {
+      return this.capacityUsed + this.capacityRemaining;
+    }
+  }
+
+  /**
    * Total used space by data nodes
    */
   public long getCapacityUsed() {
     synchronized(heartbeats){
       return this.capacityUsed;
+    }
+  }
+  /**
+   * Total used space by data nodes
+   */
+  public float getCapacityUsedPercent() {
+    synchronized(heartbeats){
+      if (getPresentCapacity() <= 0) {
+        return 100;
+      }
+
+      return ((float)getCapacityUsed() * 100.0f)/(float)getPresentCapacity();
     }
   }
   /**

@@ -85,13 +85,9 @@
         return;
     
     long c = d.getCapacity();
+    long pc = d.getPresentCapacity();
     long u = d.getDfsUsed();
-    
-    String percentUsed;
-    if (c > 0) 
-      percentUsed = FsShell.limitDecimalTo2(((1.0 * u)/c)*100);
-    else
-      percentUsed = "100";
+    String percentUsed = FsShell.limitDecimalTo2(d.getDfsUsedPercent());    
     
     String adminState = (d.isDecommissioned() ? "Decommissioned" :
                          (d.isDecommissionInProgress() ? "Decommission In Progress":
@@ -105,6 +101,8 @@
               adminState +
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(c*1.0/diskBytes) +
+	      "<td align=\"right\" class=\"pcapacity\">" +
+              FsShell.limitDecimalTo2(pc*1.0/diskBytes) +      
 	      "<td class=\"pcused\">" + percentUsed +"<td class=\"pcused\">" +
 	      ServletUtil.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
 	      "<td class=\"size\">" +
@@ -149,16 +147,23 @@
         
     counterReset();
     
+    long total = fsn.getCapacityTotal();
+    long present = fsn.getPresentCapacity();
+    long remaining = fsn.getCapacityRemaining();
+    long used = fsn.getCapacityUsed();
+    float percentUsed = fsn.getCapacityUsedPercent();
+
     out.print( "<div id=\"dfstable\"> <table>\n" +
-	       rowTxt() + colTxt() + "Capacity" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.getCapacityTotal() ) +
+	       rowTxt() + colTxt() + "Configured Capacity" + colTxt() + ":" + colTxt() +
+	       FsShell.byteDesc( total ) +
+	       rowTxt() + colTxt() + "Present Capacity" + colTxt() + ":" + colTxt() +
+	       FsShell.byteDesc( present ) +
 	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.getCapacityRemaining() ) +
+	       FsShell.byteDesc( remaining ) +
 	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.getCapacityUsed() ) +
+	       FsShell.byteDesc( used ) +
 	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimalTo2((fsn.getCapacityUsed())*100.0/
-				       (fsn.getCapacityTotal() + 1e-10)) + " %" +
+	       FsShell.limitDecimalTo2(percentUsed) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
                colTxt() + ":" + colTxt() + live.size() +
@@ -168,7 +173,7 @@
                "</table></div><br><hr>\n" );
     
     if (live.isEmpty() && dead.isEmpty()) {
-	out.print("There are no datanodes in the cluster");
+        out.print("There are no datanodes in the cluster");
     }
     else {
         
@@ -190,10 +195,12 @@
                        ("name") + "> Node <th " +
                        NodeHeaderStr("lastcontact") + "> Last Contact <th " +
                        NodeHeaderStr("adminstate") + "> Admin State <th " +
-                       NodeHeaderStr("size") + "> Size (" + diskByteStr +
-                       ") <th " + NodeHeaderStr("pcused") +
-                       "> Used (%) <th " + NodeHeaderStr("pcused") +
-                       "> Used (%) <th " +
+                       NodeHeaderStr("size") + "> Configured capacity (" + 
+                       diskByteStr + ") <th " + 
+                       NodeHeaderStr("pcapacity") + "> Present capacity (" + 
+                       diskByteStr + ") <th " + 
+                       NodeHeaderStr("pcused") + "> Used (%) <th " + 
+                       NodeHeaderStr("pcused") + "> Used (%) <th " +
                        NodeHeaderStr("remaining") + "> Remaining (" + 
                        diskByteStr + ") <th " +
                        NodeHeaderStr("blocks") + "> Blocks\n" );
@@ -202,9 +209,9 @@
 		generateNodeData( out, live.get(i), port_suffix, true );
 	    }
 	}
-        out.print("</table>\n");
-
-        counterReset();
+    out.print("</table>\n");
+    
+    counterReset();
 	
 	out.print("<br> <a name=\"DeadNodes\" id=\"title\"> " +
                   " Dead Datanodes : " +dead.size() + "</a><br><br>\n");
@@ -239,19 +246,16 @@
 <tr> <td id="col1"> Upgrades: <td> <%= jspHelper.getUpgradeStatusText()%>
 </table></div><br>				      
 
-<b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
+<b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
+<b><a href="/logs/">Namenode Logs</a></b>
+
 <hr>
 <h3>Cluster Summary</h3>
 <b> <%= jspHelper.getSafeModeText()%> </b>
 <b> <%= jspHelper.getInodeLimitText()%> </b>
-
 <% 
     generateDFSHealthReport(out, request); 
 %>
-<hr>
-
-<h3>Local logs</h3>
-<a href="/logs/">Log</a> directory
 
 <%
 out.println(ServletUtil.htmlFooter());

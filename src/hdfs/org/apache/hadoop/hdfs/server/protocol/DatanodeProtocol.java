@@ -35,9 +35,15 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 17: Remove the request for block report.
+   * 18: In sendHeartbeat, the capacity parameter reported was sum of 
+   *     the filesystem disk space of all the data directories. This is 
+   *     changed to exclude the reserved capacity defined by 
+   *     dfs.datanode.du.reserved. 
+   *
+   *     The new capacity reported is sum of the filesystem disk space of 
+   *     all the data directories minus the reserved capacity.
    */
-  public static final long versionID = 17L;
+  public static final long versionID = 18L;
   
   // error code
   final static int NOTIFY = 0;

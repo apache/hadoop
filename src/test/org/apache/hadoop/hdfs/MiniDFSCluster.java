@@ -824,4 +824,12 @@ public class MiniDFSCluster {
     }
     return list;
   }
+
+  /**
+   * Access to the data directory used for Datanodes
+   * @throws IOException 
+   */
+  public String getDataDirectory() {
+    return data_dir.getAbsolutePath();
+  }
 }

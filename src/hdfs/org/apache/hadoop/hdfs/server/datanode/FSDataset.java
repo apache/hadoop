@@ -344,11 +344,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     
     long getCapacity() throws IOException {
-      return usage.getCapacity();
+      if (reserved > usage.getCapacity()) {
+        return 0;
+      }
+
+      return usage.getCapacity()-reserved;
     }
       
     long getAvailable() throws IOException {
-      long remaining = getCapacity()-getDfsUsed()-reserved;
+      long remaining = getCapacity()-getDfsUsed();
       long available = usage.getAvailable();
       if (remaining>available) {
         remaining = available;
