@@ -297,6 +297,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public synchronized void killJob() throws IOException {
       jobSubmitClient.killJob(getID());
     }
+   
+    
+    /** Set the priority of the job.
+    * @param priority new priority of the job. 
+    */
+    public synchronized void setJobPriority(String priority) 
+                                                throws IOException {
+      jobSubmitClient.setJobPriority(getID(), priority);
+    }
     
     /**
      * Kill indicated task attempt.
@@ -1297,11 +1306,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return this.taskOutputFilter; 
   }
 
+  private String getJobPriorityNames() {
+    StringBuffer sb = new StringBuffer();
+    for (JobPriority p : JobPriority.values()) {
+      sb.append(p.name()).append(" ");
+    }
+    return sb.substring(0, sb.length()-1);
+  }
+  
   /**
    * Display usage of the command-line tool and terminate execution
    */
   private void displayUsage(String cmd) {
     String prefix = "Usage: JobClient ";
+    String jobPriorityValues = getJobPriorityNames();
     if("-submit".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-file>]");
     } else if ("-status".equals(cmd) || "-kill".equals(cmd)) {
@@ -1316,12 +1334,19 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.err.println(prefix + "[" + cmd + " [all]]");
     } else if ("-kill-task".equals(cmd) || "-fail-task".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <task-id>]");
+    } else if ("-set-priority".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id> <priority>]. " +
+          "Valid values for priorities are: " 
+          + jobPriorityValues); 
     } else {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-submit <job-file>]\n");
       System.err.printf("\t[-status <job-id>]\n");
       System.err.printf("\t[-counter <job-id> <group-name> <counter-name>]\n");
       System.err.printf("\t[-kill <job-id>]\n");
+      System.err.printf("\t[-set-priority <job-id> <priority>]. " +
+                                      "Valid values for priorities are: " +
+                                      jobPriorityValues + "\n");
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]\n");
       System.err.printf("\t[-history <jobOutputDir>]\n");
       System.err.printf("\t[-list [all]]\n");
@@ -1345,6 +1370,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     String outputDir = null;
     String counterGroupName = null;
     String counterName = null;
+    String newPriority = null;
     int fromEvent = 0;
     int nEvents = 0;
     boolean getStatus = false;
@@ -1357,6 +1383,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     boolean listAllJobs = false;
     boolean killTask = false;
     boolean failTask = false;
+    boolean setJobPriority = false;
 
     if ("-submit".equals(cmd)) {
       if (argv.length != 2) {
@@ -1387,6 +1414,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
       jobid = argv[1];
       killJob = true;
+    } else if ("-set-priority".equals(cmd)) {
+      if (argv.length != 3) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      jobid = argv[1];
+      newPriority = argv[2];
+      try {
+        JobPriority jp = JobPriority.valueOf(newPriority); 
+      } catch (IllegalArgumentException iae) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      setJobPriority = true; 
     } else if ("-events".equals(cmd)) {
       if (argv.length != 4) {
         displayUsage(cmd);
@@ -1482,6 +1523,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println("Killed job " + jobid);
           exitCode = 0;
         }
+      } else if (setJobPriority) {
+        RunningJob job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          job.setJobPriority(newPriority);
+          System.out.println("Changed job priority.");
+          exitCode = 0;
+        } 
       } else if (viewHistory) {
         viewHistory(outputDir, viewAllHistory);
         exitCode = 0;
@@ -1553,7 +1603,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       jobs = new JobStatus[0];
 
     System.out.printf("%d jobs currently running\n", jobs.length);
-    System.out.printf("JobId\tState\tStartTime\tUserName\n");
     displayJobList(jobs);
   }
     
@@ -1572,10 +1621,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   void displayJobList(JobStatus[] jobs) {
-    System.out.printf("JobId\tState\tStartTime\tUserName\tSchedulingInfo\n");
+    System.out.printf("JobId\tState\tStartTime\tUserName\tPriority\tSchedulingInfo\n");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\t%s\n", job.getJobID(), job.getRunState(),
-          job.getStartTime(), job.getUsername(),job.getSchedulingInfo());
+      System.out.printf("%s\t%d\t%d\t%s\t%s\t%s\n", job.getJobID(), job.getRunState(),
+          job.getStartTime(), job.getUsername(), 
+          job.getJobPriority().name(), job.getSchedulingInfo());
     }
   }
 

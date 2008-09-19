@@ -45,8 +45,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             cleanupProgress to JobStatus as part of HADOOP-3150
    * Version 13: Added getJobQueueInfos and getJobQueueInfo(queue name)
    *             and getAllJobs(queue) as a part of HADOOP-3930
+   * Version 14: Added setPriority for HADOOP-4124            
    */
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
 
   /**
    * Allocate a name for the job.
@@ -73,6 +74,13 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    */
   public void killJob(JobID jobid) throws IOException;
 
+  /**
+   * Set the priority of the specified job
+   * @param jobid ID of the job
+   * @param priority Priority to be set for the job
+   */
+  public void setJobPriority(JobID jobid, String priority) 
+                                                      throws IOException;
   /**
    * Kill indicated task attempt.
    * @param taskId the id of the task to kill.

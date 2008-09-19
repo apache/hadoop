@@ -2231,6 +2231,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  /**
+   * Set the priority of a job
+   * @param jobid id of the job
+   * @param priority new priority of the job
+   */
+  public synchronized void setJobPriority(JobID jobid, 
+                                              String priority)
+                                                throws IOException {
+    JobInProgress job = jobs.get(jobid);
+    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    JobPriority newPriority = JobPriority.valueOf(priority);
+    setJobPriority(jobid, newPriority);
+  }
+                           
   public synchronized JobProfile getJobProfile(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     if (job != null) {

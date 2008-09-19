@@ -172,6 +172,13 @@ public class TestQueueManager extends TestCase {
     verifyJobKillAsOtherUser(conf, true, "dummy-user,dummy-user-group");
   }
   
+  public void testUserDisabledForJobPriorityChange() throws IOException {
+    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs",
+                              "junk-user");
+    verifyJobPriorityChangeAsOtherUser(conf, false, 
+                              "junk-user,junk-user-group");
+  }
+  
   private JobConf setupConf(String aclName, String aclValue) {
     JobConf conf = new JobConf();
     conf.setBoolean("mapred.acls.enabled", true);
@@ -256,6 +263,7 @@ public class TestQueueManager extends TestCase {
     }
   }
 
+  
   private void verifyJobKillAsOtherUser(JobConf conf, boolean shouldSucceed,
                                         String otherUserInfo) 
                         throws IOException {
@@ -276,6 +284,42 @@ public class TestQueueManager extends TestCase {
         if (shouldSucceed) {
           throw ioe;
         }
+        //verify it fails
+        LOG.info("exception while submitting job: " + ioe.getMessage());
+        assertTrue(ioe.getMessage().
+                        contains("cannot perform operation " +
+                                    "ADMINISTER_JOBS on queue default"));
+      }
+      //wait for job to complete on its own
+      while (!rjob.isComplete()) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ie) {
+          break;
+        }
+      }
+    } finally {
+      tearDownCluster();
+    }
+  }
+  
+  private void verifyJobPriorityChangeAsOtherUser(JobConf conf, 
+                          boolean shouldSucceed, String otherUserInfo)
+                            throws IOException {
+    setUpCluster(conf);
+    try {
+      // submit job as another user.
+      String userInfo = otherUserInfo;
+      RunningJob rjob = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
+      assertFalse(rjob.isComplete());
+      
+      // try to change priority as self
+      try {
+        rjob.setJobPriority("VERY_LOW");
+        if (!shouldSucceed) {
+          fail("changing priority should fail.");
+        }
+      } catch (IOException ioe) {
         //verify it fails
         LOG.info("exception while submitting job: " + ioe.getMessage());
         assertTrue(ioe.getMessage().

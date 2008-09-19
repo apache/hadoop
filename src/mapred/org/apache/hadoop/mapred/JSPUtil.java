@@ -55,7 +55,8 @@ class JSPUtil {
       }
     }
 
-    if (request.getParameter("changeJobPriority") != null) {
+    if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 
+          request.getParameter("changeJobPriority") != null) {
       String[] jobs = request.getParameterValues("jobCheckBox");
 
       if (jobs != null) {
@@ -82,7 +83,9 @@ class JSPUtil {
   public static String generateJobTable(String label, Vector<JobInProgress> jobs
       , int refresh, int rowId) throws IOException {
 
-    boolean isModifiable = label.equals("Running");
+    boolean isModifiable = label.equals("Running") 
+                                && conf.getBoolean(
+                                      PRIVATE_ACTIONS_KEY, false);
     StringBuffer sb = new StringBuffer();
     
     sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
@@ -94,10 +97,7 @@ class JSPUtil {
         sb.append("<td><input type=\"Button\" onclick=\"selectAll()\" " +
         		"value=\"Select All\" id=\"checkEm\"></td>");
         sb.append("<td>");
-        if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
-         sb.append("<input type=\"submit\" name=\"killJobs\" " +
-         		"value=\"Kill Selected Jobs\">");
-        }
+        sb.append("<input type=\"submit\" name=\"killJobs\" value=\"Kill Selected Jobs\">");
         sb.append("</td");
         sb.append("<td><nobr>");
         sb.append("<select name=\"setJobPriority\">");

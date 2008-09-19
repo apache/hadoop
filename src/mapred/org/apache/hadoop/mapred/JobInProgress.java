@@ -203,6 +203,7 @@ class JobInProgress {
     fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
+    this.status.setJobPriority(this.priority);
     this.profile = new JobProfile(conf.getUser(), jobid, 
                                   jobFile.toString(), url, conf.getJobName(),
                                   conf.getQueueName());
@@ -416,7 +417,8 @@ class JobInProgress {
                        numReduceTasks, jobtracker, conf, this);
     cleanup[1].setCleanupTask();
 
-    this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, JobStatus.RUNNING);
+    this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, 0.0f, 
+                                          JobStatus.RUNNING, status.getJobPriority());
     tasksInited.set(true);
         
     JobHistory.JobInfo.logStarted(profile.getJobID(), this.launchTime, 
@@ -475,6 +477,9 @@ class JobInProgress {
       this.priority = JobPriority.NORMAL;
     } else {
       this.priority = priority;
+    }
+    synchronized (this) {
+      status.setJobPriority(priority);
     }
     // log and change to the job's priority
     JobHistory.JobInfo.logJobPriority(jobId, priority);
@@ -1746,7 +1751,8 @@ class JobInProgress {
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
       this.status = new JobStatus(status.getJobID(),
-                          1.0f, 1.0f, 1.0f, JobStatus.FAILED);
+                          1.0f, 1.0f, 1.0f, JobStatus.FAILED,
+                          status.getJobPriority());
       this.finishTime = System.currentTimeMillis();
       JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
               this.finishedMapTasks, this.finishedReduceTasks);

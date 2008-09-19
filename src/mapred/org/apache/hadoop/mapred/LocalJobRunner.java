@@ -310,6 +310,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
     jobs.get(id).stop();
   }
 
+  public void setJobPriority(JobID id, String jp) throws IOException {
+    throw new UnsupportedOperationException("Changing job priority " +
+                      "in LocalJobRunner is not supported.");
+  }
+  
   /** Throws {@link UnsupportedOperationException} */
   public boolean killTask(TaskAttemptID taskId, boolean shouldFail) throws IOException {
     throw new UnsupportedOperationException("Killing tasks in " +

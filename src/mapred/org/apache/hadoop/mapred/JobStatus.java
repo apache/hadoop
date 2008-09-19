@@ -25,6 +25,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
 
 /**************************************************
  * Describes the current status of a job.  This is
@@ -53,6 +54,7 @@ public class JobStatus implements Writable {
   private int runState;
   private long startTime;
   private String user;
+  private JobPriority priority;
   private String schedulingInfo="";
     
   /**
@@ -70,12 +72,8 @@ public class JobStatus implements Writable {
    */
   public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
                    float cleanupProgress, int runState) {
-    this.jobid = jobid;
-    this.mapProgress = mapProgress;
-    this.reduceProgress = reduceProgress;
-    this.cleanupProgress = cleanupProgress;
-    this.runState = runState;
-    this.user = "nobody";
+    this(jobid, mapProgress, reduceProgress, cleanupProgress, runState,
+                  JobPriority.NORMAL);
   }
 
   /**
@@ -90,6 +88,27 @@ public class JobStatus implements Writable {
     this(jobid, mapProgress, reduceProgress, 0.0f, runState);
   }
 
+  /**
+   * Create a job status object for a given jobid.
+   * @param jobid The jobid of the job
+   * @param mapProgress The progress made on the maps
+   * @param reduceProgress The progress made on the reduces
+   * @param runState The current state of the job
+   * @param jp Priority of the job.
+   */
+   public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
+                      float cleanupProgress, int runState, JobPriority jp) {
+     this.jobid = jobid;
+     this.mapProgress = mapProgress;
+     this.reduceProgress = reduceProgress;
+     this.cleanupProgress = cleanupProgress;
+     this.runState = runState;
+     this.user = "nobody";
+     if (jp == null) {
+       throw new IllegalArgumentException("Job Priority cannot be null.");
+     }
+     priority = jp;
+   }
   /**
    * @deprecated use getJobID instead
    */
@@ -190,6 +209,23 @@ public class JobStatus implements Writable {
     this.schedulingInfo = schedulingInfo;
   }
   
+  /**
+   * Return the priority of the job
+   * @return job priority
+   */
+   public synchronized JobPriority getJobPriority() { return priority; }
+  
+  /**
+   * Set the priority of the job, defaulting to NORMAL.
+   * @param jp new job priority
+   */
+   public synchronized void setJobPriority(JobPriority jp) {
+     if (jp == null) {
+       throw new IllegalArgumentException("Job priority cannot be null.");
+     }
+     priority = jp;
+   }
+  
   ///////////////////////////////////////
   // Writable
   ///////////////////////////////////////
@@ -201,6 +237,7 @@ public class JobStatus implements Writable {
     out.writeInt(runState);
     out.writeLong(startTime);
     Text.writeString(out, user);
+    WritableUtils.writeEnum(out, priority);
     Text.writeString(out, schedulingInfo);
   }
 
@@ -212,6 +249,7 @@ public class JobStatus implements Writable {
     this.runState = in.readInt();
     this.startTime = in.readLong();
     this.user = Text.readString(in);
+    this.priority = WritableUtils.readEnum(in, JobPriority.class);
     this.schedulingInfo = Text.readString(in);
   }
 }

@@ -382,6 +382,10 @@ Trunk (unreleased changes)
     HADOOP-3975. Change test-patch script to report working the dir
     modifications preventing the suite from being run. (Ramya R via cdouglas)
 
+    HADOOP-4124. Added a command-line switch to allow users to set job
+    priorities, also allow it to be manipulated via the web-ui. (Hemanth
+    Yamijala via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

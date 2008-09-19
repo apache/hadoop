@@ -159,7 +159,9 @@
     JobInProgress job = (JobInProgress) tracker.getJob(jobIdObj);
     
     String action = request.getParameter("action");
-    if("changeprio".equalsIgnoreCase(action) && request.getMethod().equalsIgnoreCase("POST")) {
+    if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 
+        "changeprio".equalsIgnoreCase(action) 
+        && request.getMethod().equalsIgnoreCase("POST")) {
       tracker.setJobPriority(jobIdObj, 
                              JobPriority.valueOf(request.getParameter("prio")));
     }
@@ -335,21 +337,23 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
 <%} }%>
 
 <hr>
-<table border="0"> <tr> <td>
-Change priority from <%=job.getPriority()%> to:
-<form action="jobdetails.jsp" method="post">
-<input type="hidden" name="action" value="changeprio"/>
-<input type="hidden" name="jobid" value="<%=jobId%>"/>
-</td><td> <select name="prio"> 
-<%
-  JobPriority jobPrio = job.getPriority();
-  for (JobPriority prio : JobPriority.values()) {
-    if(jobPrio != prio) {
-      %> <option value=<%=prio%>><%=prio%></option> <%
+<% if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) { %>
+  <table border="0"> <tr> <td>
+  Change priority from <%=job.getPriority()%> to:
+  <form action="jobdetails.jsp" method="post">
+  <input type="hidden" name="action" value="changeprio"/>
+  <input type="hidden" name="jobid" value="<%=jobId%>"/>
+  </td><td> <select name="prio"> 
+  <%
+    JobPriority jobPrio = job.getPriority();
+    for (JobPriority prio : JobPriority.values()) {
+      if(jobPrio != prio) {
+        %> <option value=<%=prio%>><%=prio%></option> <%
+      }
     }
-  }
-%>
-</select> </td><td><input type="submit" value="Submit"> </form></td></tr> </table>
+  %>
+  </select> </td><td><input type="submit" value="Submit"> </form></td></tr> </table>
+<% } %>
 
 <table border="0"> <tr>
     

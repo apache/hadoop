@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.Writer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -31,6 +38,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 public class TestJobClient extends ClusterMapReduceTestCase {
+  
+  private static final Log LOG = LogFactory.getLog(TestJobClient.class);
+  
   private String runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -41,7 +51,8 @@ public class TestJobClient extends ClusterMapReduceTestCase {
 
     JobConf conf = createJobConf();
     conf.setJobName("mr");
-
+    conf.setJobPriority(JobPriority.HIGH);
+    
     conf.setInputFormat(TextInputFormat.class);
 
     conf.setMapOutputKeyClass(LongWritable.class);
@@ -82,4 +93,38 @@ public class TestJobClient extends ClusterMapReduceTestCase {
     assertEquals("Counter", "3", out.toString().trim());
   }
 
+  public void testJobList() throws Exception {
+    String jobId = runJob();
+    verifyJobPriority(jobId, "HIGH");
+  }
+
+  private void verifyJobPriority(String jobId, String priority)
+                            throws Exception {
+    PipedInputStream pis = new PipedInputStream();
+    PipedOutputStream pos = new PipedOutputStream(pis);
+    int exitCode = runTool(createJobConf(), new JobClient(),
+        new String[] { "-list", "all" },
+        pos);
+    assertEquals("Exit code", 0, exitCode);
+    BufferedReader br = new BufferedReader(new InputStreamReader(pis));
+    String line = null;
+    while ((line=br.readLine()) != null) {
+      LOG.info("line = " + line);
+      if (!line.startsWith(jobId)) {
+        continue;
+      }
+      assertTrue(line.contains(priority));
+      break;
+    }
+    pis.close();
+  }
+  
+  public void testChangingJobPriority() throws Exception {
+    String jobId = runJob();
+    int exitCode = runTool(createJobConf(), new JobClient(),
+        new String[] { "-set-priority", jobId, "VERY_LOW" },
+        new ByteArrayOutputStream());
+    assertEquals("Exit code", 0, exitCode);
+    verifyJobPriority(jobId, "VERY_LOW");
+  }
 }

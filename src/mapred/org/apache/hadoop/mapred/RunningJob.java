@@ -124,7 +124,14 @@ public interface RunningJob {
    * @throws IOException
    */
   public void killJob() throws IOException;
-    
+  
+  /**
+   * Set the priority of a running job.
+   * @param priority the new priority for the job.
+   * @throws IOException
+   */
+  public void setJobPriority(String priority) throws IOException;
+  
   /**
    * Get events indicating completion (success/failure) of component tasks.
    *  
