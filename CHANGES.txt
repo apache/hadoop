@@ -396,6 +396,10 @@ Trunk (unreleased changes)
     HADOOP-2165. Augmented JobHistory to include the URIs to the tasks'
     userlogs. (Vinod Kumar Vavilapalli via acmurthy) 
 
+    HADOOP-4062. Remove the synchronization on the output stream when a
+    connection is closed and also remove an undesirable exception when
+    a client is stoped while there is no pending RPC request. (hairong)
+ 
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

@@ -19,4 +19,13 @@
        <Field name="_jspx_dependants" />
        <Bug pattern="UWF_UNWRITTEN_FIELD" />
      </Match>
+     <!-- 
+       Inconsistent synchronization for Client.Connection.out is
+       is intentional to make a connection to be closed instantly. 
+     --> 
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="out" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
 </FindBugsFilter>
