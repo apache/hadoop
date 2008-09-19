@@ -98,10 +98,12 @@ checkout () {
   echo ""
   echo ""
   ### When run by a developer, if the workspace contains modifications, do not continue
+  status=`$SVN stat`
   if [[ $HUDSON == "false" ]] ; then
-    if [[ `$SVN stat` != "" ]] ; then
-      echo "ERROR: can't run in a workspace that contains modifications"
-      cleanupAndExit 0
+    if [[ "$status" != "" ]] ; then
+      echo "ERROR: can't run in a workspace that contains the following modifications"
+      echo "$status"
+      cleanupAndExit 1
     fi
   else   
     cd $BASEDIR
