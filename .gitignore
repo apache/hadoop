@@ -17,6 +17,7 @@
 .classpath
 .project
 .settings
+.svn
 build/
 conf/masters
 conf/slaves
