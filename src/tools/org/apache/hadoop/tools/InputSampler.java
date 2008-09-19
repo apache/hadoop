@@ -235,7 +235,7 @@ public class InputSampler<K,V> implements Tool {
               // pushed out
               int ind = r.nextInt(numSamples);
               if (ind != numSamples) {
-                samples.set(r.nextInt(numSamples - 1), key);
+                samples.set(ind, key);
               }
               freq *= (numSamples - 1) / (double) numSamples;
             }
