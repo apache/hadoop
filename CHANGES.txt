@@ -399,6 +399,9 @@ Trunk (unreleased changes)
     HADOOP-4062. Remove the synchronization on the output stream when a
     connection is closed and also remove an undesirable exception when
     a client is stoped while there is no pending RPC request. (hairong)
+
+    HADOOP-4227. Remove the deprecated class org.apache.hadoop.fs.ShellCommand.
+    (szetszwo)
  
   OPTIMIZATIONS
 
