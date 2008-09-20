@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -306,9 +307,9 @@ public class Balancer implements Tool {
       DataInputStream in = null;
       try {
         sock.connect(DataNode.createSocketAddr(
-            proxySource.datanode.getName()), FSConstants.READ_TIMEOUT);
+            proxySource.datanode.getName()), HdfsConstants.READ_TIMEOUT);
         long bandwidth = conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024);
-        sock.setSoTimeout(2*FSConstants.READ_TIMEOUT+
+        sock.setSoTimeout(2*HdfsConstants.READ_TIMEOUT+
             (int)(block.getNumBytes()*1500/bandwidth));
         out = new DataOutputStream( new BufferedOutputStream(
             sock.getOutputStream(), FSConstants.BUFFER_SIZE));
@@ -357,8 +358,8 @@ public class Balancer implements Tool {
     
     /* Send a block copy request to the outputstream*/
     private void sendRequest(DataOutputStream out) throws IOException {
-      out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
-      out.writeByte(FSConstants.OP_COPY_BLOCK);
+      out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
+      out.writeByte(DataTransferProtocol.OP_COPY_BLOCK);
       out.writeLong(block.getBlock().getBlockId());
       out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
@@ -369,7 +370,7 @@ public class Balancer implements Tool {
     /* Receive a block copy response from the input stream */ 
     private void receiveResponse(DataInputStream in) throws IOException {
       short status = in.readShort();
-      if (status != FSConstants.OP_STATUS_SUCCESS) {
+      if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
         throw new IOException("Moving block "+block.getBlockId()+
             " from "+source.getName() + " to " +
             target.getName() + " through " +

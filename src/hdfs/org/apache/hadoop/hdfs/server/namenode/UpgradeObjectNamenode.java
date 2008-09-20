@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
@@ -42,8 +43,8 @@ public abstract class UpgradeObjectNamenode extends UpgradeObject {
   public abstract UpgradeCommand processUpgradeCommand(UpgradeCommand command
                                                ) throws IOException;
 
-  public FSConstants.NodeType getType() {
-    return FSConstants.NodeType.NAME_NODE;
+  public HdfsConstants.NodeType getType() {
+    return HdfsConstants.NodeType.NAME_NODE;
   }
 
   /**

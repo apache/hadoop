@@ -32,8 +32,8 @@ import java.util.Properties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
-import org.apache.hadoop.hdfs.protocol.FSConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -362,9 +362,9 @@ public abstract class Storage extends StorageInfo {
 
       this.lock(); // lock storage if it exists
 
-      if (startOpt == StartupOption.FORMAT)
+      if (startOpt == HdfsConstants.StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
-      if (startOpt != StartupOption.IMPORT) {
+      if (startOpt != HdfsConstants.StartupOption.IMPORT) {
         //make sure no conversion is required
         checkConversionNeeded(this);
       }

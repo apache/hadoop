@@ -83,7 +83,7 @@ public abstract class UpgradeManager {
     return false;
   }
 
-  public abstract FSConstants.NodeType getType();
+  public abstract HdfsConstants.NodeType getType();
   public abstract boolean startUpgrade() throws IOException;
   public abstract void completeUpgrade() throws IOException;
 }

@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.common;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -41,7 +40,7 @@ public interface Upgradeable extends Comparable<Upgradeable> {
    * Get the type of the software component, which this object is upgrading.
    * @return type
    */
-  FSConstants.NodeType getType();
+  HdfsConstants.NodeType getType();
 
   /**
    * Description of the upgrade object for displaying.

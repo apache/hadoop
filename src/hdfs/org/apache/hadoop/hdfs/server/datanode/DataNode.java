@@ -48,11 +48,14 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredDatanodeException;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -239,9 +242,9 @@ public class DataNode extends Configured
     InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
     
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
-                                      FSConstants.READ_TIMEOUT);
+                                      HdfsConstants.READ_TIMEOUT);
     this.socketWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
-                                          FSConstants.WRITE_TIMEOUT);
+                                          HdfsConstants.WRITE_TIMEOUT);
     /* Based on results on different platforms, we might need set the default 
      * to false on some of them. */
     this.transferToAllowed = conf.getBoolean("dfs.datanode.transferTo.allowed", 
@@ -1046,7 +1049,7 @@ public class DataNode extends Configured
         sock.setSoTimeout(targets.length * socketTimeout);
 
         long writeTimeout = socketWriteTimeout + 
-                            WRITE_TIMEOUT_EXTENSION * (targets.length-1);
+                            HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
         out = new DataOutputStream(new BufferedOutputStream(baseStream, 
                                                             SMALL_BUFFER_SIZE));
@@ -1058,8 +1061,8 @@ public class DataNode extends Configured
         //
         // Header info
         //
-        out.writeShort(DATA_TRANSFER_VERSION);
-        out.writeByte(OP_WRITE_BLOCK);
+        out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
+        out.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
         out.writeLong(b.getBlockId());
         out.writeLong(b.getGenerationStamp());
         out.writeInt(0);           // no pipelining

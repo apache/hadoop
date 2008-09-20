@@ -27,7 +27,7 @@ import static org.apache.hadoop.hdfs.protocol.FSConstants.LAYOUT_VERSION;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage;
-import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.UpgradeObjectDatanode;
 import org.apache.hadoop.hdfs.server.namenode.UpgradeObjectNamenode;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;

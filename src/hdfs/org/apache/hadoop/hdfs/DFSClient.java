@@ -29,6 +29,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -157,9 +158,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.conf = conf;
     this.stats = stats;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
-                                     FSConstants.READ_TIMEOUT);
+                                     HdfsConstants.READ_TIMEOUT);
     this.datanodeWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
-                                            FSConstants.WRITE_TIMEOUT);
+                                            HdfsConstants.WRITE_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
@@ -630,16 +631,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         try {
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + datanodes[j].getName() + ": "
-                + OP_BLOCK_CHECKSUM + ", block=" + block);
+                + DataTransferProtocol.OP_BLOCK_CHECKSUM +
+                ", block=" + block);
           }
-          out.writeShort(DATA_TRANSFER_VERSION);
-          out.write(OP_BLOCK_CHECKSUM);
+          out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
+          out.write(DataTransferProtocol.OP_BLOCK_CHECKSUM);
           out.writeLong(block.getBlockId());
           out.writeLong(block.getGenerationStamp());
           out.flush();
          
           final short reply = in.readShort();
-          if (reply != OP_STATUS_SUCCESS) {
+          if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
             throw new IOException("Bad response " + reply + " for block "
                 + block + " from datanode " + datanodes[j].getName());
           }
@@ -1254,11 +1256,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                        throws IOException {
       // in and out will be closed when sock is closed (by the caller)
       DataOutputStream out = new DataOutputStream(
-        new BufferedOutputStream(NetUtils.getOutputStream(sock,WRITE_TIMEOUT)));
+        new BufferedOutputStream(NetUtils.getOutputStream(sock,HdfsConstants.WRITE_TIMEOUT)));
 
       //write the header.
-      out.writeShort( DATA_TRANSFER_VERSION );
-      out.write( OP_READ_BLOCK );
+      out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
+      out.write( DataTransferProtocol.OP_READ_BLOCK );
       out.writeLong( blockId );
       out.writeLong( genStamp );
       out.writeLong( startOffset );
@@ -1274,7 +1276,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           new BufferedInputStream(NetUtils.getInputStream(sock), 
                                   bufferSize));
       
-      if ( in.readShort() != OP_STATUS_SUCCESS ) {
+      if ( in.readShort() != DataTransferProtocol.OP_STATUS_SUCCESS ) {
         throw new IOException("Got error in response to OP_READ_BLOCK " +
                               "for file " + file + 
                               " for block " + blockId);
@@ -1316,9 +1318,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */ 
     private void checksumOk(Socket sock) {
       try {
-        OutputStream out = NetUtils.getOutputStream(sock, WRITE_TIMEOUT);
-        byte buf[] = { (OP_STATUS_CHECKSUM_OK >>> 8) & 0xff,
-                       (OP_STATUS_CHECKSUM_OK) & 0xff };
+        OutputStream out = NetUtils.getOutputStream(sock, HdfsConstants.WRITE_TIMEOUT);
+        byte buf[] = { (DataTransferProtocol.OP_STATUS_CHECKSUM_OK >>> 8) & 0xff,
+                       (DataTransferProtocol.OP_STATUS_CHECKSUM_OK) & 0xff };
         out.write(buf);
         out.flush();
       } catch (IOException e) {
@@ -2320,7 +2322,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             // processes response status from all datanodes.
             for (int i = 0; i < targets.length && clientRunning; i++) {
               short reply = blockReplyStream.readShort();
-              if (reply != OP_STATUS_SUCCESS) {
+              if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
                 errorIndex = i; // first bad datanode
                 throw new IOException("Bad response " + reply +
                                       " for block " + block +
@@ -2715,7 +2717,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
         LOG.debug("Send buf size " + s.getSendBufferSize());
-        long writeTimeout = WRITE_TIMEOUT_EXTENSION * nodes.length +
+        long writeTimeout = HdfsConstants.WRITE_TIMEOUT_EXTENSION * nodes.length +
                             datanodeWriteTimeout;
 
         //
@@ -2726,8 +2728,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      DataNode.SMALL_BUFFER_SIZE));
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
-        out.writeShort( DATA_TRANSFER_VERSION );
-        out.write( OP_WRITE_BLOCK );
+        out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
+        out.write( DataTransferProtocol.OP_WRITE_BLOCK );
         out.writeLong( block.getBlockId() );
         out.writeLong( block.getGenerationStamp() );
         out.writeInt( nodes.length );

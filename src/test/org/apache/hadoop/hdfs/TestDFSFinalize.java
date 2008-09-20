@@ -23,9 +23,9 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.NodeType.DATA_NODE;
-import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
 /**
  * This test ensures the appropriate response from the system when 

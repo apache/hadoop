@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -43,8 +44,8 @@ class UpgradeManagerDatanode extends UpgradeManager {
     this.dataNode = dataNode;
   }
 
-  public FSConstants.NodeType getType() {
-    return FSConstants.NodeType.DATA_NODE;
+  public HdfsConstants.NodeType getType() {
+    return HdfsConstants.NodeType.DATA_NODE;
   }
 
   synchronized void initializeUpgrade(NamespaceInfo nsInfo) throws IOException {
