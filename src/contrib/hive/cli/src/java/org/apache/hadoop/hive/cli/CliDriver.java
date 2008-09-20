@@ -82,27 +82,30 @@ public class CliDriver {
         e.printStackTrace();
       }
 
-    } 
-    else {
+    } else {
       ret = qp.run(cmd);
       Vector<Vector<String>> res = new Vector<Vector<String>>();
-      while (qp.getResults(res)) {
-        SessionState ss  = SessionState.get();
-        PrintStream out = ss.out;
-
-        for (Vector<String> row:res)
+      while (qp.getResults(res))
+      {
+        SessionState ss = SessionState.get();
+        OutputStream out = ss.out;
+        try 
         {
-          boolean firstCol = true;
-          for (String col:row)
+
+          for (Vector<String> row:res)
           {
-            if (!firstCol)
+            for (String col:row)
+            {
+              out.write(col == null ? Utilities.nullStringOutput.getBytes() : col.getBytes());
               out.write(Utilities.tabCode);
-            out.print(col == null ? Utilities.nullStringOutput : col);
-            firstCol = false;
-          } 
-          out.write(Utilities.newLineCode);
+            } 
+            out.write(Utilities.newLineCode);
+          }
+          res.clear();
+
+        } catch (IOException e) {
+          e.printStackTrace();
         }
-        res.clear();
       }
     }
     return ret;
@@ -148,19 +151,15 @@ public class CliDriver {
     SessionState.initHiveLog4j();
 
     CliSessionState ss = new CliSessionState (new HiveConf(SessionState.class));
-    ss.in = System.in;
-    try {
-      ss.out = new PrintStream(System.out, true, "UTF-8");
-      ss.err = new PrintStream(System.err, true, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      System.exit(3);
-    }
-
     SessionState.start(ss);
 
     if(! oproc.process_stage2(ss)) {
       System.exit(2);
     }
+
+    ss.in = System.in;
+    ss.out = System.out;
+    ss.err = System.err;
 
     sp = new SetProcessor();
     qp = new Driver();

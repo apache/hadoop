@@ -1,0 +1,9 @@
+viewtime	datetime
+userid	int
+page_url	string
+referrer_url	string
+friends	array<bigint>
+properties	map<string,string>
+ip	string	'IP Address of the User'
+ds	datetime
+country	string
