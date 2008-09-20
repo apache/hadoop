@@ -5,9 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>
-      Name Space Quotas Administrator Guide
-    </title>
+<title> Directory Quotas Administrator's Guide </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -192,77 +190,124 @@ document.write("Last Published: " + document.lastModified);
 <a class="dida" href="hdfs_quota_admin_guide.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>
-      Name Space Quotas Administrator Guide
-    </h1>
-      
-<p>
-      The Hadoop Distributed File System (HDFS) allows the administrator to set quotas on individual directories. 
-      Newly created directories have no associated quota. 
-      The largest quota is <span class="codefrag">Long.Max_Value</span>. A quota of one forces a directory 
-      to remain empty.
-      </p>
-
-      
-<p>
-      The directory quota is a hard limit on the number of names in the tree 
-      rooted at that directory. File and directory creations fault if the quota 
-      would be exceeded. Quotas stick to renamed directories; the rename 
-      operation faults if operation would result in a quota violation. 
-      The attempt to set a quota faults if the directory would be in violation 
-      of the new quota.
-      </p>
-
-      
-<p>
-      Quotas are persistent with the fsimage. When starting, if the fsimage 
-      is immediately in violation of a quota (perhaps the fsimage was 
-      surreptitiously modified), the startup operation fails with an error report. 
-      Setting or removing a quota creates a journal entry.
-      </p> 
-
-      
-<p>
-      The following new commands or new options are added to support quotas. 
-      The first two are administration commands.
-      </p>
-
-      
-<ul>
-      
+<h1> Directory Quotas Administrator's Guide </h1>
+<div id="minitoc-area">
+<ul class="minitoc">
 <li>
-      
-<span class="codefrag">dfsadmin -setquota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</span> 
-      
-<br>
-      Set the quota to be <span class="codefrag">N</span> for each directory. Best effort for each directory,
-      with faults reported if <span class="codefrag">N</span> is not a positive long integer, 
-      the directory does not exist or it is a file, or the directory would 
-      immediately exceed the new quota.
-      </li>
-  
-      
+<a href="#Name+Quotas">Name Quotas</a>
+</li>
 <li>
-      
-<span class="codefrag">dfsadmin -clrquota &lt;directory&gt;...&lt;director&gt;</span>
-<br> 
-      Remove any quota for each directory. Best effort for each directory, 
-      with faults reported if the directory does not exist or it is a file. 
-      It is not a fault if the directory has no quota.
-      </li>
-  
-      
+<a href="#Space+Quotas">Space Quotas</a>
+</li>
 <li>
-      
-<span class="codefrag">fs -count -q &lt;directory&gt;...&lt;directory&gt;</span>
-<br>
-      With the <span class="codefrag">-q</span> option, also report the quota value set for each 
-      directory, and the available quota remaining. If the directory does not have 
-      a quota set, the reported values are <span class="codefrag">none</span> and <span class="codefrag">inf</span>.
-      </li>
-      
+<a href="#Administrative+Commands">Administrative Commands</a>
+</li>
+<li>
+<a href="#Reporting+Command">Reporting Command</a>
+</li>
 </ul>
-   
+</div>
+
+ 
+<p> The Hadoop Distributed File System (HDFS) allows the administrator to set quotas for the number of names used and the
+amount of space used for individual directories. Name quotas and space quotas operate independently, but the administration and
+implementation of the two types of quotas are closely parallel. </p>
+
+
+<a name="N10010"></a><a name="Name+Quotas"></a>
+<h2 class="h3">Name Quotas</h2>
+<div class="section">
+<p> The name quota is a hard limit on the number of file and directory names in the tree rooted at that directory. File and
+directory creations fail if the quota would be exceeded. Quotas stick with renamed directories; the rename operation fails if
+operation would result in a quota violation. The attempt to set a quota fails if the directory would be in violation of the new
+quota. A newly created directory has no associated quota. The largest quota is <span class="codefrag">Long.Max_Value</span>. A quota of one
+forces a directory to remain empty. (Yes, a directory counts against its own quota!) </p>
+<p> Quotas are persistent with the <span class="codefrag">fsimage</span>. When starting, if the <span class="codefrag">fsimage</span> is immediately in
+violation of a quota (perhaps the <span class="codefrag">fsimage</span> was surreptitiously modified), 
+a warning is printed for each of such violations. Setting or removing a quota creates a journal entry. </p>
+</div>
+
+
+<a name="N10029"></a><a name="Space+Quotas"></a>
+<h2 class="h3">Space Quotas</h2>
+<div class="section">
+<p> The space quota is a hard limit on the number of bytes used by files in the tree rooted at that directory. Block
+allocations fail if the quota would not allow a full block to be written. Each replica of a block counts against the quota. Quotas
+stick with renamed directories; the rename operation fails if the operation would result in a quota violation. The attempt to
+set a quota fails if the directory would be in violation of the new quota. A newly created directory has no associated quota.
+The largest quota is <span class="codefrag">Long.Max_Value</span>. A quota of zero still permits files to be created, but no blocks can be added to the files.
+Directories don't use host file system space and don't count against the space quota. The host file system space used to save
+the file meta data is not counted against the quota. Quotas are charged at the intended replication factor for the file;
+changing the replication factor for a file will credit or debit quotas. </p>
+<p> Quotas are persistent with the <span class="codefrag">fsimage</span>. When starting, if the <span class="codefrag">fsimage</span> is immediately in
+violation of a quota (perhaps the <span class="codefrag">fsimage</span> was surreptitiously modified), a warning is printed for
+each of such violations. Setting or removing a quota creates a journal entry. </p>
+</div>
+
+
+<a name="N10042"></a><a name="Administrative+Commands"></a>
+<h2 class="h3">Administrative Commands</h2>
+<div class="section">
+<p> Quotas are managed by a set of commands available only to the administrator. </p>
+<ul>
+
+ 
+<li> 
+<span class="codefrag">dfsadmin -setquota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</span> 
+<br> Set the name quota to be <span class="codefrag">N</span> for
+each directory. Best effort for each directory, with faults reported if <span class="codefrag">N</span> is not a positive long integer, the
+directory does not exist or it is a file, or the directory would immediately exceed the new quota. </li>
+
+ 
+<li> 
+<span class="codefrag">dfsadmin -clrquota &lt;directory&gt;...&lt;director&gt;</span>
+<br> Remove any name quota for each directory. Best
+effort for each directory, with faults reported if the directory does not exist or it is a file. It is not a fault if the
+directory has no quota. </li>
+
+ 
+<li> 
+<span class="codefrag">dfsadmin -setspacequota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</span> 
+<br> Set the space quota to be
+N&times;2<sup>30</sup> bytes (GB) for each directory. Best effort for each directory, with faults reported if <span class="codefrag">N</span> is
+neither zero nor a positive integer, the directory does not exist or it is a file, or the directory would immediately exceed
+the new quota. </li>
+
+ 
+<li> 
+<span class="codefrag">dfsadmin -clrspacequota &lt;directory&gt;...&lt;director&gt;</span>
+<br> Remove any space quota for each directory. Best
+effort for each directory, with faults reported if the directory does not exist or it is a file. It is not a fault if the
+directory has no quota. </li>
+
+ 
+</ul>
+</div>
+
+
+<a name="N10079"></a><a name="Reporting+Command"></a>
+<h2 class="h3">Reporting Command</h2>
+<div class="section">
+<p> An an extension to the <span class="codefrag">count</span> command of the HDFS shell reports quota values and the current count of names and bytes in use. </p>
+<ul>
+	
+	
+<li>
+
+ 
+<span class="codefrag">fs -count -q &lt;directory&gt;...&lt;directory&gt;</span>
+<br> With the <span class="codefrag">-q</span> option, also report the name quota
+value set for each directory, the available name quota remaining, the space quota value set, and the available space quota
+remaining. If the directory does not have a quota set, the reported values are <span class="codefrag">none</span> and <span class="codefrag">inf</span>. Space
+values are rounded to multiples of 2<sup>30</sup> bytes (GB).
+
+ </li>
+
+ 
+</ul>
+</div>
+
+
 </div>
 <!--+
     |end content

@@ -600,6 +600,11 @@ creations/deletions), or "all".</td>
                may be executed in parallel.</td>
 </tr>
 <tr>
+<td><a name="mapred.job.reuse.jvm.num.tasks">mapred.job.reuse.jvm.num.tasks</a></td><td>1</td><td>How many tasks to run per jvm. If set to -1, there is
+  no limit. 
+  </td>
+</tr>
+<tr>
 <td><a name="mapred.min.split.size">mapred.min.split.size</a></td><td>0</td><td>The minimum size chunk that map input should be split
   into.  Note that some file formats may have minimum split sizes that
   take priority over this setting.</td>
@@ -749,12 +754,6 @@ creations/deletions), or "all".</td>
     </td>
 </tr>
 <tr>
-<td><a name="mapred.skip.mode.enabled">mapred.skip.mode.enabled</a></td><td>false</td><td> Indicates whether skipping of bad records is enabled or not.
-    If enabled the framework will try to find bad records and skip  
-    them on further attempts.
-    </td>
-</tr>
-<tr>
 <td><a name="mapred.skip.attempts.to.start.skipping">mapred.skip.attempts.to.start.skipping</a></td><td>2</td><td> The number of Task attempts AFTER which skip mode 
     will be kicked off. When skip mode is kicked off, the 
     tasks reports the range of records which it will process 
@@ -765,7 +764,7 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="mapred.skip.map.auto.incr.proc.count">mapred.skip.map.auto.incr.proc.count</a></td><td>true</td><td> The flag which if set to true, 
-    Counters.Application.MAP_PROCESSED_RECORDS is incremented 
+    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
     by MapRunner after invoking the map function. This value must be set to 
     false for applications which process the records asynchronously 
     or buffer the input records. For example streaming. 
@@ -774,11 +773,41 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="mapred.skip.reduce.auto.incr.proc.count">mapred.skip.reduce.auto.incr.proc.count</a></td><td>true</td><td> The flag which if set to true, 
-    Counters.Application.REDUCE_PROCESSED_RECORDS is incremented 
+    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
     by framework after invoking the reduce function. This value must be set to 
     false for applications which process the records asynchronously 
     or buffer the input records. For example streaming. 
     In such cases applications should increment this counter on their own.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.out.dir">mapred.skip.out.dir</a></td><td></td><td> If no value is specified here, the skipped records are 
+    written to the output directory at _logs/skip.
+    User can stop writing skipped records by giving the value "none". 
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.map.max.skip.records">mapred.skip.map.max.skip.records</a></td><td>0</td><td> The number of acceptable skip records surrounding the bad 
+    record PER bad record in mapper. The number includes the bad record as well.
+    To turn the feature of detection/skipping of bad records off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever records(depends on application) get skipped are 
+    acceptable.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.skip.reduce.max.skip.groups">mapred.skip.reduce.max.skip.groups</a></td><td>0</td><td> The number of acceptable skip groups surrounding the bad 
+    group PER bad group in reducer. The number includes the bad group as well.
+    To turn the feature of detection/skipping of bad groups off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever groups(depends on application) get skipped are 
+    acceptable.
     </td>
 </tr>
 <tr>
@@ -942,11 +971,16 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="queue.name">queue.name</a></td><td>default</td><td> Queue to which a job is submitted. This must match one of the
+<td><a name="mapred.job.queue.name">mapred.job.queue.name</a></td><td>default</td><td> Queue to which a job is submitted. This must match one of the
     queues defined in mapred.queue.names for the system. Also, the ACL setup
     for the queue must allow the current user to submit a job to the queue.
     Before specifying a queue, ensure that the system is configured with 
     the queue, and access is allowed for submitting jobs to the queue.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.indexcache.mb">mapred.tasktracker.indexcache.mb</a></td><td>10</td><td> The maximum memory that a task tracker allows for the 
+    index cache that is used when serving map outputs to reducers.
   </td>
 </tr>
 </table>
