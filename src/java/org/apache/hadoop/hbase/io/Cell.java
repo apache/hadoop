@@ -161,7 +161,7 @@ public class Cell implements Writable, Iterable<Cell> {
     return new CellIterator();
   }
   private class CellIterator implements Iterator<Cell> {
-    private int currentValue = -1;
+    private int currentValue = 0;
     CellIterator() {
     }
     
@@ -170,8 +170,9 @@ public class Cell implements Writable, Iterable<Cell> {
     }
     
     public Cell next() {
-      currentValue += 1;
-      return new Cell(values[currentValue], timestamps[currentValue]);
+      Cell c = new Cell(values[currentValue], timestamps[currentValue]);
+      currentValue++;
+      return c;
     }
     
     public void remove() throws UnsupportedOperationException {
