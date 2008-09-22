@@ -108,11 +108,14 @@ HBASE SHELL COMMANDS:
  alter     Alter column family schema;  pass table name and a dictionary
            specifying new column family schema. Dictionaries are described
            below in the GENERAL NOTES section.  Dictionary must include name
-           of column family to alter.  For example, to change the 'f1' column
-           family in table 't1' from defaults to instead keep a maximum of 5
-           cell VERSIONS, do:
-
+           of column family to alter.  For example, 
+           
+           To change or add the 'f1' column family in table 't1' from defaults
+           to instead keep a maximum of 5 cell VERSIONS, do:
            hbase> alter 't1', {NAME => 'f1', VERSIONS => 5}
+           
+           To delete the 'f1' column family in table 't1', do:
+           hbase> alter 't1', {NAME => 'f1', METHOD => 'delete'}
            
  count     Count the number of rows in a table. This operation may take a LONG
            time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a

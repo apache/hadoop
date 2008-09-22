@@ -117,6 +117,16 @@ public class HBaseAdmin {
     return this.connection.listTables();
   }
 
+  public HTableDescriptor getTableDescriptor(final String tableName)
+  throws IOException {
+    return getTableDescriptor(Bytes.toBytes(tableName));
+  }
+  
+  public HTableDescriptor getTableDescriptor(final byte [] tableName)
+  throws IOException {
+    return this.connection.getHTableDescriptor(tableName);
+  }
+  
   private long getPauseTime(int tries) {
     if (tries >= HConstants.RETRY_BACKOFF.length)
       tries = HConstants.RETRY_BACKOFF.length - 1;

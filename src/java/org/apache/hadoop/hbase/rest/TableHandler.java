@@ -239,10 +239,22 @@ public class TableHandler extends GenericHandler {
   }
   
   private void deleteTable(HttpServletRequest request,
-      HttpServletResponse response, String[] pathSegments) throws IOException {
-    String tableName = pathSegments[0];
-    admin.deleteTable(tableName);
-    response.setStatus(202);
+      HttpServletResponse response, String[] pathSegments)
+  throws ServletException {
+    try {
+      String tableName = pathSegments[0];
+      String[] column_params = request.getParameterValues(COLUMN);
+      if (column_params != null && column_params.length > 0) {
+        for (String column : column_params) {
+          admin.deleteColumn(tableName, makeColumnName(column));
+        }
+      } else {
+        admin.deleteTable(tableName);
+      }
+      response.setStatus(202);
+    } catch (Exception e) {
+      throw new ServletException(e);
+    }
   }  
   
   private void putTableXml(HttpServletRequest 
@@ -303,12 +315,18 @@ public class TableHandler extends GenericHandler {
 
     try {
       String tableName = pathSegments[0];
-
+      HTableDescriptor htd = admin.getTableDescriptor(tableName);
+      
       NodeList columnfamily_nodes = doc.getElementsByTagName("columnfamily");
+
       for (int i = 0; i < columnfamily_nodes.getLength(); i++) {
         Element columnfamily = (Element) columnfamily_nodes.item(i);
         HColumnDescriptor hcd = putColumnFamilyXml(columnfamily);
-        admin.modifyColumn(tableName, hcd.getNameAsString(), hcd);
+        if (htd.hasFamily(Bytes.toBytes(hcd.getNameAsString()))) {
+          admin.modifyColumn(tableName, hcd.getNameAsString(), hcd);
+        } else {
+          admin.addColumn(tableName, hcd);
+        }
       }
     } catch (Exception e) {
       throw new ServletException(e);
@@ -317,11 +335,7 @@ public class TableHandler extends GenericHandler {
   
   private HColumnDescriptor putColumnFamilyXml(Element columnfamily) {
     Node name_node = columnfamily.getElementsByTagName("name").item(0);
-    String colname = name_node.getFirstChild().getNodeValue();
-    
-    if (colname.indexOf(":") == -1) {
-      colname += ":";
-    }
+    String colname = makeColumnName(name_node.getFirstChild().getNodeValue());
     
     int max_versions = HColumnDescriptor.DEFAULT_VERSIONS;
     NodeList max_versions_list = columnfamily.getElementsByTagName("max-versions");
@@ -358,6 +372,7 @@ public class TableHandler extends GenericHandler {
     if (bloomfilter_list.getLength() > 0) {
       bloomfilter = Boolean.valueOf(bloomfilter_list.item(0).getFirstChild().getNodeValue());
     }
-    return new HColumnDescriptor(Bytes.toBytes(colname), max_versions, compression, in_memory, block_cache, max_cell_size, ttl, bloomfilter);
+    return new HColumnDescriptor(Bytes.toBytes(colname), max_versions,
+        compression, in_memory, block_cache, max_cell_size, ttl, bloomfilter);
   }
 }

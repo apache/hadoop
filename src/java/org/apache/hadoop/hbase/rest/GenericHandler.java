@@ -279,4 +279,10 @@ public abstract class GenericHandler {
   protected HTable getTable(final String tableName) throws IOException {
     return new HTable(this.conf, Bytes.toBytes(tableName));
   }
+  
+  protected String makeColumnName(String column) {
+   if (column.indexOf(':') == -1)
+     column += ':';
+   return column;
+  }
 }

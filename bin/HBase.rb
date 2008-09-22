@@ -30,6 +30,7 @@ module HBase
   STARTROW = "STARTROW"
   ENDROW = STOPROW
   LIMIT = "LIMIT"
+  METHOD = "METHOD"
 
   # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
   class Admin
@@ -123,11 +124,22 @@ module HBase
     end
 
     def alter(tableName, args)
-      now = Time.now 
+      now = Time.now
       raise TypeError.new("Table name must be of type String") \
         unless tableName.instance_of? String
-      descriptor = hcd(args)
-      @admin.modifyColumn(tableName, descriptor.getNameAsString(), descriptor);
+      htd = @admin.getTableDescriptor(tableName.to_java_bytes)
+      method = args.delete(METHOD)
+      if method == "delete"
+        @admin.deleteColumn(tableName, makeColumnName(args[NAME]))
+      else
+        descriptor = hcd(args) 
+        if (htd.hasFamily(descriptor.getNameAsString().to_java_bytes))
+          @admin.modifyColumn(tableName, descriptor.getNameAsString(), 
+                              descriptor);
+        else
+          @admin.addColumn(tableName, descriptor);
+        end
+      end
       @formatter.header()
       @formatter.footer(now)
     end
