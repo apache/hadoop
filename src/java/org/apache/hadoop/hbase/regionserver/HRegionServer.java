@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.UnknownRowLockException;
+import org.apache.hadoop.hbase.ValueOverMaxLengthException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
@@ -1134,7 +1135,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         if (fam != null) {
           int maxLength = fam.getMaxValueLength();
           if (operation.getValue().length > maxLength) {
-            throw new IOException("Value in column "
+            throw new ValueOverMaxLengthException("Value in column "
                 + Bytes.toString(operation.getColumn()) + " is too long. "
                 + operation.getValue().length + " instead of " + maxLength);
           }
