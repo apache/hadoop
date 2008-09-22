@@ -8,6 +8,8 @@ Release 0.19.0 - Unreleased
   IMPROVEMENTS
    HBASE-890   Alter table operation and also related changes in REST interface
                (Sishen Freecity via Stack)
+   HBASE-894   [shell] Should be able to copy-paste table description to create
+               new table (Sishen Freecity via Stack)
 
   NEW FEATURES
 

@@ -7,6 +7,9 @@
 # For example, the exists method on Admin class prints to the formatter
 # whether the table exists and returns nil regardless.
 include Java
+include_class('java.lang.Integer') {|package,name| "J#{name}" }
+include_class('java.lang.Boolean') {|package,name| "J#{name}" }
+
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.HConstants
@@ -172,14 +175,14 @@ module HBase
       # TODO: What encoding are Strings in jruby?
       return HColumnDescriptor.new(name.to_java_bytes,
         # JRuby uses longs for ints. Need to convert.  Also constants are String 
-        arg[VERSIONS]? arg[VERSIONS]: HColumnDescriptor::DEFAULT_VERSIONS,
+        arg[VERSIONS]? JInteger.new(arg[VERSIONS]): HColumnDescriptor::DEFAULT_VERSIONS,
         arg[HColumnDescriptor::COMPRESSION]? HColumnDescriptor::CompressionType::valueOf(arg[HColumnDescriptor::COMPRESSION]):
           HColumnDescriptor::DEFAULT_COMPRESSION,
-        arg[IN_MEMORY]? arg[IN_MEMORY]: HColumnDescriptor::DEFAULT_IN_MEMORY,
-        arg[HColumnDescriptor::BLOCKCACHE]? arg[HColumnDescriptor::BLOCKCACHE]: HColumnDescriptor::DEFAULT_BLOCKCACHE,
-        arg[HColumnDescriptor::LENGTH]? arg[HColumnDescriptor::LENGTH]: HColumnDescriptor::DEFAULT_LENGTH,
-        arg[HColumnDescriptor::TTL]? arg[HColumnDescriptor::TTL]: HColumnDescriptor::DEFAULT_TTL,
-        arg[HColumnDescriptor::BLOOMFILTER]? arg[HColumnDescriptor::BLOOMFILTER]: HColumnDescriptor::DEFAULT_BLOOMFILTER)
+        arg[IN_MEMORY]? JBoolean.valueOf(arg[IN_MEMORY]): HColumnDescriptor::DEFAULT_IN_MEMORY,
+        arg[HColumnDescriptor::BLOCKCACHE]? JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE]): HColumnDescriptor::DEFAULT_BLOCKCACHE,
+        arg[HColumnDescriptor::LENGTH]? JInteger.new(arg[HColumnDescriptor::LENGTH]): HColumnDescriptor::DEFAULT_LENGTH,
+        arg[HColumnDescriptor::TTL]? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
+        arg[HColumnDescriptor::BLOOMFILTER]? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER)
     end
   end
 
