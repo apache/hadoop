@@ -92,6 +92,10 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
   public boolean containsKey(Object key) {
     return cells.containsKey(key);
   }
+  
+  public boolean containsKey(String key) {
+    return cells.containsKey(Bytes.toBytes(key));
+  }
 
   public boolean containsValue(@SuppressWarnings("unused") Object value) {
     throw new UnsupportedOperationException("Don't support containsValue!");

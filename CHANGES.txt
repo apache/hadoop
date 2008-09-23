@@ -7,6 +7,8 @@ Release 0.19.0 - Unreleased
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries
    HBASE-892   Cell iteration is broken (Doğacan Güney via Jim Kellerman)
+   HBASE-898   RowResult.containsKey(String) doesn't work
+               (Doğacan Güney via Jim Kellerman)
 
   IMPROVEMENTS
    HBASE-890   Alter table operation and also related changes in REST interface
