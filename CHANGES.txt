@@ -15,6 +15,8 @@ Release 0.19.0 - Unreleased
                new table (Sishen Freecity via Stack)
    HBASE-886, HBASE-895 Sort the tables in the web UI, [shell] 'list' command
                should emit a sorted list of tables (Krzysztof Szlapinski via Stack)
+   HBASE-884   Double and float converters for Bytes class
+               (Doğacan Güney via Stack)
 
   NEW FEATURES
 

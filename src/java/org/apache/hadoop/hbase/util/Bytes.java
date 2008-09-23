@@ -27,6 +27,16 @@ public class Bytes {
    * Size of int in bytes
    */
   public static final int SIZEOF_INT = Integer.SIZE/Byte.SIZE;
+  
+  /**
+   * Size of float in bytes
+   */
+  public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
+  
+  /**
+   * Size of double in bytes
+   */
+  public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
 
   /**
    * Pass this to TreeMaps where byte [] are keys.
@@ -142,6 +152,52 @@ public class Bytes {
       return -1;
     }
     return ByteBuffer.wrap(bytes).getInt();
+  }
+  
+  /**
+   * Convert an float value to a byte array
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(final float val) {
+    ByteBuffer bb = ByteBuffer.allocate(SIZEOF_FLOAT);
+    bb.putFloat(val);
+    return bb.array();
+  }
+
+  /**
+   * Converts a byte array to a float value
+   * @param bytes
+   * @return the float value
+   */
+  public static float toFloat(byte[] bytes) {
+    if (bytes == null || bytes.length == 0) {
+      return -1;
+    }
+    return ByteBuffer.wrap(bytes).getFloat();
+  }
+
+  /**
+   * Convert an double value to a byte array
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(final double val) {
+    ByteBuffer bb = ByteBuffer.allocate(SIZEOF_DOUBLE);
+    bb.putDouble(val);
+    return bb.array();
+  }
+
+  /**
+   * Converts a byte array to a double value
+   * @param bytes
+   * @return the double value
+   */
+  public static double toDouble(byte[] bytes) {
+    if (bytes == null || bytes.length == 0) {
+      return -1;
+    }
+    return ByteBuffer.wrap(bytes).getDouble();
   }
 
   /**
