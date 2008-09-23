@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
@@ -1349,13 +1350,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Before we return, we make sure that all the file's blocks have 
    * been reported by datanodes and are replicated correctly.
    */
-  public int completeFile(String src, String holder) throws IOException {
-    int status = completeFileInternal(src, holder);
+  
+  enum CompleteFileStatus {
+    OPERATION_FAILED,
+    STILL_WAITING,
+    COMPLETE_SUCCESS
+  }
+  
+  public CompleteFileStatus completeFile(String src, String holder) throws IOException {
+    CompleteFileStatus status = completeFileInternal(src, holder);
     getEditLog().logSync();
     return status;
   }
 
-  private synchronized int completeFileInternal(String src, 
+
+  private synchronized CompleteFileStatus completeFileInternal(String src, 
                                                 String holder) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
@@ -1376,9 +1385,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                    ((pendingFile == null) ? "null" : 
                                      ("from " + pendingFile.getClientMachine()))
                                   );                      
-      return OPERATION_FAILED;
+      return CompleteFileStatus.OPERATION_FAILED;
     } else if (!checkFileProgress(pendingFile, true)) {
-      return STILL_WAITING;
+      return CompleteFileStatus.STILL_WAITING;
     }
 
     finalizeINodeFileUnderConstruction(src, pendingFile);
@@ -1387,7 +1396,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src
                                   + " blocklist persisted");
     }
-    return COMPLETE_SUCCESS;
+    return CompleteFileStatus.COMPLETE_SUCCESS;
   }
 
   /** 

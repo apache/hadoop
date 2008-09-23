@@ -35,9 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.fs.Path;
@@ -101,8 +101,8 @@ public class JspHelper {
         
       try {
         s = new Socket();
-        s.connect(targetAddr, FSConstants.READ_TIMEOUT);
-        s.setSoTimeout(FSConstants.READ_TIMEOUT);
+        s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
+        s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
       } catch (IOException e) {
         deadNodes.add(chosenNode);
         s.close();
@@ -122,8 +122,8 @@ public class JspHelper {
     throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = new Socket();
-    s.connect(addr, FSConstants.READ_TIMEOUT);
-    s.setSoTimeout(FSConstants.READ_TIMEOUT);
+    s.connect(addr, HdfsConstants.READ_TIMEOUT);
+    s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
       
       long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
       

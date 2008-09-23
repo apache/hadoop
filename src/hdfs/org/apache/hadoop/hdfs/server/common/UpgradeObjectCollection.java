@@ -38,7 +38,7 @@ public class UpgradeObjectCollection {
 
   static class UOSignature implements Comparable<UOSignature> {
     int version;
-    FSConstants.NodeType type;
+    HdfsConstants.NodeType type;
     String className;
 
     UOSignature(Upgradeable uo) {
@@ -51,7 +51,7 @@ public class UpgradeObjectCollection {
       return version;
     }
 
-    FSConstants.NodeType getType() {
+    HdfsConstants.NodeType getType() {
       return type;
     }
 
@@ -109,7 +109,7 @@ public class UpgradeObjectCollection {
   }
 
   public static SortedSet<Upgradeable> getDistributedUpgrades(int versionFrom, 
-                                                       FSConstants.NodeType type
+                                                       HdfsConstants.NodeType type
                                                        ) throws IOException {
     assert FSConstants.LAYOUT_VERSION <= versionFrom : "Incorrect version " 
       + versionFrom + ". Expected to be <= " + FSConstants.LAYOUT_VERSION;

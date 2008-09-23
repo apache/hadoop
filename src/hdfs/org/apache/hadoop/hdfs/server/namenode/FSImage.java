@@ -47,14 +47,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.CheckpointStates;
-import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
-import org.apache.hadoop.hdfs.protocol.FSConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -83,7 +83,9 @@ public class FSImage extends Storage {
     private NameNodeFile(String name) {this.fileName = name;}
     String getName() {return fileName;}
   }
-  
+
+  // checkpoint states
+  enum CheckpointStates{START, ROLLED_EDITS, UPLOAD_START, UPLOAD_DONE; }
   /**
    * Implementation of StorageDirType specific to namenode storage
    * A Storage directory could be of type IMAGE which stores only fsimage,
@@ -119,7 +121,7 @@ public class FSImage extends Storage {
   /**
    * Can fs-image be rolled?
    */
-  volatile private CheckpointStates ckptState = CheckpointStates.START; 
+  volatile private CheckpointStates ckptState = FSImage.CheckpointStates.START; 
 
   /**
    * Used for saving the image to disk
@@ -1320,7 +1322,7 @@ public class FSImage extends Storage {
         it.remove();
       }
     }
-    ckptState = CheckpointStates.START;
+    ckptState = FSImage.CheckpointStates.START;
   }
 
   CheckpointSignature rollEditLog() throws IOException {
@@ -1349,7 +1351,7 @@ public class FSImage extends Storage {
                             ". Checkpoint Aborted.");
     }
     sig.validateStorageInfo(this);
-    ckptState = CheckpointStates.UPLOAD_START;
+    ckptState = FSImage.CheckpointStates.UPLOAD_START;
   }
 
   /**

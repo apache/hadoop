@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.UpgradeObjectCollection;
@@ -40,8 +41,8 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * and updates its status.
  */
 class UpgradeManagerNamenode extends UpgradeManager {
-  public FSConstants.NodeType getType() {
-    return FSConstants.NodeType.NAME_NODE;
+  public HdfsConstants.NodeType getType() {
+    return HdfsConstants.NodeType.NAME_NODE;
   }
 
   /**
@@ -140,7 +141,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     UpgradeManagerNamenode um = new UpgradeManagerNamenode();
     SortedSet<Upgradeable> uos;
     uos = UpgradeObjectCollection.getDistributedUpgrades(-4, 
-        FSConstants.NodeType.NAME_NODE);
+        HdfsConstants.NodeType.NAME_NODE);
     System.out.println(uos.size());
     um.startUpgrade();
   }

@@ -23,10 +23,11 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants.NodeType;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.NodeType.DATA_NODE;
-import org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
 
 /**
 * This test ensures the appropriate response (successful or failure) from

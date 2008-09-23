@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -794,7 +795,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
 
             replyOut.writeLong(expected);
-            replyOut.writeShort(OP_STATUS_SUCCESS);
+            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
             replyOut.flush();
         } catch (Exception e) {
           if (running) {
@@ -824,7 +825,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
         try {
-            short op = OP_STATUS_SUCCESS;
+            short op = DataTransferProtocol.OP_STATUS_SUCCESS;
             boolean didRead = false;
             long expected = -2;
             try { 
@@ -889,7 +890,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
             
             if (!didRead) {
-              op = OP_STATUS_ERROR;
+              op = DataTransferProtocol.OP_STATUS_ERROR;
             }
             
             // If this is the last packet in block, then close block
@@ -916,7 +917,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
             // send my status back to upstream datanode
             replyOut.writeLong(expected); // send seqno upstream
-            replyOut.writeShort(OP_STATUS_SUCCESS);
+            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
 
             LOG.debug("PacketResponder " + numTargets + 
                       " for block " + block +
@@ -926,16 +927,16 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // forward responses from downstream datanodes.
             for (int i = 0; i < numTargets && datanode.shouldRun; i++) {
               try {
-                if (op == OP_STATUS_SUCCESS) {
+                if (op == DataTransferProtocol.OP_STATUS_SUCCESS) {
                   op = mirrorIn.readShort();
-                  if (op != OP_STATUS_SUCCESS) {
+                  if (op != DataTransferProtocol.OP_STATUS_SUCCESS) {
                     LOG.debug("PacketResponder for block " + block +
                               ": error code received from downstream " +
                               " datanode[" + i + "] " + op);
                   }
                 }
               } catch (Throwable e) {
-                op = OP_STATUS_ERROR;
+                op = DataTransferProtocol.OP_STATUS_ERROR;
               }
               replyOut.writeShort(op);
             }
@@ -950,7 +951,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // If we forwarded an error response from a downstream datanode
             // and we are acting on behalf of a client, then we quit. The 
             // client will drive the recovery mechanism.
-            if (op == OP_STATUS_ERROR && receiver.clientName.length() > 0) {
+            if (op == DataTransferProtocol.OP_STATUS_ERROR && receiver.clientName.length() > 0) {
               running = false;
             }
         } catch (IOException e) {

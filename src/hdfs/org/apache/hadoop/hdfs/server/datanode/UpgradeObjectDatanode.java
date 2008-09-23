@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -33,8 +34,8 @@ import java.net.SocketTimeoutException;
 public abstract class UpgradeObjectDatanode extends UpgradeObject implements Runnable {
   private DataNode dataNode = null;
 
-  public FSConstants.NodeType getType() {
-    return FSConstants.NodeType.DATA_NODE;
+  public HdfsConstants.NodeType getType() {
+    return HdfsConstants.NodeType.DATA_NODE;
   }
 
   protected DataNode getDatanode() {

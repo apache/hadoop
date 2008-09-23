@@ -26,8 +26,10 @@ import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.CompleteFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -171,11 +173,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * <p>
    * The name-node can be started with one of the following startup options:
    * <ul> 
-   * <li>{@link org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption#REGULAR REGULAR} - normal startup</li>
-   * <li>{@link org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption#FORMAT FORMAT} - format name node</li>
-   * <li>{@link org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption#UPGRADE UPGRADE} - start the cluster  
+   * <li>{@link org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption#REGULAR REGULAR} - normal startup</li>
+   * <li>{@link org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption#FORMAT FORMAT} - format name node</li>
+   * <li>{@link org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
-   * <li>{@link org.apache.hadoop.hdfs.protocol.FSConstants.StartupOption#ROLLBACK ROLLBACK} - roll the  
+   * <li>{@link org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
    * </ul>
    * The option is passed via configuration field: 
@@ -367,10 +369,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /** {@inheritDoc} */
   public boolean complete(String src, String clientName) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
-    int returnCode = namesystem.completeFile(src, clientName);
-    if (returnCode == STILL_WAITING) {
+    CompleteFileStatus returnCode = namesystem.completeFile(src, clientName);
+    if (returnCode == CompleteFileStatus.STILL_WAITING) {
       return false;
-    } else if (returnCode == COMPLETE_SUCCESS) {
+    } else if (returnCode == CompleteFileStatus.COMPLETE_SUCCESS) {
       return true;
     } else {
       throw new IOException("Could not complete write to file " + src + " by " + clientName);

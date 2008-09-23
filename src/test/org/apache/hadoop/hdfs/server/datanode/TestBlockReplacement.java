@@ -38,10 +38,11 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.BlockTransferThrottler;
 import org.apache.hadoop.io.Text;
@@ -220,12 +221,12 @@ public class TestBlockReplacement extends TestCase {
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(
-        sourceProxy.getName()), FSConstants.READ_TIMEOUT);
-    sock.setSoTimeout(FSConstants.READ_TIMEOUT);
+        sourceProxy.getName()), HdfsConstants.READ_TIMEOUT);
+    sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-    out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
-    out.writeByte(FSConstants.OP_COPY_BLOCK);
+    out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
+    out.writeByte(DataTransferProtocol.OP_COPY_BLOCK);
     out.writeLong(block.getBlockId());
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
@@ -235,7 +236,7 @@ public class TestBlockReplacement extends TestCase {
     DataInputStream reply = new DataInputStream(sock.getInputStream());
 
     short status = reply.readShort();
-    if(status == FSConstants.OP_STATUS_SUCCESS) {
+    if(status == DataTransferProtocol.OP_STATUS_SUCCESS) {
       return true;
     }
     return false;

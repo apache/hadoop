@@ -36,10 +36,10 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
@@ -400,8 +400,8 @@ public class NamenodeFsck {
       }
       try {
         s = new Socket();
-        s.connect(targetAddr, FSConstants.READ_TIMEOUT);
-        s.setSoTimeout(FSConstants.READ_TIMEOUT);
+        s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
+        s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
         
         blockReader = 
           DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 

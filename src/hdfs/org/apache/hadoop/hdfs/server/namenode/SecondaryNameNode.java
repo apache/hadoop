@@ -22,6 +22,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
@@ -513,7 +514,7 @@ public class SecondaryNameNode implements Runnable {
               "cannot access checkpoint directory.");
         StorageState curState;
         try {
-          curState = sd.analyzeStorage(FSConstants.StartupOption.REGULAR);
+          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR);
           // sd is locked but not opened
           switch(curState) {
           case NON_EXISTENT:

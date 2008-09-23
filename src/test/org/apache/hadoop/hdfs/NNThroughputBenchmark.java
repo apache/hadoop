@@ -77,7 +77,7 @@ import org.apache.log4j.Level;
  * Then the benchmark executes the specified number of operations using 
  * the specified number of threads and outputs the resulting stats.
  */
-public class NNThroughputBenchmark implements FSConstants {
+public class NNThroughputBenchmark {
   private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
 
