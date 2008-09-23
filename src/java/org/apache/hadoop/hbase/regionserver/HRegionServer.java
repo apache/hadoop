@@ -1062,10 +1062,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw e;
     }
   }
-
+  
   public RowResult next(final long scannerId) throws IOException {
+    RowResult[] rrs = next(scannerId, 1);
+    return rrs.length == 0 ? null : rrs[0];
+  }
+
+  public RowResult[] next(final long scannerId, int nbRows) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
+    ArrayList<RowResult> resultSets = new ArrayList<RowResult>();
     try {
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.get(scannerName);
@@ -1073,24 +1079,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         throw new UnknownScannerException("Name: " + scannerName);
       }
       this.leases.renewLease(scannerName);
-
-      // Collect values to be returned here
-      HbaseMapWritable<byte [], Cell> values
-        = new HbaseMapWritable<byte [], Cell>();
-      HStoreKey key = new HStoreKey();
-      TreeMap<byte [], Cell> results =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      while (s.next(key, results)) {
-        values.putAll(results);
-        if (values.size() > 0) {
-          // Row has something in it. Return the value.
-          break;
+      for(int i = 0; i < nbRows; i++) {
+        // Collect values to be returned here
+        HbaseMapWritable<byte [], Cell> values
+          = new HbaseMapWritable<byte [], Cell>();
+        HStoreKey key = new HStoreKey();
+        while (s.next(key, values)) {
+          if (values.size() > 0) {
+            // Row has something in it. Return the value.
+            resultSets.add(new RowResult(key.getRow(), values));
+            break;
+          }
         }
-
-        // No data for this row, go get another.
-        results.clear();
       }
-      return values.size() == 0 ? null : new RowResult(key.getRow(), values);
+      return resultSets.toArray(new RowResult[resultSets.size()]);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

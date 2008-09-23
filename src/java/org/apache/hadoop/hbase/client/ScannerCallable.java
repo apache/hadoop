@@ -31,13 +31,14 @@ import org.apache.hadoop.hbase.io.RowResult;
  * Retries scanner operations such as create, next, etc.
  * Used by {@link Scanner}s made by {@link HTable}.
  */
-public class ScannerCallable extends ServerCallable<RowResult> {
+public class ScannerCallable extends ServerCallable<RowResult[]> {
   private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
   private final byte [][] columns;
   private final long timestamp;
   private final RowFilterInterface filter;
+  private int caching = 1;
 
   /**
    * @param connection
@@ -67,7 +68,7 @@ public class ScannerCallable extends ServerCallable<RowResult> {
     }
   }
   
-  public RowResult call() throws IOException {
+  public RowResult[] call() throws IOException {
     if (scannerId != -1L && closed) {
       server.close(scannerId);
       scannerId = -1L;
@@ -75,7 +76,8 @@ public class ScannerCallable extends ServerCallable<RowResult> {
       // open the scanner
       scannerId = openScanner();
     } else {
-      return server.next(scannerId);
+      RowResult[] rrs = server.next(scannerId, caching);
+      return rrs.length == 0 ? null : rrs;
     }
     return null;
   }
@@ -113,5 +115,21 @@ public class ScannerCallable extends ServerCallable<RowResult> {
       return null;
     }
     return location.getRegionInfo();
+  }
+
+  /**
+   * Get the number of rows that will be fetched on next
+   * @return the number of rows for caching
+   */
+  public int getCaching() {
+    return caching;
+  }
+
+  /**
+   * Set the number of rows that will be fetched on next
+   * @param caching the number of rows for caching
+   */
+  public void setCaching(int caching) {
+    this.caching = caching;
   }
 }

@@ -57,10 +57,12 @@ class MetaScanner implements HConstants {
       try {
         RowResult r = null;
         do {
-          r = connection.getRegionServerWithRetries(callable);
-          if (r == null || r.size() == 0) {
+          RowResult[] rrs = connection.getRegionServerWithRetries(callable);
+          
+          if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break;
           }
+          r = rrs[0];
         } while(visitor.processRow(r));
         // Advance the startRow to the end key of the current region
         startRow = callable.getHRegionInfo().getEndKey();

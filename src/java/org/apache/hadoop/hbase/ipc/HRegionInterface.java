@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 public interface HRegionInterface extends VersionedProtocol {
   /**
    * Protocol version.
-   * Upped to 4 when we removed overloaded methods from the protocol.
+   * Upped to 5 when we added scanner caching
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /** 
    * Get metainfo about an HRegion
@@ -174,7 +174,7 @@ public interface HRegionInterface extends VersionedProtocol {
   public long openScanner(final byte [] regionName, final byte [][] columns,
       final byte [] startRow, long timestamp, RowFilterInterface filter)
   throws IOException;
-
+  
   /**
    * Get the next set of values
    * @param scannerId clientId passed to openScanner
@@ -182,6 +182,15 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public RowResult next(long scannerId) throws IOException;
+  
+  /**
+   * Get the next set of values
+   * @param scannerId clientId passed to openScanner
+   * @param numberOfRows the number of rows to fetch
+   * @return map of values
+   * @throws IOException
+   */
+  public RowResult[] next(long scannerId, int numberOfRows) throws IOException;
   
   /**
    * Close a scanner

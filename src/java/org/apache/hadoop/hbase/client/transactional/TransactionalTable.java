@@ -414,10 +414,14 @@ public class TransactionalTable extends HTable {
     }
 
     @Override
-    protected ScannerCallable getScannerCallable(final byte[] localStartKey) {
-      return new TransactionScannerCallable(transactionState, getConnection(),
+    protected ScannerCallable getScannerCallable(
+        final byte[] localStartKey, int caching) {
+      TransactionScannerCallable t = 
+          new TransactionScannerCallable(transactionState, getConnection(),
           getTableName(), getColumns(), localStartKey, getTimestamp(),
           getFilter());
+      t.setCaching(caching);
+      return t;
     }
   }
 

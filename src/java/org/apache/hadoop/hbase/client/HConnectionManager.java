@@ -337,7 +337,9 @@ public class HConnectionManager implements HConstants {
         currentRegion = s.getHRegionInfo();
         try {
           RowResult r = null;
-          while (result && (r = getRegionServerWithRetries(s)) != null) {
+          RowResult[] rrs = null;
+          while (result && (rrs = getRegionServerWithRetries(s)) != null) {
+            r = rrs[0];
             Cell c = r.get(HConstants.COL_REGIONINFO);
             if (c != null) {
               byte[] value = c.getValue();

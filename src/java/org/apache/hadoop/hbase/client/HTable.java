@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -51,6 +52,7 @@ public class HTable {
   private final HConnection connection;
   private final byte [] tableName;
   private HBaseConfiguration configuration;
+  private int scannerCaching;
 
   /**
    * Creates an object to access a HBase table
@@ -99,6 +101,7 @@ public class HTable {
     this.configuration = conf;
     this.tableName = tableName;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
+    this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 30);
   }
 
   /**
@@ -174,6 +177,22 @@ public class HTable {
    */
   public HConnection getConnection() {
     return this.connection;
+  }
+  
+  /**
+   * Get the number of rows for caching that will be passed to scanners
+   * @return the number of rows for caching
+   */
+  public int getScannerCaching() {
+    return scannerCaching;
+  }
+
+  /**
+   * Set the number of rows for caching that will be passed to scanners
+   * @param scannerCaching the number of rows for caching
+   */
+  public void setScannerCaching(int scannerCaching) {
+    this.scannerCaching = scannerCaching;
   }
 
   /**
@@ -726,7 +745,8 @@ public class HTable {
   public Scanner getScanner(final byte [][] columns,
     final byte [] startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
-    ClientScanner s = new ClientScanner(columns, startRow, timestamp, filter);
+    ClientScanner s = new ClientScanner(columns, startRow,
+        timestamp, filter);
     s.initialize();
     return s;
   }
@@ -1040,12 +1060,15 @@ public class HTable {
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     protected RowFilterInterface filter;
+    final private LinkedList<RowResult> cache = new LinkedList<RowResult>();
+    final private int scannerCaching = HTable.this.scannerCaching;
 
     protected ClientScanner(final byte[][] columns, final byte [] startRow,
         final long timestamp, final RowFilterInterface filter) {
       if (CLIENT_LOG.isDebugEnabled()) {
-        CLIENT_LOG.debug("Creating scanner over " + Bytes.toString(getTableName()) +
-          " starting at key '" + Bytes.toString(startRow) + "'");
+        CLIENT_LOG.debug("Creating scanner over " 
+            + Bytes.toString(getTableName()) 
+            + " starting at key '" + Bytes.toString(startRow) + "'");
       }
       // save off the simple parameters
       this.columns = columns;
@@ -1063,7 +1086,7 @@ public class HTable {
     //TODO: change visibility to protected
     
     public void initialize() throws IOException {
-      nextScanner();
+      nextScanner(this.scannerCaching);
     }
     
     protected byte[][] getColumns() {
@@ -1082,7 +1105,7 @@ public class HTable {
      * Gets a scanner for the next region.
      * Returns false if there are no more scanners.
      */
-    private boolean nextScanner() throws IOException {
+    private boolean nextScanner(int nbRows) throws IOException {
       // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
@@ -1115,7 +1138,7 @@ public class HTable {
       }
             
       try {
-        callable = getScannerCallable(localStartKey);
+        callable = getScannerCallable(localStartKey, nbRows);
         // open a scanner on the region server starting at the 
         // beginning of the region
         getConnection().getRegionServerWithRetries(callable);
@@ -1127,9 +1150,13 @@ public class HTable {
       return true;
     }
     
-    protected ScannerCallable getScannerCallable(byte [] localStartKey) {
-      return new ScannerCallable(getConnection(), getTableName(), columns, 
+    protected ScannerCallable getScannerCallable(byte [] localStartKey,
+        int nbRows) {
+      ScannerCallable s = new ScannerCallable(getConnection(), 
+          getTableName(), columns, 
           localStartKey, scanTime, filter);
+      s.setCaching(nbRows);
+      return s;
     }
 
     /**
@@ -1147,16 +1174,31 @@ public class HTable {
     }
 
     public RowResult next() throws IOException {
-      if (this.closed) {
+      // If the scanner is closed but there is some rows left in the cache,
+      // it will first empty it before returning null
+      if (cache.size() == 0 && this.closed) {
         return null;
       }
-      RowResult values = null;
-      do {
-        values = getConnection().getRegionServerWithRetries(callable);
-      } while ((values == null || values.size() == 0) && nextScanner());
+      if (cache.size() == 0) {
+        RowResult[] values = null;
+        int countdown = this.scannerCaching;
+        // We need to reset it if it's a new callable that was created 
+        // with a countdown in nextScanner
+        callable.setCaching(this.scannerCaching);
+        do {
+          values = getConnection().getRegionServerWithRetries(callable);
+          if (values != null && values.length > 0) {
+            for (RowResult rs : values) {
+              cache.add(rs);
+              countdown--;
+            }
+          }
 
-      if (values != null && values.size() != 0) {
-        return values;
+        } while (countdown > 0 && nextScanner(countdown));
+      }
+
+      if (cache.size() > 0) {
+        return cache.poll();
       }
       return null;
     }
