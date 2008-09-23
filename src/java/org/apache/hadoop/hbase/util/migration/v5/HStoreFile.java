@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.BlockFSInputStream;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
@@ -822,7 +823,8 @@ public class HStoreFile implements HConstants {
               (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
               (int) Math.ceil(
                   (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
-                  Math.log(2.0))
+                  Math.log(2.0)),
+                  Hash.JENKINS_HASH
           );
         } else {
           this.bloomFilter = null;

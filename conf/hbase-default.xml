@@ -301,4 +301,11 @@
       memcache limiting.
     </description>
   </property>  
+  <property>
+    <name>hbase.hash.type</name>
+    <value>murmur</value>
+    <description>The hashing algorithm for use in HashFunction. Two values are
+    supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
+    </description>
+  </property>
 </configuration>

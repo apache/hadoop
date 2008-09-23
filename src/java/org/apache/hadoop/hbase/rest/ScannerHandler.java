@@ -279,7 +279,7 @@ public class ScannerHandler extends GenericHandler {
     // Make a scanner id by hashing the object toString value (object name +
     // an id).  Will make identifier less burdensome and more url friendly.
     String scannerid =
-      Integer.toHexString(JenkinsHash.hash(scanner.toString().getBytes(), -1));
+      Integer.toHexString(JenkinsHash.getInstance().hash(scanner.toString().getBytes(), -1));
     ScannerRecord sr = new ScannerRecord(scanner);
     
     // store the scanner for subsequent requests

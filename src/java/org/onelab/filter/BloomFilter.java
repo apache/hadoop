@@ -53,6 +53,8 @@ import java.io.IOException;
 
 import java.util.BitSet;
 
+import org.apache.hadoop.hbase.util.Hash;
+
 /**
  * Implements a <i>Bloom filter</i>, as defined by Bloom in 1970.
  * <p>
@@ -97,9 +99,10 @@ public class BloomFilter extends Filter {
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash function to consider.
+   * @param hashType type of the hashing function (see {@link Hash}).
    */
-  public BloomFilter(int vectorSize, int nbHash){
-    super(vectorSize, nbHash);
+  public BloomFilter(int vectorSize, int nbHash, int hashType){
+    super(vectorSize, nbHash, hashType);
 
     bits = new BitSet(this.vectorSize);
   }//end constructor
@@ -180,7 +183,7 @@ public class BloomFilter extends Filter {
 
   @Override
   public Object clone(){
-    BloomFilter bf = new BloomFilter(vectorSize, nbHash);
+    BloomFilter bf = new BloomFilter(vectorSize, nbHash, hashType);
     bf.or(this);
     return bf;
   }//end clone()

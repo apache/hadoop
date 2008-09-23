@@ -54,6 +54,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -75,6 +77,7 @@ import org.apache.hadoop.io.Writable;
  * @see org.onelab.filter.HashFunction A hash function
  */
 public abstract class Filter implements Writable {
+  private static final int VERSION = -1; // negative to accommodate for old format 
   /** The vector size of <i>this</i> filter. */
   protected int vectorSize;
 
@@ -83,6 +86,9 @@ public abstract class Filter implements Writable {
 
   /** The number of hash function to consider. */
   protected int nbHash;
+  
+  /** Type of hashing function to use. */
+  protected int hashType;
 
   protected Filter() {}
   
@@ -90,11 +96,13 @@ public abstract class Filter implements Writable {
    * Constructor.
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash functions to consider.
+   * @param hashType type of the hashing function (see {@link Hash}).
    */
-  protected Filter(int vectorSize, int nbHash){
+  protected Filter(int vectorSize, int nbHash, int hashType){
     this.vectorSize = vectorSize;
     this.nbHash = nbHash;
-    this.hash = new HashFunction(this.vectorSize, this.nbHash);
+    this.hashType = hashType;
+    this.hash = new HashFunction(this.vectorSize, this.nbHash, this.hashType);
   }//end constructor
 
   /**
@@ -185,13 +193,24 @@ public abstract class Filter implements Writable {
   // Writable interface
   
   public void write(DataOutput out) throws IOException {
+    out.writeInt(VERSION);
     out.writeInt(this.nbHash);
+    out.writeByte(this.hashType);
     out.writeInt(this.vectorSize);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.nbHash = in.readInt();
+    int ver = in.readInt();
+    if (ver > 0) { // old unversioned format
+      this.nbHash = ver;
+      this.hashType = Hash.JENKINS_HASH;
+    } else if (ver == VERSION) {
+      this.nbHash = in.readInt();
+      this.hashType = in.readByte();
+    } else {
+      throw new IOException("Unsupported version: " + ver);
+    }
     this.vectorSize = in.readInt();
-    this.hash = new HashFunction(this.vectorSize, this.nbHash);
+    this.hash = new HashFunction(this.vectorSize, this.nbHash, this.hashType);
   }
 }//end class

@@ -58,6 +58,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.util.Hash;
 import org.onelab.filter.*;
 
 /**
@@ -208,7 +209,8 @@ public class TestFilter extends TestCase {
         (int) Math.ceil(
             (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * inserted.length)) /
             Math.log(2.0)),
-            DEFAULT_NUMBER_OF_HASH_FUNCTIONS
+            DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
+            Hash.JENKINS_HASH
     );
     
     for (int i = 0; i < inserted.length; i++) {
@@ -264,7 +266,7 @@ public class TestFilter extends TestCase {
    * @throws UnsupportedEncodingException
    */
   public void testCountingBloomFilter() throws UnsupportedEncodingException {
-    Filter bf = new CountingBloomFilter(8, 2);
+    Filter bf = new CountingBloomFilter(8, 2, Hash.JENKINS_HASH);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
     Key k3 = new StringKey("mama");
@@ -281,7 +283,7 @@ public class TestFilter extends TestCase {
     assertFalse(bf.membershipTest(key));
     
     // OR 'key' back into the filter
-    Filter bf2 = new CountingBloomFilter(8, 2);
+    Filter bf2 = new CountingBloomFilter(8, 2, Hash.JENKINS_HASH);
     bf2.add(key);
     bf.or(bf2);
     assertTrue(bf.membershipTest(key));
@@ -302,7 +304,7 @@ public class TestFilter extends TestCase {
    * @throws UnsupportedEncodingException
    */
   public void testDynamicBloomFilter() throws UnsupportedEncodingException {
-    Filter bf = new DynamicBloomFilter(8, 2, 2);
+    Filter bf = new DynamicBloomFilter(8, 2, Hash.JENKINS_HASH, 2);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
     Key k3 = new StringKey("mama");

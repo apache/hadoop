@@ -52,6 +52,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;                        //TODO: remove
 
+import org.apache.hadoop.hbase.util.Hash;
+
 /**
  * Implements a <i>counting Bloom filter</i>, as defined by Fan et al. in a ToN
  * 2000 paper.
@@ -82,9 +84,10 @@ public final class CountingBloomFilter extends Filter {
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash function to consider.
+   * @param hashType type of the hashing function (see {@link Hash}).
    */
-  public CountingBloomFilter(int vectorSize, int nbHash){
-    super(vectorSize, nbHash);
+  public CountingBloomFilter(int vectorSize, int nbHash, int hashType){
+    super(vectorSize, nbHash, hashType);
     buckets = new long[buckets2words(vectorSize)];
   }//end constructor
 
@@ -245,7 +248,7 @@ public final class CountingBloomFilter extends Filter {
 
   @Override
   public Object clone(){
-    CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash);
+    CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash, hashType);
     cbf.buckets = this.buckets.clone();
     return cbf;
   }//end clone()

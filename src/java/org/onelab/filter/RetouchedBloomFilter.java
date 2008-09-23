@@ -56,6 +56,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.util.Hash;
+
 /**
  * Implements a <i>retouched Bloom filter</i>, as defined in the CoNEXT 2006 paper.
  * <p>
@@ -99,9 +101,10 @@ implements RemoveScheme {
    * Constructor
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash function to consider.
+   * @param hashType type of the hashing function (see {@link Hash}).
    */
-  public RetouchedBloomFilter(int vectorSize, int nbHash) {
-    super(vectorSize, nbHash);
+  public RetouchedBloomFilter(int vectorSize, int nbHash, int hashType) {
+    super(vectorSize, nbHash, hashType);
 
     this.rand = null;
     createVector();

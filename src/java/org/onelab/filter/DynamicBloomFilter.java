@@ -51,6 +51,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.util.Hash;
+
 /**
  * Implements a <i>dynamic Bloom filter</i>, as defined in the INFOCOM 2006 paper.
  * <p>
@@ -111,16 +113,17 @@ public class DynamicBloomFilter extends Filter {
    * Builds an empty Dynamic Bloom filter.
    * @param vectorSize The number of bits in the vector.
    * @param nbHash The number of hash function to consider.
+   * @param hashType type of the hashing function (see {@link Hash}).
    * @param nr The threshold for the maximum number of keys to record in a dynamic Bloom filter row.
    */
-  public DynamicBloomFilter(int vectorSize, int nbHash, int nr) {
-    super(vectorSize, nbHash);
+  public DynamicBloomFilter(int vectorSize, int nbHash, int hashType, int nr) {
+    super(vectorSize, nbHash, hashType);
 
     this.nr = nr;
     this.currentNbRecord = 0;
 
     matrix = new BloomFilter[1];
-    matrix[0] = new BloomFilter(this.vectorSize, this.nbHash);
+    matrix[0] = new BloomFilter(this.vectorSize, this.nbHash, this.hashType);
   }//end constructor
 
   @Override
@@ -235,7 +238,7 @@ public class DynamicBloomFilter extends Filter {
 
   @Override
   public Object clone(){
-    DynamicBloomFilter dbf = new DynamicBloomFilter(vectorSize, nbHash, nr);
+    DynamicBloomFilter dbf = new DynamicBloomFilter(vectorSize, nbHash, hashType, nr);
     dbf.currentNbRecord = this.currentNbRecord;
     dbf.matrix = new BloomFilter[this.matrix.length];
     for(int i = 0; i < this.matrix.length; i++) {
@@ -280,7 +283,7 @@ public class DynamicBloomFilter extends Filter {
       tmp[i] = (BloomFilter)matrix[i].clone();
     }
 
-    tmp[tmp.length-1] = new BloomFilter(vectorSize, nbHash);
+    tmp[tmp.length-1] = new BloomFilter(vectorSize, nbHash, hashType);
 
     matrix = tmp;
   }//end addRow()

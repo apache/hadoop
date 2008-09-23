@@ -39,12 +39,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.BlockFSInputStream;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.onelab.filter.BloomFilter;
+import org.onelab.filter.HashFunction;
 import org.onelab.filter.Key;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -830,7 +832,8 @@ public class HStoreFile implements HConstants {
               (int) Math.ceil(
                   (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
                   Math.log(2.0)),
-              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS
+              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
+              Hash.getHashType(conf)
           );
         } else {
           this.bloomFilter = null;

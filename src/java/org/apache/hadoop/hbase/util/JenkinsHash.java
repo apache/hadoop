@@ -38,36 +38,21 @@ import java.io.IOException;
  * @see <a href="http://burtleburtle.net/bob/hash/doobs.html">Has update on the
  * Dr. Dobbs Article</a>
  */
-public class JenkinsHash {
+public class JenkinsHash extends Hash {
   private static long INT_MASK  = 0x00000000ffffffffL;
   private static long BYTE_MASK = 0x00000000000000ffL;
+  
+  private static JenkinsHash _instance = new JenkinsHash();
+  
+  public static Hash getInstance() {
+    return _instance;
+  }
 
   private static long rot(long val, int pos) {
     return ((Integer.rotateLeft(
         (int)(val & INT_MASK), pos)) & INT_MASK);
   }
 
-  /**
-   * Alternate form for hashing an entire byte array
-   * 
-   * @param bytes
-   * @return hash value
-   */
-  public static int hash(byte[] bytes) {
-    return hash(bytes, bytes.length, -1);
-  }
-  
-  /**
-   * Alternate form for hashing an entire byte array
-   * 
-   * @param bytes 
-   * @param initval
-   * @return hash value
-   */
-  public static int hash(byte[] bytes, int initval) {
-    return hash(bytes, bytes.length, initval);
-  }
-  
   /**
    * taken from  hashlittle() -- hash a variable-length key into a 32-bit value
    * 
@@ -94,7 +79,7 @@ public class JenkinsHash {
    * acceptable.  Do NOT use for cryptographic purposes.
   */
   @SuppressWarnings("fallthrough")
-  public static int hash(byte[] key, int nbytes, int initval) {
+  public int hash(byte[] key, int nbytes, int initval) {
     int length = nbytes;
     long a, b, c;       // We use longs because we don't have unsigned ints
     a = b = c = (0x00000000deadbeefL + length + initval) & INT_MASK;
@@ -266,8 +251,9 @@ public class JenkinsHash {
     FileInputStream in = new FileInputStream(args[0]);
     byte[] bytes = new byte[512];
     int value = 0;
+    JenkinsHash hash = new JenkinsHash();
     for (int length = in.read(bytes); length > 0 ; length = in.read(bytes)) {
-      value = hash(bytes, length, value);
+      value = hash.hash(bytes, length, value);
     }
     System.out.println(Math.abs(value));
   }

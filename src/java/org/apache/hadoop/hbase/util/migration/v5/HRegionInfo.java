@@ -45,7 +45,7 @@ public class HRegionInfo implements WritableComparable {
    * @return the encodedName
    */
   public static int encodeRegionName(final byte [] regionName) {
-    return Math.abs(JenkinsHash.hash(regionName, regionName.length, 0));
+    return Math.abs(JenkinsHash.getInstance().hash(regionName, regionName.length, 0));
   }
 
   /** delimiter used between portions of a region name */
