@@ -11,6 +11,8 @@ Release 0.19.0 - Unreleased
                (Sishen Freecity via Stack)
    HBASE-894   [shell] Should be able to copy-paste table description to create
                new table (Sishen Freecity via Stack)
+   HBASE-886, HBASE-895 Sort the tables in the web UI, [shell] 'list' command
+               should emit a sorted list of tables (Krzysztof Szlapinski via Stack)
 
   NEW FEATURES
 

@@ -24,9 +24,9 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -277,8 +277,8 @@ public class HConnectionManager implements HConstants {
 
     public HTableDescriptor[] listTables() throws IOException {
       getMaster();
-      final HashSet<HTableDescriptor> uniqueTables =
-        new HashSet<HTableDescriptor>();
+      final TreeSet<HTableDescriptor> uniqueTables =
+        new TreeSet<HTableDescriptor>();
 
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
