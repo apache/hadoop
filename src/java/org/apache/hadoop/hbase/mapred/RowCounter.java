@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -43,7 +44,9 @@ import org.apache.hadoop.util.ToolRunner;
  * Map outputs table rows IF the input row has columns that have content.  
  * Uses an {@link IdentityReducer}
  */
-public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> implements Tool {
+public class RowCounter
+extends MapReduceBase
+implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
   /* Name of this 'program'
    */
   static final String NAME = "rowcounter";
@@ -53,7 +56,6 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
         new RowResult(Bytes.toBytes("dummy"),new HbaseMapWritable<byte [], Cell>());
   private static enum Counters {ROWS}
   
-  @Override
   public void map(ImmutableBytesWritable row, RowResult value,
     OutputCollector<ImmutableBytesWritable, RowResult> output,
     @SuppressWarnings("unused") Reporter reporter)
@@ -93,7 +95,7 @@ public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> impl
       sb.append(args[i]);
     }
     // Second argument is the table name.
-    TableMap.initJob(args[1], sb.toString(), this.getClass(),
+    TableMapReduceUtil.initTableMapJob(args[1], sb.toString(), this.getClass(),
       ImmutableBytesWritable.class, RowResult.class, c);
     c.setReducerClass(IdentityReducer.class);
     // First arg is the output directory.

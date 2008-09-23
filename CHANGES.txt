@@ -1,6 +1,8 @@
 HBase Change Log
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
+   HBASE-885   TableMap and TableReduce should be interfaces
+               (Doğacan Güney via Stack)
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

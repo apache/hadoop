@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -73,12 +74,13 @@ public class TestTableMapReduce extends MultiRegionTable {
   /**
    * Pass the given key and processed record reduce
    */
-  public static class ProcessContentsMapper extends TableMap<ImmutableBytesWritable, BatchUpdate> {
+  public static class ProcessContentsMapper
+  extends MapReduceBase
+  implements TableMap<ImmutableBytesWritable, BatchUpdate> {
     /**
      * Pass the key, and reversed value to reduce
      */
     @SuppressWarnings("unchecked")
-    @Override
     public void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
       @SuppressWarnings("unused") Reporter reporter) 
@@ -127,10 +129,10 @@ public class TestTableMapReduce extends MultiRegionTable {
       jobConf = new JobConf(conf, TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumReduceTasks(1);
-      TableMap.initJob(Bytes.toString(table.getTableName()), INPUT_COLUMN, 
-        ProcessContentsMapper.class, ImmutableBytesWritable.class,
-        BatchUpdate.class, jobConf);
-      TableReduce.initJob(Bytes.toString(table.getTableName()),
+      TableMapReduceUtil.initTableMapJob(Bytes.toString(table.getTableName()),
+        INPUT_COLUMN, ProcessContentsMapper.class,
+        ImmutableBytesWritable.class, BatchUpdate.class, jobConf);
+      TableMapReduceUtil.initTableReduceJob(Bytes.toString(table.getTableName()),
         IdentityTableReduce.class, jobConf);
             
       LOG.info("Started " + table.getTableName());

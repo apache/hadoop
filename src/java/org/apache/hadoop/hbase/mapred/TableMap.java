@@ -19,18 +19,11 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
 
 /**
  * Scan an HBase table to sort by a specified sort column.
@@ -40,42 +33,7 @@ import org.apache.hadoop.mapred.Reporter;
  * @param <V> Writable value class
  */
 @SuppressWarnings("unchecked")
-public abstract class TableMap<K extends WritableComparable, V extends Writable>
-    extends MapReduceBase implements Mapper<ImmutableBytesWritable, RowResult, K, V> {
-  /**
-   * Use this before submitting a TableMap job. It will
-   * appropriately set up the JobConf.
-   * 
-   * @param table table name
-   * @param columns columns to scan
-   * @param mapper mapper class
-   * @param outputKeyClass
-   * @param outputValueClass
-   * @param job job configuration
-   */
-  public static void initJob(String table, String columns,
-    Class<? extends TableMap> mapper, 
-    Class<? extends WritableComparable> outputKeyClass, 
-    Class<? extends Writable> outputValueClass, JobConf job) {
-      
-    job.setInputFormat(TableInputFormat.class);
-    job.setMapOutputValueClass(outputValueClass);
-    job.setMapOutputKeyClass(outputKeyClass);
-    job.setMapperClass(mapper);
-    FileInputFormat.addInputPaths(job, table);
-    job.set(TableInputFormat.COLUMN_LIST, columns);
-  }
+public interface TableMap<K extends WritableComparable, V extends Writable>
+extends Mapper<ImmutableBytesWritable, RowResult, K, V> {
 
-  /**
-   * Call a user defined function on a single HBase record, represented
-   * by a key and its associated record value.
-   * 
-   * @param key
-   * @param value
-   * @param output
-   * @param reporter
-   * @throws IOException
-   */
-  public abstract void map(ImmutableBytesWritable key, RowResult value,
-      OutputCollector<K, V> output, Reporter reporter) throws IOException;
 }

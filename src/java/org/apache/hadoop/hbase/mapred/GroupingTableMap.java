@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -37,7 +38,9 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Extract grouping columns from input record
  */
-public class GroupingTableMap extends TableMap<ImmutableBytesWritable,RowResult> {
+public class GroupingTableMap
+extends MapReduceBase
+implements TableMap<ImmutableBytesWritable,RowResult> {
 
   /**
    * JobConf parameter to specify the columns used to produce the key passed to 
@@ -63,7 +66,8 @@ public class GroupingTableMap extends TableMap<ImmutableBytesWritable,RowResult>
   public static void initJob(String table, String columns, String groupColumns, 
     Class<? extends TableMap> mapper, JobConf job) {
     
-    initJob(table, columns, mapper, ImmutableBytesWritable.class, RowResult.class, job);
+    TableMapReduceUtil.initTableMapJob(table, columns, mapper,
+        ImmutableBytesWritable.class, RowResult.class, job);
     job.set(GROUP_COLUMNS, groupColumns);
   }
 
@@ -83,7 +87,6 @@ public class GroupingTableMap extends TableMap<ImmutableBytesWritable,RowResult>
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
    */
-  @Override
   public void map(@SuppressWarnings("unused") ImmutableBytesWritable key,
       RowResult value, OutputCollector<ImmutableBytesWritable,RowResult> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {

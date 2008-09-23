@@ -25,13 +25,16 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.BatchUpdate;import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
  * Write to table each key, record pair
  */
-public class IdentityTableReduce extends TableReduce<ImmutableBytesWritable, BatchUpdate> {
+public class IdentityTableReduce
+extends MapReduceBase
+implements TableReduce<ImmutableBytesWritable, BatchUpdate> {
   @SuppressWarnings("unused")
   private static final Log LOG =
     LogFactory.getLog(IdentityTableReduce.class.getName());
@@ -41,7 +44,6 @@ public class IdentityTableReduce extends TableReduce<ImmutableBytesWritable, Bat
    *
    * @see org.apache.hadoop.hbase.mapred.TableReduce#reduce(org.apache.hadoop.io.WritableComparable, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
-  @Override
   public void reduce(ImmutableBytesWritable key, Iterator<BatchUpdate> values,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
       @SuppressWarnings("unused") Reporter reporter)
