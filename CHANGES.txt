@@ -731,6 +731,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4090. The hive scripts pick up hadoop from HADOOP_HOME
     and then the path. (Raghotham Murthy via dhruba)
 
+    HADOOP-4242. Remove extra ";" in FSDirectory that blocks compilation
+    in some IDE's. (szetszwo via omalley)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
