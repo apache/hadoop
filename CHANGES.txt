@@ -8,15 +8,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    HADOOP-4006. Clean up FSConstants and move some of the constants to 
-    better places. (Sanjay Radia via rangadi)
- 
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HADOOP-4242. Remove extra ";" in FSDirectory that blocks compilation
-    in some IDE's. (szetszwo via omalley)
 
 Release 0.19.0 - Unreleased
 
@@ -433,6 +427,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4227. Remove the deprecated class org.apache.hadoop.fs.ShellCommand.
     (szetszwo)
 
+    HADOOP-4006. Clean up FSConstants and move some of the constants to
+    better places. (Sanjay Radia via rangadi)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
@@ -732,6 +729,9 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4090. The hive scripts pick up hadoop from HADOOP_HOME
     and then the path. (Raghotham Murthy via dhruba)
+
+    HADOOP-4242. Remove extra ";" in FSDirectory that blocks compilation
+    in some IDE's. (szetszwo via omalley)
 
 Release 0.18.1 - 2008-09-17
 
