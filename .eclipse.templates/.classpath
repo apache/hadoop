@@ -27,7 +27,7 @@
 	<classpathentry kind="lib" path="lib/jetty-ext/jasper-runtime.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-ext/jsp-api.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.1.jar"/>
-	<classpathentry kind="lib" path="lib/kfs-0.2.0.jar"/>
+	<classpathentry kind="lib" path="lib/kfs-0.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/oro-2.0.8.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api.jar"/>
