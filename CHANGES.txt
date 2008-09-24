@@ -733,6 +733,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4242. Remove extra ";" in FSDirectory that blocks compilation
     in some IDE's. (szetszwo via omalley)
 
+    HADOOP-4249. Fix eclipse path to include the hsqldb.jar. (szetszwo via
+    omalley)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
