@@ -59,15 +59,21 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     public void initialize(URI uri, Configuration conf) throws IOException {
-        
         try {
-            if (kfsImpl == null) {
-                kfsImpl = new KFSImpl(conf.get("fs.kfs.metaServerHost", ""),
-                                      conf.getInt("fs.kfs.metaServerPort", -1),
-                                      statistics);
-            }
+	    if (kfsImpl == null) {
+                if (uri.getHost() == null) {
+                    kfsImpl = new KFSImpl(conf.get("fs.kfs.metaServerHost", ""),
+                                          conf.getInt("fs.kfs.metaServerPort", -1),
+                                          statistics);
+                } else {
+                    kfsImpl = new KFSImpl(uri.getHost(), uri.getPort(), statistics);
+                }
+	    }
+
             this.localFs = FileSystem.getLocal(conf);
             this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+            this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
+            setConf(conf);
             
         } catch (Exception e) {
             e.printStackTrace();

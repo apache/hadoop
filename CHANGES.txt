@@ -12,6 +12,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
+    with multiple KFS metaservers. (Sriram Rao via lohit)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
