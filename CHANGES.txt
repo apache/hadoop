@@ -8,12 +8,12 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
+    with multiple KFS metaservers. (Sriram Rao via lohit)
+
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
-    with multiple KFS metaservers. (Sriram Rao via lohit)
 
 		HADOOP-4245. Update to latest version of KFS "glue" library jar. 
 		(Sriram Rao via lohit)
