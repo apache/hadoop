@@ -491,7 +491,7 @@ runCoreTests () {
 
 ###############################################################################
 ### Tests parts of contrib specific to the eclipse files
-runContribTestOnEclipseFiles () {
+checkJarFilesDeclaredInEclipse () {
   export DECLARED_JARS=$(sed -n 's@.*kind="lib".*path="\(.*jar\)".*@\1@p' < .eclipse.templates/.classpath)
   export PRESENT_JARS=$(find lib/ src/test/lib/ -name '*.jar' |sort)
   # When run by Hudson, consider libs from ${SUPPORT_DIR} declared
@@ -515,6 +515,29 @@ FAILED: $dir is referenced in the Eclipse project although it doesn't exists any
   return 0
 }
 
+checkEclipse () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Running Eclipse classpath verification."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+
+  checkJarFilesDeclaredInEclipse
+  if [[ $? != 0 ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    -1 Eclipse classpath. The patch causes the Eclipse classpath to differ from the contents of the lib directories."
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    +1 Eclipse classpath. The patch retains Eclipse classpath integrity."
+  return 0
+}
 ###############################################################################
 ### Run the test-contrib target
 runContribTests () {
@@ -531,8 +554,8 @@ runContribTests () {
   ### Kill any rogue build processes from the last attempt
   $PS -auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /usr/bin/kill -9 {} > /dev/null
 
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib && runContribTestOnEclipseFiles"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib && runContribTestOnEclipseFiles
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -649,6 +672,8 @@ checkJavacWarnings
 checkStyle
 (( RESULT = RESULT + $? ))
 checkFindbugsWarnings
+(( RESULT = RESULT + $? ))
+checkEclipse
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
 if [[ $HUDSON == "true" ]] ; then

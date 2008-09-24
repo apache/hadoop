@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     HADOOP-4245. Update to latest version of KFS "glue" library jar. 
     (Sriram Rao via lohit)
 
+    HADOOP-4244. Change test-patch.sh to check Eclipse classpath no matter
+    it is run by Hudson or not. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
