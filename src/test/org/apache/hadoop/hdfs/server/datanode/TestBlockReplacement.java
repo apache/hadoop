@@ -213,7 +213,7 @@ public class TestBlockReplacement extends TestCase {
   }
 
   /* Copy a block from sourceProxy to destination. If the block becomes
-   * overreplicated, preferrably remove it from source.
+   * over-replicated, preferably remove it from source.
    * 
    * Return true if a block is successfully copied; otherwise false.
    */
@@ -221,16 +221,16 @@ public class TestBlockReplacement extends TestCase {
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(
-        sourceProxy.getName()), HdfsConstants.READ_TIMEOUT);
-    sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+        destination.getName()), HdfsConstants.READ_TIMEOUT);
+    sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
     out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-    out.writeByte(DataTransferProtocol.OP_COPY_BLOCK);
+    out.writeByte(DataTransferProtocol.OP_REPLACE_BLOCK);
     out.writeLong(block.getBlockId());
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
-    destination.write(out);
+    sourceProxy.write(out);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());

@@ -31,11 +31,15 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 13:
-   *    Added a new operation, OP_BLOCK_CHECKSUM, for obtaining
-   *    the checksum of a block from a datanode.
+   * Version 14:
+   *    OP_REPLACE_BLOCK is sent from the Balancer server to the destination,
+   *    including the block id, source, and proxy.
+   *    OP_COPY_BLOCK is sent from the destination to the proxy, which contains
+   *    only the block id.
+   *    A reply to OP_COPY_BLOCK sends the block content.
+   *    A reply to OP_REPLACE_BLOCK includes an operation status.
    */
-  public static final int DATA_TRANSFER_VERSION = 13;
+  public static final int DATA_TRANSFER_VERSION = 14;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
