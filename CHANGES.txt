@@ -6,6 +6,11 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4116. Balancer should provide better resource management. (hairong)
 
+  NEW FEATURES
+
+    HADOOP-2421.  Add jdiff output to documentation, listing all API
+    changes from the prior release.  (cutting)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
