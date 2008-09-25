@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.UTF8ByteArrayUtils;
 

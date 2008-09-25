@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ToolRunner;
 
 /**

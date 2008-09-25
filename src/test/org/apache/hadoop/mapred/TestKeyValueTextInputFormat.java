@@ -26,7 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestKeyValueTextInputFormat extends TestCase {
@@ -130,7 +130,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
     }
   }
   private LineReader makeStream(String str) throws IOException {
-    return new LineRecordReader.LineReader(new ByteArrayInputStream
+    return new LineReader(new ByteArrayInputStream
                                            (str.getBytes("UTF-8")), 
                                            defaultConf);
   }
