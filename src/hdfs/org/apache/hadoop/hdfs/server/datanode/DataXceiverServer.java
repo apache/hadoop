@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
@@ -54,6 +55,45 @@ class DataXceiverServer implements Runnable, FSConstants {
   static final int MAX_XCEIVER_COUNT = 256;
   int maxXceiverCount = MAX_XCEIVER_COUNT;
 
+  /** A manager to make sure that cluster balancing does not
+   * take too much resources.
+   * 
+   * It limits the number of block moves for balancing and
+   * the total amount of bandwidth they can use.
+   */
+  static class BlockBalanceThrottler extends BlockTransferThrottler {
+   private int numThreads;
+   
+   /**Constructor
+    * 
+    * @param bandwidth Total amount of bandwidth can be used for balancing 
+    */
+   private BlockBalanceThrottler(long bandwidth) {
+     super(bandwidth);
+     LOG.info("Balancing bandwith is "+ bandwidth + " bytes/s");
+   }
+   
+   /** Check if the block move can start. 
+    * 
+    * Return true if the thread quota is not exceeded and 
+    * the counter is incremented; False otherwise.
+    */
+   synchronized boolean acquire() {
+     if (numThreads >= Balancer.MAX_NUM_CONCURRENT_MOVES) {
+       return false;
+     }
+     numThreads++;
+     return true;
+   }
+   
+   /** Mark that the move is completed. The thread counter is decremented. */
+   synchronized void release() {
+     numThreads--;
+   }
+  }
+
+  BlockBalanceThrottler balanceThrottler;
+  
   /**
    * We need an estimate for block size to check if the disk partition has
    * enough space. For now we set it to be the default block size set
@@ -75,6 +115,10 @@ class DataXceiverServer implements Runnable, FSConstants {
         MAX_XCEIVER_COUNT);
     
     this.estimateBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    
+    //set up parameter for cluster balancing
+    this.balanceThrottler = new BlockBalanceThrottler(
+      conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024));
   }
 
   /**

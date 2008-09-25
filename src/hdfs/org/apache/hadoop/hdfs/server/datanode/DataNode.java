@@ -39,7 +39,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.Semaphore;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -182,12 +181,6 @@ public class DataNode extends Configured
   
   private static final Random R = new Random();
   
-    // The following three fields are to support balancing
-  public final static short MAX_BALANCING_THREADS = 5;
-  protected Semaphore balancingSem = new Semaphore(MAX_BALANCING_THREADS);
-  long balanceBandwidth;
-  protected BlockTransferThrottler balancingThrottler;
-  
   // For InterDataNodeProtocol
   public Server ipcServer;
 
@@ -327,11 +320,6 @@ public class DataNode extends Configured
     }
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
     DataNode.nameNodeAddr = nameNodeAddr;
-
-    //set up parameter for cluster balancing
-    this.balanceBandwidth = conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024);
-    LOG.info("Balancing bandwith is "+balanceBandwidth + " bytes/s");
-    this.balancingThrottler = new BlockTransferThrottler(balanceBandwidth);   
 
     //initialize periodic block scanner
     String reason = null;

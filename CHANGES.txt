@@ -20,6 +20,7 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-4116. Balancer should provide better resource management. (hairong)
 
 Release 0.19.0 - Unreleased
 

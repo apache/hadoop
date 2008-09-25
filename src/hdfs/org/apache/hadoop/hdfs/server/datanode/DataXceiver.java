@@ -475,69 +475,50 @@ class DataXceiver implements Runnable, FSConstants {
     // Read in the header
     long blockId = in.readLong(); // read block id
     Block block = new Block(blockId, 0, in.readLong());
-    String source = Text.readString(in); // read del hint
-    DatanodeInfo target = new DatanodeInfo(); // read target
-    target.readFields(in);
 
-    Socket targetSock = null;
-    short opStatus = DataTransferProtocol.OP_STATUS_SUCCESS;
+    if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
+      LOG.info("Not able to copy block " + blockId + " to " 
+          + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
+      return;
+    }
+
     BlockSender blockSender = null;
-    DataOutputStream targetOut = null;
+    DataOutputStream reply = null;
+    boolean isOpSuccess = true;
+
     try {
-      datanode.balancingSem.acquireUninterruptibly();
-      
       // check if the block exists or not
       blockSender = new BlockSender(block, 0, -1, false, false, false, 
           datanode);
 
-      // get the output stream to the target
-      InetSocketAddress targetAddr = NetUtils.createSocketAddr(
-          target.getName());
-      targetSock = datanode.newSocket();
-      targetSock.connect(targetAddr, datanode.socketTimeout);
-      targetSock.setSoTimeout(datanode.socketTimeout);
+      // set up response stream
+      OutputStream baseStream = NetUtils.getOutputStream(
+          s, datanode.socketWriteTimeout);
+      reply = new DataOutputStream(new BufferedOutputStream(
+          baseStream, SMALL_BUFFER_SIZE));
 
-      OutputStream baseStream = NetUtils.getOutputStream(targetSock, 
-          datanode.socketWriteTimeout);
-      targetOut = new DataOutputStream(
-                     new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
-
-      /* send request to the target */
-      // fist write header info
-      targetOut.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION); // transfer version
-      targetOut.writeByte(DataTransferProtocol.OP_REPLACE_BLOCK); // op code
-      targetOut.writeLong(block.getBlockId()); // block id
-      targetOut.writeLong(block.getGenerationStamp()); // block id
-      Text.writeString( targetOut, source); // del hint
-
-      // then send data
-      long read = blockSender.sendBlock(targetOut, baseStream, 
-                                        datanode.balancingThrottler);
+      // send block content to the target
+      long read = blockSender.sendBlock(reply, baseStream, 
+                                        dataXceiverServer.balanceThrottler);
 
       datanode.myMetrics.bytesRead.inc((int) read);
       datanode.myMetrics.blocksRead.inc();
       
-      // check the response from target
-      receiveResponse(targetSock, 1);
-
-      LOG.info("Copied block " + block + " to " + targetAddr);
+      LOG.info("Copied block " + block + " to " + s.getRemoteSocketAddress());
     } catch (IOException ioe) {
-      opStatus = DataTransferProtocol.OP_STATUS_ERROR;
-      LOG.warn("Got exception while serving " + block + " to "
-          + target.getName() + ": " + StringUtils.stringifyException(ioe));
+      isOpSuccess = false;
       throw ioe;
     } finally {
-      /* send response to the requester */
-      try {
-        sendResponse(s, opStatus, datanode.socketWriteTimeout);
-      } catch (IOException replyE) {
-        LOG.warn("Error writing the response back to "+
-            s.getRemoteSocketAddress() + "\n" +
-            StringUtils.stringifyException(replyE) );
+      dataXceiverServer.balanceThrottler.release();
+      if (isOpSuccess) {
+        try {
+          // send one last byte to indicate that the resource is cleaned.
+          reply.writeChar('d');
+        } catch (IOException ignored) {
+        }
       }
-      IOUtils.closeStream(targetOut);
+      IOUtils.closeStream(reply);
       IOUtils.closeStream(blockSender);
-      datanode.balancingSem.release();
     }
   }
 
@@ -549,67 +530,94 @@ class DataXceiver implements Runnable, FSConstants {
    * @throws IOException
    */
   private void replaceBlock(DataInputStream in) throws IOException {
-    datanode.balancingSem.acquireUninterruptibly();
-
     /* read header */
-    Block block = new Block(in.readLong(), dataXceiverServer.estimateBlockSize,
-        in.readLong()); // block id & len
-    String sourceID = Text.readString(in);
+    long blockId = in.readLong();
+    Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
+        in.readLong()); // block id & generation stamp
+    String sourceID = Text.readString(in); // read del hint
+    DatanodeInfo proxySource = new DatanodeInfo(); // read proxy source
+    proxySource.readFields(in);
 
+    if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
+      LOG.warn("Not able to receive block " + blockId + " from " 
+          + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
+      sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR, 
+          datanode.socketWriteTimeout);
+      return;
+    }
+
+    Socket proxySock = null;
+    DataOutputStream proxyOut = null;
     short opStatus = DataTransferProtocol.OP_STATUS_SUCCESS;
     BlockReceiver blockReceiver = null;
+    DataInputStream proxyReply = null;
+    
     try {
+      // get the output stream to the proxy
+      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
+          proxySource.getName());
+      proxySock = datanode.newSocket();
+      proxySock.connect(proxyAddr, datanode.socketTimeout);
+      proxySock.setSoTimeout(datanode.socketTimeout);
+
+      OutputStream baseStream = NetUtils.getOutputStream(proxySock, 
+          datanode.socketWriteTimeout);
+      proxyOut = new DataOutputStream(
+                     new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
+
+      /* send request to the proxy */
+      proxyOut.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION); // transfer version
+      proxyOut.writeByte(DataTransferProtocol.OP_COPY_BLOCK); // op code
+      proxyOut.writeLong(block.getBlockId()); // block id
+      proxyOut.writeLong(block.getGenerationStamp()); // block id
+      proxyOut.flush();
+
+      // receive the response from the proxy
+      proxyReply = new DataInputStream(new BufferedInputStream(
+          NetUtils.getInputStream(proxySock), BUFFER_SIZE));
       // open a block receiver and check if the block does not exist
-       blockReceiver = new BlockReceiver(
-          block, in, s.getRemoteSocketAddress().toString(),
-          s.getLocalSocketAddress().toString(), false, "", null, datanode);
+      blockReceiver = new BlockReceiver(
+          block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
+          proxySock.getLocalSocketAddress().toString(),
+          false, "", null, datanode);
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 
-          datanode.balancingThrottler, -1);
+          dataXceiverServer.balanceThrottler, -1);
                     
       // notify name node
       datanode.notifyNamenodeReceivedBlock(block, sourceID);
 
       LOG.info("Moved block " + block + 
           " from " + s.getRemoteSocketAddress());
+      
     } catch (IOException ioe) {
       opStatus = DataTransferProtocol.OP_STATUS_ERROR;
       throw ioe;
     } finally {
+      // receive the last byte that indicates the proxy released its thread resource
+      if (opStatus == DataTransferProtocol.OP_STATUS_SUCCESS) {
+        try {
+          proxyReply.readChar();
+        } catch (IOException ignored) {
+        }
+      }
+      
+      // now release the thread resource
+      dataXceiverServer.balanceThrottler.release();
+      
       // send response back
       try {
         sendResponse(s, opStatus, datanode.socketWriteTimeout);
       } catch (IOException ioe) {
         LOG.warn("Error writing reply back to " + s.getRemoteSocketAddress());
       }
+      IOUtils.closeStream(proxyOut);
       IOUtils.closeStream(blockReceiver);
-      datanode.balancingSem.release();
+      IOUtils.closeStream(proxyReply);
     }
   }
   
-  /**
-   *  Utility function for receiving a response.
-   *  @param s socket to read from
-   *  @param numTargets number of responses to read
-   **/
-  private void receiveResponse(Socket s, int numTargets) throws IOException {
-    // check the response
-    DataInputStream reply = new DataInputStream(new BufferedInputStream(
-                                NetUtils.getInputStream(s), BUFFER_SIZE));
-    try {
-      for (int i = 0; i < numTargets; i++) {
-        short opStatus = reply.readShort();
-        if(opStatus != DataTransferProtocol.OP_STATUS_SUCCESS) {
-          throw new IOException("operation failed at "+
-              s.getInetAddress());
-        } 
-      }
-    } finally {
-      IOUtils.closeStream(reply);
-    }
-  }
-
   /**
    * Utility function for sending a response.
    * @param s socket to write to
