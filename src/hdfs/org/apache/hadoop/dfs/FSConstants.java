@@ -100,12 +100,15 @@ public interface FSConstants {
    * This should change when serialization of DatanodeInfo, not just
    * when protocol changes. It is not very obvious. 
    */
-  /*
-   * Version 11:
-   *    OP_WRITE_BLOCK sends a boolean. If its value is true, an additonal 
-   *    DatanodeInfo of client requesting transfer is also sent. 
+  /* Version 14:
+   *    OP_REPLACE_BLOCK is sent from the Balancer server to the destination,
+   *    including the block id, source, and proxy.
+   *    OP_COPY_BLOCK is sent from the destination to the proxy, which contains
+   *    only the block id.
+   *    A reply to OP_COPY_BLOCK sends the block content.
+   *    A reply to OP_REPLACE_BLOCK includes an operation status.
    */
-  public static final int DATA_TRANSFER_VERSION = 11;
+  public static final int DATA_TRANSFER_VERSION = 14;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;
