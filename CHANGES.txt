@@ -20,7 +20,6 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
-    HADOOP-4116. Balancer should provide better resource management. (hairong)
 
 Release 0.19.0 - Unreleased
 
@@ -748,6 +747,12 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4247. Move InputSampler into org.apache.hadoop.mapred.lib, so that
     examples.jar doesn't depend on tools.jar. (omalley)
+
+Release 0.18.2 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-4116. Balancer should provide better resource management. (hairong)
 
 Release 0.18.1 - 2008-09-17
 
