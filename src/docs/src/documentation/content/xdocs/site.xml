@@ -53,6 +53,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <hod-config-guide href="hod_config_guide.html"/>
     </hod>
     <api       label="API Docs"           href="ext:api/index" />
+    <jdiff     label="API Changes"        href="ext:jdiff/changes" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
     <lists     label="Mailing Lists"      href="ext:lists" />
@@ -90,6 +91,9 @@ See http://forrest.apache.org/docs/linking.html for more info.
     </hod>
     <relnotes href="releasenotes.html" />
     <changes href="changes.html" />
+    <jdiff href="jdiff/">
+      <changes href="changes.html" />
+    </jdiff>
     <api href="api/">
       <index href="index.html" />
       <org href="org/">
