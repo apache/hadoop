@@ -224,8 +224,7 @@ elif [ "$COMMAND" = "archive" ] ; then
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "sampler" ] ; then
-  CLASS=org.apache.hadoop.tools.InputSampler
-  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  CLASS=org.apache.hadoop.mapred.lib.InputSampler
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else
   CLASS=$COMMAND

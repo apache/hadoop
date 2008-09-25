@@ -32,8 +32,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapred.lib.InputSampler;
 import org.apache.hadoop.mapred.lib.TotalOrderPartitioner;
-import org.apache.hadoop.tools.InputSampler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 

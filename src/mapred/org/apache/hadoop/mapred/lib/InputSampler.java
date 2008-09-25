@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.tools;
+package org.apache.hadoop.mapred.lib;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -40,9 +39,6 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.lib.TotalOrderPartitioner;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -405,7 +401,6 @@ public class InputSampler<K,V> implements Tool {
 
     Path outf = new Path(otherArgs.remove(otherArgs.size() - 1));
     TotalOrderPartitioner.setPartitionFile(job, outf);
-    ArrayList<Path> plist = new ArrayList<Path>(otherArgs.size());
     for (String s : otherArgs) {
       FileInputFormat.addInputPath(job, new Path(s));
     }
@@ -416,7 +411,7 @@ public class InputSampler<K,V> implements Tool {
 
   public static void main(String[] args) throws Exception {
     JobConf job = new JobConf(InputSampler.class);
-    InputSampler sampler = new InputSampler(job);
+    InputSampler<?,?> sampler = new InputSampler(job);
     int res = ToolRunner.run(sampler, args);
     System.exit(res);
   }
