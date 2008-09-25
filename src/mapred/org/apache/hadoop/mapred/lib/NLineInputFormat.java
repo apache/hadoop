@@ -35,7 +35,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.LineRecordReader;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 
 /**
  * NLineInputFormat which splits N lines of input as one split.

@@ -26,7 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestTextInputFormat extends TestCase {
@@ -128,7 +128,7 @@ public class TestTextInputFormat extends TestCase {
   }
 
   private static LineReader makeStream(String str) throws IOException {
-    return new LineRecordReader.LineReader(new ByteArrayInputStream
+    return new LineReader(new ByteArrayInputStream
                                              (str.getBytes("UTF-8")), 
                                            defaultConf);
   }

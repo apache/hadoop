@@ -748,6 +748,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4247. Move InputSampler into org.apache.hadoop.mapred.lib, so that
     examples.jar doesn't depend on tools.jar. (omalley)
 
+    HADOOP-4269. Fix the deprecation of LineReader by extending the new class
+    into the old name and deprecating it. Also update the tests to test the 
+    new class. (cdouglas via omalley)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

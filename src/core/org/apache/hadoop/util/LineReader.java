@@ -38,12 +38,23 @@ public class LineReader {
   private int bufferPosn = 0;
 
   /**
-   * Create a line reader that reads from the given stream using the 
-   * given buffer-size.
-   * @param in
+   * Create a line reader that reads from the given stream using the
+   * default buffer-size (64k).
+   * @param in The input stream
    * @throws IOException
    */
-  LineReader(InputStream in, int bufferSize) {
+  public LineReader(InputStream in) {
+    this(in, DEFAULT_BUFFER_SIZE);
+  }
+
+  /**
+   * Create a line reader that reads from the given stream using the 
+   * given buffer-size.
+   * @param in The input stream
+   * @param bufferSize Size of the read buffer
+   * @throws IOException
+   */
+  public LineReader(InputStream in, int bufferSize) {
     this.in = in;
     this.bufferSize = bufferSize;
     this.buffer = new byte[this.bufferSize];

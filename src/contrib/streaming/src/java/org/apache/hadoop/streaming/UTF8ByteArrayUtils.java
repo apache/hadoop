@@ -21,8 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.LineRecordReader;
-import org.apache.hadoop.mapred.LineRecordReader.LineReader;
+import org.apache.hadoop.util.LineReader;
 
 /**
  * General utils for byte array containing UTF-8 encoded strings
@@ -205,7 +204,7 @@ public class UTF8ByteArrayUtils {
    * @param out Text to read into
    * @return number of bytes read
    * @deprecated use 
-   * {@link StreamKeyValUtil#readLine(LineRecordReader.LineReader, Text)} 
+   * {@link StreamKeyValUtil#readLine(LineReader, Text)} 
    * @throws IOException
    */
   @Deprecated
