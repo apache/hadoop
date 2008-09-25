@@ -211,6 +211,7 @@
 
    <exclude pattern="**/"/>
    <exclude pattern="api/**"/>
+   <exclude pattern="jdiff/**"/>
    <exclude pattern="changes.html"/>
    <exclude pattern="releasenotes.html"/>
 

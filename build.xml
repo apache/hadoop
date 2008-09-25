@@ -126,9 +126,10 @@
   <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
 
   <property name="rat.reporting.classname" value="rat.Report"/>
-  <property name="jdiff.home" value="${user.home}/jdiff-1.1.0"/>
-  <property name="jdiff.reports.dir" value="${docs.dir}/jdiff"/>
-  <property name="jdiff.stable" value="0.17.0"/>
+
+  <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
+  <property name="jdiff.xml.dir" value="${docs.dir}/jdiff"/>
+  <property name="jdiff.stable" value="0.18.1"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
@@ -868,15 +869,18 @@
     </javadoc>
   </target>	
 
-  <target name="api-xml" depends="javadoc">
+  <target name="jdiff.check" unless="jdiff.home">
+    <fail message="'jdiff.home' is not defined. Please pass -Djdiff.home=&lt;base of jdiff installation&gt; to Ant on the command-line." />
+  </target>
+
+  <target name="api-xml" depends="jdiff.check,javadoc">
     <javadoc>
        <doclet name="jdiff.JDiff"
                path="${jdiff.home}/jdiff.jar:${jdiff.home}/xerces.jar">
-         <param name="-apidir" value="${build.dir}"/>
+         <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop ${version}"/>
        </doclet>
        <packageset dir="src/core"/>
-       <packageset dir="src/hdfs"/>
        <packageset dir="src/mapred"/>
        <packageset dir="src/tools"/>
        <classpath >
@@ -887,15 +891,16 @@
   </target>
 	
   <target name="api-report" depends="api-xml">
+    <mkdir dir="${jdiff.build.dir}"/>
     <javadoc sourcepath="src/core,src/hdfs,src,mapred,src/tools"
-             destdir="${build.dir}"
+             destdir="${jdiff.build.dir}"
              sourceFiles="${jdiff.home}/Null.java">
        <doclet name="jdiff.JDiff"
                path="${jdiff.home}/jdiff.jar:${jdiff.home}/xerces.jar">
          <param name="-oldapi" value="hadoop ${jdiff.stable}"/>
          <param name="-newapi" value="hadoop ${version}"/>
-         <param name="-oldapidir" value="${jdiff.reports.dir}"/>
-         <param name="-newapidir" value="${build.dir}"/>
+         <param name="-oldapidir" value="${jdiff.xml.dir}"/>
+         <param name="-newapidir" value="${jdiff.xml.dir}"/>
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
          <param name="-javadocnew" value="${build.javadoc}/"/>
          <param name="-stats"/>
@@ -930,6 +935,7 @@
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
+    <mkdir dir="${dist.dir}/docs/jdiff"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
       <fileset dir="lib">
