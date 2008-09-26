@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -193,8 +194,8 @@ public class DFSAdmin extends FsShell {
       "\tSet the dik space quota <quota> for each directory <dirName>.\n" + 
       "\t\tThe directory quota is a long integer that puts a hard limit " +
       "on the number of names in the directory tree.\n" +
-      "\t\tQuota can also be speciefied with MB, GB, or TB suffix" +
-      " (e.g. 100GB, 20TB).\n" + 
+      "\t\tQuota can also be speciefied with a binary prefix for terabytes, " +
+      " petabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
       "\t\tBest effort for the directory, with faults reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
@@ -208,24 +209,8 @@ public class DFSAdmin extends FsShell {
       super(fs);
       CommandFormat c = new CommandFormat(NAME, 2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
-      long multiplier = 1;
       String str = parameters.remove(0).trim();
-      if (str.endsWith("TB")) {
-        multiplier = 1024 * 1024 * 1024 * 1024;
-      } else if (str.endsWith("GB")) {
-        multiplier = 1024 * 1024 * 1024;
-      } else if (str.endsWith("MB")) {
-        multiplier = 1024 * 1024;
-      }
-      if (multiplier != 1) {
-        str = str.substring(0, str.length()-2);
-      }
-      
-      quota = Long.parseLong(str);
-      if (quota > Long.MAX_VALUE/multiplier) {
-        throw new IllegalArgumentException("quota exceeds Long.MAX_VALUE!");
-      }
-      quota *= multiplier;
+      quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     

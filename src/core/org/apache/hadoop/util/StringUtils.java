@@ -563,7 +563,7 @@ public class StringUtils {
     EXA(PETA.value << 10);
 
     public final long value;
-    public final long symbol;
+    public final char symbol;
 
     TraditionalBinaryPrefix(long value) {
       this.value = value;
@@ -601,9 +601,14 @@ public class StringUtils {
       final char lastchar = s.charAt(lastpos);
       if (Character.isDigit(lastchar))
         return Long.parseLong(s);
-      else
-        return TraditionalBinaryPrefix.valueOf(lastchar).value
-               * Long.parseLong(s.substring(0, lastpos));
+      else {
+        long prefix = TraditionalBinaryPrefix.valueOf(lastchar).value;
+        long num = Long.parseLong(s.substring(0, lastpos));
+        if (num > (Long.MAX_VALUE/prefix) || num < (Long.MIN_VALUE/prefix)) {
+          throw new IllegalArgumentException(s + " does not fit in a Long");
+        }
+        return num * prefix;
+      }
     }
   }
   
