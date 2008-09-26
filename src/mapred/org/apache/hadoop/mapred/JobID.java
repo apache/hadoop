@@ -152,23 +152,6 @@ public class JobID extends ID {
         + " is not properly formed");
   }
   
-  /** Check if the given string represents a job-id or not 
-   */
-  public static boolean isJobNameValid(String str) {
-    if(str == null) {
-      return false;
-    }
-    String[] parts = str.split("_");
-    if(parts.length == 3) {
-      if(parts[0].equals(JOB)) {
-          // other 2 parts should be parseable
-          return JobTracker.validateIdentifier(parts[1])
-                 && JobTracker.validateJobNumber(parts[2]);
-      }
-    }
-    return false;
-  }
-  
   /** 
    * Returns a regex pattern which matches task IDs. Arguments can 
    * be given null, in which case that part of the regex will be generic.  
