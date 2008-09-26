@@ -762,6 +762,9 @@ Release 0.19.0 - Unreleased
     terabytes properly. Implementation now uses StringUtils for parsing this.
     (Raghu Angadi)
 
+    HADOOP-4259. Findbugs should run over tools.jar also. (cdouglas via 
+    omalley)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
