@@ -1598,6 +1598,13 @@ Release 0.18.0 - 2008-08-19
     HADOOP-3947. Fix a problem in tasktracker reinitialization. 
     (Amareshwari Sriramadasu via ddas)
 
+Release 0.17.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-4277. Checksum verification was mistakenly disabled for
+    LocalFileSystem. (Raghu Angadi)
+
 Release 0.17.2 - 2008-08-11
 
   BUG FIXES

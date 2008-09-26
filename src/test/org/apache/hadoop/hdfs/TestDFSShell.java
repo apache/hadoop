@@ -198,6 +198,9 @@ public class TestDFSShell extends TestCase {
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
 
     try {
+      // remove left over crc files:
+      new File(TEST_ROOT_DIR, ".f1.crc").delete();
+      new File(TEST_ROOT_DIR, ".f2.crc").delete();    
       final File f1 = createLocalFile(new File(TEST_ROOT_DIR, "f1"));
       final File f2 = createLocalFile(new File(TEST_ROOT_DIR, "f2"));
   
