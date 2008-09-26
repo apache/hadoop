@@ -39,7 +39,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
- * A Proc file-system based ProcfsBasedProcessTree. Works on Linux and Cygwin.
+ * A Proc file-system based ProcessTree. Works only on Linux.
  */
 public class ProcfsBasedProcessTree {
 
@@ -72,10 +72,9 @@ public class ProcfsBasedProcessTree {
   public static boolean isAvailable() {
     try {
       String osName = System.getProperty("os.name");
-      if (!osName.startsWith("Linux") && !osName.startsWith("Windows")) {
-        LOG
-            .info("ProcfsBasedProcfsBasedProcessTree currently is supported only "
-                + "on Linux and Windows");
+      if (!osName.startsWith("Linux")) {
+        LOG.info("ProcfsBasedProcessTree currently is supported only on "
+            + "Linux.");
         return false;
       }
     } catch (SecurityException se) {

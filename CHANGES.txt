@@ -768,6 +768,11 @@ Release 0.19.0 - Unreleased
     HADOOP-4275. Move public method isJobValidName from JobID to a private
     method in JobTracker. (omalley)
 
+    HADOOP-4173. fix failures in TestProcfsBasedProcessTree and
+    TestTaskTrackerMemoryManager tests. ProcfsBasedProcessTree and
+    memory management in TaskTracker are disabled on Windows.
+    (Vinod K V via rangadi)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
