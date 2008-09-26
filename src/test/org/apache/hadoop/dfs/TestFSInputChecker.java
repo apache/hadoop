@@ -292,6 +292,7 @@ public class TestFSInputChecker extends TestCase {
     try {
       testChecker(fileSys, true);
       testChecker(fileSys, false);
+      testSeekAndRead(fileSys);
     } finally {
       fileSys.close();
       cluster.shutdown();
@@ -304,8 +305,41 @@ public class TestFSInputChecker extends TestCase {
       testChecker(fileSys, true);
       testChecker(fileSys, false);
       testFileCorruption((LocalFileSystem)fileSys);
+      testSeekAndRead(fileSys);
     }finally {
       fileSys.close();
+    }
+  }
+
+  private void testSeekAndRead(ChecksumFileSystem fileSys)
+  throws IOException {
+    Path file = new Path("try.dat");
+    writeFile(fileSys, file);
+    stm = fileSys.open(file,
+        fileSys.getConf().getInt("io.file.buffer.size", 4096));
+    checkSeekAndRead();
+    stm.close();
+    cleanupFile(fileSys, file);
+  }
+
+  private void checkSeekAndRead() throws IOException {
+    int position = 1;
+    int len = 2 * BYTES_PER_SUM - (int) position;
+    readAndCompare(stm, position, len);
+
+    position = BYTES_PER_SUM;
+    len = BYTES_PER_SUM;
+    readAndCompare(stm, position, len);
+  }
+
+  private void readAndCompare(FSDataInputStream in, int position, int len)
+      throws IOException {
+    byte[] b = new byte[len];
+    in.seek(position);
+    IOUtils.readFully(in, b, 0, b.length);
+
+    for (int i = 0; i < b.length; i++) {
+      assertEquals(expected[position + i], b[i]);
     }
   }
 }
