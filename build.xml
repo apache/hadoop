@@ -902,7 +902,7 @@
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
          <param name="-newapidir" value="${jdiff.xml.dir}"/>
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
-         <param name="-javadocnew" value="${build.javadoc}/"/>
+         <param name="-javadocnew" value="../../api/"/>
          <param name="-stats"/>
        </doclet>
        <classpath >
