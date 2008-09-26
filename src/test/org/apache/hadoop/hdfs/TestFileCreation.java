@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.io.*;
 import java.net.InetSocketAddress;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -76,19 +75,14 @@ public class TestFileCreation extends junit.framework.TestCase {
   // writes to file but does not close it
   //
   static void writeFile(FSDataOutputStream stm) throws IOException {
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
+    writeFile(stm, fileSize);
   }
 
   //
   // writes specified bytes to file.
   //
   static void writeFile(FSDataOutputStream stm, int size) throws IOException {
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
+    byte[] buffer = AppendTestUtil.randomBytes(seed, size);
     stm.write(buffer, 0, size);
   }
 
@@ -119,14 +113,14 @@ public class TestFileCreation extends junit.framework.TestCase {
       }
     }
     FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[numBlocks * blockSize];
+    final byte[] expected;
     if (simulatedStorage) {
+      expected = new byte[numBlocks * blockSize];
       for (int i= 0; i < expected.length; i++) {  
         expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
       }
     } else {
-      Random rand = new Random(seed);
-      rand.nextBytes(expected);
+      expected = AppendTestUtil.randomBytes(seed, numBlocks*blockSize);
     }
     // do a sanity check. Read the file
     byte[] actual = new byte[numBlocks * blockSize];
@@ -157,9 +151,7 @@ public class TestFileCreation extends junit.framework.TestCase {
                          " len " + locations[idx].getLength());
     }
 
-    byte[] expected = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(expected);
+    byte[] expected = AppendTestUtil.randomBytes(seed, fileSize);
     FSDataInputStream stm = fs.open(name);
     byte[] actual = new byte[fileSize];
     stm.readFully(0, actual);
@@ -344,9 +336,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // write 1 byte to file. 
       // This should fail because all datanodes are dead.
-      byte[] buffer = new byte[1];
-      Random rand = new Random(seed);
-      rand.nextBytes(buffer);
+      byte[] buffer = AppendTestUtil.randomBytes(seed, 1);
       try {
         stm.write(buffer);
         stm.close();
@@ -542,9 +532,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // write 1 byte to file.  This should succeed because the 
       // namenode should have persisted leases.
-      byte[] buffer = new byte[1];
-      Random rand = new Random(seed);
-      rand.nextBytes(buffer);
+      byte[] buffer = AppendTestUtil.randomBytes(seed, 1);
       stm.write(buffer);
       stm.close();
       stm2.write(buffer);
@@ -746,7 +734,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(1000);                       // let writers get started
 
         //stop a datanode, it should have least recover.
-        cluster.stopDataNode(new Random().nextInt(REPLICATION));
+        cluster.stopDataNode(AppendTestUtil.nextInt(REPLICATION));
         
         //let the slow writer writes a few more seconds
         System.out.println("Wait a few seconds");

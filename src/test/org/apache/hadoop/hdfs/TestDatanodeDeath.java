@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.Random;
-import java.util.Collection;
+import java.io.IOException;
 
+import junit.framework.TestCase;
+
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-
 import org.apache.log4j.Level;
-import org.apache.commons.logging.impl.Log4JLogger;
 
 /**
  * This class tests that a file need not be closed before its
@@ -135,45 +130,11 @@ public class TestDatanodeDeath extends TestCase {
   // writes to file
   //
   private void writeFile(FSDataOutputStream stm, long seed) throws IOException {
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
+    byte[] buffer = AppendTestUtil.randomBytes(seed, fileSize);
+
     int mid = fileSize/2;
     stm.write(buffer, 0, mid);
     stm.write(buffer, mid, fileSize - mid);
-  }
-
-  /**
-   * For blocks that reside on the nodes that are down, verify that their
-   * replication factor is 1 more than the specified one.
-   */
-  private DatanodeInfo[] getPipeline(FileSystem fileSys, Path name, 
-                                     short repl,
-                                     int blockNumber) 
-                                     throws IOException {
-    // need a raw stream
-    assertTrue("Not HDFS:"+fileSys.getUri(), 
-               fileSys instanceof DistributedFileSystem);
-
-    DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream)
-      ((DistributedFileSystem)fileSys).open(name);
-    Collection<LocatedBlock> dinfo = dis.getAllBlocks();
-    int num = 0;
-    DatanodeInfo[] status = null;
-
-    for (LocatedBlock blk : dinfo) { // for each block
-      int hasdown = 0;
-      DatanodeInfo[] nodes = blk.getLocations();
-      for (int j = 0; j < nodes.length; j++) {     // for each replica
-        System.out.println("Block " + blk.getBlock() + " replica " +
-                           nodes[j].getName());
-      }
-      if (blockNumber == num) {
-        status = nodes;
-      }
-      num++;
-    }
-    return status;
   }
 
   //
@@ -226,18 +187,17 @@ public class TestDatanodeDeath extends TestCase {
       }
     }
     FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[filesize];
-    Random rand = new Random(seed);
-    rand.nextBytes(expected);
+    final byte[] expected = AppendTestUtil.randomBytes(seed, fileSize);
+
     // do a sanity check. Read the file
     byte[] actual = new byte[filesize];
     stm.readFully(0, actual);
     checkData(actual, 0, expected, "Read 1");
   }
 
-  private void checkData(byte[] actual, int from, byte[] expected, String message) {
+  private static void checkData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                         expected[from+idx]+" actual "+actual[idx],
                         actual[idx], expected[from+idx]);
       actual[idx] = 0;
@@ -252,13 +212,11 @@ public class TestDatanodeDeath extends TestCase {
    * test will fail).
    */
   class Modify extends Thread {
-    Random rand;
     volatile boolean running;
     MiniDFSCluster cluster;
     Configuration conf;
 
     Modify(Configuration conf, MiniDFSCluster cluster) {
-      rand = new Random();
       running = true;
       this.cluster = cluster;
       this.conf = conf;
@@ -292,7 +250,7 @@ public class TestDatanodeDeath extends TestCase {
 
         for (int i = 0; i < replication - 1; i++) {
           // pick a random datanode to shutdown
-          int victim = rand.nextInt(numDatanodes);
+          int victim = AppendTestUtil.nextInt(numDatanodes);
           try {
             System.out.println("Stopping datanode " + victim);
             cluster.restartDataNode(victim);
@@ -389,13 +347,9 @@ public class TestDatanodeDeath extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster(conf, myMaxNodes, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
     short repl = 3;
 
     Path filename = new Path("simpletest.dat");
-    Random rand = new Random();
-    long myseed = rand.nextInt();
-    rand = new Random(myseed);
     try {
 
       // create a file and write one block of data
@@ -405,12 +359,11 @@ public class TestDatanodeDeath extends TestCase {
                                              (stm.getWrappedStream());
 
       // these are test settings
-      int bytesPerChecksum = conf.getInt( "io.bytes.per.checksum", 512); 
       dfstream.setChunksPerPacket(5);
       dfstream.setArtificialSlowdown(3000);
 
-      byte[] buffer = new byte[fileSize];
-      rand.nextBytes(buffer);
+      final long myseed = AppendTestUtil.nextLong();
+      byte[] buffer = AppendTestUtil.randomBytes(myseed, fileSize);
       int mid = fileSize/4;
       stm.write(buffer, 0, mid);
 
@@ -426,7 +379,7 @@ public class TestDatanodeDeath extends TestCase {
       }
 
       if (targets == null) {
-        int victim = rand.nextInt(myMaxNodes);
+        int victim = AppendTestUtil.nextInt(myMaxNodes);
         System.out.println("SimpleTest stopping datanode random " + victim);
         cluster.stopDataNode(victim);
       } else {

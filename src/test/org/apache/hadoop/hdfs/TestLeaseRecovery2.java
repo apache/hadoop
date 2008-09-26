@@ -18,38 +18,18 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 
 public class TestLeaseRecovery2 extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 64;
   static final int FILE_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
-  static final Random RANDOM = new Random();
   static byte[] buffer = new byte[FILE_SIZE];
 
-  static void checkMetaInfo(Block b, InterDatanodeProtocol idp
-      ) throws IOException {
-    TestInterDatanodeProtocol.checkMetaInfo(b, idp, null);
-  }
-  
-  static int min(Integer... x) {
-    int m = x[0];
-    for(int i = 1; i < x.length; i++) {
-      if (x[i] < m) {
-        m = x[i];
-      }
-    }
-    return m;
-  }
-
-  /**
-   */
   public void testBlockSynchronization() throws Exception {
     final long softLease = 1000;
     final long hardLease = 60 * 60 *1000;
@@ -67,7 +47,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       //create a file
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
       // create a random file name
-      String filestr = "/foo" + RANDOM.nextInt();
+      String filestr = "/foo" + AppendTestUtil.nextInt();
       Path filepath = new Path(filestr);
       FSDataOutputStream stm = dfs.create(filepath, true,
                                  dfs.getConf().getInt("io.file.buffer.size", 4096),
@@ -75,7 +55,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       assertTrue(dfs.dfs.exists(filestr));
 
       // write random number of bytes into it.
-      int size = RANDOM.nextInt(FILE_SIZE);
+      int size = AppendTestUtil.nextInt(FILE_SIZE);
       stm.write(buffer, 0, size);
 
       // sync file

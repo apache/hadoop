@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -57,13 +56,12 @@ public class TestFileAppend2 extends TestCase {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
   static final int numBlocks = 5;
   static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
-  byte[] fileContents = null;
-  Random rand = new Random(seed);
+
+  private byte[] fileContents = null;
 
   int numDatanodes = 5;
   int numberOfFiles = 50;
@@ -82,8 +80,8 @@ public class TestFileAppend2 extends TestCase {
   // create a buffer that contains the entire test file data.
   //
   private void initBuffer(int size) {
-    fileContents = new byte[size];
-    rand.nextBytes(fileContents);
+    long seed = AppendTestUtil.nextLong();
+    fileContents = AppendTestUtil.randomBytes(seed, size);
   }
 
   /*
@@ -209,7 +207,7 @@ public class TestFileAppend2 extends TestCase {
         int offset = 0;
         try {
           out = fs.create(foo);
-          int len = 10 + rand.nextInt(100);
+          int len = 10 + AppendTestUtil.nextInt(100);
           out.write(fileContents, offset, len);
           offset += len;
         }
@@ -225,7 +223,7 @@ public class TestFileAppend2 extends TestCase {
         out = null;
         try {
           out = fs.append(foo);
-          int len = 10 + rand.nextInt(100);
+          int len = 10 + AppendTestUtil.nextInt(100);
           out.write(fileContents, offset, len);
           offset += len;
         }
@@ -288,7 +286,7 @@ public class TestFileAppend2 extends TestCase {
             System.out.println("Completed write to almost all files.");
             return;  
           }
-          int index = rand.nextInt(testFiles.size());
+          int index = AppendTestUtil.nextInt(testFiles.size());
           testfile = testFiles.remove(index);
         }
 
@@ -313,7 +311,7 @@ public class TestFileAppend2 extends TestCase {
           if (left <= 0) {
             left = 1;
           }
-          sizeToAppend = rand.nextInt(left);
+          sizeToAppend = AppendTestUtil.nextInt(left);
 
           System.out.println("Workload thread " + id +
                              " appending " + sizeToAppend + " bytes " +
@@ -386,7 +384,7 @@ public class TestFileAppend2 extends TestCase {
       // Insert them into a linked list.
       //
       for (int i = 0; i < numberOfFiles; i++) {
-        short replication = (short)(rand.nextInt(numDatanodes) + 1);
+        short replication = (short)(AppendTestUtil.nextInt(numDatanodes) + 1);
         Path testFile = new Path("/" + i + ".dat");
         FSDataOutputStream stm = createFile(fs, testFile, replication);
         stm.close();

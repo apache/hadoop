@@ -442,6 +442,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4006. Clean up FSConstants and move some of the constants to
     better places. (Sanjay Radia via rangadi)
 
+    HADOOP-4279. Trace the seeds of random sequences in append unit tests to
+    make itermitant failures reproducible. (szetszwo via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
