@@ -720,7 +720,9 @@ creations/deletions), or "all".</description>
   <name>mapred.tasktracker.taskmemorymanager.monitoring-interval</name>
   <value>5000</value>
   <description>The interval, in milliseconds, for which the tasktracker waits
-   between two cycles of monitoring its tasks' memory usage.</description>
+   between two cycles of monitoring its tasks' memory usage. Used only if
+   tasks' memory management is enabled via mapred.tasktracker.tasks.maxmemory.
+   </description>
 </property>
 
 <property>
@@ -728,7 +730,8 @@ creations/deletions), or "all".</description>
   <value>5000</value>
   <description>The time, in milliseconds, the tasktracker waits for sending a
   SIGKILL to a process that has overrun memory limits, after it has been sent
-  a SIGTERM.</description>
+  a SIGTERM. Used only if tasks' memory management is enabled via
+  mapred.tasktracker.tasks.maxmemory.</description>
 </property>
 
 <property>
@@ -1468,7 +1471,9 @@ creations/deletions), or "all".</description>
   	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
   	 to use a share of this amount. Any task exceeding its share will be 
   	killed. If set to -1, this functionality is disabled, and 
-  	mapred.task.maxmemory is ignored.
+  	mapred.task.maxmemory is ignored. Further, it will be enabled only on the
+  	systems where org.apache.hadoop.util.ProcfsBasedProcessTree is available,
+  	i.e at present only on Linux.
   </description>
 </property>
 
