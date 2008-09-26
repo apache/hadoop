@@ -237,8 +237,8 @@ Release 0.19.0 - Unreleased
     HADOOP-4205. hive: metastore and ql to use the refactored SerDe library.
     (zshao)
 
-    HADOOP-4106. libhdfs: add time, permission and user attribute support (part 2).
-    (Pete Wyckoff through zshao)
+    HADOOP-4106. libhdfs: add time, permission and user attribute support 
+    (part 2). (Pete Wyckoff through zshao)
 
     HADOOP-4104. libhdfs: add time, permission and user attribute support.
     (Pete Wyckoff through zshao)
@@ -764,6 +764,9 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4259. Findbugs should run over tools.jar also. (cdouglas via 
     omalley)
+
+    HADOOP-4275. Move public method isJobValidName from JobID to a private
+    method in JobTracker. (omalley)
 
 Release 0.18.2 - Unreleased
 

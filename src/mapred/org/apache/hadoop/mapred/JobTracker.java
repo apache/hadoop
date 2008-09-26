@@ -579,10 +579,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return jobsToRecover.size() != 0;
     }
 
+    /** Check if the given string represents a job-id or not 
+     */
+    private boolean isJobNameValid(String str) {
+      if(str == null) {
+        return false;
+      }
+      String[] parts = str.split("_");
+      if(parts.length == 3) {
+        if(parts[0].equals("job")) {
+            // other 2 parts should be parseable
+            return JobTracker.validateIdentifier(parts[1])
+                   && JobTracker.validateJobNumber(parts[2]);
+        }
+      }
+      return false;
+    }
+    
     // checks if the job dir has the required files
     public void checkAndAddJob(FileStatus status) throws IOException {
       String jobName = status.getPath().getName();
-      if (JobID.isJobNameValid(jobName)) {
+      if (isJobNameValid(jobName)) {
         if (JobClient.isJobDirValid(status.getPath(), fs)) {
           recoveryManager.addJobForRecovery(JobID.forName(jobName));
         } else {
