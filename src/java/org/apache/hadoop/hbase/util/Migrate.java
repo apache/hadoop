@@ -90,6 +90,12 @@ public class Migrate extends Configured implements Tool {
   // Filesystem version of hbase 0.1.x.
   private static final float HBASE_0_1_VERSION = 0.1f;
   
+  // Filesystem version we can migrate from
+  private static final int PREVIOUS_VERSION = 4;
+  
+  private static final String MIGRATION_LINK = 
+    " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
+
   /** default constructor */
   public Migrate() {
     this(new HBaseConfiguration());
@@ -170,20 +176,28 @@ public class Migrate extends Configured implements Tool {
 
       // See if there is a file system version file
       String versionStr = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
-      if (versionStr != null &&
-          versionStr.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
+      if (versionStr == null) {
+        throw new IOException("File system version file " +
+            HConstants.VERSION_FILE_NAME +
+            " does not exist. No upgrade possible." + MIGRATION_LINK);
+      }
+      if (versionStr.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
         LOG.info("No upgrade necessary.");
         return 0;
       }
       float version = Float.parseFloat(versionStr);
-      if (version == HBASE_0_1_VERSION) {
-        checkForUnrecoveredLogFiles(getRootDirFiles());
-        migrateToV5();
-      } else {
-        throw new IOException("Unrecognized or non-migratable version: " +
-          version);
+      if (version == HBASE_0_1_VERSION ||
+          Integer.valueOf(versionStr) < PREVIOUS_VERSION) {
+        String msg = "Cannot upgrade from " + versionStr + " to " +
+        HConstants.FILE_SYSTEM_VERSION + " you must install hbase-0.2.x, run " +
+        "the upgrade tool, reinstall this version and run this utility again." +
+        MIGRATION_LINK;
+        System.out.println(msg);
+        throw new IOException(msg);
       }
 
+      // insert call to new migration method here.
+      
       if (!readOnly) {
         // Set file system version
         LOG.info("Setting file system version.");
@@ -199,93 +213,6 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void migrateToV5() throws IOException {
-    rewriteMetaHRegionInfo();
-    addHistorianFamilyToMeta();
-    updateBloomFilters();
-  }
-  
-  /**
-   * Rewrite the meta tables so that HRI is versioned and so we move to new
-   * HCD and HCD.
-   * @throws IOException 
-   */
-  private void rewriteMetaHRegionInfo() throws IOException {
-    if (this.readOnly && this.migrationNeeded) {
-      return;
-    }
-    // Read using old classes.
-    final org.apache.hadoop.hbase.util.migration.v5.MetaUtils utils =
-      new org.apache.hadoop.hbase.util.migration.v5.MetaUtils(this.conf);
-    try {
-      // Scan the root region
-      utils.scanRootRegion(new org.apache.hadoop.hbase.util.migration.v5.MetaUtils.ScannerListener() {
-        public boolean processRow(org.apache.hadoop.hbase.util.migration.v5.HRegionInfo info)
-        throws IOException {
-          // Scan every meta region
-          final org.apache.hadoop.hbase.util.migration.v5.HRegion metaRegion =
-            utils.getMetaRegion(info);
-          // If here, we were able to read with old classes.  If readOnly, then
-          // needs migration.
-          if (readOnly && !migrationNeeded) {
-            migrationNeeded = true;
-            return false;
-          }
-          updateHRegionInfo(utils.getRootRegion(), info);
-          utils.scanMetaRegion(info, new org.apache.hadoop.hbase.util.migration.v5.MetaUtils.ScannerListener() {
-            public boolean processRow(org.apache.hadoop.hbase.util.migration.v5.HRegionInfo hri)
-            throws IOException {
-              updateHRegionInfo(metaRegion, hri);
-              return true;
-            }
-          });
-          return true;
-        }
-      });
-    } finally {
-      utils.shutdown();
-    }
-  }
-  
-  /*
-   * Move from old pre-v5 hregioninfo to current HRegionInfo
-   * Persist back into <code>r</code>
-   * @param mr
-   * @param oldHri
-   */
-  void updateHRegionInfo(org.apache.hadoop.hbase.util.migration.v5.HRegion mr,
-    org.apache.hadoop.hbase.util.migration.v5.HRegionInfo oldHri)
-  throws IOException {
-    byte [] oldHriTableName = oldHri.getTableDesc().getName();
-    HTableDescriptor newHtd =
-      Bytes.equals(HConstants.ROOT_TABLE_NAME, oldHriTableName)?
-        HTableDescriptor.ROOT_TABLEDESC:
-        Bytes.equals(HConstants.META_TABLE_NAME, oldHriTableName)?
-          HTableDescriptor.META_TABLEDESC:
-          new HTableDescriptor(oldHri.getTableDesc().getName());
-    for (org.apache.hadoop.hbase.util.migration.v5.HColumnDescriptor oldHcd:
-        oldHri.getTableDesc().getFamilies()) {
-      HColumnDescriptor newHcd = new HColumnDescriptor(
-        HStoreKey.addDelimiter(oldHcd.getName()),
-        oldHcd.getMaxValueLength(),
-        HColumnDescriptor.CompressionType.valueOf(oldHcd.getCompressionType().toString()),
-        oldHcd.isInMemory(), oldHcd.isBlockCacheEnabled(),
-        oldHcd.getMaxValueLength(), oldHcd.getTimeToLive(),
-        oldHcd.isBloomFilterEnabled());
-      newHtd.addFamily(newHcd);
-    }
-    HRegionInfo newHri = new HRegionInfo(newHtd, oldHri.getStartKey(),
-      oldHri.getEndKey(), oldHri.isSplit(), oldHri.getRegionId());
-    BatchUpdate b = new BatchUpdate(newHri.getRegionName());
-    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(newHri));
-    mr.batchUpdate(b);
-    if (LOG.isDebugEnabled()) {
-        LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
-          " for " + oldHri.toString() + " in " + mr.toString() + " is: " +
-          newHri.toString());
-    }
-  }
-
   private FileStatus[] getRootDirFiles() throws IOException {
     FileStatus[] stats = fs.listStatus(FSUtils.getRootDir(this.conf));
     if (stats == null || stats.length == 0) {
@@ -313,90 +240,6 @@ public class Migrate extends Configured implements Tool {
           "failures in hbase, remove them and then rerun the migration.  " +
           "See 'Redo Logs' in http://wiki.apache.org/hadoop/Hbase/HowToMigrate. " + 
           "Here are the problem log files: " + unrecoveredLogs);
-    }
-  }
-
-  private void addHistorianFamilyToMeta() throws IOException {
-    if (this.migrationNeeded) {
-      // Be careful. We cannot use MetAutils if current hbase in the
-      // Filesystem has not been migrated.
-      return;
-    }
-    boolean needed = false;
-    MetaUtils utils = new MetaUtils(this.conf);
-    try {
-      List<HRegionInfo> metas = utils.getMETARows(HConstants.META_TABLE_NAME);
-      for (HRegionInfo meta : metas) {
-        if (meta.getTableDesc().
-            getFamily(HConstants.COLUMN_FAMILY_HISTORIAN) == null) {
-          needed = true;
-          break;
-        }
-      }
-      if (needed && this.readOnly) {
-        this.migrationNeeded = true;
-      } else {
-        utils.addColumn(HConstants.META_TABLE_NAME,
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
-            HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-            false, false, Integer.MAX_VALUE, HConstants.FOREVER, false));
-        LOG.info("Historian family added to .META.");
-        // Flush out the meta edits.
-      }
-    } finally {
-      utils.shutdown();
-    }
-  }
-  
-  private void updateBloomFilters() throws IOException {
-    if (this.migrationNeeded && this.readOnly) {
-      return;
-    }
-    final Path rootDir = FSUtils.getRootDir(conf);
-    final MetaUtils utils = new MetaUtils(this.conf);
-    try {
-      // Scan the root region
-      utils.scanRootRegion(new MetaUtils.ScannerListener() {
-        public boolean processRow(HRegionInfo info) throws IOException {
-          // Scan every meta region
-          final HRegion metaRegion = utils.getMetaRegion(info);
-          utils.scanMetaRegion(info, new MetaUtils.ScannerListener() {
-            public boolean processRow(HRegionInfo hri) throws IOException {
-              HTableDescriptor desc = hri.getTableDesc();
-              Path tableDir =
-                HTableDescriptor.getTableDir(rootDir, desc.getName()); 
-              for (HColumnDescriptor column: desc.getFamilies()) {
-                if (column.isBloomfilter()) {
-                  // Column has a bloom filter
-                  migrationNeeded = true;
-                  Path filterDir = HStoreFile.getFilterDir(tableDir,
-                      hri.getEncodedName(), column.getName());
-                  if (fs.exists(filterDir)) {
-                    // Filter dir exists
-                    if (readOnly) {
-                      // And if we are only checking to see if a migration is
-                      // needed - it is. We're done.
-                      return false;
-                    }
-                    // Delete the filter
-                    fs.delete(filterDir, true);
-                    // Update the HRegionInfo in meta setting the bloomfilter
-                    // to be disabled.
-                    column.setBloomfilter(false);
-                    utils.updateMETARegionInfo(metaRegion, hri);
-                  }
-                }
-              }
-              return true;
-            }
-          });
-          // Stop scanning if only doing a check and we've determined that a
-          // migration is needed. Otherwise continue by returning true
-          return readOnly && migrationNeeded ? false : true;
-        }
-      });
-    } finally {
-      utils.shutdown();
     }
   }
 

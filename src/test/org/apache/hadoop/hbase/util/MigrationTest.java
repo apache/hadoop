@@ -27,7 +27,6 @@ import java.util.zip.ZipInputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,10 +43,10 @@ import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**
- * Runs migration of filesystem from hbase 0.1 to 0.2.
+ * Runs migration of filesystem from hbase 0.x to 0.x
  */
-public class TestMigrate extends HBaseTestCase {
-  private static final Log LOG = LogFactory.getLog(TestMigrate.class);
+public class MigrationTest extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(MigrationTest.class);
   
   // This is the name of the table that is in the data file.
   private static final String TABLENAME = "TestUpgrade";
@@ -60,44 +59,10 @@ public class TestMigrate extends HBaseTestCase {
   private static final int EXPECTED_COUNT = 17576;
 
   /**
-   * Test migration
+   * Test migration. To be used in future migrations
    * @throws IOException 
    */
   public void testUpgrade() throws IOException {
-    MiniDFSCluster dfsCluster = null;
-    try {
-      dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      // Set the hbase.rootdir to be the home directory in mini dfs.
-      this.conf.set(HConstants.HBASE_DIR, new Path(
-        dfsCluster.getFileSystem().getHomeDirectory(), "hbase").toString());
-      FileSystem dfs = dfsCluster.getFileSystem();
-      Path rootDir =
-        dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
-      dfs.mkdirs(rootDir);
-      loadTestData(dfs, rootDir);
-      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
-      
-      Migrate u = new Migrate(conf);
-      u.run(new String[] {"check"});
-      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
-      
-      u = new Migrate(conf);
-      u.run(new String[] {"upgrade"});
-      listPaths(dfs, rootDir, rootDir.toString().length() + 1);
-      
-      // Try again. No upgrade should be necessary
-      u = new Migrate(conf);
-      u.run(new String[] {"check"});
-      u = new Migrate(conf);
-      u.run(new String[] {"upgrade"});
-      
-      // Now verify that can read contents.
-      verify();
-    } finally {
-      if (dfsCluster != null) {
-        shutdownDfs(dfsCluster);
-      }
-    }
   }
   
   /*

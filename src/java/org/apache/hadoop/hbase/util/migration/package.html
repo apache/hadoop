@@ -20,17 +20,16 @@
 
 <head />
 <body bgcolor="white">
-Package of classes used instantiating objects written with pre-version 5
-versions of HBase.
+Package of classes used instantiating objects written with an older
+version of HBase.
 
-Under the <code>hbase.rootdir</code>, a file named <code>hbase.version</code>
-holds the version number for the data persisted by HBase.  The version number
-is upped every time a change is made in HBase on-filesystem formats.  Version
-0.2.0 of HBase shipped with an on-filesystem version of <code>5</code>.  This
-package holds classes from previous to version 5 used during the migration of
-an HBase instance up to version 5.  See
-<a href="http://wiki.apache.org/hadoop/Hbase/HowToMigrate">How To Migrate</a>
-for more on the migration of HBase across versions and for notes on design
-of the HBase migration system.
-</body>
-</html>
+Under the <code>hbase.rootdir</code>, a file named
+<code>hbase.version</code> holds the version number for the data
+persisted by HBase.  The version number is upped every time a change
+is made in HBase on-filesystem formats.  Version 0.2.0 and 0.18.0 of
+HBase shipped with an on-filesystem version of <code>4</code>.  This
+package holds classes from version 4 to version 5 used during the
+migration of an HBase instance up to version 5.  See <a
+href="http://wiki.apache.org/hadoop/Hbase/HowToMigrate">How To
+Migrate</a> for more on the migration of HBase across versions and for
+notes on design of the HBase migration system.  </body> </html>

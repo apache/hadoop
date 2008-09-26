@@ -3,6 +3,8 @@ Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-885   TableMap and TableReduce should be interfaces
                (Doğacan Güney via Stack)
+   HBASE-905   Remove V5 migration classes from 0.19.0 (Jean-Daniel Cryans via
+               Jim Kellerman)
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries
