@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import junit.framework.TestCase;
 import java.io.*;
 import java.net.*;
-import java.util.Random;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,20 +41,20 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
  * support HDFS appends.
  */
 public class TestFileAppend extends TestCase {
-  static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1024;
   static final int numBlocks = 10;
   static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
-  byte[] fileContents = null;
+
+  private long seed;
+  private byte[] fileContents = null;
 
   //
   // create a buffer that contains the entire test file data.
   //
   private void initBuffer(int size) {
-    Random rand = new Random(seed);
-    fileContents = new byte[size];
-    rand.nextBytes(fileContents);
+    seed = AppendTestUtil.nextLong();
+    fileContents = AppendTestUtil.randomBytes(seed, size);
   }
 
   /*
@@ -73,9 +72,7 @@ public class TestFileAppend extends TestCase {
   // writes to file but does not close it
   //
   private void writeFile(FSDataOutputStream stm) throws IOException {
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
+    byte[] buffer = AppendTestUtil.randomBytes(seed, fileSize);
     stm.write(buffer);
   }
 

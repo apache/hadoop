@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
-  static final Random RANDOM = new Random();
 
   static void checkMetaInfo(Block b, InterDatanodeProtocol idp
       ) throws IOException {
@@ -98,7 +97,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       int lastblocksize = ORG_FILE_SIZE % BLOCK_SIZE;
       Integer[] newblocksizes = new Integer[REPLICATION_NUM];
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        newblocksizes[i] = RANDOM.nextInt(lastblocksize);
+        newblocksizes[i] = AppendTestUtil.nextInt(lastblocksize);
       }
       DataNode.LOG.info("newblocksizes = " + Arrays.asList(newblocksizes)); 
 
@@ -115,7 +114,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       cluster.getNameNode().append(filestr, dfs.dfs.clientName);
 
       //block synchronization
-      final int primarydatanodeindex = RANDOM.nextInt(datanodes.length);
+      final int primarydatanodeindex = AppendTestUtil.nextInt(datanodes.length);
       DataNode.LOG.info("primarydatanodeindex  =" + primarydatanodeindex);
       DataNode primary = datanodes[primarydatanodeindex];
       DataNode.LOG.info("primary.dnRegistration=" + primary.dnRegistration);
