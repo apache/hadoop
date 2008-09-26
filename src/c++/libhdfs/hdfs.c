@@ -1469,8 +1469,8 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
       return -2;
     }
 
-    jlong jmtime = mtime * 1000;
-    jlong jatime = atime * 1000;
+    jlong jmtime = mtime * (jlong)1000;
+    jlong jatime = atime * (jlong)1000;
 
     int ret = 0;
     jthrowable jExc = NULL;
@@ -1775,7 +1775,7 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
                                    "FileStatus::getModificationTime");
         return -1;
     }
-    fileInfo->mLastMod = (tTime) (jVal.j) / 1000;
+    fileInfo->mLastMod = (tTime) (jVal.j / 1000);
 
     if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "getAccessTime", "()J") != 0) {
@@ -1783,7 +1783,7 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
                                    "FileStatus::getAccessTime");
         return -1;
     }
-    fileInfo->mLastAccess = (tTime) (jVal.j) / 1000;
+    fileInfo->mLastAccess = (tTime) (jVal.j / 1000);
 
 
     if (fileInfo->mKind == kObjectKindFile) {
