@@ -75,6 +75,10 @@ public class TestQuota extends TestCase {
       String[] args = new String[]{"-setQuota", "3", parent.toString()};
       runCommand(admin, args, false);
 
+      //try setting space quota with a 'binary prefix'
+      runCommand(admin, false, "-setSpaceQuota", "2t", parent.toString());
+      assertEquals(2L<<40, dfs.getContentSummary(parent).getSpaceQuota());
+      
       // set diskspace quota to 10000 
       runCommand(admin, false, "-setSpaceQuota", 
                  Long.toString(spaceQuota), parent.toString());
@@ -188,7 +192,7 @@ public class TestQuota extends TestCase {
       assertFalse(dfs.exists(nonExistentPath));
       args = new String[]{"-setQuota", "1", nonExistentPath.toString()};
       runCommand(admin, args, true);
-      runCommand(admin, true, "-setSpaceQuota", "1GB", // for space quota
+      runCommand(admin, true, "-setSpaceQuota", "1g", // for space quota
                  nonExistentPath.toString());
       
       // 14b: set quota on a file
@@ -196,7 +200,7 @@ public class TestQuota extends TestCase {
       args[1] = childFile0.toString();
       runCommand(admin, args, true);
       // same for space quota
-      runCommand(admin, true, "-setSpaceQuota", "1GB", args[1]);
+      runCommand(admin, true, "-setSpaceQuota", "1t", args[1]);
       
       // 15a: clear quota on a file
       args[0] = "-clrQuota";
@@ -230,7 +234,7 @@ public class TestQuota extends TestCase {
       
       // 16e: set space quota with a value larger than Long.MAX_VALUE
       runCommand(admin, true, "-setSpaceQuota", 
-                 (Long.MAX_VALUE/1024/1024 + 1024) + "TB", args[2]);
+                 (Long.MAX_VALUE/1024/1024 + 1024) + "m", args[2]);
       
       // 17:  setQuota by a non-administrator
       UnixUserGroupInformation.saveToConf(conf, 
@@ -239,7 +243,7 @@ public class TestQuota extends TestCase {
       DFSAdmin userAdmin = new DFSAdmin(conf);
       args[1] = "100";
       runCommand(userAdmin, args, true);
-      runCommand(userAdmin, true, "-setSpaceQuota", "1GB", args[2]);
+      runCommand(userAdmin, true, "-setSpaceQuota", "1g", args[2]);
       
       // 18: clrQuota by a non-administrator
       args = new String[] {"-clrQuota", parent.toString()};
