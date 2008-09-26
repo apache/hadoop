@@ -174,7 +174,6 @@ abstract public class FSInputChecker extends FSInputStream {
   private void fill(  ) throws IOException {
     assert(pos>=count);
     // fill internal buffer
-    pos = 0;
     count = readChecksumChunk(buf, 0, buf.length);
   }
   
@@ -226,6 +225,9 @@ abstract public class FSInputChecker extends FSInputStream {
    */ 
   private int readChecksumChunk(byte b[], int off, int len)
   throws IOException {
+    // invalidate buffer
+    count = pos = 0;
+          
     int read = 0;
     boolean retry = true;
     int retriesLeft = numOfRetries; 
@@ -248,9 +250,6 @@ abstract public class FSInputChecker extends FSInputStream {
           if (retriesLeft == 0) {
             throw ce;
           }
-          
-          // invalidate buffer
-          count = pos = 0;
           
           // try a new replica
           if (seekToNewSource(chunkPos)) {
