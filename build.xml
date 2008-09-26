@@ -743,10 +743,12 @@
       <sourcePath path="${mapred.src.dir}"/>
       <sourcePath path="${hdfs.src.dir}"/>  	
       <sourcePath path="${examples.dir}" />
+      <sourcePath path="${tools.src}" />
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
-      <class location="${basedir}/build/hadoop-${version}-core.jar" />
-      <class location="${basedir}/build/hadoop-${version}-examples.jar" />
-      <class location="${basedir}/build/contrib/streaming/hadoop-${version}-streaming.jar" />
+      <class location="${basedir}/build/${final.name}-core.jar" />
+      <class location="${basedir}/build/${final.name}-examples.jar" />
+      <class location="${basedir}/build/${final.name}-tools.jar" />
+      <class location="${basedir}/build/contrib/streaming/${final.name}-streaming.jar" />
     </findbugs>
   	
   	<xslt style="${findbugs.home}/src/xsl/default.xsl"
