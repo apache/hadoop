@@ -21,11 +21,14 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * This class tests if FSInputChecker works correctly.
@@ -40,6 +43,7 @@ public class TestFSInputChecker extends TestCase {
   byte[] expected = new byte[FILE_SIZE];
   byte[] actual;
   FSDataInputStream stm;
+  Random rand = new Random(seed);
 
   /* create a file */
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
@@ -216,13 +220,70 @@ public class TestFSInputChecker extends TestCase {
     cleanupFile(fileSys, file);
   }
   
+  private void testFileCorruption(LocalFileSystem fileSys) throws IOException {
+    // create a file and verify that checksum corruption results in 
+    // a checksum exception on LocalFS
+    
+    String dir = System.getProperty("test.build.data", ".");
+    Path file = new Path(dir + "/corruption-test.dat");
+    Path crcFile = new Path(dir + "/.corruption-test.dat.crc");
+    
+    writeFile(fileSys, file);
+    
+    int fileLen = (int)fileSys.getFileStatus(file).getLen();
+    
+    byte [] buf = new byte[fileLen];
+
+    InputStream in = fileSys.open(file);
+    IOUtils.readFully(in, buf, 0, buf.length);
+    in.close();
+    
+    // check .crc corruption
+    checkFileCorruption(fileSys, file, crcFile);
+    fileSys.delete(file, true);
+    
+    writeFile(fileSys, file);
+    
+    // check data corrutpion
+    checkFileCorruption(fileSys, file, file);
+    
+    fileSys.delete(file, true);
+  }
+  
+  private void checkFileCorruption(LocalFileSystem fileSys, Path file, 
+                                   Path fileToCorrupt) throws IOException {
+    
+    // corrupt the file 
+    RandomAccessFile out = 
+      new RandomAccessFile(new File(fileToCorrupt.toString()), "rw");
+    
+    byte[] buf = new byte[(int)fileSys.getFileStatus(file).getLen()];    
+    int corruptFileLen = (int)fileSys.getFileStatus(fileToCorrupt).getLen();
+    assertTrue(buf.length >= corruptFileLen);
+    
+    rand.nextBytes(buf);
+    out.seek(corruptFileLen/2);
+    out.write(buf, 0, corruptFileLen/4);
+    out.close();
+
+    boolean gotException = false;
+    
+    InputStream in = fileSys.open(file);
+    try {
+      IOUtils.readFully(in, buf, 0, buf.length);
+    } catch (ChecksumException e) {
+      gotException = true;
+    }
+    assertTrue(gotException);
+    in.close();    
+  }
+  
   public void testFSInputChecker() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BYTES_PER_SUM);
     conf.set("fs.hdfs.impl",
              "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");
-    Random rand = new Random(seed);
     rand.nextBytes(expected);
 
     // test DFS
@@ -242,6 +303,7 @@ public class TestFSInputChecker extends TestCase {
     try {
       testChecker(fileSys, true);
       testChecker(fileSys, false);
+      testFileCorruption((LocalFileSystem)fileSys);
     }finally {
       fileSys.close();
     }
