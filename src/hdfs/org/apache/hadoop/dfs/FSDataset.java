@@ -606,9 +606,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     }
   }
 
-  File findBlockFile(Block b) {
-    assert b.generationStamp == GenerationStamp.WILDCARD_STAMP;
-
+  /** Return the block file for the given ID */ 
+  public File findBlockFile(long blockId) {
+    final Block b = new Block(blockId);
+     
     File blockfile = null;
     ActiveFile activefile = ongoingCreates.get(b);
     if (activefile != null) {
@@ -627,16 +628,14 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /** {@inheritDoc} */
-  public Block getStoredBlock(long blkid) throws IOException {
-    Block b = new Block(blkid);
-    File blockfile = findBlockFile(b);
+  public synchronized Block getStoredBlock(long blkid) throws IOException {
+    File blockfile = findBlockFile(blkid);
     if (blockfile == null) {
       return null;
     }
     File metafile = findMetaFile(blockfile);
-    b.generationStamp = parseGenerationStamp(blockfile, metafile);
-    b.len = blockfile.length();
-    return b;
+    return new Block(blkid, blockfile.length(),
+        parseGenerationStamp(blockfile, metafile));
   }
 
   public boolean metaFileExists(Block b) throws IOException {
@@ -791,10 +790,13 @@ class FSDataset implements FSConstants, FSDatasetInterface {
           + ") to newblock (=" + newblock + ").");
     }
 
-    File blockFile = findBlockFile(oldblock);
+    File blockFile = findBlockFile(oldblock.getBlockId());
+    if (blockFile == null) {
+      throw new IOException("Block " + oldblock + " does not exist.");
+    }
     interruptOngoingCreates(oldblock);
-    
-    File oldMetaFile = getMetaFile(blockFile, oldblock);
+
+    File oldMetaFile = findMetaFile(blockFile);
     long oldgs = parseGenerationStamp(blockFile, oldMetaFile);
     
     //rename meta file to a tmp file
