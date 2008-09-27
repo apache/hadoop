@@ -782,6 +782,9 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4116. Balancer should provide better resource management. (hairong)
 
+    HADOOP-3614. Fix a bug that Datanode may use an old GenerationStamp to get
+    meta file. (szetszwo)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
