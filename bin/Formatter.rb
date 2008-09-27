@@ -84,11 +84,11 @@ module Formatter
     end
 
     def dump(str)
-      # Remove double-quotes added by 'dump'.
       if str.instance_of? Fixnum
           return
       end
-      return str.dump.slice(1, str.length)
+      # Remove double-quotes added by 'dump'.
+      return str.dump[1..-1]
     end
 
     def output(width, str)

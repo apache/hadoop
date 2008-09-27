@@ -11,6 +11,7 @@ Release 0.19.0 - Unreleased
    HBASE-892   Cell iteration is broken (Doğacan Güney via Jim Kellerman)
    HBASE-898   RowResult.containsKey(String) doesn't work
                (Doğacan Güney via Jim Kellerman)
+   HBASE-906   [shell] Truncates output
 
   IMPROVEMENTS
    HBASE-890   Alter table operation and also related changes in REST interface
