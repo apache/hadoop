@@ -170,7 +170,6 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-jobconf", "mapred.skip.reduce.max.skip.groups="+Long.MAX_VALUE,
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "mapred.reduce.tasks=1",
-      "-jobconf", "mapred.task.timeout=30000",
       "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
       "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
       "-jobconf", "mapred.job.tracker.http.address="
@@ -197,13 +196,15 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
       "-jobconf", "mapred.skip.attempts.to.start.skipping=1",
-      "-jobconf", "mapred.map.max.attempts=12",
-      "-jobconf", "mapred.reduce.max.attempts=8",
+      //actually fewer attempts are required than specified
+      //but to cater to the case of slow processed counter update, need to 
+      //have more attempts
+      "-jobconf", "mapred.map.max.attempts=20",
+      "-jobconf", "mapred.reduce.max.attempts=15",
       "-jobconf", "mapred.skip.map.max.skip.records=1",
       "-jobconf", "mapred.skip.reduce.max.skip.groups=1",
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "mapred.reduce.tasks=1",
-      "-jobconf", "mapred.task.timeout=30000",
       "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
       "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
       "-jobconf", "mapred.job.tracker.http.address="
@@ -275,7 +276,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       }
       else if(badRecords.size()>2 && line.contains(badRecords.get(2))) {
         LOG.warn("Encountered BAD record");
-        Thread.sleep(15*60*1000);
+        System.exit(-1);
       }
       super.processLine(line);
     }
