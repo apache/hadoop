@@ -70,7 +70,7 @@ public class WritableName {
     try {
       return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {
-      IOException newE = new IOException("WritableName can't load class");
+      IOException newE = new IOException("WritableName can't load class: " + name);
       newE.initCause(e);
       throw newE;
     }

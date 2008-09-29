@@ -17,6 +17,9 @@ Trunk (unreleased changes)
     HADOOP-4244. Change test-patch.sh to check Eclipse classpath no matter
     it is run by Hudson or not. (szetszwo)
 
+    HADOOP-3180. Add name of missing class to WritableName.getClass 
+    IOException. (Pete Wyckoff via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
