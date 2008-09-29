@@ -343,6 +343,9 @@ public class TestCapacityScheduler extends TestCase {
     }*/
     
     public float getGuaranteedCapacity(String queue) {
+      if(queueMap.get(queue).gc == -1) {
+        return super.getGuaranteedCapacity(queue);
+      }
       return queueMap.get(queue).gc;
     }
     
@@ -475,6 +478,28 @@ public class TestCapacityScheduler extends TestCase {
                         getRunningJobQueue("default").size());
     assertEquals(1, scheduler.jobQueuesManager.
                         getWaitingJobQueue("default").size());
+  }
+  
+  //Basic test to test GC allocation across the queues which have no
+  //GC configured.
+  
+  public void testGCAllocationToQueues() throws Exception {
+    String[] qs = {"default","q1","q2","q3","q4"};
+    taskTrackerManager.addQueues(qs);
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default",25.0f,5000,true,25));
+    queues.add(new FakeQueueInfo("q1",-1.0f,5000,true,25));
+    queues.add(new FakeQueueInfo("q2",-1.0f,5000,true,25));
+    queues.add(new FakeQueueInfo("q3",-1.0f,5000,true,25));
+    queues.add(new FakeQueueInfo("q4",-1.0f,5000,true,25));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start(); 
+    assertEquals(18.75f, resConf.getGuaranteedCapacity("q1"));
+    assertEquals(18.75f, resConf.getGuaranteedCapacity("q2"));
+    assertEquals(18.75f, resConf.getGuaranteedCapacity("q3"));
+    assertEquals(18.75f, resConf.getGuaranteedCapacity("q4"));
   }
   
   // test capacity transfer

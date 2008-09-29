@@ -47,4 +47,31 @@
     </description>
   </property>
   
+  <!-- The default configuration settings for the capacity task scheduler -->
+  <!-- The default values would be applied to all the queues which don't have -->
+  <!-- the appropriate property for the particular queue -->
+  <property>
+    <name>mapred.capacity-scheduler.default-reclaim-time-limit</name>
+    <value>300</value>
+    <description>The amount of time, in seconds, before which 
+    resources distributed to other queues will be reclaimed by default
+    in a job queue.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.capacity-scheduler.default-supports-priority</name>
+    <value>false</value>
+    <description>If true, priorities of jobs will be taken into 
+      account in scheduling decisions by default in a job queue.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.capacity-scheduler.default-minimum-user-limit-percent</name>
+    <value>100</value>
+    <description>The percentage of the resources limited to a particular user
+      for the job queue at any given point of time by default.
+    </description>
+  </property>
 </configuration>

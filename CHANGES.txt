@@ -20,6 +20,9 @@ Trunk (unreleased changes)
     HADOOP-3180. Add name of missing class to WritableName.getClass 
     IOException. (Pete Wyckoff via omalley)
 
+    HADOOP-4178. Make the capacity scheduler's default values configurable.
+    (Sreekanth Ramakrishnan via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES

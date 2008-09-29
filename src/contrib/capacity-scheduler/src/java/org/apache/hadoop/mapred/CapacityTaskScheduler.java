@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
 import org.apache.hadoop.util.StringUtils;
 
+
 /**
  * A {@link TaskScheduler} that implements the requirements in HADOOP-3421
  * and provides a HOD-less way to share large clusters. This scheduler 
@@ -971,10 +972,15 @@ class CapacityTaskScheduler extends TaskScheduler {
     // read queue info from config file
     QueueManager queueManager = taskTrackerManager.getQueueManager();
     Set<String> queues = queueManager.getQueues();
+    Set<String> queuesWithoutConfiguredGC = new HashSet<String>();
     float totalCapacity = 0.0f;
     for (String queueName: queues) {
       float gc = rmConf.getGuaranteedCapacity(queueName); 
-      totalCapacity += gc;
+      if(gc == -1.0) {
+        queuesWithoutConfiguredGC.add(queueName);
+      }else {
+        totalCapacity += gc;
+      }
       int ulMin = rmConf.getMinimumUserLimitPercent(queueName); 
       long reclaimTimeLimit = rmConf.getReclaimTimeLimit(queueName);
       // reclaimTimeLimit is the time(in millisec) within which we need to
@@ -990,15 +996,26 @@ class CapacityTaskScheduler extends TaskScheduler {
       jobQueuesManager.createQueue(queueName, supportsPrio);
       
       SchedulingInfo schedulingInfo = new SchedulingInfo(
-          mapScheduler.getQueueSchedulingInfo(queueName),reduceScheduler.getQueueSchedulingInfo(queueName),supportsPrio);
+          mapScheduler.getQueueSchedulingInfo(queueName),
+          reduceScheduler.getQueueSchedulingInfo(queueName),supportsPrio);
       queueManager.setSchedulerInfo(queueName, schedulingInfo);
       
+    }
+    float remainingQuantityToAllocate = 100 - totalCapacity;
+    float quantityToAllocate = 
+      remainingQuantityToAllocate/queuesWithoutConfiguredGC.size();
+    for(String queue: queuesWithoutConfiguredGC) {
+      QueueSchedulingInfo schedulingInfo = 
+        mapScheduler.getQueueSchedulingInfo(queue);
+      schedulingInfo.guaranteedCapacityPercent = quantityToAllocate;
+      schedulingInfo = reduceScheduler.getQueueSchedulingInfo(queue);
+      schedulingInfo.guaranteedCapacityPercent = quantityToAllocate;
+      rmConf.setGuaranteedCapacity(queue, quantityToAllocate);
     }
     if (totalCapacity > 100.0) {
       throw new IllegalArgumentException("Sum of queue capacities over 100% at "
                                          + totalCapacity);
-    }
-    
+    }    
     // Sanity check: there should be at least one queue. 
     if (0 == mapScheduler.getNumQueues()) {
       throw new IllegalStateException("System has no queue configured");
