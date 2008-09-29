@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -444,6 +445,36 @@ public class TestCapacityScheduler extends TestCase {
     j = submitJob(JobStatus.PREP, 10, 10, "q2", "u1");
     // now when we get a task, it should be from the second job
     t = checkAssignment("tt2", "attempt_test_0002_m_000001_0 on tt2");
+  }
+  
+  public void testGetJobs() throws Exception {
+    // need only one queue
+    String[] qs = { "default" };
+    taskTrackerManager.addQueues(qs);
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 300, true, 100));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+    
+    // submit a job
+    JobInProgress j1 = submitJob(JobStatus.PREP, 10, 10, "default", "u1");
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    
+    // submit another job
+    JobInProgress j2 = submitJob(JobStatus.PREP, 10, 10, "default", "u1");
+    
+    Collection<JobInProgress> jobs = scheduler.getJobs("default");
+    assertEquals(2, jobs.size());
+    Iterator<JobInProgress> iter = jobs.iterator();
+    assertEquals(j1, iter.next());
+    assertEquals(j2, iter.next());
+    
+    assertEquals(1, scheduler.jobQueuesManager.
+                        getRunningJobQueue("default").size());
+    assertEquals(1, scheduler.jobQueuesManager.
+                        getWaitingJobQueue("default").size());
   }
   
   // test capacity transfer
