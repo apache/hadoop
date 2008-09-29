@@ -860,7 +860,7 @@ public class JobHistory {
       FileOutputStream jobOut = null;
       try {
         jobOut = new FileOutputStream(localJobFile);
-        jobConf.write(jobOut);
+        jobConf.writeXml(jobOut);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Job conf for " + jobId + " stored at " 
                     + localJobFile.getAbsolutePath());
@@ -895,14 +895,14 @@ public class JobHistory {
           fs = new Path(LOG_DIR).getFileSystem(jobConf);
           if (!fs.exists(jobFilePath)) {
             jobFileOut = fs.create(jobFilePath);
-            jobConf.write(jobFileOut);
+            jobConf.writeXml(jobFileOut);
             jobFileOut.close();
           }
         } 
         if (userLogDir != null) {
           fs = new Path(userLogDir).getFileSystem(jobConf);
           jobFileOut = fs.create(userJobFilePath);
-          jobConf.write(jobFileOut);
+          jobConf.writeXml(jobFileOut);
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Job conf for " + jobId + " stored at " 

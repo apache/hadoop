@@ -77,13 +77,13 @@ public class TestWritableJobConf extends TestCase {
   }
 
   public void testEmptyConfiguration() throws Exception {
-    WritableJobConf conf = new WritableJobConf();
+    JobConf conf = new JobConf();
     Configuration deser = serDeser(conf);
     assertEquals(conf, deser);
   }
 
   public void testNonEmptyConfiguration() throws Exception {
-    WritableJobConf conf = new WritableJobConf();
+    JobConf conf = new JobConf();
     conf.set("a", "A");
     conf.set("b", "B");
     Configuration deser = serDeser(conf);
@@ -91,7 +91,7 @@ public class TestWritableJobConf extends TestCase {
   }
 
   public void testConfigurationWithDefaults() throws Exception {
-    WritableJobConf conf = new WritableJobConf(false);
+    JobConf conf = new JobConf(false);
     conf.set("a", "A");
     conf.set("b", "B");
     Configuration deser = serDeser(conf);

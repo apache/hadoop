@@ -231,7 +231,7 @@ public class TestPipes extends TestCase {
     local.delete(outDir, true);
     local.mkdirs(outDir);
     out = local.create(jobXml);
-    job.write(out);
+    job.writeXml(out);
     out.close();
     System.err.println("About to run: Submitter -conf " + jobXml + 
                        " -input " + inDir + " -output " + outDir + 

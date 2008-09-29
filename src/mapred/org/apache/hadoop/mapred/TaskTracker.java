@@ -765,7 +765,7 @@ public class TaskTracker
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
           try {
-            localJobConf.write(out);
+            localJobConf.writeXml(out);
           } finally {
             out.close();
           }
@@ -1842,7 +1842,7 @@ public class TaskTracker
       }
       OutputStream out = localFs.create(localTaskFile);
       try {
-        localJobConf.write(out);
+        localJobConf.writeXml(out);
       } finally {
         out.close();
       }
