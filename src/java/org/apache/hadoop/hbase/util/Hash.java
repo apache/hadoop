@@ -113,7 +113,7 @@ public abstract class Hash {
    * @param bytes input bytes
    * @param length length of the valid bytes to consider
    * @param initval seed value
-   * @return
+   * @return hash value
    */
   public abstract int hash(byte[] bytes, int length, int initval);
 }

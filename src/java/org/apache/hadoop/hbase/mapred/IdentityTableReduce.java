@@ -41,8 +41,6 @@ implements TableReduce<ImmutableBytesWritable, BatchUpdate> {
   
   /**
    * No aggregation, output pairs of (key, record)
-   *
-   * @see org.apache.hadoop.hbase.mapred.TableReduce#reduce(org.apache.hadoop.io.WritableComparable, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   public void reduce(ImmutableBytesWritable key, Iterator<BatchUpdate> values,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
