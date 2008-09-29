@@ -1124,10 +1124,11 @@ class CapacityTaskScheduler extends TaskScheduler {
   
   @Override
   public synchronized Collection<JobInProgress> getJobs(String queueName) {
-    Collection<JobInProgress> jobCollection = 
-      jobQueuesManager.getRunningJobQueue(queueName);
-    if(jobCollection == null) {
-      jobCollection = new ArrayList<JobInProgress>();
+    Collection<JobInProgress> jobCollection = new ArrayList<JobInProgress>();
+    Collection<JobInProgress> runningJobs = 
+        jobQueuesManager.getRunningJobQueue(queueName);
+    if (runningJobs != null) {
+      jobCollection.addAll(runningJobs);
     }
     Collection<JobInProgress> waitingJobs = 
       jobQueuesManager.getWaitingJobQueue(queueName);
