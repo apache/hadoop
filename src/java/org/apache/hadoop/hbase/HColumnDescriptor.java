@@ -131,21 +131,23 @@ public class HColumnDescriptor implements WritableComparable {
    * Construct a column descriptor specifying only the family name 
    * The other attributes are defaulted.
    * 
-   * @param columnName - column family name
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and end in a <code>:<code>
    */
-  public HColumnDescriptor(final String columnName) {
-    this(Bytes.toBytes(columnName));
+  public HColumnDescriptor(final String familyName) {
+    this(Bytes.toBytes(familyName));
   }
   
   /**
    * Construct a column descriptor specifying only the family name 
    * The other attributes are defaulted.
    * 
-   * @param columnName Column family name.  Must have the ':' ending.
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and end in a <code>:<code>
    */
-  public HColumnDescriptor(final byte [] columnName) {
-    this (columnName == null || columnName.length <= 0?
-      HConstants.EMPTY_BYTE_ARRAY: columnName, DEFAULT_VERSIONS,
+  public HColumnDescriptor(final byte [] familyName) {
+    this (familyName == null || familyName.length <= 0?
+      HConstants.EMPTY_BYTE_ARRAY: familyName, DEFAULT_VERSIONS,
       DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY, DEFAULT_BLOCKCACHE,
       Integer.MAX_VALUE, DEFAULT_TTL, false);
   }
@@ -167,7 +169,8 @@ public class HColumnDescriptor implements WritableComparable {
 
   /**
    * Constructor
-   * @param columnName Column family name.  Must have the ':' ending.
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and end in a <code>:<code>
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -183,12 +186,12 @@ public class HColumnDescriptor implements WritableComparable {
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
-  public HColumnDescriptor(final byte [] columnName, final int maxVersions,
+  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final CompressionType compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int maxValueLength,
       final int timeToLive, final boolean bloomFilter) {
-    isLegalFamilyName(columnName);
-    this.name = stripColon(columnName);
+    isLegalFamilyName(familyName);
+    this.name = stripColon(familyName);
     if (maxVersions <= 0) {
       // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
       // Until there is support, consider 0 or < 0 -- a configuration error.
