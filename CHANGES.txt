@@ -1616,7 +1616,7 @@ Release 0.17.3 - Unreleased
     HADOOP-4277. Checksum verification was mistakenly disabled for
     LocalFileSystem. (Raghu Angadi)
 
-    HADOOP-4217. Checksum input stream can sometimes return invalid 
+    HADOOP-4271. Checksum input stream can sometimes return invalid 
     data to the user. (Ning Li via rangadi)
 
 Release 0.17.2 - 2008-08-11
