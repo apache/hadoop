@@ -187,7 +187,7 @@ abstract class TaskRunner extends Thread {
         localFs.delete(localTaskFile, true);
         OutputStream out = localFs.create(localTaskFile);
         try {
-          conf.write(out);
+          conf.writeXml(out);
         } finally {
           out.close();
         }

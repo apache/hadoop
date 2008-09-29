@@ -122,8 +122,8 @@ class Chain {
   private static JobConf getChainElementConf(JobConf jobConf, String confKey) {
     JobConf conf;
     try {
-      Stringifier<WritableJobConf> stringifier =
-        new DefaultStringifier<WritableJobConf>(jobConf, WritableJobConf.class);
+      Stringifier<JobConf> stringifier =
+        new DefaultStringifier<JobConf>(jobConf, JobConf.class);
       conf = stringifier.fromString(jobConf.get(confKey, null));
     } catch (IOException ioex) {
       throw new RuntimeException(ioex);
@@ -233,11 +233,11 @@ class Chain {
                         Object.class);
 
     // serialize the private mapper jobconf in the chain jobconf.
-    Stringifier<WritableJobConf> stringifier =
-      new DefaultStringifier<WritableJobConf>(jobConf, WritableJobConf.class);
+    Stringifier<JobConf> stringifier =
+      new DefaultStringifier<JobConf>(jobConf, JobConf.class);
     try {
       jobConf.set(prefix + CHAIN_MAPPER_CONFIG + index,
-                  stringifier.toString(new WritableJobConf(mapperConf)));
+                  stringifier.toString(new JobConf(mapperConf)));
     }
     catch (IOException ioEx) {
       throw new RuntimeException(ioEx);
@@ -300,11 +300,11 @@ class Chain {
                          Object.class);
 
     // serialize the private mapper jobconf in the chain jobconf.
-    Stringifier<WritableJobConf> stringifier =
-      new DefaultStringifier<WritableJobConf>(jobConf, WritableJobConf.class);
+    Stringifier<JobConf> stringifier =
+      new DefaultStringifier<JobConf>(jobConf, JobConf.class);
     try {
       jobConf.set(prefix + CHAIN_REDUCER_CONFIG,
-                  stringifier.toString(new WritableJobConf(reducerConf)));
+                  stringifier.toString(new JobConf(reducerConf)));
     }
     catch (IOException ioEx) {
       throw new RuntimeException(ioEx);

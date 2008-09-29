@@ -108,6 +108,9 @@ Release 0.19.0 - Unreleased
     HADOOP-3938. Disk space quotas for HDFS. This is similar to namespace
     quotas in 0.18. (rangadi)
 
+    HADOOP-4293. Make Configuration Writable and remove unreleased 
+    WritableJobConf. Configuration.write is renamed to writeXml. (omalley)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

@@ -19,6 +19,8 @@
 package org.apache.hadoop.conf;
 
 import java.io.BufferedInputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -54,6 +56,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -128,7 +132,8 @@ import org.xml.sax.SAXException;
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
  */
-public class Configuration implements Iterable<Map.Entry<String,String>> {
+public class Configuration implements Iterable<Map.Entry<String,String>>,
+                                      Writable {
   private static final Log LOG =
     LogFactory.getLog(Configuration.class);
 
@@ -1063,7 +1068,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * 
    * @param out the output stream to write to.
    */
-  public void write(OutputStream out) throws IOException {
+  public void writeXml(OutputStream out) throws IOException {
     Properties properties = getProps();
     try {
       Document doc =
@@ -1154,7 +1159,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   /** For debugging.  List non-default properties to the terminal and exit. */
   public static void main(String[] args) throws Exception {
-    new Configuration().write(System.out);
+    new Configuration().writeXml(System.out);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    clear();
+    int size = WritableUtils.readVInt(in);
+    for(int i=0; i < size; ++i) {
+      set(org.apache.hadoop.io.Text.readString(in), 
+          org.apache.hadoop.io.Text.readString(in));
+    }
+  }
+
+  //@Override
+  public void write(DataOutput out) throws IOException {
+    Properties props = getProps();
+    WritableUtils.writeVInt(out, props.size());
+    for(Map.Entry<Object, Object> item: props.entrySet()) {
+      org.apache.hadoop.io.Text.writeString(out, (String) item.getKey());
+      org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
+    }
   }
 
 }

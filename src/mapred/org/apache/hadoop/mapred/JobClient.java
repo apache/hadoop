@@ -808,7 +808,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         new FsPermission(JOB_FILE_PERMISSION));
 
     try {
-      job.write(out);
+      job.writeXml(out);
     } finally {
       out.close();
     }
