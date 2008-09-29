@@ -73,6 +73,10 @@ public class TestJobHistoryParsing  extends TestCase {
                     "\t\b\n\f\"\n in it";
     String value4 = "Value ends with escape\\";
     String value5 = "Value ends with \\\" \\.\n";
+    
+    // Log the history version
+    JobHistory.MetaInfoManager.logMetaInfo(historyWriter);
+    
     JobHistory.log(historyWriter, RecordTypes.Job, 
                    new JobHistory.Keys[] {Keys.JOBTRACKERID, 
                                           Keys.TRACKER_NAME, 
