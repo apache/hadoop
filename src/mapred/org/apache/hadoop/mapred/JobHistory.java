@@ -85,7 +85,6 @@ public class JobHistory {
   private static boolean disableHistory = false; 
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
-  private static int jobHistoryBufferSize = 0;
   private static String jobtrackerHostname;
   /**
    * Record types are identifiers for each line of log in history files. 
@@ -148,14 +147,10 @@ public class JobHistory {
       }
       conf.set("hadoop.job.history.location", LOG_DIR);
       disableHistory = false;
-      // set the job history block size
+      // set the job history block size (default is 3MB)
       jobHistoryBlockSize = 
         conf.getLong("mapred.jobtracker.job.history.block.size", 
-                     fs.getDefaultBlockSize());
-      // set the job history buffer size
-      jobHistoryBufferSize = 
-        Integer.parseInt(conf.get("mapred.jobtracker.job.history.buffer.size", 
-                                  "4096"));
+                     3 * 1024 * 1024);
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
@@ -729,8 +724,10 @@ public class JobHistory {
             
             logFile = recoverJobHistoryFile(jobConf, logFile);
             
+            int defaultBufferSize = 
+              fs.getConf().getInt("io.file.buffer.size", 4096);
             out = fs.create(logFile, FsPermission.getDefault(), true, 
-                            jobHistoryBufferSize, 
+                            defaultBufferSize, 
                             fs.getDefaultReplication(), 
                             jobHistoryBlockSize, null);
             writer = new PrintWriter(out);

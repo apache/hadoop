@@ -24,9 +24,16 @@
     // then remove the attribute
     // if the job has not yet finished, remove the attribute sothat it 
     // gets refreshed.
+    boolean isJobComplete = false;
+    if (null != job) {
+      String jobStatus = job.get(Keys.JOB_STATUS);
+      isJobComplete = Values.SUCCESS.name() == jobStatus
+                      || Values.FAILED.name() == jobStatus
+                      || Values.KILLED.name() == jobStatus;
+    }
     if (null != job && 
        (!jobId.equals(job.get(Keys.JOBID)) 
-         || job.get(Keys.JOB_STATUS) == "")) {
+         || !isJobComplete)) {
       // remove jobInfo from session, keep only one job in session at a time
       request.getSession().removeAttribute("job"); 
       job = null ; 

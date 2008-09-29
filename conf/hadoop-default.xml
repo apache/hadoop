@@ -762,19 +762,11 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.jobtracker.job.history.block.size</name>
-  <value>0</value>
+  <value>3145728></value>
   <description>The block size of the job history file. Since the job recovery
                uses job history, its important to dump job history to disk as 
-               soon as possible.
-  </description>
-</property>
-
-<property>
-  <name>mapred.jobtracker.job.history.buffer.size</name>
-  <value>4096</value>
-  <description>The buffer size for the job history file. Since the job 
-               recovery uses job history, its important to frequently flush the 
-               job history to disk. This will minimize the loss in recovery.
+               soon as possible. Note that this is an expert level parameter.
+               The default value is set to 3 MB.
   </description>
 </property>
 
