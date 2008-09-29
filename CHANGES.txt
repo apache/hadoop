@@ -26,6 +26,9 @@ Trunk (unreleased changes)
     HADOOP-4262. Generate better error message when client exception has null
     message. (stevel via omalley)
 
+    HADOOP-4226. Refactor and document LineReader to make it more readily
+    understandable. (Yuri Pradkin via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

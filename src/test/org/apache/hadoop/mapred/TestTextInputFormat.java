@@ -132,6 +132,11 @@ public class TestTextInputFormat extends TestCase {
                                              (str.getBytes("UTF-8")), 
                                            defaultConf);
   }
+  private static LineReader makeStream(String str, int bufsz) throws IOException {
+    return new LineReader(new ByteArrayInputStream
+                                             (str.getBytes("UTF-8")), 
+                                           bufsz);
+  }
   
   public void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
@@ -144,40 +149,74 @@ public class TestTextInputFormat extends TestCase {
     assertEquals("split on fake newline", "abc\u200axyz", line.toString());
   }
 
+  /**
+   * Test readLine for various kinds of line termination sequneces.
+   * Varies buffer size to stress test.  Also check that returned
+   * value matches the string length.
+   *
+   * @throws Exception
+   */
   public void testNewLines() throws Exception {
-    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+    final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
+    final int STRLENBYTES = STR.getBytes().length;
     Text out = new Text();
-    in.readLine(out);
-    assertEquals("line1 length", 1, out.getLength());
-    in.readLine(out);
-    assertEquals("line2 length", 2, out.getLength());
-    in.readLine(out);
-    assertEquals("line3 length", 0, out.getLength());
-    in.readLine(out);
-    assertEquals("line4 length", 3, out.getLength());
-    in.readLine(out);
-    assertEquals("line5 length", 4, out.getLength());
-    in.readLine(out);
-    assertEquals("line5 length", 5, out.getLength());
-    assertEquals("end of file", 0, in.readLine(out));
+    for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
+      LineReader in = makeStream(STR, bufsz);
+      int c = 0;
+      c += in.readLine(out); //"a"\n
+      assertEquals("line1 length, bufsz:"+bufsz, 1, out.getLength());
+      c += in.readLine(out); //"bb"\n
+      assertEquals("line2 length, bufsz:"+bufsz, 2, out.getLength());
+      c += in.readLine(out); //""\n
+      assertEquals("line3 length, bufsz:"+bufsz, 0, out.getLength());
+      c += in.readLine(out); //"ccc"\r
+      assertEquals("line4 length, bufsz:"+bufsz, 3, out.getLength());
+      c += in.readLine(out); //dddd\r
+      assertEquals("line5 length, bufsz:"+bufsz, 4, out.getLength());
+      c += in.readLine(out); //""\r
+      assertEquals("line6 length, bufsz:"+bufsz, 0, out.getLength());
+      c += in.readLine(out); //""\r\n
+      assertEquals("line7 length, bufsz:"+bufsz, 0, out.getLength());
+      c += in.readLine(out); //""\r\n
+      assertEquals("line8 length, bufsz:"+bufsz, 0, out.getLength());
+      c += in.readLine(out); //"eeeee"EOF
+      assertEquals("line9 length, bufsz:"+bufsz, 5, out.getLength());
+      assertEquals("end of file, bufsz: "+bufsz, 0, in.readLine(out));
+      assertEquals("total bytes, bufsz: "+bufsz, c, STRLENBYTES);
+    }
   }
-  
+
+  /**
+   * Test readLine for correct interpretation of maxLineLength
+   * (returned string should be clipped at maxLineLength, and the
+   * remaining bytes on the same line should be thrown out).
+   * Also check that returned value matches the string length.
+   * Varies buffer size to stress test.
+   *
+   * @throws Exception
+   */
   public void testMaxLineLength() throws Exception {
-    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+    final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
+    final int STRLENBYTES = STR.getBytes().length;
     Text out = new Text();
-    in.readLine(out, 1);
-    assertEquals("line1 length", 1, out.getLength());
-    in.readLine(out, 1);
-    assertEquals("line2 length", 1, out.getLength());
-    in.readLine(out, 1);
-    assertEquals("line3 length", 0, out.getLength());
-    in.readLine(out, 3);
-    assertEquals("line4 length", 3, out.getLength());
-    in.readLine(out, 10);
-    assertEquals("line5 length", 4, out.getLength());
-    in.readLine(out, 8);
-    assertEquals("line5 length", 5, out.getLength());
-    assertEquals("end of file", 0, in.readLine(out));
+    for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
+      LineReader in = makeStream(STR, bufsz);
+      int c = 0;
+      c += in.readLine(out, 1);
+      assertEquals("line1 length, bufsz: "+bufsz, 1, out.getLength());
+      c += in.readLine(out, 1);
+      assertEquals("line2 length, bufsz: "+bufsz, 1, out.getLength());
+      c += in.readLine(out, 1);
+      assertEquals("line3 length, bufsz: "+bufsz, 0, out.getLength());
+      c += in.readLine(out, 3);
+      assertEquals("line4 length, bufsz: "+bufsz, 3, out.getLength());
+      c += in.readLine(out, 10);
+      assertEquals("line5 length, bufsz: "+bufsz, 4, out.getLength());
+      c += in.readLine(out, 8);
+      assertEquals("line5 length, bufsz: "+bufsz, 5, out.getLength());
+      assertEquals("end of file, bufsz: " +bufsz, 0, in.readLine(out));
+      assertEquals("total bytes, bufsz: "+bufsz, c, STRLENBYTES);
+    }
   }
 
   private static void writeFile(FileSystem fs, Path name, 
