@@ -88,7 +88,7 @@ module Formatter
           return
       end
       # Remove double-quotes added by 'dump'.
-      return str.dump[1..-1]
+      return str.dump[1..-2]
     end
 
     def output(width, str)
