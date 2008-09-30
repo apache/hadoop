@@ -420,7 +420,7 @@ public class HadoopServer {
    */
   public void storeSettingsToFile(File file) throws IOException {
     FileOutputStream fos = new FileOutputStream(file);
-    this.conf.write(fos);
+    this.conf.writeXml(fos);
     fos.close();
   }
 

@@ -163,7 +163,7 @@ public class RunOnHadoopWizard extends Wizard {
       // confDir);
       File confFile = new File(confDir, "hadoop-site.xml");
       FileOutputStream fos = new FileOutputStream(confFile);
-      conf.write(fos);
+      conf.writeXml(fos);
       fos.close();
 
     } catch (IOException ioe) {
