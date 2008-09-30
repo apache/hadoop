@@ -256,9 +256,10 @@ public class DFSAdmin extends FsShell {
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
       DiskStatus ds = dfs.getDiskStatus();
-      long raw = ds.getCapacity();
-      long rawUsed = ds.getDfsUsed();
+      long capacity = ds.getCapacity();
+      long used = ds.getDfsUsed();
       long remaining = ds.getRemaining();
+      long presentCapacity = used + remaining;
       boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
       UpgradeStatusReport status = 
                       dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
@@ -269,14 +270,16 @@ public class DFSAdmin extends FsShell {
       if (status != null) {
         System.out.println(status.getStatusText(false));
       }
-      System.out.println("Total raw bytes: " + raw
-                         + " (" + byteDesc(raw) + ")");
-      System.out.println("Remaining raw bytes: " + remaining
+      System.out.println("Configured Capacity: " + capacity
+                         + " (" + byteDesc(capacity) + ")");
+      System.out.println("Present Capacity: " + presentCapacity
+          + " (" + byteDesc(presentCapacity) + ")");
+      System.out.println("DFS Remaining: " + remaining
           + " (" + byteDesc(remaining) + ")");
-      System.out.println("Used raw bytes: " + rawUsed
-                         + " (" + byteDesc(rawUsed) + ")");
-      System.out.println("% used: "
-                         + limitDecimalTo2(((1.0 * rawUsed) / raw) * 100)
+      System.out.println("DFS Used: " + used
+                         + " (" + byteDesc(used) + ")");
+      System.out.println("DFS Used%: "
+                         + limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
                          + "%");
       System.out.println();
 
