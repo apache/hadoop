@@ -155,8 +155,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
+    long pc = getPresentCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
+    float usedPercent = getDfsUsedPercent();
+
     buffer.append("Name: "+name+"\n");
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
@@ -169,10 +172,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
     } else {
       buffer.append("Normal\n");
     }
-    buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
-    buffer.append("Remaining raw bytes: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
-    buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
-    buffer.append("% used: "+FsShell.limitDecimalTo2(100.0*u/(c+1e-10))+"%\n");
+    buffer.append("Configured Capacity: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
+    buffer.append("Present Capacity: "+pc+" ("+FsShell.byteDesc(pc)+")"+"\n");
+    buffer.append("DFS Remaining: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
+    buffer.append("DFS Used: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
+    buffer.append("DFS Used%: "+FsShell.limitDecimalTo2(usedPercent)+"%\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -181,6 +185,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public String dumpDatanode() {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
+    long pc = getPresentCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
     buffer.append(name);
@@ -195,6 +200,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append(" IN");
     }
     buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
+    buffer.append(" " + pc + "(" + FsShell.byteDesc(c)+")");
     buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
     buffer.append(" " + FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%");
     buffer.append(" " + r + "(" + FsShell.byteDesc(r)+")");
