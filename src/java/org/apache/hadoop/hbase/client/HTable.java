@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
+import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -979,8 +981,7 @@ public class HTable {
   public synchronized void commit(final BatchUpdate batchUpdate,
       final RowLock rl) 
   throws IOException {
-    if (batchUpdate.getRow() == null)
-      throw new IllegalArgumentException("update has null row");
+    checkRowAndColumns(batchUpdate);
     connection.getRegionServerWithRetries(
       new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
         public Boolean call() throws IOException {
@@ -1005,6 +1006,24 @@ public class HTable {
   throws IOException {
     for (BatchUpdate batchUpdate : batchUpdates) 
       commit(batchUpdate,null);
+  }
+  
+  /**
+   * Utility method that checks rows existence, length and 
+   * columns well formedness.
+   * @param bu
+   * @throws IllegalArgumentException
+   * @throws IOException
+   */
+  private void checkRowAndColumns(BatchUpdate bu)
+      throws IllegalArgumentException, IOException {
+    if (bu.getRow() == null || 
+        bu.getRow().length > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException("Row key is invalid");
+    }
+    for (BatchOperation bo : bu) {
+      HStoreKey.getFamily(bo.getColumn());
+    }
   }
 
   /**
