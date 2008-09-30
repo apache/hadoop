@@ -111,8 +111,9 @@ class MapTask extends Task {
   }
   
   @Override
-  public TaskRunner createRunner(TaskTracker tracker) {
-    return new MapTaskRunner(this, tracker, this.conf);
+  public TaskRunner createRunner(TaskTracker tracker, 
+      TaskTracker.TaskInProgress tip) {
+    return new MapTaskRunner(tip, tracker, this.conf);
   }
 
   @Override

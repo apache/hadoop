@@ -1433,8 +1433,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
-            taskStatus.getRunState() != TaskStatus.State.UNASSIGNED &&
-            taskStatus.getRunState() != TaskStatus.State.INITIALIZED) {
+            taskStatus.getRunState() != TaskStatus.State.UNASSIGNED) {
           markCompletedTaskAttempt(taskStatus.getTaskTracker(), 
                                    taskStatus.getTaskID());
         }
@@ -1444,8 +1443,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING &&
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
-            taskStatus.getRunState() != TaskStatus.State.UNASSIGNED &&
-            taskStatus.getRunState() != TaskStatus.State.INITIALIZED) {
+            taskStatus.getRunState() != TaskStatus.State.UNASSIGNED) {
           markCompletedTaskAttempt(taskStatus.getTaskTracker(), 
                                    taskStatus.getTaskID());
         }

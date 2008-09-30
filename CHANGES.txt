@@ -813,6 +813,9 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4309. Fix eclipse-plugin compilation. (cdouglas)
 
+    HADOOP-4232. Fix race condition in JVM reuse when multiple slots become
+    free. (ddas via acmurthy) 
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

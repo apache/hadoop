@@ -56,11 +56,10 @@ public class Child {
     int port = Integer.parseInt(args[1]);
     InetSocketAddress address = new InetSocketAddress(host, port);
     final TaskAttemptID firstTaskid = TaskAttemptID.forName(args[2]);
+    final int SLEEP_LONGER_COUNT = 5;
     taskid = firstTaskid;
     int jvmIdInt = Integer.parseInt(args[3]);
     JVMId jvmId = new JVMId(taskid.getJobID(),taskid.isMap(),jvmIdInt);
-    final int MAX_SLEEP_COUNT = 600; //max idle time of 5 minutes
-    int sleepCount = 0;
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
           TaskUmbilicalProtocol.versionID,
@@ -75,7 +74,9 @@ public class Child {
         while (true) {
           try {
             Thread.sleep(5000);
-            TaskLog.syncLogs(firstTaskid, taskid);
+            if (taskid != null) {
+              TaskLog.syncLogs(firstTaskid, taskid);
+            }
           } catch (InterruptedException ie) {
           } catch (IOException iee) {
             LOG.error("Error in syncLogs: " + iee);
@@ -93,22 +94,26 @@ public class Child {
     //manager to use JVMId instead of TaskAttemptId
     Path srcPidPath = null;
     Path dstPidPath = null;
+    int idleLoopCount = 0;
     try {
       while (true) {
-        JvmTask myTask = umbilical.getTask(jvmId, firstTaskid);
+        JvmTask myTask = umbilical.getTask(jvmId);
         if (myTask.shouldDie()) {
           break;
         } else {
           if (myTask.getTask() == null) {
-            if (sleepCount == MAX_SLEEP_COUNT) {
-              System.exit(0);
+            taskid = null;
+            if (++idleLoopCount >= SLEEP_LONGER_COUNT) {
+              //we sleep for a bigger interval when we don't receive
+              //tasks for a while
+              Thread.sleep(1500);
+            } else {
+              Thread.sleep(500);
             }
-            sleepCount++;
-            Thread.sleep(500);
             continue;
           }
-          sleepCount = 0; //got a task. reset the sleepCount
         }
+        idleLoopCount = 0;
         Task task = myTask.getTask();
         taskid = task.getTaskID();
         

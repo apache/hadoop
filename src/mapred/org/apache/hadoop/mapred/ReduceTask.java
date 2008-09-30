@@ -70,6 +70,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.IFile.*;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -161,8 +162,9 @@ class ReduceTask extends Task {
   }
 
   @Override
-  public TaskRunner createRunner(TaskTracker tracker) throws IOException {
-    return new ReduceTaskRunner(this, tracker, this.conf);
+  public TaskRunner createRunner(TaskTracker tracker, TaskInProgress tip) 
+  throws IOException {
+    return new ReduceTaskRunner(tip, tracker, this.conf);
   }
 
   @Override

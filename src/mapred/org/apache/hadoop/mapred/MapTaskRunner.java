@@ -19,10 +19,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
 
-  public MapTaskRunner(Task task, TaskTracker tracker, JobConf conf) {
+  public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf) {
     super(task, tracker, conf);
   }
   

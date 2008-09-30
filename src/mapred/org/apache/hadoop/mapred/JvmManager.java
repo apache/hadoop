@@ -29,9 +29,8 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 class JvmManager {
@@ -72,22 +71,21 @@ class JvmManager {
     }
   }
 
-  public void launchJvm(JobID jobId, boolean isMap, JvmEnv env) {
-    if (isMap) {
-      mapJvmManager.reapJvm(env, jobId, tracker);
+  public void launchJvm(TaskRunner t, JvmEnv env) {
+    if (t.getTask().isMapTask()) {
+      mapJvmManager.reapJvm(t, tracker, env);
     } else {
-      reduceJvmManager.reapJvm(env, jobId, tracker);
+      reduceJvmManager.reapJvm(t, tracker, env);
     }
   }
 
-  public void setRunningTaskForJvm(JVMId jvmId, TaskRunner t) {
+  public TaskInProgress getTaskForJvm(JVMId jvmId) {
     if (jvmId.isMapJVM()) {
-      mapJvmManager.setRunningTaskForJvm(jvmId, t);
+      return mapJvmManager.getTaskForJvm(jvmId);
     } else {
-      reduceJvmManager.setRunningTaskForJvm(jvmId, t);
+      return reduceJvmManager.getTaskForJvm(jvmId);
     }
   }
-
   public void taskFinished(TaskRunner tr) {
     if (tr.getTask().isMapTask()) {
       mapJvmManager.taskFinished(tr);
@@ -136,15 +134,16 @@ class JvmManager {
 
     synchronized public void setRunningTaskForJvm(JVMId jvmId, 
         TaskRunner t) {
-      if (t == null) { 
-        //signifies the JVM asked for a task and it 
-        //was not given anything.
-        jvmIdToRunner.get(jvmId).setBusy(false);
-        return;
-      }
       jvmToRunningTask.put(jvmId, t);
       runningTaskToJvm.put(t,jvmId);
       jvmIdToRunner.get(jvmId).setBusy(true);
+    }
+    
+    synchronized public TaskInProgress getTaskForJvm(JVMId jvmId) {
+      if (jvmToRunningTask.containsKey(jvmId)) {
+        return jvmToRunningTask.get(jvmId).getTaskInProgress();
+      }
+      return null;
     }
     
     synchronized public boolean isJvmknown(JVMId jvmId) {
@@ -187,23 +186,34 @@ class JvmManager {
       jvmIdToRunner.remove(jvmId);
     }
     private synchronized void reapJvm( 
-        JvmEnv env,
-        JobID jobId, TaskTracker tracker) {
+        TaskRunner t, TaskTracker tracker, JvmEnv env) {
       boolean spawnNewJvm = false;
+      JobID jobId = t.getTask().getJobID();
       //Check whether there is a free slot to start a new JVM.
       //,or, Kill a (idle) JVM and launch a new one
+      //When this method is called, we *must* 
+      // (1) spawn a new JVM (if we are below the max) 
+      // (2) find an idle JVM (that belongs to the same job), or,
+      // (3) kill an idle JVM (from a different job) 
+      // (the order of return is in the order above)
       int numJvmsSpawned = jvmIdToRunner.size();
-
+      JvmRunner runnerToKill = null;
       if (numJvmsSpawned >= maxJvms) {
         //go through the list of JVMs for all jobs.
-        //for each JVM see whether it is currently running something and
-        //if not, then kill the JVM
         Iterator<Map.Entry<JVMId, JvmRunner>> jvmIter = 
           jvmIdToRunner.entrySet().iterator();
         
         while (jvmIter.hasNext()) {
           JvmRunner jvmRunner = jvmIter.next().getValue();
           JobID jId = jvmRunner.jvmId.getJobId();
+          //look for a free JVM for this job; if one exists then just break
+          if (jId.equals(jobId) && !jvmRunner.isBusy() && !jvmRunner.ranAll()){
+            setRunningTaskForJvm(jvmRunner.jvmId, t); //reserve the JVM
+            LOG.info("No new JVM spawned for jobId/taskid: " + 
+                     jobId+"/"+t.getTask().getTaskID() +
+                     ". Attempting to reuse: " + jvmRunner.jvmId);
+            return;
+          }
           //Cases when a JVM is killed: 
           // (1) the JVM under consideration belongs to the same job 
           //     (passed in the argument). In this case, kill only when
@@ -211,13 +221,12 @@ class JvmManager {
           //     of count).
           // (2) the JVM under consideration belongs to a different job and is
           //     currently not busy
-          //             
+          //But in both the above cases, we see if we can assign the current
+          //task to an idle JVM (hence we continue the loop even on a match)
           if ((jId.equals(jobId) && jvmRunner.ranAll()) ||
               (!jId.equals(jobId) && !jvmRunner.isBusy())) {
-            jvmIter.remove();
-            jvmRunner.kill();
+            runnerToKill = jvmRunner;
             spawnNewJvm = true;
-            break;
           }
         }
       } else {
@@ -225,13 +234,42 @@ class JvmManager {
       }
 
       if (spawnNewJvm) {
-        spawnNewJvm(jobId, env, tracker);
-      } else {
-        LOG.info("No new JVM spawned for jobId: " + jobId);
+        if (runnerToKill != null) {
+          LOG.info("Killing JVM: " + runnerToKill.jvmId);
+          runnerToKill.kill();
+        }
+        spawnNewJvm(jobId, env, tracker, t);
+        return;
       }
+      //*MUST* never reach this
+      throw new RuntimeException("Inconsistent state!!! " +
+      		"JVM Manager reached an unstable state " +
+            "while reaping a JVM for task: " + t.getTask().getTaskID()+
+            " " + getDetails());
+    }
+    
+    private String getDetails() {
+      StringBuffer details = new StringBuffer();
+      details.append("Number of active JVMs:").
+              append(jvmIdToRunner.size());
+      Iterator<JVMId> jvmIter = 
+        jvmIdToRunner.keySet().iterator();
+      while (jvmIter.hasNext()) {
+        JVMId jvmId = jvmIter.next();
+        details.append("\n  JVMId ").
+          append(jvmId.toString()).
+          append(" #Tasks ran: "). 
+          append(jvmIdToRunner.get(jvmId).numTasksRan).
+          append(" Currently busy? ").
+          append(jvmIdToRunner.get(jvmId).busy).
+          append(" Currently running: "). 
+          append(jvmToRunningTask.get(jvmId).getTask().getTaskID().toString());
+      }
+      return details.toString();
     }
 
-    private void spawnNewJvm(JobID jobId, JvmEnv env, TaskTracker tracker) {
+    private void spawnNewJvm(JobID jobId, JvmEnv env, TaskTracker tracker, 
+        TaskRunner t) {
       JvmRunner jvmRunner = new JvmRunner(env,jobId);
       jvmIdToRunner.put(jvmRunner.jvmId, jvmRunner);
       //spawn the JVM in a new thread. Note that there will be very little
@@ -247,6 +285,7 @@ class JvmManager {
             TaskAttemptID.forName(env.conf.get("mapred.task.id")),
             tracker.getMemoryForTask(env.conf));
       }
+      setRunningTaskForJvm(jvmRunner.jvmId, t);
       LOG.info(jvmRunner.getName());
       jvmRunner.start();
     }

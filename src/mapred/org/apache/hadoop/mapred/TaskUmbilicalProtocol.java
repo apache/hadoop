@@ -51,18 +51,18 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *            stale or not. Hence the return type is a class that 
    *            encapsulates the events and whether to reset events index.
    * Version 13 changed the getTask method signature for HADOOP-249
+   * Version 14 changed the getTask method signature for HADOOP-4232
    * */
 
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
   
   /**
    * Called when a child task process starts, to get its task.
    * @param jvmId the ID of this JVM w.r.t the tasktracker that launched it
-   * @param taskid the first taskid that the JVM runs
    * @return Task object
    * @throws IOException 
    */
-  JvmTask getTask(JVMId jvmId, TaskAttemptID taskid) throws IOException;
+  JvmTask getTask(JVMId jvmId) throws IOException;
 
   /**
    * Report child's progress to parent.

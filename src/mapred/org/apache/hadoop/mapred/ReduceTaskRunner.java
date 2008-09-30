@@ -19,10 +19,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
   
-  public ReduceTaskRunner(Task task, TaskTracker tracker, 
+  public ReduceTaskRunner(TaskInProgress task, TaskTracker tracker, 
                           JobConf conf) throws IOException {
     
     super(task, tracker, conf);

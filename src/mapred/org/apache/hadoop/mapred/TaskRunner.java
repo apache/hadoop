@@ -42,6 +42,7 @@ abstract class TaskRunner extends Thread {
     LogFactory.getLog(TaskRunner.class);
 
   volatile boolean killed = false;
+  private TaskTracker.TaskInProgress tip;
   private Task t;
   private Object lock = new Object();
   private volatile boolean done = false;
@@ -58,8 +59,10 @@ abstract class TaskRunner extends Thread {
    */
   protected MapOutputFile mapOutputFile;
 
-  public TaskRunner(Task t, TaskTracker tracker, JobConf conf) {
-    this.t = t;
+  public TaskRunner(TaskTracker.TaskInProgress tip, TaskTracker tracker, 
+      JobConf conf) {
+    this.tip = tip;
+    this.t = tip.getTask();
     this.tracker = tracker;
     this.conf = conf;
     this.mapOutputFile = new MapOutputFile(t.getJobID());
@@ -68,6 +71,7 @@ abstract class TaskRunner extends Thread {
   }
 
   public Task getTask() { return t; }
+  public TaskTracker.TaskInProgress getTaskInProgress() { return tip; }
   public TaskTracker getTracker() { return tracker; }
 
   /** Called to assemble this task's input.  This method is run in the parent
@@ -403,9 +407,7 @@ abstract class TaskRunner extends Thread {
         ldLibraryPath.append(oldLdLibraryPath);
       }
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
-      tracker.taskInitialized(t.getTaskID());
-      LOG.info("Task ID: " + t.getTaskID() +" initialized");
-      jvmManager.launchJvm(t.getJobID(), t.isMapTask(), 
+      jvmManager.launchJvm(this, 
           jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
               workDir, env, pidFile, conf));
       synchronized (lock) {
@@ -537,6 +539,7 @@ abstract class TaskRunner extends Thread {
   public void kill() {
     killed = true;
     jvmManager.taskKilled(this);
+    signalDone();
   }
   public void signalDone() {
     synchronized (lock) {

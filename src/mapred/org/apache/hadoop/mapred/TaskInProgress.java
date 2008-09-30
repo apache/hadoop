@@ -486,7 +486,6 @@ class TaskInProgress {
       // @see {@link TaskTracker.transmitHeartbeat()}
       if ((newState != TaskStatus.State.RUNNING && 
            newState != TaskStatus.State.COMMIT_PENDING && 
-           newState != TaskStatus.State.INITIALIZED &&
            newState != TaskStatus.State.UNASSIGNED) && 
           (oldState == newState)) {
         LOG.warn("Recieved duplicate status update of '" + newState + 
@@ -499,8 +498,7 @@ class TaskInProgress {
       // to running. This is a spot fix, but it should be addressed more
       // globally.
       if ((newState == TaskStatus.State.RUNNING || 
-          newState == TaskStatus.State.UNASSIGNED ||
-          newState == TaskStatus.State.INITIALIZED) &&
+          newState == TaskStatus.State.UNASSIGNED) &&
           (oldState == TaskStatus.State.FAILED || 
            oldState == TaskStatus.State.KILLED || 
            oldState == TaskStatus.State.SUCCEEDED ||
@@ -713,7 +711,6 @@ class TaskInProgress {
     TaskStatus st = taskStatuses.get(taskId);
     if(st != null && (st.getRunState() == TaskStatus.State.RUNNING
         || st.getRunState() == TaskStatus.State.COMMIT_PENDING ||
-        st.getRunState() == TaskStatus.State.INITIALIZED ||
         st.getRunState() == TaskStatus.State.UNASSIGNED)
         && tasksToKill.put(taskId, shouldFail) == null ) {
       String logStr = "Request received to " + (shouldFail ? "fail" : "kill") 
