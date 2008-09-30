@@ -84,8 +84,13 @@ public class TypeID {
   public boolean equals(Object o) {
     if (this == o) 
       return true;
-    if (!(o instanceof TypeID))
+
+    if (o == null)
       return false;
+
+    if (this.getClass() != o.getClass())
+      return false;
+
     TypeID oTypeID = (TypeID) o;
     return (this.typeVal == oTypeID.typeVal);
   }

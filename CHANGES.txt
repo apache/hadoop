@@ -4,6 +4,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-4210. Fix findbugs warnings for equals implementations of mapred ID
+    classes. Removed public, static ID::read and ID::forName; made ID an
+    abstract class. (Suresh Srinivas via cdouglas)
+
   NEW FEATURES
 
   IMPROVEMENTS

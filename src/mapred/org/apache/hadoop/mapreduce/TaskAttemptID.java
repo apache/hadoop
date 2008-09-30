@@ -92,14 +92,11 @@ public class TaskAttemptID extends ID {
   
   @Override
   public boolean equals(Object o) {
-    if(o == null)
+    if (!super.equals(o))
       return false;
-    if(o.getClass().equals(TaskAttemptID.class)) {
-      TaskAttemptID that = (TaskAttemptID)o;
-      return this.id==that.id
-        && this.taskId.equals(that.taskId);
-    }
-    else return false;
+
+    TaskAttemptID that = (TaskAttemptID)o;
+    return this.taskId.equals(that.taskId);
   }
   
   /**Compare TaskIds by first tipIds, then by task numbers. */

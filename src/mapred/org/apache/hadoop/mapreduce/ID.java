@@ -33,7 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @see TaskID
  * @see TaskAttemptID
  */
-public class ID implements WritableComparable<ID> {
+public abstract class ID implements WritableComparable<ID> {
   protected int id;
 
   /** constructs an ID object from the given int */
@@ -61,9 +61,11 @@ public class ID implements WritableComparable<ID> {
 
   @Override
   public boolean equals(Object o) {
+    if (this == o)
+      return true;
     if(o == null)
       return false;
-    if (o.getClass().equals(ID.class)) {
+    if (o.getClass() == this.getClass()) {
       ID that = (ID) o;
       return this.id == that.id;
     }
@@ -82,30 +84,5 @@ public class ID implements WritableComparable<ID> {
 
   public void write(DataOutput out) throws IOException {
     out.writeInt(id);
-  }
-
-  public static ID read(DataInput in) throws IOException {
-    ID id = new ID();
-    id.readFields(in);
-    return id;
-  }
-
-  /**
-   * Construct an ID object from given string
-   * 
-   * @return constructed Id object or null if the given String is null
-   * @throws IllegalArgumentException if the given string is malformed
-   */
-  public static ID forName(String str) throws IllegalArgumentException {
-    if (str == null)
-      return null;
-    try {
-      int id = Integer.parseInt(str);
-      return new ID(id);
-    }
-    catch (Exception ex) {
-      throw new IllegalArgumentException("Id string : " + str
-          + " is not propoerly formed");
-    }
   }
 }

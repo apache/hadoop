@@ -47,10 +47,9 @@ public class VectorTypeID extends TypeID {
    * same type
    */
   public boolean equals(Object o) {
-    if (this == o) 
-      return true;
-    if (!(o instanceof VectorTypeID))
+    if (!super.equals (o))
       return false;
+
     VectorTypeID vti = (VectorTypeID) o;
     return this.typeIDElement.equals(vti.typeIDElement);
   }

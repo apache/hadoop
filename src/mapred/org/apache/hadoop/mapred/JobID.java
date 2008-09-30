@@ -73,14 +73,11 @@ public class JobID extends ID {
   
   @Override
   public boolean equals(Object o) {
-    if(o == null)
+    if (!super.equals(o))
       return false;
-    if(o.getClass().equals(JobID.class)) {
-      JobID that = (JobID)o;
-      return this.id==that.id
-        && this.jtIdentifier.equals(that.jtIdentifier);
-    }
-    else return false;
+
+    JobID that = (JobID)o;
+    return this.jtIdentifier.equals(that.jtIdentifier);
   }
   
   /**Compare JobIds by first jtIdentifiers, then by job numbers*/

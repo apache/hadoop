@@ -97,15 +97,11 @@ public class TaskID extends ID {
   
   @Override
   public boolean equals(Object o) {
-    if(o == null)
+    if (!super.equals(o))
       return false;
-    if(o.getClass().equals(TaskID.class)) {
-      TaskID that = (TaskID)o;
-      return this.id==that.id
-        && this.isMap == that.isMap
-        && this.jobId.equals(that.jobId);
-    }
-    else return false;
+
+    TaskID that = (TaskID)o;
+    return this.isMap == that.isMap && this.jobId.equals(that.jobId);
   }
 
   /**Compare TaskInProgressIds by first jobIds, then by tip numbers. Reduces are 

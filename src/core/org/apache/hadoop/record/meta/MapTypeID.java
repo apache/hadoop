@@ -62,14 +62,13 @@ public class MapTypeID extends TypeID {
    * same type
    */
   public boolean equals(Object o) {
-    if (this == o) 
-      return true;
-    if (!(o instanceof MapTypeID))
+    if (!super.equals(o))
       return false;
+
     MapTypeID mti = (MapTypeID) o;
-    if (!this.typeIDKey.equals(mti.typeIDKey))
-      return false;
-    return this.typeIDValue.equals(mti.typeIDValue);
+
+    return this.typeIDKey.equals(mti.typeIDKey) &&
+           this.typeIDValue.equals(mti.typeIDValue);
   }
   
   /**
