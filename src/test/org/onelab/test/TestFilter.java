@@ -291,13 +291,28 @@ public class TestFilter extends TestCase {
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
     
-    // to test for overflows, add 'key' enough times to overflow an 8bit bucket,
+    // to test for overflows, add 'key' enough times to overflow a 4bit bucket,
     // while asserting that it stays a member
-    for(int i = 0; i < 257; i++){
+    for(int i = 0; i < 16; i++){
       bf.add(key);
       assertTrue(bf.membershipTest(key));
     }
-    
+    // test approximateCount
+    CountingBloomFilter bf3 = new CountingBloomFilter(4, 2, Hash.JENKINS_HASH);
+    // test the exact range
+    for (int i = 0; i < 8; i++) {
+      bf3.add(key);
+      bf3.add(k2);
+      assertEquals(bf3.approximateCount(key), i + 1);
+      assertEquals(bf3.approximateCount(k2), i + 1);
+    }
+    // test gently degraded counting in high-fill, high error rate filter
+    for (int i = 8; i < 15; i++) {
+      bf3.add(key);
+      assertTrue(bf3.approximateCount(key) >= (i + 1));
+      assertEquals(bf3.approximateCount(k2), 8);
+      assertEquals(bf3.approximateCount(k3), 0);
+    }
   }
   
   /** Test a DynamicBloomFilter

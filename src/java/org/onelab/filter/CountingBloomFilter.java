@@ -195,6 +195,44 @@ public final class CountingBloomFilter extends Filter {
     return true;
   }//end membershipTest()
 
+  /**
+   * This method calculates an approximate count of the key, i.e. how many
+   * times the key was added to the filter. This allows the filter to be
+   * used as an approximate <code>key -&gt; count</code> map.
+   * <p>NOTE: due to the bucket size of this filter, inserting the same
+   * key more than 15 times will cause an overflow at all filter positions
+   * associated with this key, and it will significantly increase the error
+   * rate for this and other keys. For this reason the filter can only be
+   * used to store small count values <code>0 &lt;= N &lt;&lt; 15</code>.
+   * @param key key to be tested
+   * @return 0 if the key is not present. Otherwise, a positive value v will
+   * be returned such that <code>v == count</code> with probability equal to the
+   * error rate of this filter, and <code>v &gt; count</code> otherwise.
+   * Additionally, if the filter experienced an underflow as a result of
+   * {@link #delete(Key)} operation, the return value may be lower than the
+   * <code>count</code> with the probability of the false negative rate of such
+   * filter.
+   */
+  public int approximateCount(Key key) {
+    int res = Integer.MAX_VALUE;
+    int[] h = hash.hash(key);
+    hash.clear();
+    for (int i = 0; i < nbHash; i++) {
+      // find the bucket
+      int wordNum = h[i] >> 4;          // div 16
+      int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
+      
+      long bucketMask = 15L << bucketShift;
+      long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
+      if (bucketValue < res) res = (int)bucketValue;
+    }
+    if (res != Integer.MAX_VALUE) {
+      return res;
+    } else {
+      return 0;
+    }
+  }
+
   @Override
   public void not(){
     throw new UnsupportedOperationException("not() is undefined for "
