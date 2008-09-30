@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Maps a relative pathname to an absolute pathname using the
@@ -108,12 +109,9 @@ public class PathFinder
   private static void printEnvVariables() {
     System.out.println("Environment Variables: ");
     Map<String,String> map = System.getenv();
-    Set<String> keys = map.keySet();
-    Iterator iter = keys.iterator();
-    while(iter.hasNext()) {
-      String thiskey = (String)(iter.next()); 
-      String value = map.get(thiskey);
-      System.out.println(thiskey + " = " + value);
+    Set<Entry<String, String>> entrySet = map.entrySet();
+    for(Entry<String, String> entry : entrySet) {
+      System.out.println(entry.getKey() + " = " + entry.getValue());
     }
   }
 

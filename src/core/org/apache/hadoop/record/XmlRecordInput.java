@@ -47,7 +47,7 @@ public class XmlRecordInput implements RecordInput {
     public String getType() { return type; }
   }
     
-  private class XMLParser extends DefaultHandler {
+  private static class XMLParser extends DefaultHandler {
     private boolean charsValid = false;
         
     private ArrayList<Value> valList;

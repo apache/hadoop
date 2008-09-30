@@ -23,7 +23,7 @@ package org.apache.hadoop.net;
 
 public class NodeBase implements Node {
   public final static char PATH_SEPARATOR = '/';
-  public static String PATH_SEPARATOR_STR = "/";
+  public final static String PATH_SEPARATOR_STR = "/";
   public final static String ROOT = ""; // string representation of root
   
   protected String name; //host:port#

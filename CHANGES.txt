@@ -37,6 +37,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-4204. Fix findbugs warnings related to unused variables, naive
+    Number subclass instantiation, Map iteration, and badly scoped inner
+    classes. (Suresh Srinivas via cdouglas)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

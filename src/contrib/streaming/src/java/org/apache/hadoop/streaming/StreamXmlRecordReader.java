@@ -128,8 +128,6 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
                                      DataOutputBuffer outBufOrNull) throws IOException {
     byte[] buf = new byte[Math.max(lookAhead_, maxRecSize_)];
     int read = 0;
-    boolean success = true;
-    long skippedBytes = 0;
     bin_.mark(Math.max(lookAhead_, maxRecSize_) + 2); //mark to invalidate if we read more
     read = bin_.read(buf);
     if (read == -1) return false;
@@ -142,12 +140,9 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     int bufPos = 0;
     int state = synched_ ? CDATA_OUT : CDATA_UNK;
     int s = 0;
-    int matchLen = 0;
-    int LL = 120000 * 10;
 
     while (match.find(bufPos)) {
       int input;
-      matchLen = match.group(0).length();
       if (match.group(1) != null) {
         input = CDATA_BEGIN;
       } else if (match.group(2) != null) {
@@ -164,7 +159,6 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
       }
       state = nextState(state, input, match.start());
       if (state == RECORD_ACCEPT) {
-        bufPos = match.end();
         break;
       }
       bufPos = match.end();
@@ -177,7 +171,11 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     if (matched) {
       int endPos = includePat ? firstMatchEnd_ : firstMatchStart_;
       bin_.reset();
-      skippedBytes = bin_.skip(endPos); //Skip succeeds as we have already read this is buffer
+
+      for (long skiplen = endPos; skiplen > 0; ) {
+        skiplen -= bin_.skip(skiplen); // Skip succeeds as we have read this buffer
+      }
+
       pos_ += endPos;
       if (outBufOrNull != null) {
         outBufOrNull.writeBytes(sbuf.substring(0,endPos));
@@ -299,6 +297,5 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   int firstMatchStart_ = 0; // candidate record boundary. Might just be CDATA.
   int firstMatchEnd_ = 0;
 
-  boolean isRecordMatch_;
   boolean synched_;
 }

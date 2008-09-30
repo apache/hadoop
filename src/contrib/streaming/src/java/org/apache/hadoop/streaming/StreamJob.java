@@ -953,7 +953,7 @@ public class StreamJob implements Tool {
     return 0;
   }
   /** Support -jobconf x=y x1=y1 type options **/
-  class MultiPropertyOption extends PropertyOption{
+  static class MultiPropertyOption extends PropertyOption{
     private String optionString; 
     MultiPropertyOption(){
       super(); 
@@ -1051,7 +1051,7 @@ public class StreamJob implements Tool {
 
   protected RunningJob running_;
   protected JobID jobId_;
-  protected static String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
+  protected static final String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
     "Please specify a different link name for all of your caching URIs";
 
 }

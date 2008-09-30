@@ -66,7 +66,7 @@ implements InputFormat<FloatWritable, NullWritable> {
    * {@link #next(FloatWritable, NullWritable)} with the progress as the
    * <code>key</code>.
    */
-  class PipesDummyRecordReader implements RecordReader<FloatWritable, NullWritable> {
+  static class PipesDummyRecordReader implements RecordReader<FloatWritable, NullWritable> {
     float progress = 0.0f;
     
     public PipesDummyRecordReader(Configuration job, InputSplit split)

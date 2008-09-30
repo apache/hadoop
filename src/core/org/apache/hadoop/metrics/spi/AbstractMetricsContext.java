@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.Map.Entry;
+
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsException;
@@ -298,9 +300,9 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     for (String recordName : bufferedData.keySet()) {
       RecordMap recordMap = bufferedData.get(recordName);
       synchronized (recordMap) {
-        for (TagMap tagMap : recordMap.keySet()) {
-          MetricMap metricMap = recordMap.get(tagMap);
-          OutputRecord outRec = new OutputRecord(tagMap, metricMap);
+        Set<Entry<TagMap, MetricMap>> entrySet = recordMap.entrySet ();
+        for (Entry<TagMap, MetricMap> entry : entrySet) {
+          OutputRecord outRec = new OutputRecord(entry.getKey(), entry.getValue());
           emitRecord(contextName, recordName, outRec);
         }
       }
@@ -338,8 +340,11 @@ public abstract class AbstractMetricsContext implements MetricsContext {
         TagMap tagMap = new TagMap(tagTable); // clone tags
         recordMap.put(tagMap, metricMap);
       }
-      for (String metricName : metricUpdates.keySet()) {
-        MetricValue updateValue = metricUpdates.get(metricName);
+
+      Set<Entry<String, MetricValue>> entrySet = metricUpdates.entrySet();
+      for (Entry<String, MetricValue> entry : entrySet) {
+        String metricName = entry.getKey ();
+        MetricValue updateValue = entry.getValue ();
         Number updateNumber = updateValue.getNumber();
         Number currentNumber = metricMap.get(metricName);
         if (currentNumber == null || updateValue.isAbsolute()) {
@@ -363,16 +368,16 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    */
   private Number sum(Number a, Number b) {
     if (a instanceof Integer) {
-      return new Integer(a.intValue() + b.intValue());
+      return Integer.valueOf(a.intValue() + b.intValue());
     }
     else if (a instanceof Float) {
       return new Float(a.floatValue() + b.floatValue());
     }
     else if (a instanceof Short) {
-      return new Short((short)(a.shortValue() + b.shortValue()));
+      return Short.valueOf((short)(a.shortValue() + b.shortValue()));
     }
     else if (a instanceof Byte) {
-      return new Byte((byte)(a.byteValue() + b.byteValue()));
+      return Byte.valueOf((byte)(a.byteValue() + b.byteValue()));
     }
     else if (a instanceof Long) {
       return Long.valueOf((a.longValue() + b.longValue()));

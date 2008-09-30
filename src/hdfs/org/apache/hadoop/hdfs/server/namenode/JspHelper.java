@@ -50,12 +50,12 @@ public class JspHelper {
 
   static FSNamesystem fsn = null;
   public static InetSocketAddress nameNodeAddr;
-  public static Configuration conf = new Configuration();
+  public static final Configuration conf = new Configuration();
   public static final UnixUserGroupInformation webUGI
   = UnixUserGroupInformation.createImmutable(
       conf.getStrings(WEB_UGI_PROPERTY_NAME));
 
-  public static int defaultChunkSizeToView = 
+  public static final int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
   static Random rand = new Random();
 
