@@ -48,10 +48,12 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 16: adds ResourceStatus to TaskTrackerStatus for HADOOP-3759
    * Version 17: Changed format of Task and TaskStatus for HADOOP-3150
    * Version 18: Changed status message due to changes in TaskStatus
-   *             Changed heartbeat to piggyback JobTracker restart information
+   * Version 19: Changed heartbeat to piggyback JobTracker restart information
                  so that the TaskTracker can synchronize itself.
+   * Version 20: Changed status message due to changes in TaskStatus
+   *             (HADOOP-4232)
    */
-  public static final long versionID = 18L;
+  public static final long versionID = 20L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

@@ -41,7 +41,7 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   // what state is the task in?
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
-                            COMMIT_PENDING, INITIALIZED}
+                            COMMIT_PENDING}
     
   private TaskAttemptID taskid;
   private float progress;

@@ -59,7 +59,7 @@ public class IsolationRunner {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
-    public JvmTask getTask(JVMId jvmId, TaskAttemptID taskId) throws IOException {
+    public JvmTask getTask(JVMId jvmId) throws IOException {
       return null;
     }
 
