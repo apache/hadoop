@@ -282,7 +282,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       }
     }
     if (count != blockTable.length) {
-      blockTable = Arrays.copyOf(blockTable, count);
+      Block[] tmpTable = new Block[count];
+      for (int i=0; i<count; i++) {
+        tmpTable[i] = blockTable[i];
+      }
+      blockTable = tmpTable;
     }
     return blockTable;
   }
