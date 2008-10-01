@@ -819,6 +819,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4232. Fix race condition in JVM reuse when multiple slots become
     free. (ddas via acmurthy) 
 
+    HADOOP-4302. Fix a race condition in TestReduceFetch that can yield false
+    negatvies. (cdouglas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
