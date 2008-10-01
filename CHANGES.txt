@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     Number subclass instantiation, Map iteration, and badly scoped inner
     classes. (Suresh Srinivas via cdouglas)
 
+    HADOOP-4207. Update derby jar file to release 10.4.2 release.
+    (Prasad Chakka via dhruba)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
