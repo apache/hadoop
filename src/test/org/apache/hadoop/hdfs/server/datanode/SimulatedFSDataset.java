@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -279,9 +280,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   public synchronized Block[] getBlockReport() {
     Block[] blockTable = new Block[blockMap.size()];
-    int i = 0;
-    for (Block b: blockMap.keySet()) {  
-      blockTable[i++] = blockMap.get(b).theBlock;
+    int count = 0;
+    for (BInfo b : blockMap.values()) {
+      if (b.isFinalized()) {
+        blockTable[count++] = b.theBlock;
+      }
+    }
+    if (count != blockTable.length) {
+      blockTable = Arrays.copyOf(blockTable, count);
     }
     return blockTable;
   }
