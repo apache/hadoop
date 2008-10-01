@@ -35,8 +35,6 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.net.NetUtils;
 
 /**
  * This class tests the replication of a DFS file.
@@ -71,27 +69,11 @@ public class TestReplication extends TestCase {
     Configuration conf = fileSys.getConf();
     ClientProtocol namenode = DFSClient.createNamenode(conf);
       
-    LocatedBlocks locations;
-    boolean isReplicationDone;
-    do {
-      locations = namenode.getBlockLocations(name.toString(),0,Long.MAX_VALUE);
-      isReplicationDone = true;
-      for (LocatedBlock blk : locations.getLocatedBlocks()) {
-        DatanodeInfo[] datanodes = blk.getLocations();
-        if (Math.min(numDatanodes, repl) != datanodes.length) {
-          isReplicationDone=false;
-          LOG.warn("File has "+datanodes.length+" replicas, expecting "
-                   +Math.min(numDatanodes, repl));
-          try {
-            Thread.sleep(15000L);
-          } catch (InterruptedException e) {
-            // nothing
-          }
-          break;
-        }
-      }
-    } while(!isReplicationDone);
-      
+    waitForBlockReplication(name.toString(), namenode, 
+                            Math.min(numDatanodes, repl), -1);
+    
+    LocatedBlocks locations = namenode.getBlockLocations(name.toString(),0,
+                                                         Long.MAX_VALUE);
     boolean isOnSameRack = true, isNotOnSameRack = true;
     for (LocatedBlock blk : locations.getLocatedBlocks()) {
       DatanodeInfo[] datanodes = blk.getLocations();
