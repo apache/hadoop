@@ -168,9 +168,37 @@
               line. The <code>urilist_uri</code> list should be a fully
               qualified URI.
               </td></tr>
+          <tr><td><code>-filelimit &lt;n&gt;</code></td>
+              <td>Limit the total number of files to be &lt;= n</td>
+              <td>See also <a href="#Symbolic-Representations">Symbolic
+                  Representations</a>.
+              </td></tr>
+          <tr><td><code>-sizelimit &lt;n&gt;</code></td>
+              <td>Limit the total size to be &lt;= n bytes</td>
+              <td>See also <a href="#Symbolic-Representations">Symbolic
+                  Representations</a>.
+              </td></tr>
+          <tr><td><code>-delete</code></td>
+              <td>Delete the files existing in the dst but not in src</td>
+              <td>The deletion is done by FS Shell.  So the trash will be used,
+                  if it is enable.
+              </td></tr>
 
         </table>
 
+      </section>
+
+      <section id="Symbolic-Representations">
+        <title>Symbolic Representations</title>
+        <p>
+        The parameter &lt;n&gt; in <code>-filelimit</code>
+        and <code>-sizelimit</code> can be specified with symbolic
+        representation.  For examples,
+        </p>
+        <ul>
+          <li>1230k = 1230 * 1024 = 1259520</li>
+          <li>891g = 891 * 1024^3 = 956703965184</li>
+        </ul>
       </section>
 
       <section id="uo">

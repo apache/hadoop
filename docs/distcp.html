@@ -67,7 +67,7 @@
 <a class="unselected" href="http://wiki.apache.org/hadoop">Wiki</a>
 </li>
 <li class="current">
-<a class="selected" href="index.html">Hadoop 0.19 Documentation</a>
+<a class="selected" href="index.html">Hadoop 0.20 Documentation</a>
 </li>
 </ul>
 <!--+
@@ -156,6 +156,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
+<a href="jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
 <a href="http://wiki.apache.org/hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
@@ -207,6 +210,9 @@ document.write("Last Published: " + document.lastModified);
 <ul class="minitoc">
 <li>
 <a href="#Option+Index">Option Index</a>
+</li>
+<li>
+<a href="#Symbolic-Representations">Symbolic Representations</a>
 </li>
 <li>
 <a href="#uo">Update and Overwrite</a>
@@ -408,10 +414,48 @@ document.write("Last Published: " + document.lastModified);
               qualified URI.
               </td>
 </tr>
+          
+<tr>
+<td colspan="1" rowspan="1"><span class="codefrag">-filelimit &lt;n&gt;</span></td>
+              <td colspan="1" rowspan="1">Limit the total number of files to be &lt;= n</td>
+              <td colspan="1" rowspan="1">See also <a href="#Symbolic-Representations">Symbolic
+                  Representations</a>.
+              </td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1"><span class="codefrag">-sizelimit &lt;n&gt;</span></td>
+              <td colspan="1" rowspan="1">Limit the total size to be &lt;= n bytes</td>
+              <td colspan="1" rowspan="1">See also <a href="#Symbolic-Representations">Symbolic
+                  Representations</a>.
+              </td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1"><span class="codefrag">-delete</span></td>
+              <td colspan="1" rowspan="1">Delete the files existing in the dst but not in src</td>
+              <td colspan="1" rowspan="1">The deletion is done by FS Shell.  So the trash will be used,
+                  if it is enable.
+              </td>
+</tr>
 
         
 </table>
-<a name="N10136"></a><a name="uo"></a>
+<a name="N10171"></a><a name="Symbolic-Representations"></a>
+<h4>Symbolic Representations</h4>
+<p>
+        The parameter &lt;n&gt; in <span class="codefrag">-filelimit</span>
+        and <span class="codefrag">-sizelimit</span> can be specified with symbolic
+        representation.  For examples,
+        </p>
+<ul>
+          
+<li>1230k = 1230 * 1024 = 1259520</li>
+          
+<li>891g = 891 * 1024^3 = 956703965184</li>
+        
+</ul>
+<a name="N1018A"></a><a name="uo"></a>
 <h4>Update and Overwrite</h4>
 <p>It's worth giving some examples of <span class="codefrag">-update</span> and
         <span class="codefrag">-overwrite</span>. Consider a copy from <span class="codefrag">/foo/a</span> and
@@ -510,10 +554,10 @@ document.write("Last Published: " + document.lastModified);
 </div> <!-- Usage -->
 
     
-<a name="N101E7"></a><a name="etc"></a>
+<a name="N1023B"></a><a name="etc"></a>
 <h2 class="h3">Appendix</h2>
 <div class="section">
-<a name="N101ED"></a><a name="Map+sizing"></a>
+<a name="N10241"></a><a name="Map+sizing"></a>
 <h3 class="h4">Map sizing</h3>
 <p>DistCp makes a faint attempt to size each map comparably so that
           each copies roughly the same number of bytes. Note that files are the
@@ -527,7 +571,7 @@ document.write("Last Published: " + document.lastModified);
 <p>Tuning the number of maps to the size of the source and
           destination clusters, the size of the copy, and the available
           bandwidth is recommended for long-running and regularly run jobs.</p>
-<a name="N10206"></a><a name="cpver"></a>
+<a name="N1025A"></a><a name="cpver"></a>
 <h3 class="h4">Copying between versions of HDFS</h3>
 <p>For copying between two different versions of Hadoop, one will
         usually use HftpFileSystem. This is a read-only FileSystem, so DistCp
@@ -536,7 +580,7 @@ document.write("Last Published: " + document.lastModified);
         specified as <span class="codefrag">hftp://&lt;dfs.http.address&gt;/&lt;path&gt;</span>
         (the default <span class="codefrag">dfs.http.address</span> is
         &lt;namenode&gt;:50070).</p>
-<a name="N10216"></a><a name="Map%2FReduce+and+other+side-effects"></a>
+<a name="N1026A"></a><a name="Map%2FReduce+and+other+side-effects"></a>
 <h3 class="h4">Map/Reduce and other side-effects</h3>
 <p>As has been mentioned in the preceding, should a map fail to copy
         one of its inputs, there will be several side-effects.</p>

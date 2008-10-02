@@ -822,6 +822,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4302. Fix a race condition in TestReduceFetch that can yield false
     negatvies. (cdouglas)
 
+    HADOOP-3942. Update distcp documentation to include features introduced in
+    HADOOP-3873, HADOOP-3939. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
