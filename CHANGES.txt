@@ -826,7 +826,7 @@ Release 0.19.0 - Unreleased
     HADOOP-3873, HADOOP-3939. (Tsz Wo (Nicholas), SZE via cdouglas)
 
     HADOOP-4257. The DFS client should pick only one datanode as the candidate
-    to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via cdouglas)
+    to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via dhruba)
 
     HADOOP-4319. fuse-dfs dfs_read function returns as many bytes as it is
     told to read unlesss end-of-file is reached.  (Pete Wyckoff via dhruba)
@@ -1671,6 +1671,8 @@ Release 0.17.3 - Unreleased
 
     HADOOP-4271. Checksum input stream can sometimes return invalid 
     data to the user. (Ning Li via rangadi)
+
+    HADOOP-4318. DistCp should use absolute paths for cleanup.  (szetszwo)
 
 Release 0.17.2 - 2008-08-11
 
