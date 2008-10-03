@@ -12,6 +12,7 @@ Release 0.19.0 - Unreleased
    HBASE-898   RowResult.containsKey(String) doesn't work
                (Doğacan Güney via Jim Kellerman)
    HBASE-906   [shell] Truncates output
+   HBASE-912   PE is broken when other tables exist
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
