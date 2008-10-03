@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -48,9 +49,9 @@ public class TestFSInputChecker extends TestCase {
   /* create a file */
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, 
-                     fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                     NUM_OF_DATANODES, BLOCK_SIZE);
+    FSDataOutputStream stm = fileSys.create(name, new FsPermission((short)0777),
+        true, fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        (short)NUM_OF_DATANODES, BLOCK_SIZE, null);
     stm.write(expected);
     stm.close();
   }
