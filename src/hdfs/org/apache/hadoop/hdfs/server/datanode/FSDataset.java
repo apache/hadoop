@@ -33,7 +33,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 
@@ -839,7 +838,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     //rename meta file to a tmp file
     File tmpMetaFile = new File(oldMetaFile.getParent(),
-        oldMetaFile.getName()+"_tmp");
+        oldMetaFile.getName()+"_tmp" + newblock.getGenerationStamp());
     if (!oldMetaFile.renameTo(tmpMetaFile)){
       throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
     }

@@ -244,8 +244,10 @@ class BlockSender implements java.io.Closeable, FSConstants {
         IOUtils.closeStream(checksumIn);
         checksumIn = null;
         if (corruptChecksumOk) {
-          // Just fill the array with zeros.
-          Arrays.fill(buf, checksumOff, checksumLen, (byte) 0);
+          if (checksumOff < checksumLen) {
+            // Just fill the array with zeros.
+            Arrays.fill(buf, checksumOff, checksumLen, (byte) 0);
+          }
         } else {
           throw e;
         }

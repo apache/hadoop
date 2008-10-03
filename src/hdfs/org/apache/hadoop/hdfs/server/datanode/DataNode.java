@@ -1335,7 +1335,8 @@ public class DataNode extends Configured
 
   /** {@inheritDoc} */
   public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
-    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock);
+    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock
+        + ", datanode=" + dnRegistration.getName());
     data.updateBlock(oldblock, newblock);
     if (finalize) {
       data.finalizeBlock(newblock);
