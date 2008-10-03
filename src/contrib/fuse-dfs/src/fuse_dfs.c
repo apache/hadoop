@@ -644,9 +644,15 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,
   assert(path);
   assert(buf);
 
+
   dfs_fh *fh = (dfs_fh*)fi->fh;
+
+  if(size >= dfs->rdbuffer_size) {
+    return hdfsPread(fh->fs, fh->hdfsFH, offset, buf, size);
+  }
+
   //fprintf(stderr, "Cache bounds for %s: %llu -> %llu (%d bytes). Check for offset %llu\n", path, fh->startOffset, fh->startOffset + fh->sizeBuffer, fh->sizeBuffer, offset);
-  if (fh->sizeBuffer == 0  || offset < fh->startOffset || offset > (fh->startOffset + fh->sizeBuffer)  )
+  if (fh->sizeBuffer == 0  || offset < fh->startOffset || offset + size > (fh->startOffset + fh->sizeBuffer)  )
     {
       // do the actual read
       //fprintf (stderr,"Reading %s from HDFS, offset %llu, amount %d\n", path, offset, dfs->rdbuffer_size);

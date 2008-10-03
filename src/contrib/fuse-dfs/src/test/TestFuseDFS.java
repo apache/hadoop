@@ -57,7 +57,8 @@ public class TestFuseDFS extends TestCase {
     String lp = System.getProperty("LD_LIBRARY_PATH") + ":" + "/usr/local/lib:" + libhdfs + ":" + jvm;
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
-                       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks" };
+                       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks",
+    "-ordbuffer=5000"};
     final String [] envp = {
       "CLASSPATH="+  cp,
       "LD_LIBRARY_PATH=" + lp,
@@ -381,6 +382,68 @@ public class TestFuseDFS extends TestCase {
     }
   }
 
+  /**
+   *
+   * Test dfs_read on a file size that will trigger multiple internal reads. 
+   * First, just check raw size reading is ok and then check with smaller reads
+   * including checking the validity of the data read.
+   *
+   */
+  public void testReads() throws IOException,InterruptedException  {
+    try {
+      // First create a new directory with mkdirs
+      Runtime r = Runtime.getRuntime();
+      Process p;
+
+      // create the file
+      Path myPath = new Path("/test/hello.reads");
+      FSDataOutputStream s = fileSys.create(myPath);
+      String hello = "hello world!";
+      int written = 0;
+      int mycount = 0;
+      while(written < 1024 * 9) {
+        s.writeUTF(hello);
+        s.writeInt(mycount++);
+        written += hello.length() + 4;
+      }
+      s.close();
+
+      // check it exists
+      assertTrue(fileSys.exists(myPath));
+      FileStatus foo = fileSys.getFileStatus(myPath);
+      assertTrue(foo.getLen() >= 9 * 1024);
+
+      {
+        // cat the file
+        DataInputStream is = new DataInputStream(new FileInputStream(mpoint + "/test/hello.reads"));
+        byte buf [] = new byte[4096];
+        assertTrue(is.read(buf, 0, 1024) == 1024);
+        assertTrue(is.read(buf, 0, 4096) == 4096);
+        assertTrue(is.read(buf, 0, 4096) == 4096);
+        is.close();
+      }
+
+      {
+        DataInputStream is = new DataInputStream(new FileInputStream(mpoint + "/test/hello.reads"));
+        int read = 0;
+        int counter = 0;
+        try {
+          while(true) {
+            String s2 = DataInputStream.readUTF(is);
+            int s3 = is.readInt();
+            assertTrue(s2.equals(hello));
+            assertTrue(s3 == counter++);
+            read += hello.length() + 4;
+          }
+        } catch(EOFException e) {
+          assertTrue(read >= 9 * 1024);
+        }
+      }
+    } catch(Exception e) {
+      e.printStackTrace();
+    } finally {
+    }
+  }
 
 
   /**
