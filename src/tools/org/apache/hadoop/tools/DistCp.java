@@ -344,8 +344,11 @@ public class DistCp implements Tool {
     
     private FSDataOutputStream create(Path f, Reporter reporter,
         FileStatus srcstat) throws IOException {
+      if (destFileSys.exists(f)) {
+        destFileSys.delete(f, false);
+      }
       if (!preserve_status) {
-        return destFileSys.create(f, reporter);
+        return destFileSys.create(f, true, sizeBuf, reporter);
       }
 
       FsPermission permission = preseved.contains(FileAttribute.PERMISSION)?
@@ -527,22 +530,23 @@ public class DistCp implements Tool {
                     FilePair value,
                     OutputCollector<WritableComparable<?>, Text> out,
                     Reporter reporter) throws IOException {
-      FileStatus srcstat = value.input;
-      Path dstpath = new Path(value.output);
+      final FileStatus srcstat = value.input;
+      final Path relativedst = new Path(value.output);
       try {
-        copy(srcstat, dstpath, out, reporter);
+        copy(srcstat, relativedst, out, reporter);
       } catch (IOException e) {
         ++failcount;
         reporter.incrCounter(Counter.FAIL, 1);
         updateStatus(reporter);
-        final String sfailure = "FAIL " + dstpath + " : " +
+        final String sfailure = "FAIL " + relativedst + " : " +
                           StringUtils.stringifyException(e);
         out.collect(null, new Text(sfailure));
         LOG.info(sfailure);
         try {
           for (int i = 0; i < 3; ++i) {
             try {
-              if (destFileSys.delete(dstpath, true))
+              final Path tmp = new Path(job.get(TMP_DIR_LABEL), relativedst);
+              if (destFileSys.delete(tmp, true))
                 break;
             } catch (Throwable ex) {
               // ignore, we are just cleaning up
