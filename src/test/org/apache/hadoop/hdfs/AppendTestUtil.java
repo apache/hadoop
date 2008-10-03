@@ -22,14 +22,19 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-
 /** Utilities for append-related tests */ 
 class AppendTestUtil {
+  /** For specifying the random number generator seed,
+   *  change the following value:
+   */
+  static final Long RANDOM_NUMBER_GENERATOR_SEED = null;
+
   static final Log LOG = LogFactory.getLog(AppendTestUtil.class);
 
   private static final Random SEED = new Random();
   static {
-    final long seed = SEED.nextLong();
+    final long seed = RANDOM_NUMBER_GENERATOR_SEED == null?
+        SEED.nextLong(): RANDOM_NUMBER_GENERATOR_SEED;
     LOG.info("seed=" + seed);
     SEED.setSeed(seed);
   }
@@ -39,7 +44,7 @@ class AppendTestUtil {
       final Random r =  new Random();
       synchronized(SEED) { 
         final long seed = SEED.nextLong();
-        SEED.setSeed(seed);
+        r.setSeed(seed);
         LOG.info(Thread.currentThread().getName() + ": seed=" + seed);
       }
       return r;

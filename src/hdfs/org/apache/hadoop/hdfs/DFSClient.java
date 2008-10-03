@@ -71,8 +71,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
-  String clientName;
-  private final LeaseChecker leasechecker = new LeaseChecker();
+  final String clientName;
+  final LeaseChecker leasechecker = new LeaseChecker();
   private Configuration conf;
   private long defaultBlockSize;
   private short defaultReplication;
@@ -904,7 +904,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /** Lease management*/
-  private class LeaseChecker implements Runnable {
+  class LeaseChecker implements Runnable {
     /** A map from src -> DFSOutputStream of files that are currently being
      * written by this client.
      */
@@ -926,6 +926,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     synchronized void remove(String src) {
       pendingCreates.remove(src);
     }
+    
+    synchronized void interrupt() {
+      if (daemon != null) {
+        daemon.interrupt();
+      }
+    }
 
     synchronized void close() {
       while (!pendingCreates.isEmpty()) {
@@ -941,9 +947,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
       
-      if (daemon != null) {
-        daemon.interrupt();
-      }
+      interrupt();
     }
 
     private void renew() throws IOException {
