@@ -1679,6 +1679,9 @@ Release 0.17.3 - Unreleased
 
     HADOOP-4318. DistCp should use absolute paths for cleanup.  (szetszwo)
 
+    HADOOP-4326. ChecksumFileSystem does not override create(...) correctly.
+    (szetszwo)
+
 Release 0.17.2 - 2008-08-11
 
   BUG FIXES
