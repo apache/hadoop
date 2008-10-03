@@ -113,10 +113,15 @@ public class SocketInputStream extends InputStream
      * probably no need to optimize or encourage single byte read.
      */
     byte[] buf = new byte[1];
-    if (read(buf, 0, 1) > 0) {
+    int ret = read(buf, 0, 1);
+    if (ret > 0) {
       return (byte)buf[0];
     }
-    throw new IOException("Could not read from stream");
+    if (ret != -1) {
+      // unexpected
+      throw new IOException("Could not read from stream");
+    }
+    return ret;
   }
 
   public int read(byte[] b, int off, int len) throws IOException {

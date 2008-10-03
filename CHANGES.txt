@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HADOOP-4207. Update derby jar file to release 10.4.2 release.
     (Prasad Chakka via dhruba)
 
+    HADOOP-4325. SocketInputStream.read() should return -1 in case EOF.
+    (Raghu Angadi)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -132,12 +132,16 @@ public class TestSocketIOWithTimeout extends TestCase {
       //make sure the channels are still open
       assertTrue(source.isOpen());
       assertTrue(sink.isOpen());
+
+      out.close();
+      assertFalse(sink.isOpen());
+      
+      // close sink and expect -1 from source.read()
+      assertEquals(-1, in.read());
       
       // make sure close() closes the underlying channel.
       in.close();
       assertFalse(source.isOpen());
-      out.close();
-      assertFalse(sink.isOpen());
       
     } finally {
       if (source != null) {
