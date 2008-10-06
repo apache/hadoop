@@ -37,11 +37,6 @@ import org.apache.hadoop.util.Shell;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
-  TreeMap<File, FileInputStream> sharedLockDataSet =
-    new TreeMap<File, FileInputStream>();
-  TreeMap<File, FileOutputStream> nonsharedLockDataSet =
-    new TreeMap<File, FileOutputStream>();
-  TreeMap<File, FileLock> lockObjSet = new TreeMap<File, FileLock>();
   
   public RawLocalFileSystem() {
     workingDir = new Path(System.getProperty("user.dir")).makeQualified(this);
@@ -55,9 +50,6 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return new File(path.toUri().getPath());
   }
-
-  /** @deprecated */
-  public String getName() { return "local"; }
 
   public URI getUri() { return NAME; }
   
@@ -334,58 +326,6 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public Path getWorkingDirectory() {
     return workingDir;
-  }
-  
-  /** @deprecated */ @Deprecated
-    public void lock(Path p, boolean shared) throws IOException {
-    File f = pathToFile(p);
-    f.createNewFile();
-    
-    if (shared) {
-      FileInputStream lockData = new FileInputStream(f);
-      FileLock lockObj =
-        lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
-      synchronized (this) {
-        sharedLockDataSet.put(f, lockData);
-        lockObjSet.put(f, lockObj);
-      }
-    } else {
-      FileOutputStream lockData = new FileOutputStream(f);
-      FileLock lockObj = lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
-      synchronized (this) {
-        nonsharedLockDataSet.put(f, lockData);
-        lockObjSet.put(f, lockObj);
-      }
-    }
-  }
-  
-  /** @deprecated */ @Deprecated
-    public void release(Path p) throws IOException {
-    File f = pathToFile(p);
-    
-    FileLock lockObj;
-    FileInputStream sharedLockData;
-    FileOutputStream nonsharedLockData;
-    synchronized (this) {
-      lockObj = lockObjSet.remove(f);
-      sharedLockData = sharedLockDataSet.remove(f);
-      nonsharedLockData = nonsharedLockDataSet.remove(f);
-    }
-    
-    if (lockObj == null) {
-      throw new IOException("Given target not held as lock");
-    }
-    if (sharedLockData == null && nonsharedLockData == null) {
-      throw new IOException("Given target not held as lock");
-    }
-    
-    lockObj.release();
-    
-    if (sharedLockData != null) {
-      sharedLockData.close();
-    } else {
-      nonsharedLockData.close();
-    }
   }
   
   // In the case of the local filesystem, we can just rename the file.

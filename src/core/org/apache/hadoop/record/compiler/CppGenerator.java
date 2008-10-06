@@ -41,28 +41,34 @@ class CppGenerator extends CodeGenerator {
                ArrayList<JRecord> rlist, String destDir, ArrayList<String> options)
     throws IOException {
     name = new File(destDir, (new File(name)).getName()).getAbsolutePath();
+
     FileWriter cc = new FileWriter(name+".cc");
-    FileWriter hh = new FileWriter(name+".hh");
-    
-    String fileName = (new File(name)).getName();
-    hh.write("#ifndef __"+fileName.toUpperCase().replace('.','_')+"__\n");
-    hh.write("#define __"+fileName.toUpperCase().replace('.','_')+"__\n");
-    hh.write("#include \"recordio.hh\"\n");
-    hh.write("#include \"recordTypeInfo.hh\"\n");
-    for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
-      hh.write("#include \""+iter.next().getName()+".hh\"\n");
+    try {
+      FileWriter hh = new FileWriter(name+".hh");
+      
+      try {
+        String fileName = (new File(name)).getName();
+        hh.write("#ifndef __"+fileName.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#define __"+fileName.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#include \"recordio.hh\"\n");
+        hh.write("#include \"recordTypeInfo.hh\"\n");
+        for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
+          hh.write("#include \""+iter.next().getName()+".hh\"\n");
+        }
+        
+        cc.write("#include \""+fileName+".hh\"\n");
+        cc.write("#include \"utils.hh\"\n");
+        
+        for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
+          iter.next().genCppCode(hh, cc, options);
+        }
+        
+        hh.write("#endif //"+fileName.toUpperCase().replace('.','_')+"__\n");
+      } finally {
+        hh.close();
+      }
+    } finally {
+      cc.close();
     }
-    
-    cc.write("#include \""+fileName+".hh\"\n");
-    cc.write("#include \"utils.hh\"\n");
-    
-    for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
-      iter.next().genCppCode(hh, cc, options);
-    }
-    
-    hh.write("#endif //"+fileName.toUpperCase().replace('.','_')+"__\n");
-    
-    hh.close();
-    cc.close();
   }
 }

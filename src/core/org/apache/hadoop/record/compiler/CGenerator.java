@@ -42,26 +42,30 @@ class CGenerator extends CodeGenerator {
     throws IOException {
     name = new File(destDir, (new File(name)).getName()).getAbsolutePath();
     FileWriter cc = new FileWriter(name+".c");
-    FileWriter hh = new FileWriter(name+".h");
-    
-    hh.write("#ifndef __"+name.toUpperCase().replace('.','_')+"__\n");
-    hh.write("#define __"+name.toUpperCase().replace('.','_')+"__\n");
-    hh.write("#include \"recordio.h\"\n");
-    for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
-      hh.write("#include \""+iter.next().getName()+".h\"\n");
-    }
-    
-    cc.write("#include \""+name+".h\"\n");
-    
-    /*
-      for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
-      iter.next().genCppCode(hh, cc);
+    try {
+      FileWriter hh = new FileWriter(name+".h");
+      try {
+        hh.write("#ifndef __"+name.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#define __"+name.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#include \"recordio.h\"\n");
+        for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
+          hh.write("#include \""+iter.next().getName()+".h\"\n");
+        }
+
+        cc.write("#include \""+name+".h\"\n");
+
+        /*
+        for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
+        iter.next().genCppCode(hh, cc);
+        }
+         */
+
+        hh.write("#endif //"+name.toUpperCase().replace('.','_')+"__\n");
+      } finally {
+        hh.close();
       }
-    */
-    
-    hh.write("#endif //"+name.toUpperCase().replace('.','_')+"__\n");
-    
-    hh.close();
-    cc.close();
+    } finally {
+      cc.close();
+    }
   }
 }

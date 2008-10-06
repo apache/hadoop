@@ -192,11 +192,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       LOG.debug(StringUtils.stringifyException
                 (new IOException("config(config)")));
     }
-    this.resources = (ArrayList)other.resources.clone();
-    if (other.properties != null)
-      this.properties = (Properties)other.properties.clone();
-    if (other.overlay!=null)
-      this.overlay = (Properties)other.overlay.clone();
+   
+   this.resources = (ArrayList)other.resources.clone();
+   synchronized(other) {
+     if (other.properties != null) {
+       this.properties = (Properties)other.properties.clone();
+     }
+
+     if (other.overlay!=null) {
+       this.overlay = (Properties)other.overlay.clone();
+     }
+   }
+   
     this.finalParameters = new HashSet<String>(other.finalParameters);
   }
 

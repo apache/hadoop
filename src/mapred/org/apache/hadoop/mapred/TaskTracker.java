@@ -551,7 +551,7 @@ public class TaskTracker
       
     @Override
     public void run() {
-      LOG.info("Starting thread: " + getName());
+      LOG.info("Starting thread: " + this.getName());
         
       while (true) {
         try {
@@ -561,7 +561,7 @@ public class TaskTracker
               try {
                 runningJobs.wait();
               } catch (InterruptedException e) {
-                LOG.info("Shutting down: " + getName());
+                LOG.info("Shutting down: " + this.getName());
                 return;
               }
             }
@@ -592,7 +592,7 @@ public class TaskTracker
                 waitingOn.wait(heartbeatInterval);
               }
             } catch (InterruptedException ie) {
-              LOG.info("Shutting down: " + getName());
+              LOG.info("Shutting down: " + this.getName());
               return;
             }
           }

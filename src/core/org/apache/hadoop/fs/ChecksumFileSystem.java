@@ -484,10 +484,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     throws IOException {
     if (!fs.isDirectory(src)) { // source is a file
       fs.copyToLocalFile(src, dst);
-      FileSystem localFs = getLocal(getConf());
-      if (localFs instanceof ChecksumFileSystem) {
-        localFs = ((ChecksumFileSystem) localFs).getRawFileSystem();
-      }
+      FileSystem localFs = getLocal(getConf()).getRawFileSystem();
       if (localFs.isDirectory(dst)) {
         dst = new Path(dst, src.getName());
       }
