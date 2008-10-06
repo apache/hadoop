@@ -212,6 +212,14 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <incrcounterString href="#incrCounter(java.lang.String, java.lang.String, long amount)" />
               </reporter>
               <runningjob href="RunningJob.html" />
+              <skipbadrecords href="SkipBadRecords.html">
+                <setmappermaxskiprecords href="#setMapperMaxSkipRecords(org.apache.hadoop.conf.Configuration, long)"/>
+                <setreducermaxskipgroups href="#setReducerMaxSkipGroups(org.apache.hadoop.conf.Configuration, long)"/>
+                <setattemptsTostartskipping href="#setAttemptsToStartSkipping(org.apache.hadoop.conf.Configuration, int)"/>
+                <setskipoutputpath href="#setSkipOutputPath(org.apache.hadoop.mapred.JobConf, org.apache.hadoop.fs.Path)"/>
+                <counter_map_processed_records href="#COUNTER_MAP_PROCESSED_RECORDS"/>
+                <counter_reduce_processed_groups href="#COUNTER_REDUCE_PROCESSED_GROUPS"/>
+              </skipbadrecords>
               <textinputformat href="TextInputFormat.html" />
               <textoutputformat href="TextOutputFormat.html" />
               <lib href="lib/">

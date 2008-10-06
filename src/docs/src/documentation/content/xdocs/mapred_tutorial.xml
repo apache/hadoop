@@ -1990,6 +1990,86 @@
           </section>
         </section>
         
+        <section>
+          <title>Skipping Bad Records</title>
+          <p>Hadoop provides an optional mode of execution in which the bad 
+          records are detected and skipped in further attempts. 
+          Applications can control various settings via 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords">
+          SkipBadRecords</a>.</p>
+          
+          <p>This feature can be used when map/reduce tasks crashes 
+          deterministically on certain input. This happens due to bugs in the 
+          map/reduce function. The usual course would be to fix these bugs. 
+          But sometimes this is not possible; perhaps the bug is in third party 
+          libraries for which the source code is not available. Due to this, 
+          the task never reaches to completion even with multiple attempts and 
+          complete data for that task is lost.</p>
+
+          <p>With this feature, only a small portion of data is lost surrounding 
+          the bad record. This may be acceptable for some user applications; 
+          for example applications which are doing statistical analysis on 
+          very large data. By default this feature is disabled. For turning it 
+          on refer <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
+          SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
+          SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>.
+          </p>
+ 
+          <p>The skipping mode gets kicked off after certain no of failures
+          see <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setattemptsTostartskipping">
+          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>.
+          </p>
+ 
+          <p>In the skipping mode, the map/reduce task maintains the record 
+          range which is getting processed at all times. For maintaining this 
+          range, the framework relies on the processed record 
+          counter. see <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_map_processed_records">
+          SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_reduce_processed_groups">
+          SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS</a>. 
+          Based on this counter, the framework knows that how 
+          many records have been processed successfully by mapper/reducer.
+          Before giving the 
+          input to the map/reduce function, it sends this record range to the 
+          Task tracker. If task crashes, the Task tracker knows which one was 
+          the last reported range. On further attempts that range get skipped.
+          </p>
+     
+          <p>The number of records skipped for a single bad record depends on 
+          how frequent, the processed counters are incremented by the application. 
+          It is recommended to increment the counter after processing every 
+          single record. However in some applications this might be difficult as 
+          they may be batching up their processing. In that case, the framework 
+          might skip more records surrounding the bad record. If users want to 
+          reduce the number of records skipped, then they can specify the 
+          acceptable value using 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
+          SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
+          SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>. 
+          The framework tries to narrow down the skipped range by employing the 
+          binary search kind of algorithm during task re-executions. The skipped
+          range is divided into two halves and only one half get executed. 
+          Based on the subsequent failure, it figures out which half contains 
+          the bad record. This task re-execution will keep happening till 
+          acceptable skipped value is met or all task attempts are exhausted.
+          To increase the number of task attempts, use
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmaxmapattempts">
+          JobConf.setMaxMapAttempts(int)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmaxreduceattempts">
+          JobConf.setMaxReduceAttempts(int)</a>.
+          </p>
+          
+          <p>The skipped records are written to the hdfs in the sequence file 
+          format, which could be used for later analysis. The location of 
+          skipped records output path can be changed by 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setskipoutputpath">
+          SkipBadRecords.setSkipOutputPath(JobConf, Path)</a>.
+          </p> 
+
+        </section>
+        
       </section>
     </section>
 
