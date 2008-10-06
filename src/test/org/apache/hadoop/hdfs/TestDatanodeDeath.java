@@ -48,7 +48,6 @@ public class TestDatanodeDeath extends TestCase {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int numBlocks = 2;
   static final int fileSize = numBlocks * blockSize + 1;
@@ -62,15 +61,17 @@ public class TestDatanodeDeath extends TestCase {
   //
   // an object that does a bunch of transactions
   //
-  class Workload extends Thread {
+  static class Workload extends Thread {
     private short replication;
     private int numberOfFiles;
     private int id;
     private FileSystem fs;
     private long stamp;
+    private final long myseed;
 
-    Workload(FileSystem fs, int threadIndex, int numberOfFiles, 
+    Workload(long myseed, FileSystem fs, int threadIndex, int numberOfFiles, 
              short replication, long stamp) {
+      this.myseed = myseed;
       id = threadIndex;
       this.fs = fs;
       this.numberOfFiles = numberOfFiles;
@@ -83,7 +84,6 @@ public class TestDatanodeDeath extends TestCase {
       System.out.println("Workload starting ");
       for (int i = 0; i < numberOfFiles; i++) {
         Path filename = new Path(id + "." + i);
-        long myseed = seed + id + i;
         try {
           System.out.println("Workload processing file " + filename);
           FSDataOutputStream stm = createFile(fs, filename, replication);
@@ -117,7 +117,7 @@ public class TestDatanodeDeath extends TestCase {
   //
   // creates a file and returns a descriptor for writing to it.
   //
-  private FSDataOutputStream createFile(FileSystem fileSys, Path name, short repl)
+  static private FSDataOutputStream createFile(FileSystem fileSys, Path name, short repl)
     throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -129,7 +129,7 @@ public class TestDatanodeDeath extends TestCase {
   //
   // writes to file
   //
-  private void writeFile(FSDataOutputStream stm, long seed) throws IOException {
+  static private void writeFile(FSDataOutputStream stm, long seed) throws IOException {
     byte[] buffer = AppendTestUtil.randomBytes(seed, fileSize);
 
     int mid = fileSize/2;
@@ -140,7 +140,7 @@ public class TestDatanodeDeath extends TestCase {
   //
   // verify that the data written are sane
   // 
-  private void checkFile(FileSystem fileSys, Path name, int repl,
+  static private void checkFile(FileSystem fileSys, Path name, int repl,
                          int numblocks, int filesize, long seed)
     throws IOException {
     boolean done = false;
@@ -296,7 +296,7 @@ public class TestDatanodeDeath extends TestCase {
       // Create threads and make them run workload concurrently.
       workload = new Workload[numThreads];
       for (int i = 0; i < numThreads; i++) {
-        workload[i] = new Workload(fs, i, numberOfFiles, replication, 0);
+        workload[i] = new Workload(AppendTestUtil.nextLong(), fs, i, numberOfFiles, replication, 0);
         workload[i].start();
       }
 
@@ -405,10 +405,11 @@ public class TestDatanodeDeath extends TestCase {
     }
   }
 
-  public void testDatanodeDeath() throws IOException {
-    for (int i = 0; i < 3; i++) {
-      simpleTest(i); // kills the ith datanode in the pipeline
-    }
-    complexTest();
-  }
+  public void testSimple0() throws IOException {simpleTest(0);}
+
+  public void testSimple1() throws IOException {simpleTest(1);}
+
+  public void testSimple2() throws IOException {simpleTest(2);}
+
+  public void testComplex() throws IOException {complexTest();}
 }
