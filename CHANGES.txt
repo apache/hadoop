@@ -485,6 +485,9 @@ Release 0.19.0 - Unreleased
     incrementing the task attempt numbers by 1000 when the job restarts.
     (Amar Kamat via omalley)
 
+    HADOOP-4301. Adds forrest doc for the skip bad records feature.
+    (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

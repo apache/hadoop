@@ -442,12 +442,15 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="mapred.tasktracker.taskmemorymanager.monitoring-interval">mapred.tasktracker.taskmemorymanager.monitoring-interval</a></td><td>5000</td><td>The interval, in milliseconds, for which the tasktracker waits
-   between two cycles of monitoring its tasks' memory usage.</td>
+   between two cycles of monitoring its tasks' memory usage. Used only if
+   tasks' memory management is enabled via mapred.tasktracker.tasks.maxmemory.
+   </td>
 </tr>
 <tr>
 <td><a name="mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill">mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill</a></td><td>5000</td><td>The time, in milliseconds, the tasktracker waits for sending a
   SIGKILL to a process that has overrun memory limits, after it has been sent
-  a SIGTERM.</td>
+  a SIGTERM. Used only if tasks' memory management is enabled via
+  mapred.tasktracker.tasks.maxmemory.</td>
 </tr>
 <tr>
 <td><a name="mapred.map.tasks">mapred.map.tasks</a></td><td>2</td><td>The default number of map tasks per job.  Typically set
@@ -467,15 +470,10 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.jobtracker.job.history.block.size">mapred.jobtracker.job.history.block.size</a></td><td>0</td><td>The block size of the job history file. Since the job recovery
+<td><a name="mapred.jobtracker.job.history.block.size">mapred.jobtracker.job.history.block.size</a></td><td>3145728&gt;</td><td>The block size of the job history file. Since the job recovery
                uses job history, its important to dump job history to disk as 
-               soon as possible.
-  </td>
-</tr>
-<tr>
-<td><a name="mapred.jobtracker.job.history.buffer.size">mapred.jobtracker.job.history.buffer.size</a></td><td>4096</td><td>The buffer size for the job history file. Since the job 
-               recovery uses job history, its important to frequently flush the 
-               job history to disk. This will minimize the loss in recovery.
+               soon as possible. Note that this is an expert level parameter.
+               The default value is set to 3 MB.
   </td>
 </tr>
 <tr>
@@ -914,7 +912,9 @@ creations/deletions), or "all".</td>
   	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
   	 to use a share of this amount. Any task exceeding its share will be 
   	killed. If set to -1, this functionality is disabled, and 
-  	mapred.task.maxmemory is ignored.
+  	mapred.task.maxmemory is ignored. Further, it will be enabled only on the
+  	systems where org.apache.hadoop.util.ProcfsBasedProcessTree is available,
+  	i.e at present only on Linux.
   </td>
 </tr>
 <tr>
