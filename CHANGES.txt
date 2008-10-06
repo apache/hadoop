@@ -474,6 +474,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4279. Trace the seeds of random sequences in append unit tests to
     make itermitant failures reproducible. (szetszwo via cdouglas)
 
+    HADOOP-4209. Remove the change to the format of task attempt id by 
+    incrementing the task attempt numbers by 1000 when the job restarts.
+    (Amar Kamat via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

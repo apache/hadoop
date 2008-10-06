@@ -134,6 +134,9 @@ class JobInProgress {
   long startTime;
   long launchTime;
   long finishTime;
+  
+  // Indicates how many times the job got restarted
+  private int restartCount = 0;
 
   private JobConf conf;
   AtomicBoolean tasksInited = new AtomicBoolean(false);
@@ -493,13 +496,22 @@ class JobInProgress {
   }
   
   // Update the job start/launch time (upon restart) and log to history
-  synchronized void updateJobTime(long startTime, long launchTime) {
+  synchronized void updateJobInfo(long startTime, long launchTime, int count) {
     // log and change to the job's start/launch time
     this.startTime = startTime;
     this.launchTime = launchTime;
-    JobHistory.JobInfo.logJobSubmitTime(jobId, startTime, launchTime);
+    // change to the job's restart count
+    this.restartCount = count;
+    JobHistory.JobInfo.logJobInfo(jobId, startTime, launchTime, count);
   }
 
+  /**
+   * Get the number of times the job has restarted
+   */
+  int numRestarts() {
+    return restartCount;
+  }
+  
   long getInputLength() {
     return inputLength;
   }

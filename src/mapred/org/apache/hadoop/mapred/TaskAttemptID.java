@@ -22,28 +22,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.WritableUtils;
-
 /**
  * TaskAttemptID represents the immutable and unique identifier for 
  * a task attempt. Each task attempt is one particular instance of a Map or
  * Reduce Task identified by its TaskID. 
  * 
- * TaskAttemptID consists of 3 parts. First part is the 
+ * TaskAttemptID consists of 2 parts. First part is the 
  * {@link TaskID}, that this TaskAttemptID belongs to.
- * Second part is the task attempt number. Third part is the unique identifier
- * for distinguishing tasks-attempts across jobtracker restarts.<br> 
+ * Second part is the task attempt number. <br> 
  * An example TaskAttemptID is : 
- * <code>attempt_200707121733_0003_m_000005_0_1234567890123</code> , which 
- * represents the zeroth task attempt for the fifth map task in the third job 
- * running at the jobtracker started at <code>200707121733</code> with 
- * timestamp <code>1234567890123</code>. There could be another attempt with id
- * <code>attempt_200707121733_0003_m_000005_0_1234567890124</code> which 
- * indicates that the task was scheduled by the jobtracker started at timestamp
- * <code>1234567890124</code>. <code>200707121733</code> here indicates that 
- * the job was started by the jobtracker that was started at 
- * <code>200707121733</code>, although this task-attempt was scheduled by the 
- * new jobtracker. 
+ * <code>attempt_200707121733_0003_m_000005_0</code> , which represents the
+ * zeroth task attempt for the fifth map task in the third job 
+ * running at the jobtracker started at <code>200707121733</code>.
  * <p>
  * Applications should never construct or parse TaskAttemptID strings
  * , but rather use appropriate constructors or {@link #forName(String)} 
@@ -55,39 +45,19 @@ import org.apache.hadoop.io.WritableUtils;
 public class TaskAttemptID extends ID {
   private static final String ATTEMPT = "attempt";
   private TaskID taskId;
-  private long jtTimestamp = 0;
   private static final char UNDERSCORE = '_';
-  
-  /**
-   * @deprecated Use {@link #TaskAttemptID(TaskID, int, long)} instead.
-   */
-  public TaskAttemptID(TaskID taskId, int id) {
-    this(taskId, id, 0);
-  }
   
   /**
    * Constructs a TaskAttemptID object from given {@link TaskID}.  
    * @param taskId TaskID that this task belongs to  
    * @param id the task attempt number
-   * @param jtTimestamp timestamp that uniquely identifies the task 
-   *        attempt across restarts
    */
-  public TaskAttemptID(TaskID taskId, int id, long jtTimestamp) {
+  public TaskAttemptID(TaskID taskId, int id) {
     super(id);
     if(taskId == null) {
       throw new IllegalArgumentException("taskId cannot be null");
     }
     this.taskId = taskId;
-    this.jtTimestamp = jtTimestamp;
-  }
-  
-  /**
-   * @deprecated 
-   *   Use {@link #TaskAttemptID(String, int, boolean, int, int, long)} instead
-   */
-  public TaskAttemptID(String jtIdentifier, int jobId, boolean isMap, 
-                       int taskId, int id) {
-    this(new TaskID(jtIdentifier, jobId, isMap, taskId), id, 0);
   }
   
   /**
@@ -97,13 +67,10 @@ public class TaskAttemptID extends ID {
    * @param isMap whether the tip is a map 
    * @param taskId taskId number
    * @param id the task attempt number
-   * @param jtTimestamp timestamp that uniquely identifies the task attempt 
-   *        across restarts
    */
   public TaskAttemptID(String jtIdentifier, int jobId, boolean isMap, 
-                       int taskId, int id, long jtTimestamp) {
-    this(new TaskID(jtIdentifier, jobId, isMap, taskId), id, 
-                    jtTimestamp);
+                       int taskId, int id) {
+    this(new TaskID(jtIdentifier, jobId, isMap, taskId), id);
   }
   
   private TaskAttemptID() { }
@@ -127,10 +94,12 @@ public class TaskAttemptID extends ID {
   public boolean equals(Object o) {
     if (!super.equals(o))
       return false;
-
-    TaskAttemptID that = (TaskAttemptID)o;
-    return this.taskId.equals(that.taskId) && 
-           this.jtTimestamp == that.jtTimestamp;
+    if(o.getClass().equals(TaskAttemptID.class)) {
+      TaskAttemptID that = (TaskAttemptID)o;
+      return this.id==that.id
+             && this.taskId.equals(that.taskId);
+    }
+    else return false;
   }
   
   /**Compare TaskIds by first tipIds, then by task numbers. */
@@ -139,12 +108,9 @@ public class TaskAttemptID extends ID {
     TaskAttemptID that = (TaskAttemptID)o;
     int tipComp = this.taskId.compareTo(that.taskId);
     if(tipComp == 0) {
-      tipComp = this.id - that.id;
+      return this.id - that.id;
     }
-    if (tipComp == 0) {
-      tipComp = Long.valueOf(this.jtTimestamp).compareTo(that.jtTimestamp);
-    }
-    return tipComp;
+    else return tipComp;
   }
   @Override
   public String toString() { 
@@ -154,13 +120,9 @@ public class TaskAttemptID extends ID {
   }
 
   StringBuilder toStringWOPrefix() {
-    // This is just for backward compability.
-    String appendForTimestamp = (jtTimestamp == 0) 
-                                ? "" 
-                                : UNDERSCORE + String.valueOf(jtTimestamp);
     StringBuilder builder = new StringBuilder();
     return builder.append(taskId.toStringWOPrefix())
-                  .append(UNDERSCORE).append(id).append(appendForTimestamp);
+                  .append(UNDERSCORE).append(id);
   }
   
   @Override
@@ -172,14 +134,12 @@ public class TaskAttemptID extends ID {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     this.taskId = TaskID.read(in);
-    this.jtTimestamp = WritableUtils.readVLong(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     taskId.write(out);
-    WritableUtils.writeVLong(out, jtTimestamp);
   }
   
   public static TaskAttemptID read(DataInput in) throws IOException {
@@ -197,20 +157,14 @@ public class TaskAttemptID extends ID {
       return null;
     try {
       String[] parts = str.split("_");
-      long jtTimestamp = 0;
-      // This is for backward compability
-      if(parts.length == 6 || parts.length == 7) {
+      if(parts.length == 6) {
         if(parts[0].equals(ATTEMPT)) {
           boolean isMap = false;
           if(parts[3].equals("m")) isMap = true;
           else if(parts[3].equals("r")) isMap = false;
           else throw new Exception();
-          if (parts.length == 7) {
-            jtTimestamp = Long.parseLong(parts[6]);
-          }
           return new TaskAttemptID(parts[1], Integer.parseInt(parts[2]),
-                                   isMap, Integer.parseInt(parts[4]), 
-                                   Integer.parseInt(parts[5]), jtTimestamp);
+              isMap, Integer.parseInt(parts[4]), Integer.parseInt(parts[5]));
         }
       }
     }catch (Exception ex) {//fall below
@@ -220,20 +174,6 @@ public class TaskAttemptID extends ID {
   }
   
   /** 
-   * @return a regex pattern matching TaskAttemptIDs
-   * @deprecated Use {@link #getTaskAttemptIDsPattern(String, Integer, Boolean,
-   *                                                  Integer, Integer, Long)} 
-   *             instead.
-   */
-  public static String getTaskAttemptIDsPattern(String jtIdentifier,
-      Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
-    StringBuilder builder = new StringBuilder(ATTEMPT).append(UNDERSCORE);
-    builder.append(getTaskAttemptIDsPatternWOPrefix(jtIdentifier, jobId,
-                   isMap, taskId, attemptId, null));
-    return builder.toString();
-  }
-  
-  /**
    * Returns a regex pattern which matches task attempt IDs. Arguments can 
    * be given null, in which case that part of the regex will be generic.  
    * For example to obtain a regex matching <i>all task attempt IDs</i> 
@@ -249,23 +189,16 @@ public class TaskAttemptID extends ID {
    * @param isMap whether the tip is a map, or null 
    * @param taskId taskId number, or null
    * @param attemptId the task attempt number, or null
-   * @param jtTimestamp Timestamp that is used to identify task attempts across
-   *        jobtracker restarts. Make sure that timestamp has some valid value.
+   * @return a regex pattern matching TaskAttemptIDs
    */
-  public static String getTaskAttemptIDsPattern(String jtIdentifier, 
-      Integer jobId, Boolean isMap, Integer taskId, Integer attemptId, Long jtTimestamp) {
+  public static String getTaskAttemptIDsPattern(String jtIdentifier,
+      Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
     StringBuilder builder = new StringBuilder(ATTEMPT).append(UNDERSCORE);
     builder.append(getTaskAttemptIDsPatternWOPrefix(jtIdentifier, jobId,
-                   isMap, taskId, attemptId, jtTimestamp));
+        isMap, taskId, attemptId));
     return builder.toString();
   }
   
-  /**
-   * @deprecated 
-   * Use {@link #getTaskAttemptIDsPatternWOPrefix(String, Integer, Boolean, 
-   *                                              Integer, Integer, Long)} 
-   * instead.
-   */
   static StringBuilder getTaskAttemptIDsPatternWOPrefix(String jtIdentifier
       , Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
     StringBuilder builder = new StringBuilder();
@@ -276,15 +209,4 @@ public class TaskAttemptID extends ID {
     return builder;
   }
   
-  static StringBuilder getTaskAttemptIDsPatternWOPrefix(String jtIdentifier, 
-      Integer jobId, Boolean isMap, Integer taskId, Integer attemptId, 
-      Long jtTimestamp) {
-    StringBuilder builder = new StringBuilder();
-    builder.append(TaskID.getTaskIDsPatternWOPrefix(jtIdentifier, jobId, isMap, taskId))
-           .append(UNDERSCORE)
-           .append(attemptId != null ? attemptId : "[0-9]*")
-           .append(UNDERSCORE)
-           .append(jtTimestamp != null ? jtTimestamp : "[0-9]*");
-    return builder;
-  }
 }

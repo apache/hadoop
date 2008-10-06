@@ -615,8 +615,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     private void updateJob(JobInProgress jip, JobHistory.JobInfo job) {
       // Set the start/launch time only if there are recovered tasks
-      jip.updateJobTime(job.getLong(JobHistory.Keys.SUBMIT_TIME), 
-                        job.getLong(JobHistory.Keys.LAUNCH_TIME));
+      // Increment the job's restart count
+      jip.updateJobInfo(job.getLong(JobHistory.Keys.SUBMIT_TIME), 
+                        job.getLong(JobHistory.Keys.LAUNCH_TIME),
+                        job.getInt(Keys.RESTART_COUNT) + 1);
       
       // Change the job priority
       String jobpriority = job.get(Keys.JOB_PRIORITY);
