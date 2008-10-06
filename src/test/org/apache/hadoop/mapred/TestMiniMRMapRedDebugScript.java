@@ -163,7 +163,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
 
     JobID jobId = job.getID();
     // construct the task id of first map task of failmap
-    TaskAttemptID taskId = mr.getTaskAttemptId(new TaskID(jobId,true, 0), 0);
+    TaskAttemptID taskId = new TaskAttemptID(new TaskID(jobId,true, 0), 0);
     // wait for the job to finish.
     while (!job.isComplete()) ;
     

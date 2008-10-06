@@ -54,6 +54,7 @@ class TaskInProgress {
   int maxTaskAttempts = 4;    
   static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
+  private static final int NUM_ATTEMPTS_PER_RESTART = 1000;
 
   public static final Log LOG = LogFactory.getLog(TaskInProgress.class);
 
@@ -817,7 +818,9 @@ class TaskInProgress {
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
     TaskAttemptID taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
-      taskid = new TaskAttemptID( id, nextTaskId, jobtracker.getStartTime());
+      // Make sure that the attempts are unqiue across restarts
+      int attemptId = job.numRestarts() * NUM_ATTEMPTS_PER_RESTART + nextTaskId;
+      taskid = new TaskAttemptID( id, attemptId);
       ++nextTaskId;
     } else {
       LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + maxTaskAttempts) +

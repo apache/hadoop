@@ -84,10 +84,6 @@ public class MiniMRCluster {
       return tracker;
     }
     
-    public TaskAttemptID getTaskAttemptId(TaskID taskId, int attemptId) {
-      return new TaskAttemptID(taskId, attemptId, tracker.getStartTime());
-    }
-
     /**
      * Create the job tracker and run it.
      */
@@ -301,10 +297,6 @@ public class MiniMRCluster {
     return createJobConf(new JobConf());
   }
 
-  public TaskAttemptID getTaskAttemptId(TaskID taskId, int attemptId) {
-    return this.jobTracker.getTaskAttemptId(taskId, attemptId);
-  }
-
   public JobConf createJobConf(JobConf conf) {
     if(conf == null) {
       conf = new JobConf();
@@ -516,9 +508,8 @@ public class MiniMRCluster {
          getMapTaskCompletionEventsUpdates(int index, JobID jobId, int max) 
   throws IOException {
     String jtId = jobTracker.getJobTracker().getTrackerIdentifier();
-    long jtStart = jobTracker.getJobTracker().getStartTime();
     TaskAttemptID dummy = 
-      new TaskAttemptID(jtId, jobId.getId(), false, 0, 0, jtStart);
+      new TaskAttemptID(jtId, jobId.getId(), false, 0, 0);
     return taskTrackerList.get(index).getTaskTracker()
                                      .getMapCompletionEvents(jobId, 0, max, 
                                                              dummy);
