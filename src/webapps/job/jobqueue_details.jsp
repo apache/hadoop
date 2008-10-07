@@ -18,37 +18,8 @@ private static final long serialVersionUID = 526456771152222127L;
     StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   String queueName = 
     StringUtils.escapeHTML(request.getParameter("queueName"));
-  Vector<JobInProgress> completedJobs = new Vector<JobInProgress>();
-  Vector<JobInProgress> failedJobs = new Vector<JobInProgress>();
-  Vector<JobInProgress> runningJobs = new Vector<JobInProgress>();
-  Vector<JobInProgress> waitingJobs = new Vector<JobInProgress>();
-  Collection<JobInProgress> jobs = null;
   TaskScheduler scheduler = tracker.getTaskScheduler();
-  
-  
-  
-  if((queueName != null) && !(queueName.trim().equals(""))) {
-    jobs = scheduler.getJobs(queueName);
-  }
-  
-  if(jobs!=null && !jobs.isEmpty()) {
-    for(JobInProgress job :jobs) {
-      switch(job.getStatus().getRunState()){
-      case JobStatus.RUNNING:
-        runningJobs.add(job);
-        break;
-      case JobStatus.PREP:
-        waitingJobs.add(job);
-        break;
-      case JobStatus.SUCCEEDED:
-        completedJobs.add(job);
-        break;
-      case JobStatus.FAILED:
-        failedJobs.add(job);
-        break;
-      }
-    }
-  }
+  Collection<JobInProgress> jobs = scheduler.getJobs(queueName);
   JobQueueInfo schedInfo = tracker.getQueueInfo(queueName);
 %>
 <html>
@@ -81,37 +52,16 @@ if(jobs == null || jobs.isEmpty()) {
 %>
 <center>
 <h2> Job Summary for the Queue :: <%=queueName!=null?queueName:"" %> </h2>
-<hr/>
 </center>
-<h2>Running Jobs</h2>
+<div style="text-align: center;text-indent: center;font-style: italic;">
+(In the order maintained by the scheduler)
+</div>
+<br/>
+<hr/>
 <%=
-  JSPUtil.generateJobTable("Running", runningJobs, 30, 0)
+  JSPUtil.generateJobTable("Job List", jobs, 30, 0)
 %>
 <hr>
-
-<h2>Waiting Jobs</h2>
-<%=
-  JSPUtil.generateJobTable("Waiting", waitingJobs, 30, runningJobs.size())
-%>
-<hr>
-
-<h2>Completed Jobs</h2>
-<%=
-  JSPUtil.generateJobTable("Completed", completedJobs, 0,
-      (runningJobs.size()+waitingJobs.size()))
-%>
-
-<hr>
-
-<h2>Failed Jobs</h2>
-<%=
-  JSPUtil.generateJobTable("Failed", failedJobs, 0,
-      (runningJobs.size()+waitingJobs.size()+completedJobs.size()))
-%>
-
-<hr>
-
-
 <% } %>
 
 <%
