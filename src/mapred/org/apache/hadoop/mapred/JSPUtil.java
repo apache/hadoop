@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Vector;
+import java.util.Collection;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -80,7 +80,7 @@ class JSPUtil {
    * @return
    * @throws IOException
    */
-  public static String generateJobTable(String label, Vector<JobInProgress> jobs
+  public static String generateJobTable(String label, Collection<JobInProgress> jobs
       , int refresh, int rowId) throws IOException {
 
     boolean isModifiable = label.equals("Running") 
