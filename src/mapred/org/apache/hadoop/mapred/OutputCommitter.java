@@ -30,12 +30,10 @@ import java.io.IOException;
  *   <li>
  *   Setup the job during initialization. For example, create the temporary 
  *   output directory for the job during the initialization of the job.
- *   The job client does the setup for the job.
  *   </li>
  *   <li>
  *   Cleanup the job after the job completion. For example, remove the
- *   temporary output directory after the job completion. CleanupJob is done
- *   by a separate task at the end of the job.
+ *   temporary output directory after the job completion. 
  *   </li>
  *   <li>
  *   Setup the task temporary output.
@@ -61,8 +59,6 @@ public abstract class OutputCommitter {
   /**
    * For the framework to setup the job output during initialization
    * 
-   * The job client does the setup for the job.
-   *   
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException if temporary output could not be created
    */

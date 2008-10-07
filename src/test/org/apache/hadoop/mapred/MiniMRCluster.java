@@ -464,9 +464,9 @@ public class MiniMRCluster {
   }
     
   /**
-   * Get the map task completion events
+   * Get the task completion events
    */
-  public TaskCompletionEvent[] getMapTaskCompletionEvents(JobID id, int from, 
+  public TaskCompletionEvent[] getTaskCompletionEvents(JobID id, int from, 
                                                           int max) 
   throws IOException {
     return jobTracker.getJobTracker().getTaskCompletionEvents(id, from, max);

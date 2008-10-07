@@ -70,7 +70,10 @@ public class TestMiniMRLocalFS extends TestCase {
       // test the task report fetchers
       JobClient client = new JobClient(job);
       JobID jobid = ret.job.getID();
-      TaskReport[] reports = client.getMapTaskReports(jobid);
+      TaskReport[] reports;
+      reports = client.getSetupTaskReports(jobid);
+      assertEquals("number of setups", 2, reports.length);
+      reports = client.getMapTaskReports(jobid);
       assertEquals("number of maps", 1, reports.length);
       reports = client.getReduceTaskReports(jobid);
       assertEquals("number of reduces", 1, reports.length);

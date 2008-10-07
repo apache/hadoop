@@ -531,7 +531,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       // is updated
       private void checkAndInit() throws IOException {
         String jobStatus = this.job.get(Keys.JOB_STATUS);
-        if (Values.RUNNING.name().equals(jobStatus)) {
+        if (Values.PREP.name().equals(jobStatus)) {
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
           jip.initTasks();
@@ -1860,7 +1860,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (taskTrackerStatus == null) {
         LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
       } else {
-        List<Task> tasks = getCleanupTask(taskTrackerStatus);
+        List<Task> tasks = getSetupAndCleanupTasks(taskTrackerStatus);
         if (tasks == null ) {
           tasks = taskScheduler.assignTasks(taskTrackerStatus);
         }
@@ -2099,8 +2099,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return null;
   }
   
-  private synchronized List<Task> getCleanupTask(TaskTrackerStatus taskTracker)
-  throws IOException {
+  // returns cleanup tasks first, then setup tasks.
+  private synchronized List<Task> getSetupAndCleanupTasks(
+    TaskTrackerStatus taskTracker) throws IOException {
     int maxMapTasks = taskTracker.getMaxMapTasks();
     int maxReduceTasks = taskTracker.getMaxReduceTasks();
     int numMaps = taskTracker.countMapTasks();
@@ -2120,12 +2121,30 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             return Collections.singletonList(t);
           }
         }
+        for (Iterator<JobInProgress> it = jobs.values().iterator();
+             it.hasNext();) {
+          JobInProgress job = it.next();
+          t = job.obtainSetupTask(taskTracker, numTaskTrackers,
+                                  numUniqueHosts, true);
+          if (t != null) {
+            return Collections.singletonList(t);
+          }
+        }
       }
       if (numReduces < maxReduceTasks) {
         for (Iterator<JobInProgress> it = jobs.values().iterator();
              it.hasNext();) {
           JobInProgress job = it.next();
           t = job.obtainCleanupTask(taskTracker, numTaskTrackers,
+                                    numUniqueHosts, false);
+          if (t != null) {
+            return Collections.singletonList(t);
+          }
+        }
+        for (Iterator<JobInProgress> it = jobs.values().iterator();
+             it.hasNext();) {
+          JobInProgress job = it.next();
+          t = job.obtainSetupTask(taskTracker, numTaskTrackers,
                                     numUniqueHosts, false);
           if (t != null) {
             return Collections.singletonList(t);
@@ -2353,6 +2372,28 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   
   }
   
+  public synchronized TaskReport[] getSetupTaskReports(JobID jobid) {
+    JobInProgress job = jobs.get(jobid);
+    if (job == null) {
+      return new TaskReport[0];
+    } else {
+      Vector<TaskReport> reports = new Vector<TaskReport>();
+      Vector<TaskInProgress> completeTasks = job.reportSetupTIPs(true);
+      for (Iterator<TaskInProgress> it = completeTasks.iterator();
+           it.hasNext();) {
+        TaskInProgress tip = (TaskInProgress) it.next();
+        reports.add(tip.generateSingleReport());
+      }
+      Vector<TaskInProgress> incompleteTasks = job.reportSetupTIPs(false);
+      for (Iterator<TaskInProgress> it = incompleteTasks.iterator(); 
+           it.hasNext();) {
+        TaskInProgress tip = (TaskInProgress) it.next();
+        reports.add(tip.generateSingleReport());
+      }
+      return reports.toArray(new TaskReport[reports.size()]);
+    }
+  }
+  
   TaskCompletionEvent[] EMPTY_EVENTS = new TaskCompletionEvent[0];
   
   /* 
@@ -2576,7 +2617,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // And completed maps with zero reducers of the job 
         // never need to be failed. 
         if (!tip.isComplete() || 
-            (tip.isMapTask() && job.desiredReduces() != 0)) {
+            (tip.isMapTask() && !tip.isSetupTask() && 
+             job.desiredReduces() != 0)) {
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING) {
             job.failedTask(tip, taskId, ("Lost task tracker: " + trackerName), 

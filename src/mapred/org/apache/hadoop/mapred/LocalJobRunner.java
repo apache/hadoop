@@ -114,6 +114,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
         JobContext jContext = new JobContext(conf);
         OutputCommitter outputCommitter = job.getOutputCommitter();
+        outputCommitter.setupJob(jContext);
+        status.setSetupProgress(1.0f);
         
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
@@ -334,6 +336,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new TaskReport[0];
   }
   public TaskReport[] getCleanupTaskReports(JobID id) {
+    return new TaskReport[0];
+  }
+  public TaskReport[] getSetupTaskReports(JobID id) {
     return new TaskReport[0];
   }
 

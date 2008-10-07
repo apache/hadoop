@@ -88,15 +88,15 @@
               "</td></tr>\n");
   }
 
-  private void printCleanupTaskSummary(JspWriter out,
+  private void printJobLevelTaskSummary(JspWriter out,
                                 String jobId,
+                                String kind,
                                 TaskInProgress[] tasks
                                ) throws IOException {
     int totalTasks = tasks.length;
     int runningTasks = 0;
     int finishedTasks = 0;
     int killedTasks = 0;
-    String kind = "cleanup";
     for(int i=0; i < totalTasks; ++i) {
       TaskInProgress task = tasks[i];
       if (task.isComplete()) {
@@ -208,6 +208,9 @@
     out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
     out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" 
               + profile.getJobFile() + "</a><br>\n");
+    out.print("<b>Job Setup:</b>");
+    printJobLevelTaskSummary(out, jobId, "setup", job.getSetupTasks());
+    out.print("<br>\n");
     if (runState == JobStatus.RUNNING) {
       out.print("<b>Status:</b> Running<br>\n");
       out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
@@ -238,7 +241,7 @@
       }
     }
     out.print("<b>Job Cleanup:</b>");
-    printCleanupTaskSummary(out, jobId, job.getCleanupTasks());
+    printJobLevelTaskSummary(out, jobId, "cleanup", job.getCleanupTasks());
     out.print("<br>\n");
     if (flakyTaskTrackers > 0) {
       out.print("<b>Black-listed TaskTrackers:</b> " + 

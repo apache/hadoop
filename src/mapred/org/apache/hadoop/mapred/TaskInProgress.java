@@ -83,6 +83,7 @@ class TaskInProgress {
   private FailedRanges failedRanges = new FailedRanges();
   private volatile boolean skipping = false;
   private boolean cleanup = false; 
+  private boolean setup = false;
    
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
@@ -180,7 +181,15 @@ class TaskInProgress {
   public void setCleanupTask() {
     cleanup = true;
   }
-  
+
+  public boolean isSetupTask() {
+    return setup;
+  }
+	  
+  public void setSetupTask() {
+    setup = true;
+  }
+
   public boolean isOnlyCommitPending() {
     for (TaskStatus t : taskStatuses.values()) {
       if (t.getRunState() == TaskStatus.State.COMMIT_PENDING) {
@@ -380,7 +389,8 @@ class TaskInProgress {
         (job.getStatus().getRunState() != JobStatus.RUNNING)) {
       tasksReportedClosed.add(taskid);
       close = true;
-    } else if (isComplete() && !(isMapTask() && isComplete(taskid)) &&
+    } else if (isComplete() && 
+               !(isMapTask() && !setup && !cleanup && isComplete(taskid)) &&
                !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
       close = true; 
@@ -565,7 +575,7 @@ class TaskInProgress {
     // should note this failure only for completed maps, only if this taskid;
     // completed this map. however if the job is done, there is no need to 
     // manipulate completed maps
-    if (this.isMapTask() && isComplete(taskid) && 
+    if (this.isMapTask() && !setup && !cleanup && isComplete(taskid) && 
         jobStatus.getRunState() != JobStatus.SUCCEEDED) {
       this.completes--;
       
@@ -850,6 +860,9 @@ class TaskInProgress {
     if (cleanup) {
       t.setCleanupTask();
     }
+    if (setup) {
+      t.setSetupTask();
+    }
     t.setConf(conf);
     LOG.debug("Launching task with skipRanges:"+failedRanges.getSkipRanges());
     t.setSkipRanges(failedRanges.getSkipRanges());
@@ -951,7 +964,7 @@ class TaskInProgress {
   }
 
   public long getMapInputSize() {
-    if(isMapTask()) {
+    if(isMapTask() && !setup && !cleanup) {
       return rawSplit.getDataLength();
     } else {
       return 0;

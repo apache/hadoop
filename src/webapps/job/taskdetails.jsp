@@ -69,9 +69,12 @@
     }
     TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(tipidObj)
         : null;
-    boolean isCleanup = false;
+    boolean isCleanupOrSetup = false;
     if (tipidObj != null) { 
-      isCleanup = job.getTaskInProgress(tipidObj).isCleanupTask();
+      isCleanupOrSetup = job.getTaskInProgress(tipidObj).isCleanupTask();
+      if (!isCleanupOrSetup) {
+        isCleanupOrSetup = job.getTaskInProgress(tipidObj).isSetupTask();
+      }
     }
 %>
 
@@ -98,7 +101,7 @@
 <table border=2 cellpadding="5" cellspacing="2">
 <tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Start Time</td> 
   <%
-   if (!ts[0].getIsMap() && !isCleanup) {
+   if (!ts[0].getIsMap() && !isCleanupOrSetup) {
    %>
 <td>Shuffle Finished</td><td>Sort Finished</td>
   <%
@@ -126,7 +129,7 @@
         out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getStartTime(), 0) + "</td>");
-        if (!ts[i].getIsMap() && !isCleanup) {
+        if (!ts[i].getIsMap() && !isCleanupOrSetup) {
           out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getShuffleFinishTime(), status.getStartTime()) + "</td>");
