@@ -52,6 +52,7 @@ public class JobStatus implements Writable {
   private float mapProgress;
   private float reduceProgress;
   private float cleanupProgress;
+  private float setupProgress;
   private int runState;
   private long startTime;
   private String user;
@@ -99,7 +100,25 @@ public class JobStatus implements Writable {
    */
    public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
                       float cleanupProgress, int runState, JobPriority jp) {
+     this(jobid, 0.0f, mapProgress, reduceProgress, 
+          cleanupProgress, runState, jp);
+   }
+   
+  /**
+   * Create a job status object for a given jobid.
+   * @param jobid The jobid of the job
+   * @param setupProgress The progress made on the setup
+   * @param mapProgress The progress made on the maps
+   * @param reduceProgress The progress made on the reduces
+   * @param cleanupProgress The progress made on the cleanup
+   * @param runState The current state of the job
+   * @param jp Priority of the job.
+   */
+   public JobStatus(JobID jobid, float setupProgress, float mapProgress,
+                    float reduceProgress, float cleanupProgress, 
+                    int runState, JobPriority jp) {
      this.jobid = jobid;
+     this.setupProgress = setupProgress;
      this.mapProgress = mapProgress;
      this.reduceProgress = reduceProgress;
      this.cleanupProgress = cleanupProgress;
@@ -110,6 +129,7 @@ public class JobStatus implements Writable {
      }
      priority = jp;
    }
+   
   /**
    * @deprecated use getJobID instead
    */
@@ -145,6 +165,19 @@ public class JobStatus implements Writable {
    */
   synchronized void setCleanupProgress(float p) { 
     this.cleanupProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
+  }
+
+  /**
+   * @return Percentage of progress in setup 
+   */
+  public synchronized float setupProgress() { return setupProgress; }
+    
+  /**
+   * Sets the setup progress of this job
+   * @param p The value of setup progress to set to
+   */
+  synchronized void setSetupProgress(float p) { 
+    this.setupProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
   }
 
   /**
@@ -232,6 +265,7 @@ public class JobStatus implements Writable {
   ///////////////////////////////////////
   public synchronized void write(DataOutput out) throws IOException {
     jobid.write(out);
+    out.writeFloat(setupProgress);
     out.writeFloat(mapProgress);
     out.writeFloat(reduceProgress);
     out.writeFloat(cleanupProgress);
@@ -244,6 +278,7 @@ public class JobStatus implements Writable {
 
   public synchronized void readFields(DataInput in) throws IOException {
     this.jobid = JobID.read(in);
+    this.setupProgress = in.readFloat();
     this.mapProgress = in.readFloat();
     this.reduceProgress = in.readFloat();
     this.cleanupProgress = in.readFloat();

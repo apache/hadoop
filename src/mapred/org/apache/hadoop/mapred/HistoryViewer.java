@@ -93,6 +93,8 @@ class HistoryViewer {
     printJobDetails();
     printTaskSummary();
     printJobAnalysis();
+    printTasks("SETUP", "FAILED");
+    printTasks("SETUP", "KILLED");
     printTasks("MAP", "FAILED");
     printTasks("MAP", "KILLED");
     printTasks("REDUCE", "FAILED");
@@ -100,9 +102,11 @@ class HistoryViewer {
     printTasks("CLEANUP", "FAILED");
     printTasks("CLEANUP", "KILLED");
     if (printAll) {
+      printTasks("SETUP", "SUCCESS");
       printTasks("MAP", "SUCCESS");
       printTasks("REDUCE", "SUCCESS");
       printTasks("CLEANUP", "SUCCESS");
+      printAllTaskAttempts("SETUP");
       printAllTaskAttempts("MAP");
       printAllTaskAttempts("REDUCE");
       printAllTaskAttempts("CLEANUP");
@@ -219,6 +223,7 @@ class HistoryViewer {
     int totalMaps = 0; 
     int totalReduces = 0; 
     int totalCleanups = 0;
+    int totalSetups = 0;
     int numFailedMaps = 0; 
     int numKilledMaps = 0;
     int numFailedReduces = 0; 
@@ -226,12 +231,17 @@ class HistoryViewer {
     int numFinishedCleanups = 0;
     int numFailedCleanups = 0;
     int numKilledCleanups = 0;
+    int numFinishedSetups = 0;
+    int numFailedSetups = 0;
+    int numKilledSetups = 0;
     long mapStarted = 0; 
     long mapFinished = 0; 
     long reduceStarted = 0; 
     long reduceFinished = 0; 
     long cleanupStarted = 0;
     long cleanupFinished = 0;
+    long setupStarted = 0;
+    long setupFinished = 0;
 
     Map <String, String> allHosts = new TreeMap<String, String>();
 
@@ -286,6 +296,23 @@ class HistoryViewer {
                                             attempt.get(Keys.TASK_STATUS))) {
             numKilledCleanups++;
           }
+        } else if (Values.SETUP.name().equals(task.get(Keys.TASK_TYPE))){
+          if (setupStarted==0||setupStarted > startTime) {
+            setupStarted = startTime; 
+          }
+          if (setupFinished < finishTime) {
+            setupFinished = finishTime; 
+          }
+          totalSetups++; 
+          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFinishedSetups++;
+          } else if (Values.FAILED.name().equals(
+                                            attempt.get(Keys.TASK_STATUS))) {
+            numFailedSetups++;
+          } else if (Values.KILLED.name().equals(
+                                            attempt.get(Keys.TASK_STATUS))) {
+            numKilledSetups++;
+          }
         }
       }
     }
@@ -296,6 +323,14 @@ class HistoryViewer {
     taskSummary.append("\nKind\tTotal\t");
     taskSummary.append("Successful\tFailed\tKilled\tStartTime\tFinishTime");
     taskSummary.append("\n");
+    taskSummary.append("\nSetup\t").append(totalSetups);
+    taskSummary.append("\t").append(numFinishedSetups);
+    taskSummary.append("\t\t").append(numFailedSetups);
+    taskSummary.append("\t").append(numKilledSetups);
+    taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                               dateFormat, setupStarted, 0));
+    taskSummary.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                               dateFormat, setupFinished, setupStarted)); 
     taskSummary.append("\nMap\t").append(totalMaps);
     taskSummary.append("\t").append(job.getInt(Keys.FINISHED_MAPS));
     taskSummary.append("\t\t").append(numFailedMaps);

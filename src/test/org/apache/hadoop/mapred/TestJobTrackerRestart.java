@@ -471,8 +471,9 @@ public class TestJobTrackerRestart extends TestCase {
     }
     
     TaskCompletionEvent[] prevEvents = 
-      mr.getMapTaskCompletionEvents(id, 0, numMaps);
-    TaskReport[] prevReports = jobClient.getMapTaskReports(id);
+      mr.getTaskCompletionEvents(id, 0, numMaps);
+    TaskReport[] prevSetupReports = jobClient.getSetupTaskReports(id);
+    TaskReport[] prevMapReports = jobClient.getMapTaskReports(id);
     ClusterStatus prevStatus = jobClient.getClusterStatus();
     
     mr.stopJobTracker();
@@ -502,7 +503,7 @@ public class TestJobTrackerRestart extends TestCase {
     
     // Get the new jobtrackers events
     TaskCompletionEvent[] jtEvents =  
-      mr.getMapTaskCompletionEvents(id, 0, 2 * numMaps);
+      mr.getTaskCompletionEvents(id, 0, 2 * numMaps);
     
     // Test if all the events that were recovered match exactly
     testTaskCompletionEvents(prevEvents, jtEvents, false, numToMatch);
@@ -521,8 +522,10 @@ public class TestJobTrackerRestart extends TestCase {
     
     // Check the task reports
     // The reports should match exactly if the attempts are same
-    TaskReport[] afterReports = jobClient.getMapTaskReports(id);
-    testTaskReports(prevReports, afterReports, numToMatch);
+    TaskReport[] afterMapReports = jobClient.getMapTaskReports(id);
+    TaskReport[] afterSetupReports = jobClient.getSetupTaskReports(id);
+    testTaskReports(prevMapReports, afterMapReports, numToMatch - 1);
+    testTaskReports(prevSetupReports, afterSetupReports, 1);
     
     //  Signal the reduce tasks
     signalTasks(dfs, fileSys, false, getMapSignalFile(shareDir), 

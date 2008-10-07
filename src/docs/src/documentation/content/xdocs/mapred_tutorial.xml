@@ -1594,13 +1594,11 @@
           <li>
             Setup the job during initialization. For example, create
             the temporary output directory for the job during the
-            initialization of the job. The job client does the setup
-            for the job.
+            initialization of the job. 
           </li>
           <li>
             Cleanup the job after the job completion. For example, remove the
-            temporary output directory after the job completion. A separate 
-            task does the cleanupJob at the end of the job.
+            temporary output directory after the job completion.
           </li>
           <li>
             Setup the task temporary output.

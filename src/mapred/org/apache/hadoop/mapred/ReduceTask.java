@@ -336,7 +336,7 @@ class ReduceTask extends Task {
     job.setBoolean("mapred.skip.on", isSkipping());
     Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
 
-    if (!cleanupJob) {
+    if (!cleanupJob && !setupJob) {
       copyPhase = getProgress().addPhase("copy");
       sortPhase  = getProgress().addPhase("sort");
       reducePhase = getProgress().addPhase("reduce");
@@ -349,6 +349,10 @@ class ReduceTask extends Task {
     // check if it is a cleanupJobTask
     if (cleanupJob) {
       runCleanup(umbilical);
+      return;
+    }
+    if (setupJob) {
+      runSetupJob(umbilical);
       return;
     }
     

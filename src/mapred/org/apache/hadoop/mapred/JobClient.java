@@ -262,6 +262,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
 
     /**
+     * A float between 0.0 and 1.0, indicating the % of setup work
+     * completed.
+     */
+    public float setupProgress() throws IOException {
+      ensureFreshStatus();
+      return status.setupProgress();
+    }
+
+    /**
      * Returns immediately whether the whole job is done yet or not.
      */
     public synchronized boolean isComplete() throws IOException {
@@ -813,13 +822,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       out.close();
     }
 
-    // skip doing setup if there are no maps for the job.
-    // because if there are no maps, job is considered completed and successful
-    if (splits.length != 0) {
-      // do setupJob
-      job.getOutputCommitter().setupJob(new JobContext(job));
-    }
-
     //
     // Now, actually submit the job (using the submit name)
     //
@@ -1039,7 +1041,18 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public TaskReport[] getCleanupTaskReports(JobID jobId) throws IOException {
     return jobSubmitClient.getCleanupTaskReports(jobId);
   }
-  
+
+  /**
+   * Get the information of the current state of the setup tasks of a job.
+   * 
+   * @param jobId the job to query.
+   * @return the list of all of the setup tips.
+   * @throws IOException
+   */    
+  public TaskReport[] getSetupTaskReports(JobID jobId) throws IOException {
+    return jobSubmitClient.getSetupTaskReports(jobId);
+  }
+
   /**@deprecated Applications should rather use {@link #getReduceTaskReports(JobID)}*/
   @Deprecated
   public TaskReport[] getReduceTaskReports(String jobId) throws IOException {

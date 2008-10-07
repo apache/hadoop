@@ -259,7 +259,7 @@ changes from the prior release.<br />(cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(70)
+</a>&nbsp;&nbsp;&nbsp;(72)
     <ol id="release_0.19.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4205">HADOOP-4205</a>. hive: metastore and ql to use the refactored SerDe library.<br />(zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4106">HADOOP-4106</a>. libhdfs: add time, permission and user attribute support
@@ -387,6 +387,8 @@ better places.<br />(Sanjay Radia via rangadi)</li>
 make itermitant failures reproducible.<br />(szetszwo via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4209">HADOOP-4209</a>. Remove the change to the format of task attempt id by
 incrementing the task attempt numbers by 1000 when the job restarts.<br />(Amar Kamat via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4301">HADOOP-4301</a>. Adds forrest doc for the skip bad records feature.<br />(Sharad Agarwal via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4354">HADOOP-4354</a>. Separate TestDatanodeDeath.testDatanodeDeath() into 4 tests.<br />(szetszwo)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -413,7 +415,7 @@ it from a different .crc file.<br />(Jothi Padmanabhan via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(108)
+</a>&nbsp;&nbsp;&nbsp;(109)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -621,6 +623,8 @@ told to read unlesss end-of-file is reached.<br />(Pete Wyckoff via dhruba)</li>
 retries for fetching map-outputs; also fixed the case where the reducer
 automatically kills on too many unique map-outputs could not be fetched
 for small jobs.<br />(Amareshwari Sri Ramadasu via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4163">HADOOP-4163</a>. Report FSErrors from map output fetch threads instead of
+merely logging them.<br />(Sharad Agarwal via cdouglas)</li>
     </ol>
   </li>
 </ul>

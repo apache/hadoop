@@ -42,6 +42,7 @@
     int totalMaps = 0 ; 
     int totalReduces = 0;
     int totalCleanups = 0; 
+    int totalSetups = 0; 
     int numFailedMaps = 0; 
     int numKilledMaps = 0;
     int numFailedReduces = 0 ; 
@@ -49,6 +50,9 @@
     int numFinishedCleanups = 0;
     int numFailedCleanups = 0;
     int numKilledCleanups = 0;
+    int numFinishedSetups = 0;
+    int numFailedSetups = 0;
+    int numKilledSetups = 0;
 	
     long mapStarted = 0 ; 
     long mapFinished = 0 ; 
@@ -56,6 +60,8 @@
     long reduceFinished = 0;
     long cleanupStarted = 0;
     long cleanupFinished = 0; 
+    long setupStarted = 0;
+    long setupFinished = 0; 
         
     Map <String,String> allHosts = new TreeMap<String,String>();
     for (JobHistory.Task task : tasks.values()) {
@@ -104,6 +110,21 @@
             numFailedCleanups++;
           } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
             numKilledCleanups++;
+          } 
+        } else if (Values.SETUP.name().equals(task.get(Keys.TASK_TYPE))) {
+          if (setupStarted==0||setupStarted > startTime) {
+            setupStarted = startTime ; 
+          }
+          if (setupFinished < finishTime) {
+            setupFinished = finishTime; 
+          }
+          totalSetups++; 
+          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFinishedSetups++;
+          } else if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numFailedSetups++;
+          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
+            numKilledSetups++;
           }
         }
       }
@@ -115,6 +136,19 @@
 <table border="2" cellpadding="5" cellspacing="2">
 <tr>
 <td>Kind</td><td>Total Tasks(successful+failed+killed)</td><td>Successful tasks</td><td>Failed tasks</td><td>Killed tasks</td><td>Start Time</td><td>Finish Time</td>
+</tr>
+<tr>
+<td>Setup</td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=all">
+        <%=totalSetups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.SUCCESS %>">
+        <%=numFinishedSetups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.FAILED %>">
+        <%=numFailedSetups%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.KILLED %>">
+        <%=numKilledSetups%></a></td>  
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupStarted, 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupFinished, setupStarted) %></td>
 </tr>
 <tr>
 <td>Map</td>

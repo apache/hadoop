@@ -94,6 +94,15 @@ public interface RunningJob {
   public float cleanupProgress() throws IOException;
 
   /**
+   * Get the <i>progress</i> of the job's setup-tasks, as a float between 0.0 
+   * and 1.0.  When all setup tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's setup-tasks.
+   * @throws IOException
+   */
+  public float setupProgress() throws IOException;
+
+  /**
    * Check if the job is finished or not. 
    * This is a non-blocking call.
    * 

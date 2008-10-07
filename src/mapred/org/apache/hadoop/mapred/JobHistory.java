@@ -123,7 +123,7 @@ public class JobHistory {
    * most places in history file. 
    */
   public static enum Values {
-    SUCCESS, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING
+    SUCCESS, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING, PREP, SETUP
   }
 
   // temp buffer for parsed dataa
@@ -923,12 +923,14 @@ public class JobHistory {
     }
     /**
      * Logs launch time of job. 
+     * 
      * @param jobId job id, assigned by jobtracker. 
      * @param startTime start time of job. 
      * @param totalMaps total maps assigned by jobtracker. 
      * @param totalReduces total reduces. 
      */
-    public static void logStarted(JobID jobId, long startTime, int totalMaps, int totalReduces){
+    public static void logInited(JobID jobId, long startTime, 
+                                 int totalMaps, int totalReduces) {
       if (!disableHistory){
         String logFileKey =  JOBTRACKER_UNIQUE_STRING + jobId; 
         ArrayList<PrintWriter> writer = openJobs.get(logFileKey); 
@@ -940,10 +942,45 @@ public class JobHistory {
               new String[] {jobId.toString(), String.valueOf(startTime), 
                             String.valueOf(totalMaps), 
                             String.valueOf(totalReduces), 
+                            Values.PREP.name()}); 
+        }
+      }
+    }
+    
+   /**
+     * Logs the job as RUNNING. 
+     *
+     * @param jobId job id, assigned by jobtracker. 
+     * @param startTime start time of job. 
+     * @param totalMaps total maps assigned by jobtracker. 
+     * @param totalReduces total reduces. 
+     * @deprecated Use {@link #logInited(JobID, long, int, int)} and 
+     * {@link #logStarted(JobID)}
+     */
+    @Deprecated
+    public static void logStarted(JobID jobId, long startTime, 
+                                  int totalMaps, int totalReduces) {
+      logStarted(jobId);
+    }
+    
+    /**
+     * Logs job as running 
+     * @param jobId job id, assigned by jobtracker. 
+     */
+    public static void logStarted(JobID jobId){
+      if (!disableHistory){
+        String logFileKey =  JOBTRACKER_UNIQUE_STRING + jobId; 
+        ArrayList<PrintWriter> writer = openJobs.get(logFileKey); 
+
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.Job, 
+              new Keys[] {Keys.JOBID, Keys.JOB_STATUS},
+              new String[] {jobId.toString(),  
                             Values.RUNNING.name()}); 
         }
       }
     }
+    
     /**
      * Log job finished. closes the job file in history. 
      * @param jobId job id, assigned by jobtracker. 
@@ -1197,12 +1234,11 @@ public class JobHistory {
      * @param startTime start time of task attempt as reported by task tracker. 
      * @param hostName host name of the task attempt. 
      * @deprecated Use 
-     *             {@link #logStarted(TaskAttemptID, long, String, int, 
-     *                                boolean)}
+     *             {@link #logStarted(TaskAttemptID, long, String, int, String)}
      */
     @Deprecated
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime, String hostName){
-      logStarted(taskAttemptId, startTime, hostName, -1, false);
+      logStarted(taskAttemptId, startTime, hostName, -1, Values.MAP.name());
     }
     
     /**
@@ -1212,11 +1248,11 @@ public class JobHistory {
      * @param startTime start time of task attempt as reported by task tracker. 
      * @param trackerName name of the tracker executing the task attempt.
      * @param httpPort http port of the task tracker executing the task attempt
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or map 
      */
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime,
                                   String trackerName, int httpPort, 
-                                  boolean isCleanup){
+                                  String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1226,8 +1262,7 @@ public class JobHistory {
                          new Keys[]{ Keys.TASK_TYPE, Keys.TASKID, 
                                      Keys.TASK_ATTEMPT_ID, Keys.START_TIME, 
                                      Keys.TRACKER_NAME, Keys.HTTP_PORT},
-                         new String[]{isCleanup ? Values.CLEANUP.name() : 
-                                                  Values.MAP.name(),
+                         new String[]{taskType,
                                       taskAttemptId.getTaskID().toString(), 
                                       taskAttemptId.toString(), 
                                       String.valueOf(startTime), trackerName,
@@ -1242,13 +1277,12 @@ public class JobHistory {
      * @param finishTime finish time
      * @param hostName host name 
      * @deprecated Use 
-     * {@link #logFinished(TaskAttemptID, long, String, boolean, String, 
-     *                     Counters)}
+     * {@link #logFinished(TaskAttemptID, long, String, String, String, Counters)}
      */
     @Deprecated
     public static void logFinished(TaskAttemptID taskAttemptId, long finishTime, 
                                    String hostName){
-      logFinished(taskAttemptId, finishTime, hostName, false, "", 
+      logFinished(taskAttemptId, finishTime, hostName, Values.MAP.name(), "", 
                   new Counters());
     }
 
@@ -1258,14 +1292,15 @@ public class JobHistory {
      * @param taskAttemptId task attempt id 
      * @param finishTime finish time
      * @param hostName host name 
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or map 
      * @param stateString state string of the task attempt
      * @param counter counters of the task attempt
      */
     public static void logFinished(TaskAttemptID taskAttemptId, 
                                    long finishTime, 
                                    String hostName,
-                                   boolean isCleanup, String stateString, 
+                                   String taskType,
+                                   String stateString, 
                                    Counters counter) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
@@ -1277,8 +1312,7 @@ public class JobHistory {
                                      Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                      Keys.FINISH_TIME, Keys.HOSTNAME, 
                                      Keys.STATE_STRING, Keys.COUNTERS},
-                         new String[]{isCleanup ? Values.CLEANUP.name() : 
-                                                  Values.MAP.name(), 
+                         new String[]{taskType, 
                                       taskAttemptId.getTaskID().toString(),
                                       taskAttemptId.toString(), 
                                       Values.SUCCESS.name(),  
@@ -1296,13 +1330,13 @@ public class JobHistory {
      * @param hostName hostname of this task attempt.
      * @param error error message if any for this task attempt.
      * @deprecated Use
-     * {@link #logFailed(TaskAttemptID, long, String, String, boolean)} 
+     * {@link #logFailed(TaskAttemptID, long, String, String, String)} 
      */
     @Deprecated
     public static void logFailed(TaskAttemptID taskAttemptId, 
                                  long timestamp, String hostName, 
                                  String error) {
-      logFailed(taskAttemptId, timestamp, hostName, error, false);
+      logFailed(taskAttemptId, timestamp, hostName, error, Values.MAP.name());
     }
 
     /**
@@ -1312,11 +1346,11 @@ public class JobHistory {
      * @param timestamp timestamp
      * @param hostName hostname of this task attempt.
      * @param error error message if any for this task attempt. 
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or map 
      */
     public static void logFailed(TaskAttemptID taskAttemptId, 
                                  long timestamp, String hostName, 
-                                 String error, boolean isCleanup) {
+                                 String error, String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1326,8 +1360,7 @@ public class JobHistory {
                          new Keys[]{Keys.TASK_TYPE, Keys.TASKID, 
                                     Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                     Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR},
-                         new String[]{ isCleanup ? Values.CLEANUP.name() :
-                                                   Values.MAP.name(), 
+                         new String[]{ taskType, 
                                        taskAttemptId.getTaskID().toString(),
                                        taskAttemptId.toString(), 
                                        Values.FAILED.name(),
@@ -1344,12 +1377,12 @@ public class JobHistory {
      * @param hostName hostname of this task attempt.
      * @param error error message if any for this task attempt. 
      * @deprecated Use 
-     * {@link #logKilled(TaskAttemptID, long, String, String, boolean)}
+     * {@link #logKilled(TaskAttemptID, long, String, String, String)}
      */
     @Deprecated
     public static void logKilled(TaskAttemptID taskAttemptId, 
                                  long timestamp, String hostName, String error){
-      logKilled(taskAttemptId, timestamp, hostName, error, false);
+      logKilled(taskAttemptId, timestamp, hostName, error, Values.MAP.name());
     } 
     
     /**
@@ -1359,11 +1392,11 @@ public class JobHistory {
      * @param timestamp timestamp
      * @param hostName hostname of this task attempt.
      * @param error error message if any for this task attempt. 
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or map 
      */
     public static void logKilled(TaskAttemptID taskAttemptId, 
                                  long timestamp, String hostName,
-                                 String error, boolean isCleanup){
+                                 String error, String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1374,8 +1407,7 @@ public class JobHistory {
                                     Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                     Keys.FINISH_TIME, Keys.HOSTNAME,
                                     Keys.ERROR},
-                         new String[]{ isCleanup ? Values.CLEANUP.name() : 
-                                                   Values.MAP.name(), 
+                         new String[]{ taskType, 
                                        taskAttemptId.getTaskID().toString(), 
                                        taskAttemptId.toString(),
                                        Values.KILLED.name(),
@@ -1396,12 +1428,12 @@ public class JobHistory {
      * @param startTime start time
      * @param hostName host name 
      * @deprecated Use 
-     * {@link #logStarted(TaskAttemptID, long, String, int, boolean)}
+     * {@link #logStarted(TaskAttemptID, long, String, int, String)}
      */
     @Deprecated
     public static void logStarted(TaskAttemptID taskAttemptId, 
                                   long startTime, String hostName){
-      logStarted(taskAttemptId, startTime, hostName, -1, false);
+      logStarted(taskAttemptId, startTime, hostName, -1, Values.REDUCE.name());
     }
     
     /**
@@ -1411,11 +1443,12 @@ public class JobHistory {
      * @param startTime start time
      * @param trackerName tracker name 
      * @param httpPort the http port of the tracker executing the task attempt
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or reduce 
      */
     public static void logStarted(TaskAttemptID taskAttemptId, 
                                   long startTime, String trackerName, 
-                                  int httpPort, boolean isCleanup) {
+                                  int httpPort, 
+                                  String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1425,8 +1458,7 @@ public class JobHistory {
                          new Keys[]{  Keys.TASK_TYPE, Keys.TASKID, 
                                       Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
                                       Keys.TRACKER_NAME, Keys.HTTP_PORT},
-                         new String[]{isCleanup ? Values.CLEANUP.name() : 
-                                                  Values.REDUCE.name(),
+                         new String[]{taskType,
                                       taskAttemptId.getTaskID().toString(), 
                                       taskAttemptId.toString(), 
                                       String.valueOf(startTime), trackerName,
@@ -1443,15 +1475,15 @@ public class JobHistory {
      * @param finishTime finish time of task
      * @param hostName host name where task attempt executed
      * @deprecated Use 
-     * {@link #logFinished(TaskAttemptID, long, long, long, String, boolean, 
-     *                     String, Counters)}
+     * {@link #logFinished(TaskAttemptID, long, long, long, String, String, String, Counters)}
      */
     @Deprecated
     public static void logFinished(TaskAttemptID taskAttemptId, long shuffleFinished, 
                                    long sortFinished, long finishTime, 
                                    String hostName){
       logFinished(taskAttemptId, shuffleFinished, sortFinished, 
-                  finishTime, hostName, false, "", new Counters());
+                  finishTime, hostName, Values.REDUCE.name(),
+                  "", new Counters());
     }
     
     /**
@@ -1462,14 +1494,14 @@ public class JobHistory {
      * @param sortFinished sort finish time
      * @param finishTime finish time of task
      * @param hostName host name where task attempt executed
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or reduce 
      * @param stateString the state string of the attempt
      * @param counter counters of the attempt
      */
     public static void logFinished(TaskAttemptID taskAttemptId, 
                                    long shuffleFinished, 
                                    long sortFinished, long finishTime, 
-                                   String hostName, boolean isCleanup,
+                                   String hostName, String taskType,
                                    String stateString, Counters counter) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
@@ -1482,8 +1514,7 @@ public class JobHistory {
                                      Keys.SHUFFLE_FINISHED, Keys.SORT_FINISHED,
                                      Keys.FINISH_TIME, Keys.HOSTNAME, 
                                      Keys.STATE_STRING, Keys.COUNTERS},
-                         new String[]{isCleanup ? Values.CLEANUP.name() : 
-                                                  Values.REDUCE.name(),
+                         new String[]{taskType,
                                       taskAttemptId.getTaskID().toString(), 
                                       taskAttemptId.toString(), 
                                       Values.SUCCESS.name(), 
@@ -1503,12 +1534,12 @@ public class JobHistory {
      * @param hostName host name of the task attempt.  
      * @param error error message of the task.
      * @deprecated Use 
-     * {@link #logFailed(TaskAttemptID, long, String, String, boolean)} 
+     * {@link #logFailed(TaskAttemptID, long, String, String, String)} 
      */
     @Deprecated
     public static void logFailed(TaskAttemptID taskAttemptId, long timestamp, 
                                  String hostName, String error){
-      logFailed(taskAttemptId, timestamp, hostName, error, false);
+      logFailed(taskAttemptId, timestamp, hostName, error, Values.REDUCE.name());
     }
     
     /**
@@ -1518,11 +1549,11 @@ public class JobHistory {
      * @param timestamp time stamp when task failed
      * @param hostName host name of the task attempt.  
      * @param error error message of the task. 
-     * @param isCleanup Whether the attempt is cleanup or not 
+     * @param taskType Whether the attempt is cleanup or setup or reduce 
      */
     public static void logFailed(TaskAttemptID taskAttemptId, long timestamp, 
                                  String hostName, String error, 
-                                 boolean isCleanup) {
+                                 String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1533,8 +1564,7 @@ public class JobHistory {
                                       Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                       Keys.FINISH_TIME, Keys.HOSTNAME,
                                       Keys.ERROR },
-                         new String[]{ isCleanup ? Values.CLEANUP.name() : 
-                                                   Values.REDUCE.name(), 
+                         new String[]{ taskType, 
                                        taskAttemptId.getTaskID().toString(), 
                                        taskAttemptId.toString(), 
                                        Values.FAILED.name(), 
@@ -1550,12 +1580,12 @@ public class JobHistory {
      * @param hostName host name of the task attempt.  
      * @param error error message of the task.
      * @deprecated Use 
-     * {@link #logKilled(TaskAttemptID, long, String, String, boolean)} 
+     * {@link #logKilled(TaskAttemptID, long, String, String, String)} 
      */
     @Deprecated
     public static void logKilled(TaskAttemptID taskAttemptId, long timestamp, 
                                  String hostName, String error) {
-      logKilled(taskAttemptId, timestamp, hostName, error, false);
+      logKilled(taskAttemptId, timestamp, hostName, error, Values.REDUCE.name());
     }
     
     /**
@@ -1565,11 +1595,11 @@ public class JobHistory {
      * @param timestamp time stamp when task failed
      * @param hostName host name of the task attempt.  
      * @param error error message of the task. 
-     * @param isCleanup Whether the attempt is cleanup or not 
-     */
+     * @param taskType Whether the attempt is cleanup or setup or reduce 
+    */
     public static void logKilled(TaskAttemptID taskAttemptId, long timestamp, 
                                  String hostName, String error, 
-                                 boolean isCleanup) {
+                                 String taskType) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                    + taskAttemptId.getJobID()); 
@@ -1580,8 +1610,7 @@ public class JobHistory {
                                       Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                       Keys.FINISH_TIME, Keys.HOSTNAME, 
                                       Keys.ERROR },
-                         new String[]{ isCleanup ? Values.CLEANUP.name() : 
-                                                   Values.REDUCE.name(),
+                         new String[]{ taskType,
                                        taskAttemptId.getTaskID().toString(), 
                                        taskAttemptId.toString(), 
                                        Values.KILLED.name(), 

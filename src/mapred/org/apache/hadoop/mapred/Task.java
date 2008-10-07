@@ -108,6 +108,7 @@ abstract class Task implements Writable, Configurable {
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
   protected boolean cleanupJob = false;
+  protected boolean setupJob = false;
   private Thread pingProgressThread;
   
   //skip ranges based on failed ranges from previous attempts
@@ -241,6 +242,9 @@ abstract class Task implements Writable, Configurable {
     cleanupJob = true;
   }
 
+  public void setSetupTask() {
+    setupJob = true; 
+  }
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -253,6 +257,7 @@ abstract class Task implements Writable, Configurable {
     skipRanges.write(out);
     out.writeBoolean(skipping);
     out.writeBoolean(cleanupJob);
+    out.writeBoolean(setupJob);
     out.writeBoolean(writeSkipRecs);
   }
   public void readFields(DataInput in) throws IOException {
@@ -266,6 +271,7 @@ abstract class Task implements Writable, Configurable {
     currentRecStartIndex = currentRecIndexIterator.next();
     skipping = in.readBoolean();
     cleanupJob = in.readBoolean();
+    setupJob = in.readBoolean();
     writeSkipRecs = in.readBoolean();
   }
 
@@ -716,6 +722,14 @@ abstract class Task implements Writable, Configurable {
     getProgress().setStatus("cleanup");
     // do the cleanup
     conf.getOutputCommitter().cleanupJob(jobContext);
+    done(umbilical);
+  }
+
+  protected void runSetupJob(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    // do the setup
+    getProgress().setStatus("setup");
+    conf.getOutputCommitter().setupJob(jobContext);
     done(umbilical);
   }
   

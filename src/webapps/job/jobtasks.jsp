@@ -21,7 +21,7 @@
   }
   String type = request.getParameter("type");
   String pagenum = request.getParameter("pagenum");
-  TaskInProgress[] tasks;
+  TaskInProgress[] tasks = null;
   String state = request.getParameter("state");
   state = (state!=null) ? state : "all";
   int pnum = Integer.parseInt(pagenum);
@@ -42,9 +42,12 @@
   else if ("reduce".equals(type)) {
     reports = (job != null) ? tracker.getReduceTaskReports(jobidObj) : null;
     tasks = (job != null) ? job.getReduceTasks() : null;
-  } else {
+  } else if ("cleanup".equals(type)) {
     reports = (job != null) ? tracker.getCleanupTaskReports(jobidObj) : null;
     tasks = (job != null) ? job.getCleanupTasks() : null;
+  } else if ("setup".equals(type)) {
+    reports = (job != null) ? tracker.getSetupTaskReports(jobidObj) : null;
+    tasks = (job != null) ? job.getSetupTasks() : null;
   }
 %>
 

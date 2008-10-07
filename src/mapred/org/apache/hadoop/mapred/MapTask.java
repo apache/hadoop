@@ -283,6 +283,10 @@ class MapTask extends Task {
       runCleanup(umbilical);
       return;
     }
+    if (setupJob) {
+      runSetupJob(umbilical);
+      return;
+    }
 
     int numReduceTasks = conf.getNumReduceTasks();
     LOG.info("numReduceTasks: " + numReduceTasks);

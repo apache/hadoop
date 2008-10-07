@@ -47,8 +47,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             and getAllJobs(queue) as a part of HADOOP-3930
    * Version 14: Added setPriority for HADOOP-4124
    * Version 15: Added KILLED status to JobStatus as part of HADOOP-3924            
+   * Version 16: Added getSetupTaskReports and 
+   *             setupProgress to JobStatus as part of HADOOP-4261           
    */
-  public static final long versionID = 15L;
+  public static final long versionID = 16L;
 
   /**
    * Allocate a name for the job.
@@ -121,6 +123,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Grab a bunch of info on the cleanup tasks that make up the job
    */
   public TaskReport[] getCleanupTaskReports(JobID jobid) throws IOException;
+
+  /**
+   * Grab a bunch of info on the setup tasks that make up the job
+   */
+  public TaskReport[] getSetupTaskReports(JobID jobid) throws IOException;
 
   /**
    * A MapReduce system always operates on a single filesystem.  This 
