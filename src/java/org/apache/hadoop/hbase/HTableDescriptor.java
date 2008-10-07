@@ -38,22 +38,6 @@ import org.apache.hadoop.io.WritableComparable;
  * column families.
  */
 public class HTableDescriptor implements WritableComparable {
-  /** Table descriptor for <core>-ROOT-</code> catalog table */
-  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
-      HConstants.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-          1, HColumnDescriptor.CompressionType.NONE, false, false,
-          Integer.MAX_VALUE, HConstants.FOREVER, false) });
-  
-  /** Table descriptor for <code>.META.</code> catalog table */
-  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
-      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-              HColumnDescriptor.CompressionType.NONE, false, false,
-              Integer.MAX_VALUE, HConstants.FOREVER, false),
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
-              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -68,31 +52,23 @@ public class HTableDescriptor implements WritableComparable {
 
   public static final String FAMILIES = "FAMILIES";
   public static final ImmutableBytesWritable FAMILIES_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(FAMILIES));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(FAMILIES));;
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   public static final ImmutableBytesWritable MAX_FILESIZE_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes("MAX_FILESIZE"));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
   public static final String READONLY = "READONLY";
   public static final ImmutableBytesWritable READONLY_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes("READONLY"));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(READONLY));
   public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
   public static final ImmutableBytesWritable MEMCACHE_FLUSHSIZE_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(MEMCACHE_FLUSHSIZE));
   public static final String IS_ROOT = "IS_ROOT";
   public static final ImmutableBytesWritable IS_ROOT_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes("IS_ROOT"));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
   public static final String IS_META = "IS_META";
   public static final ImmutableBytesWritable IS_META_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes("IS_META"));
-  
-  public static final ImmutableBytesWritable IN_MEMORY_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(HConstants.IN_MEMORY));
-  
+    new ImmutableBytesWritable(Bytes.toBytes(IS_META));
+
   // The below are ugly but better than creating them each time till we
   // replace booleans being saved as Strings with plain booleans.  Need a
   // migration script to do this.  TODO.
@@ -173,9 +149,9 @@ public class HTableDescriptor implements WritableComparable {
    */
   public HTableDescriptor(final byte [] name) {
     super();
+    setMetaFlags(this.name);
     this.name = this.isMetaRegion() ? name: isLegalTableName(name);
     this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(this.name);
   }
 
   /**
@@ -230,7 +206,8 @@ public class HTableDescriptor implements WritableComparable {
   }
 
   private synchronized Boolean calculateIsMetaRegion() {
-    return isSomething(IS_META_KEY, false)? Boolean.TRUE: Boolean.FALSE;
+    byte [] value = getValue(IS_META_KEY);
+    return (value != null)? new Boolean(Bytes.toString(value)): Boolean.FALSE;
   }
   
   private boolean isSomething(final ImmutableBytesWritable key,
@@ -357,7 +334,10 @@ public class HTableDescriptor implements WritableComparable {
    * HRegionServer cache only
    */
   public boolean isInMemory() {
-    return isSomething(IN_MEMORY_KEY, DEFAULT_IN_MEMORY);
+    String value = getValue(HConstants.IN_MEMORY);
+    if (value != null)
+      return Boolean.valueOf(value);
+    return DEFAULT_IN_MEMORY;
   }
 
   /**
@@ -365,7 +345,7 @@ public class HTableDescriptor implements WritableComparable {
    * the HRegionServer cache only.
    */
   public void setInMemory(boolean inMemory) {
-    setValue(IN_MEMORY_KEY, inMemory? TRUE: FALSE);
+    setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
   /**
@@ -557,28 +537,18 @@ public class HTableDescriptor implements WritableComparable {
   // Comparable
 
   public int compareTo(Object o) {
-    return compareTo(this, (HTableDescriptor)o);
-  }
-  
-  /**
-   * @param left
-   * @param right
-   * @return 0 if equal, etc.
-   */
-  public static int compareTo(HTableDescriptor left, HTableDescriptor right) {
-    int result = Bytes.compareTo(left.getName(), right.getName());
-    Collection<HColumnDescriptor> leftFamilies = left.getFamilies();
-    Collection<HColumnDescriptor> rightFamilies = right.getFamilies();
+    HTableDescriptor other = (HTableDescriptor) o;
+    int result = Bytes.compareTo(this.name, other.name);
     if (result == 0) {
-      result = leftFamilies.size() - rightFamilies.size();
+      result = families.size() - other.families.size();
     }
-    if (result == 0 && leftFamilies.size() != rightFamilies.size()) {
-      result = Integer.valueOf(leftFamilies.size()).compareTo(
-          Integer.valueOf(rightFamilies.size()));
+    if (result == 0 && families.size() != other.families.size()) {
+      result = Integer.valueOf(families.size()).compareTo(
+          Integer.valueOf(other.families.size()));
     }
     if (result == 0) {
-      for (Iterator<HColumnDescriptor> it = leftFamilies.iterator(),
-          it2 = rightFamilies.iterator(); it.hasNext(); ) {
+      for (Iterator<HColumnDescriptor> it = families.values().iterator(),
+          it2 = other.families.values().iterator(); it.hasNext(); ) {
         result = it.next().compareTo(it2.next());
         if (result != 0) {
           break;
@@ -587,23 +557,13 @@ public class HTableDescriptor implements WritableComparable {
     }
     if (result == 0) {
       // punt on comparison for ordering, just calculate difference
-      result = leftFamilies.hashCode() - rightFamilies.hashCode();
+      result = this.values.hashCode() - other.values.hashCode();
       if (result < 0)
         result = -1;
       else if (result > 0)
         result = 1;
     }
     return result;
-  }
-  
-  /**
-   * Comparator used in UI jsp.
-   */
-  public static class HTableDescriptorComparator
-  implements java.util.Comparator<HTableDescriptor> {
-    public int compare(HTableDescriptor o1, HTableDescriptor o2) {
-      return compareTo(o1, o2);
-    }
   }
 
   /**
@@ -639,4 +599,21 @@ public class HTableDescriptor implements WritableComparable {
   public static Path getTableDir(Path rootdir, final byte [] tableName) {
     return new Path(rootdir, Bytes.toString(tableName));
   }
+
+  /** Table descriptor for <core>-ROOT-</code> catalog table */
+  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
+      HConstants.ROOT_TABLE_NAME,
+      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
+          1, HColumnDescriptor.CompressionType.NONE, false, false,
+          Integer.MAX_VALUE, HConstants.FOREVER, false) });
+  
+  /** Table descriptor for <code>.META.</code> catalog table */
+  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
+      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+              HColumnDescriptor.CompressionType.NONE, false, false,
+              Integer.MAX_VALUE, HConstants.FOREVER, false),
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
+              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
+              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
 }
