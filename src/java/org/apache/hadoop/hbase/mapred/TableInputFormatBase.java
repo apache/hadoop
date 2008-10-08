@@ -50,7 +50,7 @@ import org.apache.hadoop.util.StringUtils;
  * Subclasses may use other TableRecordReader implementations.
  * <p>
  * An example of a subclass:
- * <code>
+ * <pre>
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
  *     public void configure(JobConf job) {
@@ -70,7 +70,7 @@ import org.apache.hadoop.util.StringUtils;
  *     public void validateInput(JobConf job) throws IOException {
  *     }
  *  }
- * </code>
+ * </pre>
  */
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, RowResult> {
