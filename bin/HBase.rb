@@ -55,7 +55,9 @@ module HBase
       now = Time.now 
       @formatter.header()
       found = false
-      for t in @admin.listTables()
+      tables = @admin.listTables().to_a
+      tables.push(HTableDescriptor::META_TABLEDESC, HTableDescriptor::ROOT_TABLEDESC)
+      for t in tables
         if t.getNameAsString() == tableName
           @formatter.row([t.to_s])
           found = true

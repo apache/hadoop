@@ -95,6 +95,7 @@ public class HTableDescriptor implements WritableComparable {
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
     this.name = name.clone();
+    this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
@@ -108,6 +109,7 @@ public class HTableDescriptor implements WritableComparable {
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
        Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
     this.name = name.clone();
+    this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
