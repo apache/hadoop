@@ -175,17 +175,17 @@ HBASE SHELL COMMANDS:
 
            hbase> put 't1', 'r1', 'c1', 'value', ts1
 
- scan      Scan a table; pass table name and optionally an array of column
-           names OR an array of column names AND a dictionary of scanner 
-           specifications.  If you wish to include scanner specifications, 
-           you must also include an array of columns.  Scanner specifications 
-           may include one or more of the following: LIMIT, STARTROW, STOPROW,
-           or TIMESTAMP.  To scan all members of a column family, leave the 
-           qualifier empty as in 'col_family:'.  Examples:
+ scan      Scan a table; pass table name and optionally a dictionary of scanner 
+           specifications.  Scanner specifications may include one or more of 
+           the following: LIMIT, STARTROW, STOPROW, TIMESTAMP, or COLUMNS.  If 
+           no columns are specified, all columns will be scanned.  To scan all 
+           members of a column family, leave the qualifier empty as in 
+           'col_family:'.  Examples:
            
            hbase> scan '.META.'
-           hbase> scan '.META.', ['info:regioninfo']
-           hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10, STARTROW => 'xyz'}
+           hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
+           hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, \\
+             STARTROW => 'xyz'}
            
  version   Output this HBase version
 
@@ -271,8 +271,8 @@ def put(table, row, column, value, timestamp = nil)
   table(table).put(row, column, value, timestamp)
 end
   
-def scan(table, columns = [], args = {})
-  table(table).scan(columns, args)
+def scan(table, args = {})
+  table(table).scan(args)
 end
   
 def delete(table, row, column,

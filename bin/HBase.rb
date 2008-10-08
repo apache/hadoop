@@ -223,33 +223,33 @@ module HBase
        result
     end
 
-    def scan(columns, args = {})
+    def scan(args = {})
       now = Time.now 
-      if not columns or columns.length < 1
-        # Make up list of columns.
-        columns = getAllColumns()
-      end
-      if columns.class == String
-        columns = [columns]
-      elsif columns.class != Array
-        raise ArgumentError.new("Must supply columns")
-      end
-      cs = columns.to_java(java.lang.String)
       limit = -1
-      if args == nil or args.length <= 0
-        s = @table.getScanner(cs)
-      else
+      if args != nil and args.length > 0
         limit = args["LIMIT"] || -1 
         filter = args["FILTER"] || nil
         startrow = args["STARTROW"] || ""
         stoprow = args["STOPROW"] || nil
         timestamp = args["TIMESTAMP"] || HConstants::LATEST_TIMESTAMP
+        columns = args["COLUMNS"] || getAllColumns()
+        
+        if columns.class == String
+          columns = [columns]
+        elsif columns.class != Array
+          raise ArgumentError.new("COLUMNS must be specified as a String or an Array")
+        end
+        cs = columns.to_java(java.lang.String)
+        
         if stoprow
           s = @table.getScanner(cs, startrow, stoprow, timestamp)
         else
           s = @table.getScanner(cs, startrow, timestamp, filter) 
         end
-      end 
+      else
+        columns = getAllColumns()
+        s = @table.getScanner(columns.to_java(java.lang.String))
+      end
       count = 0
       @formatter.header(["ROW", "COLUMN+CELL"])
       i = s.iterator()

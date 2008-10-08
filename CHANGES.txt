@@ -5,6 +5,8 @@ Release 0.19.0 - Unreleased
                (Doğacan Güney via Stack)
    HBASE-905   Remove V5 migration classes from 0.19.0 (Jean-Daniel Cryans via
                Jim Kellerman)
+   HBASE-852   Cannot scan all families in a row with a LIMIT, STARTROW, etc.
+               (Izaak Rubin via Stack)
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries
