@@ -867,6 +867,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4256. Removes Completed and Failed Job tables from 
     jobqueue_details.jsp. (Sreekanth Ramakrishnan via ddas)
 
+    HADOOP-4267. Occasional exceptions during shutting down HSQLDB is logged 
+    but not rethrown. (enis) 
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
