@@ -49,6 +49,7 @@ import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat;
 import org.apache.hadoop.mapred.lib.db.DBOutputFormat;
 import org.apache.hadoop.mapred.lib.db.DBWritable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.hsqldb.Server;
@@ -99,13 +100,22 @@ public class DBCountPageView extends Configured implements Tool {
     connection.setAutoCommit(false);
   }
 
-  private void shutdown() throws SQLException {
-    connection.commit();
-    connection.close();
-    
-    if(server != null) {
-      server.stop();
-      server.shutdown();
+  private void shutdown() {
+    try {
+      connection.commit();
+      connection.close();
+    }catch (Throwable ex) {
+      LOG.warn("Exception occurred while closing connection :"
+          + StringUtils.stringifyException(ex));
+    } finally {
+      try {
+        if(server != null) {
+          server.shutdown();
+        }
+      }catch (Throwable ex) {
+        LOG.warn("Exception occurred while shutting down HSQLDB :"
+            + StringUtils.stringifyException(ex));
+      }
     }
   }
 

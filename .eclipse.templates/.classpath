@@ -19,7 +19,7 @@
 	<classpathentry kind="lib" path="lib/commons-logging-1.0.4.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-api-1.0.4.jar"/>
 	<classpathentry kind="lib" path="lib/commons-net-1.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/hsqldb.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/jets3t-0.6.1.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-5.1.4.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-ext/commons-el.jar"/>
