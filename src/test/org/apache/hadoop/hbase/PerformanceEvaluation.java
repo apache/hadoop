@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -51,7 +52,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -71,12 +73,12 @@ import org.apache.log4j.Logger;
  * runs an individual client. Each client does about 1GB of data.
  */
 public class PerformanceEvaluation implements HConstants {
-  static final Logger LOG =
-    Logger.getLogger(PerformanceEvaluation.class.getName());
+  private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   
   private static final int ROW_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
+  
   static final byte [] COLUMN_NAME = Bytes.toBytes(COLUMN_FAMILY_STR + "data");
   
   protected static HTableDescriptor tableDescriptor;
@@ -102,6 +104,7 @@ public class PerformanceEvaluation implements HConstants {
   
   volatile HBaseConfiguration conf;
   private boolean miniCluster = false;
+  private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -223,10 +226,68 @@ public class PerformanceEvaluation implements HConstants {
   private void runNIsMoreThanOne(final String cmd)
   throws IOException {
     checkTable(new HBaseAdmin(conf));
-    
-    // Run a mapreduce job.  Run as many maps as asked-for clients.
-    // Before we start up the job, write out an input file with instruction
-    // per client regards which row they are to start on.
+    if (this.nomapred) {
+      doMultipleClients(cmd);
+    } else {
+      doMapReduce(cmd);
+    }
+  }
+  
+  /*
+   * Run all clients in this vm each to its own thread.
+   * @param cmd Command to run.
+   * @throws IOException
+   */
+  @SuppressWarnings("unused")
+  private void doMultipleClients(final String cmd) throws IOException {
+    final List<Thread> threads = new ArrayList<Thread>(this.N);
+    final int perClientRows = R/N;
+    for (int i = 0; i < this.N; i++) {
+      Thread t = new Thread (Integer.toString(i)) {
+        @Override
+        public void run() {
+          super.run();
+          PerformanceEvaluation pe = new PerformanceEvaluation(conf);
+          int index = Integer.parseInt(getName());
+          try {
+            long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
+               perClientRows, perClientRows,
+               new Status() {
+                  public void setStatus(final String msg) throws IOException {
+                    LOG.info("client-" + getName() + " " + msg);
+                  }
+                });
+            LOG.info("Finished " + getName() + " in " + elapsedTime +
+              "ms writing " + perClientRows + " rows");
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+      threads.add(t);
+    }
+    for (Thread t: threads) {
+      t.start();
+    }
+    for (Thread t: threads) {
+      while(t.isAlive()) {
+        try {
+          t.join();
+        } catch (InterruptedException e) {
+          LOG.debug("Interrupted, continuing" + e.toString());
+        }
+      }
+    }
+  }
+  
+  /*
+   * Run a mapreduce job.  Run as many maps as asked-for clients.
+   * Before we start up the job, write out an input file with instruction
+   * per client regards which row they are to start on.
+   * @param cmd Command to run.
+   * @throws IOException
+   */
+  private void doMapReduce(final String cmd) throws IOException {
     Path inputDir = writeInputFile(this.conf);
     this.conf.set(EvaluationMapTask.CMD_KEY, cmd);
     JobConf job = new JobConf(this.conf, this.getClass());
@@ -274,7 +335,7 @@ public class PerformanceEvaluation implements HConstants {
     }
     return subdir;
   }
-  
+
   /*
    * A test.
    * Subclass to particularize what happens per row.
@@ -559,7 +620,7 @@ public class PerformanceEvaluation implements HConstants {
     if (cmd.equals(RANDOM_READ_MEM)) {
       // For this one test, so all fits in memory, make R smaller (See
       // pg. 9 of BigTable paper).
-      R = (ONE_GB / 10) * N;
+      R = (this.R / 10) * N;
     }
     
     MiniHBaseCluster hbaseMiniCluster = null;
@@ -574,7 +635,6 @@ public class PerformanceEvaluation implements HConstants {
       conf.set(HConstants.HBASE_DIR, parentdir.toString());
       fs.mkdirs(parentdir);
       FSUtils.setVersion(fs, parentdir);
-      
       hbaseMiniCluster = new MiniHBaseCluster(this.conf, N);
     }
     
@@ -604,13 +664,17 @@ public class PerformanceEvaluation implements HConstants {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() +
-        "[--master=host:port] [--miniCluster] <command> <nclients>");
+        " [--master=HOST:PORT] \\");
+    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" master          Specify host and port of HBase " +
         "cluster master. If not present,");
     System.err.println("                 address is read from configuration");
     System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
+    System.err.println(" nomapred        Run multiple clients using threads " +
+      "(rather than use mapreduce)");
+    System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println();
     System.err.println("Command:");
     System.err.println(" randomRead      Run random read test");
@@ -643,7 +707,7 @@ public class PerformanceEvaluation implements HConstants {
     }
    
     // Set total number of rows to write.
-    R = ROWS_PER_GB * N;
+    this.R = this.R * N;
   }
   
   private int doCommandLine(final String[] args) {
@@ -675,6 +739,18 @@ public class PerformanceEvaluation implements HConstants {
           this.miniCluster = true;
           continue;
         }
+        
+        final String nmr = "--nomapred";
+        if (cmd.startsWith(nmr)) {
+          this.nomapred = true;
+          continue;
+        }
+        
+        final String rows = "--rows=";
+        if (cmd.startsWith(rows)) {
+          this.R = Integer.parseInt(cmd.substring(rows.length()));
+          continue;
+        }
        
         if (COMMANDS.contains(cmd)) {
           getArgs(i + 1, args);
@@ -699,6 +775,6 @@ public class PerformanceEvaluation implements HConstants {
   public static void main(final String[] args) {
     HBaseConfiguration c = new HBaseConfiguration();
     System.exit(new PerformanceEvaluation(c).
-      doCommandLine(args));
+    doCommandLine(args));
   }
 }

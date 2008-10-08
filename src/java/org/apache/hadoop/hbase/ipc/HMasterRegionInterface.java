@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 /**
  * HRegionServers interact with the HMasterRegionInterface to report on local 
  * goings-on and to obtain data-handling instructions from the HMaster.
+ * <p>Changes here need to be reflected in HbaseObjectWritable HbaseRPC#Invoker.
  */
 public interface HMasterRegionInterface extends VersionedProtocol {
   /**
@@ -38,8 +39,9 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    * MapWritable instead of a HbaseMapWritable as part of HBASE-82 changes.
    * Version 3 was when HMsg was refactored so it could carry optional
    * messages (HBASE-504).
+   * <p>HBASE-576 we moved this to 4.
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /**
    * Called when a region server first starts

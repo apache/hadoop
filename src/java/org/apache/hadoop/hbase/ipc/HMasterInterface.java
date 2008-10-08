@@ -38,8 +38,9 @@ public interface HMasterInterface extends VersionedProtocol {
    * -- HADOOP-2495 and then to 3 when we changed the RPC to send codes instead
    * of actual class names (HADOOP-2519).
    * <p>Version 4 when we moved to all byte arrays (HBASE-42).
+   * <p>Version 5  HBASE-576.
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();

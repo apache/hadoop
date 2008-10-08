@@ -26,6 +26,7 @@ Release 0.19.0 - Unreleased
                (Doğacan Güney via Stack)
    HBASE-908   Add approximate counting to CountingBloomFilter
                (Andrzej Bialecki via Stack)
+   HBASE-576   Investigate IPC performance
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

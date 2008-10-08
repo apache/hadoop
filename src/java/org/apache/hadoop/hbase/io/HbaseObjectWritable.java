@@ -126,6 +126,11 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(RowResult.class, code++);
     addToMap(HRegionInfo[].class, code++);
     addToMap(MapWritable.class, code++);
+    try {
+      addToMap(Class.forName("[Lorg.apache.hadoop.hbase.io.RowResult;"), code++);
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    }
   }
   
   private Class<?> declaredClass;

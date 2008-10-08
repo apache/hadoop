@@ -29,8 +29,10 @@ import org.apache.hadoop.hbase.io.RowResult;
  * 
  */
 public interface TransactionalRegionInterface extends HRegionInterface {
-  /** Interface version number */
-  public static final long versionID = 1L;
+  /** Interface version number
+   *  Moved to 2 for hbase-576.
+   */
+  public static final long versionID = 2L;
 
   /**
    * Sent to initiate a transaction.

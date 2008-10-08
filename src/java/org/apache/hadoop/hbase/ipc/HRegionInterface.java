@@ -37,8 +37,9 @@ public interface HRegionInterface extends VersionedProtocol {
   /**
    * Protocol version.
    * Upped to 5 when we added scanner caching
+   * <p>HBASE-576, we moved this to 6.
    */
-  public static final long versionID = 5L;
+  public static final long versionID = 6L;
 
   /** 
    * Get metainfo about an HRegion

@@ -59,7 +59,7 @@ public class TestCompare extends TestCase {
    */
   public void testHStoreKeyBorderCases() {
     HRegionInfo info = new HRegionInfo(new HTableDescriptor("testtable"),
-        HConstants.EMPTY_BYTE_ARRAY,HConstants.EMPTY_BYTE_ARRAY);
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
     HStoreKey rowA = new HStoreKey("testtable,www.hbase.org/,1234",
         "", Long.MAX_VALUE, info);
     HStoreKey rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
