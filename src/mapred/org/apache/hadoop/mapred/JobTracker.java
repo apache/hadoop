@@ -2721,5 +2721,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return (JobStatus[]) jobStatusList.toArray(
         new JobStatus[jobStatusList.size()]);
   }
+
+  /**
+   * Returns the confgiured maximum number of tasks for a single job
+   */
+  int getMaxTasksPerJob() {
+    return conf.getInt("mapred.jobtracker.maxtasks.per.job", -1);
+  }
   
 }
