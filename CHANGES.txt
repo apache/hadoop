@@ -522,6 +522,9 @@ Release 0.19.0 - Unreleased
     HADOOP-3638. Caches the iFile index files in memory to reduce seeks
     (Jothi Padmanabhan via ddas)
 
+    HADOOP-4225. FSEditLog.logOpenFile() should persist accessTime 
+    rather than modificationTime. (shv)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

@@ -970,7 +970,7 @@ public class FSEditLog {
       new UTF8(path), 
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogLong(newNode.getModificationTime()),
-      FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getAccessTime()),
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
