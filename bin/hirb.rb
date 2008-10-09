@@ -57,6 +57,10 @@ for arg in ARGV
   elsif arg == '-h' || arg == '--help'
     puts cmdline_help
     exit
+  else
+    # Presume it a script and try running it.  Will go on to run the shell unless
+    # script calls 'exit' or 'exit 0' or 'exit errcode'.
+    load(arg)
   end
 end
 for arg in found
