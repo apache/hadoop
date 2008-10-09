@@ -387,7 +387,7 @@ public class HStoreKey implements WritableComparable {
   throws ColumnNameParseException {
     int index = getFamilyDelimiterIndex(column);
     if (index <= 0) {
-      throw new ColumnNameParseException("No ':' delimiter between " +
+      throw new ColumnNameParseException("Missing ':' delimiter between " +
         "column family and qualifier in the passed column name <" +
         Bytes.toString(column) + ">");
     }
