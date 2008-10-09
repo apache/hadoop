@@ -968,6 +968,13 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.jobtracker.maxtasks.per.job</name>
+  <value>-1</value>
+  <description>The maximum number of tasks for a single job.
+  A value of -1 indicates that there is no maximum.  </description>
+</property>
+
+<property>
   <name>mapred.submit.replication</name>
   <value>10</value>
   <description>The replication level for submitted job files.  This

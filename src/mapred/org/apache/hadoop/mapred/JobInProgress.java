@@ -52,7 +52,7 @@ import org.apache.hadoop.net.Node;
  * ***********************************************************
  */
 class JobInProgress {
-  private static final Log LOG = LogFactory.getLog(JobInProgress.class);
+  static final Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
   JobStatus status;
@@ -363,6 +363,18 @@ class JobInProgress {
       splitFile.close();
     }
     numMapTasks = splits.length;
+
+
+    // if the number of splits is larger than a configured value
+    // then fail the job.
+    int maxTasks = jobtracker.getMaxTasksPerJob();
+    if (maxTasks > 0 && numMapTasks + numReduceTasks > maxTasks) {
+      throw new IOException(
+                "The number of tasks for this job " + 
+                (numMapTasks + numReduceTasks) +
+                " exceeds the configured limit " + maxTasks);
+    }
+
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
       inputLength += splits[i].getDataLength();
