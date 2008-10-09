@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /** 
@@ -110,7 +111,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         byte [] row = values.getRow();
         
         if (LOG.isDebugEnabled() && row != null) {
-          LOG.debug("shutdown scanner looking at " + row.toString());
+          LOG.debug("shutdown scanner looking at " + Bytes.toString(row));
         }
 
         // Check server name.  If null, be conservative and treat as though

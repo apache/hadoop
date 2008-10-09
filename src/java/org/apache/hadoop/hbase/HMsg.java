@@ -194,7 +194,7 @@ public class HMsg implements Writable {
       sb.append(this.info.getRegionNameAsString());
     }
     if (this.message != null && this.message.length > 0) {
-      sb.append(": " + this.message);
+      sb.append(": " + Bytes.toString(this.message));
     }
     return sb.toString();
   }
