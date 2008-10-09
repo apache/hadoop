@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HConstants;      //TODO: remove
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -33,9 +32,10 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Construct a Lucene document per row, which is consumed by IndexOutputFormat
@@ -43,8 +43,7 @@ import org.apache.lucene.document.Field;
  */
 public class IndexTableReduce extends MapReduceBase implements
     Reducer<ImmutableBytesWritable, RowResult, ImmutableBytesWritable, LuceneDocumentWrapper> {
-  private static final Logger LOG = Logger.getLogger(IndexTableReduce.class);
-
+  private static final Log LOG = LogFactory.getLog(IndexTableReduce.class);
   private IndexConfiguration indexConf;
 
   @Override

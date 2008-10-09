@@ -27,8 +27,6 @@ import java.util.Random;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -47,8 +45,8 @@ import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MultiSearcher;
@@ -82,8 +80,6 @@ public class TestTableIndex extends MultiRegionTable {
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
-    // Enable DEBUG-level MR logging.
-    Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
   }
 
   @Override

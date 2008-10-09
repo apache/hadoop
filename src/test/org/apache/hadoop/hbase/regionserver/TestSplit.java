@@ -24,14 +24,11 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -42,7 +39,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * split and manufactures odd-ball split scenarios.
  */
 public class TestSplit extends HBaseClusterTestCase {
-  @SuppressWarnings("hiding")
   static final Log LOG = LogFactory.getLog(TestSplit.class.getName());
   
   /** constructor */
@@ -64,10 +60,6 @@ public class TestSplit extends HBaseClusterTestCase {
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
-    
-    Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).
-      setLevel(Level.DEBUG);
   }
 
   /**

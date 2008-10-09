@@ -30,7 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * <p>
@@ -42,8 +43,8 @@ public class MapFilePerformanceEvaluation {
   private static final int ROW_LENGTH = 1000;
   private static final int ROW_COUNT = 1000000;
   
-  static final Logger LOG =
-    Logger.getLogger(MapFilePerformanceEvaluation.class.getName());
+  static final Log LOG =
+    LogFactory.getLog(MapFilePerformanceEvaluation.class.getName());
   
   static ImmutableBytesWritable format(final int i, ImmutableBytesWritable w) {
     String v = Integer.toString(i);

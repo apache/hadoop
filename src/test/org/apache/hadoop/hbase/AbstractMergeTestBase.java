@@ -27,12 +27,13 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /** Abstract base class for merge tests */
 public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
-  static final Logger LOG =
-    Logger.getLogger(AbstractMergeTestBase.class.getName());
+  static final Log LOG =
+    LogFactory.getLog(AbstractMergeTestBase.class.getName());
   protected static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   protected final Random rand = new Random();
   protected HTableDescriptor desc;

@@ -29,7 +29,8 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -44,7 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
 public class TestHRegion extends HBaseTestCase {
-  static final Logger LOG = Logger.getLogger(TestHRegion.class);
+  static final Log LOG = LogFactory.getLog(TestHRegion.class);
   
   /**
    * Since all the "tests" depend on the results of the previous test, they are

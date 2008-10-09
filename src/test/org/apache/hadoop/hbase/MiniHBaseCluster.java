@@ -22,7 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -33,8 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
  * each server.
  */
 public class MiniHBaseCluster implements HConstants {
-  static final Logger LOG =
-    Logger.getLogger(MiniHBaseCluster.class.getName());
+  static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   
   private HBaseConfiguration conf;
   private LocalHBaseCluster hbaseCluster;
