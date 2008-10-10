@@ -31,7 +31,7 @@ import java.io.File;
  * wouldn't have direct access to the associated TaskTracker.
  *  
  **/
-public class TaskTrackerInstrumentation  {
+class TaskTrackerInstrumentation  {
 
   protected final TaskTracker tt;
   

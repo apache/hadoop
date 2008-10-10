@@ -41,7 +41,7 @@ import org.apache.log4j.LogManager;
  * The main() for child processes. 
  */
 
-public class Child {
+class Child {
 
   public static final Log LOG =
     LogFactory.getLog(TaskTracker.class);

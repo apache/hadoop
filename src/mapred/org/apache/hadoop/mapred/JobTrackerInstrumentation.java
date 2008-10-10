@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.metrics.Updater;
-
-public class JobTrackerInstrumentation {
+class JobTrackerInstrumentation {
 
   protected final JobTracker tracker;
   
