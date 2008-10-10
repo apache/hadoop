@@ -1322,9 +1322,10 @@ public class DataNode extends Configured
       public void run() {
         for(int i = 0; i < blocks.length; i++) {
           try {
+            logRecoverBlock("NameNode", blocks[i], targets[i]);
             recoverBlock(blocks[i], targets[i], true);
           } catch (IOException e) {
-            LOG.warn("recoverBlocks, i=" + i, e);
+            LOG.warn("recoverBlocks FAILED, blocks[" + i + "]=" + blocks[i], e);
           }
         }
       }
@@ -1397,10 +1398,6 @@ public class DataNode extends Configured
       ongoingRecovery.put(block, block);
     }
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("block=" + block
-            + ", datanodeids=" + Arrays.asList(datanodeids));
-      }
       List<BlockRecord> syncList = new ArrayList<BlockRecord>();
       long minlength = Long.MAX_VALUE;
       int errorCount = 0;
@@ -1480,22 +1477,31 @@ public class DataNode extends Configured
       }
       return new LocatedBlock(newblock, info); // success
     }
-    return null; // failed
+
+    //failed
+    StringBuilder b = new StringBuilder();
+    for(BlockRecord r : syncList) {
+      b.append("\n  " + r.id);
+    }
+    throw new IOException("Cannot recover " + block + ", none of these "
+        + syncList.size() + " datanodes success {" + b + "\n}");
   }
   
   // ClientDataNodeProtocol implementation
   /** {@inheritDoc} */
   public LocatedBlock recoverBlock(Block block, DatanodeInfo[] targets
       ) throws IOException {
-    StringBuilder msg = new StringBuilder();
-    for (int i = 0; i < targets.length; i++) {
-      msg.append(targets[i].getName());
-      if (i < targets.length - 1) {
-        msg.append(",");
-      }
-    }
-    LOG.info("Client invoking recoverBlock for block " + block +
-             " on datanodes " + msg.toString());
+    logRecoverBlock("Client", block, targets);
     return recoverBlock(block, targets, false);
+  }
+
+  private static void logRecoverBlock(String who,
+      Block block, DatanodeID[] targets) {
+    StringBuilder msg = new StringBuilder(targets[0].getName());
+    for (int i = 1; i < targets.length; i++) {
+      msg.append(", " + targets[i].getName());
+    }
+    LOG.info(who + " calls recoverBlock(block=" + block
+        + ", targets=[" + msg + "])");
   }
 }

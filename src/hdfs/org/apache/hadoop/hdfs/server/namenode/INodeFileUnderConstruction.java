@@ -31,6 +31,7 @@ public class INodeFileUnderConstruction extends INodeFile {
 
   private int primaryNodeIndex = -1; //the node working on lease recovery
   private DatanodeDescriptor[] targets = null;   //locations for last block
+  private long lastRecoveryTime = 0;
   
   INodeFileUnderConstruction() {}
 
@@ -133,7 +134,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     targets = null;
   }
 
-  void setLastBlock(BlockInfo newblock, DatanodeDescriptor[] newtargets
+  synchronized void setLastBlock(BlockInfo newblock, DatanodeDescriptor[] newtargets
       ) throws IOException {
     if (blocks == null) {
       throw new IOException("Trying to update non-existant block (newblock="
@@ -141,6 +142,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     }
     blocks[blocks.length - 1] = newblock;
     setTargets(newtargets);
+    lastRecoveryTime = 0;
   }
 
   /**
@@ -167,5 +169,17 @@ public class INodeFileUnderConstruction extends INodeFile {
         return;
       }
     }
+  }
+  
+  /**
+   * Update lastRecoveryTime if expired.
+   * @return true if lastRecoveryTimeis updated. 
+   */
+  synchronized boolean setLastRecoveryTime(long now) {
+    boolean expired = now - lastRecoveryTime > NameNode.LEASE_RECOVER_PERIOD;
+    if (expired) {
+      lastRecoveryTime = now;
+    }
+    return expired;
   }
 }
