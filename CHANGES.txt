@@ -882,7 +882,10 @@ Release 0.19.0 - Unreleased
     pre-configured maximum value. (dhruba)
 
     HADOOP-4288. Fixes a NPE problem in CapacityScheduler. 
-   (Amar Kamat via ddas)
+    (Amar Kamat via ddas)
+
+    HADOOP-3883. Limit namenode to assign at most one generation stamp for
+    a particular block within a short period. (szetszwo)
 
 Release 0.18.2 - Unreleased
 
