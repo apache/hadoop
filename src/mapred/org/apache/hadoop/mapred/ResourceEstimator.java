@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.util.concurrent.atomic.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -29,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
  * There is one ResourceEstimator per JobInProgress
  *
  */
-public class ResourceEstimator {
+class ResourceEstimator {
 
   //Log with JobInProgress
   private static final Log LOG = LogFactory.getLog(

@@ -525,6 +525,11 @@ Release 0.19.0 - Unreleased
     HADOOP-4225. FSEditLog.logOpenFile() should persist accessTime 
     rather than modificationTime. (shv)
 
+    HADOOP-4380. Made several new classes (Child, JVMId, 
+    JobTrackerInstrumentation, QueueManager, ResourceEstimator, 
+    TaskTrackerInstrumentation, and TaskTrackerMetricsInst) in 
+    org.apache.hadoop.mapred  package private instead of public. (omalley)
+
   BUG FIXES
 
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 

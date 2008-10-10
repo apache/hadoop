@@ -23,7 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.text.NumberFormat;
 
-public class JVMId extends ID {
+class JVMId extends ID {
   boolean isMap;
   JobID jobId;
   private static final String JVM = "jvm";

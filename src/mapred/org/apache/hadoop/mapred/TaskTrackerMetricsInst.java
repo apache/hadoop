@@ -24,7 +24,8 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
   
-public class TaskTrackerMetricsInst extends TaskTrackerInstrumentation implements Updater {
+class TaskTrackerMetricsInst extends TaskTrackerInstrumentation 
+                             implements Updater {
   private final MetricsRecord metricsRecord;
   private int numCompletedTasks = 0;
   private int timedoutTasks = 0;

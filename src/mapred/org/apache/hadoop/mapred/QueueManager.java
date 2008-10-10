@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
@@ -45,7 +44,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * queues. Where such a case exists, the queue name must be used to link 
  * the common properties with the scheduler specific ones.  
  */
-public class QueueManager {
+class QueueManager {
   
   private static final Log LOG = LogFactory.getLog(QueueManager.class);
   
