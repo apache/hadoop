@@ -543,12 +543,15 @@ class CapacityTaskScheduler extends TaskScheduler {
       // update user-specific info
       Integer i = qsi.numJobsByUser.get(job.getProfile().getUser());
       if (null == i) {
-        qsi.numJobsByUser.put(job.getProfile().getUser(), 1);
+        i = 1;
         qsi.numRunningTasksByUser.put(job.getProfile().getUser(), 0);
       }
       else {
         i++;
       }
+      qsi.numJobsByUser.put(job.getProfile().getUser(), i);
+      LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
+                + job.getProfile().getUser() + ", user now has " + i + " jobs");
     }
     void jobRemoved(JobInProgress job) {
       // update qsi 
@@ -566,7 +569,9 @@ class CapacityTaskScheduler extends TaskScheduler {
         LOG.debug("No more jobs for user, number of users = " + qsi.numJobsByUser.size());
       }
       else {
-        LOG.debug("User still has jobs, number of users = " + qsi.numJobsByUser.size());
+        qsi.numJobsByUser.put(job.getProfile().getUser(), i);
+        LOG.debug("User still has " + i + " jobs, number of users = "
+                  + qsi.numJobsByUser.size());
       }
     }
 
