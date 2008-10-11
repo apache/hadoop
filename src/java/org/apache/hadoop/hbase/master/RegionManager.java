@@ -178,16 +178,19 @@ class RegionManager implements HConstants {
       // worked on elsewhere.
       Set<HRegionInfo> regionsToAssign = regionsAwaitingAssignment();
       if (regionsToAssign.size() == 0) {
-        // There are no regions waiting to be assigned. This is an opportunity
-        // for us to check if this server is overloaded. 
-        double avgLoad = master.serverManager.getAverageLoad();
-        if (avgLoad > 2.0 && thisServersLoad.getNumberOfRegions() > avgLoad) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server " + serverName + " is overloaded. Server load: " + 
-              thisServersLoad.getNumberOfRegions() + " avg: " + avgLoad);
+        // There are no regions waiting to be assigned.
+        if (allRegionsAssigned()) {
+          // We only do load balancing once all regions are assigned.
+          // This prevents churn while the cluster is starting up.
+          double avgLoad = master.serverManager.getAverageLoad();
+          if (avgLoad > 2.0 && thisServersLoad.getNumberOfRegions() > avgLoad) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Server " + serverName + " is overloaded. Server load: " + 
+                  thisServersLoad.getNumberOfRegions() + " avg: " + avgLoad);
+            }
+            unassignSomeRegions(thisServersLoad, avgLoad, mostLoadedRegions, 
+                returnMsgs);
           }
-          unassignSomeRegions(thisServersLoad, avgLoad, mostLoadedRegions, 
-            returnMsgs);
         }
       } else {
         // if there's only one server, just give it all the regions
@@ -840,6 +843,15 @@ class RegionManager implements HConstants {
    */  
   public boolean isInitialMetaScanComplete() {
     return metaScannerThread.isInitialScanComplete();
+  }
+  
+  /** 
+   * @return true if the initial meta scan is complete and there are no
+   * unassigned or pending regions
+   */
+  public boolean allRegionsAssigned() {
+    return isInitialMetaScanComplete() && unassignedRegions.size() == 0 &&
+      pendingRegions.size() == 0;
   }
   
   /** 

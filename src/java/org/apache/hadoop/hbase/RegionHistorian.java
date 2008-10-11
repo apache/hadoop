@@ -86,7 +86,7 @@ public class RegionHistorian implements HConstants {
    * Get the RegionHistorian Singleton instance.
    * @return The region historian
    */
-  public static RegionHistorian getInstance() {
+  public synchronized static RegionHistorian getInstance() {
     if (historian == null) {
       historian = new RegionHistorian();
     }
