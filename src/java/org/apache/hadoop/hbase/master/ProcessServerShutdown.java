@@ -133,8 +133,9 @@ class ProcessServerShutdown extends RegionServerOperation {
 
         if (info.isMetaTable()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("removing meta region " + info.getRegionName() +
-                " from online meta regions");
+            LOG.debug("removing meta region " +
+              Bytes.toString(info.getRegionName()) +
+              " from online meta regions");
           }
           master.regionManager.offlineMetaRegion(info.getStartKey());
         }
@@ -171,8 +172,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() +
-          " rows with empty HRegionInfo while scanning meta region " +
-          regionName);
+        " rows with empty HRegionInfo while scanning meta region " +
+        Bytes.toString(regionName));
       master.deleteEmptyMetaRows(server, regionName, emptyRows);
     }
     // Update server in root/meta entries
@@ -214,8 +215,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process server shutdown scanning " + m.getRegionName() +
-            " on " + m.getServer());
+        LOG.debug("process server shutdown scanning " +
+          Bytes.toString(m.getRegionName()) + " on " + m.getServer());
       }
       long scannerId =
         server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
@@ -293,7 +294,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("process server shutdown finished scanning " +
-            r.getRegionName() + " on " + r.getServer());
+          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
     }
     master.regionManager.allRegionsClosed(deadServerName);
