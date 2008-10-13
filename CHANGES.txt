@@ -899,6 +899,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4314. Simulated datanodes should not include blocks that are still
     being written in their block report. (Raghu Angadi)
 
+    HADOOP-4228. dfs datanoe metrics, bytes_read and bytes_written, overflow
+    due to incorrect type used. (hairong)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

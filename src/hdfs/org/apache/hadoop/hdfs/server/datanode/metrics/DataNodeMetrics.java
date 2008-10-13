@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 
@@ -44,10 +45,10 @@ public class DataNodeMetrics implements Updater {
   private DataNodeStatistics datanodeStats;
   
   
-  public MetricsTimeVaryingInt bytesWritten = 
-                      new MetricsTimeVaryingInt("bytes_written");
-  public MetricsTimeVaryingInt bytesRead = 
-                      new MetricsTimeVaryingInt("bytes_read");
+  public MetricsLongValue bytesWritten = 
+                      new MetricsLongValue("bytes_written");
+  public MetricsLongValue bytesRead = 
+                      new MetricsLongValue("bytes_read");
   public MetricsTimeVaryingInt blocksWritten = 
                       new MetricsTimeVaryingInt("blocks_written");
   public MetricsTimeVaryingInt blocksRead = 
