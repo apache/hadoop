@@ -830,9 +830,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     do {
       // get block locations
       int numNodes = blocksMap.numNodes(blocks[curBlk]);
-      Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(
-                                                      blocks[curBlk]);
-      int numCorruptNodes = (nodesCorrupt == null) ? 0 : nodesCorrupt.size();
+      int numCorruptNodes = countNodes(blocks[curBlk]).corruptReplicas();
+      int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blocks[curBlk]); 
+      if (numCorruptNodes != numCorruptReplicas) {
+        LOG.warn("Inconsistent number of corrupt replicas for " + 
+            blocks[curBlk] + "blockMap has " + numCorruptNodes + 
+            " but corrupt replicas map has " + numCorruptReplicas);
+      }
       boolean blockCorrupt = (numCorruptNodes == numNodes);
       int numMachineSet = blockCorrupt ? numNodes : 
                             (numNodes - numCorruptNodes);
@@ -842,8 +846,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         for(Iterator<DatanodeDescriptor> it = 
             blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
           DatanodeDescriptor dn = it.next();
-          boolean replicaCorrupt = ((nodesCorrupt != null) &&
-                                    nodesCorrupt.contains(dn));
+          boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blocks[curBlk], dn);
           if (blockCorrupt || (!blockCorrupt && !replicaCorrupt))
             machineSet[numNodes++] = dn;
         }
@@ -1526,20 +1529,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             " as corrupt because datanode " + dn.getName() +
                             " does not exist. ");
     }
-    // Check if the block is associated with an inode, if not 
-    // ignore the request for now. This could happen when BlockScanner
-    // thread of Datanode reports bad block before Block reports are sent
-    // by the Datanode on startup
-    if (blocksMap.getINode(blk) == null) 
+    
+    if (!blocksMap.contains(blk, node)) {
+      // Check if the replica is in the blockMap, if not 
+      // ignore the request for now. This could happen when BlockScanner
+      // thread of Datanode reports bad block before Block reports are sent
+      // by the Datanode on startup
       NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
                                    "block " + blk + " could not be marked " +
                                    "as corrupt as it does not exists in " +
                                    "blocksMap");
-    else {
-      // Add this replica to corruptReplicas Map and 
-      // add the block to neededReplication 
-      corruptReplicas.addToCorruptReplicasMap(blk, node);
-      updateNeededReplications(blk, 0, 1);
+    } else {
+      INodeFile inode = blocksMap.getINode(blk);
+      assert inode!=null : (blk + " in blocksMap must belongs to a file.");
+      if (countNodes(blk).liveReplicas()>inode.getReplication()) {
+        // the block is over-replicated so invalidate the replicas immediately
+        invalidateBlock(blk, node);
+      } else {
+        // Add this replica to corruptReplicas Map and 
+        // add the block to neededReplication 
+        corruptReplicas.addToCorruptReplicasMap(blk, node);
+        updateNeededReplications(blk, -1, 0);
+      }
     }
   }
 
@@ -2921,8 +2932,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     // If the file replication has reached desired value
     // we can remove any corrupt replicas the block may have
-    int corruptReplicasCount = num.corruptReplicas();
-    if ((corruptReplicasCount > 0) && (numLiveReplicas == fileReplication)) 
+    int corruptReplicasCount = corruptReplicas.numCorruptReplicas(block); 
+    int numCorruptNodes = num.corruptReplicas();
+    if ( numCorruptNodes != corruptReplicasCount) {
+      LOG.warn("Inconsistent number of corrupt replicas for " + 
+          block + "blockMap has " + numCorruptNodes + 
+          " but corrupt replicas map has " + corruptReplicasCount);
+    }
+    if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication)) 
       invalidateCorruptReplicas(block);
     return block;
   }
@@ -3187,9 +3204,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         excessReplicateMap.remove(node.getStorageID());
       }
     }
-    // If block is removed from blocksMap, remove it from corruptReplicas
-    if (fileINode == null)
-      corruptReplicas.removeFromCorruptReplicasMap(block);
+    // Remove the replica from corruptReplicas
+    corruptReplicas.removeFromCorruptReplicasMap(block, node);
   }
 
   /**

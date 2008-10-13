@@ -907,6 +907,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4395. The FSEditLog loading is incorrect for the case OP_SET_OWNER.
     (szetszwo)
 
+    HADOOP-4351. FSNamesystem.getBlockLocationsInternal throws
+    ArrayIndexOutOfBoundsException. (hairong)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

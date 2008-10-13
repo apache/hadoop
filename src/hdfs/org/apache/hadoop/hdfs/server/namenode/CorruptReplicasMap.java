@@ -83,6 +83,28 @@ public class CorruptReplicasMap{
   }
 
   /**
+   * Remove the block at the given datanode from CorruptBlockMap
+   * @param blk block to be removed
+   * @param datanode datanode where the block is located
+   * @return true if the removal is successful; 
+             false if the replica is not in the map
+   */ 
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
+    Collection<DatanodeDescriptor> datanodes = corruptReplicasMap.get(blk);
+    if (datanodes==null)
+      return false;
+    if (datanodes.remove(datanode)) { // remove the replicas
+      if (datanodes.isEmpty()) {
+        // remove the block if there is no more corrupted replicas
+        corruptReplicasMap.remove(blk);
+      }
+      return true;
+    }
+    return false;
+  }
+    
+
+  /**
    * Get Nodes which have corrupt replicas of Block
    * 
    * @param blk Block for which nodes are requested
