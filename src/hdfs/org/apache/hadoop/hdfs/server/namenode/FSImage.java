@@ -1540,6 +1540,11 @@ public class FSImage extends Storage {
     return U_STR.toString();
   }
 
+  static String readString_EmptyAsNull(DataInputStream in) throws IOException {
+    final String s = readString(in);
+    return s.isEmpty()? null: s;
+  }
+
   static byte[] readBytes(DataInputStream in) throws IOException {
     U_STR.readFields(in);
     int len = U_STR.getLength();

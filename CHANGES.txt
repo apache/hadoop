@@ -902,6 +902,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4228. dfs datanoe metrics, bytes_read and bytes_written, overflow
     due to incorrect type used. (hairong)
 
+    HADOOP-4395. The FSEditLog loading is incorrect for the case OP_SET_OWNER.
+    (szetszwo)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

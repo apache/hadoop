@@ -732,7 +732,8 @@ public class FSEditLog {
             throw new IOException("Unexpected opcode " + opcode
                                   + " for version " + logVersion);
           fsDir.unprotectedSetOwner(FSImage.readString(in),
-              FSImage.readString(in), FSImage.readString(in));
+              FSImage.readString_EmptyAsNull(in),
+              FSImage.readString_EmptyAsNull(in));
           break;
         }
         case OP_SET_NS_QUOTA: {
