@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.fs.permission;
 
-/**
- * An exception class for access control related issues.
- */
-public class AccessControlException extends java.io.IOException {
+import java.io.IOException;
+
+@Deprecated
+public class AccessControlException extends IOException {
   //Required by {@link java.io.Serializable}.
   private static final long serialVersionUID = 1L;
 
@@ -37,5 +37,7 @@ public class AccessControlException extends java.io.IOException {
    * with the specified detail message.
    * @param s the detail message.
    */
-  public AccessControlException(String s) {super(s);}
+  public AccessControlException(String s) {
+    super(s);
+  }
 }

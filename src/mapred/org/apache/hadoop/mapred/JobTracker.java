@@ -49,7 +49,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.AccessControlException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -64,7 +63,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
-import org.apache.hadoop.security.AccessControlIOException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -2243,7 +2242,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // get the queue
     String queue = job.getProfile().getQueueName();
     if (!queueManager.hasAccess(queue, job, oper, ugi)) {
-      throw new AccessControlIOException("User " 
+      throw new AccessControlException("User " 
                             + ugi.getUserName() 
                             + " cannot perform "
                             + "operation " + oper + " on queue " + queue);
