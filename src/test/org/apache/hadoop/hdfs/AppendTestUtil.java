@@ -17,10 +17,21 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Random;
+
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for append-related tests */ 
 class AppendTestUtil {
@@ -61,5 +72,48 @@ class AppendTestUtil {
     final Random rand = new Random(seed);
     rand.nextBytes(b);
     return b;
+  }
+
+  static void sleep(long ms) {
+    try {
+      Thread.sleep(ms);
+    } catch (InterruptedException e) {
+      LOG.info("ms=" + ms, e);
+    }
+  }
+
+  static FileSystem createHdfsWithDifferentUsername(Configuration conf
+      ) throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    String username = UserGroupInformation.getCurrentUGI().getUserName()+"_XXX";
+    UnixUserGroupInformation.saveToConf(conf2,
+        UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        new UnixUserGroupInformation(username, new String[]{"supergroup"}));
+    return FileSystem.get(conf2);
+  }
+
+  static void write(OutputStream out, int offset, int length) throws IOException {
+    final byte[] bytes = new byte[length];
+    for(int i = 0; i < length; i++) {
+      bytes[i] = (byte)(offset + i);
+    }
+    out.write(bytes);
+  }
+  
+  static void check(FileSystem fs, Path p, long length) throws IOException {
+    int i = -1;
+    try {
+      final FileStatus status = fs.getFileStatus(p);
+      TestCase.assertEquals(length, status.getLen());
+      InputStream in = fs.open(p);
+      for(i++; i < length; i++) {
+        TestCase.assertEquals((byte)i, (byte)in.read());  
+      }
+      i = -(int)length;
+      TestCase.assertEquals(-1, in.read()); //EOF  
+      in.close();
+    } catch(IOException ioe) {
+      throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
+    }
   }
 }
