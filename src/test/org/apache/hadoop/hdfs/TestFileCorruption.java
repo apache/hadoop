@@ -19,12 +19,19 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.*;
+import java.util.ArrayList;
+
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 /**
  * A JUnit test for corrupted file handling.
@@ -92,5 +99,82 @@ public class TestFileCorruption extends TestCase {
       //expect this exception but let any NPE get thrown
     }
     fs.delete(file, true);
+  }
+  
+  /** Test the case that a replica is reported corrupt while it is not
+   * in blocksMap. Make sure that ArrayIndexOutOfBounds does not thrown.
+   * See Hadoop-4351.
+   */
+  public void testArrayOutOfBoundsException() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      cluster.waitActive();
+      
+      FileSystem fs = cluster.getFileSystem();
+      final Path FILE_PATH = new Path("/tmp.txt");
+      final long FILE_LEN = 1L;
+      DFSTestUtil.createFile(fs, FILE_PATH, FILE_LEN, (short)2, 1L);
+      
+      // get the block
+      File dataDir = new File(cluster.getDataDirectory(),
+          "data1/current");
+      Block blk = getBlock(dataDir);
+      if (blk == null) {
+        blk = getBlock(new File(cluster.getDataDirectory(),
+          "dfs/data/data2/current"));
+      }
+      assertFalse(blk==null);
+
+      // start a third datanode
+      cluster.startDataNodes(conf, 1, true, null, null);
+      ArrayList<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 3);
+      DataNode dataNode = datanodes.get(2);
+      
+      // report corrupted block by the third datanode
+      cluster.getNameNode().namesystem.markBlockAsCorrupt(blk, 
+          new DatanodeInfo(dataNode.dnRegistration ));
+      
+      // open the file
+      fs.open(FILE_PATH);
+      
+      //clean up
+      fs.delete(FILE_PATH, false);
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+    
+  }
+  
+  private Block getBlock(File dataDir) {
+    assertTrue("data directory does not exist", dataDir.exists());
+    File[] blocks = dataDir.listFiles();
+    assertTrue("Blocks do not exist in dataDir", (blocks != null) && (blocks.length > 0));
+
+    int idx = 0;
+    String blockFileName = null;
+    for (; idx < blocks.length; idx++) {
+      blockFileName = blocks[idx].getName();
+      if (blockFileName.startsWith("blk_") && !blockFileName.endsWith(".meta")) {
+        break;
+      }
+    }
+    if (blockFileName == null) {
+      return null;
+    }
+    long blockId = Long.parseLong(blockFileName.substring("blk_".length()));
+    long blockTimeStamp = GenerationStamp.WILDCARD_STAMP;
+    for (idx=0; idx < blocks.length; idx++) {
+      String fileName = blocks[idx].getName();
+      if (fileName.startsWith(blockFileName) && fileName.endsWith(".meta")) {
+        int startIndex = blockFileName.length()+1;
+        int endIndex = fileName.length() - ".meta".length();
+        blockTimeStamp = Long.parseLong(fileName.substring(startIndex, endIndex));
+        break;
+      }
+    }
+    return new Block(blockId, blocks[idx].length(), blockTimeStamp);
   }
 }
