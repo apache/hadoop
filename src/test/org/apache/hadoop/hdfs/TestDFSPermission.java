@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import junit.framework.AssertionFailedError;
