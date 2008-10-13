@@ -405,4 +405,18 @@ class BlocksMap {
   boolean contains(Block block) {
     return map.containsKey(block);
   }
+  
+  /**
+   * Check if the replica at the given datanode exists in map
+   */
+  boolean contains(Block block, DatanodeDescriptor datanode) {
+    BlockInfo info = map.get(block);
+    if (info == null)
+      return false;
+    
+    if (-1 == info.findDatanode(datanode))
+      return false;
+    
+    return true;
+  }
 }
