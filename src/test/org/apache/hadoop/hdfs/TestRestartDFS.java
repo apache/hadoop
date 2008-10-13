@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-import java.util.Random;
-import junit.framework.*;
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -31,30 +29,31 @@ import org.apache.hadoop.fs.Path;
  * A JUnit test for checking if restarting DFS preserves integrity.
  */
 public class TestRestartDFS extends TestCase {
-  
-  private static Configuration conf = new Configuration();
-
-  public TestRestartDFS(String testName) {
-    super(testName);
-  }
-
-  protected void setUp() throws Exception {
-  }
-
-  protected void tearDown() throws Exception {
-  }
-  
   /** check if DFS remains in proper condition after a restart */
   public void testRestartDFS() throws Exception {
+    final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 20, 3, 8*1024);
-    Path root = new Path("/");
-    long modificationTime;
+
+    final String dir = "/srcdat";
+    final Path rootpath = new Path("/");
+    final Path dirpath = new Path(dir);
+
+    long rootmtime;
+    FileStatus rootstatus;
+    FileStatus dirstatus;
+
     try {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem fs = cluster.getFileSystem();
-      files.createFiles(fs, "/srcdat");
-      modificationTime = fs.getFileStatus(root).getModificationTime();
+      files.createFiles(fs, dir);
+
+      rootmtime = fs.getFileStatus(rootpath).getModificationTime();
+      rootstatus = fs.getFileStatus(dirpath);
+      dirstatus = fs.getFileStatus(dirpath);
+
+      fs.setOwner(rootpath, rootstatus.getOwner() + "_XXX", null);
+      fs.setOwner(dirpath, null, dirstatus.getGroup() + "_XXX");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
@@ -62,11 +61,19 @@ public class TestRestartDFS extends TestCase {
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster(conf, 4, false, null);
       FileSystem fs = cluster.getFileSystem();
-      assertEquals(modificationTime,
-                   fs.getFileStatus(root).getModificationTime());
       assertTrue("Filesystem corrupted after restart.",
-                 files.checkFiles(fs, "/srcdat"));
-      files.cleanup(fs, "/srcdat");
+                 files.checkFiles(fs, dir));
+
+      final FileStatus newrootstatus = fs.getFileStatus(rootpath);
+      assertEquals(rootmtime, newrootstatus.getModificationTime());
+      assertEquals(rootstatus.getOwner() + "_XXX", newrootstatus.getOwner());
+      assertEquals(rootstatus.getGroup(), newrootstatus.getGroup());
+
+      final FileStatus newdirstatus = fs.getFileStatus(dirpath);
+      assertEquals(dirstatus.getOwner(), newdirstatus.getOwner());
+      assertEquals(dirstatus.getGroup() + "_XXX", newdirstatus.getGroup());
+
+      files.cleanup(fs, dir);
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
