@@ -9,6 +9,9 @@ Release 0.18.2 - Unreleased
     HADOOP-3614. Fix a bug that Datanode may use an old GenerationStamp to get
     meta file. (szetszwo)
 
+    HADOOP-4228. dfs datanoe metrics, bytes_read and bytes_written, overflow
+    due to incorrect type used. (hairong)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
