@@ -34,7 +34,7 @@ public class DataNodeStatistics implements DataNodeStatisticsMBean {
    * This constructs and registers the DataNodeStatisticsMBean
    * @param dataNodeMetrics - the metrics from which the mbean gets its info
    */
-  DataNodeStatistics(DataNodeMetrics dataNodeMetrics, String storageId) {
+  public DataNodeStatistics(DataNodeMetrics dataNodeMetrics, String storageId) {
     myMetrics = dataNodeMetrics;
     String serverName;
     if (storageId.equals("")) {// Temp fix for the uninitialized storage
@@ -92,10 +92,17 @@ public class DataNodeStatistics implements DataNodeStatisticsMBean {
   /**
    * @inheritDoc
    */
-  public int getBytesRead() {
-    return myMetrics.bytesRead.getPreviousIntervalValue();
+  public long getBytesRead() {
+    return myMetrics.bytesRead.get();
   }
 
+  /**
+   *   {@inheritDoc}
+   */
+  public long getBytesWritten() {
+    return myMetrics.bytesWritten.get();
+  }
+  
   /**
    * @inheritDoc
    */

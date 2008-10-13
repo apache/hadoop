@@ -45,10 +45,16 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 public interface DataNodeStatisticsMBean {
   
   /**
+   *   Number of bytes written in the last interval
+   * @return number of bytes written
+   */
+  long getBytesWritten();
+  
+  /**
    *   Number of bytes read in the last interval
    * @return number of bytes read
    */
-  int getBytesRead();
+  long getBytesRead();
   
   /**
    *   Number of blocks written in the last interval
