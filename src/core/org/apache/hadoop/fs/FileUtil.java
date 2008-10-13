@@ -189,7 +189,7 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
 
-    if (srcFS.isDirectory(src)) {
+    if (srcFS.getFileStatus(src).isDir()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
@@ -230,7 +230,7 @@ public class FileUtil {
                                   Configuration conf, String addString) throws IOException {
     dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
-    if (!srcFS.isDirectory(srcDir))
+    if (!srcFS.getFileStatus(srcDir).isDir())
       return false;
    
     OutputStream out = dstFS.create(dstFile);
@@ -305,7 +305,7 @@ public class FileUtil {
   public static boolean copy(FileSystem srcFS, Path src, 
                              File dst, boolean deleteSource,
                              Configuration conf) throws IOException {
-    if (srcFS.isDirectory(src)) {
+    if (srcFS.getFileStatus(src).isDir()) {
       if (!dst.mkdirs()) {
         return false;
       }
@@ -392,7 +392,7 @@ public class FileUtil {
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(File file) throws IOException {
-    return makeShellPath(file.toString());
+    return makeShellPath(file.getCanonicalPath());
   }
 
   /**
@@ -427,13 +427,13 @@ public class FileUtil {
    * @throws IOException
    */
   public static void unZip(File inFile, File unzipDir) throws IOException {
-    Enumeration entries;
+    Enumeration<? extends ZipEntry> entries;
     ZipFile zipFile = new ZipFile(inFile);
 
     try {
       entries = zipFile.entries();
       while (entries.hasMoreElements()) {
-        ZipEntry entry = (ZipEntry) entries.nextElement();
+        ZipEntry entry = entries.nextElement();
         if (!entry.isDirectory()) {
           InputStream in = zipFile.getInputStream(entry);
           try {
@@ -523,10 +523,11 @@ public class FileUtil {
   
     private static String[] hardLinkCommand;
     private static String[] getLinkCountCommand;
-    private static String osName = System.getProperty("os.name");
+    private static OSType osType;
     
     static {
-      switch(getOSType()) {
+      osType = getOSType();
+      switch(osType) {
       case OS_TYPE_WINXP:
         hardLinkCommand = new String[] {"fsutil","hardlink","create", null, null};
         getLinkCountCommand = new String[] {"stat","-c%h"};
@@ -547,8 +548,9 @@ public class FileUtil {
     }
 
     static private OSType getOSType() {
+      String osName = System.getProperty("os.name");
       if (osName.indexOf("Windows") >= 0 && 
-          (osName.indexOf("XpP") >= 0 || osName.indexOf("2003") >= 0))
+          (osName.indexOf("XP") >= 0 || osName.indexOf("2003") >= 0 || osName.indexOf("Vista") >= 0))
         return OSType.OS_TYPE_WINXP;
       else if (osName.indexOf("SunOS") >= 0)
          return OSType.OS_TYPE_SOLARIS;
@@ -564,8 +566,13 @@ public class FileUtil {
     public static void createHardLink(File target, 
                                       File linkName) throws IOException {
       int len = hardLinkCommand.length;
-      hardLinkCommand[len-2] = target.getCanonicalPath();
-      hardLinkCommand[len-1] = linkName.getCanonicalPath();
+      if (osType == OSType.OS_TYPE_WINXP) {
+       hardLinkCommand[len-1] = target.getCanonicalPath();
+       hardLinkCommand[len-2] = linkName.getCanonicalPath();
+      } else {
+       hardLinkCommand[len-2] = makeShellPath(target);
+       hardLinkCommand[len-1] = makeShellPath(linkName);
+      }
       // execute shell command
       Process process = Runtime.getRuntime().exec(hardLinkCommand);
       try {

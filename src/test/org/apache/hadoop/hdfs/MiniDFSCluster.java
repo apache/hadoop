@@ -31,9 +31,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
@@ -241,7 +239,7 @@ public class MiniDFSCluster {
       ioe.initCause(e);
       throw ioe;
     }
-    base_dir = new File(System.getProperty("test.build.data"), "dfs/");
+    base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");
     
     // Setup the NameNode configuration
@@ -579,12 +577,13 @@ public class MiniDFSCluster {
   boolean corruptBlockOnDataNode(int i, String blockName) throws Exception {
     Random random = new Random();
     boolean corrupted = false;
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File dataDir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/data");
     if (i < 0 || i >= dataNodes.size())
       return false;
     for (int dn = i*2; dn < i*2+2; dn++) {
-      File blockFile = new File(baseDir, "data" + (dn+1) + "/current/" +
+      File blockFile = new File(dataDir, "data" + (dn+1) + "/current/" +
                                 blockName);
+      System.out.println("Corrupting for: " + blockFile);
       if (blockFile.exists()) {
         // Corrupt replica by writing random bytes into replica
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
@@ -717,10 +716,9 @@ public class MiniDFSCluster {
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
-    DatanodeInfo[] dnInfos;
 
     // make sure all datanodes are alive
-    while((dnInfos = client.datanodeReport(DatanodeReportType.LIVE)).length
+    while(client.datanodeReport(DatanodeReportType.LIVE).length
         != numDataNodes) {
       try {
         Thread.sleep(500);
@@ -732,7 +730,7 @@ public class MiniDFSCluster {
   }
   
   public void formatDataNodeDirs() throws IOException {
-    base_dir = new File(System.getProperty("test.build.data"), "dfs/");
+    base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");
     if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
       throw new IOException("Cannot remove data directory: " + data_dir);

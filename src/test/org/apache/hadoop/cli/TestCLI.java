@@ -20,7 +20,6 @@ package org.apache.hadoop.cli;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Properties;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -36,14 +35,9 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Tests for the Command Line Interface (CLI)
@@ -60,6 +54,8 @@ public class TestCLI extends TestCase {
   // This can be useful populate the testConfig.xml file the first time
   // a new command is added
   public static final String TESTMODE_NOCOMPARE = "nocompare";
+  public static final String TEST_CACHE_DATA_DIR =
+    System.getProperty("test.cache.data", "build/test/cache");
   
   //By default, run the tests. The other mode is to run the commands and not
   // compare the output
@@ -86,9 +82,7 @@ public class TestCLI extends TestCase {
     
     if (testsFromConfigFile == null) {
       boolean success = false;
-      Properties props = System.getProperties();
-      testConfigFile = 
-        props.getProperty("test.cache.data") + File.separator + testConfigFile;
+      testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
       try {
         SAXParser p = (SAXParserFactory.newInstance()).newSAXParser();
         p.parse(testConfigFile, new TestConfigFileParser());
@@ -113,7 +107,7 @@ public class TestCLI extends TestCase {
     conf = new Configuration();
     cluster = new MiniDFSCluster(conf, 1, true, null);
     namenode = conf.get("fs.default.name", "file:///");
-    clitestDataDir = new File(System.getProperty("test.cache.data")).
+    clitestDataDir = new File(TEST_CACHE_DATA_DIR).
       toURI().toString().replace(' ', '+');
     username = System.getProperty("user.name");
 
