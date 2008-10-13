@@ -20,15 +20,12 @@ package org.apache.hadoop.cli.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.cli.TestCLI;
 
 /**
  *
@@ -51,7 +48,7 @@ public class CommandExecutor {
 
       args[i] = args[i].replaceAll("NAMENODE", namenode);
       args[i] = args[i].replaceAll("CLITEST_DATA", 
-        new File(System.getProperty("test.cache.data")).
+        new File(TestCLI.TEST_CACHE_DATA_DIR).
         toURI().toString().replace(' ', '+'));
       args[i] = args[i].replaceAll("USERNAME", System.getProperty("user.name"));
 

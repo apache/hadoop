@@ -1185,7 +1185,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cp: /file: No such file or directory</expected-output>
+          <expected-output>^cp: File does not exist: /file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1201,7 +1201,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cp: file1: No such file or directory</expected-output>
+          <expected-output>^cp: File does not exist: file1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1785,7 +1785,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>put: /user/wrongdata: No such file or directory</expected-output>
+          <expected-output>put: File /user/wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1801,7 +1801,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>put: wrongdata: No such file or directory</expected-output>
+          <expected-output>put: File wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2041,7 +2041,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>copyFromLocal: /user/wrongdata: No such file or directory</expected-output>
+          <expected-output>copyFromLocal: File /user/wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2057,7 +2057,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>copyFromLocal: wrongdata: No such file or directory</expected-output>
+          <expected-output>copyFromLocal: File wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -3108,7 +3108,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>moveFromLocal: /user/wrongdata: No such file or directory</expected-output>
+          <expected-output>moveFromLocal: File /user/wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -3124,7 +3124,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>moveFromLocal: wrongdata: No such file or directory</expected-output>
+          <expected-output>moveFromLocal: File wrongdata does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
