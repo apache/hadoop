@@ -167,7 +167,7 @@
 
           <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
             <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;fs.default.name&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9000&lt;/value&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;hdfs://localhost:9000&lt;/value&gt;</td></tr>
           <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
 
           <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
