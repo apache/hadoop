@@ -176,7 +176,6 @@ class Hdfs(MasterSlave):
     attrs['dfs.name.dir'] = namedir
     attrs['hadoop.tmp.dir'] = hadooptmpdir
     attrs['dfs.data.dir'] = ','.join(datadir)
-    # FIXME -- change dfs.client.buffer.dir
     envs['HADOOP_ROOT_LOGGER'] = "INFO,DRFA"
 
 

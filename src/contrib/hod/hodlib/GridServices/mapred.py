@@ -180,7 +180,6 @@ class MapReduce(MasterSlave):
     attrs['mapred.local.dir'] = ','.join(local)
     attrs['mapred.system.dir'] = 'fillindir'
     attrs['mapred.temp.dir'] = temp
-    attrs['dfs.client.buffer.dir'] = ','.join(dfsclient)
     attrs['hadoop.tmp.dir'] = hadooptmpdir
 
 
