@@ -446,8 +446,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
-          this.log.close();
-          LOG.info("On abort, closed hlog");
+          if (this.log != null) {
+            this.log.close();
+            LOG.info("On abort, closed hlog");
+          }
         } catch (IOException e) {
           LOG.error("Unable to close log in abort",
               RemoteExceptionHandler.checkIOException(e));
