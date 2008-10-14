@@ -1371,7 +1371,7 @@ class FSImage extends Storage {
 
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {
     final String s = readString(in);
-    return s.isEmpty()? null: s;
+    return s.length() == 0? null: s;
   }
 
   static byte[] readBytes(DataInputStream in) throws IOException {

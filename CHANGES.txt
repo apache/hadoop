@@ -21,6 +21,8 @@ Release 0.18.2 - Unreleased
     HADOOP-4351. FSNamesystem.getBlockLocationsInternal throws
     ArrayIndexOutOfBoundsException. (hairong)
 
+    HADOOP-4407. HADOOP-4395 should use a Java 1.5 API for 0.18.  (szetszwo)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
