@@ -905,6 +905,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4400. Add "hdfs://" to fs.default.name on quickstart.html.
     (Jeff Hammerbacher via omalley)
 
+    HADOOP-4403. Make TestLeaseRecovery and TestFileCreation more robust.
+    (szetszwo)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
