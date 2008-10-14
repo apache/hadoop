@@ -492,11 +492,11 @@ class JobInProgress {
     return finishedReduceTasks;
   }
   public synchronized int pendingMaps() {
-    return numMapTasks - runningMapTasks - failedMapTasks - 
+    return numMapTasks - runningMapTasks - failedMapTIPs - 
     finishedMapTasks + speculativeMapTasks;
   }
   public synchronized int pendingReduces() {
-    return numReduceTasks - runningReduceTasks - failedReduceTasks - 
+    return numReduceTasks - runningReduceTasks - failedReduceTIPs - 
     finishedReduceTasks + speculativeReduceTasks;
   }
   public JobPriority getPriority() {
@@ -1915,8 +1915,6 @@ class JobInProgress {
     if ((status.getRunState() == JobStatus.RUNNING) ||
          (status.getRunState() == JobStatus.PREP)) {
       LOG.info("Killing job '" + this.status.getJobID() + "'");
-      this.runningMapTasks = 0;
-      this.runningReduceTasks = 0;
       //
       // kill all TIPs.
       //

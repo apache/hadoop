@@ -895,6 +895,9 @@ Release 0.19.0 - Unreleased
     and org.apache.hadoop.security.AccessControlIOException into a single
     class hadoop.security.AccessControlException. (omalley via acmurthy)
 
+    HADOOP-4287. Fixes an issue to do with maintaining counts of running/pending
+    maps/reduces. (Sreekanth Ramakrishnan via ddas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
