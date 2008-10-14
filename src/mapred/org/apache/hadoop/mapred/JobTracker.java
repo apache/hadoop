@@ -2054,7 +2054,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // It may be successfully completed, or may be killed in
           // mid-execution.
           //
-          if (tip.getJob().getStatus().getRunState() == JobStatus.RUNNING) {
+          if (tip.getJob().getStatus().getRunState() == JobStatus.RUNNING ||
+              tip.getJob().getStatus().getRunState() == JobStatus.PREP) {
             killList.add(new KillTaskAction(killTaskId));
             LOG.debug(taskTracker + " -> KillTaskAction: " + killTaskId);
           } else {
@@ -2619,7 +2620,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             (tip.isMapTask() && !tip.isSetupTask() && 
              job.desiredReduces() != 0)) {
           // if the job is done, we don't want to change anything
-          if (job.getStatus().getRunState() == JobStatus.RUNNING) {
+          if (job.getStatus().getRunState() == JobStatus.RUNNING ||
+              job.getStatus().getRunState() == JobStatus.PREP) {
             job.failedTask(tip, taskId, ("Lost task tracker: " + trackerName), 
                            (tip.isMapTask() ? 
                                TaskStatus.Phase.MAP : 

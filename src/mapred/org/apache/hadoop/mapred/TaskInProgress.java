@@ -386,7 +386,9 @@ class TaskInProgress {
     TaskStatus ts = taskStatuses.get(taskid);
     if ((ts != null) &&
         (!tasksReportedClosed.contains(taskid)) &&
-        (job.getStatus().getRunState() != JobStatus.RUNNING)) {
+        ((this.failed) ||
+        ((job.getStatus().getRunState() != JobStatus.RUNNING &&
+         (job.getStatus().getRunState() != JobStatus.PREP))))) {
       tasksReportedClosed.add(taskid);
       close = true;
     } else if (isComplete() && 

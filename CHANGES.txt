@@ -898,6 +898,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4287. Fixes an issue to do with maintaining counts of running/pending
     maps/reduces. (Sreekanth Ramakrishnan via ddas)
 
+    HADOOP-4361. Makes sure that jobs killed from command line are killed
+    fast (i.e., there is a slot to run the cleanup task soon).
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

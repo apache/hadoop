@@ -858,7 +858,7 @@ class JobInProgress {
                                             int clusterSize, 
                                             int numUniqueHosts
                                            ) throws IOException {
-    if (!tasksInited.get()) {
+    if (status.getRunState() != JobStatus.RUNNING) {
       LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
@@ -1016,7 +1016,7 @@ class JobInProgress {
                                                int clusterSize,
                                                int numUniqueHosts
                                               ) throws IOException {
-    if (!tasksInited.get()) {
+    if (status.getRunState() != JobStatus.RUNNING) {
       LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
@@ -1918,6 +1918,9 @@ class JobInProgress {
       //
       // kill all TIPs.
       //
+      for (int i = 0; i < setup.length; i++) {
+        setup[i].kill();
+      }
       for (int i = 0; i < maps.length; i++) {
         maps[i].kill();
       }
