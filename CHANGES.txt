@@ -929,6 +929,8 @@ Release 0.18.2 - Unreleased
     HADOOP-4351. FSNamesystem.getBlockLocationsInternal throws
     ArrayIndexOutOfBoundsException. (hairong)
 
+    HADOOP-4292. Do not support append() for LocalFileSystem. (hairong)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS

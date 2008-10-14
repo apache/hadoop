@@ -276,6 +276,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         new ChecksumFSInputChecker(this, f, bufferSize));
   }
 
+  /** {@inheritDoc} */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   /**
    * Calculated the length of the checksum file in bytes.
    * @param size the length of the data file in bytes
