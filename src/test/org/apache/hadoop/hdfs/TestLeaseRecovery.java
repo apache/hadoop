@@ -70,6 +70,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, ORG_FILE_SIZE, REPLICATION_NUM, 0L);
       assertTrue(dfs.dfs.exists(filestr));
+      DFSTestUtil.waitReplication(dfs, filepath, REPLICATION_NUM);
 
       //get block info for the last block
       LocatedBlock locatedblock = TestInterDatanodeProtocol.getLastLocatedBlock(

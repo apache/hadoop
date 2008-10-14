@@ -226,7 +226,6 @@ public class TestFileCreation extends junit.framework.TestCase {
         assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize, dn.getFSDataset().getRemaining());
       }
     } finally {
-      fs.close();
       cluster.shutdown();
     }
   }
@@ -359,7 +358,6 @@ public class TestFileCreation extends junit.framework.TestCase {
       assertTrue("Error blocks were not cleaned up",
                  locations.locatedBlockCount() == 0);
     } finally {
-      fs.close();
       cluster.shutdown();
       client.close();
     }
@@ -595,20 +593,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       // This should close all existing file.
       dfsclient.close();
 
-      try {
-        fs.close();
-        fs = null;
-      } catch (IOException e) {
-      }
-
       // reopen file system and verify that file exists.
-      fs = cluster.getFileSystem();
-      assertTrue(file1 + " does not exist.", fs.exists(file1));
-
+      assertTrue(file1 + " does not exist.", 
+          AppendTestUtil.createHdfsWithDifferentUsername(conf).exists(file1));
     } finally {
-      if (fs != null) {
-        fs.close();
-      }
       cluster.shutdown();
     }
   }
