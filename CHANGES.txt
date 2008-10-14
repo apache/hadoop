@@ -23,6 +23,9 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4407. HADOOP-4395 should use a Java 1.5 API for 0.18.  (szetszwo)
 
+    HADOOP-4403. Make TestLeaseRecovery and TestFileCreation more robust.
+    (szetszwo)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
