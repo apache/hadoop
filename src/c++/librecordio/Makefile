@@ -16,40 +16,43 @@
 
 COPTS=-g3 -O0 -Wall
 
-all: librecordio.a test
+all: ${LIBRECORDIO_BUILD_DIR}/librecordio.a
 
-librecordio.a: recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o \
-	exception.o typeIDs.o fieldTypeInfo.o recordTypeInfo.o utils.o
-	ar cru librecordio.a recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o \
-	exception.o typeIDs.o fieldTypeInfo.o recordTypeInfo.o utils.o
+COBJS = $(addprefix ${LIBRECORDIO_BUILD_DIR}/, recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o \
+	exception.o typeIDs.o fieldTypeInfo.o recordTypeInfo.o utils.o)
 
-recordio.o: recordio.cc recordio.hh archive.hh
-	g++ ${COPTS} -c -I${XERCESCROOT}/include -o recordio.o recordio.cc
+CCMD = $(addprefix ${LIBRECORDIO_BUILD_DIR}/, librecordio.a recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o \
+        exception.o typeIDs.o fieldTypeInfo.o recordTypeInfo.o utils.o)
 
-filestream.o: filestream.cc recordio.hh filestream.hh
-	g++ ${COPTS} -c -o filestream.o filestream.cc
+${LIBRECORDIO_BUILD_DIR}/librecordio.a: ${COBJS}
+	ar cru ${CCMD}
 
-binarchive.o: binarchive.cc recordio.hh binarchive.hh archive.hh
-	g++ ${COPTS} -c -o binarchive.o binarchive.cc
+${LIBRECORDIO_BUILD_DIR}/recordio.o: recordio.cc recordio.hh archive.hh
+	g++ ${COPTS} -c -I${XERCESCROOT}/include -o ${LIBRECORDIO_BUILD_DIR}/recordio.o recordio.cc
 
-csvarchive.o: csvarchive.cc recordio.hh csvarchive.hh archive.hh
-	g++ ${COPTS} -c -o csvarchive.o csvarchive.cc
+${LIBRECORDIO_BUILD_DIR}/filestream.o: filestream.cc recordio.hh filestream.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/filestream.o filestream.cc
 
-xmlarchive.o: xmlarchive.cc recordio.hh xmlarchive.hh archive.hh
-	g++ ${COPTS} -c -I${XERCESCROOT}/include -o xmlarchive.o xmlarchive.cc
+${LIBRECORDIO_BUILD_DIR}/binarchive.o: binarchive.cc recordio.hh binarchive.hh archive.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/binarchive.o binarchive.cc
 
-exception.o: exception.cc exception.hh
-	g++ ${COPTS} -c -o exception.o exception.cc
+${LIBRECORDIO_BUILD_DIR}/csvarchive.o: csvarchive.cc recordio.hh csvarchive.hh archive.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/csvarchive.o csvarchive.cc
 
-typeIDs.o: typeIDs.cc typeIDs.hh
-	g++ ${COPTS} -c -o typeIDs.o typeIDs.cc
-fieldTypeInfo.o: fieldTypeInfo.cc fieldTypeInfo.hh
-	g++ ${COPTS} -c -o fieldTypeInfo.o fieldTypeInfo.cc
-recordTypeInfo.o: recordTypeInfo.cc recordTypeInfo.hh
-	g++ ${COPTS} -c -o recordTypeInfo.o recordTypeInfo.cc
-utils.o: utils.cc utils.hh
-	g++ ${COPTS} -c -o utils.o utils.cc
+${LIBRECORDIO_BUILD_DIR}/xmlarchive.o: xmlarchive.cc recordio.hh xmlarchive.hh archive.hh
+	g++ ${COPTS} -c -I${XERCESCROOT}/include -o ${LIBRECORDIO_BUILD_DIR}/xmlarchive.o xmlarchive.cc
 
+${LIBRECORDIO_BUILD_DIR}/exception.o: exception.cc exception.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/exception.o exception.cc
+
+${LIBRECORDIO_BUILD_DIR}/typeIDs.o: typeIDs.cc typeIDs.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/typeIDs.o typeIDs.cc
+${LIBRECORDIO_BUILD_DIR}/fieldTypeInfo.o: fieldTypeInfo.cc fieldTypeInfo.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/fieldTypeInfo.o fieldTypeInfo.cc
+${LIBRECORDIO_BUILD_DIR}/recordTypeInfo.o: recordTypeInfo.cc recordTypeInfo.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/recordTypeInfo.o recordTypeInfo.cc
+${LIBRECORDIO_BUILD_DIR}/utils.o: utils.cc utils.hh
+	g++ ${COPTS} -c -o ${LIBRECORDIO_BUILD_DIR}/utils.o utils.cc
 recordio.cc: recordio.hh archive.hh exception.hh
 filestream.cc: recordio.hh filestream.hh 
 binarchive.cc: recordio.hh binarchive.hh 
@@ -65,5 +68,5 @@ test: librecordio.a
 	make -C test all
 
 clean:
-	rm -f *~ *.o *.a
+	rm -f ${LIBRECORDIO_BUILD_DIR}/*~ ${LIBRECORDIO_BUILD_DIR}/*.o ${LIBRECORDIO_BUILD_DIR}/*.a
 	make -C test clean
