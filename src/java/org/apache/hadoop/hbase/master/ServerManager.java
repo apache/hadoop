@@ -499,19 +499,17 @@ class ServerManager implements HConstants {
       // the ProcessRegionClose going on asynchronously.
       master.regionManager.noLongerUnassigned(region);
 
-      if (!reassignRegion) {
-        // either the region is being offlined or deleted. we want to do those 
-        // operations asynchronously, so we'll creating a todo item for that.
-        try {
-          master.toDoQueue.put(new ProcessRegionClose(master, region, 
-              offlineRegion));
-        } catch (InterruptedException e) {
-          throw new RuntimeException(
-              "Putting into toDoQueue was interrupted.", e);
-        }
-      } else {
-        // we are reassigning the region eventually, so set it unassigned
-        master.regionManager.setUnassigned(region);
+      // NOTE: we cannot put the region into unassignedRegions as that
+      //       changes the ordering of the messages we've received. In
+      //       this case, a close could be processed before an open
+      //       resulting in the master not agreeing on the region's
+      //       state.
+      try {
+        master.toDoQueue.put(new ProcessRegionClose(master, region, 
+            offlineRegion, reassignRegion));
+      } catch (InterruptedException e) {
+        throw new RuntimeException(
+            "Putting into toDoQueue was interrupted.", e);
       }
     }
   }

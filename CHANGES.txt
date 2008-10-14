@@ -7,6 +7,8 @@ Release 0.19.0 - Unreleased
                Jim Kellerman)
    HBASE-852   Cannot scan all families in a row with a LIMIT, STARTROW, etc.
                (Izaak Rubin via Stack)
+   HBASE-921   region close and open processed out of order; makes for 
+               disagreement between master and regionserver on region state
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

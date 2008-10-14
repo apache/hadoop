@@ -33,19 +33,21 @@ import org.apache.hadoop.hbase.HRegionInfo;
  * necessary.
  */
 class ProcessRegionClose extends ProcessRegionStatusChange {
-  protected final  boolean offlineRegion;
+  protected final boolean offlineRegion;
+  protected final boolean reassignRegion;
 
   /**
   * @param master
   * @param regionInfo Region to operate on
   * @param offlineRegion if true, set the region to offline in meta
-  * delete the region files from disk.
+  * @param reassignRegion if true, region is to be reassigned
   */
   public ProcessRegionClose(HMaster master, HRegionInfo regionInfo, 
-   boolean offlineRegion) {
+      boolean offlineRegion, boolean reassignRegion) {
 
    super(master, regionInfo);
    this.offlineRegion = offlineRegion;
+   this.reassignRegion = reassignRegion;
   }
 
   @Override
@@ -56,31 +58,34 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
-    Boolean result =
-      new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
-        public Boolean call() throws IOException {
-          LOG.info("region closed: " + regionInfo.getRegionNameAsString());
+    Boolean result = null;
+    if (offlineRegion) {
+      result =
+        new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+          public Boolean call() throws IOException {
+            LOG.info("region closed: " + regionInfo.getRegionNameAsString());
 
-          // Mark the Region as unavailable in the appropriate meta table
-
-          if (!metaRegionAvailable()) {
             // We can't proceed unless the meta region we are going to update
-            // is online. metaRegionAvailable() has put this operation on the
+            // is online. metaRegionAvailable() will put this operation on the
             // delayedToDoQueue, so return true so the operation is not put 
             // back on the toDoQueue
+
+            if (metaRegionAvailable()) {
+              // offline the region in meta and then note that we've offlined
+              // the region. 
+              HRegion.offlineRegionInMETA(server, metaRegionName,
+                  regionInfo);
+              master.regionManager.regionOfflined(regionInfo.getRegionName());
+            }
             return true;
           }
+        }.doWithRetries();
+        result = result == null ? true : result;
 
-          if (offlineRegion) {
-            // offline the region in meta and then note that we've offlined the
-            // region. 
-            HRegion.offlineRegionInMETA(server, metaRegionName,
-                regionInfo);
-            master.regionManager.regionOfflined(regionInfo.getRegionName());
-          }
-          return true;
-        }
-    }.doWithRetries();
+    } else if (reassignRegion) {
+      // we are reassigning the region eventually, so set it unassigned
+      master.regionManager.setUnassigned(regionInfo);
+    }
 
     return result == null ? true : result;
   }
