@@ -6,6 +6,18 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.19.0 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
     HADOOP-3695. Provide an ability to start multiple workers per node.
     (Vinod Kumar Vavilapalli via yhemanth)
 
