@@ -18,21 +18,22 @@ COPTS=-g3 -O0 -Wall
 
 all: test testFromJava
 
-test: test.o test.jr.o
-	g++ -g3 -O0 -o test test.o test.jr.o -L.. -L${XERCESCROOT}/lib -lrecordio -lxerces-c
+test: ${LIBRECORDIO_TEST_DIR}/test.o ${LIBRECORDIO_TEST_DIR}/test.jr.o
+	g++ -g3 -O0 -o ${LIBRECORDIO_TEST_DIR}/test ${LIBRECORDIO_TEST_DIR}/test.o \
+	${LIBRECORDIO_TEST_DIR}/test.jr.o -L${LIBRECORDIO_BUILD_DIR} -L${XERCESCROOT}/lib -lrecordio -lxerces-c
 	
-test.o: test.cc
-	g++ ${COPTS} -c -I.. -o test.o test.cc
+${LIBRECORDIO_TEST_DIR}/test.o: test.cc
+	g++ ${COPTS} -c -I .. -o ${LIBRECORDIO_TEST_DIR}/test.o test.cc
 
-testFromJava: testFromJava.o test.jr.o
-	g++ -g3 -O0 -o testFromJava testFromJava.o test.jr.o -L.. -L${XERCESCROOT}/lib -lrecordio -lxerces-c
+testFromJava: ${LIBRECORDIO_TEST_DIR}/testFromJava.o ${LIBRECORDIO_TEST_DIR}/test.jr.o
+	g++ -g3 -O0 -o ${LIBRECORDIO_TEST_DIR}/testFromJava ${LIBRECORDIO_TEST_DIR}/testFromJava.o ${LIBRECORDIO_TEST_DIR}/test.jr.o \
+	-L${LIBRECORDIO_BUILD_DIR} -L${XERCESCROOT}/lib -lrecordio -lxerces-c
 	
-testFromJava.o: testFromJava.cc
-	g++ ${COPTS} -c -I.. -o testFromJava.o testFromJava.cc
+${LIBRECORDIO_TEST_DIR}/testFromJava.o: testFromJava.cc
+	g++ ${COPTS} -c -I.. -o ${LIBRECORDIO_TEST_DIR}/testFromJava.o testFromJava.cc
 
-
-test.jr.o: test.jr.cc
-	g++ ${COPTS} -c -I.. -o test.jr.o test.jr.cc
+${LIBRECORDIO_TEST_DIR}/test.jr.o: test.jr.cc
+	g++ ${COPTS} -c -I..  -o ${LIBRECORDIO_TEST_DIR}/test.jr.o test.jr.cc
 
 %.jr.cc %.jr.hh: %.jr
 	${HADOOP_HOME}/bin/rcc --language c++ $<
@@ -44,5 +45,6 @@ test.cc: test.hh
 test.hh: test.jr.hh ../recordio.hh ../filestream.hh
 
 clean:
-	rm -f *~ *.o test testFromJava *.jr.*
+	rm -f ${LIBRECORDIO_TEST_DIR}/*~ ${LIBRECORDIO_TEST_DIR}/*.o ${LIBRECORDIO_TEST_DIR}/test \
+	${LIBRECORDIO_TEST_DIR}/testFromJava ${LIBRECORDIO_TEST_DIR}/*.jr.*
 

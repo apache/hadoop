@@ -49,8 +49,10 @@
   <property name="c++.pipes.src" value="${c++.src}/pipes"/>
   <property name="c++.examples.pipes.src" value="${examples.dir}/pipes"/>
   <property name="libhdfs.src" value="${c++.src}/libhdfs"/>
+  <property name="librecordio.src" value="${c++.src}/librecordio"/>
   <property name="tools.src" value="${basedir}/src/tools"/>
 
+  <property name="xercescroot" value=""/> 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.src" value="${build.dir}/src"/>
@@ -59,6 +61,7 @@
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.anttasks" value="${build.dir}/ant"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
+  <property name="build.librecordio" value="${build.dir}/librecordio"/>
   <!-- convert spaces to _ so that mac os doesn't break things -->
   <exec executable="sed" inputstring="${os.name}" 
         outputproperty="nonspace.os">
@@ -106,6 +109,7 @@
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
   <property name="libhdfs.test.dir" value="${test.build.dir}/libhdfs"/>
 
+  <property name="librecordio.test.dir" value="${test.build.dir}/librecordio"/>
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
 
@@ -929,7 +933,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-libhdfs"
+  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-libhdfs, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1135,7 +1139,44 @@
   		<arg line="-sf libhdfs.so.${libhdfs.version} libhdfs.so"/>
   	</exec>
   </target>
-		
+<!-- ================================================================== -->
+<!-- librecordio targets.                                               -->
+<!-- ================================================================== -->		
+
+  <target name="compile-librecordio" depends="init" if="librecordio" >
+     <mkdir dir="${build.librecordio}"/>
+     <exec dir="${librecordio.src}" executable="${make.cmd}" failonerror="true">
+        <env key="XERCESCROOT" value="${xercescroot}"/>
+        <env key="LIBRECORDIO_BUILD_DIR" value="${build.librecordio}"/>
+     </exec>
+  </target>
+  	
+  <target name="test-librecordio" depends="compile-librecordio, compile-core" if="librecordio">
+    <delete dir="${librecordio.test.dir}"/>
+    <mkdir dir="${librecordio.test.dir}"/>
+    <exec dir="${librecordio.src}/test" executable="${make.cmd}" failonerror="true">
+        <env key="HADOOP_HOME" value="${basedir}"/>
+	<env key="XERCESCROOT" value="${xercescroot}"/>
+        <env key="LIBRECORDIO_BUILD_DIR" value="${build.librecordio}"/> 	
+        <env key="LIBRECORDIO_TEST_DIR" value="${librecordio.test.dir}"/>
+      		<arg value="all"/>		
+    </exec>
+  </target>
+
+  <target name="package-librecordio" depends="compile-librecordio" if="librecordio">
+    <mkdir dir="${dist.dir}/librecordio"/> 
+    <copy todir="${dist.dir}/librecordio">
+       <fileset dir="${build.librecordio}" casesensitive="yes" followsymlinks="false">
+          <exclude name="**/tests/**"/>
+          <exclude name="*.so"/> 
+          <exclude name="*.o"/>
+       </fileset>
+    </copy>
+    <chmod perm="ugo+x" type="file">
+       <fileset dir="${dist.dir}/librecordio"/>
+    </chmod>
+  </target>
+ 
   <target name="create-c++-configure" depends="init" if="compile.c++">
     <exec executable="autoreconf" dir="${c++.utils.src}" searchpath="yes" 
           failonerror="yes">

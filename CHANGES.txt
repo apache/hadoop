@@ -493,6 +493,9 @@ Release 0.19.0 - Unreleased
 
     HADOOP-3790. Add more unit tests for testing HDFS file append.  (szetszwo)
 
+    HADOOP-4150. Include librecordio in hadoop releases. (Giridharan Kesavan
+    via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
