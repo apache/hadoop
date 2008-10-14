@@ -26,6 +26,8 @@ Release 0.18.2 - Unreleased
     HADOOP-4403. Make TestLeaseRecovery and TestFileCreation more robust.
     (szetszwo)
 
+    HADOOP-4292. Do not support append() for LocalFileSystem. (hairong)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
