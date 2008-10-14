@@ -93,8 +93,6 @@ class test_hadoopConfig(unittest.TestCase):
     # fs.default.name should start with hdfs://
     assert(keyvals['fs.default.name'].startswith('hdfs://'))
     assert(keyvals['hadoop.tmp.dir'] == self.tempDir)
-    assert(keyvals['dfs.client.buffer.dir'] == os.path.join(self.tempDir,
-                                                            'dfs', 'tmp'))
 
     # TODO other tests
     pass
