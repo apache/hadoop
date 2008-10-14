@@ -28,6 +28,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -87,7 +88,11 @@ public class TestJobQueueInformation extends TestCase {
     assertNotNull(queueInfos);
     assertEquals(1, queueInfos.length);
     assertEquals("default", queueInfos[0].getQueueName());
-    TestMiniMRWithDFS.runWordCount(mrCluster, mrCluster.createJobConf());
+    JobConf conf = mrCluster.createJobConf();
+    SleepJob sleepJob = new SleepJob();
+    sleepJob.setConf(conf);
+    conf = sleepJob.setupJobConf(4, 2, 1, 1, 1, 1);
+    JobClient.runJob(conf);
     int numberOfJobs = 0;
 
     for (JobQueueInfo queueInfo : queueInfos) {
@@ -101,7 +106,6 @@ public class TestJobQueueInformation extends TestCase {
         assertEquals(JOB_SCHEDULING_INFO, status.getSchedulingInfo());
       }
     }
-    // Three jobs are launched by runwordcount
-    assertEquals(3, numberOfJobs);
+    assertEquals(1, numberOfJobs);
   }
 }
