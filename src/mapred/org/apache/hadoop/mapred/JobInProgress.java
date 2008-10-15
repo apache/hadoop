@@ -2385,4 +2385,11 @@ class JobInProgress {
     boolean initStarted;
     boolean initDone;
   }
+
+  boolean isComplete() {
+    int runState = this.status.getRunState();
+    return runState == JobStatus.SUCCEEDED 
+           || runState == JobStatus.FAILED 
+           || runState == JobStatus.KILLED;
+  }
 }

@@ -33,6 +33,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -681,7 +682,6 @@ class CapacityTaskScheduler extends TaskScheduler {
         // this job is a candidate for running. Initialize it, move it
         // to run queue
         j.initTasks();
-        scheduler.jobQueuesManager.jobUpdated(j);
         // We found a suitable job. Get task from it.
         t = obtainNewTask(taskTracker, j);
         if (t != null) {
@@ -715,7 +715,6 @@ class CapacityTaskScheduler extends TaskScheduler {
           scheduler.jobQueuesManager.getWaitingJobQueue(qsi.queueName)) {
           if (usersOverLimit.contains(j.getProfile().getUser())) {
             j.initTasks();
-            scheduler.jobQueuesManager.jobUpdated(j);
             t = obtainNewTask(taskTracker, j);
             if (t != null) {
               LOG.debug("Getting task from job " + 
@@ -1161,8 +1160,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     reduceScheduler.jobAdded(job);
   }
 
-  // called when a job is removed
-  synchronized void jobRemoved(JobInProgress job) {
+  // called when a job completes
+  synchronized void jobCompleted(JobInProgress job) {
     // let our map and reduce schedulers know this, so they can update 
     // user-specific info
     mapScheduler.jobRemoved(job);

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -132,9 +133,20 @@ class EagerTaskInitializationListener extends JobInProgressListener {
   }
 
   @Override
-  public void jobUpdated(JobInProgress job) {
-    synchronized (jobInitQueue) {
-      resortInitQueue();
+  public void jobUpdated(JobChangeEvent event) {
+    if (event instanceof JobStatusChangeEvent) {
+      jobStateChanged((JobStatusChangeEvent)event);
+    }
+  }
+  
+  // called when the job's status is changed
+  private void jobStateChanged(JobStatusChangeEvent event) {
+    // Resort the job queue if the job-start-time or job-priority changes
+    if (event.getEventType() == EventType.START_TIME_CHANGED
+        || event.getEventType() == EventType.PRIORITY_CHANGED) {
+      synchronized (jobInitQueue) {
+        resortInitQueue();
+      }
     }
   }
 

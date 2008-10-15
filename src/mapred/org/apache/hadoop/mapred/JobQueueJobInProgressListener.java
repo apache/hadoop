@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.TreeSet;
 
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
+
 /**
  * A {@link JobInProgressListener} that maintains the jobs being managed in
  * a queue. By default the queue is FIFO, but it is possible to use custom
@@ -74,13 +76,38 @@ class JobQueueJobInProgressListener extends JobInProgressListener {
     jobQueue.add(job);
   }
 
+  // Job will be removed once the job completes
   @Override
-  public void jobRemoved(JobInProgress job) {
+  public void jobRemoved(JobInProgress job) {}
+  
+  private void jobCompleted(JobInProgress job) {
     jobQueue.remove(job);
   }
   
   @Override
-  public synchronized void jobUpdated(JobInProgress job) {
+  public synchronized void jobUpdated(JobChangeEvent event) {
+    JobInProgress job = event.getJobInProgress();
+    if (event instanceof JobStatusChangeEvent) {
+      // Check if the ordering of the job has changed
+      // For now priority and start-time can change the job ordering
+      JobStatusChangeEvent statusEvent = (JobStatusChangeEvent)event;
+      if (statusEvent.getEventType() == EventType.PRIORITY_CHANGED 
+          || statusEvent.getEventType() == EventType.START_TIME_CHANGED) {
+        // Make a priority change
+        reorderJobs(job);
+      } else if (statusEvent.getEventType() == EventType.RUN_STATE_CHANGED) {
+        // Check if the job is complete
+        int runState = statusEvent.getNewStatus().getRunState();
+        if (runState == JobStatus.SUCCEEDED
+            || runState == JobStatus.FAILED
+            || runState == JobStatus.KILLED) {
+          jobCompleted(job);
+        }
+      }
+    }
+  }
+  
+  private void reorderJobs(JobInProgress job) {
     synchronized (jobQueue) {
       jobQueue.remove(job);
       jobQueue.add(job);
