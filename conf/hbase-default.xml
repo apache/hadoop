@@ -23,19 +23,19 @@
 -->
 <configuration>
   <property>
-    <name>hbase.master</name>
-    <value>local</value>
-    <description>The host and port that the HBase master runs at.
-    A value of 'local' runs the master and a regionserver in
-    a single process.
-    </description>
-  </property>
-  <property>
     <name>hbase.rootdir</name>
     <value>file:///tmp/hbase-${user.name}/hbase</value>
     <description>The directory shared by region servers.
     Should be fully-qualified to include the filesystem to use.
     E.g: hdfs://NAMENODE_SERVER:PORT/HBASE_ROOTDIR
+    </description>
+  </property>
+  <property>
+    <name>hbase.master</name>
+    <value>local</value>
+    <description>The host and port that the HBase master runs at.
+    A value of 'local' runs the master and a regionserver in
+    a single process.
     </description>
   </property>
   <property>
@@ -50,6 +50,21 @@
     <value>0.0.0.0</value>
     <description>The address for the hbase master web UI
     </description>
+  </property>
+  <property>
+    <name>hbase.master.meta.thread.rescanfrequency</name>
+    <value>60000</value>
+    <description>How long the HMaster sleeps (in milliseconds) between scans of
+    the root and meta tables.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.lease.period</name>
+    <value>120000</value>
+    <description>HMaster server lease period in milliseconds. Default is
+    120 seconds.  Region servers must report in within this period else
+    they are considered dead.  On loaded cluster, may need to up this
+    period.</description>
   </property>
   <property>
     <name>hbase.regionserver</name>
@@ -111,40 +126,11 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.meta.thread.rescanfrequency</name>
-    <value>60000</value>
-    <description>How long the HMaster sleeps (in milliseconds) between scans of
-    the root and meta tables.
-    </description>
-  </property>
-  <property>
-    <name>hbase.master.lease.period</name>
-    <value>120000</value>
-    <description>HMaster server lease period in milliseconds. Default is
-    120 seconds.  Region servers must report in within this period else
-    they are considered dead.  On loaded cluster, may need to up this
-    period.</description>
-  </property>
-  <property>
-    <name>hbase.hbasemaster.maxregionopen</name>
-    <value>120000</value>
-    <description>Period to wait for a region open.  If regionserver
-    takes longer than this interval, assign to a new regionserver.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.lease.period</name>
     <value>60000</value>
     <description>HRegion server lease period in milliseconds. Default is
     60 seconds. Clients must report in within this period else they are
     considered dead.</description>
-  </property>
-  <property>
-    <name>hbase.server.thread.wakefrequency</name>
-    <value>10000</value>
-    <description>Time to sleep in between searches for work (in milliseconds).
-    Used as sleep interval by service threads such as META scanner and log roller.
-    </description>
   </property>
   <property>
     <name>hbase.regionserver.handler.count</name>
@@ -187,6 +173,50 @@
     rolled before invoking an optional log roll (An optional log roll is a
     one in which the log does not contain hbase.regionserver.maxlogentries).
     Default: 30 minutes (in miliseconds)
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
+    <value>20000</value>
+    <description>How often a region server runs the split/compaction check.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.nbreservationblocks</name>
+    <value>4</value>
+    <description>The number of reservation blocks which are used to prevent
+    unstable region servers caused by an OOME.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.globalMemcacheLimit</name>
+    <value>536870912</value>
+    <description>Maximum size of all memcaches in a region server before new 
+      updates are blocked and flushes are forced. Defaults to 512MB.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.globalMemcacheLimitlowMark</name>
+    <value>256435456</value>
+    <description>When memcaches are being forced to flush to make room in
+      memory, keep flushing until we hit this mark. Defaults to 256MB. Setting
+      this value equal to hbase.regionserver.globalmemcachelimit causes the 
+      minimum possible flushing to occur when updates are blocked due to 
+      memcache limiting.
+    </description>
+  </property>  
+  <property>
+    <name>hbase.hbasemaster.maxregionopen</name>
+    <value>120000</value>
+    <description>Period to wait for a region open.  If regionserver
+    takes longer than this interval, assign to a new regionserver.
+    </description>
+  </property>
+  <property>
+    <name>hbase.server.thread.wakefrequency</name>
+    <value>10000</value>
+    <description>Time to sleep in between searches for work (in milliseconds).
+    Used as sleep interval by service threads such as META scanner and log roller.
     </description>
   </property>
   <property>
@@ -235,12 +265,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
-    <value>20000</value>
-    <description>How often a region server runs the split/compaction check.
-    </description>
-  </property>
-  <property>
     <name>hbase.hstore.compaction.max</name>
     <value>10</value>
     <description>Max number of HStoreFiles to compact per 'minor' compaction.
@@ -254,10 +278,10 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.nbreservationblocks</name>
-    <value>4</value>
-    <description>The number of reservation blocks which are used to prevent
-    unstable region servers caused by an OOME.
+    <name>hbase.regions.slop</name>
+    <value>0.1</value>
+    <description>Rebalance if regionserver has average + (average * slop) regions.
+    Default is 10% slop.
     </description>
   </property>
   <property>
@@ -283,23 +307,6 @@
     <description>The size of each block in any block caches.
     </description>
   </property>
-  <property>
-    <name>hbase.regionserver.globalMemcacheLimit</name>
-    <value>536870912</value>
-    <description>Maximum size of all memcaches in a region server before new 
-      updates are blocked and flushes are forced. Defaults to 512MB.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.globalMemcacheLimitlowMark</name>
-    <value>256435456</value>
-    <description>When memcaches are being forced to flush to make room in
-      memory, keep flushing until we hit this mark. Defaults to 256MB. Setting
-      this value equal to hbase.regionserver.globalmemcachelimit causes the 
-      minimum possible flushing to occur when updates are blocked due to 
-      memcache limiting.
-    </description>
-  </property>  
   <property>
     <name>hbase.hash.type</name>
     <value>murmur</value>

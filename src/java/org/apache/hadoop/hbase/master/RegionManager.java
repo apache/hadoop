@@ -118,15 +118,17 @@ class RegionManager implements HConstants {
   private final int maxAssignInOneGo;
 
   private final HMaster master;
-  
   private final RegionHistorian historian;
+  private final float slop;
   
   RegionManager(HMaster master) {
     this.master = master;
     this.historian = RegionHistorian.getInstance();
     this.maxAssignInOneGo = this.master.getConfiguration().
       getInt("hbase.regions.percheckin", 10);
-    
+    this.slop = this.master.getConfiguration().getFloat("hbase.regions.slop",
+      (float)0.1);
+
     // The root region
     rootScannerThread = new RootScanner(master, this);
 
@@ -183,13 +185,18 @@ class RegionManager implements HConstants {
           // We only do load balancing once all regions are assigned.
           // This prevents churn while the cluster is starting up.
           double avgLoad = master.serverManager.getAverageLoad();
-          if (avgLoad > 2.0 && thisServersLoad.getNumberOfRegions() > avgLoad) {
+          double avgLoadWithSlop = avgLoad +
+            ((this.slop != 0)? avgLoad * this.slop: avgLoad);
+          if (avgLoad > 2.0 &&
+              thisServersLoad.getNumberOfRegions() > avgLoadWithSlop) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Server " + serverName + " is overloaded. Server load: " + 
-                  thisServersLoad.getNumberOfRegions() + " avg: " + avgLoad);
+              LOG.debug("Server " + serverName +
+                " is overloaded. Server load: " + 
+                thisServersLoad.getNumberOfRegions() + " avg: " + avgLoad +
+                ", slop: " + this.slop);
             }
-            unassignSomeRegions(thisServersLoad, avgLoad, mostLoadedRegions, 
-                returnMsgs);
+            unassignSomeRegions(thisServersLoad, avgLoad, mostLoadedRegions,
+              returnMsgs);
           }
         }
       } else {
