@@ -24,12 +24,11 @@
 <property>
   <name>hadoop.http.filter.initializers</name>
   <value></value>
-  <description>A comma separated list of class names.  Each class in the list must extend org.apache.hadoop.http.FilterInitializer.
-  
-  The corresponding Filter will be initialized.  Then, the Filter will be applied to all user facing jsp and servlet web pages.  The ordering of the list defines the ordering of the filters.
-
-  The value can be empty.
-  </description>
+  <description>A comma separated list of class names. Each class in the list 
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
+  Filter will be initialized. Then, the Filter will be applied to all user 
+  facing jsp and servlet web pages.  The ordering of the list defines the 
+  ordering of the filters.</description>
 </property>
 
 <!--- logging properties -->
@@ -562,13 +561,15 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.namenode.decommission.interval</name>
   <value>300</value>
-  <description>Namenode periodicity in seconds to check if decommission is complete.</description>
+  <description>Namenode periodicity in seconds to check if decommission is 
+  complete.</description>
 </property>
 
 <property>
   <name>dfs.replication.interval</name>
   <value>3</value>
-  <description>The periodicity in seconds with which the namenode computes repliaction work for datanodes. </description>
+  <description>The periodicity in seconds with which the namenode computes 
+  repliaction work for datanodes. </description>
 </property>
 
 <property>
@@ -846,8 +847,8 @@ creations/deletions), or "all".</description>
 <property>
   <name>mapred.jobtracker.completeuserjobs.maximum</name>
   <value>100</value>
-  <description>The maximum number of complete jobs per user to keep around before delegating them to the job history.
-  </description>
+  <description>The maximum number of complete jobs per user to keep around 
+  before delegating them to the job history.</description>
 </property>
 
 <property>
