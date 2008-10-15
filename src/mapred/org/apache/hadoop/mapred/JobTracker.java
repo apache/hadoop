@@ -2264,9 +2264,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized void killJob(JobID jobid) throws IOException {
     JobInProgress job = jobs.get(jobid);
     checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
-    if (job.inited()) {
-      job.kill();
-    }
+    job.kill();
   }
 
   /**
