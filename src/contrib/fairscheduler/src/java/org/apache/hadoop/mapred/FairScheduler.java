@@ -190,7 +190,7 @@ public class FairScheduler extends TaskScheduler {
     }
   
     @Override
-    public void jobUpdated(JobInProgress job) {
+    public void jobUpdated(JobChangeEvent event) {
     }
   }
 

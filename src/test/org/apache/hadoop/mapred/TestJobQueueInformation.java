@@ -29,6 +29,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -42,6 +44,21 @@ public class TestJobQueueInformation extends TestCase {
   private MiniDFSCluster dfsCluster;
   private JobConf jc;
   private static final String JOB_SCHEDULING_INFO = "TESTSCHEDULINGINFO";
+  private static final Path TEST_DIR = new Path("job-queue-info-testing");
+  
+  // configure a waiting job with 2 maps
+  private JobConf configureWaitingJob(JobConf conf) throws IOException {
+    Path inDir = new Path(TEST_DIR, "input");
+    Path shareDir = new Path(TEST_DIR, "share");
+    Path outputDir = new Path(TEST_DIR, "output");
+    String mapSignalFile = TestJobTrackerRestart.getMapSignalFile(shareDir);
+    String redSignalFile = TestJobTrackerRestart.getReduceSignalFile(shareDir);
+    JobPriority[] priority = new JobPriority[] {JobPriority.NORMAL};
+    return TestJobTrackerRestart.getJobs(conf, priority, 
+                                         new int[] {2}, new int[] {0}, 
+                                         outputDir, inDir, 
+                                         mapSignalFile, redSignalFile)[0];
+  }
 
   public static class TestTaskScheduler extends LimitTasksPerJobTaskScheduler {
 
@@ -89,10 +106,21 @@ public class TestJobQueueInformation extends TestCase {
     assertEquals(1, queueInfos.length);
     assertEquals("default", queueInfos[0].getQueueName());
     JobConf conf = mrCluster.createJobConf();
-    SleepJob sleepJob = new SleepJob();
-    sleepJob.setConf(conf);
-    conf = sleepJob.setupJobConf(4, 2, 1, 1, 1, 1);
-    JobClient.runJob(conf);
+    FileSystem fileSys = dfsCluster.getFileSystem();
+    
+    // configure a waiting job
+    conf = configureWaitingJob(conf);
+    conf.setJobName("test-job-queue-info-test");
+    
+    // clear the signal file if any
+    TestJobTrackerRestart.cleanUp(fileSys, TEST_DIR);
+    
+    RunningJob rJob = jc.submitJob(conf);
+    
+    while (rJob.getJobState() != JobStatus.RUNNING) {
+      TestJobTrackerRestart.waitFor(10);
+    }
+    
     int numberOfJobs = 0;
 
     for (JobQueueInfo queueInfo : queueInfos) {

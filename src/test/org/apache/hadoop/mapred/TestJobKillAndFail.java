@@ -40,7 +40,7 @@ public class TestJobKillAndFail extends TestCase {
   private static String TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
 
-  private void runJobFail(JobConf conf) throws IOException {
+  static JobID runJobFail(JobConf conf) throws IOException {
 
     conf.setJobName("testjobfail");
     conf.setMapperClass(FailMapper.class);
@@ -55,9 +55,11 @@ public class TestJobKillAndFail extends TestCase {
     }
     // Checking that the Job got failed
     assertEquals(job.getJobState(), JobStatus.FAILED);
+    
+    return job.getID();
   }
 
-  private void runJobKill(JobConf conf) throws IOException {
+  static JobID runJobKill(JobConf conf) throws IOException {
 
     conf.setJobName("testjobkill");
     conf.setMapperClass(KillMapper.class);
@@ -81,9 +83,11 @@ public class TestJobKillAndFail extends TestCase {
     // Checking that the Job got killed
     assertTrue(job.isComplete());
     assertEquals(job.getJobState(), JobStatus.KILLED);
+    
+    return job.getID();
   }
 
-  private RunningJob runJob(JobConf conf) throws IOException {
+  static RunningJob runJob(JobConf conf) throws IOException {
 
     final Path inDir = new Path(TEST_ROOT_DIR + "/failkilljob/input");
     final Path outDir = new Path(TEST_ROOT_DIR + "/failkilljob/output");

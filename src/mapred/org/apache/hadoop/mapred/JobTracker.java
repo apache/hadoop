@@ -57,6 +57,7 @@ import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -534,25 +535,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
           jip.initTasks();
-          updateJobListeners();
-        }
-      }
-      
-      private void updateJobListeners() {
-        // The scheduler needs to be informed as the recovery-manager
-        // has inited the jobs
-        for (JobInProgressListener listener : jobInProgressListeners) {
-          listener.jobUpdated(jip);
         }
       }
       
       void close() {
         if (hasUpdates) {
           // Apply the final (job-level) updates
-          updateJob(jip, job);
-          // Update the job listeners as the start/submit time and the job 
-          // priority has changed
-          updateJobListeners();
+          JobStatusChangeEvent event = updateJob(jip, job);
+          
+          // Update the job listeners
+          updateJobInProgressListeners(event);
         }
       }
       
@@ -612,20 +604,29 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     }
     
-    private void updateJob(JobInProgress jip, JobHistory.JobInfo job) {
+    private JobStatusChangeEvent updateJob(JobInProgress jip, 
+                                           JobHistory.JobInfo job) {
+      // Change the job priority
+      String jobpriority = job.get(Keys.JOB_PRIORITY);
+      JobPriority priority = JobPriority.valueOf(jobpriority);
+      // It's important to update this via the jobtracker's api as it will 
+      // take care of updating the event listeners too
+      setJobPriority(jip.getJobID(), priority);
+
+      // Save the previous job status
+      JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
+      
       // Set the start/launch time only if there are recovered tasks
       // Increment the job's restart count
       jip.updateJobInfo(job.getLong(JobHistory.Keys.SUBMIT_TIME), 
                         job.getLong(JobHistory.Keys.LAUNCH_TIME),
                         job.getInt(Keys.RESTART_COUNT) + 1);
+
+      // Save the new job status
+      JobStatus newStatus = (JobStatus)jip.getStatus().clone();
       
-      // Change the job priority
-      String jobpriority = job.get(Keys.JOB_PRIORITY);
-      if (jobpriority.length() > 0) {
-        JobPriority priority = JobPriority.valueOf(jobpriority);
-        // Its important to update this via the jobtracker's api
-        setJobPriority(jip.getJobID(), priority);
-      }
+      return new JobStatusChangeEvent(jip, EventType.START_TIME_CHANGED, oldStatus, 
+                                      newStatus);
     }
     
     private void updateTip(TaskInProgress tip, JobHistory.Task task) {
@@ -1761,6 +1762,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     jobInProgressListeners.remove(listener);
   }
   
+  // Update the listeners about the job
+  private void updateJobInProgressListeners(JobChangeEvent event) {
+    for (JobInProgressListener listener : jobInProgressListeners) {
+      listener.jobUpdated(event);
+    }
+  }
+  
   /**
    * Return the {@link QueueManager} associated with the JobTracker.
    */
@@ -2263,8 +2271,24 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
   public synchronized void killJob(JobID jobid) throws IOException {
     JobInProgress job = jobs.get(jobid);
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
     job.kill();
+    
+    // Inform the listeners if the job is killed
+    // Note : 
+    //   If the job is killed in the PREP state then the listeners will be 
+    //   invoked
+    //   If the job is killed in the RUNNING state then cleanup tasks will be 
+    //   launched and the updateTaskStatuses() will take care of it
+    JobStatus newStatus = (JobStatus)job.getStatus().clone();
+    if (prevStatus.getRunState() != newStatus.getRunState()
+        && newStatus.getRunState() == JobStatus.KILLED) {
+      JobStatusChangeEvent event = 
+        new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+            newStatus);
+      updateJobInProgressListeners(event);
+    }
   }
 
   /**
@@ -2530,10 +2554,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     JobInProgress job = jobs.get(jobId);
     if (job != null) {
       synchronized (taskScheduler) {
+        JobStatus oldStatus = (JobStatus)job.getStatus().clone();
         job.setPriority(priority);
-        for (JobInProgressListener listener : jobInProgressListeners) {
-          listener.jobUpdated(job);
-        }
+        JobStatus newStatus = (JobStatus)job.getStatus().clone();
+        JobStatusChangeEvent event = 
+          new JobStatusChangeEvent(job, EventType.PRIORITY_CHANGED, oldStatus, 
+                                   newStatus);
+        updateJobInProgressListeners(event);
       }
     } else {
       LOG.warn("Trying to change the priority of an unknown job: " + jobId);
@@ -2559,13 +2586,25 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       // Check if the tip is known to the jobtracker. In case of a restarted
       // jt, some tasks might join in later
       if (tip != null || hasRestarted()) {
+        JobInProgress job = getJob(taskId.getJobID());
         if (tip == null) {
-          JobInProgress job = getJob(taskId.getJobID());
           tip = job.getTaskInProgress(taskId.getTaskID());
           job.addRunningTaskToTIP(tip, taskId, status, false);
         }
         expireLaunchingTasks.removeTask(taskId);
-        tip.getJob().updateTaskStatus(tip, report, myInstrumentation);
+        
+        // Update the job and inform the listeners if necessary
+        JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+        job.updateTaskStatus(tip, report, myInstrumentation);
+        JobStatus newStatus = (JobStatus)job.getStatus().clone();
+        
+        // Update the listeners if an incomplete job completes
+        if (prevStatus.getRunState() != newStatus.getRunState()) {
+          JobStatusChangeEvent event = 
+            new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, 
+                                     prevStatus, newStatus);
+          updateJobInProgressListeners(event);
+        }
       } else {
         LOG.info("Serious problem.  While updating status, cannot find taskid " 
                  + report.getTaskID());

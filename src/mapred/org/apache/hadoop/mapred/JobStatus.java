@@ -32,7 +32,7 @@ import org.apache.hadoop.io.WritableUtils;
  * not intended to be a comprehensive piece of data.
  * For that, look at JobProfile.
  **************************************************/
-public class JobStatus implements Writable {
+public class JobStatus implements Writable, Cloneable {
 
   static {                                      // register a ctor
     WritableFactories.setFactory
@@ -216,6 +216,16 @@ public class JobStatus implements Writable {
    */
   synchronized public long getStartTime() { return startTime;}
 
+  @Override
+  public Object clone() {
+    try {
+      return super.clone();
+    } catch (CloneNotSupportedException cnse) {
+      // Shouldn't happen since we do implement Clonable
+      throw new InternalError(cnse.toString());
+    }
+  }
+  
   /**
    * @param user The username of the job
    */

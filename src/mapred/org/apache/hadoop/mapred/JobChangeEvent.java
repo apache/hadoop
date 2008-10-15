@@ -18,27 +18,20 @@
 package org.apache.hadoop.mapred;
 
 /**
- * A listener for changes in a {@link JobInProgress job}'s lifecycle in the
- * {@link JobTracker}.
+ * {@link JobChangeEvent} is used to capture state changes in a job. A job can 
+ * change its state w.r.t priority, progress, run-state etc.
  */
-abstract class JobInProgressListener {
-
-  /**
-   * Invoked when a new job has been added to the {@link JobTracker}.
-   * @param job The added job.
-   */
-  public abstract void jobAdded(JobInProgress job);
-
-  /**
-   * Invoked when a job has been removed from the {@link JobTracker}.
-   * @param job The removed job.
-   */
-  public abstract void jobRemoved(JobInProgress job);
+abstract class JobChangeEvent {
+  private JobInProgress jip;
+  
+  JobChangeEvent(JobInProgress jip) {
+    this.jip = jip;
+  }
   
   /**
-   * Invoked when a job has been updated in the {@link JobTracker}.
-   * This change in the job is tracker using {@link JobChangeEvent}.
-   * @param event the event that tracks the change
+   * Get the job object for which the change is reported
    */
-  public abstract void jobUpdated(JobChangeEvent event);
+  JobInProgress getJobInProgress() {
+    return jip;
+  }
 }

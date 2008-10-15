@@ -27,6 +27,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 
 /**
  * A {@link JobInProgressListener} that maintains the jobs being managed in
@@ -173,25 +174,70 @@ class JobQueuesManager extends JobInProgressListener {
     scheduler.jobAdded(job);
   }
 
-  @Override
-  public void jobRemoved(JobInProgress job) {
-    QueueInfo qi = jobQueues.get(job.getProfile().getQueueName());
-    if (null == qi) {
-      // can't find queue for job. Shouldn't happen. 
-      LOG.warn("Could not find queue " + job.getProfile().getQueueName() + 
-          " when removing job " + job.getProfile().getJobID());
-      return;
-    }
+  private void jobCompleted(JobInProgress job, QueueInfo qi) {
+    LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
+             + job.getProfile().getQueueName() + " has completed");
     // job could be in running or waiting queue
     if (!qi.runningJobs.remove(job)) {
       QueueInfo.removeOb(qi.waitingJobs, job);
     }
     // let scheduler know
-    scheduler.jobRemoved(job);
+    scheduler.jobCompleted(job);
+  }
+  
+  // Note that job is removed when the job completes i.e in jobUpated()
+  @Override
+  public void jobRemoved(JobInProgress job) {}
+  
+  // This is used to reposition a job in the queue. A job can get repositioned 
+  // because of the change in the job priority or job start-time.
+  private void reorderJobs(JobInProgress job, QueueInfo qi) {
+    Collection<JobInProgress> queue = qi.waitingJobs;
+    
+    // Remove from the waiting queue
+    if (!QueueInfo.removeOb(queue, job)) {
+      queue = qi.runningJobs;
+      QueueInfo.removeOb(queue, job);
+    }
+    
+    // Add back to the queue
+    queue.add(job);
+  }
+  
+  // This is used to move a job from the waiting queue to the running queue.
+  private void makeJobRunning(JobInProgress job, QueueInfo qi) {
+    // Remove from the waiting queue
+    QueueInfo.removeOb(qi.waitingJobs, job);
+    
+    // Add the job to the running queue
+    qi.runningJobs.add(job);
+  }
+  
+  // Update the scheduler as job's state has changed
+  private void jobStateChanged(JobStatusChangeEvent event, QueueInfo qi) {
+    JobInProgress job = event.getJobInProgress();
+    // Check if the ordering of the job has changed
+    // For now priority and start-time can change the job ordering
+    if (event.getEventType() == EventType.PRIORITY_CHANGED 
+        || event.getEventType() == EventType.START_TIME_CHANGED) {
+      // Make a priority change
+      reorderJobs(job, qi);
+    } else if (event.getEventType() == EventType.RUN_STATE_CHANGED) {
+      // Check if the job is complete
+      int runState = job.getStatus().getRunState();
+      if (runState == JobStatus.SUCCEEDED
+          || runState == JobStatus.FAILED
+          || runState == JobStatus.KILLED) {
+        jobCompleted(job, qi);
+      } else if (runState == JobStatus.RUNNING) {
+        makeJobRunning(job, qi);
+      }
+    }
   }
   
   @Override
-  public void jobUpdated(JobInProgress job) {
+  public void jobUpdated(JobChangeEvent event) {
+    JobInProgress job = event.getJobInProgress();
     QueueInfo qi = jobQueues.get(job.getProfile().getQueueName());
     if (null == qi) {
       // can't find queue for job. Shouldn't happen. 
@@ -199,18 +245,11 @@ class JobQueuesManager extends JobInProgressListener {
           " when updating job " + job.getProfile().getJobID());
       return;
     }
-    // this is called when a job's priority or state is changed.
-    // since we don't know the job's previous state, we need to 
-    // find out in which queue it was earlier, and then place it in the
-    // right queue.
-    Collection<JobInProgress> dest = (job.getStatus().getRunState() == 
-      JobStatus.PREP)? qi.waitingJobs: qi.runningJobs;
-    // We use our own version of removing objects based on referential
-    // equality, since the 'job' object has already been changed. 
-    if (!QueueInfo.removeOb(qi.waitingJobs, job)) {
-      qi.runningJobs.remove(job);
+    
+    // Check if this is the status change
+    if (event instanceof JobStatusChangeEvent) {
+      jobStateChanged((JobStatusChangeEvent)event, qi);
     }
-    dest.add(job);
   }
   
 }
