@@ -177,7 +177,7 @@ public class HColumnDescriptor implements WritableComparable {
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
    * @param maxValueLength Restrict values to &lt;= this value
-   * @param timeToLive Time-to-live of cell contents, in seconds from last timestamp
+   * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
    * 
@@ -389,17 +389,15 @@ public class HColumnDescriptor implements WritableComparable {
   }
 
   /**
-   * @return Time to live.
+   * @return Time-to-live of cell contents, in seconds.
    */
   public int getTimeToLive() {
     String value = getValue(TTL);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_TTL;
+    return (value != null)? Integer.valueOf(value).intValue(): DEFAULT_TTL;
   }
 
   /**
-   * @param timeToLive
+   * @param timeToLive Time-to-live of cell contents, in seconds.
    */
   public void setTimeToLive(int timeToLive) {
     setValue(TTL, Integer.toString(timeToLive));
@@ -411,7 +409,7 @@ public class HColumnDescriptor implements WritableComparable {
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
     if (value != null)
-      return Boolean.valueOf(value);
+      return Boolean.valueOf(value).booleanValue();
     return DEFAULT_BLOCKCACHE;
   }
 

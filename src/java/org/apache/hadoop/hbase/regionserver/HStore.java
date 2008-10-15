@@ -85,6 +85,7 @@ public class HStore implements HConstants {
   private final SequenceFile.CompressionType compression;
   final FileSystem fs;
   private final HBaseConfiguration conf;
+  // ttl in milliseconds.
   protected long ttl;
   private long majorCompactionTime;
   private int maxFilesToCompact;
@@ -166,9 +167,11 @@ public class HStore implements HConstants {
     this.family = family;
     this.fs = fs;
     this.conf = conf;
+    // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     this.ttl = family.getTimeToLive();
-    if (ttl != HConstants.FOREVER)
+    if (ttl != HConstants.FOREVER) {
       this.ttl *= 1000;
+    }
     this.memcache = new Memcache(this.ttl, info);
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName = Bytes.toBytes(this.info.getEncodedName() + "/" +
