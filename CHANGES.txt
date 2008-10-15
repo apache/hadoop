@@ -27,6 +27,8 @@ Release 0.19.0 - Unreleased
    HBASE-928   NPE throwing RetriesExhaustedException
    HBASE-924   Update hadoop in lib on 0.18 hbase branch to 0.18.1
    HBASE-929   Clarify that ttl in HColumnDescriptor is seconds
+   HBASE-930   RegionServer stuck: HLog: Could not append. Requesting close of
+               log java.io.IOException: Could not get block locations. Aborting...
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

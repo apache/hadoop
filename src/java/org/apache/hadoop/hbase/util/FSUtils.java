@@ -72,10 +72,8 @@ public class FSUtils {
     } catch (IOException e) {
       exception = RemoteExceptionHandler.checkIOException(e);
     }
-    
     try {
       fs.close();
-        
     } catch (Exception e) {
         LOG.error("file system close failed: ", e);
     }

@@ -226,9 +226,10 @@ public class HLog implements HConstants {
    * cacheFlushLock and then completeCacheFlush could be called which would wait
    * for the lock on this and consequently never release the cacheFlushLock
    *
+   * @throws FailedLogCloseException
    * @throws IOException
    */
-  public void rollWriter() throws IOException {
+  public void rollWriter() throws FailedLogCloseException, IOException {
     this.cacheFlushLock.lock();
     try {
       if (closed) {
@@ -237,7 +238,14 @@ public class HLog implements HConstants {
       synchronized (updateLock) {
         if (this.writer != null) {
           // Close the current writer, get a new one.
-          this.writer.close();
+          try {
+            this.writer.close();
+          } catch (IOException e) {
+            // Failed close of log file.  Means we're losing edits.  For now,
+            // shut ourselves down to minimize loss.  Alternative is to try and
+            // keep going.  See HBASE-930.
+            throw new FailedLogCloseException("#" + this.filenum, e);
+          }
           Path p = computeFilename(old_filenum);
           if (LOG.isDebugEnabled()) {
             LOG.debug("Closing current log writer " + FSUtils.getPath(p));

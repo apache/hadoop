@@ -77,8 +77,11 @@ class LogRoller extends Thread implements LogRollListener {
       try {
         LOG.info("Rolling hlog. Number of entries: " + server.getLog().getNumEntries());
         server.getLog().rollWriter();
+      } catch (FailedLogCloseException e) {
+        LOG.fatal("Forcing server shutdown", e);
+        server.abort();
       } catch (IOException ex) {
-        LOG.error("Log rolling failed",
+        LOG.error("Log rolling failed with ioe: ",
             RemoteExceptionHandler.checkIOException(ex));
         server.checkFileSystem();
       } catch (Exception ex) {
