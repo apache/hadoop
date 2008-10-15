@@ -917,6 +917,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4376. Fix formatting in hadoop-default.xml for
     hadoop.http.filter.initializers. (Enis Soztutar via acmurthy) 
 
+    HADOOP-4410. Adds an extra arg to the API FileUtil.makeShellPath to
+    determine whether to canonicalize file paths or not.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

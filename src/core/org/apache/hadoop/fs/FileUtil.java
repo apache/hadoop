@@ -392,7 +392,24 @@ public class FileUtil {
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(File file) throws IOException {
-    return makeShellPath(file.getCanonicalPath());
+    return makeShellPath(file, false);
+  }
+
+  /**
+   * Convert a os-native filename to a path that works for the shell.
+   * @param file The filename to convert
+   * @param makeCanonicalPath 
+   *          Whether to make canonical path for the file passed
+   * @return The unix pathname
+   * @throws IOException on windows, there can be problems with the subprocess
+   */
+  public static String makeShellPath(File file, boolean makeCanonicalPath) 
+  throws IOException {
+    if (makeCanonicalPath) {
+      return makeShellPath(file.getCanonicalPath());
+    } else {
+      return makeShellPath(file.toString());
+    }
   }
 
   /**
@@ -570,8 +587,8 @@ public class FileUtil {
        hardLinkCommand[len-1] = target.getCanonicalPath();
        hardLinkCommand[len-2] = linkName.getCanonicalPath();
       } else {
-       hardLinkCommand[len-2] = makeShellPath(target);
-       hardLinkCommand[len-1] = makeShellPath(linkName);
+       hardLinkCommand[len-2] = makeShellPath(target, true);
+       hardLinkCommand[len-1] = makeShellPath(linkName, true);
       }
       // execute shell command
       Process process = Runtime.getRuntime().exec(hardLinkCommand);
