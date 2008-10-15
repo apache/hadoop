@@ -142,6 +142,7 @@ class JobInProgress {
 
   private JobConf conf;
   AtomicBoolean tasksInited = new AtomicBoolean(false);
+  private JobInitKillStatus jobInitKillStatus = new JobInitKillStatus();
 
   private LocalFileSystem localFs;
   private JobID jobId;
@@ -340,6 +341,12 @@ class JobInProgress {
     if (tasksInited.get()) {
       return;
     }
+    synchronized(jobInitKillStatus){
+      if(jobInitKillStatus.killed) {
+        return;
+      }
+      jobInitKillStatus.initStarted = true;
+    }
 
     // log job info
     JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
@@ -449,6 +456,15 @@ class JobInProgress {
     setup[1] = new TaskInProgress(jobId, jobFile, numMapTasks,
                        numReduceTasks + 1, jobtracker, conf, this);
     setup[1].setSetupTask();
+    
+    synchronized(jobInitKillStatus){
+      jobInitKillStatus.initDone = true;
+      if(jobInitKillStatus.killed) {
+        //setup not launched so directly terminate
+        terminateJob(JobStatus.KILLED);
+        return;
+      }
+    }
     
     tasksInited.set(true);
     JobHistory.JobInfo.logInited(profile.getJobID(), this.launchTime, 
@@ -881,40 +897,47 @@ class JobInProgress {
    * Return a CleanupTask, if appropriate, to run on the given tasktracker
    * 
    */
-  public synchronized Task obtainCleanupTask(TaskTrackerStatus tts, 
+  public Task obtainCleanupTask(TaskTrackerStatus tts, 
                                              int clusterSize, 
                                              int numUniqueHosts,
                                              boolean isMapSlot
                                             ) throws IOException {
-    if (!canLaunchCleanupTask()) {
+    if(!tasksInited.get()) {
       return null;
     }
     
-    String taskTracker = tts.getTrackerName();
-    // Update the last-known clusterSize
-    this.clusterSize = clusterSize;
-    if (!shouldRunOnTaskTracker(taskTracker)) {
-      return null;
+    synchronized(this) {
+      if (!canLaunchCleanupTask()) {
+        return null;
+      }
+      
+      String taskTracker = tts.getTrackerName();
+      // Update the last-known clusterSize
+      this.clusterSize = clusterSize;
+      if (!shouldRunOnTaskTracker(taskTracker)) {
+        return null;
+      }
+      
+      List<TaskInProgress> cleanupTaskList = new ArrayList<TaskInProgress>();
+      if (isMapSlot) {
+        cleanupTaskList.add(cleanup[0]);
+      } else {
+        cleanupTaskList.add(cleanup[1]);
+      }
+      TaskInProgress tip = findTaskFromList(cleanupTaskList,
+                             tts, numUniqueHosts, false);
+      if (tip == null) {
+        return null;
+      }
+      
+      // Now launch the cleanupTask
+      Task result = tip.getTaskToRun(tts.getTrackerName());
+      if (result != null) {
+        addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
+      }
+      return result;
     }
     
-    List<TaskInProgress> cleanupTaskList = new ArrayList<TaskInProgress>();
-    if (isMapSlot) {
-      cleanupTaskList.add(cleanup[0]);
-    } else {
-      cleanupTaskList.add(cleanup[1]);
-    }
-    TaskInProgress tip = findTaskFromList(cleanupTaskList,
-                           tts, numUniqueHosts, false);
-    if (tip == null) {
-      return null;
-    }
-    
-    // Now launch the cleanupTask
-    Task result = tip.getTaskToRun(tts.getTrackerName());
-    if (result != null) {
-      addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
-    }
-    return result;
   }
   
   /**
@@ -956,40 +979,46 @@ class JobInProgress {
    * Return a SetupTask, if appropriate, to run on the given tasktracker
    * 
    */
-  public synchronized Task obtainSetupTask(TaskTrackerStatus tts, 
+  public Task obtainSetupTask(TaskTrackerStatus tts, 
                                              int clusterSize, 
                                              int numUniqueHosts,
                                              boolean isMapSlot
                                             ) throws IOException {
-    if (!canLaunchSetupTask()) {
+    if(!tasksInited.get()) {
       return null;
     }
     
-    String taskTracker = tts.getTrackerName();
-    // Update the last-known clusterSize
-    this.clusterSize = clusterSize;
-    if (!shouldRunOnTaskTracker(taskTracker)) {
-      return null;
+    synchronized(this) {
+      if (!canLaunchSetupTask()) {
+        return null;
+      }
+      
+      String taskTracker = tts.getTrackerName();
+      // Update the last-known clusterSize
+      this.clusterSize = clusterSize;
+      if (!shouldRunOnTaskTracker(taskTracker)) {
+        return null;
+      }
+      
+      List<TaskInProgress> setupTaskList = new ArrayList<TaskInProgress>();
+      if (isMapSlot) {
+        setupTaskList.add(setup[0]);
+      } else {
+        setupTaskList.add(setup[1]);
+      }
+      TaskInProgress tip = findTaskFromList(setupTaskList,
+                             tts, numUniqueHosts, false);
+      if (tip == null) {
+        return null;
+      }
+      
+      // Now launch the setupTask
+      Task result = tip.getTaskToRun(tts.getTrackerName());
+      if (result != null) {
+        addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
+      }
+      return result;
     }
-    
-    List<TaskInProgress> setupTaskList = new ArrayList<TaskInProgress>();
-    if (isMapSlot) {
-      setupTaskList.add(setup[0]);
-    } else {
-      setupTaskList.add(setup[1]);
-    }
-    TaskInProgress tip = findTaskFromList(setupTaskList,
-                           tts, numUniqueHosts, false);
-    if (tip == null) {
-      return null;
-    }
-    
-    // Now launch the setupTask
-    Task result = tip.getTaskToRun(tts.getTrackerName());
-    if (result != null) {
-      addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
-    }
-    return result;
   }
   
   /**
@@ -1883,7 +1912,7 @@ class JobInProgress {
     }
   }
   
-  synchronized void terminateJob(int jobTerminationState) {
+  private synchronized void terminateJob(int jobTerminationState) {
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
       if (jobTerminationState == JobStatus.FAILED) {
@@ -1909,12 +1938,33 @@ class JobInProgress {
 
   /**
    * Terminate the job and all its component tasks.
+   * Calling this will lead to marking the job as failed/killed. Cleanup 
+   * tip will be launched. If the job has not inited, it will directly call 
+   * terminateJob as there is no need to launch cleanup tip.
+   * This method is reentrant.
    * @param jobTerminationState job termination state
    */
   private synchronized void terminate(int jobTerminationState) {
+    if(!tasksInited.get()) {
+    	//init could not be done, we just terminate directly.
+      terminateJob(jobTerminationState);
+      return;
+    }
+
     if ((status.getRunState() == JobStatus.RUNNING) ||
          (status.getRunState() == JobStatus.PREP)) {
       LOG.info("Killing job '" + this.status.getJobID() + "'");
+      if (jobTerminationState == JobStatus.FAILED) {
+        if(jobFailed) {//reentrant
+          return;
+        }
+        jobFailed = true;
+      } else if (jobTerminationState == JobStatus.KILLED) {
+        if(jobKilled) {//reentrant
+          return;
+        }
+        jobKilled = true;
+      }
       //
       // kill all TIPs.
       //
@@ -1927,19 +1977,29 @@ class JobInProgress {
       for (int i = 0; i < reduces.length; i++) {
         reduces[i].kill();
       }
-      if (jobTerminationState == JobStatus.FAILED) {
-        jobFailed = true;
-      } else if (jobTerminationState == JobStatus.KILLED) {
-        jobKilled = true;
-      }
     }
   }
   
   /**
-   * Kill the job and all its component tasks.
+   * Kill the job and all its component tasks. This method is called from 
+   * jobtracker and should return fast as it locks the jobtracker.
    */
-  public synchronized void kill() {
-    terminate(JobStatus.KILLED);
+  public void kill() {
+    boolean killNow = false;
+    synchronized(jobInitKillStatus) {
+      if(jobInitKillStatus.killed) {//job is already marked for killing
+        return;
+      }
+      jobInitKillStatus.killed = true;
+      //if not in middle of init, terminate it now
+      if(!jobInitKillStatus.initStarted || jobInitKillStatus.initDone) {
+        //avoiding nested locking by setting flag
+        killNow = true;
+      }
+    }
+    if(killNow) {
+      terminate(JobStatus.KILLED);
+    }
   }
   
   /**
@@ -2311,5 +2371,18 @@ class JobInProgress {
   public synchronized void setSchedulingInfo(Object schedulingInfo) {
     this.schedulingInfo = schedulingInfo;
     this.status.setSchedulingInfo(schedulingInfo.toString());
+  }
+  
+  /**
+   * To keep track of kill and initTasks status of this job. initTasks() take 
+   * a lock on JobInProgress object. kill should avoid waiting on 
+   * JobInProgress lock since it may take a while to do initTasks().
+   */
+  private static class JobInitKillStatus {
+    //flag to be set if kill is called
+    boolean killed;
+    
+    boolean initStarted;
+    boolean initDone;
   }
 }
