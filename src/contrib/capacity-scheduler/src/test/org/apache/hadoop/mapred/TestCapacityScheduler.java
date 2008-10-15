@@ -564,6 +564,62 @@ public class TestCapacityScheduler extends TestCase {
     assertEquals(18.75f, resConf.getGuaranteedCapacity("q3"));
     assertEquals(18.75f, resConf.getGuaranteedCapacity("q4"));
   }
+
+  // Tests how GC is computed and assignment of tasks done
+  // on the basis of the GC.
+  public void testCapacityBasedAllocation() throws Exception {
+    // set up some queues
+    String[] qs = {"default", "q2"};
+    taskTrackerManager.addQueues(qs);
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    // set the gc % as 10%, so that gc will be zero initially as 
+    // the cluster capacity increase slowly.
+    queues.add(new FakeQueueInfo("default", 10.0f, 5000, true, 25));
+    queues.add(new FakeQueueInfo("q2", 90.0f, 5000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+   
+    // submit a job to the default queue
+    submitJob(JobStatus.PREP, 10, 0, "default", "u1");
+    
+    // submit a job to the second queue
+    submitJob(JobStatus.PREP, 10, 0, "q2", "u1");
+    
+    // job from q2 runs first because it has some non-zero capacity.
+    checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    verifyGuaranteedCapacity("0", "default");
+    verifyGuaranteedCapacity("3", "q2");
+    
+    // add another tt to increase tt slots
+    taskTrackerManager.addTaskTracker("tt3");
+    checkAssignment("tt2", "attempt_test_0002_m_000002_0 on tt2");
+    verifyGuaranteedCapacity("0", "default");
+    verifyGuaranteedCapacity("5", "q2");
+    
+    // add another tt to increase tt slots
+    taskTrackerManager.addTaskTracker("tt4");
+    checkAssignment("tt3", "attempt_test_0002_m_000003_0 on tt3");
+    verifyGuaranteedCapacity("0", "default");
+    verifyGuaranteedCapacity("7", "q2");
+    
+    // add another tt to increase tt slots
+    taskTrackerManager.addTaskTracker("tt5");
+    // now job from default should run, as it is furthest away
+    // in terms of runningMaps / gc.
+    checkAssignment("tt4", "attempt_test_0001_m_000001_0 on tt4");
+    verifyGuaranteedCapacity("1", "default");
+    verifyGuaranteedCapacity("9", "q2");
+  }
+  
+  private void verifyGuaranteedCapacity(String expectedCapacity, 
+                                          String queue) throws IOException {
+    String schedInfo = taskTrackerManager.getQueueManager().
+                          getSchedulerInfo(queue).toString();
+    assertTrue(schedInfo.contains("Current Capacity Maps : " 
+                                    + expectedCapacity));
+  }
   
   // test capacity transfer
   public void testCapacityTransfer() throws Exception {
