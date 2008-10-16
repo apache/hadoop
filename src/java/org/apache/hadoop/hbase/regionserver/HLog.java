@@ -245,7 +245,7 @@ public class HLog implements HConstants {
             // shut ourselves down to minimize loss.  Alternative is to try and
             // keep going.  See HBASE-930.
             FailedLogCloseException flce =
-              new FailedLogCloseException("#" + this.filenum, e);
+              new FailedLogCloseException("#" + this.filenum);
             flce.initCause(e);
             throw e; 
           }
