@@ -246,7 +246,7 @@ public class HLog implements HConstants {
             // keep going.  See HBASE-930.
             FailedLogCloseException flce =
               new FailedLogCloseException("#" + this.filenum, e);
-            flce.initCause(e):
+            flce.initCause(e);
             throw e; 
           }
           Path p = computeFilename(old_filenum);
