@@ -623,9 +623,10 @@ public class FsShell extends Configured implements Tool {
           stat.getPermission() + " ");
         System.out.printf("%"+ maxReplication + 
           "s ", (!stat.isDir() ? stat.getReplication() : "-"));
-        System.out.printf("%-"+ maxOwner +
-          "s ", stat.getOwner());
-        System.out.printf("%-"+ maxGroup +"s ", stat.getGroup());
+        if (maxOwner > 0)
+          System.out.printf("%-"+ maxOwner + "s ", stat.getOwner());
+        if (maxGroup > 0)
+          System.out.printf("%-"+ maxGroup + "s ", stat.getGroup());
         System.out.printf("%"+ maxLen + "d ", stat.getLen());
         System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
