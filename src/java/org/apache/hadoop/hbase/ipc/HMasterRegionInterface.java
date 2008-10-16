@@ -26,6 +26,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 
 /**
  * HRegionServers interact with the HMasterRegionInterface to report on local 
@@ -67,4 +68,11 @@ public interface HMasterRegionInterface extends VersionedProtocol {
   public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[], 
     HRegionInfo mostLoadedRegions[])
   throws IOException;
+
+  /**
+   * @return Root region region server address. Unlike
+   * HMasterInterface.findRootRegion, does not wait until all regions are 
+   * assigned.
+   */
+  public HServerAddress getRootRegionLocation();
 }

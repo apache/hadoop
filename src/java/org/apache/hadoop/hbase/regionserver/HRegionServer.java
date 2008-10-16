@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -72,6 +73,8 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.ValueOverMaxLengthException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -117,6 +120,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   protected final HServerInfo serverInfo;
   protected final HBaseConfiguration conf;
+
+  private final ServerConnection connection;
+  private final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
@@ -226,6 +232,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
+    this.connection = ServerConnectionManager.getConnection(conf);
 
     this.isOnline = false;
 
@@ -486,7 +493,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     join();
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
-  
+
   /*
    * Run init. Sets up hlog and starts up all server threads.
    * @param c Extra configuration.
@@ -626,6 +633,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * the end of the main HRegionServer run loop.
    */
   private void housekeeping() {
+    // Try to get the root region location from the master. 
+    if (!haveRootRegion.get()) {
+      HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
+      if (rootServer != null) {
+        // By setting the root region location, we bypass the wait imposed on
+        // HTable for all regions being assigned.
+        this.connection.setRootRegionLocation(
+            new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
+        haveRootRegion.set(true);
+      }
+    }
     // If the todo list has > 0 messages, iterate looking for open region
     // messages. Send the master a message that we're working on its
     // processing so it doesn't assign the region elsewhere.

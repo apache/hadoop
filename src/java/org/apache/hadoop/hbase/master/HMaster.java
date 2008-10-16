@@ -52,8 +52,8 @@ import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -116,7 +116,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private final Server server;
   private final HServerAddress address;
 
-  final HConnection connection;
+  final ServerConnection connection;
 
   final int metaRescanInterval;
   
@@ -224,7 +224,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.address = new HServerAddress(server.getListenerAddress());
     conf.set(MASTER_ADDRESS, address.toString());
 
-    this.connection = HConnectionManager.getConnection(conf);
+    this.connection = ServerConnectionManager.getConnection(conf);
 
     this.metaRescanInterval =
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
@@ -679,7 +679,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public HServerAddress findRootRegion() {
-    return regionManager.getRootRegionLocation();
+    HServerAddress rootServer = null;
+    if (regionManager.allRegionsAssigned()) {
+      rootServer = regionManager.getRootRegionLocation();
+    }
+    return rootServer;
   }
 
   /*

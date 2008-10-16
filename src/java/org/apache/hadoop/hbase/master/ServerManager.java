@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.LeaseException;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
@@ -444,7 +445,10 @@ class ServerManager implements HConstants {
 
       if (region.isRootRegion()) {
         // Store the Root Region location (in memory)
-        master.regionManager.setRootRegionLocation(serverInfo.getServerAddress());
+        HServerAddress rootServer = serverInfo.getServerAddress();
+        master.connection.setRootRegionLocation(
+            new HRegionLocation(region, rootServer));
+        master.regionManager.setRootRegionLocation(rootServer);
       } else {
         // Note that the table has been assigned and is waiting for the
         // meta table to be updated.
@@ -470,6 +474,7 @@ class ServerManager implements HConstants {
         LOG.fatal("root region is marked offline");
         master.shutdown();
       }
+      master.connection.setRootRegionLocation(null);
       master.regionManager.unassignRootRegion();
 
     } else {

@@ -62,11 +62,9 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 public class HConnectionManager implements HConstants {
   /*
-   * Private. Not instantiable.
+   * Not instantiable.
    */
-  private HConnectionManager() {
-    super();
-  }
+  protected HConnectionManager() {}
   
   // A Map of master HServerAddress -> connection information for that instance
   // Note that although the Map is synchronized, the objects it contains
@@ -109,7 +107,7 @@ public class HConnectionManager implements HConstants {
   }
 
   /* Encapsulates finding the servers for an HBase instance */
-  private static class TableServers implements HConnection, HConstants {
+  private static class TableServers implements ServerConnection, HConstants {
     private static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -168,11 +166,16 @@ public class HConnectionManager implements HConstants {
     }
 
     private long getPauseTime(int tries) {
-      if (tries >= HConstants.RETRY_BACKOFF.length)
-        tries = HConstants.RETRY_BACKOFF.length - 1;
-      return this.pause * HConstants.RETRY_BACKOFF[tries];
+      int ntries = tries;
+      if (ntries >= HConstants.RETRY_BACKOFF.length)
+        ntries = HConstants.RETRY_BACKOFF.length - 1;
+      return this.pause * HConstants.RETRY_BACKOFF[ntries];
     }
 
+    public void setRootRegionLocation(HRegionLocation rootRegion) {
+      this.rootRegionLocation = rootRegion;
+    }
+    
     public HMasterInterface getMaster() throws MasterNotRunningException {
       HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
@@ -366,8 +369,7 @@ public class HConnectionManager implements HConstants {
     implements MetaScanner.MetaScannerVisitor {
         byte[] tableName;
         HTableDescriptor result;
-        //TODO: change visibility to protected
-        public HTableDescriptorFinder(byte[] tableName) {
+        protected HTableDescriptorFinder(byte[] tableName) {
           this.tableName = tableName;
         }
         public boolean processRow(RowResult rowResult) throws IOException {
