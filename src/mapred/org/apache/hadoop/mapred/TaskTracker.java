@@ -118,7 +118,7 @@ public class TaskTracker
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
 
-  private boolean running = true;
+  volatile boolean running = true;
 
   private LocalDirAllocator localDirAllocator;
   String taskTrackerName;
@@ -553,7 +553,7 @@ public class TaskTracker
     public void run() {
       LOG.info("Starting thread: " + this.getName());
         
-      while (true) {
+      while (running) {
         try {
           List <FetchStatus> fList = null;
           synchronized (runningJobs) {
@@ -583,6 +583,9 @@ public class TaskTracker
                        "Ignoring exception that fetch for map completion" +
                        " events threw for " + f.jobId + " threw: " +
                        StringUtils.stringifyException(e)); 
+            }
+            if (!running) {
+              break;
             }
           }
           synchronized (waitingOn) {
@@ -867,6 +870,15 @@ public class TaskTracker
     
     // shutdown RPC connections
     RPC.stopProxy(jobClient);
+
+    // wait for the fetcher thread to exit
+    for (boolean done = false; !done; ) {
+      try {
+        this.mapEventsFetcher.join();
+        done = true;
+      } catch (InterruptedException e) {
+      }
+    }
   }
 
   /**
