@@ -294,11 +294,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
-          // Commit suicide.
-          LOG.fatal("unable to report to master for " + (now - lastMsg) +
-            " milliseconds - aborting server");
-          abort();
-          break;
+          LOG.warn("unable to report to master for " + (now - lastMsg) +
+            " milliseconds - retrying");
         }
         if ((now - lastMsg) >= msgInterval) {
           HMsg outboundArray[] = null;
@@ -403,12 +400,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               LOG.warn("Processing message (Retry: " + tries + ")", e);
               tries++;
             } else {
-              LOG.fatal("Exceeded max retries: " + this.numRetries, e);
-              if (!checkFileSystem()) {
-                continue;
-              }
-              // Something seriously wrong. Shutdown.
-              stop();
+              LOG.error("Exceeded max retries: " + this.numRetries, e);
+              checkFileSystem();
             }
           }
         }
@@ -701,17 +694,26 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private MapWritable reportForDuty(final Sleeper sleeper)
-  throws IOException {
+  private MapWritable reportForDuty(final Sleeper sleeper) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Telling master at " +
         conf.get(MASTER_ADDRESS) + " that we are up");
     }
-    // Do initial RPC setup.  The final argument indicates that the RPC should retry indefinitely.
-    this.hbaseMaster = (HMasterRegionInterface)HbaseRPC.waitForProxy(
-      HMasterRegionInterface.class, HMasterRegionInterface.versionID,
-      new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
-      this.conf, -1);
+    HMasterRegionInterface master = null;
+    while (!stopRequested.get() && master == null) {
+      try {
+        // Do initial RPC setup.  The final argument indicates that the RPC
+        // should retry indefinitely.
+        master = (HMasterRegionInterface)HbaseRPC.waitForProxy(
+            HMasterRegionInterface.class, HMasterRegionInterface.versionID,
+            new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
+            this.conf, -1);
+      } catch (IOException e) {
+        LOG.warn("Unable to connect to master. Retrying. Error was:", e);
+        sleeper.sleep();
+      }
+    }
+    this.hbaseMaster = master;
     MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
