@@ -244,7 +244,10 @@ public class HLog implements HConstants {
             // Failed close of log file.  Means we're losing edits.  For now,
             // shut ourselves down to minimize loss.  Alternative is to try and
             // keep going.  See HBASE-930.
-            throw new FailedLogCloseException("#" + this.filenum, e);
+            FailedLogCloseException flce =
+              new FailedLogCloseException("#" + this.filenum, e);
+            flce.initCause(e):
+            throw e; 
           }
           Path p = computeFilename(old_filenum);
           if (LOG.isDebugEnabled()) {

@@ -35,12 +35,4 @@ class FailedLogCloseException extends IOException {
   public FailedLogCloseException(String arg0) {
     super(arg0);
   }
-
-  public FailedLogCloseException(Throwable arg0) {
-    super(arg0);
-  }
-
-  public FailedLogCloseException(String arg0, Throwable arg1) {
-    super(arg0, arg1);
-  }
 }
