@@ -231,6 +231,14 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
+<a href="#Cluster+Restartability">Cluster Restartability</a>
+<ul class="minitoc">
+<li>
+<a href="#Map%2FReduce">Map/Reduce</a>
+</li>
+</ul>
+</li>
+<li>
 <a href="#Hadoop+Rack+Awareness">Hadoop Rack Awareness</a>
 </li>
 <li>
@@ -726,8 +734,21 @@ document.write("Last Published: " + document.lastModified);
       typically <span class="codefrag">${HADOOP_HOME}/conf</span>.</p>
 </div>
     
+<a name="N10398"></a><a name="Cluster+Restartability"></a>
+<h2 class="h3">Cluster Restartability</h2>
+<div class="section">
+<a name="N1039E"></a><a name="Map%2FReduce"></a>
+<h3 class="h4">Map/Reduce</h3>
+<p>The job tracker restart can recover running jobs if 
+        <span class="codefrag">mapred.jobtracker.restart.recover</span> is set true and 
+        <a href="#Logging">JobHistory logging</a> is enabled. Also 
+        <span class="codefrag">mapred.jobtracker.job.history.block.size</span> value should be 
+        set to an optimal value to dump job history to disk as soon as 
+        possible, the typical value is 3145728(3MB).</p>
+</div>
     
-<a name="N10398"></a><a name="Hadoop+Rack+Awareness"></a>
+    
+<a name="N103B3"></a><a name="Hadoop+Rack+Awareness"></a>
 <h2 class="h3">Hadoop Rack Awareness</h2>
 <div class="section">
 <p>The HDFS and the Map/Reduce components are rack-aware.</p>
@@ -750,7 +771,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N103BE"></a><a name="Hadoop+Startup"></a>
+<a name="N103D9"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -785,7 +806,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10404"></a><a name="Hadoop+Shutdown"></a>
+<a name="N1041F"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

@@ -420,6 +420,18 @@
       to the <code>HADOOP_CONF_DIR</code> directory on all the machines, 
       typically <code>${HADOOP_HOME}/conf</code>.</p>
     </section>
+    <section>
+      <title>Cluster Restartability</title>
+      <section>
+        <title>Map/Reduce</title>
+        <p>The job tracker restart can recover running jobs if 
+        <code>mapred.jobtracker.restart.recover</code> is set true and 
+        <a href="#Logging">JobHistory logging</a> is enabled. Also 
+        <code>mapred.jobtracker.job.history.block.size</code> value should be 
+        set to an optimal value to dump job history to disk as soon as 
+        possible, the typical value is 3145728(3MB).</p>
+      </section>
+    </section>
     
     <section>
       <title>Hadoop Rack Awareness</title>

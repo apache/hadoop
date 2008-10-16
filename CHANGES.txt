@@ -940,6 +940,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4278. Increase debug logging for unit test TestDatanodeDeath.
     (dhruba)
 
+    HADOOP-4418. Updates documentation in forrest for Mapred, streaming and pipes.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

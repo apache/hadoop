@@ -96,13 +96,14 @@ understandable.<br />(Yuri Pradkin via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(3)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4204">HADOOP-4204</a>. Fix findbugs warnings related to unused variables, naive
 Number subclass instantiation, Map iteration, and badly scoped inner
 classes.<br />(Suresh Srinivas via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4207">HADOOP-4207</a>. Update derby jar file to release 10.4.2 release.<br />(Prasad Chakka via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4325">HADOOP-4325</a>. SocketInputStream.read() should return -1 in case EOF.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4408">HADOOP-4408</a>. FsAction functions need not create new objects.<br />(cdouglas)</li>
     </ol>
   </li>
 </ul>
@@ -259,7 +260,7 @@ changes from the prior release.<br />(cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(72)
+</a>&nbsp;&nbsp;&nbsp;(74)
     <ol id="release_0.19.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4205">HADOOP-4205</a>. hive: metastore and ql to use the refactored SerDe library.<br />(zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4106">HADOOP-4106</a>. libhdfs: add time, permission and user attribute support
@@ -389,10 +390,13 @@ make itermitant failures reproducible.<br />(szetszwo via cdouglas)</li>
 incrementing the task attempt numbers by 1000 when the job restarts.<br />(Amar Kamat via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4301">HADOOP-4301</a>. Adds forrest doc for the skip bad records feature.<br />(Sharad Agarwal via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4354">HADOOP-4354</a>. Separate TestDatanodeDeath.testDatanodeDeath() into 4 tests.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3790">HADOOP-3790</a>. Add more unit tests for testing HDFS file append.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4150">HADOOP-4150</a>. Include librecordio in hadoop releases.<br />(Giridharan Kesavan
+via acmurthy)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
-</a>&nbsp;&nbsp;&nbsp;(9)
+</a>&nbsp;&nbsp;&nbsp;(11)
     <ol id="release_0.19.0_-_unreleased_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3556">HADOOP-3556</a>. Removed lock contention in MD5Hash by changing the
 singleton MessageDigester by an instance per Thread using
@@ -412,10 +416,16 @@ GenericMRLoadGenerator public, so they can be used in other contexts.<br />(Ling
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3514">HADOOP-3514</a>. Inline the CRCs in intermediate files as opposed to reading
 it from a different .crc file.<br />(Jothi Padmanabhan via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3638">HADOOP-3638</a>. Caches the iFile index files in memory to reduce seeks<br />(Jothi Padmanabhan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4225">HADOOP-4225</a>. FSEditLog.logOpenFile() should persist accessTime
+rather than modificationTime.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4380">HADOOP-4380</a>. Made several new classes (Child, JVMId,
+JobTrackerInstrumentation, QueueManager, ResourceEstimator,
+TaskTrackerInstrumentation, and TaskTrackerMetricsInst) in
+org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(109)
+</a>&nbsp;&nbsp;&nbsp;(130)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -625,6 +635,45 @@ automatically kills on too many unique map-outputs could not be fetched
 for small jobs.<br />(Amareshwari Sri Ramadasu via acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4163">HADOOP-4163</a>. Report FSErrors from map output fetch threads instead of
 merely logging them.<br />(Sharad Agarwal via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4261">HADOOP-4261</a>. Adds a setup task for jobs. This is required so that we
+don't setup jobs that haven't been inited yet (since init could lead
+to job failure). Only after the init has successfully happened do we
+launch the setupJob task.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4256">HADOOP-4256</a>. Removes Completed and Failed Job tables from
+jobqueue_details.jsp.<br />(Sreekanth Ramakrishnan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4267">HADOOP-4267</a>. Occasional exceptions during shutting down HSQLDB is logged
+but not rethrown.<br />(enis)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4018">HADOOP-4018</a>. The number of tasks for a single job cannot exceed a
+pre-configured maximum value.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4288">HADOOP-4288</a>. Fixes a NPE problem in CapacityScheduler.<br />(Amar Kamat via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3883">HADOOP-3883</a>. Limit namenode to assign at most one generation stamp for
+a particular block within a short period.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4014">HADOOP-4014</a>. Create hard links with 'fsutil hardlink' on Windows.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4393">HADOOP-4393</a>. Merged org.apache.hadoop.fs.permission.AccessControlException
+and org.apache.hadoop.security.AccessControlIOException into a single
+class hadoop.security.AccessControlException.<br />(omalley via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4287">HADOOP-4287</a>. Fixes an issue to do with maintaining counts of running/pending
+maps/reduces.<br />(Sreekanth Ramakrishnan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4361">HADOOP-4361</a>. Makes sure that jobs killed from command line are killed
+fast (i.e., there is a slot to run the cleanup task soon).<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4400">HADOOP-4400</a>. Add "hdfs://" to fs.default.name on quickstart.html.<br />(Jeff Hammerbacher via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4403">HADOOP-4403</a>. Make TestLeaseRecovery and TestFileCreation more robust.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4378">HADOOP-4378</a>. Fix TestJobQueueInformation to use SleepJob rather than
+WordCount via TestMiniMRWithDFS.<br />(Sreekanth Ramakrishnan via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4376">HADOOP-4376</a>. Fix formatting in hadoop-default.xml for
+hadoop.http.filter.initializers.<br />(Enis Soztutar via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4410">HADOOP-4410</a>. Adds an extra arg to the API FileUtil.makeShellPath to
+determine whether to canonicalize file paths or not.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4236">HADOOP-4236</a>. Ensure un-initialized jobs are killed correctly on
+user-demand.<br />(Sharad Agarwal via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4373">HADOOP-4373</a>. Fix calculation of Guaranteed Capacity for the
+capacity-scheduler.<br />(Hemanth Yamijala via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4053">HADOOP-4053</a>. Schedulers must be notified when jobs complete.<br />(Amar Kamat via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4335">HADOOP-4335</a>. Fix FsShell -ls for filesystems without owners/groups.<br />(David
+Phillips via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4426">HADOOP-4426</a>. TestCapacityScheduler broke due to the two commits <a href="http://issues.apache.org/jira/browse/HADOOP-4053">HADOOP-4053</a>
+and <a href="http://issues.apache.org/jira/browse/HADOOP-4373">HADOOP-4373</a>. This patch fixes that.<br />(Hemanth Yamijala via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4278">HADOOP-4278</a>. Increase debug logging for unit test TestDatanodeDeath.<br />(dhruba)</li>
     </ol>
   </li>
 </ul>
@@ -634,13 +683,19 @@ merely logging them.<br />(Sharad Agarwal via cdouglas)</li>
 </a></h3>
 <ul id="release_0.18.2_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(3)
+</a>&nbsp;&nbsp;&nbsp;(7)
     <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
 meta file.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4314">HADOOP-4314</a>. Simulated datanodes should not include blocks that are still
 being written in their block report.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4228">HADOOP-4228</a>. dfs datanoe metrics, bytes_read and bytes_written, overflow
+due to incorrect type used.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4395">HADOOP-4395</a>. The FSEditLog loading is incorrect for the case OP_SET_OWNER.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
+ArrayIndexOutOfBoundsException.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
     </ol>
   </li>
 </ul>

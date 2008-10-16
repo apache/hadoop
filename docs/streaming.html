@@ -238,6 +238,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="#A+Useful+Partitioner+Class+%28secondary+sort%2C+the+-partitioner+org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner+option%29">A Useful Partitioner Class (secondary sort, the -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner option) </a>
 </li>
 <li>
+<a href="#A+Useful+Comparator+Class">A Useful Comparator Class</a>
+</li>
+<li>
 <a href="#Working+with+the+Hadoop+Aggregate+Package+%28the+-reduce+aggregate+option%29">Working with the Hadoop Aggregate Package (the -reduce aggregate option) </a>
 </li>
 <li>
@@ -615,10 +618,17 @@ In the above example, "-D stream.map.output.field.separator=." specifies "." as 
 <p>
 Similarly, you can use "-D stream.reduce.output.field.separator=SEP" and "-D stream.num.reduce.output.fields=NUM" to specify the nth field separator in a line of the reduce outputs as the separator between the key and the value.
 </p>
-<a name="N101D9"></a><a name="A+Useful+Partitioner+Class+%28secondary+sort%2C+the+-partitioner+org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner+option%29"></a>
+<p> Similarly, you can specify "stream.map.input.field.separator" and 
+"stream.reduce.input.field.separator" as the input separator for map/reduce 
+inputs. By default the separator is the tab character.</p>
+<a name="N101DC"></a><a name="A+Useful+Partitioner+Class+%28secondary+sort%2C+the+-partitioner+org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner+option%29"></a>
 <h3 class="h4">A Useful Partitioner Class (secondary sort, the -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner option) </h3>
 <p>
-Hadoop has a library class, org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner, that is useful for many applications. This class allows the Map/Reduce framework to partition the map outputs based on prefixes of keys, not the whole keys. For example:
+Hadoop has a library class, 
+<a href="api/org/apache/hadoop/mapred/lib/KeyFieldBasedPartitioner.html">KeyFieldBasedPartitioner</a>, 
+that is useful for many applications. This class allows the Map/Reduce 
+framework to partition the map outputs based on certain key fields, not
+the whole keys. For example:
 </p>
 <pre class="code">
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
@@ -630,14 +640,20 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -D stream.map.output.field.separator=. \
     -D stream.num.map.output.key.fields=4 \
     -D map.output.key.field.separator=. \
-    -D num.key.fields.for.partition=2 \
+    -D mapred.text.key.partitioner.options=-k1,2\
     -D mapred.reduce.tasks=12
 </pre>
 <p>
 Here, <em>-D stream.map.output.field.separator=.</em> and <em>-D stream.num.map.output.key.fields=4</em> are as explained in previous example. The two variables are used by streaming to identify the key/value pair of mapper. 
 </p>
 <p>
-The map output keys of the above Map/Reduce job normally have four fields separated by ".". However, the Map/Reduce framework will partition the map outputs by the first two fields of the keys using the <em>-D num.key.fields.for.partition=2</em> option. Here, <em>-D map.output.key.field.separator=.</em> specifies the separator for the partition. This guarantees that all the key/value pairs with the same first two fields in the keys will be partitioned into the same reducer.
+The map output keys of the above Map/Reduce job normally have four fields
+separated by ".". However, the Map/Reduce framework will partition the map
+outputs by the first two fields of the keys using the 
+<em>-D mapred.text.key.partitioner.options=-k1,2</em> option. 
+Here, <em>-D map.output.key.field.separator=.</em> specifies the separator 
+for the partition. This guarantees that all the key/value pairs with the 
+same first two fields in the keys will be partitioned into the same reducer.
 </p>
 <p>
 
@@ -675,12 +691,59 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)</p>
 11.14.2.2
 11.14.2.3
 </pre>
-<a name="N1020F"></a><a name="Working+with+the+Hadoop+Aggregate+Package+%28the+-reduce+aggregate+option%29"></a>
+<a name="N10216"></a><a name="A+Useful+Comparator+Class"></a>
+<h3 class="h4">A Useful Comparator Class</h3>
+<p>
+Hadoop has a library class, 
+<a href="api/org/apache/hadoop/mapred/lib/KeyFieldBasedComparator.html">KeyFieldBasedComparator</a>, 
+that is useful for many applications. This class provides a subset of features
+provided by the Unix/GNU Sort. For example:
+</p>
+<pre class="code">
+$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+    -input myInputDirs \
+    -output myOutputDir \
+    -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
+    -reducer org.apache.hadoop.mapred.lib.IdentityReducer \
+    -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+    -D stream.map.output.field.separator=. \
+    -D stream.num.map.output.key.fields=4 \
+    -D map.output.key.field.separator=. \
+    -D mapred.text.key.comparator.options=-k2,2nr\
+    -D mapred.reduce.tasks=12
+</pre>
+<p>
+The map output keys of the above Map/Reduce job normally have four fields
+separated by ".". However, the Map/Reduce framework will sort the 
+outputs by the second field of the keys using the 
+<em>-D mapred.text.key.comparator.options=-k2,2nr</em> option. 
+Here, <em>-n</em> specifies that the sorting is numerical sorting and 
+<em>-r</em> specifies that the result should be reversed. A simple illustration
+is shown below:
+</p>
+<p>
+Output of map (the keys)</p>
+<pre class="code">
+11.12.1.2
+11.14.2.3
+11.11.4.1
+11.12.1.1
+11.14.2.2
+</pre>
+<p>
+Sorting output for the reducer(where second field used for sorting)</p>
+<pre class="code">
+11.14.2.3
+11.14.2.2
+11.12.1.2
+11.12.1.1
+11.11.4.1
+</pre>
+<a name="N10242"></a><a name="Working+with+the+Hadoop+Aggregate+Package+%28the+-reduce+aggregate+option%29"></a>
 <h3 class="h4">Working with the Hadoop Aggregate Package (the -reduce aggregate option) </h3>
 <p>
-Hadoop has a library package called "Aggregate" (
-<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate">
-https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate</a>).
+Hadoop has a library package called 
+<a href="api/org/apache/hadoop/mapred/lib/aggregate/package-summary.html">Aggregate</a>.
 Aggregate provides a special reducer class and a special combiner class, and
 a list of simple aggregators that perform aggregations such as "sum", "max",
 "min" and so on  over a sequence of values. Aggregate allows you to define a
@@ -724,7 +787,7 @@ def main(argv):
 if __name__ == "__main__":
      main(sys.argv)
 </pre>
-<a name="N1022A"></a><a name="Field+Selection+%28+similar+to+unix+%27cut%27+command%29"></a>
+<a name="N1025D"></a><a name="Field+Selection+%28+similar+to+unix+%27cut%27+command%29"></a>
 <h3 class="h4">Field Selection ( similar to unix 'cut' command) </h3>
 <p>
 Hadoop has a library class, org.apache.hadoop.mapred.lib.FieldSelectionMapReduce, that effectively allows you to process text data like the unix "cut" utility. The map function defined in the class treats each input key/value pair as a list of fields. You can specify the field separator (the default is the tab character). You can select an arbitrary list of fields as the map output key, and an arbitrary list of fields as the map output value. Similarly, the reduce function defined in the class treats each input key/value pair as a list of fields. You can select an arbitrary list of fields as the reduce output key, and an arbitrary list of fields as the reduce output value. For example:
@@ -737,7 +800,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -reducer org.apache.hadoop.mapred.lib.FieldSelectionMapReduce\
     -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
     -D map.output.key.field.separa=. \
-    -D num.key.fields.for.partition=2 \
+    -D mapred.text.key.partitioner.options=-k1,2 \
     -D mapred.data.field.separator=. \
     -D map.output.key.value.fields.spec=6,5,1-3:0- \
     -D reduce.output.key.value.fields.spec=0-2:5- \
@@ -748,20 +811,24 @@ The option "-D map.output.key.value.fields.spec=6,5,1-3:0-" specifies key/value 
 the subsequent fields). 
 </p>
 <p>
-The option "-D reduce.output.key.value.fields.spec=0-2:0-" specifies key/value selection for the reduce outputs. In this case, the reduce output key will consist of fields 0, 1, 2 (corresponding to the original fields 6, 5, 1). The reduce output value will consist of all fields starting from field 5 (corresponding to all the original fields).  
+The option "-D reduce.output.key.value.fields.spec=0-2:5-" specifies 
+key/value selection for the reduce outputs. In this case, the reduce 
+output key will consist of fields 0, 1, 2 (corresponding to the original 
+fields 6, 5, 1). The reduce output value will consist of all fields starting
+from field 5 (corresponding to all the original fields).  
 </p>
 </div>
 
 
-<a name="N1023E"></a><a name="Frequently+Asked+Questions"></a>
+<a name="N10271"></a><a name="Frequently+Asked+Questions"></a>
 <h2 class="h3">Frequently Asked Questions </h2>
 <div class="section">
-<a name="N10244"></a><a name="How+do+I+use+Hadoop+Streaming+to+run+an+arbitrary+set+of+%28semi-%29independent+tasks%3F"></a>
+<a name="N10277"></a><a name="How+do+I+use+Hadoop+Streaming+to+run+an+arbitrary+set+of+%28semi-%29independent+tasks%3F"></a>
 <h3 class="h4">How do I use Hadoop Streaming to run an arbitrary set of (semi-)independent tasks? </h3>
 <p>
 Often you do not need the full power of Map Reduce, but only need to run multiple instances of the same program - either on different parts of the data, or on the same data, but with different parameters. You can use Hadoop Streaming to do this.
 </p>
-<a name="N1024E"></a><a name="How+do+I+process+files%2C+one+per+map%3F"></a>
+<a name="N10281"></a><a name="How+do+I+process+files%2C+one+per+map%3F"></a>
 <h3 class="h4">How do I process files, one per map? </h3>
 <p>
 As an example, consider the problem of zipping (compressing) a set of files across the hadoop cluster. You can achieve this using either of these methods:
@@ -805,13 +872,13 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 </li>
 
 </ol>
-<a name="N10279"></a><a name="How+many+reducers+should+I+use%3F"></a>
+<a name="N102AC"></a><a name="How+many+reducers+should+I+use%3F"></a>
 <h3 class="h4">How many reducers should I use? </h3>
 <p>
 See the Hadoop Wiki for details: <a href="mapred_tutorial.html#Reducer">Reducer</a>
 
 </p>
-<a name="N10287"></a><a name="If+I+set+up+an+alias+in+my+shell+script%2C+will+that+work+after+-mapper%2C+i.e.+say+I+do%3A+alias+c1%3D%27cut+-f1%27.+Will+-mapper+%22c1%22+work%3F"></a>
+<a name="N102BA"></a><a name="If+I+set+up+an+alias+in+my+shell+script%2C+will+that+work+after+-mapper%2C+i.e.+say+I+do%3A+alias+c1%3D%27cut+-f1%27.+Will+-mapper+%22c1%22+work%3F"></a>
 <h3 class="h4">If I set up an alias in my shell script, will that work after -mapper, i.e. say I do: alias c1='cut -f1'. Will -mapper "c1" work? </h3>
 <p>
 Using an alias will not work, but variable substitution is allowed as shown in this example:
@@ -838,12 +905,12 @@ $ hadoop dfs -cat samples/student_out/part-00000
 75
 80
 </pre>
-<a name="N10295"></a><a name="Can+I+use+UNIX+pipes%3F+For+example%2C+will+-mapper+%22cut+-f1+%7C+sed+s%2Ffoo%2Fbar%2Fg%22+work%3F"></a>
+<a name="N102C8"></a><a name="Can+I+use+UNIX+pipes%3F+For+example%2C+will+-mapper+%22cut+-f1+%7C+sed+s%2Ffoo%2Fbar%2Fg%22+work%3F"></a>
 <h3 class="h4">Can I use UNIX pipes? For example, will -mapper "cut -f1 | sed s/foo/bar/g" work?</h3>
 <p>
 Currently this does not work and gives an "java.io.IOException: Broken pipe" error. This is probably a bug that needs to be investigated.
 </p>
-<a name="N1029F"></a><a name="When+I+run+a+streaming+job+by"></a>
+<a name="N102D2"></a><a name="When+I+run+a+streaming+job+by"></a>
 <h3 class="h4">When I run a streaming job by distributing large executables (for example, 3.6G) through the -file option, I get a "No space left on device" error. What do I do? </h3>
 <p>
 The jar packaging happens in a directory pointed to by the configuration variable stream.tmpdir. The default value of stream.tmpdir is /tmp. Set the value to a directory with more space:
@@ -851,7 +918,7 @@ The jar packaging happens in a directory pointed to by the configuration variabl
 <pre class="code">
 -D stream.tmpdir=/export/bigspace/...
 </pre>
-<a name="N102B0"></a><a name="How+do+I+specify+multiple+input+directories%3F"></a>
+<a name="N102E3"></a><a name="How+do+I+specify+multiple+input+directories%3F"></a>
 <h3 class="h4">How do I specify multiple input directories? </h3>
 <p>
 You can specify multiple input directories with multiple '-input' options:
@@ -859,17 +926,17 @@ You can specify multiple input directories with multiple '-input' options:
 <pre class="code">
  hadoop jar hadoop-streaming.jar -input '/user/foo/dir1' -input '/user/foo/dir2' 
 </pre>
-<a name="N102BD"></a><a name="How+do+I+generate+output+files+with+gzip+format%3F"></a>
+<a name="N102F0"></a><a name="How+do+I+generate+output+files+with+gzip+format%3F"></a>
 <h3 class="h4">How do I generate output files with gzip format? </h3>
 <p>
 Instead of plain text files, you can generate gzip files as your generated output. Pass '-D mapred.output.compress=true -D  mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCode' as option to your streaming job.
 </p>
-<a name="N102C7"></a><a name="How+do+I+provide+my+own+input%2Foutput+format+with+streaming%3F"></a>
+<a name="N102FA"></a><a name="How+do+I+provide+my+own+input%2Foutput+format+with+streaming%3F"></a>
 <h3 class="h4">How do I provide my own input/output format with streaming? </h3>
 <p>
 At least as late as version 0.14, Hadoop does not support multiple jar files. So, when specifying your own custom classes you will have to pack them along with the streaming jar and use the custom jar instead of the default hadoop streaming jar. 
 </p>
-<a name="N102D1"></a><a name="How+do+I+parse+XML+documents+using+streaming%3F"></a>
+<a name="N10304"></a><a name="How+do+I+parse+XML+documents+using+streaming%3F"></a>
 <h3 class="h4">How do I parse XML documents using streaming? </h3>
 <p>
 You can use the record reader StreamXmlRecordReader to process XML documents. 
@@ -880,14 +947,14 @@ hadoop jar hadoop-streaming.jar -inputreader "StreamXmlRecord,begin=BEGIN_STRING
 <p>
 Anything found between BEGIN_STRING and END_STRING would be treated as one record for map tasks.
 </p>
-<a name="N102E2"></a><a name="How+do+I+update+counters+in+streaming+applications%3F"></a>
+<a name="N10315"></a><a name="How+do+I+update+counters+in+streaming+applications%3F"></a>
 <h3 class="h4">How do I update counters in streaming applications? </h3>
 <p>
 A streaming process can use the stderr to emit counter information.
 <span class="codefrag">reporter:counter:&lt;group&gt;,&lt;counter&gt;,&lt;amount&gt;</span> 
 should be sent to stderr to update the counter.
 </p>
-<a name="N102EF"></a><a name="How+do+I+update+status+in+streaming+applications%3F"></a>
+<a name="N10322"></a><a name="How+do+I+update+status+in+streaming+applications%3F"></a>
 <h3 class="h4">How do I update status in streaming applications? </h3>
 <p>
 A streaming process can use the stderr to emit status information.

@@ -172,8 +172,8 @@ public class Grep extends Configured implements Tool {
     
     grepJob.setJobName("grep");
 
-    grepJob.setInputPath(new Path(args[0]));
-    grepJob.setOutputPath(args[1]);
+    FileInputFormat.setInputPaths(grepJob, new Path(args[0]));
+    FileOutputFormat.setOutputPath(grepJob, args[1]);
 
     grepJob.setMapperClass(GrepMapper.class);
     grepJob.setCombinerClass(GrepReducer.class);

@@ -763,7 +763,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.jobtracker.job.history.block.size</name>
-  <value>3145728></value>
+  <value>3145728</value>
   <description>The block size of the job history file. Since the job recovery
                uses job history, its important to dump job history to disk as 
                soon as possible. Note that this is an expert level parameter.

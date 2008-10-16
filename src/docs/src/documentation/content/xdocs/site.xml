@@ -74,6 +74,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <zlib      href="http://www.zlib.net/" />
     <lzo       href="http://www.oberhumer.com/opensource/lzo/" />
     <gzip      href="http://www.gzip.org/" />
+    <bzip      href="http://www.bzip.org/" />
     <cygwin    href="http://www.cygwin.com/" />
     <osx       href="http://www.apple.com/macosx" />
     <hod href="">
@@ -180,6 +181,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setprofileenabled href="#setProfileEnabled(boolean)" />
                 <setprofiletaskrange href="#setProfileTaskRange(boolean,%20java.lang.String)" />
                 <setprofileparams href="#setProfileParams(java.lang.String)" />
+                <setnumtaskstoexecuteperjvm href="#setNumTasksToExecutePerJvm(int)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
                 <getjar href="#getJar()" />
               </jobconf>
@@ -225,6 +227,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
               <lib href="lib/">
                 <package-summary href="package-summary.html" />
                 <hashpartitioner href="HashPartitioner.html" />
+                <keyfieldbasedpartitioner href="KeyFieldBasedPartitioner.html" />
+                <keyfieldbasedcomparator href="KeyFieldBasedComparator.html" />
+                <aggregate href="aggregate/">
+                  <package-summary href="package-summary.html" />
+                </aggregate>
               </lib>
               <pipes href="pipes/">
                 <package-summary href="package-summary.html" />
