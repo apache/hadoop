@@ -122,7 +122,8 @@ public class FsPermission implements Writable {
    * Encode the object to a short.
    */
   public short toShort() {
-    int s = (useraction.INDEX<<6) | (groupaction.INDEX<<3) | otheraction.INDEX;
+    int s = (useraction.ordinal() << 6) | (groupaction.ordinal() << 3) |
+             otheraction.ordinal();
     return (short)s;
   }
 

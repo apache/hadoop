@@ -54,6 +54,8 @@ Trunk (unreleased changes)
     HADOOP-4325. SocketInputStream.read() should return -1 in case EOF.
     (Raghu Angadi)
 
+    HADOOP-4408. FsAction functions need not create new objects. (cdouglas)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

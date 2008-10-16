@@ -21,24 +21,23 @@ package org.apache.hadoop.fs.permission;
  * File system actions, e.g. read, write, etc.
  */
 public enum FsAction {
-  //POSIX style
-  NONE(0, "---"),
-  EXECUTE(1, "--x"),
-  WRITE(2, "-w-"),
-  WRITE_EXECUTE(3, "-wx"),
-  READ(4, "r--"),
-  READ_EXECUTE(5, "r-x"),
-  READ_WRITE(6, "rw-"),
-  ALL(7, "rwx");
+  // POSIX style
+  NONE("---"),
+  EXECUTE("--x"),
+  WRITE("-w-"),
+  WRITE_EXECUTE("-wx"),
+  READ("r--"),
+  READ_EXECUTE("r-x"),
+  READ_WRITE("rw-"),
+  ALL("rwx");
 
-  //constants
-  /** Octal representation */
-  public final int INDEX;
+  /** Retain reference to value array. */
+  private final static FsAction[] vals = values();
+
   /** Symbolic representation */
   public final String SYMBOL;
 
-  private FsAction(int v, String s) {
-    INDEX = v;
+  private FsAction(String s) {
     SYMBOL = s;
   }
 
@@ -48,21 +47,21 @@ public enum FsAction {
    */
   public boolean implies(FsAction that) {
     if (that != null) {
-      return (this.INDEX & that.INDEX) == that.INDEX;
+      return (ordinal() & that.ordinal()) == that.ordinal();
     }
     return false;
   }
 
   /** AND operation. */
   public FsAction and(FsAction that) {
-    return values()[this.INDEX & that.INDEX];
+    return vals[ordinal() & that.ordinal()];
   }
   /** OR operation. */
   public FsAction or(FsAction that) {
-    return values()[this.INDEX | that.INDEX];
+    return vals[ordinal() | that.ordinal()];
   }
   /** NOT operation. */
   public FsAction not() {
-    return values()[7 - INDEX];
+    return vals[7 - ordinal()];
   }
 }
