@@ -253,14 +253,18 @@ document.write("Last Published: " + document.lastModified);
 <li>
 <a href="http://www.oberhumer.com/opensource/lzo/">lzo</a>
 </li>
+        
+<li>
+<a href="http://www.bzip.org/">bzip2</a>
+</li>
       
 </ul>
 <p>Of the above, the availability of native hadoop libraries is imperative 
-      for the lzo and gzip compression codecs to work.</p>
+      for the lzo, gzip and bzip2 compression codecs to work.</p>
 </div>
 
     
-<a name="N1003D"></a><a name="Usage"></a>
+<a name="N10042"></a><a name="Usage"></a>
 <h2 class="h3">Usage</h2>
 <div class="section">
 <p>It is fairly simple to use the native hadoop libraries:</p>
@@ -279,7 +283,8 @@ document.write("Last Published: " + document.lastModified);
         </li>
         
 <li>
-          Make sure you have either or both of <strong>&gt;zlib-1.2</strong> and 
+          Make sure you have any of or all of <strong>&gt;zlib-1.2</strong>,
+          <strong>&gt;gzip-1.2</strong>, <strong>&gt;bzip2-1.0</strong> and 
           <strong>&gt;lzo2.0</strong> packages for your platform installed; 
           depending on your needs.
         </li>
@@ -314,7 +319,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10087"></a><a name="Supported+Platforms"></a>
+<a name="N10092"></a><a name="Supported+Platforms"></a>
 <h2 class="h3">Supported Platforms</h2>
 <div class="section">
 <p>Hadoop native library is supported only on *nix platforms only.
@@ -344,7 +349,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N100B7"></a><a name="Building+Native+Hadoop+Libraries"></a>
+<a name="N100C2"></a><a name="Building+Native+Hadoop+Libraries"></a>
 <h2 class="h3">Building Native Hadoop Libraries</h2>
 <div class="section">
 <p>Hadoop native library is written in 
@@ -393,15 +398,16 @@ document.write("Last Published: " + document.lastModified);
 <p>where &lt;platform&gt; is combination of the system-properties: 
       <span class="codefrag">${os.name}-${os.arch}-${sun.arch.data.model}</span>; for e.g. 
       Linux-i386-32.</p>
-<a name="N1010A"></a><a name="Notes"></a>
+<a name="N10115"></a><a name="Notes"></a>
 <h3 class="h4">Notes</h3>
 <ul>
           
 <li>
-            It is <strong>mandatory</strong> to have both the zlib and lzo 
+            It is <strong>mandatory</strong> to have the 
+            zlib, gzip, bzip2 and lzo 
             development packages on the target platform for building the 
             native hadoop library; however for deployment it is sufficient to 
-            install zlib or lzo if you wish to use only one of them.
+            install one of them if you wish to use only one of them.
           </li>
           
 <li>
@@ -413,7 +419,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </div>
     
-<a name="N1011E"></a><a name="Loading+native+libraries+through+DistributedCache"></a>
+<a name="N10129"></a><a name="Loading+native+libraries+through+DistributedCache"></a>
 <h2 class="h3"> Loading native libraries through DistributedCache </h2>
 <div class="section">
 <p>User can load native shared libraries through  

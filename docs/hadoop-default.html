@@ -11,12 +11,11 @@
 <td><a name="hadoop.native.lib">hadoop.native.lib</a></td><td>true</td><td>Should native hadoop libraries, if present, be used.</td>
 </tr>
 <tr>
-<td><a name="hadoop.http.filter.initializers">hadoop.http.filter.initializers</a></td><td></td><td>A comma separated list of class names.  Each class in the list must extend org.apache.hadoop.http.FilterInitializer.
-  
-  The corresponding Filter will be initialized.  Then, the Filter will be applied to all user facing jsp and servlet web pages.  The ordering of the list defines the ordering of the filters.
-
-  The value can be empty.
-  </td>
+<td><a name="hadoop.http.filter.initializers">hadoop.http.filter.initializers</a></td><td></td><td>A comma separated list of class names. Each class in the list 
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
+  Filter will be initialized. Then, the Filter will be applied to all user 
+  facing jsp and servlet web pages.  The ordering of the list defines the 
+  ordering of the filters.</td>
 </tr>
 <tr>
 <td><a name="hadoop.logfile.size">hadoop.logfile.size</a></td><td>10000000</td><td>The max size of each log file</td>
@@ -343,10 +342,12 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>300</td><td>Namenode periodicity in seconds to check if decommission is complete.</td>
+<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>300</td><td>Namenode periodicity in seconds to check if decommission is 
+  complete.</td>
 </tr>
 <tr>
-<td><a name="dfs.replication.interval">dfs.replication.interval</a></td><td>3</td><td>The periodicity in seconds with which the namenode computes repliaction work for datanodes. </td>
+<td><a name="dfs.replication.interval">dfs.replication.interval</a></td><td>3</td><td>The periodicity in seconds with which the namenode computes 
+  repliaction work for datanodes. </td>
 </tr>
 <tr>
 <td><a name="dfs.access.time.precision">dfs.access.time.precision</a></td><td>3600000</td><td>The access time for HDFS file is precise upto this value. 
@@ -470,7 +471,7 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.jobtracker.job.history.block.size">mapred.jobtracker.job.history.block.size</a></td><td>3145728&gt;</td><td>The block size of the job history file. Since the job recovery
+<td><a name="mapred.jobtracker.job.history.block.size">mapred.jobtracker.job.history.block.size</a></td><td>3145728</td><td>The block size of the job history file. Since the job recovery
                uses job history, its important to dump job history to disk as 
                soon as possible. Note that this is an expert level parameter.
                The default value is set to 3 MB.
@@ -523,8 +524,8 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.jobtracker.completeuserjobs.maximum">mapred.jobtracker.completeuserjobs.maximum</a></td><td>100</td><td>The maximum number of complete jobs per user to keep around before delegating them to the job history.
-  </td>
+<td><a name="mapred.jobtracker.completeuserjobs.maximum">mapred.jobtracker.completeuserjobs.maximum</a></td><td>100</td><td>The maximum number of complete jobs per user to keep around 
+  before delegating them to the job history.</td>
 </tr>
 <tr>
 <td><a name="mapred.jobtracker.instrumentation">mapred.jobtracker.instrumentation</a></td><td>org.apache.hadoop.mapred.JobTrackerMetricsInst</td><td>Expert: The instrumentation class to associate with each JobTracker.
@@ -606,6 +607,10 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.min.split.size">mapred.min.split.size</a></td><td>0</td><td>The minimum size chunk that map input should be split
   into.  Note that some file formats may have minimum split sizes that
   take priority over this setting.</td>
+</tr>
+<tr>
+<td><a name="mapred.jobtracker.maxtasks.per.job">mapred.jobtracker.maxtasks.per.job</a></td><td>-1</td><td>The maximum number of tasks for a single job.
+  A value of -1 indicates that there is no maximum.  </td>
 </tr>
 <tr>
 <td><a name="mapred.submit.replication">mapred.submit.replication</a></td><td>10</td><td>The replication level for submitted job files.  This
