@@ -471,7 +471,7 @@ public class TestCapacityScheduler extends TestCase {
     taskTrackerManager.addQueues(new String[] {"default"});
     resConf = new FakeResourceManagerConf();
     ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
-    queues.add(new FakeQueueInfo("default", 1f, 1, true, 1));
+    queues.add(new FakeQueueInfo("default", 100.0f, 1, true, 1));
     resConf.setFakeQueues(queues);
     scheduler.setResourceManagerConf(resConf);
     scheduler.start();
@@ -681,10 +681,10 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.start();
    
     // submit a job to the default queue
-    submitJob(JobStatus.PREP, 10, 0, "default", "u1");
+    submitJobAndInit(JobStatus.PREP, 10, 0, "default", "u1");
     
     // submit a job to the second queue
-    submitJob(JobStatus.PREP, 10, 0, "q2", "u1");
+    submitJobAndInit(JobStatus.PREP, 10, 0, "q2", "u1");
     
     // job from q2 runs first because it has some non-zero capacity.
     checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");

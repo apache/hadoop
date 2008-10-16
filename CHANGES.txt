@@ -934,6 +934,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4335. Fix FsShell -ls for filesystems without owners/groups. (David
     Phillips via cdouglas)
 
+    HADOOP-4426. TestCapacityScheduler broke due to the two commits HADOOP-4053
+    and HADOOP-4373. This patch fixes that. (Hemanth Yamijala via ddas)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
