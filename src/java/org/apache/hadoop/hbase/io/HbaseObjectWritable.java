@@ -131,6 +131,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     }
+    addToMap(BatchUpdate[].class, code++);
   }
   
   private Class<?> declaredClass;

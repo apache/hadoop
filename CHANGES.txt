@@ -54,6 +54,7 @@ Release 0.19.0 - Unreleased
                (Andrzej Bialecki via Stack)
 
   OPTIMIZATIONS
+   HBASE-748   Add an efficient way to batch update many rows
    HBASE-887   Fix a hotspot in scanners
 
 Release 0.18.0 - September 21st, 2008

@@ -460,7 +460,6 @@ public class HConnectionManager implements HConstants {
       final byte [] tableName, final byte [] row, boolean useCache)
     throws IOException{
       HRegionLocation location = null;
-      
       // if we're supposed to be using the cache, then check it for a possible
       // hit. otherwise, delete any existing cached location so it won't 
       // interfere.
@@ -472,7 +471,7 @@ public class HConnectionManager implements HConstants {
       } else {
         deleteCachedLocation(tableName, row);
       }
-
+      
       // build the key of the meta region we should be looking for.
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
@@ -875,6 +874,29 @@ public class HConnectionManager implements HConstants {
           Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e) {
           // continue
+        }
+      }
+      return null;    
+    }
+    
+    public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable)
+        throws IOException, RuntimeException {
+      getMaster();
+      try {
+        callable.instantiateServer(false);
+        return callable.call();
+      } catch (Throwable t) {
+        if (t instanceof UndeclaredThrowableException) {
+          t = t.getCause();
+        }
+        if (t instanceof RemoteException) {
+          t = RemoteExceptionHandler.decodeRemoteException((RemoteException) t);
+        }
+        if (t instanceof DoNotRetryIOException) {
+          throw (DoNotRetryIOException) t;
+        }
+        if (t instanceof IOException) {
+          throw (IOException) t;
         }
       }
       return null;    

@@ -1354,6 +1354,22 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   /**
+   * Batch update many rows and take splitsAndClosesLock so we don't get 
+   * blocked while updating.
+   * @param bus 
+   */
+  public void batchUpdate(BatchUpdate[] bus) throws IOException {
+    splitsAndClosesLock.readLock().lock();
+    try {
+      for (BatchUpdate bu : bus) {
+        batchUpdate(bu, null);
+      }
+    } finally {
+      splitsAndClosesLock.readLock().unlock();
+    }
+  }
+  
+  /**
    * @param b
    * @throws IOException
    */
@@ -1465,32 +1481,29 @@ public class HRegion implements HConstants {
    * the notify.
    */
   private void checkResources() {
-    if (this.memcacheSize.get() > this.blockingMemcacheSize) {
-      requestFlush();
-      doBlocking();
-    }
-  }
-  
-  private synchronized void doBlocking() {
     boolean blocked = false;
     while (this.memcacheSize.get() > this.blockingMemcacheSize) {
+      requestFlush();
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
-            "' on region " + Bytes.toString(getRegionName()) + ": Memcache size " +
-            StringUtils.humanReadableInt(this.memcacheSize.get()) +
-            " is >= than blocking " +
-            StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
+          "' on region " + Bytes.toString(getRegionName()) +
+          ": Memcache size " +
+          StringUtils.humanReadableInt(this.memcacheSize.get()) +
+          " is >= than blocking " +
+          StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
       }
       blocked = true;
-      try {
-        wait(threadWakeFrequency);
-      } catch (InterruptedException e) {
-        // continue;
+      synchronized(this) {
+        try {
+          wait(threadWakeFrequency);
+        } catch (InterruptedException e) {
+          // continue;
+        }
       }
     }
     if (blocked) {
-      LOG.info("Unblocking updates for region " + this + " '" + 
-        Thread.currentThread().getName() + "'");
+      LOG.info("Unblocking updates for region " + this + " '"
+          + Thread.currentThread().getName() + "'");
     }
   }
   

@@ -28,7 +28,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * A Writable object that contains a series of BatchOperations
@@ -37,10 +37,12 @@ import org.apache.hadoop.io.Writable;
  * can result in multiple BatchUpdate objects if the batch contains rows that
  * are served by multiple region servers.
  */
-public class BatchUpdate implements Writable, Iterable<BatchOperation> {
+public class BatchUpdate implements WritableComparable<BatchUpdate>, 
+  Iterable<BatchOperation> {
   
   // the row being updated
   private byte [] row = null;
+  private long size = 0;
     
   // the batched operations
   private ArrayList<BatchOperation> operations =
@@ -95,11 +97,19 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     this.row = row;
     this.timestamp = timestamp;
     this.operations = new ArrayList<BatchOperation>();
+    this.size = (row == null)? 0: row.length;
   }
 
   /** @return the row */
   public byte [] getRow() {
     return row;
+  }
+
+  /**
+   * @return BatchUpdate size in bytes.
+   */
+  public long getSize() {
+    return size;
   }
 
   /**
@@ -201,6 +211,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
       // If null, the PUT becomes a DELETE operation.
       throw new IllegalArgumentException("Passed value cannot be null");
     }
+    size += val.length + column.length;
     operations.add(new BatchOperation(column, val));
   }
 
@@ -265,6 +276,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     }
     this.row = Bytes.readByteArray(in);
     timestamp = in.readLong();
+    this.size = in.readLong();
     int nOps = in.readInt();
     for (int i = 0; i < nOps; i++) {
       BatchOperation op = new BatchOperation();
@@ -276,9 +288,14 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   public void write(final DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.row);
     out.writeLong(timestamp);
+    out.writeLong(this.size);
     out.writeInt(operations.size());
     for (BatchOperation op: operations) {
       op.write(out);
     }
+  }
+
+  public int compareTo(BatchUpdate o) {
+    return Bytes.compareTo(this.row, o.getRow());
   }
 }

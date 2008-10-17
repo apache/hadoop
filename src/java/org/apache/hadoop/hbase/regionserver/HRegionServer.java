@@ -1125,6 +1125,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   throws IOException {
     if (b.getRow() == null)
       throw new IllegalArgumentException("update has null row");
+    
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -1139,6 +1140,33 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       checkFileSystem();
       throw e;
     }
+  }
+  
+  public int batchUpdates(final byte[] regionName, final BatchUpdate[] b)
+  throws IOException {
+    int i = 0;
+    checkOpen();
+    try {
+      HRegion region = getRegion(regionName);
+      this.cacheFlusher.reclaimMemcacheMemory();
+      for (BatchUpdate batchUpdate : b) {
+        this.requestCount.incrementAndGet();
+        validateValuesLength(batchUpdate, region);
+      }
+      i+= b.length-1;
+      region.batchUpdate(b);
+    } catch (OutOfMemoryError error) {
+      abort();
+      LOG.fatal("Ran out of memory", error);
+    } catch(WrongRegionException ex) {
+      return i;
+    } catch (NotServingRegionException ex) {
+      return i;
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+    return i;
   }
   
   /**

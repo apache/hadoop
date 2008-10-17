@@ -55,8 +55,8 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
    */
   public TestBatchUpdate() throws UnsupportedEncodingException {
     super();
-    value = "abcd".getBytes(HConstants.UTF8_ENCODING);
-    smallValue = "a".getBytes(HConstants.UTF8_ENCODING);
+    value = Bytes.toBytes("abcd");
+    smallValue = Bytes.toBytes("a");
   }
   
   @Override
@@ -153,4 +153,62 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail("This is unexpected : " + e);
     }
   }
+  
+  public void testRowsBatchUpdateBufferedOneFlush() {
+    table.setAutoFlush(false);
+    ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
+    for(int i = 0; i < NB_BATCH_ROWS*10; i++) {
+      BatchUpdate batchUpdate = new BatchUpdate("row"+i);
+      batchUpdate.put(CONTENTS, value);
+      rowsUpdate.add(batchUpdate);
+    }
+    try {
+      table.commit(rowsUpdate);  
+    
+      byte [][] columns = { CONTENTS };
+      Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+      int nbRows = 0;
+      for(RowResult row : scanner)
+        nbRows++;
+      assertEquals(0, nbRows);  
+      scanner.close();
+      
+      table.flushCommits();
+      
+      scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+      nbRows = 0;
+      for(RowResult row : scanner)
+        nbRows++;
+      assertEquals(NB_BATCH_ROWS*10, nbRows);
+    } catch (IOException e) {
+      fail("This is unexpected : " + e);
+    }
+  }
+  
+  public void testRowsBatchUpdateBufferedManyManyFlushes() {
+    table.setAutoFlush(false);
+    table.setWriteBufferSize(10);
+    ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
+    for(int i = 0; i < NB_BATCH_ROWS*10; i++) {
+      BatchUpdate batchUpdate = new BatchUpdate("row"+i);
+      batchUpdate.put(CONTENTS, value);
+      rowsUpdate.add(batchUpdate);
+    }
+    try {
+      table.commit(rowsUpdate);
+      
+      table.flushCommits();
+      
+      byte [][] columns = { CONTENTS };
+      Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+      int nbRows = 0;
+      for(RowResult row : scanner)
+        nbRows++;
+      assertEquals(NB_BATCH_ROWS*10, nbRows);
+    } catch (IOException e) {
+      fail("This is unexpected : " + e);
+    }
+  }
+  
+  
 }

@@ -108,9 +108,19 @@ public interface HRegionInterface extends VersionedProtocol {
   throws IOException;
   
   /**
-   * Delete all cells that match the passed row and column and whose
-   * timestamp is equal-to or older than the passed timestamp.
-   *
+   * Applies a batch of updates via one RPC for many rows
+   * 
+   * @param regionName name of the region to update
+   * @param b BatchUpdate[]
+   * @throws IOException
+   */
+  public int batchUpdates(final byte[] regionName, final BatchUpdate[] b)
+  throws IOException;
+  
+  /**
+   * Delete all cells that match the passed row and column and whose timestamp
+   * is equal-to or older than the passed timestamp.
+   * 
    * @param regionName region name
    * @param row row key
    * @param column column key

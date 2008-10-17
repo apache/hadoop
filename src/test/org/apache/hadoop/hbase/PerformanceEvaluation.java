@@ -372,11 +372,13 @@ public class PerformanceEvaluation implements HConstants {
     void testSetup() throws IOException {
       this.admin = new HBaseAdmin(conf);
       this.table = new HTable(conf, tableDescriptor.getName());
+      this.table.setAutoFlush(false);
+      this.table.setWriteBufferSize(1024*1024*12);
     }
 
     @SuppressWarnings("unused")
     void testTakedown()  throws IOException {
-      // Empty
+      this.table.flushCommits();
     }
     
     /*

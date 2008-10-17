@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,6 +55,10 @@ public class HTable {
   private final HConnection connection;
   private final byte [] tableName;
   private HBaseConfiguration configuration;
+  private ArrayList<BatchUpdate> writeBuffer;
+  private long writeBufferSize;
+  private boolean autoFlush;
+  private long currentWriteBufferSize;
   private int scannerCaching;
 
   /**
@@ -103,6 +108,11 @@ public class HTable {
     this.configuration = conf;
     this.tableName = tableName;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
+    this.writeBuffer = new ArrayList<BatchUpdate>();
+    this.writeBufferSize = 
+      this.configuration.getLong("hbase.client.write.buffer", 10485760);
+    this.autoFlush = true;
+    this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 30);
   }
 
@@ -964,6 +974,7 @@ public class HTable {
 
   /**
    * Commit a BatchUpdate to the table.
+   * If autoFlush is false, the update is buffered
    * @param batchUpdate
    * @throws IOException
    */ 
@@ -974,6 +985,7 @@ public class HTable {
   
   /**
    * Commit a BatchUpdate to the table using existing row lock.
+   * If autoFlush is false, the update is buffered
    * @param batchUpdate
    * @param rl Existing row lock
    * @throws IOException
@@ -982,43 +994,104 @@ public class HTable {
       final RowLock rl) 
   throws IOException {
     checkRowAndColumns(batchUpdate);
-    connection.getRegionServerWithRetries(
-      new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
-        public Boolean call() throws IOException {
-          long lockId = -1L;
-          if(rl != null) {
-            lockId = rl.getLockId();
-          }
-          server.batchUpdate(location.getRegionInfo().getRegionName(), 
-            batchUpdate, lockId);
-          return null;
-        }
-      }
-    );  
+    writeBuffer.add(batchUpdate);
+    currentWriteBufferSize += batchUpdate.getSize();
+    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+      flushCommits();
+    }
   }
   
   /**
-   * Commit a RowsBatchUpdate to the table.
+   * Commit a List of BatchUpdate to the table.
+   * If autoFlush is false, the updates are buffered
    * @param batchUpdates
    * @throws IOException
    */ 
-  public synchronized void commit(final List<BatchUpdate> batchUpdates) 
-  throws IOException {
-    for (BatchUpdate batchUpdate : batchUpdates) 
-      commit(batchUpdate,null);
+  public synchronized void commit(final List<BatchUpdate> batchUpdates)
+      throws IOException {
+    for(BatchUpdate bu : batchUpdates) {
+      checkRowAndColumns(bu);
+      writeBuffer.add(bu);
+      currentWriteBufferSize += bu.getSize();
+    }
+    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+      flushCommits();
+    }
   }
   
   /**
-   * Utility method that checks rows existence, length and 
-   * columns well formedness.
+   * Commit to the table the buffer of BatchUpdate.
+   * Called automaticaly in the commit methods when autoFlush is true.
+   * @throws IOException
+   */
+  public void flushCommits() throws IOException {
+    try {
+      // See HBASE-748 for pseudo code of this method
+      if (writeBuffer.isEmpty()) {
+        return;
+      }
+      Collections.sort(writeBuffer);
+      List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
+      byte[] currentRegion = connection.getRegionLocation(tableName,
+          writeBuffer.get(0).getRow(), false).getRegionInfo().getRegionName();
+      byte[] region = currentRegion;
+      boolean isLastRow = false;
+      for (int i = 0; i < writeBuffer.size(); i++) {
+        BatchUpdate batchUpdate = writeBuffer.get(i);
+        tempUpdates.add(batchUpdate);
+        isLastRow = (i + 1) == writeBuffer.size();
+        if (!isLastRow) {
+          region = connection.getRegionLocation(tableName,
+              writeBuffer.get(i + 1).getRow(), false).getRegionInfo()
+              .getRegionName();
+        }
+        if (!Bytes.equals(currentRegion, region) || isLastRow) {
+          final BatchUpdate[] updates = tempUpdates.toArray(new BatchUpdate[0]);
+          int index = connection
+              .getRegionServerForWithoutRetries(new ServerCallable<Integer>(
+                  connection, tableName, batchUpdate.getRow()) {
+                public Integer call() throws IOException {
+                  int i = server.batchUpdates(location.getRegionInfo()
+                      .getRegionName(), updates);
+                  return i;
+                }
+              });
+          if (index != updates.length - 1) {
+            // Basic waiting time. If many updates are flushed, tests have shown
+            // that this is barely needed but when commiting 1 update this may
+            // get retried hundreds of times.
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException e) {
+              // continue
+            }
+            i = i - updates.length + index;
+            region = connection.getRegionLocation(tableName,
+                writeBuffer.get(i + 1).getRow(), true).getRegionInfo()
+                .getRegionName();
+
+          }
+          currentRegion = region;
+          tempUpdates.clear();
+        }
+      }
+    } finally {
+      currentWriteBufferSize = 0;
+      writeBuffer.clear();
+    }
+  }
+
+  /**
+   * Utility method that checks rows existence, length and columns well
+   * formedness.
+   * 
    * @param bu
    * @throws IllegalArgumentException
    * @throws IOException
    */
   private void checkRowAndColumns(BatchUpdate bu)
       throws IllegalArgumentException, IOException {
-    if (bu.getRow() == null || 
-        bu.getRow().length > HConstants.MAX_ROW_LENGTH) {
+    if (bu.getRow() == null || bu.getRow().length > HConstants.MAX_ROW_LENGTH) {
       throw new IllegalArgumentException("Row key is invalid");
     }
     for (BatchOperation bo : bu) {
@@ -1062,6 +1135,46 @@ public class HTable {
         }
       }
     );
+  }
+  
+  /**
+   * Get the value of autoFlush. If true, updates will not be buffered
+   * @return value of autoFlush
+   */
+  public boolean isAutoFlush() {
+    return autoFlush;
+  }
+
+  /**
+   * Set if this instanciation of HTable will autoFlush
+   * @param autoFlush
+   */
+  public void setAutoFlush(boolean autoFlush) {
+    this.autoFlush = autoFlush;
+  }
+
+  /**
+   * Get the maximum size in bytes of the write buffer for this HTable
+   * @return the size of the write buffer in bytes
+   */
+  public long getWriteBufferSize() {
+    return writeBufferSize;
+  }
+
+  /**
+   * Set the size of the buffer in bytes
+   * @param writeBufferSize
+   */
+  public void setWriteBufferSize(long writeBufferSize) {
+    this.writeBufferSize = writeBufferSize;
+  }
+
+  /**
+   * Get the write buffer 
+   * @return the current write buffer
+   */
+  public ArrayList<BatchUpdate> getWriteBuffer() {
+    return writeBuffer;
   }
 
   /**

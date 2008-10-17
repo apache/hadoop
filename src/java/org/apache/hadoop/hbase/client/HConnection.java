@@ -138,4 +138,16 @@ public interface HConnection {
    */
   public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
   throws IOException, RuntimeException;
+  
+  /**
+   * Pass in a ServerCallable with your particular bit of logic defined and
+   * this method will pass it to the defined region server.
+   * @param <T> the type of the return value
+   * @param callable
+   * @return an object of type T
+   * @throws IOException
+   * @throws RuntimeException
+   */
+  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable) 
+  throws IOException, RuntimeException;
 }

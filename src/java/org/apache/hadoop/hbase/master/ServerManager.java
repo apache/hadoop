@@ -442,7 +442,6 @@ class ServerManager implements HConstants {
       // it was assigned, and it's not a duplicate assignment, so take it out 
       // of the unassigned list.
       master.regionManager.noLongerUnassigned(region);
-
       if (region.isRootRegion()) {
         // Store the Root Region location (in memory)
         HServerAddress rootServer = serverInfo.getServerAddress();
