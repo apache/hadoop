@@ -425,7 +425,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(130)
+</a>&nbsp;&nbsp;&nbsp;(133)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -674,6 +674,11 @@ Phillips via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4426">HADOOP-4426</a>. TestCapacityScheduler broke due to the two commits <a href="http://issues.apache.org/jira/browse/HADOOP-4053">HADOOP-4053</a>
 and <a href="http://issues.apache.org/jira/browse/HADOOP-4373">HADOOP-4373</a>. This patch fixes that.<br />(Hemanth Yamijala via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4278">HADOOP-4278</a>. Increase debug logging for unit test TestDatanodeDeath.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4418">HADOOP-4418</a>. Updates documentation in forrest for Mapred, streaming and pipes.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3155">HADOOP-3155</a>. Ensure that there is only one thread fetching
+TaskCompletionEvents on TaskTracker re-init.<br />(Dhruba Borthakur via
+acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4425">HADOOP-4425</a>. Fix EditLogInputStream to overload the bulk read method.<br />(cdouglas)</li>
     </ol>
   </li>
 </ul>
