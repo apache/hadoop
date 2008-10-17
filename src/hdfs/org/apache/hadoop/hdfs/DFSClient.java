@@ -2448,17 +2448,34 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         //
         LocatedBlock newBlock = null;
         ClientDatanodeProtocol primary =  null;
+        DatanodeInfo primaryNode = null;
         try {
           // Pick the "least" datanode as the primary datanode to avoid deadlock.
-          primary = createClientDatanodeProtocolProxy(
-              Collections.min(Arrays.asList(newnodes)), conf);
+          primaryNode = Collections.min(Arrays.asList(newnodes));
+          primary = createClientDatanodeProtocolProxy(primaryNode, conf);
           newBlock = primary.recoverBlock(block, newnodes);
         } catch (IOException e) {
           recoveryErrorCount++;
           if (recoveryErrorCount > maxRecoveryErrorCount) {
+            if (nodes.length > 1) {
+              // if the primary datanode failed, remove it from the list.
+              // The original bad datanode is left in the list because it is
+              // conservative to remove only one datanode in one iteration.
+              for (int j = 0; j < nodes.length; j++) {
+                if (nodes[j] ==  primaryNode) {
+                  errorIndex = j; // forget original bad node.
+                }
+              }
+              LOG.warn("Error Recovery for block " + block + " failed " +
+                       " because recovery from primary datanode " +
+                       primaryNode + " failed " + recoveryErrorCount +
+                       " times. Marking primary datanode as bad.");
+              recoveryErrorCount = 0; 
+              return true;          // sleep when we return from here
+            }
             String emsg = "Error Recovery for block " + block + " failed " +
                           " because recovery from primary datanode " +
-                          newnodes[0] + " failed " + recoveryErrorCount + 
+                          primaryNode + " failed " + recoveryErrorCount + 
                           " times. Aborting...";
             LOG.warn(emsg);
             lastException = new IOException(emsg);
@@ -2468,7 +2485,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           } 
           LOG.warn("Error Recovery for block " + block + " failed " +
                    " because recovery from primary datanode " +
-                   newnodes[0] + " failed " + recoveryErrorCount +
+                   primaryNode + " failed " + recoveryErrorCount +
                    " times. Will retry...");
           return true;          // sleep when we return from here
         } finally {
