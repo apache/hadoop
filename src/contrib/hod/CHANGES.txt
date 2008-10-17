@@ -1,6 +1,13 @@
 HOD Change Log
 
 
+Release 0.17.3 - Unreleased 
+
+  BUG FIXES
+
+    HADOOP-3217. Decrease the rate at which the hod queries the resource
+    manager for job status. (Hemanth Yamijala via acmurthy) 
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
