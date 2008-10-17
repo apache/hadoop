@@ -1174,9 +1174,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       f = tmp;
     }
     if (f == null) {
-      throw new IOException("Block " + b + 
-                            " block file " + f +
-                            " does not exist on disk.");
+      throw new IOException("Block " + b + " does not exist on disk.");
     }
     if (!f.exists()) {
       throw new IOException("Block " + b + 

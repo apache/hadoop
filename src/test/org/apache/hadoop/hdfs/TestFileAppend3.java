@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import junit.extensions.TestSetup;
 import junit.framework.Test;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 
 /** This class implements some of tests posted in HADOOP-2658. */
@@ -137,6 +139,51 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
     //d. On Machine M1, close file.
     out.close();        
+  }
+
+  /** TC7: Corrupted replicas are present. */
+  public void testTC7() throws Exception {
+    final short repl = 2;
+    final Path p = new Path("/TC7/foo");
+    System.out.println("p=" + p);
+    
+    //a. Create file with replication factor of 2. Write half block of data. Close file.
+    final int len1 = (int)(BLOCK_SIZE/2); 
+    {
+      FSDataOutputStream out = fs.create(p, false, buffersize, repl, BLOCK_SIZE);
+      AppendTestUtil.write(out, 0, len1);
+      out.close();
+    }
+    DFSTestUtil.waitReplication(fs, p, repl);
+
+    //b. Log into one datanode that has one replica of this block.
+    //   Find the block file on this datanode and truncate it to zero size.
+    final LocatedBlocks locatedblocks = fs.dfs.namenode.getBlockLocations(p.toString(), 0L, len1);
+    assertEquals(1, locatedblocks.locatedBlockCount());
+    final LocatedBlock lb = locatedblocks.get(0);
+    final Block blk = lb.getBlock();
+    assertEquals(len1, lb.getBlockSize());
+
+    DatanodeInfo[] datanodeinfos = lb.getLocations();
+    assertEquals(repl, datanodeinfos.length);
+    final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
+    final FSDataset data = (FSDataset)dn.getFSDataset();
+    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk), "rw");
+    AppendTestUtil.LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
+    assertEquals(len1, raf.length());
+    raf.setLength(0);
+    raf.close();
+
+    //c. Open file in "append mode".  Append a new block worth of data. Close file.
+    final int len2 = (int)BLOCK_SIZE; 
+    {
+      FSDataOutputStream out = fs.append(p);
+      AppendTestUtil.write(out, len1, len2);
+      out.close();
+    }
+
+    //d. Reopen file and read two blocks worth of data.
+    AppendTestUtil.check(fs, p, len1 + len2);
   }
 
   /** TC11: Racing rename */

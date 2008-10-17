@@ -937,9 +937,6 @@ Release 0.19.0 - Unreleased
     HADOOP-4426. TestCapacityScheduler broke due to the two commits HADOOP-4053
     and HADOOP-4373. This patch fixes that. (Hemanth Yamijala via ddas)
 
-    HADOOP-4278. Increase debug logging for unit test TestDatanodeDeath.
-    (dhruba)
-
     HADOOP-4418. Updates documentation in forrest for Mapred, streaming and pipes.
     (Amareshwari Sriramadasu via ddas)
 
@@ -953,8 +950,11 @@ Release 0.19.0 - Unreleased
     HADOOP-4427. Adds the new queue/job commands to the manual.
     (Sreekanth Ramakrishnan via ddas)
 
-    HADOOP-4278. If the primary datanode fails in DFSClent, remove it from
-    the pipe line.  (dhruba via szetszwo)
+    HADOOP-4278. Increase debug logging for unit test TestDatanodeDeath.
+    Fix the case when primary is dead.  (dhruba via szetszwo)
+
+    HADOOP-4423. Keep block length when the block recovery is triggered by
+    append.  (szetszwo)
 
 Release 0.18.2 - Unreleased
 

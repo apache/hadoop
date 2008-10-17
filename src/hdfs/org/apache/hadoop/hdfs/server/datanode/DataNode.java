@@ -1323,7 +1323,7 @@ public class DataNode extends Configured
         for(int i = 0; i < blocks.length; i++) {
           try {
             logRecoverBlock("NameNode", blocks[i], targets[i]);
-            recoverBlock(blocks[i], targets[i], true);
+            recoverBlock(blocks[i], false, targets[i], true);
           } catch (IOException e) {
             LOG.warn("recoverBlocks FAILED, blocks[" + i + "]=" + blocks[i], e);
           }
@@ -1336,8 +1336,9 @@ public class DataNode extends Configured
 
   /** {@inheritDoc} */
   public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
-    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock
-        + ", datanode=" + dnRegistration.getName());
+    LOG.info("oldblock=" + oldblock + "(length=" + oldblock.getNumBytes()
+        + "), newblock=" + newblock + "(length=" + newblock.getNumBytes()
+        + "), datanode=" + dnRegistration.getName());
     data.updateBlock(oldblock, newblock);
     if (finalize) {
       data.finalizeBlock(newblock);
@@ -1380,8 +1381,8 @@ public class DataNode extends Configured
   }
 
   /** Recover a block */
-  private LocatedBlock recoverBlock(Block block, DatanodeID[] datanodeids,
-      boolean closeFile) throws IOException {
+  private LocatedBlock recoverBlock(Block block, boolean keepLength,
+      DatanodeID[] datanodeids, boolean closeFile) throws IOException {
 
     // If the block is already being recovered, then skip recovering it.
     // This can happen if the namenode and client start recovering the same
@@ -1409,9 +1410,16 @@ public class DataNode extends Configured
               this: DataNode.createInterDataNodeProtocolProxy(id, getConf());
           BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
           if (info != null && info.getGenerationStamp() >= block.getGenerationStamp()) {
-            syncList.add(new BlockRecord(id, datanode, new Block(info)));
-            if (info.getNumBytes() < minlength) {
-              minlength = info.getNumBytes();
+            if (keepLength) {
+              if (info.getNumBytes() == block.getNumBytes()) {
+                syncList.add(new BlockRecord(id, datanode, new Block(info)));
+              }
+            }
+            else {
+              syncList.add(new BlockRecord(id, datanode, new Block(info)));
+              if (info.getNumBytes() < minlength) {
+                minlength = info.getNumBytes();
+              }
             }
           }
         } catch (IOException e) {
@@ -1426,7 +1434,10 @@ public class DataNode extends Configured
         throw new IOException("All datanodes failed: block=" + block
             + ", datanodeids=" + Arrays.asList(datanodeids));
       }
-      return syncBlock(block, minlength, syncList, closeFile);
+      if (!keepLength) {
+        block.setNumBytes(minlength);
+      }
+      return syncBlock(block, syncList, closeFile);
     } finally {
       synchronized (ongoingRecovery) {
         ongoingRecovery.remove(block);
@@ -1435,11 +1446,11 @@ public class DataNode extends Configured
   }
 
   /** Block synchronization */
-  private LocatedBlock syncBlock(Block block, long minlength,
-      List<BlockRecord> syncList, boolean closeFile) throws IOException {
+  private LocatedBlock syncBlock(Block block, List<BlockRecord> syncList,
+      boolean closeFile) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("block=" + block + ", minlength=" + minlength
-          + ", syncList=" + syncList + ", closeFile=" + closeFile);
+      LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
+          + "), syncList=" + syncList + ", closeFile=" + closeFile);
     }
 
     //syncList.isEmpty() that all datanodes do not have the block
@@ -1453,7 +1464,7 @@ public class DataNode extends Configured
     List<DatanodeID> successList = new ArrayList<DatanodeID>();
 
     long generationstamp = namenode.nextGenerationStamp(block);
-    Block newblock = new Block(block.getBlockId(), minlength, generationstamp);
+    Block newblock = new Block(block.getBlockId(), block.getNumBytes(), generationstamp);
 
     for(BlockRecord r : syncList) {
       try {
@@ -1489,10 +1500,10 @@ public class DataNode extends Configured
   
   // ClientDataNodeProtocol implementation
   /** {@inheritDoc} */
-  public LocatedBlock recoverBlock(Block block, DatanodeInfo[] targets
+  public LocatedBlock recoverBlock(Block block, boolean keepLength, DatanodeInfo[] targets
       ) throws IOException {
     logRecoverBlock("Client", block, targets);
-    return recoverBlock(block, targets, false);
+    return recoverBlock(block, keepLength, targets, false);
   }
 
   private static void logRecoverBlock(String who,

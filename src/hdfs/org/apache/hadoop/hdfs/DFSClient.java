@@ -2146,7 +2146,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           synchronized (dataQueue) {
 
             // process IO errors if any
-            boolean doSleep = processDatanodeError(hasError);
+            boolean doSleep = processDatanodeError(hasError, false);
 
             // wait for a packet to be sent.
             while ((!closed && !hasError && clientRunning 
@@ -2371,7 +2371,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     // threads and mark stream as closed. Returns true if we should
     // sleep for a while after returning from this call.
     //
-    private boolean processDatanodeError(boolean hasError) {
+    private boolean processDatanodeError(boolean hasError, boolean isAppend) {
       if (!hasError) {
         return false;
       }
@@ -2453,7 +2453,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           // Pick the "least" datanode as the primary datanode to avoid deadlock.
           primaryNode = Collections.min(Arrays.asList(newnodes));
           primary = createClientDatanodeProtocolProxy(primaryNode, conf);
-          newBlock = primary.recoverBlock(block, newnodes);
+          newBlock = primary.recoverBlock(block, isAppend, newnodes);
         } catch (IOException e) {
           recoveryErrorCount++;
           if (recoveryErrorCount > maxRecoveryErrorCount) {
@@ -2640,7 +2640,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                 "of file " + src);
                         
         }
-        processDatanodeError(true);
+        processDatanodeError(true, true);
         streamer.start();
       }
       else {
