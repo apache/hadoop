@@ -258,7 +258,7 @@
       </tr>
       <tr>
         <td> 7 </td>
-        <td> DFS failure </td>
+        <td> HDFS failure </td>
       </tr>
       <tr>
         <td> 8 </td>
@@ -376,7 +376,7 @@
   <section><title><code>hod</code> Hangs During Deallocation </title><anchor id="_hod_Hangs_During_Deallocation"></anchor><anchor id="hod_Hangs_During_Deallocation"></anchor>
   <p><em>Possible Cause:</em> A Torque related problem, usually load on the Torque server, or the allocation is very large. Generally, waiting for the command to complete is the only option.</p>
   </section>
-  <section><title><code>hod</code> Fails With an error code and error message </title><anchor id="hod_Fails_With_an_error_code_and"></anchor><anchor id="_hod_Fails_With_an_error_code_an"></anchor>
+  <section><title><code>hod</code> Fails With an Error Code and Error Message </title><anchor id="hod_Fails_With_an_error_code_and"></anchor><anchor id="_hod_Fails_With_an_error_code_an"></anchor>
   <p>If the exit code of the <code>hod</code> command is not <code>0</code>, then refer to the following table of error exit codes to determine why the code may have occurred and how to debug the situation.</p>
   <p><strong> Error Codes </strong></p><anchor id="Error_Codes"></anchor>
   <table>
@@ -429,14 +429,14 @@
       </tr>
       <tr>
         <td> 7 </td>
-        <td> DFS failure </td>
-        <td> When HOD fails to allocate due to DFS failures (or Job tracker failures, error code 8, see below), it prints a failure message "Hodring at &lt;hostname&gt; failed with following errors:" and then gives the actual error message, which may indicate one of the following:<br/>
+        <td> HDFS failure </td>
+        <td> When HOD fails to allocate due to HDFS failures (or Job tracker failures, error code 8, see below), it prints a failure message "Hodring at &lt;hostname&gt; failed with following errors:" and then gives the actual error message, which may indicate one of the following:<br/>
           1. Problem in starting Hadoop clusters. Usually the actual cause in the error message will indicate the problem on the hostname mentioned. Also, review the Hadoop related configuration in the HOD configuration files. Look at the Hadoop logs using information specified in <em>Collecting and Viewing Hadoop Logs</em> section above. <br />
           2. Invalid configuration on the node running the hodring, specified by the hostname in the error message <br/>
           3. Invalid configuration in the <code>hodring</code> section of hodrc. <code>ssh</code> to the hostname specified in the error message and grep for <code>ERROR</code> or <code>CRITICAL</code> in hodring logs. Refer to the section <em>Locating Hodring Logs</em> below for more information. <br />
           4. Invalid tarball specified which is not packaged correctly. <br />
           5. Cannot communicate with an externally configured HDFS.<br/>
-          When such DFS or Job tracker failure occurs, one can login into the host with hostname mentioned in HOD failure message and debug the problem. While fixing the problem, one should also review other log messages in the ringmaster log to see which other machines also might have had problems bringing up the jobtracker/namenode, apart from the hostname that is reported in the failure message. This possibility of other machines also having problems occurs because HOD continues to try and launch hadoop daemons on multiple machines one after another depending upon the value of the configuration variable <a href="hod_config_guide.html#3.4+ringmaster+options">ringmaster.max-master-failures</a>. Refer to the section <em>Locating Ringmaster Logs</em> below to find more about ringmaster logs.
+          When such HDFS or Job tracker failure occurs, one can login into the host with hostname mentioned in HOD failure message and debug the problem. While fixing the problem, one should also review other log messages in the ringmaster log to see which other machines also might have had problems bringing up the jobtracker/namenode, apart from the hostname that is reported in the failure message. This possibility of other machines also having problems occurs because HOD continues to try and launch hadoop daemons on multiple machines one after another depending upon the value of the configuration variable <a href="hod_config_guide.html#3.4+ringmaster+options">ringmaster.max-master-failures</a>. Refer to the section <em>Locating Ringmaster Logs</em> below to find more about ringmaster logs.
           </td>
       </tr>
       <tr>
@@ -482,6 +482,21 @@
       </tr>
   </table>
     </section>
+  <section><title>Hadoop DFSClient Warns with a
+  NotReplicatedYetException</title>
+  <p>Sometimes, when you try to upload a file to the HDFS immediately after
+  allocating a HOD cluster, DFSClient warns with a NotReplicatedYetException. It
+  usually shows a message something like - </p><table><tr><td><code>WARN
+  hdfs.DFSClient: NotReplicatedYetException sleeping &lt;filename&gt; retries
+  left 3</code></td></tr><tr><td><code>08/01/25 16:31:40 INFO hdfs.DFSClient:
+  org.apache.hadoop.ipc.RemoteException: java.io.IOException: File
+  &lt;filename&gt; could only be replicated to 0 nodes, instead of
+  1</code></td></tr></table><p> This scenario arises when you try to upload a file
+  to the HDFS while the DataNodes are still in the process of contacting the
+  NameNode. This can be resolved by waiting for some time before uploading a new
+  file to the HDFS, so that enough DataNodes start and contact the
+  NameNode.</p>
+  </section>
   <section><title> Hadoop Jobs Not Running on a Successfully Allocated Cluster </title><anchor id="Hadoop_Jobs_Not_Running_on_a_Suc"></anchor>
   <p>This scenario generally occurs when a cluster is allocated, and is left inactive for sometime, and then hadoop jobs are attempted to be run on them. Then Hadoop jobs fail with the following exception:</p>
   <table><tr><td><code>08/01/25 16:31:40 INFO ipc.Client: Retrying connect to server: foo.bar.com/1.1.1.1:53567. Already tried 1 time(s).</code></td></tr></table>
@@ -502,7 +517,7 @@
   <p><em>Possible Cause:</em> Version 0.16 of hadoop is required for this functionality to work. The version of Hadoop used does not match. Use the required version of Hadoop.</p>
   <p><em>Possible Cause:</em> The deallocation was done without using the <code>hod</code> command; for e.g. directly using <code>qdel</code>. When the cluster is deallocated in this manner, the HOD processes are terminated using signals. This results in the exit code to be based on the signal number, rather than the exit code of the program.</p>
     </section>
-  <section><title> The Hadoop Logs are Not Uploaded to DFS </title><anchor id="The_Hadoop_Logs_are_Not_Uploaded"></anchor>
+  <section><title> The Hadoop Logs are Not Uploaded to HDFS </title><anchor id="The_Hadoop_Logs_are_Not_Uploaded"></anchor>
   <p><em>Possible Cause:</em> There is a version mismatch between the version of the hadoop being used for uploading the logs and the external HDFS. Ensure that the correct version is specified in the <code>hodring.pkgs</code> option.</p>
     </section>
   <section><title> Locating Ringmaster Logs </title><anchor id="Locating_Ringmaster_Logs"></anchor>

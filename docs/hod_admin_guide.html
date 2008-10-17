@@ -349,7 +349,9 @@ Nodes : HOD requires a minimum of three nodes configured through a resource mana
 <p>The following components must be installed on ALL nodes before using HOD:</p>
 <ul>
  
-<li>Torque: Resource manager</li>
+<li>
+<a href="http://www.clusterresources.com/pages/products/torque-resource-manager.php">Torque: Resource manager</a>
+</li>
  
 <li>
 <a href="http://www.python.org">Python</a> : HOD requires version 2.5.1 of Python.</li>
@@ -379,7 +381,7 @@ nodes.
 </div>
 
 
-<a name="N1008D"></a><a name="Resource+Manager"></a>
+<a name="N1008F"></a><a name="Resource+Manager"></a>
 <h2 class="h3">Resource Manager</h2>
 <div class="section">
 <p>  Currently HOD works with the Torque resource manager, which it uses for its node
@@ -424,7 +426,7 @@ nodes.
 </div>
 
 
-<a name="N100CC"></a><a name="Installing+HOD"></a>
+<a name="N100CE"></a><a name="Installing+HOD"></a>
 <h2 class="h3">Installing HOD</h2>
 <div class="section">
 <p>Once the resource manager is set up, you can obtain and
@@ -449,13 +451,13 @@ install HOD.</p>
 </div>
 
 
-<a name="N100E5"></a><a name="Configuring+HOD"></a>
+<a name="N100E7"></a><a name="Configuring+HOD"></a>
 <h2 class="h3">Configuring HOD</h2>
 <div class="section">
 <p>You can configure HOD once it is installed. The minimal configuration needed
 to run HOD is described below. More advanced configuration options are discussed
 in the HOD Configuration Guide.</p>
-<a name="N100EE"></a><a name="Minimal+Configuration"></a>
+<a name="N100F0"></a><a name="Minimal+Configuration"></a>
 <h3 class="h4">Minimal Configuration</h3>
 <p>To get started using HOD, the following minimal configuration is
   required:</p>
@@ -515,7 +517,7 @@ in the HOD Configuration Guide.</p>
 </li>
 
 </ul>
-<a name="N10122"></a><a name="Advanced+Configuration"></a>
+<a name="N10124"></a><a name="Advanced+Configuration"></a>
 <h3 class="h4">Advanced Configuration</h3>
 <p> You can review and modify other configuration options to suit
  your specific needs. Refer to the <a href="hod_config_guide.html">Configuration
@@ -523,19 +525,19 @@ in the HOD Configuration Guide.</p>
 </div>
 
   
-<a name="N10131"></a><a name="Running+HOD"></a>
+<a name="N10133"></a><a name="Running+HOD"></a>
 <h2 class="h3">Running HOD</h2>
 <div class="section">
 <p>You can run HOD once it is configured. Refer to <a href="hod_user_guide.html">the HOD User Guide</a> for more information.</p>
 </div>
 
   
-<a name="N1013F"></a><a name="Supporting+Tools+and+Utilities"></a>
+<a name="N10141"></a><a name="Supporting+Tools+and+Utilities"></a>
 <h2 class="h3">Supporting Tools and Utilities</h2>
 <div class="section">
 <p>This section describes supporting tools and utilities that can be used to
     manage HOD deployments.</p>
-<a name="N10148"></a><a name="logcondense.py+-+Manage+Log+Files"></a>
+<a name="N1014A"></a><a name="logcondense.py+-+Manage+Log+Files"></a>
 <h3 class="h4">logcondense.py - Manage Log Files</h3>
 <p>As mentioned in the 
          <a href="hod_user_guide.html#Collecting+and+Viewing+Hadoop+Logs">HOD User Guide</a>,
@@ -543,7 +545,7 @@ in the HOD Configuration Guide.</p>
          Hadoop logs to a statically configured HDFS. Over time, the number of logs uploaded
          to HDFS could increase. logcondense.py is a tool that helps
          administrators to remove log files uploaded to HDFS. </p>
-<a name="N10155"></a><a name="Running+logcondense.py"></a>
+<a name="N10157"></a><a name="Running+logcondense.py"></a>
 <h4>Running logcondense.py</h4>
 <p>logcondense.py is available under hod_install_location/support folder. You can either
         run it using python, for example, <em>python logcondense.py</em>, or give execute permissions 
@@ -554,7 +556,7 @@ in the HOD Configuration Guide.</p>
         be configured to come under the user's home directory in HDFS. In that case, the user
         running logcondense.py should have super user privileges to remove the files from under
         all user home directories.</p>
-<a name="N10169"></a><a name="Command+Line+Options+for+logcondense.py"></a>
+<a name="N1016B"></a><a name="Command+Line+Options+for+logcondense.py"></a>
 <h4>Command Line Options for logcondense.py</h4>
 <p>The following command line options are supported for logcondense.py.</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
@@ -628,7 +630,7 @@ in the HOD Configuration Guide.</p>
 <p>
 <em>python logcondense.py -p ~/hadoop-0.17.0/bin/hadoop -d 7 -c ~/hadoop-conf -l /user</em>
 </p>
-<a name="N1020C"></a><a name="checklimits.sh+-+Monitor+Resource+Limits"></a>
+<a name="N1020E"></a><a name="checklimits.sh+-+Monitor+Resource+Limits"></a>
 <h3 class="h4">checklimits.sh - Monitor Resource Limits</h3>
 <p>checklimits.sh is a HOD tool specific to the Torque/Maui environment
       (<a href="http://www.clusterresources.com/pages/products/maui-cluster-scheduler.php">Maui Cluster Scheduler</a> is an open source job
@@ -644,7 +646,7 @@ in the HOD Configuration Guide.</p>
       Used:([0-9]*) MaxLimit:([0-9]*)</em> for those jobs that violate limits.
       This comment field is then used by HOD to behave accordingly depending on
       the type of violation.</p>
-<a name="N1021C"></a><a name="Running+checklimits.sh"></a>
+<a name="N1021E"></a><a name="Running+checklimits.sh"></a>
 <h4>Running checklimits.sh</h4>
 <p>checklimits.sh is available under the hod_install_location/support
         folder. This shell script can be run directly as <em>sh
@@ -658,7 +660,7 @@ in the HOD Configuration Guide.</p>
         constraints, for example via cron. Please note that the resource manager
         and scheduler commands used in this script can be expensive and so
         it is better not to run this inside a tight loop without sleeping.</p>
-<a name="N1022D"></a><a name="verify-account+-+Script+to+verify+an+account+under+which+%0A+++++++++++++jobs+are+submitted"></a>
+<a name="N1022F"></a><a name="verify-account+-+Script+to+verify+an+account+under+which+%0A+++++++++++++jobs+are+submitted"></a>
 <h3 class="h4">verify-account - Script to verify an account under which 
              jobs are submitted</h3>
 <p>Production systems use accounting packages to charge users for using
@@ -669,7 +671,7 @@ in the HOD Configuration Guide.</p>
       system. The <em>hod-install-dir/bin/verify-account</em> script 
       provides a mechanism to plug-in a custom script that can do this
       verification.</p>
-<a name="N1023C"></a><a name="Integrating+the+verify-account+script+with+HOD"></a>
+<a name="N1023E"></a><a name="Integrating+the+verify-account+script+with+HOD"></a>
 <h4>Integrating the verify-account script with HOD</h4>
 <p>HOD runs the <em>verify-account</em> script passing in the
         <em>resource_manager.pbs-account</em> value as argument to the script,

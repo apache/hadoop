@@ -68,7 +68,15 @@
         <ul>
           <li>temp-dir: Temporary directory for usage by the HOD processes. Make 
                       sure that the users who will run hod have rights to create 
-                      directories under the directory specified here.</li>
+                      directories under the directory specified here. If you
+                      wish to make this directory vary across allocations,
+                      you can make use of the environmental variables which will
+                      be made available by the resource manager to the HOD
+                      processes. For example, in a Torque setup, having
+                      --ringmaster.temp-dir=/tmp/hod-temp-dir.$PBS_JOBID would
+                      let ringmaster use different temp-dir for each
+                      allocation; Torque expands this variable before starting
+                      the ringmaster.</li>
           
           <li>debug: Numeric value from 1-4. 4 produces the most log information,
                    and 1 the least.</li>
@@ -147,6 +155,18 @@
                       variable 'HOD_PYTHON_HOME' to the path to the python 
                       executable. The HOD processes launched on the compute nodes
                       can then use this variable.</li>
+          <li>options: Comma-separated list of key-value pairs,
+                      expressed as
+                      &lt;option&gt;:&lt;sub-option&gt;=&lt;value&gt;. When
+                      passing to the job submission program, these are expanded
+                      as -&lt;option&gt; &lt;sub-option&gt;=&lt;value&gt;. These
+                      are generally used for specifying additional resource
+                      contraints for scheduling. For instance, with a Torque
+                      setup, one can specify
+                      --resource_manager.options='l:arch=x86_64' for
+                      constraining the nodes being allocated to a particular
+                      architecture; this option will be passed to Torque's qsub
+                      command as "-l arch=x86_64".</li>
         </ul>
       </section>
       
