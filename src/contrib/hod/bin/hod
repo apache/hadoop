@@ -159,7 +159,19 @@ defList = { 'hod' : (
               True, 10, False, True, 'W'),
 
              ('log-rollover-count', 'pos_int', 'Specifies the number of rolled-over log files of HOD client. A zero value disables rollover.',
-              True, 5, False, True, 'L')),
+              True, 5, False, True, 'L'),
+
+             ('job-status-query-interval', 'pos_int', 'Specifies the time between checking for job status', 
+              False, 30, False, True),
+
+             ('job-command-failure-interval', 'pos_int', 'Specifies the time between checking for failed job status or submission commands', 
+              False, 10, False, True),
+
+             ('job-status-query-failure-retries', 'pos_int', 'Specifies the number of times job status failure queries are retried', 
+              False, 3, False, True),
+
+             ('job-submission-failure-retries', 'pos_int', 'Specifies the number of times job submission failure queries are retried',
+              False, 3, False, True)),
 
             'resource_manager' : (
              ('id', 'string', 'Batch scheduler ID: torque|condor.',
