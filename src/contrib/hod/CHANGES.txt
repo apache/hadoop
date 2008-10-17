@@ -110,6 +110,13 @@ Release 0.18.0 - 2008-08-19
     HADOOP-3703. Fixes logcondense.py to use the new format of hadoop dfs -lsr
     command line output format. (Vinod Kumar Vavilapalli via yhemanth)
 
+Release 0.17.3 - Unreleased 
+
+  BUG FIXES
+
+    HADOOP-3217. Decrease the rate at which the hod queries the resource
+    manager for job status. (Hemanth Yamijala via acmurthy) 
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
