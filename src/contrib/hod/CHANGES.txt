@@ -1,5 +1,12 @@
 HOD Change Log
 
+Release 0.18.2 - Unreleased 
+
+  BUG FIXES
+
+    HADOOP-3786. Use HDFS instead of DFS in all docs and hyperlink to Torque.
+    (Vinod Kumar Vavilapalli via acmurthy)
+
 Release 0.18.1 - 2008-09-17
 
   INCOMPATIBLE CHANGES

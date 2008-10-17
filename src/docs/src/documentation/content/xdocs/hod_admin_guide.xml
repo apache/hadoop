@@ -89,7 +89,7 @@ Nodes : HOD requires a minimum of three nodes configured through a resource mana
 <p> Software </p>
 <p>The following components must be installed on ALL nodes before using HOD:</p>
 <ul>
- <li>Torque: Resource manager</li>
+ <li><a href="ext:hod/torque">Torque: Resource manager</a></li>
  <li><a href="ext:hod/python">Python</a> : HOD requires version 2.5.1 of Python.</li>
 </ul>
 

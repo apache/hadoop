@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.18.1_-_2008-09-17_' && list.id != 'release_0.18.0_-_2008-08-19_') {
+        if (list.id != 'release_0.18.2_-_unreleased_' && list.id != 'release_0.18.1_-_2008-09-17_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,35 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('release_0.18.2_-_unreleased_')">Release 0.18.2 - Unreleased
+</a></h2>
+<ul id="release_0.18.2_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(9)
+    <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
+meta file.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4314">HADOOP-4314</a>. Simulated datanodes should not include blocks that are still
+being written in their block report.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4228">HADOOP-4228</a>. dfs datanoe metrics, bytes_read and bytes_written, overflow
+due to incorrect type used.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4395">HADOOP-4395</a>. The FSEditLog loading is incorrect for the case OP_SET_OWNER.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
+ArrayIndexOutOfBoundsException.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4407">HADOOP-4407</a>. <a href="http://issues.apache.org/jira/browse/HADOOP-4395">HADOOP-4395</a> should use a Java 1.5 API for 0.18.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4403">HADOOP-4403</a>. Make TestLeaseRecovery and TestFileCreation more robust.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.18.2_-_unreleased_._new_features_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2421">HADOOP-2421</a>.  Add jdiff output to documentation, listing all API
+changes from the prior release.<br />(cutting)</li>
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.18.1_-_2008-09-17_')">Release 0.18.1 - 2008-09-17
 </a></h2>
 <ul id="release_0.18.1_-_2008-09-17_">
@@ -78,8 +107,10 @@ outputs or when the final map outputs are being fetched without contention.<br /
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.18.0_-_2008-08-19_')">Release 0.18.0 - 2008-08-19
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.18.0_-_2008-08-19_')">Release 0.18.0 - 2008-08-19
+</a></h3>
 <ul id="release_0.18.0_-_2008-08-19_">
   <li><a href="javascript:toggleList('release_0.18.0_-_2008-08-19_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(23)
@@ -620,8 +651,21 @@ cdouglas)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
+<h3><a href="javascript:toggleList('release_0.17.3_-_unreleased_')">Release 0.17.3 - Unreleased
+</a></h3>
+<ul id="release_0.17.3_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(4)
+    <ol id="release_0.17.3_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4277">HADOOP-4277</a>. Checksum verification was mistakenly disabled for
+LocalFileSystem.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4271">HADOOP-4271</a>. Checksum input stream can sometimes return invalid
+data to the user.<br />(Ning Li via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4318">HADOOP-4318</a>. DistCp should use absolute paths for cleanup.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4326">HADOOP-4326</a>. ChecksumFileSystem does not override create(...) correctly.<br />(szetszwo)</li>
+    </ol>
+  </li>
+</ul>
 <h3><a href="javascript:toggleList('release_0.17.2_-_2008-08-11_')">Release 0.17.2 - 2008-08-11
 </a></h3>
 <ul id="release_0.17.2_-_2008-08-11_">
