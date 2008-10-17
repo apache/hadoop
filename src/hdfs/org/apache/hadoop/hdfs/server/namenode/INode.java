@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -38,7 +37,7 @@ public abstract class INode implements Comparable<byte[]> {
   protected byte[] name;
   protected INodeDirectory parent;
   protected long modificationTime;
-  protected int accessTime; // precise to the last hour
+  protected long accessTime;
 
   /** Simple wrapper for two counters : 
    *  nsCount (namespace consumed) and dsCount (diskspace consumed).
@@ -291,19 +290,14 @@ public abstract class INode implements Comparable<byte[]> {
    * @return access time
    */
   public long getAccessTime() {
-    return this.accessTime * FSNamesystem.getFSNamesystem().getAccessTimePrecision();
+    return accessTime;
   }
 
   /**
    * Set last access time of inode.
    */
   void setAccessTime(long atime) {
-    long precision = FSNamesystem.getFSNamesystem().getAccessTimePrecision();
-    if (precision == 0) {
-      this.accessTime = 0;
-    } else {
-      this.accessTime = (int)(atime/precision);
-    }
+    accessTime = atime;
   }
 
   /**
