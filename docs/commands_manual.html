@@ -229,6 +229,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="#pipes"> pipes </a>
 </li>
 <li>
+<a href="#queue"> queue </a>
+</li>
+<li>
 <a href="#version"> version </a>
 </li>
 <li>
@@ -582,7 +585,8 @@ document.write("Last Published: " + document.lastModified);
 					[-submit &lt;job-file&gt;] | [-status &lt;job-id&gt;] | 
 					[-counter &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;] | [-kill &lt;job-id&gt;] | 
 					[-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;] | [-history [all] &lt;jobOutputDir&gt;] |
-					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;]</span>
+					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;] | 
+          [-set-priority &lt;job-id&gt; &lt;priority&gt;]</span>
 				
 </p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
@@ -656,9 +660,17 @@ document.write("Last Published: " + document.lastModified);
 			            <td colspan="1" rowspan="1">Fails the task. Failed tasks are counted against failed attempts.</td>
 			           
 </tr>
+                 
+<tr>
+                  
+<td colspan="1" rowspan="1"><span class="codefrag">-set-priority &lt;job-id&gt; &lt;priority&gt;</span></td>
+                  <td colspan="1" rowspan="1">Changes the priority of the job. 
+                  Allowed priority values are VERY_HIGH, HIGH, NORMAL, LOW, VERY_LOW</td>
+                 
+</tr>
 					
 </table>
-<a name="N10302"></a><a name="pipes"></a>
+<a name="N10310"></a><a name="pipes"></a>
 <h3 class="h4"> pipes </h3>
 <p>
 					Runs a pipes job.
@@ -763,7 +775,46 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 					
 </table>
-<a name="N103C7"></a><a name="version"></a>
+<a name="N103D5"></a><a name="queue"></a>
+<h3 class="h4"> queue </h3>
+<p>
+          command to interact and view Job Queue information
+        </p>
+<p>
+          
+<span class="codefrag">Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]]</span>
+        
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+        
+<tr>
+          
+<th colspan="1" rowspan="1"> COMMAND_OPTION </th><th colspan="1" rowspan="1"> Description </th>
+        
+</tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1"><span class="codefrag">-list</span> </td>
+          <td colspan="1" rowspan="1">Gets list of Job Queues configured in the system. Along with scheduling information
+          associated with the job queues.
+          </td>
+        
+</tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1"><span class="codefrag">-info &lt;job-queue-name&gt; [-showJobs]</span></td>
+          <td colspan="1" rowspan="1">
+           Displays the job queue information and associated scheduling information of particular
+           job queue. If -showJobs options is present a list of jobs submitted to the particular job
+           queue is displayed. 
+          </td>
+        
+</tr>
+        
+</table>
+<a name="N10411"></a><a name="version"></a>
 <h3 class="h4"> version </h3>
 <p>
 					Prints the version.
@@ -773,7 +824,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Usage: hadoop version</span>
 				
 </p>
-<a name="N103D7"></a><a name="CLASSNAME"></a>
+<a name="N10421"></a><a name="CLASSNAME"></a>
 <h3 class="h4"> CLASSNAME </h3>
 <p>
 					 hadoop script can be used to invoke any class.
@@ -788,12 +839,11 @@ document.write("Last Published: " + document.lastModified);
 				</p>
 </div>
 		
-		
-<a name="N103EB"></a><a name="Administration+Commands"></a>
+<a name="N10435"></a><a name="Administration+Commands"></a>
 <h2 class="h3"> Administration Commands </h2>
 <div class="section">
 <p>Commands useful for administrators of a hadoop cluster.</p>
-<a name="N103F4"></a><a name="balancer"></a>
+<a name="N1043E"></a><a name="balancer"></a>
 <h3 class="h4"> balancer </h3>
 <p>
 					Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the 
@@ -819,7 +869,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N10423"></a><a name="daemonlog"></a>
+<a name="N1046D"></a><a name="daemonlog"></a>
 <h3 class="h4"> daemonlog </h3>
 <p>
 					 Get/Set the log level for each daemon.
@@ -856,7 +906,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N10460"></a><a name="datanode"></a>
+<a name="N104AA"></a><a name="datanode"></a>
 <h3 class="h4"> datanode</h3>
 <p>
 					Runs a HDFS datanode.
@@ -882,7 +932,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N1048B"></a><a name="dfsadmin"></a>
+<a name="N104D5"></a><a name="dfsadmin"></a>
 <h3 class="h4"> dfsadmin </h3>
 <p>
 					Runs a HDFS dfsadmin client.
@@ -997,7 +1047,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N1054B"></a><a name="jobtracker"></a>
+<a name="N10595"></a><a name="jobtracker"></a>
 <h3 class="h4"> jobtracker </h3>
 <p>
 					Runs the MapReduce job Tracker node.
@@ -1007,7 +1057,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Usage: hadoop jobtracker</span>
 				
 </p>
-<a name="N1055B"></a><a name="namenode"></a>
+<a name="N105A5"></a><a name="namenode"></a>
 <h3 class="h4"> namenode </h3>
 <p>
 					Runs the namenode. More info about the upgrade, rollback and finalize is at 
@@ -1065,7 +1115,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N105C2"></a><a name="secondarynamenode"></a>
+<a name="N1060C"></a><a name="secondarynamenode"></a>
 <h3 class="h4"> secondarynamenode </h3>
 <p>
 					Runs the HDFS secondary namenode. See <a href="hdfs_user_guide.html#Secondary+Namenode">Secondary Namenode</a> 
@@ -1099,7 +1149,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 			     
 </table>
-<a name="N105FF"></a><a name="tasktracker"></a>
+<a name="N10649"></a><a name="tasktracker"></a>
 <h3 class="h4"> tasktracker </h3>
 <p>
 					Runs a MapReduce task Tracker node.
