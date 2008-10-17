@@ -238,7 +238,8 @@
 					[-submit &lt;job-file&gt;] | [-status &lt;job-id&gt;] | 
 					[-counter &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;] | [-kill &lt;job-id&gt;] | 
 					[-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;] | [-history [all] &lt;jobOutputDir&gt;] |
-					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;]</code>
+					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;] | 
+          [-set-priority &lt;job-id&gt; &lt;priority&gt;]</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
@@ -281,6 +282,11 @@
 			          	<td><code>-fail-task &lt;task-id&gt;</code></td>
 			            <td>Fails the task. Failed tasks are counted against failed attempts.</td>
 			           </tr>
+                 <tr>
+                  <td><code>-set-priority &lt;job-id&gt; &lt;priority&gt;</code></td>
+                  <td>Changes the priority of the job. 
+                  Allowed priority values are VERY_HIGH, HIGH, NORMAL, LOW, VERY_LOW</td>
+                 </tr>
 					</table>
 			</section>
 			
@@ -348,7 +354,34 @@
 			           </tr>
 					</table>
 			</section>
-			
+      <section>
+        <title> queue </title>
+        <p>
+          command to interact and view Job Queue information
+        </p>
+        <p>
+          <code>Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]]</code>
+        </p>
+        <table>
+        <tr>
+          <th> COMMAND_OPTION </th><th> Description </th>
+        </tr>
+        <tr>
+          <td><code>-list</code> </td>
+          <td>Gets list of Job Queues configured in the system. Along with scheduling information
+          associated with the job queues.
+          </td>
+        </tr>
+        <tr>
+          <td><code>-info &lt;job-queue-name&gt; [-showJobs]</code></td>
+          <td>
+           Displays the job queue information and associated scheduling information of particular
+           job queue. If -showJobs options is present a list of jobs submitted to the particular job
+           queue is displayed. 
+          </td>
+        </tr>
+        </table>
+      </section>  	
 			<section>
 				<title> version </title>
 				<p>
@@ -358,7 +391,6 @@
 					<code>Usage: hadoop version</code>
 				</p>
 			</section>
-			
 			<section>
 				<title> CLASSNAME </title>
 				<p>
@@ -371,9 +403,7 @@
 					 Runs the class named CLASSNAME.
 				</p>
 			</section>
-			
-		</section>
-		
+    </section>
 		<section>
 			<title> Administration Commands </title>
 			<p>Commands useful for administrators of a hadoop cluster.</p>
