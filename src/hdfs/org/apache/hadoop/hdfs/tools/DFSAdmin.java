@@ -65,7 +65,7 @@ public class DFSAdmin extends FsShell {
     private static final String NAME = "clrQuota";
     private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-    "\tClear the quota for each directory <dirName>.\n" +
+    "Clear the quota for each directory <dirName>.\n" +
     "\t\tBest effort for the directory. with fault reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
@@ -106,9 +106,9 @@ public class DFSAdmin extends FsShell {
       "-"+NAME+" <quota> <dirname>...<dirname>";
     private static final String DESCRIPTION = 
       "-setQuota <quota> <dirname>...<dirname>: " +
-      "\tSet the quota <quota> for each directory <dirName>.\n" + 
-      "\t\tThe directory quota is a long integer that puts a hard limit " +
-      "on the number of names in the directory tree\n" +
+      "Set the quota <quota> for each directory <dirName>.\n" + 
+      "\t\tThe directory quota is a long integer that puts a hard limit\n" +
+      "\t\ton the number of names in the directory tree\n" +
       "\t\tBest effort for the directory, with faults reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
@@ -151,7 +151,7 @@ public class DFSAdmin extends FsShell {
     private static final String NAME = "clrSpaceQuota";
     private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-    "\tClear the disk space quota for each directory <dirName>.\n" +
+    "Clear the disk space quota for each directory <dirName>.\n" +
     "\t\tBest effort for the directory. with fault reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
@@ -190,12 +190,12 @@ public class DFSAdmin extends FsShell {
     private static final String NAME = "setSpaceQuota";
     private static final String USAGE =
       "-"+NAME+" <quota> <dirname>...<dirname>";
-    private static final String DESCRIPTION = USAGE +
-      "\tSet the dik space quota <quota> for each directory <dirName>.\n" + 
-      "\t\tThe directory quota is a long integer that puts a hard limit " +
-      "on the number of names in the directory tree.\n" +
-      "\t\tQuota can also be speciefied with a binary prefix for terabytes, " +
-      " petabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
+    private static final String DESCRIPTION = USAGE + ": " +
+      "Set the dik space quota <quota> for each directory <dirName>.\n" + 
+      "\t\tThe directory quota is a long integer that puts a hard limit\n" +
+      "\t\ton the number of names in the directory tree.\n" +
+      "\t\tQuota can also be speciefied with a binary prefix for terabytes,\n" +
+      "\t\tpetabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
       "\t\tBest effort for the directory, with faults reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
