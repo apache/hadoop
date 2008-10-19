@@ -958,6 +958,9 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4449. Fix dfsadmin usage. (Raghu Angadi via cdouglas)
 
+    HADOOP-4455. Added TestSerDe so that unit tests can run successfully.
+    (Ashish Thusoo via dhruba)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
