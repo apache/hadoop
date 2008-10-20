@@ -244,6 +244,65 @@
 		        TaskTrackers.
 		      </td>
   		    </tr>
+        <tr>
+          <td>mapred.queue.names</td>
+          <td>Comma separated list of queues to which jobs can be submitted.</td>
+          <td>
+            The Map/Reduce system always supports atleast one queue
+            with the name as <em>default</em>. Hence, this parameter's
+            value should always contain the string <em>default</em>.
+            Some job schedulers supported in Hadoop, like the 
+            <a href="capacity_scheduler.html">Capacity 
+            Scheduler</a>, support multiple queues. If such a scheduler is
+            being used, the list of configured queue names must be
+            specified here. Once queues are defined, users can submit
+            jobs to a queue using the property name 
+            <em>mapred.job.queue.name</em> in the job configuration.
+            There could be a separate 
+            configuration file for configuring properties of these 
+            queues that is managed by the scheduler. 
+            Refer to the documentation of the scheduler for information on 
+            the same.
+          </td>
+        </tr>
+        <tr>
+          <td>mapred.acls.enabled</td>
+          <td>Specifies whether ACLs are supported for controlling job
+              submission and administration</td>
+          <td>
+            If <em>true</em>, ACLs would be checked while submitting
+            and administering jobs. ACLs can be specified using the
+            configuration parameters of the form
+            <em>mapred.queue.queue-name.acl-name</em>, defined below.
+          </td>
+        </tr>
+        <tr>
+          <td>mapred.queue.<em>queue-name</em>.acl-submit-job</td>
+          <td>List of users and groups that can submit jobs to the
+              specified <em>queue-name</em>.</td>
+          <td>
+            The list of users and groups are both comma separated
+            list of names. The two lists are separated by a blank.
+            Example: <em>user1,user2 group1,group2</em>.
+            If you wish to define only a list of groups, provide
+            a blank at the beginning of the value.
+          </td>
+        </tr>
+        <tr>
+          <td>mapred.queue.<em>queue-name</em>.acl-administer-job</td>
+          <td>List of users and groups that can change the priority
+              or kill jobs that have been submitted to the
+              specified <em>queue-name</em>.</td>
+          <td>
+            The list of users and groups are both comma separated
+            list of names. The two lists are separated by a blank.
+            Example: <em>user1,user2 group1,group2</em>.
+            If you wish to define only a list of groups, provide
+            a blank at the beginning of the value. Note that an
+            owner of a job can always change the priority or kill
+            his/her own job, irrespective of the ACLs.
+          </td>
+        </tr>
 		  </table>
 
           <p>Typically all the above parameters are marked as 

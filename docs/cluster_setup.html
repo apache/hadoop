@@ -153,6 +153,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="hod.html">Hadoop On Demand</a>
 </div>
 <div class="menuitem">
+<a href="capacity_scheduler.html">Capacity Scheduler</a>
+</div>
+<div class="menuitem">
 <a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
@@ -518,13 +521,84 @@ document.write("Last Published: " + document.lastModified);
 		      </td>
   		    
 </tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1">mapred.queue.names</td>
+          <td colspan="1" rowspan="1">Comma separated list of queues to which jobs can be submitted.</td>
+          <td colspan="1" rowspan="1">
+            The Map/Reduce system always supports atleast one queue
+            with the name as <em>default</em>. Hence, this parameter's
+            value should always contain the string <em>default</em>.
+            Some job schedulers supported in Hadoop, like the 
+            <a href="capacity_scheduler.html">Capacity 
+            Scheduler</a>, support multiple queues. If such a scheduler is
+            being used, the list of configured queue names must be
+            specified here. Once queues are defined, users can submit
+            jobs to a queue using the property name 
+            <em>mapred.job.queue.name</em> in the job configuration.
+            There could be a separate 
+            configuration file for configuring properties of these 
+            queues that is managed by the scheduler. 
+            Refer to the documentation of the scheduler for information on 
+            the same.
+          </td>
+        
+</tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1">mapred.acls.enabled</td>
+          <td colspan="1" rowspan="1">Specifies whether ACLs are supported for controlling job
+              submission and administration</td>
+          <td colspan="1" rowspan="1">
+            If <em>true</em>, ACLs would be checked while submitting
+            and administering jobs. ACLs can be specified using the
+            configuration parameters of the form
+            <em>mapred.queue.queue-name.acl-name</em>, defined below.
+          </td>
+        
+</tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1">mapred.queue.<em>queue-name</em>.acl-submit-job</td>
+          <td colspan="1" rowspan="1">List of users and groups that can submit jobs to the
+              specified <em>queue-name</em>.</td>
+          <td colspan="1" rowspan="1">
+            The list of users and groups are both comma separated
+            list of names. The two lists are separated by a blank.
+            Example: <em>user1,user2 group1,group2</em>.
+            If you wish to define only a list of groups, provide
+            a blank at the beginning of the value.
+          </td>
+        
+</tr>
+        
+<tr>
+          
+<td colspan="1" rowspan="1">mapred.queue.<em>queue-name</em>.acl-administer-job</td>
+          <td colspan="1" rowspan="1">List of users and groups that can change the priority
+              or kill jobs that have been submitted to the
+              specified <em>queue-name</em>.</td>
+          <td colspan="1" rowspan="1">
+            The list of users and groups are both comma separated
+            list of names. The two lists are separated by a blank.
+            Example: <em>user1,user2 group1,group2</em>.
+            If you wish to define only a list of groups, provide
+            a blank at the beginning of the value. Note that an
+            owner of a job can always change the priority or kill
+            his/her own job, irrespective of the ACLs.
+          </td>
+        
+</tr>
 		  
 </table>
 <p>Typically all the above parameters are marked as 
           <a href="api/org/apache/hadoop/conf/Configuration.html#FinalParams">
           final</a> to ensure that they cannot be overriden by user-applications.
           </p>
-<a name="N1020F"></a><a name="Real-World+Cluster+Configurations"></a>
+<a name="N1027C"></a><a name="Real-World+Cluster+Configurations"></a>
 <h5>Real-World Cluster Configurations</h5>
 <p>This section lists some non-default configuration parameters which 
             have been used to run the <em>sort</em> benchmark on very large 
@@ -685,7 +759,7 @@ document.write("Last Published: " + document.lastModified);
 </li>
             
 </ul>
-<a name="N1032D"></a><a name="Slaves"></a>
+<a name="N1039A"></a><a name="Slaves"></a>
 <h4>Slaves</h4>
 <p>Typically you choose one machine in the cluster to act as the 
           <span class="codefrag">NameNode</span> and one machine as to act as the 
@@ -694,14 +768,14 @@ document.write("Last Published: " + document.lastModified);
           referred to as <em>slaves</em>.</p>
 <p>List all slave hostnames or IP addresses in your 
           <span class="codefrag">conf/slaves</span> file, one per line.</p>
-<a name="N1034C"></a><a name="Logging"></a>
+<a name="N103B9"></a><a name="Logging"></a>
 <h4>Logging</h4>
 <p>Hadoop uses the <a href="http://logging.apache.org/log4j/">Apache 
           log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
           Commons Logging</a> framework for logging. Edit the 
           <span class="codefrag">conf/log4j.properties</span> file to customize the Hadoop 
           daemons' logging configuration (log-formats and so on).</p>
-<a name="N10360"></a><a name="History+Logging"></a>
+<a name="N103CD"></a><a name="History+Logging"></a>
 <h5>History Logging</h5>
 <p> The job history files are stored in central location 
             <span class="codefrag"> hadoop.job.history.location </span> which can be on DFS also,
@@ -734,10 +808,10 @@ document.write("Last Published: " + document.lastModified);
       typically <span class="codefrag">${HADOOP_HOME}/conf</span>.</p>
 </div>
     
-<a name="N10398"></a><a name="Cluster+Restartability"></a>
+<a name="N10405"></a><a name="Cluster+Restartability"></a>
 <h2 class="h3">Cluster Restartability</h2>
 <div class="section">
-<a name="N1039E"></a><a name="Map%2FReduce"></a>
+<a name="N1040B"></a><a name="Map%2FReduce"></a>
 <h3 class="h4">Map/Reduce</h3>
 <p>The job tracker restart can recover running jobs if 
         <span class="codefrag">mapred.jobtracker.restart.recover</span> is set true and 
@@ -748,7 +822,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N103B3"></a><a name="Hadoop+Rack+Awareness"></a>
+<a name="N10420"></a><a name="Hadoop+Rack+Awareness"></a>
 <h2 class="h3">Hadoop Rack Awareness</h2>
 <div class="section">
 <p>The HDFS and the Map/Reduce components are rack-aware.</p>
@@ -771,7 +845,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N103D9"></a><a name="Hadoop+Startup"></a>
+<a name="N10446"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -806,7 +880,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1041F"></a><a name="Hadoop+Shutdown"></a>
+<a name="N1048C"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>
