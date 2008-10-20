@@ -143,9 +143,6 @@ class JSPUtil {
         String name = profile.getJobName();
         String jobpri = job.getPriority().toString();
         String schedulingInfo = job.getStatus().getSchedulingInfo();
-        if(schedulingInfo.trim().equals("")){
-          schedulingInfo = "&nbsp;&nbsp;&nbsp;";
-        }
 
         if (isModifiable) {
           sb.append("<tr><td><input TYPE=\"checkbox\" " +

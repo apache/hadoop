@@ -39,6 +39,9 @@ Trunk (unreleased changes)
 
     HADOOP-4226. Refactor and document LineReader to make it more readily
     understandable. (Yuri Pradkin via cdouglas)
+    
+    HADOOP-4238. When listing jobs, if scheduling information isn't available 
+    print NA instead of empty output. (Sreekanth Ramakrishnan via johan)
 
   OPTIMIZATIONS
 

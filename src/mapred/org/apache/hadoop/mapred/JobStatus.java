@@ -57,7 +57,7 @@ public class JobStatus implements Writable, Cloneable {
   private long startTime;
   private String user;
   private JobPriority priority;
-  private String schedulingInfo="";
+  private String schedulingInfo="NA";
     
   /**
    */
