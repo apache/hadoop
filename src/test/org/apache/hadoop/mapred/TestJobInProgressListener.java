@@ -19,8 +19,12 @@
 package org.apache.hadoop.mapred;
 
 import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +37,171 @@ import junit.framework.TestCase;
 public class TestJobInProgressListener extends TestCase {
   private static final Log LOG = 
     LogFactory.getLog(TestJobInProgressListener.class);
+  private final Path testDir = new Path("test-jip-listener-update");
+  
+  private JobConf configureJob(JobConf conf, int m, int r, 
+                               Path inDir, Path outputDir,
+                               String mapSignalFile, String redSignalFile) 
+  throws IOException {
+    TestJobTrackerRestart.configureWaitingJobConf(conf, inDir, outputDir, 
+                                                  m, r, "job-listener-test", 
+                                                  mapSignalFile, redSignalFile);
+    return conf; 
+  }
+  
+  /**
+   * This test case tests if external updates to JIP do not result into 
+   * undesirable effects
+   * Test is as follows
+   *   - submit 2 jobs of normal priority. job1 is a waiting job which waits and
+   *     blocks the cluster
+   *   - change one parameter of job2 such that the job bumps up in the queue
+   *   - check if the queue looks ok
+   *   
+   */
+  public void testJobQueueChanges() throws IOException {
+    LOG.info("Testing job queue changes");
+    JobConf conf = new JobConf();
+    MiniDFSCluster dfs = new MiniDFSCluster(conf, 1, true, null, null);
+    dfs.waitActive();
+    FileSystem fileSys = dfs.getFileSystem();
+    
+    dfs.startDataNodes(conf, 1, true, null, null, null, null);
+    dfs.waitActive();
+    
+    String namenode = (dfs.getFileSystem()).getUri().getHost() + ":" 
+                      + (dfs.getFileSystem()).getUri().getPort();
+    MiniMRCluster mr = new MiniMRCluster(1, namenode, 1);
+    JobClient jobClient = new JobClient(mr.createJobConf());
+    
+    // clean up
+    fileSys.delete(testDir, true);
+    
+    if (!fileSys.mkdirs(testDir)) {
+      throw new IOException("Mkdirs failed to create " + testDir.toString());
+    }
+
+    // Write the input file
+    Path inDir = new Path(testDir, "input");
+    Path shareDir = new Path(testDir, "share");
+    String mapSignalFile = TestJobTrackerRestart.getMapSignalFile(shareDir);
+    String redSignalFile = TestJobTrackerRestart.getReduceSignalFile(shareDir);
+    TestRackAwareTaskPlacement.writeFile(dfs.getNameNode(), conf, 
+                                         new Path(inDir + "/file"), 
+                                         (short)1);
+    
+    JobQueueJobInProgressListener myListener = 
+      new JobQueueJobInProgressListener();
+    
+    // add the listener
+    mr.getJobTrackerRunner().getJobTracker()
+      .addJobInProgressListener(myListener);
+    
+    // big blocking job
+    Path outputDir = new Path(testDir, "output");
+    Path newOutputDir = outputDir.suffix("0");
+    JobConf job1 = configureJob(mr.createJobConf(), 10, 0, inDir, newOutputDir,
+                                mapSignalFile, redSignalFile);
+    
+    // short blocked job
+    newOutputDir = outputDir.suffix("1");
+    JobConf job2 = configureJob(mr.createJobConf(), 1, 0, inDir, newOutputDir,
+                                mapSignalFile, redSignalFile);
+    
+    RunningJob rJob1 = jobClient.submitJob(job1);
+    LOG.info("Running job " + rJob1.getID().toString());
+    
+    RunningJob rJob2 = jobClient.submitJob(job2);
+    LOG.info("Running job " + rJob2.getID().toString());
+    
+    // I. Check job-priority change
+    LOG.info("Testing job priority changes");
+    
+    // bump up job2's priority
+    LOG.info("Increasing job2's priority to HIGH");
+    rJob2.setJobPriority("HIGH");
+    
+    // check if the queue is sane
+    assertTrue("Priority change garbles the queue", 
+               myListener.getJobQueue().size() == 2);
+    
+    JobInProgress[] queue = 
+      myListener.getJobQueue().toArray(new JobInProgress[0]);
+    
+    // check if the bump has happened
+    assertTrue("Priority change failed to bump up job2 in the queue", 
+               queue[0].getJobID().equals(rJob2.getID()));
+    
+    assertTrue("Priority change failed to bump down job1 in the queue", 
+               queue[1].getJobID().equals(rJob1.getID()));
+    
+    assertEquals("Priority change has garbled the queue", 
+                 2, queue.length);
+    
+    // II. Check start-time change
+    LOG.info("Testing job start-time changes");
+    
+    // reset the priority which will make the order as
+    //  - job1
+    //  - job2
+    // this will help in bumping job2 on start-time change
+    LOG.info("Increasing job2's priority to NORMAL"); 
+    rJob2.setJobPriority("NORMAL");
+    
+    // create the change event
+    JobInProgress jip2 = mr.getJobTrackerRunner().getJobTracker()
+                          .getJob(rJob2.getID());
+    JobInProgress jip1 = mr.getJobTrackerRunner().getJobTracker()
+                           .getJob(rJob1.getID());
+    
+    JobStatus prevStatus = (JobStatus)jip2.getStatus().clone();
+    
+    // change job2's start-time and the status
+    jip2.startTime =  jip1.startTime - 1;
+    jip2.status.setStartTime(jip2.startTime);
+    
+    
+    JobStatus newStatus = (JobStatus)jip2.getStatus().clone();
+    
+    // inform the listener
+    LOG.info("Updating the listener about job2's start-time change");
+    JobStatusChangeEvent event = 
+      new JobStatusChangeEvent(jip2, EventType.START_TIME_CHANGED, 
+                              prevStatus, newStatus);
+    myListener.jobUpdated(event);
+    
+    // check if the queue is sane
+    assertTrue("Start time change garbles the queue", 
+               myListener.getJobQueue().size() == 2);
+    
+    queue = myListener.getJobQueue().toArray(new JobInProgress[0]);
+    
+    // check if the bump has happened
+    assertTrue("Start time change failed to bump up job2 in the queue", 
+               queue[0].getJobID().equals(rJob2.getID()));
+    
+    assertTrue("Start time change failed to bump down job1 in the queue", 
+               queue[1].getJobID().equals(rJob1.getID()));
+    
+    assertEquals("Start time change has garbled the queue", 
+                 2, queue.length);
+    
+    // signal the maps to complete
+    TestJobTrackerRestart.signalTasks(dfs, fileSys, true, 
+                                      mapSignalFile, redSignalFile);
+    
+    // check if job completion leaves the queue sane
+    while (rJob2.getJobState() != JobStatus.SUCCEEDED) {
+      TestJobTrackerRestart.waitFor(10);
+    }
+    
+    while (rJob1.getJobState() != JobStatus.SUCCEEDED) {
+      TestJobTrackerRestart.waitFor(10);
+    }
+    
+    assertTrue("Job completion garbles the queue", 
+               myListener.getJobQueue().size() == 0);
+  }
   
   // A listener that inits the tasks one at a time and also listens to the 
   // events

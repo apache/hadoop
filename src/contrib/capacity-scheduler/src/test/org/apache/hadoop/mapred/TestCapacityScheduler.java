@@ -57,8 +57,9 @@ public class TestCapacityScheduler extends TestCase {
       super(jId, jobConf);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
-      this.status = new JobStatus();
-      this.status.setRunState(JobStatus.PREP);
+      this.status = new JobStatus(jId, 0f, 0f, JobStatus.PREP);
+      this.status.setJobPriority(JobPriority.NORMAL);
+      this.status.setStartTime(startTime);
       if (null == jobConf.getQueueName()) {
         this.profile = new JobProfile(user, jId, 
             null, null, null);
@@ -316,6 +317,23 @@ public class TestCapacityScheduler extends TestCase {
       }
     }
     
+    public void setStartTime(FakeJobInProgress fjob, long start) {
+      // take a snapshot of the status before changing it
+      JobStatus oldStatus = (JobStatus)fjob.getStatus().clone();
+      
+      fjob.startTime = start; // change the start time of the job
+      fjob.status.setStartTime(start); // change the start time of the jobstatus
+      
+      JobStatus newStatus = (JobStatus)fjob.getStatus().clone();
+      
+      JobStatusChangeEvent event = 
+        new JobStatusChangeEvent (fjob, EventType.START_TIME_CHANGED, oldStatus,
+                                  newStatus);
+      for (JobInProgressListener listener : listeners) {
+        listener.jobUpdated(event);
+      }
+    }
+    
     void addQueues(String[] arr) {
       Set<String> queues = new HashSet<String>();
       for (String s: arr) {
@@ -484,18 +502,44 @@ public class TestCapacityScheduler extends TestCase {
       submitJob(JobStatus.PREP, 1, 0, "default", "user");
     
     // check if the job is in the waiting queue
-    assertTrue("Waiting queue doesnt contain queued job", 
-                scheduler.jobQueuesManager.getWaitingJobQueue("default")
-                         .contains(fjob1));
+    JobInProgress[] jobs = 
+      scheduler.jobQueuesManager.getWaitingJobQueue("default")
+               .toArray(new JobInProgress[0]);
+    assertTrue("Waiting queue doesnt contain queued job #1 in right order", 
+                jobs[0].getJobID().equals(fjob1.getJobID()));
+    assertTrue("Waiting queue doesnt contain queued job #2 in right order", 
+                jobs[1].getJobID().equals(fjob2.getJobID()));
     
-    // change the job priority
-    taskTrackerManager.setPriority(fjob2, JobPriority.HIGH);
+    // I. Check the start-time change
+    // Change job2 start-time and check if job2 bumps up in the queue 
+    taskTrackerManager.setStartTime(fjob2, fjob1.startTime - 1);
+    
+    jobs = scheduler.jobQueuesManager.getWaitingJobQueue("default")
+                    .toArray(new JobInProgress[0]);
+    assertTrue("Start time change didnt not work as expected for job #2", 
+                jobs[0].getJobID().equals(fjob2.getJobID()));
+    assertTrue("Start time change didnt not work as expected for job #1", 
+                jobs[1].getJobID().equals(fjob1.getJobID()));
+    
+    // check if the queue is fine
+    assertEquals("Start-time change garbled the waiting queue", 
+                 2, scheduler.getJobs("default").size());
+    
+    // II. Change job priority change
+    // Bump up job1's priority and make sure job1 bumps up in the queue
+    taskTrackerManager.setPriority(fjob1, JobPriority.HIGH);
     
     // Check if the priority changes are reflected
-    JobInProgress firstJob = 
-      scheduler.getJobs("default").toArray(new JobInProgress[0])[0];
-    assertTrue("Priority change didnt not work as expected", 
-               firstJob.getJobID().equals(fjob2.getJobID()));
+    jobs = scheduler.jobQueuesManager.getWaitingJobQueue("default")
+                    .toArray(new JobInProgress[0]);
+    assertTrue("Priority change didnt not work as expected for job #1", 
+                jobs[0].getJobID().equals(fjob1.getJobID()));
+    assertTrue("Priority change didnt not work as expected for job #2", 
+                jobs[1].getJobID().equals(fjob2.getJobID()));
+    
+    // check if the queue is fine
+    assertEquals("Priority change has garbled the waiting queue", 
+                 2, scheduler.getJobs("default").size());
     
     // Create an event
     JobChangeEvent event = initTasksAndReportEvent(fjob1);
@@ -503,10 +547,26 @@ public class TestCapacityScheduler extends TestCase {
     // inform the scheduler
     scheduler.jobQueuesManager.jobUpdated(event);
     
+    // waiting queue
+    Collection<JobInProgress> wqueue = 
+      scheduler.jobQueuesManager.getWaitingJobQueue("default");
+    
+    // check if the job is not in the waiting queue
+    assertFalse("Waiting queue contains running/inited job", 
+                wqueue.contains(fjob1));
+    
+    // check if the waiting queue is fine
+    assertEquals("Waiting queue is garbled on job init", 1, wqueue.size());
+    
+    Collection<JobInProgress> rqueue = 
+      scheduler.jobQueuesManager.getRunningJobQueue("default");
+    
     // check if the job is in the running queue
     assertTrue("Running queue doesnt contain running/inited job", 
-                scheduler.jobQueuesManager.getRunningJobQueue("default")
-                         .contains(fjob1));
+                rqueue.contains(fjob1));
+    
+    // check if the running queue is fine
+    assertEquals("Running queue is garbled upon init", 1, rqueue.size());
     
     // schedule a task
     List<Task> tasks = scheduler.assignTasks(tracker("tt1"));
@@ -518,9 +578,16 @@ public class TestCapacityScheduler extends TestCase {
     // mark the job as complete
     taskTrackerManager.finalizeJob(fjob1);
     
+    rqueue = scheduler.jobQueuesManager.getRunningJobQueue("default");
+    
     // check if the job is removed from the scheduler
     assertFalse("Scheduler contains completed job", 
-                scheduler.getJobs("default").contains(fjob1));
+                rqueue.contains(fjob1));
+    
+    // check if the running queue size is correct
+    assertEquals("Job finish garbles the queue", 
+                 0, rqueue.size());
+    
   }
   
   /*protected void submitJobs(int number, int state, int maps, int reduces)

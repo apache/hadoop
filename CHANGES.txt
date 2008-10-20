@@ -989,6 +989,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4404. saveFSImage() removes files from a storage directory that do 
     not correspond to its type. (shv)
 
+    HADOOP-4149. Fix handling of updates to the job priority, by changing the
+    list of jobs to be keyed by the priority, submit time, and job tracker id.
+    (Amar Kamat via omalley)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES

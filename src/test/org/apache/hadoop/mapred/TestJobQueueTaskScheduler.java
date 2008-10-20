@@ -42,8 +42,9 @@ public class TestJobQueueTaskScheduler extends TestCase {
       super(new JobID("test", ++jobCounter), jobConf);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
-      this.status = new JobStatus();
-      this.status.setRunState(JobStatus.PREP);
+      this.status = new JobStatus(getJobID(), 0f, 0f, JobStatus.PREP);
+      this.status.setJobPriority(JobPriority.NORMAL);
+      this.status.setStartTime(startTime);
     }
     
     @Override
