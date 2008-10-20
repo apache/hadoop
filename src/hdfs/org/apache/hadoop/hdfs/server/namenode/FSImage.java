@@ -54,7 +54,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -723,18 +722,23 @@ public class FSImage extends Storage {
     StorageDirectory latestEditsSD = null;
     boolean needToSave = false;
     isUpgradeFinalized = true;
+    Collection<String> imageDirs = new ArrayList<String>();
+    Collection<String> editsDirs = new ArrayList<String>();
     for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       if (!sd.getVersionFile().exists()) {
         needToSave |= true;
         continue; // some of them might have just been formatted
       }
-      if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE))
-        assert getImageFile(sd, NameNodeFile.IMAGE).exists() :
-          "Image file must exist.";
-      if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
-        assert getImageFile(sd, NameNodeFile.EDITS).exists() :
-          "Edits file must exist.";
+      boolean imageExists = false, editsExists = false;
+      if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
+        imageExists = getImageFile(sd, NameNodeFile.IMAGE).exists();
+        imageDirs.add(sd.getRoot().getCanonicalPath());
+      }
+      if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+        editsExists = getImageFile(sd, NameNodeFile.EDITS).exists();
+        editsDirs.add(sd.getRoot().getCanonicalPath());
+      }
       
       checkpointTime = readCheckpointTime(sd);
       if ((checkpointTime != Long.MIN_VALUE) && 
@@ -745,12 +749,12 @@ public class FSImage extends Storage {
         needToSave |= true;
       }
       if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE) && 
-         (latestNameCheckpointTime < checkpointTime)) {
+         (latestNameCheckpointTime < checkpointTime) && imageExists) {
         latestNameCheckpointTime = checkpointTime;
         latestNameSD = sd;
       }
       if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS) && 
-           (latestEditsCheckpointTime < checkpointTime)) {
+           (latestEditsCheckpointTime < checkpointTime) && editsExists) {
         latestEditsCheckpointTime = checkpointTime;
         latestEditsSD = sd;
       }
@@ -759,11 +763,13 @@ public class FSImage extends Storage {
       // set finalized flag
       isUpgradeFinalized = isUpgradeFinalized && !sd.getPreviousDir().exists();
     }
-    assert latestNameSD != null : "Latest image storage directory was " +
-                                  "not determined.";
-    assert latestEditsSD != null : "Latest edits storage directory was " +
-                                   "not determined.";
-    
+
+    // We should have at least one image and one edits dirs
+    if (latestNameSD == null)
+      throw new IOException("Image file is not found in " + imageDirs);
+    if (latestEditsSD == null)
+      throw new IOException("Edits file is not found in " + editsDirs);
+
     // Make sure we are loading image and edits from same checkpoint
     if (latestNameCheckpointTime != latestEditsCheckpointTime)
       throw new IOException("Inconsitent storage detected, " +
@@ -1312,6 +1318,16 @@ public class FSImage extends Storage {
     for (Iterator<StorageDirectory> it = 
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
+      // delete old edits if sd is the image only the directory
+      if (!sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+        File editsFile = getImageFile(sd, NameNodeFile.EDITS);
+        editsFile.delete();
+      }
+      // delete old fsimage if sd is the edits only the directory
+      if (!sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
+        File imageFile = getImageFile(sd, NameNodeFile.IMAGE);
+        imageFile.delete();
+      }
       try {
         sd.write();
       } catch (IOException e) {
