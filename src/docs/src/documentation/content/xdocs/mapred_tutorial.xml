@@ -40,10 +40,10 @@
       details:</p> 
       <ul>
         <li>
-          Hadoop <a href="quickstart.html">Quickstart</a> for first-time users.
+          <a href="quickstart.html">Hadoop Quick Start</a> for first-time users.
         </li>
         <li>
-          Hadoop <a href="cluster_setup.html">Cluster Setup</a> for large, 
+          <a href="cluster_setup.html">Hadoop Cluster Setup</a> for large, 
           distributed clusters.
         </li>
       </ul>
@@ -66,8 +66,8 @@
       tasks.</p>
       
       <p>Typically the compute nodes and the storage nodes are the same, that is, 
-      the Map/Reduce framework and the <a href="hdfs_design.html">Distributed 
-      FileSystem</a> are running on the same set of nodes. This configuration
+      the Map/Reduce framework and the Hadoop Distributed File System (see <a href="hdfs_design.html">HDFS Architecture </a>) 
+      are running on the same set of nodes. This configuration
       allows the framework to effectively schedule tasks on the nodes where data 
       is already present, resulting in very high aggregate bandwidth across the 
       cluster.</p>
@@ -150,11 +150,8 @@
       <p><code>WordCount</code> is a simple application that counts the number of
       occurences of each word in a given input set.</p>
       
-      <p>This works with a 
-      <a href="quickstart.html#Standalone+Operation">local-standalone</a>,
-      <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
-      <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
-      Hadoop installation.</p>
+      <p>This works with a local-standalone, pseudo-distributed or fully-distributed 
+      Hadoop installation(see <a href="quickstart.html"> Hadoop Quick Start</a>).</p>
       
       <section>
         <title>Source Code</title>
@@ -611,7 +608,7 @@
         as arguments that are unzipped/unjarred and a link with name of the
         jar/zip are created in the current working directory of tasks. More
         details about the command line options are available at 
-        <a href="commands_manual.html">Commands manual</a></p>
+        <a href="commands_manual.html"> Hadoop Command Guide.</a></p>
         
         <p>Running <code>wordcount</code> example with 
         <code>-libjars</code> and <code>-files</code>:<br/>

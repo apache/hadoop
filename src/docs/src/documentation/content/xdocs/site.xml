@@ -32,39 +32,37 @@ See http://forrest.apache.org/docs/linking.html for more info.
 <site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
 
   <docs label="Documentation"> 
-    <overview  label="Overview"           href="index.html" />
-    <quickstart label="Quickstart"        href="quickstart.html" />
-    <setup     label="Cluster Setup"      href="cluster_setup.html" />
-    <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
+    <overview   label="Overview"           href="index.html" />
+    <quickstart label="Hadoop Quick Start"        href="quickstart.html" />
+    <setup     label="Hadoop Cluster Setup"      href="cluster_setup.html" />
+    <mapred    label="Hadoop Map/Reduce Tutorial" href="mapred_tutorial.html" />
+    <commands  label="Hadoop Command Guide"     href="commands_manual.html" />
+    <fs        label="Hadoop FS Shell Guide"     href="hdfs_shell.html" />
+    <distcp    label="Hadoop DistCp Guide"       href="distcp.html" />
+    <mapred    label="Hadoop Native Libraries" href="native_libraries.html" />
+    <streaming label="Hadoop Streaming"          href="streaming.html" />
+    <archives  label="Hadoop Archives"     href="hadoop_archives.html"/>
     <hdfs      label="HDFS User Guide"    href="hdfs_user_guide.html" />
-    <hdfs      label="HDFS Permissions Guide"    href="hdfs_permissions_guide.html" />
-    <hdfs      label="HDFS Quotas Administrator Guide" href="hdfs_quota_admin_guide.html" />
-    <commands  label="Commands Manual"     href="commands_manual.html" />
-    <fs        label="FS Shell Guide"     href="hdfs_shell.html" />
-    <fs        label="Synthetic Load Generator User Guide"  href="SLG_user_guide.html" />
-    <distcp    label="DistCp Guide"       href="distcp.html" />
-    <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
-    <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />
-    <streaming label="Streaming"          href="streaming.html" />
-    <archives label="Hadoop Archives"     href="hadoop_archives.html"/>
-    <hod       label="Hadoop On Demand" href="hod.html">
-      <hod-user-guide href="hod_user_guide.html"/>
-      <hod-admin-guide href="hod_admin_guide.html"/>
-      <hod-config-guide href="hod_config_guide.html"/>
-    </hod>
+    <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
+    <hdfs      label="HDFS Admin Guide: Permissions"    href="hdfs_permissions_guide.html" />
+    <hdfs      label="HDFS Admin Guide: Quotas" href="hdfs_quota_admin_guide.html" />
+    <fs        label="HDFS Utilities"  href="SLG_user_guide.html" />
+    <hod-user-guide label="HOD User Guide" href="hod_user_guide.html"/>
+    <hod-admin-guide label="HOD Admin Guide" href="hod_admin_guide.html"/>
+    <hod-config-guide label="HOD Config Guide" href="hod_config_guide.html"/>
     <capacity_scheduler label="Capacity Scheduler" href="capacity_scheduler.html"/>
     <api       label="API Docs"           href="ext:api/index" />
     <jdiff     label="API Changes"        href="ext:jdiff/changes" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
-    <lists     label="Mailing Lists"      href="ext:lists" />
     <relnotes  label="Release Notes"      href="ext:relnotes" />
-    <changes   label="All Changes"        href="ext:changes" />
+    <changes   label="Change Log"        href="ext:changes" />
   </docs>
-
+  
   <external-refs>
     <site      href="http://hadoop.apache.org/core/"/>
     <lists     href="http://hadoop.apache.org/core/mailing_lists.html"/>
+    <archive   href="http://mail-archives.apache.org/mod_mbox/hadoop-core-commits/"/>
     <releases  href="http://hadoop.apache.org/core/releases.html">
       <download href="#Download" />
     </releases>

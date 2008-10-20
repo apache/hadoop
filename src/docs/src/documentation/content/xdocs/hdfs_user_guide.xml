@@ -45,11 +45,9 @@
  HDFS is the primary distributed storage used by Hadoop applications. A
  HDFS cluster primarily consists of a NameNode that manages the
  file system metadata and DataNodes that store the actual data. The
- architecture of HDFS is described in detail
- <a href="hdfs_design.html">here</a>. This user guide primarily deals with 
- interaction of users and administrators with HDFS clusters. 
- The <a href="images/hdfsarchitecture.gif">diagram</a> from 
- <a href="hdfs_design.html">HDFS architecture</a> depicts 
+ <a href="hdfs_design.html">HDFS Architecture</a> describes HDFS in detail. This user guide primarily deals with 
+ the interaction of users and administrators with HDFS clusters. 
+ The <a href="images/hdfsarchitecture.gif">HDFS architecture diagram</a> depicts 
  basic interactions among NameNode, the DataNodes, and the clients. 
  Clients contact NameNode for file metadata or file modifications and perform 
  actual file I/O directly with the DataNodes.
@@ -63,7 +61,7 @@
     	Hadoop, including HDFS, is well suited for distributed storage
     	and distributed processing using commodity hardware. It is fault
     	tolerant, scalable, and extremely simple to expand.
-    	<a href="mapred_tutorial.html">Map-Reduce</a>,
+    	<a href="mapred_tutorial.html">Map/Reduce</a>,
     	well known for its simplicity and applicability for large set of
     	distributed applications, is an integral part of Hadoop.
     </li>
@@ -429,7 +427,7 @@
       treated as the superuser for HDFS. Future versions of HDFS will
       support network authentication protocols like Kerberos for user
       authentication and encryption of data transfers. The details are discussed in the 
-      <a href="hdfs_permissions_guide.html">Permissions User and Administrator Guide</a>.
+      <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
      </p>
      
    </section> <section> <title> Scalability </title>
@@ -481,8 +479,7 @@
          description of most of the configuration variables available.
       </li>
       <li>
-        <a href="commands_manual.html">Commands Manual</a> 
-        : commands usage.
+        <a href="commands_manual.html">Hadoop Command Guide</a>: commands usage.
       </li>
       </ul>
      </section>

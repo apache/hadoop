@@ -514,6 +514,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4321. Include documentation for the capacity scheduler. (Hemanth 
     Yamijala via omalley)
 
+    HADOOP-4424. Change menu layout for Hadoop documentation (Boris Shkolnik
+    via cdouglas).
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 

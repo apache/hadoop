@@ -6,7 +6,7 @@
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title> 
-      Hadoop On Demand
+      HOD Administrator Guide
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -104,55 +104,61 @@ document.write("Last Published: " + document.lastModified);
     |start Menu
     +-->
 <div id="menu">
-<div onclick="SwitchMenu('menu_1.1', 'skin/')" id="menu_1.1Title" class="menutitle">Documentation</div>
-<div id="menu_1.1" class="menuitemgroup">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
 <div class="menuitem">
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_user_guide.html">HDFS User Guide</a>
+<a href="commands_manual.html">Hadoop Command Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
+<a href="hdfs_shell.html">Hadoop FS Shell Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
+<a href="distcp.html">Hadoop DistCp Guide</a>
 </div>
 <div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="native_libraries.html">Hadoop Native Libraries</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">FS Shell Guide</a>
-</div>
-<div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
-</div>
-<div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
-</div>
-<div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
+<a href="streaming.html">Hadoop Streaming</a>
 </div>
 <div class="menuitem">
 <a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS Architecture</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS Admin Guide: Quotas</a>
+</div>
+<div class="menuitem">
+<a href="SLG_user_guide.html">HDFS Utilities</a>
+</div>
+<div class="menuitem">
+<a href="hod_user_guide.html">HOD User Guide</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HOD Admin Guide</div>
+</div>
+<div class="menuitem">
+<a href="hod_config_guide.html">HOD Config Guide</a>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -170,13 +176,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -199,7 +202,7 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 <h1> 
-      Hadoop On Demand
+      HOD Administrator Guide
     </h1>
 <div id="minitoc-area">
 <ul class="minitoc">
@@ -268,11 +271,11 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1000C"></a><a name="Overview"></a>
 <h2 class="h3">Overview</h2>
 <div class="section">
-<p>The Hadoop On Demand (HOD) project is a system for provisioning and
+<p>Hadoop On Demand (HOD) is a system for provisioning and
 managing independent Hadoop Map/Reduce and Hadoop Distributed File System (HDFS)
 instances on a shared cluster 
 of nodes. HOD is a tool that makes it easy for administrators and users to 
-quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers 
+quickly setup and use Hadoop. HOD is also a very useful tool for Hadoop developers 
 and testers who need to share a physical cluster for testing their own Hadoop 
 versions.
 </p>
@@ -336,7 +339,7 @@ some obtained from options given by user in its own configuration file.</li>
 JobTracker and HDFS daemons.</li>
 
 </ul>
-<p>The rest of this document describes how to setup HOD on a physical cluster of nodes.</p>
+<p>This guide shows you how to get started using HOD, reviews various HOD features and command line options, and provides detailed troubleshooting help.</p>
 </div>
 
 
@@ -523,7 +526,7 @@ in the HOD Configuration Guide.</p>
 <a name="N10124"></a><a name="Advanced+Configuration"></a>
 <h3 class="h4">Advanced Configuration</h3>
 <p> You can review and modify other configuration options to suit
- your specific needs. Refer to the <a href="hod_config_guide.html">Configuration
+ your specific needs. Refer to the <a href="hod_config_guide.html">HOD Configuration
  Guide</a> for more information.</p>
 </div>
 
@@ -531,7 +534,7 @@ in the HOD Configuration Guide.</p>
 <a name="N10133"></a><a name="Running+HOD"></a>
 <h2 class="h3">Running HOD</h2>
 <div class="section">
-<p>You can run HOD once it is configured. Refer to <a href="hod_user_guide.html">the HOD User Guide</a> for more information.</p>
+<p>You can run HOD once it is configured. Refer to the<a href="hod_user_guide.html"> HOD User Guide</a> for more information.</p>
 </div>
 
   
@@ -555,7 +558,7 @@ in the HOD Configuration Guide.</p>
         to the file, and directly run it as <em>logcondense.py</em>. logcondense.py needs to be 
         run by a user who has sufficient permissions to remove files from locations where log 
         files are uploaded in the HDFS, if permissions are enabled. For example as mentioned in the
-        <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>, the logs could
+        <a href="hod_config_guide.html#3.7+hodring+options">HOD Configuration Guide</a>, the logs could
         be configured to come under the user's home directory in HDFS. In that case, the user
         running logcondense.py should have super user privileges to remove the files from under
         all user home directories.</p>
@@ -607,7 +610,7 @@ in the HOD Configuration Guide.</p>
 <td colspan="1" rowspan="1">-l</td>
               <td colspan="1" rowspan="1">--logs</td>
               <td colspan="1" rowspan="1">A HDFS path, this must be the same HDFS path as specified for the log-destination-uri,
-              as mentioned in the  <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>,
+              as mentioned in the  <a href="hod_config_guide.html#3.7+hodring+options">HOD Configuration Guide</a>,
               without the hdfs:// URI string</td>
               <td colspan="1" rowspan="1">/user</td>
             

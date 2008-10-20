@@ -8,16 +8,16 @@
 
   <header>
     <title> 
-      Hadoop On Demand: Configuration Guide
+      HOD Configuration Guide
     </title>
   </header>
 
   <body>
     <section>
       <title>1. Introduction</title>
-    
-      <p>This document explains some of the most important and commonly used 
-      Hadoop On Demand (HOD) configuration options. Configuration options 
+      <p>This guide discusses Hadoop on Demand (HOD) configuration sections and shows you how to work with the most important 
+      and commonly used HOD configuration options.</p>
+      <p>Configuration options 
       can be specified in two ways: a configuration file 
       in the INI format, and as command line options to the HOD shell, 
       specified in the format --section.option[=value]. If the same option is 
@@ -321,3 +321,4 @@
     </section>
   </body>
 </document>
+

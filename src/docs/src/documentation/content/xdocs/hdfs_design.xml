@@ -23,7 +23,7 @@
 
   <header>
     <title> 
-      The Hadoop Distributed File System: Architecture and Design
+      HDFS Architecture
     </title>
     <authors>
       <person name="Dhruba Borthakur" email="dhruba@yahoo-inc.com"/>
@@ -286,7 +286,7 @@
             <td> Create a directory named <code>/foodir</code> </td> <td> <code>bin/hadoop dfs -mkdir /foodir</code> </td>
           </tr>
           <tr>
-            <td> Create a directory named <code>/foodir</code> </td> <td> <code>bin/hadoop dfs -mkdir /foodir</code> </td>
+            <td> Remove a directory named <code>/foodir</code> </td> <td> <code>bin/hadoop dfs -rmr /foodir</code> </td>
           </tr>
           <tr>
             <td> View the contents of a file named <code>/foodir/myfile.txt</code> </td> <td> <code>bin/hadoop dfs -cat /foodir/myfile.txt</code> </td>

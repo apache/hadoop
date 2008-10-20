@@ -20,25 +20,17 @@
 <document>
   
   <header>
-    <title>Hadoop Documentation</title>
+    <title>Overview</title>
   </header>
   
   <body>
-    <p>
-    The following documents provide concepts and procedures that will help you 
-    get started using Hadoop. If you have more questions, you can ask the 
-    <a href="ext:lists">mailing list</a> or browse the archives.
+  <p>
+  The Hadoop Documentation provides the information you need to get started using Hadoop, the Hadoop Distributed File System (HDFS), and Hadoop on Demand (HOD).
+  </p><p>
+Begin with the <a href="quickstart.html">Hadoop Quick Start</a> which shows you how to set up a single-node Hadoop installation. Then move on to the <a href="cluster_setup.html">Hadoop Cluster Setup</a> to learn how to set up a multi-node Hadoop installation. Once your Hadoop installation is in place, try out the <a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>. 
+  </p><p>
+If you have more questions, you can ask on the <a href="ext:lists">Hadoop Core Mailing Lists</a> or browse the <a href="ext:archive">Mailing List Archives</a>.
     </p>
-    <ul>
-      <li><a href="quickstart.html">Hadoop Quickstart</a></li>
-      <li><a href="cluster_setup.html">Hadoop Cluster Setup</a></li>
-      <li><a href="hdfs_design.html">Hadoop Distributed File System</a></li>
-      <li><a href="mapred_tutorial.html">Hadoop Map-Reduce Tutorial</a></li>
-      <li><a href="native_libraries.html">Native Hadoop Libraries</a></li>
-      <li><a href="ext:api/index">API Docs</a></li>
-      <li><a href="ext:wiki">Wiki</a></li>
-      <li><a href="ext:faq">FAQ</a></li>
-    </ul>
   </body>
   
 </document>
