@@ -1091,6 +1091,7 @@ class JobInProgress {
                                         boolean isScheduled) {
     // keeping the earlier ordering intact
     String name;
+    String splits = "";
     Enum counter = null;
     if (tip.isSetupTask()) {
       launchedSetup = true;
@@ -1102,6 +1103,7 @@ class JobInProgress {
       ++runningMapTasks;
       name = Values.MAP.name();
       counter = Counter.TOTAL_LAUNCHED_MAPS;
+      splits = tip.getSplitNodes();
       if (tip.getActiveTasks().size() > 1)
         speculativeMapTasks++;
     } else {
@@ -1115,7 +1117,7 @@ class JobInProgress {
     // restart has already their logs in place.
     if (tip.isFirstAttempt(id)) {
       JobHistory.Task.logStarted(tip.getTIPId(), name,
-                                 tip.getExecStartTime(), "");
+                                 tip.getExecStartTime(), splits);
     }
     if (!tip.isSetupTask() && !tip.isCleanupTask()) {
       jobCounters.incrCounter(counter, 1);
