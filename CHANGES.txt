@@ -1018,6 +1018,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4399. Make fuse-dfs multi-thread access safe.
     (Pete Wyckoff via dhruba)
 
+    HADOOP-4369. Use setMetric(...) instead of incrMetric(...) for metrics
+    averages.  (Brian Bockelman via szetszwo)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
