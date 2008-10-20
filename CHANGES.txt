@@ -977,9 +977,6 @@ Release 0.19.0 - Unreleased
     HADOOP-4455. Added TestSerDe so that unit tests can run successfully.
     (Ashish Thusoo via dhruba)
 
-    HADOOP-4399. Make fuse-dfs multi-thread access safe.
-    (Pete Wyckoff via dhruba)
-
     HADOOP-4457. Fixes an input split logging problem introduced by
     HADOOP-3245. (Amareshwari Sriramadasu via ddas)
 
@@ -1008,6 +1005,9 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4398. No need to truncate access time in INode. Also fixes NPE 
     in CreateEditsLog. (Raghu Angadi) 
+
+    HADOOP-4399. Make fuse-dfs multi-thread access safe.
+    (Pete Wyckoff via dhruba)
 
 Release 0.18.1 - 2008-09-17
 
