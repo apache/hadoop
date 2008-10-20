@@ -45,6 +45,12 @@
   <target name="compile" depends="check-libhdfs-fuse,check-libhdfs-exists" if="libhdfs-fuse">
     <echo message="contrib: ${name}"/>
 
+    <condition property="perms" value="1" else="0">
+    <not>
+      <isset property="libhdfs.noperms"/>
+    </not>
+    </condition>
+
     <exec executable="/bin/sh" failonerror="true">
       <arg value="${root}/bootstrap.sh"/>
     </exec>
@@ -53,6 +59,8 @@
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="HADOOP_HOME" value="${hadoop.root}"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
+
+      <env key="PERMS" value="${perms}"/>
     </exec>
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.dir}/test"/>
