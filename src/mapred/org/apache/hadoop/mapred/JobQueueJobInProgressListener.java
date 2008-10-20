@@ -20,7 +20,8 @@ package org.apache.hadoop.mapred;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 
@@ -32,9 +33,32 @@ import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
  */
 class JobQueueJobInProgressListener extends JobInProgressListener {
 
-  private static final Comparator<JobInProgress> FIFO_JOB_QUEUE_COMPARATOR
-    = new Comparator<JobInProgress>() {
-    public int compare(JobInProgress o1, JobInProgress o2) {
+  /** A class that groups all the information from a {@link JobInProgress} that 
+   * is necessary for scheduling a job.
+   */ 
+  static class JobSchedulingInfo {
+    private JobPriority priority;
+    private long startTime;
+    private JobID id;
+    
+    public JobSchedulingInfo(JobInProgress jip) {
+      this(jip.getStatus());
+    }
+    
+    public JobSchedulingInfo(JobStatus status) {
+      priority = status.getJobPriority();
+      startTime = status.getStartTime();
+      id = status.getJobID();
+    }
+    
+    JobPriority getPriority() {return priority;}
+    long getStartTime() {return startTime;}
+    JobID getJobID() {return id;}
+  }
+  
+  static final Comparator<JobSchedulingInfo> FIFO_JOB_QUEUE_COMPARATOR
+    = new Comparator<JobSchedulingInfo>() {
+    public int compare(JobSchedulingInfo o1, JobSchedulingInfo o2) {
       int res = o1.getPriority().compareTo(o2.getPriority());
       if (res == 0) {
         if (o1.getStartTime() < o2.getStartTime()) {
@@ -50,38 +74,40 @@ class JobQueueJobInProgressListener extends JobInProgressListener {
     }
   };
   
-  private Collection<JobInProgress> jobQueue;
+  private Map<JobSchedulingInfo, JobInProgress> jobQueue;
   
   public JobQueueJobInProgressListener() {
-    this(new TreeSet<JobInProgress>(FIFO_JOB_QUEUE_COMPARATOR));
+    this(new TreeMap<JobSchedulingInfo, 
+                     JobInProgress>(FIFO_JOB_QUEUE_COMPARATOR));
   }
 
   /**
    * For clients that want to provide their own job priorities.
    * @param jobQueue A collection whose iterator returns jobs in priority order.
    */
-  protected JobQueueJobInProgressListener(Collection<JobInProgress> jobQueue) {
-    this.jobQueue = Collections.synchronizedCollection(jobQueue);
+  protected JobQueueJobInProgressListener(Map<JobSchedulingInfo, 
+                                          JobInProgress> jobQueue) {
+    this.jobQueue = Collections.synchronizedMap(jobQueue);
   }
 
   /**
    * Returns a synchronized view of the the job queue.
    */
   public Collection<JobInProgress> getJobQueue() {
-    return jobQueue;
+    return jobQueue.values();
   }
   
   @Override
   public void jobAdded(JobInProgress job) {
-    jobQueue.add(job);
+    jobQueue.put(new JobSchedulingInfo(job.getStatus()), job);
   }
 
   // Job will be removed once the job completes
   @Override
   public void jobRemoved(JobInProgress job) {}
   
-  private void jobCompleted(JobInProgress job) {
-    jobQueue.remove(job);
+  private void jobCompleted(JobSchedulingInfo oldInfo) {
+    jobQueue.remove(oldInfo);
   }
   
   @Override
@@ -91,26 +117,28 @@ class JobQueueJobInProgressListener extends JobInProgressListener {
       // Check if the ordering of the job has changed
       // For now priority and start-time can change the job ordering
       JobStatusChangeEvent statusEvent = (JobStatusChangeEvent)event;
+      JobSchedulingInfo oldInfo =  
+        new JobSchedulingInfo(statusEvent.getOldStatus());
       if (statusEvent.getEventType() == EventType.PRIORITY_CHANGED 
           || statusEvent.getEventType() == EventType.START_TIME_CHANGED) {
         // Make a priority change
-        reorderJobs(job);
+        reorderJobs(job, oldInfo);
       } else if (statusEvent.getEventType() == EventType.RUN_STATE_CHANGED) {
         // Check if the job is complete
         int runState = statusEvent.getNewStatus().getRunState();
         if (runState == JobStatus.SUCCEEDED
             || runState == JobStatus.FAILED
             || runState == JobStatus.KILLED) {
-          jobCompleted(job);
+          jobCompleted(oldInfo);
         }
       }
     }
   }
   
-  private void reorderJobs(JobInProgress job) {
+  private void reorderJobs(JobInProgress job, JobSchedulingInfo oldInfo) {
     synchronized (jobQueue) {
-      jobQueue.remove(job);
-      jobQueue.add(job);
+      jobQueue.remove(oldInfo);
+      jobQueue.put(new JobSchedulingInfo(job), job);
     }
   }
 
