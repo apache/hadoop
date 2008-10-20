@@ -110,49 +110,55 @@ document.write("Last Published: " + document.lastModified);
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
+</div>
+<div class="menuitem">
+<a href="commands_manual.html">Hadoop Command Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_shell.html">Hadoop FS Shell Guide</a>
+</div>
+<div class="menuitem">
+<a href="distcp.html">Hadoop DistCp Guide</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop Native Libraries</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Hadoop Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menupage">
 <div class="menupagetitle">HDFS User Guide</div>
 </div>
 <div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
+<a href="hdfs_design.html">HDFS Architecture</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
+<a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>
 </div>
 <div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="hdfs_quota_admin_guide.html">HDFS Admin Guide: Quotas</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">FS Shell Guide</a>
+<a href="SLG_user_guide.html">HDFS Utilities</a>
 </div>
 <div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
+<a href="hod_user_guide.html">HOD User Guide</a>
 </div>
 <div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
+<a href="hod_admin_guide.html">HOD Admin Guide</a>
 </div>
 <div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
-</div>
-<div class="menuitem">
-<a href="hadoop_archives.html">Hadoop Archives</a>
-</div>
-<div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hod_config_guide.html">HOD Config Guide</a>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -170,13 +176,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -275,11 +278,9 @@ document.write("Last Published: " + document.lastModified);
  HDFS is the primary distributed storage used by Hadoop applications. A
  HDFS cluster primarily consists of a NameNode that manages the
  file system metadata and DataNodes that store the actual data. The
- architecture of HDFS is described in detail
- <a href="hdfs_design.html">here</a>. This user guide primarily deals with 
- interaction of users and administrators with HDFS clusters. 
- The <a href="images/hdfsarchitecture.gif">diagram</a> from 
- <a href="hdfs_design.html">HDFS architecture</a> depicts 
+ <a href="hdfs_design.html">HDFS Architecture</a> describes HDFS in detail. This user guide primarily deals with 
+ the interaction of users and administrators with HDFS clusters. 
+ The <a href="images/hdfsarchitecture.gif">HDFS architecture diagram</a> depicts 
  basic interactions among NameNode, the DataNodes, and the clients. 
  Clients contact NameNode for file metadata or file modifications and perform 
  actual file I/O directly with the DataNodes.
@@ -294,7 +295,7 @@ document.write("Last Published: " + document.lastModified);
     	Hadoop, including HDFS, is well suited for distributed storage
     	and distributed processing using commodity hardware. It is fault
     	tolerant, scalable, and extremely simple to expand.
-    	<a href="mapred_tutorial.html">Map-Reduce</a>,
+    	<a href="mapred_tutorial.html">Map/Reduce</a>,
     	well known for its simplicity and applicability for large set of
     	distributed applications, is an integral part of Hadoop.
     </li>
@@ -367,7 +368,7 @@ document.write("Last Published: " + document.lastModified);
     
 </ul>
 </div> 
-<a name="N1006B"></a><a name="Pre-requisites"></a>
+<a name="N10067"></a><a name="Pre-requisites"></a>
 <h2 class="h3"> Pre-requisites </h2>
 <div class="section">
 <p>
@@ -396,7 +397,7 @@ document.write("Last Published: " + document.lastModified);
  	machine.	
     </p>
 </div> 
-<a name="N10089"></a><a name="Web+Interface"></a>
+<a name="N10085"></a><a name="Web+Interface"></a>
 <h2 class="h3"> Web Interface </h2>
 <div class="section">
 <p>
@@ -410,7 +411,7 @@ document.write("Last Published: " + document.lastModified);
  	page).
  </p>
 </div> 
-<a name="N10096"></a><a name="Shell+Commands"></a>
+<a name="N10092"></a><a name="Shell+Commands"></a>
 <h2 class="h3">Shell Commands</h2>
 <div class="section">
 <p>
@@ -426,7 +427,7 @@ document.write("Last Published: " + document.lastModified);
       changing file permissions, etc. It also supports a few HDFS
       specific operations like changing replication of files.
      </p>
-<a name="N100A5"></a><a name="DFSAdmin+Command"></a>
+<a name="N100A1"></a><a name="DFSAdmin+Command"></a>
 <h3 class="h4"> DFSAdmin Command </h3>
 <p>
    	The <span class="codefrag">bin/hadoop dfsadmin</span>
@@ -474,7 +475,7 @@ document.write("Last Published: " + document.lastModified);
    	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.
    	</p>
 </div> 
-<a name="N100D8"></a><a name="Secondary+NameNode"></a>
+<a name="N100D4"></a><a name="Secondary+NameNode"></a>
 <h2 class="h3"> Secondary NameNode </h2>
 <div class="section">
 <p>
@@ -559,7 +560,7 @@ document.write("Last Published: " + document.lastModified);
      For command usage, see <a href="commands_manual.html#secondarynamenode"><span class="codefrag">secondarynamenode</span> command</a>.
    </p>
 </div> 
-<a name="N1013F"></a><a name="Rebalancer"></a>
+<a name="N1013B"></a><a name="Rebalancer"></a>
 <h2 class="h3"> Rebalancer </h2>
 <div class="section">
 <p>
@@ -607,7 +608,7 @@ document.write("Last Published: " + document.lastModified);
      For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
    </p>
 </div> 
-<a name="N1016A"></a><a name="Rack+Awareness"></a>
+<a name="N10166"></a><a name="Rack+Awareness"></a>
 <h2 class="h3"> Rack Awareness </h2>
 <div class="section">
 <p>
@@ -626,7 +627,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>.
     </p>
 </div> 
-<a name="N1017F"></a><a name="Safemode"></a>
+<a name="N1017B"></a><a name="Safemode"></a>
 <h2 class="h3"> Safemode </h2>
 <div class="section">
 <p>
@@ -647,7 +648,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><span class="codefrag">setSafeMode()</span></a>.
     </p>
 </div> 
-<a name="N10191"></a><a name="fsck"></a>
+<a name="N1018D"></a><a name="fsck"></a>
 <h2 class="h3"> fsck </h2>
 <div class="section">
 <p>    
@@ -665,7 +666,7 @@ document.write("Last Published: " + document.lastModified);
       <span class="codefrag">fsck</span> can be run on the whole file system or on a subset of files.
      </p>
 </div> 
-<a name="N101B3"></a><a name="Upgrade+and+Rollback"></a>
+<a name="N101AF"></a><a name="Upgrade+and+Rollback"></a>
 <h2 class="h3"> Upgrade and Rollback </h2>
 <div class="section">
 <p>
@@ -724,7 +725,7 @@ document.write("Last Published: " + document.lastModified);
       
 </ul>
 </div> 
-<a name="N101F1"></a><a name="File+Permissions+and+Security"></a>
+<a name="N101ED"></a><a name="File+Permissions+and+Security"></a>
 <h2 class="h3"> File Permissions and Security </h2>
 <div class="section">
 <p>           
@@ -734,10 +735,10 @@ document.write("Last Published: " + document.lastModified);
       treated as the superuser for HDFS. Future versions of HDFS will
       support network authentication protocols like Kerberos for user
       authentication and encryption of data transfers. The details are discussed in the 
-      <a href="hdfs_permissions_guide.html">Permissions User and Administrator Guide</a>.
+      <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
      </p>
 </div> 
-<a name="N101FF"></a><a name="Scalability"></a>
+<a name="N101FB"></a><a name="Scalability"></a>
 <h2 class="h3"> Scalability </h2>
 <div class="section">
 <p>
@@ -755,7 +756,7 @@ document.write("Last Published: " + document.lastModified);
       suggested configuration improvements for large Hadoop clusters.
      </p>
 </div> 
-<a name="N10211"></a><a name="Related+Documentation"></a>
+<a name="N1020D"></a><a name="Related+Documentation"></a>
 <h2 class="h3"> Related Documentation </h2>
 <div class="section">
 <p>
@@ -801,8 +802,7 @@ document.write("Last Published: " + document.lastModified);
       
 <li>
         
-<a href="commands_manual.html">Commands Manual</a> 
-        : commands usage.
+<a href="commands_manual.html">Hadoop Command Guide</a>: commands usage.
       </li>
       
 </ul>

@@ -15,7 +15,7 @@ governing permissions and limitations under the License. -->
 
 <document>
 
- <header> <title> Directory Quotas Administrator's Guide </title> </header>
+ <header> <title> HDFS Administrator Guide: Quotas </title> </header>
 
  <body>
 
@@ -69,7 +69,8 @@ effort for each directory, with faults reported if the directory does not exist 
 directory has no quota. </li>
 
  <li> <code>dfsadmin -setspacequota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the space quota to be
-N&times;2<sup>30</sup> bytes (GB) for each directory. Best effort for each directory, with faults reported if <code>N</code> is
+N bytes for each directory. N can also be specified with a binary prefix for convenience, for e.g. 50g for 50 gigabytes and 
+2t for 2 terabytes etc. Best effort for each directory, with faults reported if <code>N</code> is
 neither zero nor a positive integer, the directory does not exist or it is a file, or the directory would immediately exceed
 the new quota. </li>
 
@@ -93,8 +94,7 @@ directory has no quota. </li>
 
  <code>fs -count -q &lt;directory>...&lt;directory></code><br /> With the <code>-q</code> option, also report the name quota
 value set for each directory, the available name quota remaining, the space quota value set, and the available space quota
-remaining. If the directory does not have a quota set, the reported values are <code>none</code> and <code>inf</code>. Space
-values are rounded to multiples of 2<sup>30</sup> bytes (GB).
+remaining. If the directory does not have a quota set, the reported values are <code>none</code> and <code>inf</code>.
 
  </li>
 

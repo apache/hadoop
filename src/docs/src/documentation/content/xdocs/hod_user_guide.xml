@@ -5,7 +5,7 @@
 <document>
   <header>
     <title>
-      Hadoop On Demand User Guide
+      HOD User Guide
     </title>
   </header>
 
@@ -14,7 +14,7 @@
     <title> Introduction </title><anchor id="Introduction"></anchor>
   <p>Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.</p>
   <p>HOD supports Hadoop from version 0.15 onwards.</p>
-  <p>The rest of this document comprises of a quick-start guide that helps you get quickly started with using HOD, a more detailed guide of all HOD features, and a trouble-shooting section.</p>
+  <p>This guide shows you how to get started using HOD, reviews various HOD features and command line options, and provides detailed troubleshooting help.</p>
   </section>
   <section>
 		<title> Getting Started Using HOD </title><anchor id="Getting_Started_Using_HOD_0_4"></anchor>

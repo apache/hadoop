@@ -31,9 +31,8 @@
       <p>This document describes how to install, configure and manage non-trivial
       Hadoop clusters ranging from a few nodes to extremely large clusters with 
       thousands of nodes.</p>
-      
-      <p>If you are looking to install Hadoop on a single machine to play
-      with it, you can find relevant details <a href="quickstart.html">here</a>.
+      <p>
+      To play with Hadoop, you may first want to install Hadoop on a single machine (see <a href="quickstart.html"> Hadoop Quick Start</a>).
       </p>
     </section>
     

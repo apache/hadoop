@@ -20,7 +20,7 @@
 <document>
   
   <header>
-    <title>Hadoop Quickstart</title>
+    <title>Hadoop Quick Start</title>
   </header>
   
   <body>
@@ -29,9 +29,9 @@
       <title>Purpose</title>
       
       <p>The purpose of this document is to help you get a single-node Hadoop 
-      installation up and running very quickly so that you can get a flavour 
-      of the <a href="hdfs_design.html">Hadoop Distributed File System 
-      (<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a> and 
+      installation up and running very quickly so that you can get a flavour
+      of the Hadoop Distributed File System 
+      (see <a href="hdfs_design.html"> <acronym title="Hadoop Distributed File System">HDFS</acronym> Architecture</a>) and 
       the Map/Reduce framework; that is, perform simple operations on HDFS and 
       run example jobs.</p>
     </section>
@@ -265,8 +265,8 @@
     <section id="FullyDistributed">
       <title>Fully-Distributed Operation</title>
       
-	  <p>Information on setting up fully-distributed, non-trivial clusters
-	  can be found <a href="cluster_setup.html">here</a>.</p>  
+	  <p>For information on setting up fully-distributed, non-trivial clusters
+	  see <a href="cluster_setup.html">Hadoop Cluster Setup</a>.</p>  
     </section>
     
     <p>

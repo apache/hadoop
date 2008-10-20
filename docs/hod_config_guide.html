@@ -6,7 +6,7 @@
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title> 
-      Hadoop On Demand: Configuration Guide
+      HOD Configuration Guide
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -104,55 +104,61 @@ document.write("Last Published: " + document.lastModified);
     |start Menu
     +-->
 <div id="menu">
-<div onclick="SwitchMenu('menu_1.1', 'skin/')" id="menu_1.1Title" class="menutitle">Documentation</div>
-<div id="menu_1.1" class="menuitemgroup">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
 <div class="menuitem">
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_user_guide.html">HDFS User Guide</a>
+<a href="commands_manual.html">Hadoop Command Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
+<a href="hdfs_shell.html">Hadoop FS Shell Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
+<a href="distcp.html">Hadoop DistCp Guide</a>
 </div>
 <div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="native_libraries.html">Hadoop Native Libraries</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">FS Shell Guide</a>
-</div>
-<div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
-</div>
-<div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
-</div>
-<div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
+<a href="streaming.html">Hadoop Streaming</a>
 </div>
 <div class="menuitem">
 <a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS Architecture</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS Admin Guide: Quotas</a>
+</div>
+<div class="menuitem">
+<a href="SLG_user_guide.html">HDFS Utilities</a>
+</div>
+<div class="menuitem">
+<a href="hod_user_guide.html">HOD User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_admin_guide.html">HOD Admin Guide</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HOD Config Guide</div>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -170,13 +176,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -199,7 +202,7 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 <h1> 
-      Hadoop On Demand: Configuration Guide
+      HOD Configuration Guide
     </h1>
 <div id="minitoc-area">
 <ul class="minitoc">
@@ -241,8 +244,9 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1000C"></a><a name="1.+Introduction"></a>
 <h2 class="h3">1. Introduction</h2>
 <div class="section">
-<p>This document explains some of the most important and commonly used 
-      Hadoop On Demand (HOD) configuration options. Configuration options 
+<p>This guide discusses Hadoop on Demand (HOD) configuration sections and shows you how to work with the most important 
+      and commonly used HOD configuration options.</p>
+<p>Configuration options 
       can be specified in two ways: a configuration file 
       in the INI format, and as command line options to the HOD shell, 
       specified in the format --section.option[=value]. If the same option is 
@@ -259,7 +263,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10021"></a><a name="2.+Sections"></a>
+<a name="N10024"></a><a name="2.+Sections"></a>
 <h2 class="h3">2. Sections</h2>
 <div class="section">
 <p>HOD organizes configuration options into these sections:</p>
@@ -282,13 +286,13 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10040"></a><a name="3.+HOD+Configuration+Options"></a>
+<a name="N10043"></a><a name="3.+HOD+Configuration+Options"></a>
 <h2 class="h3">3. HOD Configuration Options</h2>
 <div class="section">
 <p>The following section describes configuration options common to most 
       HOD sections followed by sections that describe configuration options 
       specific to each HOD section.</p>
-<a name="N10049"></a><a name="3.1+Common+configuration+options"></a>
+<a name="N1004C"></a><a name="3.1+Common+configuration+options"></a>
 <h3 class="h4">3.1 Common configuration options</h3>
 <p>Certain configuration options are defined in most of the sections of 
         the HOD configuration. Options defined in a section, are used by the
@@ -336,7 +340,7 @@ document.write("Last Published: " + document.lastModified);
                               
         
 </ul>
-<a name="N1006B"></a><a name="3.2+hod+options"></a>
+<a name="N1006E"></a><a name="3.2+hod+options"></a>
 <h3 class="h4">3.2 hod options</h3>
 <ul>
           
@@ -372,7 +376,7 @@ document.write("Last Published: " + document.lastModified);
                            </li>
          
 </ul>
-<a name="N10082"></a><a name="3.3+resource_manager+options"></a>
+<a name="N10085"></a><a name="3.3+resource_manager+options"></a>
 <h3 class="h4">3.3 resource_manager options</h3>
 <ul>
           
@@ -408,7 +412,7 @@ document.write("Last Published: " + document.lastModified);
                       command as "-l arch=x86_64".</li>
         
 </ul>
-<a name="N10098"></a><a name="3.4+ringmaster+options"></a>
+<a name="N1009B"></a><a name="3.4+ringmaster+options"></a>
 <h3 class="h4">3.4 ringmaster options</h3>
 <ul>
           
@@ -453,7 +457,7 @@ document.write("Last Published: " + document.lastModified);
                        production use.</li>
         
 </ul>
-<a name="N100AB"></a><a name="3.5+gridservice-hdfs+options"></a>
+<a name="N100AE"></a><a name="3.5+gridservice-hdfs+options"></a>
 <h3 class="h4">3.5 gridservice-hdfs options</h3>
 <ul>
           
@@ -494,7 +498,7 @@ document.write("Last Published: " + document.lastModified);
 <li>final-server-params: Same as above, except they will be marked final.</li>
         
 </ul>
-<a name="N100CA"></a><a name="3.6+gridservice-mapred+options"></a>
+<a name="N100CD"></a><a name="3.6+gridservice-mapred+options"></a>
 <h3 class="h4">3.6 gridservice-mapred options</h3>
 <ul>
           
@@ -527,7 +531,7 @@ document.write("Last Published: " + document.lastModified);
 <li>final-server-params: Same as above, except they will be marked final.</li>
         
 </ul>
-<a name="N100E9"></a><a name="3.7+hodring+options"></a>
+<a name="N100EC"></a><a name="3.7+hodring+options"></a>
 <h3 class="h4">3.7 hodring options</h3>
 <ul>
           

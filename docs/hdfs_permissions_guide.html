@@ -6,7 +6,7 @@
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title>
-      Permissions User and Administrator Guide
+      HDFS Administrator Guide: Permissions
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -110,49 +110,55 @@ document.write("Last Published: " + document.lastModified);
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_user_guide.html">HDFS User Guide</a>
-</div>
-<div class="menupage">
-<div class="menupagetitle">HDFS Permissions Guide</div>
+<a href="commands_manual.html">Hadoop Command Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
+<a href="hdfs_shell.html">Hadoop FS Shell Guide</a>
 </div>
 <div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="distcp.html">Hadoop DistCp Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">FS Shell Guide</a>
+<a href="native_libraries.html">Hadoop Native Libraries</a>
 </div>
 <div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
-</div>
-<div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
-</div>
-<div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
+<a href="streaming.html">Hadoop Streaming</a>
 </div>
 <div class="menuitem">
 <a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS Architecture</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HDFS Admin Guide: Permissions</div>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS Admin Guide: Quotas</a>
+</div>
+<div class="menuitem">
+<a href="SLG_user_guide.html">HDFS Utilities</a>
+</div>
+<div class="menuitem">
+<a href="hod_user_guide.html">HOD User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_admin_guide.html">HOD Admin Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_config_guide.html">HOD Config Guide</a>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -170,13 +176,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -199,7 +202,7 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 <h1>
-      Permissions User and Administrator Guide
+      HDFS Administrator Guide: Permissions
     </h1>
 <div id="minitoc-area">
 <ul class="minitoc">
@@ -237,7 +240,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3">Overview</h2>
 <div class="section">
 <p>
-		The Hadoop Distributed File System implements a permissions model for files and directories that shares much of the POSIX model. Each file and directory is associated with an <em>owner</em> and a <em>group</em>. The file or directory has separate permissions for the user that is the owner, for other users that are members of the group, and for all other users. For files, the <em>r</em> permission is required to read the file, and the <em>w</em> permission is required to write or append to the file. For directories, the <em>r</em> permission is required to list the contents of the directory, the <em>w</em> permission is required to create or delete files or directories, and the <em>x</em> permission is required to access a child of the directory. In contrast to the POSIX model, there are no <em>sticky</em>, <em>setuid</em> or <em>setgid</em> bits for files as there is no notion of executable files. For directories, there no <em>sticky</em>, <em>setuid</em> or <em>setgid</em> bits directory as a simplification. Collectively, the permissions of a file or directory are its <em>mode</em>. In general, Unix customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a file or directory is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
+		The Hadoop Distributed File System (HDFS) implements a permissions model for files and directories that shares much of the POSIX model. Each file and directory is associated with an <em>owner</em> and a <em>group</em>. The file or directory has separate permissions for the user that is the owner, for other users that are members of the group, and for all other users. For files, the <em>r</em> permission is required to read the file, and the <em>w</em> permission is required to write or append to the file. For directories, the <em>r</em> permission is required to list the contents of the directory, the <em>w</em> permission is required to create or delete files or directories, and the <em>x</em> permission is required to access a child of the directory. In contrast to the POSIX model, there are no <em>sticky</em>, <em>setuid</em> or <em>setgid</em> bits for files as there is no notion of executable files. For directories, there no <em>sticky</em>, <em>setuid</em> or <em>setgid</em> bits directory as a simplification. Collectively, the permissions of a file or directory are its <em>mode</em>. In general, Unix customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a file or directory is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
 	</p>
 <p>
 		Each client process that accesses HDFS has a two-part identity composed of the <em>user name</em>, and <em>groups list</em>. Whenever HDFS must do a permissions check for a file or directory <span class="codefrag">foo</span> accessed by a client process,

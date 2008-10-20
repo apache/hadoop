@@ -8,19 +8,18 @@
 
   <header>
     <title> 
-      Hadoop On Demand
+      HOD Administrator Guide
     </title>
   </header>
 
   <body>
 <section>
 <title>Overview</title>
-
-<p>The Hadoop On Demand (HOD) project is a system for provisioning and
+<p>Hadoop On Demand (HOD) is a system for provisioning and
 managing independent Hadoop Map/Reduce and Hadoop Distributed File System (HDFS)
 instances on a shared cluster 
 of nodes. HOD is a tool that makes it easy for administrators and users to 
-quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers 
+quickly setup and use Hadoop. HOD is also a very useful tool for Hadoop developers 
 and testers who need to share a physical cluster for testing their own Hadoop 
 versions.
 </p>
@@ -75,7 +74,7 @@ some obtained from options given by user in its own configuration file.</li>
 JobTracker and HDFS daemons.</li>
 </ul>
 
-<p>The rest of this document describes how to setup HOD on a physical cluster of nodes.</p>
+<p>This guide shows you how to get started using HOD, reviews various HOD features and command line options, and provides detailed troubleshooting help.</p>
 
 </section>
 
@@ -228,15 +227,15 @@ in the HOD Configuration Guide.</p>
   <section>
     <title>Advanced Configuration</title>
     <p> You can review and modify other configuration options to suit
- your specific needs. Refer to the <a href="hod_config_guide.html">Configuration
+ your specific needs. Refer to the <a href="hod_config_guide.html">HOD Configuration
  Guide</a> for more information.</p>
   </section>
 </section>
 
   <section>
     <title>Running HOD</title>
-    <p>You can run HOD once it is configured. Refer to <a
-    href="hod_user_guide.html">the HOD User Guide</a> for more information.</p>
+    <p>You can run HOD once it is configured. Refer to the<a
+    href="hod_user_guide.html"> HOD User Guide</a> for more information.</p>
   </section>
 
   <section>
@@ -259,7 +258,7 @@ in the HOD Configuration Guide.</p>
         to the file, and directly run it as <em>logcondense.py</em>. logcondense.py needs to be 
         run by a user who has sufficient permissions to remove files from locations where log 
         files are uploaded in the HDFS, if permissions are enabled. For example as mentioned in the
-        <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>, the logs could
+        <a href="hod_config_guide.html#3.7+hodring+options">HOD Configuration Guide</a>, the logs could
         be configured to come under the user's home directory in HDFS. In that case, the user
         running logcondense.py should have super user privileges to remove the files from under
         all user home directories.</p>
@@ -298,7 +297,7 @@ in the HOD Configuration Guide.</p>
               <td>-l</td>
               <td>--logs</td>
               <td>A HDFS path, this must be the same HDFS path as specified for the log-destination-uri,
-              as mentioned in the  <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>,
+              as mentioned in the  <a href="hod_config_guide.html#3.7+hodring+options">HOD Configuration Guide</a>,
               without the hdfs:// URI string</td>
               <td>/user</td>
             </tr>

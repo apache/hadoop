@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>Hadoop Shell Commands</title>
+<title>Hadoop FS Shell Guide</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -108,49 +108,55 @@ document.write("Last Published: " + document.lastModified);
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_user_guide.html">HDFS User Guide</a>
-</div>
-<div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
-</div>
-<div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
-</div>
-<div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="commands_manual.html">Hadoop Command Guide</a>
 </div>
 <div class="menupage">
-<div class="menupagetitle">FS Shell Guide</div>
+<div class="menupagetitle">Hadoop FS Shell Guide</div>
 </div>
 <div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
+<a href="distcp.html">Hadoop DistCp Guide</a>
 </div>
 <div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
+<a href="native_libraries.html">Hadoop Native Libraries</a>
 </div>
 <div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
+<a href="streaming.html">Hadoop Streaming</a>
 </div>
 <div class="menuitem">
 <a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS Architecture</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS Admin Guide: Quotas</a>
+</div>
+<div class="menuitem">
+<a href="SLG_user_guide.html">HDFS Utilities</a>
+</div>
+<div class="menuitem">
+<a href="hod_user_guide.html">HOD User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_admin_guide.html">HOD Admin Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_config_guide.html">HOD Config Guide</a>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -168,13 +174,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -196,7 +199,7 @@ document.write("Last Published: " + document.lastModified);
 <a class="dida" href="hdfs_shell.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>Hadoop Shell Commands</h1>
+<h1>Hadoop FS Shell Guide</h1>
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
@@ -344,7 +347,7 @@ document.write("Last Published: " + document.lastModified);
 			
 </p>
 <p>
-	    Change group association of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change group association of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 <a name="N10077"></a><a name="chmod"></a>
 <h3 class="h4"> chmod </h3>
@@ -354,7 +357,7 @@ document.write("Last Published: " + document.lastModified);
 			
 </p>
 <p>
-	    Change the permissions of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change the permissions of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 <a name="N1008E"></a><a name="chown"></a>
 <h3 class="h4"> chown </h3>
@@ -364,7 +367,7 @@ document.write("Last Published: " + document.lastModified);
 			
 </p>
 <p>
-	    Change the owner of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change the owner of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 <a name="N100A5"></a><a name="copyFromLocal"></a>
 <h3 class="h4">copyFromLocal</h3>
@@ -447,7 +450,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Usage: hadoop fs -expunge</span>
 			
 </p>
-<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Design</a> for more information on Trash feature.
+<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Architecture</a> for more information on Trash feature.
 	   </p>
 <a name="N10138"></a><a name="get"></a>
 <h3 class="h4"> get </h3>

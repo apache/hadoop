@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title> Directory Quotas Administrator's Guide </title>
+<title> HDFS Administrator Guide: Quotas </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -108,49 +108,55 @@ document.write("Last Published: " + document.lastModified);
 <a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
-<a href="quickstart.html">Quickstart</a>
+<a href="quickstart.html">Hadoop Quick Start</a>
 </div>
 <div class="menuitem">
-<a href="cluster_setup.html">Cluster Setup</a>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">HDFS Architecture</a>
+<a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_user_guide.html">HDFS User Guide</a>
+<a href="commands_manual.html">Hadoop Command Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
-</div>
-<div class="menupage">
-<div class="menupagetitle">HDFS Quotas Administrator Guide</div>
+<a href="hdfs_shell.html">Hadoop FS Shell Guide</a>
 </div>
 <div class="menuitem">
-<a href="commands_manual.html">Commands Manual</a>
+<a href="distcp.html">Hadoop DistCp Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">FS Shell Guide</a>
+<a href="native_libraries.html">Hadoop Native Libraries</a>
 </div>
 <div class="menuitem">
-<a href="SLG_user_guide.html">Synthetic Load Generator User Guide</a>
-</div>
-<div class="menuitem">
-<a href="distcp.html">DistCp Guide</a>
-</div>
-<div class="menuitem">
-<a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
-</div>
-<div class="menuitem">
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</div>
-<div class="menuitem">
-<a href="streaming.html">Streaming</a>
+<a href="streaming.html">Hadoop Streaming</a>
 </div>
 <div class="menuitem">
 <a href="hadoop_archives.html">Hadoop Archives</a>
 </div>
 <div class="menuitem">
-<a href="hod.html">Hadoop On Demand</a>
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS Architecture</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HDFS Admin Guide: Quotas</div>
+</div>
+<div class="menuitem">
+<a href="SLG_user_guide.html">HDFS Utilities</a>
+</div>
+<div class="menuitem">
+<a href="hod_user_guide.html">HOD User Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_admin_guide.html">HOD Admin Guide</a>
+</div>
+<div class="menuitem">
+<a href="hod_config_guide.html">HOD Config Guide</a>
 </div>
 <div class="menuitem">
 <a href="capacity_scheduler.html">Capacity Scheduler</a>
@@ -168,13 +174,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
-</div>
-<div class="menuitem">
 <a href="releasenotes.html">Release Notes</a>
 </div>
 <div class="menuitem">
-<a href="changes.html">All Changes</a>
+<a href="changes.html">Change Log</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -196,7 +199,7 @@ document.write("Last Published: " + document.lastModified);
 <a class="dida" href="hdfs_quota_admin_guide.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1> Directory Quotas Administrator's Guide </h1>
+<h1> HDFS Administrator Guide: Quotas </h1>
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
@@ -275,7 +278,8 @@ directory has no quota. </li>
 <li> 
 <span class="codefrag">dfsadmin -setspacequota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</span> 
 <br> Set the space quota to be
-N&times;2<sup>30</sup> bytes (GB) for each directory. Best effort for each directory, with faults reported if <span class="codefrag">N</span> is
+N bytes for each directory. N can also be specified with a binary prefix for convenience, for e.g. 50g for 50 gigabytes and 
+2t for 2 terabytes etc. Best effort for each directory, with faults reported if <span class="codefrag">N</span> is
 neither zero nor a positive integer, the directory does not exist or it is a file, or the directory would immediately exceed
 the new quota. </li>
 
@@ -291,7 +295,7 @@ directory has no quota. </li>
 </div>
 
 
-<a name="N10079"></a><a name="Reporting+Command"></a>
+<a name="N10076"></a><a name="Reporting+Command"></a>
 <h2 class="h3">Reporting Command</h2>
 <div class="section">
 <p> An an extension to the <span class="codefrag">count</span> command of the HDFS shell reports quota values and the current count of names and bytes in use. </p>
@@ -304,8 +308,7 @@ directory has no quota. </li>
 <span class="codefrag">fs -count -q &lt;directory&gt;...&lt;directory&gt;</span>
 <br> With the <span class="codefrag">-q</span> option, also report the name quota
 value set for each directory, the available name quota remaining, the space quota value set, and the available space quota
-remaining. If the directory does not have a quota set, the reported values are <span class="codefrag">none</span> and <span class="codefrag">inf</span>. Space
-values are rounded to multiples of 2<sup>30</sup> bytes (GB).
+remaining. If the directory does not have a quota set, the reported values are <span class="codefrag">none</span> and <span class="codefrag">inf</span>.
 
  </li>
 

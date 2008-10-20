@@ -18,7 +18,7 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title>Commands Manual</title>
+		<title>Hadoop Command Guide</title>
 	</header>
 	
 	<body>
@@ -132,7 +132,7 @@
 			<section>
 				<title> distcp </title>
 				<p>
-					Copy file or directories recursively. More information can be found at <a href="distcp.html">DistCp Guide</a>.
+					Copy file or directories recursively. More information can be found at <a href="distcp.html">Hadoop DistCp Guide</a>.
 				</p>
 				<p>
 					<code>Usage: hadoop distcp &lt;srcurl&gt; &lt;desturl&gt;</code>
@@ -161,7 +161,7 @@
 					Runs a generic filesystem user client.
 				</p>
 				<p>
-					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">HDFS Shell Guide</a>.
+					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">Hadoop FS Shell Guide</a>.
 				</p>   
 			</section>
 			

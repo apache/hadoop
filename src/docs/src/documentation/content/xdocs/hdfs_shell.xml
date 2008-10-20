@@ -17,7 +17,7 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title>Hadoop Shell Commands</title>
+		<title>Hadoop FS Shell Guide</title>
 	</header>
 	<body>
 		<section>
@@ -66,7 +66,7 @@
 				<code>Usage: hadoop fs -chgrp [-R] GROUP URI [URI &#x2026;]</code>
 			</p>
 			<p>
-	    Change group association of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change group association of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 		</section>
 		<section>
@@ -75,7 +75,7 @@
 				<code>Usage: hadoop fs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &#x2026;]</code>
 			</p>
 			<p>
-	    Change the permissions of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change the permissions of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 		</section>
 		<section>
@@ -84,7 +84,7 @@
 				<code>Usage: hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</code>
 			</p>
 			<p>
-	    Change the owner of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    Change the owner of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
 	    </p>
 		</section>
 		<section>
@@ -147,7 +147,7 @@
 			<p>
 				<code>Usage: hadoop fs -expunge</code>
 			</p>
-			<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Design</a> for more information on Trash feature.
+			<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Architecture</a> for more information on Trash feature.
 	   </p>
 		</section>
 		<section>
