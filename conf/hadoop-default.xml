@@ -374,13 +374,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.datanode.du.pct</name>
-  <value>0.98f</value>
-  <description>When calculating remaining space, only use this percentage of the real available space
-  </description>
-</property>
-
-<property>
   <name>dfs.name.dir</name>
   <value>${hadoop.tmp.dir}/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node

@@ -144,6 +144,16 @@ Release 0.19.0 - Unreleased
     consistent with the web interface as defined in HADOOP-2816. (Suresh
     Srinivas via cdouglas)
 
+    HADOOP-4430. Further change the cluster summary at name node web that was
+    changed in HADOOP-2816:
+      Non DFS Used - This indicates the disk space taken by non DFS file from
+                     the Configured capacity
+      DFS Used % - DFS Used % of Configured Capacity 
+      DFS Remaining % - Remaing % Configured Capacity available for DFS use
+    DFS command line report reflects the same change. Config parameter 
+    dfs.datanode.du.pct is no longer used and is removed from the 
+    hadoop-default.xml. (Suresh Srinivas via hairong)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map

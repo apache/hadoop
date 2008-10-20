@@ -240,8 +240,12 @@ public class JspHelper {
         FIELD_NAME              = 1,
         FIELD_LAST_CONTACT      = 2,
         FIELD_BLOCKS            = 3,
-        FIELD_SIZE              = 4,
-        FIELD_DISK_USED         = 5,
+        FIELD_CAPACITY          = 4,
+        FIELD_USED              = 5,
+        FIELD_PERCENT_USED      = 6,
+        FIELD_NONDFS_USED       = 7,
+        FIELD_REMAINING         = 8,
+        FIELD_PERCENT_REMAINING = 9,
         SORT_ORDER_ASC          = 1,
         SORT_ORDER_DSC          = 2;
 
@@ -251,12 +255,20 @@ public class JspHelper {
       public NodeComapare(String field, String order) {
         if (field.equals("lastcontact")) {
           sortField = FIELD_LAST_CONTACT;
-        } else if (field.equals("size")) {
-          sortField = FIELD_SIZE;
+        } else if (field.equals("capacity")) {
+          sortField = FIELD_CAPACITY;
+        } else if (field.equals("used")) {
+          sortField = FIELD_USED;
+        } else if (field.equals("nondfsused")) {
+          sortField = FIELD_NONDFS_USED;
+        } else if (field.equals("remaining")) {
+          sortField = FIELD_REMAINING;
+        } else if (field.equals("pcused")) {
+          sortField = FIELD_PERCENT_USED;
+        } else if (field.equals("pcremaining")) {
+          sortField = FIELD_PERCENT_REMAINING;
         } else if (field.equals("blocks")) {
           sortField = FIELD_BLOCKS;
-        } else if (field.equals("pcused")) {
-          sortField = FIELD_DISK_USED;
         } else {
           sortField = FIELD_NAME;
         }
@@ -275,17 +287,34 @@ public class JspHelper {
         case FIELD_LAST_CONTACT:
           ret = (int) (d2.getLastUpdate() - d1.getLastUpdate());
           break;
-        case FIELD_BLOCKS:
-          ret = d1.numBlocks() - d2.numBlocks();
-          break;
-        case FIELD_SIZE:
+        case FIELD_CAPACITY:
           long  dlong = d1.getCapacity() - d2.getCapacity();
           ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
           break;
-        case FIELD_DISK_USED:
-          double ddbl =((d2.getRemaining()*1.0/d2.getCapacity())-
-                        (d1.getRemaining()*1.0/d1.getCapacity()));
+        case FIELD_USED:
+          dlong = d1.getDfsUsed() - d2.getDfsUsed();
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
+          break;
+        case FIELD_NONDFS_USED:
+          dlong = d1.getNonDfsUsed() - d2.getNonDfsUsed();
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
+          break;
+        case FIELD_REMAINING:
+          dlong = d1.getRemaining() - d2.getRemaining();
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
+          break;
+        case FIELD_PERCENT_USED:
+          double ddbl =((d1.getDfsUsedPercent())-
+                        (d2.getDfsUsedPercent()));
           ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
+          break;
+        case FIELD_PERCENT_REMAINING:
+          ddbl =((d1.getRemainingPercent())-
+                 (d2.getRemainingPercent()));
+          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
+          break;
+        case FIELD_BLOCKS:
+          ret = d1.numBlocks() - d2.numBlocks();
           break;
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());

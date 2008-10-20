@@ -3277,15 +3277,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Total raw bytes including non-dfs used space.
-   */
-  public long getPresentCapacity() {
-    synchronized (heartbeats) {
-      return this.capacityUsed + this.capacityRemaining;
-    }
-  }
-
-  /**
    * Total used space by data nodes
    */
   public long getCapacityUsed() {
@@ -3294,16 +3285,27 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
   }
   /**
-   * Total used space by data nodes
+   * Total used space by data nodes as percentage of total capacity
    */
   public float getCapacityUsedPercent() {
     synchronized(heartbeats){
-      if (getPresentCapacity() <= 0) {
+      if (capacityTotal <= 0) {
         return 100;
       }
 
-      return ((float)getCapacityUsed() * 100.0f)/(float)getPresentCapacity();
+      return ((float)capacityUsed * 100.0f)/(float)capacityTotal;
     }
+  }
+  /**
+   * Total used space by data nodes for non DFS purposes such
+   * as storing temporary files on the local file system
+   */
+  public long getCapacityUsedNonDFS() {
+    long nonDFSUsed = 0;
+    synchronized(heartbeats){
+      nonDFSUsed = capacityTotal - capacityRemaining - capacityUsed;
+    }
+    return nonDFSUsed < 0 ? 0 : nonDFSUsed;
   }
   /**
    * Total non-used raw bytes.
@@ -3314,6 +3316,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
   }
 
+  /**
+   * Total remaining space by data nodes as percentage of total capacity
+   */
+  public float getCapacityRemainingPercent() {
+    synchronized(heartbeats){
+      if (capacityTotal <= 0) {
+        return 0;
+      }
+
+      return ((float)capacityRemaining * 100.0f)/(float)capacityTotal;
+    }
+  }
   /**
    * Total number of connections.
    */

@@ -91,23 +91,35 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /** The raw capacity. */
   public long getCapacity() { return capacity; }
   
-  /** The present capacity available for DFS. */
-  public long getPresentCapacity() { return dfsUsed + remaining; }
-  
   /** The used space by the data node. */
   public long getDfsUsed() { return dfsUsed; }
 
+  /** The used space by the data node. */
+  public long getNonDfsUsed() { 
+    long nonDFSUsed = capacity - dfsUsed - remaining;
+    return nonDFSUsed < 0 ? 0 : nonDFSUsed;
+  }
+
   /** The used space by the data node as percentage of present capacity */
   public float getDfsUsedPercent() { 
-    if (getPresentCapacity() <= 0) {
+    if (capacity <= 0) {
       return 100;
     }
 
-    return ((float)dfsUsed * 100.0f)/(float)getPresentCapacity(); 
+    return ((float)dfsUsed * 100.0f)/(float)capacity; 
   }
 
   /** The raw free space. */
   public long getRemaining() { return remaining; }
+
+  /** The remaining space as percentage of configured capacity. */
+  public float getRemainingPercent() { 
+    if (capacity <= 0) {
+      return 0;
+    }
+
+    return ((float)remaining * 100.0f)/(float)capacity; 
+  }
 
   /** The time when this information was accurate. */
   public long getLastUpdate() { return lastUpdate; }
@@ -155,10 +167,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
-    long pc = getPresentCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
+    long nonDFSUsed = getNonDfsUsed();
     float usedPercent = getDfsUsedPercent();
+    float remainingPercent = getRemainingPercent();
 
     buffer.append("Name: "+name+"\n");
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
@@ -173,10 +186,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append("Normal\n");
     }
     buffer.append("Configured Capacity: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
-    buffer.append("Present Capacity: "+pc+" ("+FsShell.byteDesc(pc)+")"+"\n");
-    buffer.append("DFS Remaining: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
     buffer.append("DFS Used: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
+    buffer.append("Non DFS Used: "+nonDFSUsed+" ("+FsShell.byteDesc(nonDFSUsed)+")"+"\n");
+    buffer.append("DFS Remaining: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
     buffer.append("DFS Used%: "+FsShell.limitDecimalTo2(usedPercent)+"%\n");
+    buffer.append("DFS Remaining%: "+FsShell.limitDecimalTo2(remainingPercent)+"%\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -185,7 +199,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public String dumpDatanode() {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
-    long pc = getPresentCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
     buffer.append(name);
@@ -200,7 +213,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append(" IN");
     }
     buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
-    buffer.append(" " + pc + "(" + FsShell.byteDesc(c)+")");
     buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
     buffer.append(" " + FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%");
     buffer.append(" " + r + "(" + FsShell.byteDesc(r)+")");
