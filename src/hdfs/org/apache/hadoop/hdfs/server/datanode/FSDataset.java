@@ -287,21 +287,16 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   class FSVolume {
-    static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
-
     private FSDir dataDir;
     private File tmpDir;
     private File detachDir; // copy on write for blocks in snapshot
     private DF usage;
     private DU dfsUsage;
     private long reserved;
-    private double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
 
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
-      this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
-                                         (float) USABLE_DISK_PCT_DEFAULT);
       File parent = currentDir.getParentFile();
 
       this.detachDir = new File(parent, "detach");
@@ -356,7 +351,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       if (remaining>available) {
         remaining = available;
       }
-      return (remaining > 0) ? (long)(remaining * usableDiskPct) : 0;
+      return (remaining > 0) ? remaining : 0;
     }
       
     String getMount() throws IOException {

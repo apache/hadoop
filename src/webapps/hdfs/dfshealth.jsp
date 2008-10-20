@@ -85,9 +85,11 @@
         return;
     
     long c = d.getCapacity();
-    long pc = d.getPresentCapacity();
     long u = d.getDfsUsed();
+    long nu = d.getNonDfsUsed();
+    long r = d.getRemaining();
     String percentUsed = FsShell.limitDecimalTo2(d.getDfsUsedPercent());    
+    String percentRemaining = FsShell.limitDecimalTo2(d.getRemainingPercent());    
     
     String adminState = (d.isDecommissioned() ? "Decommissioned" :
                          (d.isDecommissionInProgress() ? "Decommission In Progress":
@@ -97,16 +99,20 @@
     long currentTime = System.currentTimeMillis();
     out.print("<td class=\"lastcontact\"> " +
               ((currentTime - timestamp)/1000) +
-	      "<td class=\"adminstate\">" +
+              "<td class=\"adminstate\">" +
               adminState +
-	      "<td class=\"size\">" +
+              "<td align=\"right\" class=\"capacity\">" +
               FsShell.limitDecimalTo2(c*1.0/diskBytes) +
-	      "<td align=\"right\" class=\"pcapacity\">" +
-              FsShell.limitDecimalTo2(pc*1.0/diskBytes) +      
-	      "<td class=\"pcused\">" + percentUsed +"<td class=\"pcused\">" +
-	      ServletUtil.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
-	      "<td class=\"size\">" +
-              FsShell.limitDecimalTo2(d.getRemaining()*1.0/diskBytes) +
+              "<td align=\"right\" class=\"used\">" +
+              FsShell.limitDecimalTo2(u*1.0/diskBytes) +      
+              "<td align=\"right\" class=\"nondfsused\">" +
+              FsShell.limitDecimalTo2(nu*1.0/diskBytes) +      
+              "<td align=\"right\" class=\"remaining\">" +
+              FsShell.limitDecimalTo2(r*1.0/diskBytes) +      
+              "<td align=\"right\" class=\"pcused\">" + percentUsed +
+              "<td class=\"pcused\">" +
+              ServletUtil.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
+              "<td align=\"right\" class=\"pcremaining`\">" + percentRemaining +
               "<td title=" + "\"blocks scheduled : " + d.getBlocksScheduled() + 
               "\" class=\"blocks\">" + d.numBlocks() + "\n");
   }
@@ -125,9 +131,6 @@
     if ( sorterOrder == null )
         sorterOrder = "ASC";
 
-    jspHelper.sortNodeList(live, sorterField, sorterOrder);
-    jspHelper.sortNodeList(dead, "name", "ASC");
-    
     // Find out common suffix. Should this be before or after the sort?
     String port_suffix = null;
     if ( live.size() > 0 ) {
@@ -148,22 +151,25 @@
     counterReset();
     
     long total = fsn.getCapacityTotal();
-    long present = fsn.getPresentCapacity();
     long remaining = fsn.getCapacityRemaining();
     long used = fsn.getCapacityUsed();
+    long nonDFS = fsn.getCapacityUsedNonDFS();
     float percentUsed = fsn.getCapacityUsedPercent();
+    float percentRemaining = fsn.getCapacityRemainingPercent();
 
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Configured Capacity" + colTxt() + ":" + colTxt() +
 	       FsShell.byteDesc( total ) +
-	       rowTxt() + colTxt() + "Present Capacity" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( present ) +
-	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( remaining ) +
 	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
 	       FsShell.byteDesc( used ) +
+	       rowTxt() + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt() +
+	       FsShell.byteDesc( nonDFS ) +
+	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
+	       FsShell.byteDesc( remaining ) +
 	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
 	       FsShell.limitDecimalTo2(percentUsed) + " %" +
+	       rowTxt() + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt() +
+	       FsShell.limitDecimalTo2(percentRemaining) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
                colTxt() + ":" + colTxt() + live.size() +
@@ -191,24 +197,28 @@
                 diskByteStr = "TB";
             }
 
-	    out.print( "<tr class=\"headerRow\"> <th " +
-                       ("name") + "> Node <th " +
-                       NodeHeaderStr("lastcontact") + "> Last Contact <th " +
-                       NodeHeaderStr("adminstate") + "> Admin State <th " +
-                       NodeHeaderStr("size") + "> Configured capacity (" + 
-                       diskByteStr + ") <th " + 
-                       NodeHeaderStr("pcapacity") + "> Present capacity (" + 
-                       diskByteStr + ") <th " + 
-                       NodeHeaderStr("pcused") + "> Used (%) <th " + 
-                       NodeHeaderStr("pcused") + "> Used (%) <th " +
-                       NodeHeaderStr("remaining") + "> Remaining (" + 
-                       diskByteStr + ") <th " +
-                       NodeHeaderStr("blocks") + "> Blocks\n" );
+      out.print( "<tr class=\"headerRow\"> <th " +
+                 NodeHeaderStr("name") + "> Node <th " +
+                 NodeHeaderStr("lastcontact") + "> Last <br>Contact <th " +
+                 NodeHeaderStr("adminstate") + "> Admin State <th " +
+                 NodeHeaderStr("capacity") + "> Configured <br>Capacity (" + 
+                 diskByteStr + ") <th " + 
+                 NodeHeaderStr("used") + "> Used <br>(" + 
+                 diskByteStr + ") <th " + 
+                 NodeHeaderStr("nondfsused") + "> Non DFS <br>Used (" + 
+                 diskByteStr + ") <th " + 
+                 NodeHeaderStr("remaining") + "> Remaining <br>(" + 
+                 diskByteStr + ") <th " + 
+                 NodeHeaderStr("pcused") + "> Used <br>(%) <th " + 
+                 NodeHeaderStr("pcused") + "> Used <br>(%) <th " +
+                 NodeHeaderStr("pcremaining") + "> Remaining <br>(%) <th " +
+                 NodeHeaderStr("blocks") + "> Blocks\n" );
             
-	    for ( int i=0; i < live.size(); i++ ) {
-		generateNodeData( out, live.get(i), port_suffix, true );
-	    }
-	}
+      jspHelper.sortNodeList(live, sorterField, sorterOrder);
+      for ( int i=0; i < live.size(); i++ ) {
+        generateNodeData( out, live.get(i), port_suffix, true );
+      }
+    }
     out.print("</table>\n");
     
     counterReset();
@@ -220,6 +230,7 @@
 	    out.print( "<table border=1 cellspacing=0> <tr id=\"row1\"> " +
 		       "<td> Node \n" );
 	    
+      jspHelper.sortNodeList(dead, "name", "ASC");
 	    for ( int i=0; i < dead.size() ; i++ ) {
                 generateNodeData( out, dead.get(i), port_suffix, false );
 	    }
