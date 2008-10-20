@@ -19,17 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import junit.framework.TestCase;
 import java.io.*;
-import java.util.Collection;
-import java.util.List;
-import java.util.Iterator;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
-import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -40,34 +32,55 @@ import org.apache.hadoop.fs.Path;
  * and dfs.name.edits.dir configurations.
  */
 public class TestNameEditsConfigs extends TestCase {
-  static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 4096;
-  static final int fileSize = 8192;
-  static final int numDatanodes = 3;
+  static final long SEED = 0xDEADBEEFL;
+  static final int BLOCK_SIZE = 4096;
+  static final int FILE_SIZE = 8192;
+  static final int NUM_DATA_NODES = 3;
+  static final String FILE_IMAGE = "current/fsimage";
+  static final String FILE_EDITS = "current/edits";
+
   short replication = 3;
+  private File base_dir = new File(
+      System.getProperty("test.build.data", "build/test/data"), "dfs/");
+
+  protected void setUp() throws java.lang.Exception {
+    if(base_dir.exists())
+      tearDown();
+  }
+
+  protected void tearDown() throws java.lang.Exception {
+    if (!FileUtil.fullyDelete(base_dir)) 
+      throw new IOException("Cannot remove directory " + base_dir);
+  }
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
+                                            (short)repl, (long)BLOCK_SIZE);
+    byte[] buffer = new byte[FILE_SIZE];
+    Random rand = new Random(SEED);
     rand.nextBytes(buffer);
     stm.write(buffer);
     stm.close();
   }
-  
-  
+
+  void checkImageAndEditsFilesExistence(File dir, 
+                                        boolean imageMustExist,
+                                        boolean editsMustExist) {
+    assertTrue(imageMustExist == new File(dir, FILE_IMAGE).exists());
+    assertTrue(editsMustExist == new File(dir, FILE_EDITS).exists());
+  }
+
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     assertTrue(fileSys.exists(name));
     int replication = fileSys.getFileStatus(name).getReplication();
     assertEquals("replication for " + name, repl, replication);
     long size = fileSys.getContentSummary(name).getLength();
-    assertEquals("file size for " + name, size, (long)fileSize);
+    assertEquals("file size for " + name, size, (long)FILE_SIZE);
   }
-  
+
   private void cleanupFile(FileSystem fileSys, Path name)
     throws IOException {
     assertTrue(fileSys.exists(name));
@@ -101,7 +114,6 @@ public class TestNameEditsConfigs extends TestCase {
     SecondaryNameNode secondary = null;
     Configuration conf = null;
     FileSystem fileSys = null;
-    File base_dir = new File(System.getProperty("test.build.data"), "dfs/");
     File newNameDir = new File(base_dir, "name");
     File newEditsDir = new File(base_dir, "edits");
     File nameAndEdits = new File(base_dir, "name_and_edits");
@@ -117,7 +129,7 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set("fs.checkpoint.edits.dir", checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, true, false, true, null,
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
                                   null, null, null);
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
@@ -149,7 +161,7 @@ public class TestNameEditsConfigs extends TestCase {
              "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true, 
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true, 
                                   null, null, null, null);
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
@@ -167,16 +179,31 @@ public class TestNameEditsConfigs extends TestCase {
       cluster.shutdown();
       secondary.shutdown();
     }
-    
+
+    checkImageAndEditsFilesExistence(nameAndEdits, true, true);
+    checkImageAndEditsFilesExistence(newNameDir, true, false);
+    checkImageAndEditsFilesExistence(newEditsDir, false, true);
+    checkImageAndEditsFilesExistence(checkpointNameAndEdits, true, true);
+    checkImageAndEditsFilesExistence(checkpointNameDir, true, false);
+    checkImageAndEditsFilesExistence(checkpointEditsDir, false, true);
+
     // Now remove common directory both have and start namenode with 
     // separate name and edits dirs
+    new File(nameAndEdits, FILE_EDITS).renameTo(
+        new File(newNameDir, FILE_EDITS));
+    new File(nameAndEdits, FILE_IMAGE).renameTo(
+        new File(newEditsDir, FILE_IMAGE));
+    new File(checkpointNameAndEdits, FILE_EDITS).renameTo(
+        new File(checkpointNameDir, FILE_EDITS));
+    new File(checkpointNameAndEdits, FILE_IMAGE).renameTo(
+        new File(checkpointEditsDir, FILE_IMAGE));
     conf =  new Configuration();
     conf.set("dfs.name.dir", newNameDir.getPath());
     conf.set("dfs.name.edits.dir", newEditsDir.getPath());
     conf.set("fs.checkpoint.dir", checkpointNameDir.getPath());
     conf.set("fs.checkpoint.edits.dir", checkpointEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true,
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
@@ -195,18 +222,30 @@ public class TestNameEditsConfigs extends TestCase {
       cluster.shutdown();
       secondary.shutdown();
     }
-    
+
+    checkImageAndEditsFilesExistence(newNameDir, true, false);
+    checkImageAndEditsFilesExistence(newEditsDir, false, true);
+    checkImageAndEditsFilesExistence(checkpointNameDir, true, false);
+    checkImageAndEditsFilesExistence(checkpointEditsDir, false, true);
+
     // Add old name_and_edits dir. File system should not read image or edits
     // from old dir
+    assertTrue(FileUtil.fullyDelete(new File(nameAndEdits, "current")));
+    assertTrue(FileUtil.fullyDelete(new File(checkpointNameAndEdits, "current")));
     conf = new Configuration();
     conf.set("dfs.name.dir", nameAndEdits.getPath() +
               "," + newNameDir.getPath());
     conf.set("dfs.name.edits.dir", nameAndEdits +
               "," + newEditsDir.getPath());
+    conf.set("fs.checkpoint.dir", checkpointNameDir.getPath() +
+        "," + checkpointNameAndEdits.getPath());
+    conf.set("fs.checkpoint.edits.dir", checkpointEditsDir.getPath() +
+        "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true,
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
     cluster.waitActive();
+    secondary = startSecondaryNameNode(conf);
     fileSys = cluster.getFileSystem();
 
     try {
@@ -214,25 +253,14 @@ public class TestNameEditsConfigs extends TestCase {
       assertTrue(!fileSys.exists(file2));
       assertTrue(fileSys.exists(file3));
       checkFile(fileSys, file3, replication);
+      secondary.doCheckpoint();
     } finally {
       fileSys.close();
       cluster.shutdown();
+      secondary.shutdown();
     }
-
-    // Cleanup
-    if (!FileUtil.fullyDelete(newNameDir)) 
-      throw new IOException("Cannot remove directory " + newNameDir);
-    if (!FileUtil.fullyDelete(newEditsDir)) 
-      throw new IOException("Cannot remove directory " + newEditsDir);
-    if (!FileUtil.fullyDelete(nameAndEdits))
-      throw new IOException("Cannot remove directory " + nameAndEdits);
-    if (!FileUtil.fullyDelete(checkpointNameDir))
-      throw new IOException("Cannot remove directory " + checkpointNameDir);
-    if (!FileUtil.fullyDelete(checkpointEditsDir))
-      throw new IOException("Cannot remove directory " + checkpointEditsDir);
-    if (!FileUtil.fullyDelete(checkpointNameAndEdits))
-      throw new IOException("Cannot remove directory " + 
-                             checkpointNameAndEdits);
+    checkImageAndEditsFilesExistence(nameAndEdits, true, true);
+    checkImageAndEditsFilesExistence(checkpointNameAndEdits, true, true);
   }
 
   /**
@@ -253,7 +281,6 @@ public class TestNameEditsConfigs extends TestCase {
     MiniDFSCluster cluster = null;
     Configuration conf = null;
     FileSystem fileSys = null;
-    File base_dir = new File(System.getProperty("test.build.data"), "dfs/");
     File newNameDir = new File(base_dir, "name");
     File newEditsDir = new File(base_dir, "edits");
     File nameAndEdits = new File(base_dir, "name_and_edits");
@@ -264,7 +291,7 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set("dfs.name.edits.dir", nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, true, false, true, null,
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
                                   null, null, null);
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
@@ -289,7 +316,7 @@ public class TestNameEditsConfigs extends TestCase {
               "," + newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true, 
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true, 
                                   null, null, null, null);
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
@@ -311,7 +338,7 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set("dfs.name.dir", newNameDir.getPath());
     conf.set("dfs.name.edits.dir", newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true,
+    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
@@ -335,7 +362,7 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set("dfs.name.edits.dir", nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {
-      cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true,
+      cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
       assertTrue(false);
     } catch (IOException e) { // expect to fail
@@ -352,7 +379,7 @@ public class TestNameEditsConfigs extends TestCase {
              "," + nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {
-      cluster = new MiniDFSCluster(0, conf, numDatanodes, false, false, true,
+      cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                    null, null, null, null);
       assertTrue(false);
     } catch (IOException e) { // expect to fail
@@ -360,13 +387,5 @@ public class TestNameEditsConfigs extends TestCase {
     } finally {
       cluster = null;
     }
-
-    // Cleanup
-    if (!FileUtil.fullyDelete(newNameDir)) 
-      throw new IOException("Cannot remove directory " + newNameDir);
-    if (!FileUtil.fullyDelete(newEditsDir)) 
-      throw new IOException("Cannot remove directory " + newEditsDir);
-    if (!FileUtil.fullyDelete(nameAndEdits))
-      throw new IOException("Cannot remove directory " + nameAndEdits);
   }
 }
