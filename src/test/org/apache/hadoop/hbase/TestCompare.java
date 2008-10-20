@@ -51,6 +51,11 @@ public class TestCompare extends TestCase {
     nocolumn = new HStoreKey(a, HConstants.LATEST_TIMESTAMP);
     withcolumn = new HStoreKey(a, a, timestamp);
     assertTrue(nocolumn.compareTo(withcolumn) < 0);
+    // Test null keys.
+    HStoreKey normal = new HStoreKey("a", "b");
+    assertTrue(normal.compareTo(null) > 0);
+    assertTrue(HStoreKey.compareTo(null, null, null) == 0);
+    assertTrue(HStoreKey.compareTo(null, null, normal) < 0);
   }
   
   /**

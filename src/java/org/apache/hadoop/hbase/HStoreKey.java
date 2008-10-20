@@ -351,6 +351,11 @@ public class HStoreKey implements WritableComparable {
   
   static int compareTo(final HRegionInfo hri, final HStoreKey left,
       final HStoreKey right) {
+    // We can be passed null
+    if (left == null && right == null) return 0;
+    if (left == null) return -1;
+    if (right == null) return 1;
+    
     int result = compareTwoRowKeys(hri, left.getRow(), right.getRow());
     if (result != 0) {
       return result;
