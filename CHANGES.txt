@@ -28,6 +28,9 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4292. Do not support append() for LocalFileSystem. (hairong)
 
+    HADOOP-4399. Make fuse-dfs multi-thread access safe.
+    (Pete Wyckoff via dhruba)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API

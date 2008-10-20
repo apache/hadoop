@@ -34,7 +34,7 @@ Requirements:
 
 To build:
 
-   1. in HADOOP_HOME: ant compile-contrib -Dcompile.c++=1 -Dfusedfs=1
+   1. in HADOOP_HOME: ant compile-contrib -Dcompile.c++=1 -Dfusedfs=1 -Dlibhdfs.noperms=1
 
 
 NOTE: for amd64 architecture, libhdfs will not compile unless you edit

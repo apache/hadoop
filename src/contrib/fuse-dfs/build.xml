@@ -30,22 +30,48 @@
     </condition>
   </target>
 
+
+  <target name="check-libhdfs-exists" if="fusedfs">
+  <property name="libhdfs.lib" value="${hadoop.root}/build/libhdfs/libhdfs.so"/>
+        <available file="${libhdfs.lib}" property="libhdfs-exists"/>
+    <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile-libhdfs -Dlibhdfs=1">
+         <condition>
+            <not><isset property="libhdfs-exists"/></not>
+          </condition>
+   </fail>
+   </target>
+
   <!-- override compile target !-->
-  <target name="compile" depends="check-libhdfs-fuse" if="libhdfs-fuse">
+  <target name="compile" depends="check-libhdfs-fuse,check-libhdfs-exists" if="libhdfs-fuse">
     <echo message="contrib: ${name}"/>
+
+    <condition property="perms" value="1" else="0">
+    <not>
+      <isset property="libhdfs.noperms"/>
+    </not>
+    </condition>
 
     <exec executable="/bin/sh" failonerror="true">
       <arg value="${root}/bootstrap.sh"/>
     </exec>
-
     <exec executable="make" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="HADOOP_HOME" value="${hadoop.root}"/>
-      <env key="PROTECTED_PATHS" value="/,/Trash,/user"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
-      <env key="FUSE_HOME" value="/usr/local"/>
+
+      <env key="PERMS" value="${perms}"/>
     </exec>
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.dir}/test"/>
+    <exec executable="cp" failonerror="true">
+    <arg line="${root}/src/fuse_dfs ${build.dir}"/>
+    </exec>
+    <mkdir dir="${build.dir}/test"/>
+    <exec executable="cp" failonerror="true">
+    <arg line="${root}/src/fuse_dfs_wrapper.sh ${build.dir}"/>
+    </exec>
+
   </target>
 
   <!-- override jar target !-->
@@ -64,6 +90,12 @@
       <arg value="${dist.dir}/contrib/${name}"/>
     </exec>
   </target>
+
+  <target name="test" if="fusedfs">
+    <echo message="testing FuseDFS ..."/>
+   <antcall target="hadoopbuildcontrib.test"> 
+   </antcall>
+  </target>  
 
   <!-- override clean target !-->
   <target name="clean" depends="check-libhdfs-fuse" if="libhdfs-fuse">
