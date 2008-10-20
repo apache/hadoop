@@ -52,6 +52,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <hod-admin-guide href="hod_admin_guide.html"/>
       <hod-config-guide href="hod_config_guide.html"/>
     </hod>
+    <capacity_scheduler label="Capacity Scheduler" href="capacity_scheduler.html"/>
     <api       label="API Docs"           href="ext:api/index" />
     <jdiff     label="API Changes"        href="ext:jdiff/changes" />
     <wiki      label="Wiki"               href="ext:wiki" />
@@ -182,6 +183,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setprofiletaskrange href="#setProfileTaskRange(boolean,%20java.lang.String)" />
                 <setprofileparams href="#setProfileParams(java.lang.String)" />
                 <setnumtaskstoexecuteperjvm href="#setNumTasksToExecutePerJvm(int)" />
+                <setqueuename href="#setQueueName(java.lang.String)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
                 <getjar href="#getJar()" />
               </jobconf>

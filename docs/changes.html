@@ -74,7 +74,7 @@ Following deprecated methods in RawLocalFileSystem are removed:
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(7)
+</a>&nbsp;&nbsp;&nbsp;(8)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4234">HADOOP-4234</a>. Fix KFS "glue" layer to allow applications to interface
 with multiple KFS metaservers.<br />(Sriram Rao via lohit)</li>
@@ -88,6 +88,8 @@ IOException.<br />(Pete Wyckoff via omalley)</li>
 message.<br />(stevel via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4226">HADOOP-4226</a>. Refactor and document LineReader to make it more readily
 understandable.<br />(Yuri Pradkin via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4238">HADOOP-4238</a>. When listing jobs, if scheduling information isn't available
+print NA instead of empty output.<br />(Sreekanth Ramakrishnan via johan)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -425,7 +427,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(133)
+</a>&nbsp;&nbsp;&nbsp;(139)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -673,12 +675,21 @@ capacity-scheduler.<br />(Hemanth Yamijala via acmurthy)</li>
 Phillips via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4426">HADOOP-4426</a>. TestCapacityScheduler broke due to the two commits <a href="http://issues.apache.org/jira/browse/HADOOP-4053">HADOOP-4053</a>
 and <a href="http://issues.apache.org/jira/browse/HADOOP-4373">HADOOP-4373</a>. This patch fixes that.<br />(Hemanth Yamijala via ddas)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4278">HADOOP-4278</a>. Increase debug logging for unit test TestDatanodeDeath.<br />(dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4418">HADOOP-4418</a>. Updates documentation in forrest for Mapred, streaming and pipes.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3155">HADOOP-3155</a>. Ensure that there is only one thread fetching
 TaskCompletionEvents on TaskTracker re-init.<br />(Dhruba Borthakur via
 acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4425">HADOOP-4425</a>. Fix EditLogInputStream to overload the bulk read method.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4427">HADOOP-4427</a>. Adds the new queue/job commands to the manual.<br />(Sreekanth Ramakrishnan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4278">HADOOP-4278</a>. Increase debug logging for unit test TestDatanodeDeath.
+Fix the case when primary is dead.<br />(dhruba via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4423">HADOOP-4423</a>. Keep block length when the block recovery is triggered by
+append.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4449">HADOOP-4449</a>. Fix dfsadmin usage.<br />(Raghu Angadi via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4455">HADOOP-4455</a>. Added TestSerDe so that unit tests can run successfully.<br />(Ashish Thusoo via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4457">HADOOP-4457</a>. Fixes an input split logging problem introduced by
+<a href="http://issues.apache.org/jira/browse/HADOOP-3245">HADOOP-3245</a>.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
 </ul>
@@ -688,7 +699,7 @@ acmurthy)</li>
 </a></h3>
 <ul id="release_0.18.2_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(7)
+</a>&nbsp;&nbsp;&nbsp;(8)
     <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
@@ -701,6 +712,8 @@ due to incorrect type used.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
 ArrayIndexOutOfBoundsException.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4398">HADOOP-4398</a>. No need to truncate access time in INode. Also fixes NPE
+in CreateEditsLog.<br />(Raghu Angadi)</li>
     </ol>
   </li>
 </ul>

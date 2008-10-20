@@ -1703,6 +1703,23 @@
         <title>Other Useful Features</title>
  
         <section>
+          <title>Submitting Jobs to a Queue</title>
+          <p>Some job schedulers supported in Hadoop, like the 
+            <a href="capacity_scheduler.html">Capacity
+            Scheduler</a>, support multiple queues. If such a scheduler is
+            being used, users can submit jobs to one of the queues
+            administrators would have defined in the
+            <em>mapred.queue.names</em> property of the Hadoop site
+            configuration. The queue name can be specified through the
+            <em>mapred.job.queue.name</em> property, or through the
+            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setqueuename">setQueueName(String)</a>
+            API. Note that administrators may choose to define ACLs
+            that control which queues a job can be submitted to by a
+            given user. In that case, if the job is not submitted
+            to one of the queues where the user has access,
+            the job would be rejected.</p>
+        </section>
+        <section>
           <title>Counters</title>
           
           <p><code>Counters</code> represent global counters, defined either by 
