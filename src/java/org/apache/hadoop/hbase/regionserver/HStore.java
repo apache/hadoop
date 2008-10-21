@@ -459,16 +459,17 @@ public class HStore implements HConstants {
       results.put(Long.valueOf(storeSeqId), curfile);
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
       // section.  Make sure path is fully qualified for compare.
-      mapfiles.add(mapfile);
+      mapfiles.add(this.fs.makeQualified(mapfile));
     }
     
     // List paths by experience returns fully qualified names -- at least when
     // running on a mini hdfs cluster.
-    FileStatus datfiles[] = fs.listStatus(mapdir);
+    FileStatus [] datfiles = fs.listStatus(mapdir);
     for (int i = 0; i < datfiles.length; i++) {
       Path p = datfiles[i].getPath();
       // If does not have sympathetic info file, delete.
-      if (!mapfiles.contains(fs.makeQualified(p))) {
+      Path qualifiedP = fs.makeQualified(p);
+      if (!mapfiles.contains(qualifiedP)) {
         fs.delete(p, true);
       }
     }
