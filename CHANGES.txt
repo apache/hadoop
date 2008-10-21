@@ -1046,6 +1046,9 @@ Release 0.18.2 - Unreleased
 
     HADOOP-4469. Rename and add the ant task jar file to the tar file. (nigel)
 
+    HADOOP-3914. DFSClient sends Checksum Ok only once for a block. 
+    (Christain Kunz via hairong)
+ 
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
