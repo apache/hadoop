@@ -34,6 +34,8 @@ Release 0.18.2 - Unreleased
     HADOOP-4369. Use setMetric(...) instead of incrMetric(...) for metrics
     averages.  (Brian Bockelman via szetszwo)
 
+    HADOOP-4469. Rename and add the ant task jar file to the tar file. (nigel)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
