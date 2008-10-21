@@ -1286,7 +1286,7 @@
   <target name="ant-tasks" depends="jar, compile-ant-tasks">
     <copy file="${anttasks.dir}/org/apache/hadoop/ant/antlib.xml"
           todir="${build.anttasks}/org/apache/hadoop/ant"/>
-    <jar destfile="${build.dir}/ant-${final.name}.jar">
+    <jar destfile="${build.dir}/${final.name}-ant.jar">
       <fileset dir="${build.anttasks}"/>
     </jar>
   </target>
