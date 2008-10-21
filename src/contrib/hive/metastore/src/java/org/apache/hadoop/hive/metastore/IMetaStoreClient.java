@@ -108,4 +108,18 @@ public interface IMetaStoreClient {
   public void alter_table(String defaultDatabaseName, String tblName, Table table) throws InvalidOperationException, MetaException, TException;
   public boolean createDatabase(String name, String location_uri) throws AlreadyExistsException, MetaException, TException;
   public boolean dropDatabase(String name) throws MetaException, TException;
+
+  /**
+   * @param db_name
+   * @param tbl_name
+   * @param part_vals
+   * @param deleteData delete the underlying data or just delete the table in metadata
+   * @return
+   * @throws NoSuchObjectException
+   * @throws MetaException
+   * @throws TException
+   * @see org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Iface#drop_partition(java.lang.String, java.lang.String, java.util.List)
+   */
+  public boolean dropPartition(String db_name, String tbl_name, List<String> part_vals, boolean deleteData)
+      throws NoSuchObjectException, MetaException, TException;
 }

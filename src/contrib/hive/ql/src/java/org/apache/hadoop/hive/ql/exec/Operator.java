@@ -55,6 +55,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   protected String id;
   protected T conf;
+  protected boolean done;
 
   public void setConf(T conf) {
     this.conf = conf;
@@ -71,6 +72,14 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   public String getId() {
     return id;
+  }
+
+  public boolean getDone() {
+    return done;
+  }
+
+  public void setDone(boolean done) {
+    this.done = done;
   }
 
   // non-bean fields needed during compilation
@@ -219,9 +228,24 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   protected void forward(Object row, ObjectInspector rowInspector) throws HiveException {
     
-    if(childOperators == null) {
+    if((childOperators == null) || (getDone())) {
       return;
     }
+    
+    // if all children are done, this operator is also done
+    boolean isDone = true;
+    for(Operator<? extends Serializable> o: childOperators) {
+      if (!o.getDone()) {
+        isDone = false;
+        break;
+      }
+    }
+
+    if (isDone) {
+      setDone(isDone);
+      return;
+    }
+
     for(Operator<? extends Serializable> o: childOperators) {
       o.process(row, rowInspector);
     }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.serde.thrift;
 
 import org.apache.hadoop.hive.serde.*;
 import java.lang.reflect.*;
+import java.util.HashMap;
 
 /**
  * Thrift implementation of SerDeField
@@ -32,12 +33,32 @@ public class ThriftSerDeField extends ReflectionSerDeField {
   private Class issetClass;
   private Field issetField;
   private Field fieldIssetField;
+  private static HashMap<String, Field[]> cacheFields = new HashMap<String, Field[]>();
 
   public ThriftSerDeField(String className, String fieldName) throws SerDeException {
     super(className, fieldName);
     try {
       issetClass = Class.forName(className+"$Isset");
-      fieldIssetField = issetClass.getDeclaredField(fieldName);
+      //      fieldIssetField = issetClass.getDeclaredField(fieldName);
+      String name = issetClass.getName();
+      Field[] allFields = cacheFields.get(name);
+      if (allFields == null) {
+        allFields = issetClass.getDeclaredFields();
+        cacheFields.put(name, allFields);
+      }
+
+      boolean found = false;
+      for (Field f: allFields) {
+        if (f.getName().equalsIgnoreCase(fieldName)) {
+          fieldIssetField = f;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) 
+        throw new SerDeException("Not a Thrift Class?");
+
       issetField = _parentClass.getDeclaredField("__isset");
     } catch (Exception e) {
       throw (new SerDeException("Not a Thrift Class?", e));

@@ -37,7 +37,8 @@ public class ExecMapper extends MapReduceBase implements Mapper {
   private boolean abort = false;
   private Reporter rp;
   public static final Log l4j = LogFactory.getLog("ExecMapper");
-
+  private static boolean done;
+  
   public void configure(JobConf job) {
     jc = job;
     mapredWork mrwork = Utilities.getMapRedWork(job);
@@ -63,8 +64,11 @@ public class ExecMapper extends MapReduceBase implements Mapper {
     }
 
     try {
-      // Since there is no concept of a group, we don't invoke startGroup/endGroup for a mapper
-      mo.process((Writable)value);
+      if (mo.getDone())
+        done = true;
+      else
+        // Since there is no concept of a group, we don't invoke startGroup/endGroup for a mapper
+        mo.process((Writable)value);
     } catch (HiveException e) {
       abort = true;
       e.printStackTrace();
@@ -73,6 +77,19 @@ public class ExecMapper extends MapReduceBase implements Mapper {
   }
 
   public void close() {
+    // No row was processed
+    if(oc == null) {
+      try {
+        l4j.trace("Close called no row");
+        mo.initialize(jc);
+        rp = null;
+      } catch (HiveException e) {
+        abort = true;
+        e.printStackTrace();
+        throw new RuntimeException ("Map operator close failed during initialize", e);
+      }
+    }
+
     // detecting failed executions by exceptions thrown by the operator tree
     // ideally hadoop should let us know whether map execution failed or not
     try {
@@ -87,6 +104,10 @@ public class ExecMapper extends MapReduceBase implements Mapper {
         throw new RuntimeException ("Error while closing operators");
       }
     }
+  }
+
+  public static boolean getDone() {
+    return done;
   }
 
   public static class reportStats implements Operator.OperatorFunc {

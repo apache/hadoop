@@ -24,7 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-public class UDFLTrim extends UDF {
+public class UDFLTrim implements UDF {
 
   public UDFLTrim() {
   }

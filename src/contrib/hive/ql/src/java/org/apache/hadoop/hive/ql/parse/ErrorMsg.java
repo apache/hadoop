@@ -28,6 +28,7 @@ public enum ErrorMsg {
   GENERIC_ERROR("Exception while processing"),
   INVALID_TABLE("Table not found"),
   INVALID_COLUMN("Invalid Column Reference"),
+  INVALID_PARTITION("Partition not found"),
   AMBIGOUS_COLUMN("Ambigous Column Reference"),
   AMBIGOUS_TABLE_ALIAS("Ambigous Table Alias"),
   INVALID_TABLE_ALIAS("Invalid Table Alias"),
@@ -47,12 +48,17 @@ public enum ErrorMsg {
   ILLEGAL_PATH("Path is not legal"),
   INVALID_NUMERICAL_CONSTANT("Invalid Numerical Constant"),
   INVALID_ARRAYINDEX_CONSTANT("Non Constant Expressions for Array Indexes not Supported"),
+  INVALID_MAPINDEX_CONSTANT("Non Constant Expression for Map Indexes not Supported"),
+  INVALID_MAPINDEX_TYPE("Map Key Type does not Match Index Expression Type"),
+  NON_COLLECTION_TYPE("[] not Valid on Non Collection Types"),
   SELECT_DISTINCT_WITH_GROUPBY("SELECT DISTINCT and GROUP BY can not be in the same query"),
   COLUMN_REPAEATED_IN_PARTITIONING_COLS("Column repeated in partitioning columns"),
   DUPLICATE_COLUMN_NAMES("Duplicate column names"),
   COLUMN_REPEATED_IN_CLUSTER_SORT("Same column cannot appear in cluster and sort by"),
   SAMPLE_RESTRICTION("Cannot Sample on More Than Two Columns"),
-  SAMPLE_COLUMN_NOT_FOUND("Sample Column Not Found");
+  SAMPLE_COLUMN_NOT_FOUND("Sample Column Not Found"),
+  NO_PARTITION_PREDICATE("No Partition Predicate Found"),
+  INVALID_DOT(". operator is only supported on struct or list of struct types");
   
   private String mesg;
   ErrorMsg(String mesg) {

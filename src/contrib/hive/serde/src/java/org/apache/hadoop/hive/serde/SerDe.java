@@ -91,6 +91,4 @@ public interface SerDe {
   public SerDeField getFieldFromExpression(SerDeField parentField, String fieldExpression)
     throws SerDeException;
 
-  public String getShortName() ;
-
 }

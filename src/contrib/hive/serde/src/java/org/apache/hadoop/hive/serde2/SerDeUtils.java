@@ -170,7 +170,7 @@ public class SerDeUtils {
     switch(oi.getCategory()) {
       case PRIMITIVE: {
         if (o == null) {
-          sb.append("\\N");
+          sb.append("null");
         } else if (o instanceof String) {
           sb.append(QUOTE);
           sb.append(escapeString((String)o));
@@ -184,54 +184,66 @@ public class SerDeUtils {
         break;
       }
       case LIST: {
-        sb.append(LBRACKET);
         ListObjectInspector loi = (ListObjectInspector)oi;
         ObjectInspector listElementObjectInspector = loi.getListElementObjectInspector();
         List<?> olist = loi.getList(o);
-        for (int i=0; i<olist.size(); i++) {
-          if (i>0) sb.append(COMMA);
-          buildJSONString(sb, olist.get(i), listElementObjectInspector);
+        if (olist == null) {
+          sb.append("null");
+        } else {
+          sb.append(LBRACKET);
+          for (int i=0; i<olist.size(); i++) {
+            if (i>0) sb.append(COMMA);
+            buildJSONString(sb, olist.get(i), listElementObjectInspector);
+          }
+          sb.append(RBRACKET);
         }
-        sb.append(RBRACKET);
         break;
       }
       case MAP: {
-        sb.append(LBRACE);
         MapObjectInspector moi = (MapObjectInspector)oi;
         ObjectInspector mapKeyObjectInspector = moi.getMapKeyObjectInspector();
         ObjectInspector mapValueObjectInspector = moi.getMapValueObjectInspector();
         Map<?,?> omap = moi.getMap(o);
-        boolean first = true;
-        for(Object entry : omap.entrySet()) {
-          if (first) {
-            first = false;
-          } else {
-            sb.append(COMMA);
+        if (omap == null) {
+          sb.append("null");
+        } else {
+          sb.append(LBRACE);
+          boolean first = true;
+          for(Object entry : omap.entrySet()) {
+            if (first) {
+              first = false;
+            } else {
+              sb.append(COMMA);
+            }
+            Map.Entry<?,?> e = (Map.Entry<?,?>)entry;
+            buildJSONString(sb, e.getKey(), mapKeyObjectInspector);
+            sb.append(COLON);
+            buildJSONString(sb, e.getValue(), mapValueObjectInspector);
           }
-          Map.Entry<?,?> e = (Map.Entry<?,?>)entry;
-          buildJSONString(sb, e.getKey(), mapKeyObjectInspector);
-          sb.append(COLON);
-          buildJSONString(sb, e.getValue(), mapValueObjectInspector);
+          sb.append(RBRACE);
         }
-        sb.append(RBRACE);
         break;
       }
       case STRUCT: {
-        sb.append(LBRACE);
         StructObjectInspector soi = (StructObjectInspector)oi;
         List<? extends StructField> structFields = soi.getAllStructFieldRefs();
-        for(int i=0; i<structFields.size(); i++) {
-          if (i>0) {
-            sb.append(COMMA);
+        if (structFields == null) {
+          sb.append("null");
+        } else {
+          sb.append(LBRACE);
+          for(int i=0; i<structFields.size(); i++) {
+            if (i>0) {
+              sb.append(COMMA);
+            }
+            sb.append(QUOTE);
+            sb.append(structFields.get(i).getFieldName());
+            sb.append(QUOTE);
+            sb.append(COLON);
+            buildJSONString(sb, soi.getStructFieldData(o, structFields.get(i)), 
+                structFields.get(i).getFieldObjectInspector());          
           }
-          sb.append(QUOTE);
-          sb.append(structFields.get(i).getFieldName());
-          sb.append(QUOTE);
-          sb.append(COLON);
-          buildJSONString(sb, soi.getStructFieldData(o, structFields.get(i)), 
-              structFields.get(i).getFieldObjectInspector());          
+          sb.append(RBRACE);
         }
-        sb.append(RBRACE);
         break;
       }
       default:

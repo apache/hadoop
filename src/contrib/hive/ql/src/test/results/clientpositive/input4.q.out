@@ -8,18 +8,18 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-0
     Copy
-      source: file:/data/zshao/trunk/VENDOR/hadoop-0.17/src/contrib/hive/data/files/kv1.txt
-      destination: file:/tmp/hive-zshao/-1658380790
+      source: file:/home/njain/workspace/hadoop-0.17/src/contrib/hive/data/files/kv1.txt
+      destination: file:/tmp/hive-njain/-478939701
 
   Stage: Stage-1
     Move Operator
       tables:
+            replace:
             table:
-                name: input4
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: input4
 
 
 val_238	238
@@ -522,4 +522,3 @@ val_403	403
 val_400	400
 val_200	200
 val_97	97
-

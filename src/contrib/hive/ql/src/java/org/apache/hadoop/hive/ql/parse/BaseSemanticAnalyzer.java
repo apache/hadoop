@@ -31,7 +31,6 @@ import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.metadata.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Task;
-import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 
 
@@ -43,6 +42,8 @@ public abstract class BaseSemanticAnalyzer {
   protected final Hive db;
   protected final HiveConf conf;
   protected List<Task<? extends Serializable>> rootTasks;
+  protected Task<? extends Serializable> fetchTask;
+  protected boolean fetchTaskInit;
   protected final Log LOG;
   protected final LogHelper console;
 
@@ -65,13 +66,40 @@ public abstract class BaseSemanticAnalyzer {
     }
   }
 
-  public abstract void analyze(CommonTree ast, Context ctx) throws SemanticException;
+  public abstract void analyzeInternal(CommonTree ast, Context ctx) throws SemanticException;
+
+  public void analyze(CommonTree ast, Context ctx) throws SemanticException {
+    scratchDir = ctx.getScratchDir();
+    analyzeInternal(ast, ctx);
+  }
   
   public List<Task<? extends Serializable>> getRootTasks() {
     return rootTasks;
   }
 
-  protected void reset() {
+  /**
+	 * @return the fetchTask
+	 */
+	public Task<? extends Serializable> getFetchTask() {
+		return fetchTask;
+	}
+
+	/**
+	 * @param fetchTask the fetchTask to set
+	 */
+	public void setFetchTask(Task<? extends Serializable> fetchTask) {
+		this.fetchTask = fetchTask;
+	}
+
+	public boolean getFetchTaskInit() {
+		return fetchTaskInit;
+	}
+
+	public void setFetchTaskInit(boolean fetchTaskInit) {
+		this.fetchTaskInit = fetchTaskInit;
+	}
+
+	protected void reset() {
     rootTasks = new ArrayList<Task<? extends Serializable>>();
   }
 
@@ -118,9 +146,33 @@ public abstract class BaseSemanticAnalyzer {
   public static String unescapeSQLString(String b) {
     assert(b.charAt(0) == '\'');
     assert(b.charAt(b.length()-1) == '\'');
+
+    // Some of the strings can be passed in as unicode. For example, the
+    // delimiter can be passed in as \002 - So, we first check if the 
+    // string is a unicode number, else go back to the old behavior
     StringBuilder sb = new StringBuilder(b.length());
-    for(int i=1; i+1<b.length(); i++) {
-      if (b.charAt(i) == '\\' && i+2<b.length()) {
+    int i = 1;
+    while (i < (b.length()-1)) {
+
+      if (b.charAt(i) == '\\' && (i+4 < b.length())) {
+        char i1 = b.charAt(i+1);
+        char i2 = b.charAt(i+2);
+        char i3 = b.charAt(i+3);
+        if ((i1 >= '0' && i1 <= '1') &&
+            (i2 >= '0' && i2 <= '7') &&
+            (i3 >= '0' && i3 <= '7'))
+        {
+          byte bVal = (byte)((i3 - '0') + ((i2 - '0') * 8 ) + ((i1 - '0') * 8 * 8));
+          byte[] bValArr = new byte[1];
+          bValArr[0] = bVal;
+          String tmp = new String(bValArr);
+          sb.append(tmp);
+          i += 4;
+          continue;
+        }
+      }
+        
+      if (b.charAt(i) == '\\' && (i+2 < b.length())) {
         char n=b.charAt(i+1);
         switch(n) {
         case '0': sb.append("\0"); break;
@@ -141,6 +193,7 @@ public abstract class BaseSemanticAnalyzer {
       } else {
         sb.append(b.charAt(i));
       }
+      i++;
     }
     return sb.toString();
   }
@@ -159,7 +212,7 @@ public abstract class BaseSemanticAnalyzer {
     public HashMap<String, String> partSpec;
     public Partition partHandle;
 
-    public tableSpec(Hive db, CommonTree ast) throws SemanticException {
+    public tableSpec(Hive db, CommonTree ast, boolean forceCreatePartition) throws SemanticException {
 
       assert(ast.getToken().getType() == HiveParser.TOK_TAB);
       int childIndex = 0;
@@ -179,7 +232,10 @@ public abstract class BaseSemanticAnalyzer {
             String val = stripQuotes(partspec_val.getChild(1).getText());
             partSpec.put(partspec_val.getChild(0).getText(), val);
           }
-          partHandle = Hive.get().getPartition(tableHandle, partSpec, true);
+          partHandle = Hive.get().getPartition(tableHandle, partSpec, forceCreatePartition);
+          if(partHandle == null) {
+            throw new SemanticException(ErrorMsg.INVALID_PARTITION.getMsg(ast.getChild(childIndex)));
+          }
         }
       } catch (InvalidTableException ite) {
         throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast.getChild(0)), ite);

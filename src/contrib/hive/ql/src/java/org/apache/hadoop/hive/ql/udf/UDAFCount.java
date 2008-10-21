@@ -35,7 +35,10 @@ public class UDAFCount extends UDAF {
   }
   
   public boolean aggregate(Object o) {
-    mCount ++;
+    // Our SerDe between map/reduce boundary may convert MetadataTypedSerDe to 
+    if (o != null && !o.equals("")) {
+      mCount ++;
+    }
     return true;
   }
 

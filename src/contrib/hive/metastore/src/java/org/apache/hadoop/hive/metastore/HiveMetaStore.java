@@ -77,6 +77,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       };
 
       // The next serial number to be assigned
+      private boolean checkForDefaultDb;
       private static int nextSerialNum = 0;
       private static ThreadLocal<Integer> threadLocalId = new ThreadLocal() {
         protected synchronized Object initialValue() {
@@ -109,6 +110,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       
       private boolean init() throws MetaException {
         rawStoreClassName = hiveConf.get("hive.metastore.rawstore.impl");
+        checkForDefaultDb = hiveConf.getBoolean("hive.metastore.checkForDefaultDb", true);
         wh = new Warehouse(hiveConf);
         createDefaultDB();
         return true;
@@ -134,7 +136,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
        * @throws MetaException
        */
       private void createDefaultDB() throws MetaException {
-        if(HMSHandler.createDefaultDB) {
+        if(HMSHandler.createDefaultDB || !checkForDefaultDb) {
           return;
         }
         try {
@@ -358,6 +360,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           throws InvalidObjectException, AlreadyExistsException, MetaException {
         this.incrementCounter("append_partition");
         logStartFunction("append_partition", dbName, tableName);
+        if(LOG.isDebugEnabled()) {
+          for (String part : part_vals) {
+            LOG.debug(part);
+          }
+        }
         Partition part = new Partition();
         boolean success = false;
         try {
@@ -367,19 +374,20 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           part.setTableName(tableName);
           part.setValues(part_vals);
 
+          Table tbl = getMS().getTable(part.getDbName(), part.getTableName());
+          if(tbl == null) {
+            throw new InvalidObjectException("Unable to add partition because table or database do not exist");
+          }
+
+          part.setSd(tbl.getSd());
+          Path partLocation = new Path(tbl.getSd().getLocation(), Warehouse.makePartName(tbl.getPartitionKeys(), part_vals));
+          part.getSd().setLocation(partLocation.toString());
+
           Partition old_part = this.get_partition(part.getDbName(), part.getTableName(), part.getValues());
           if( old_part != null) {
             throw new AlreadyExistsException("Partition already exists:" + part);
           }
           
-          Table tbl = getMS().getTable(part.getDbName(), part.getTableName());
-          if(tbl == null) {
-            throw new InvalidObjectException("Unable to add partition because table or database do not exist");
-          }
-          part.setSd(tbl.getSd());
-          Path partLocation = new Path(tbl.getSd().getLocation(), Warehouse.makePartName(tbl.getPartitionKeys(), part_vals));
-          part.getSd().setLocation(partLocation.toString());
-
           success = getMS().addPartition(part);
           if(success) {
             success = getMS().commitTransaction();
@@ -454,8 +462,32 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           TException {
         this.incrementCounter("drop_partition");
         logStartFunction("drop_partition", db_name, tbl_name);
-        // TODO:pc drop the data as needed
-        return getMS().dropPartition(db_name, tbl_name, part_vals);
+        LOG.info("Partition values:" + part_vals);
+        boolean success = false;
+        Path partPath = null;
+        try {
+          getMS().openTransaction();
+          Partition part = this.get_partition(db_name, tbl_name, part_vals);
+          if(part == null) {
+            throw new NoSuchObjectException("Partition doesn't exist. " + part_vals);
+          }
+          if(part.getSd() == null  || part.getSd().getLocation() == null) {
+            throw new MetaException("Partition metadata is corrupted");
+          }
+          if(!getMS().dropPartition(db_name, tbl_name, part_vals)) {
+            throw new MetaException("Unable to drop partition");
+          }
+          success  = getMS().commitTransaction();
+          partPath = new Path(part.getSd().getLocation());
+        } finally {
+          if(!success) {
+            getMS().rollbackTransaction();
+          } else if(deleteData && (partPath != null)) {
+            wh.deleteDir(partPath, true);
+            // ok even if the data is not deleted
+          }
+        }
+        return true;
       }
 
       public Partition get_partition(String db_name, String tbl_name, List<String> part_vals)

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql;
 
+import java.io.File;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.FileNotFoundException;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.util.StringUtils;
+import java.util.Random;
 
 public class Context {
   private Path resFile;
@@ -38,9 +40,12 @@ public class Context {
   private Path[] resDirPaths;
   private int    resDirFilesNum;
   boolean initialized;
+  private String scratchDir;
+  private HiveConf conf;
   
   public Context(HiveConf conf) {
     try {
+      this.conf = conf;
       fs = FileSystem.get(conf);
       initialized = false;
       resDir = null;
@@ -48,6 +53,23 @@ public class Context {
     } catch (IOException e) {
       LOG.info("Context creation error: " + StringUtils.stringifyException(e));
     }
+  }
+
+  public void makeScratchDir() throws Exception {
+    Random rand = new Random();
+    int randomid = Math.abs(rand.nextInt()%rand.nextInt());
+    scratchDir = conf.getVar(HiveConf.ConfVars.SCRATCHDIR) + File.separator + randomid;
+    Path tmpdir = new Path(scratchDir);
+    fs.mkdirs(tmpdir);
+  }
+
+  public String getScratchDir() {
+    return scratchDir;
+  }
+
+  public void removeScratchDir() throws Exception {
+    Path tmpdir = new Path(scratchDir);
+    fs.delete(tmpdir, true);
   }
 
   /**

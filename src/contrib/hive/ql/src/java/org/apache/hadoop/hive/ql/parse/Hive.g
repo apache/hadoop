@@ -79,7 +79,10 @@ TOK_CREATETABLE;
 TOK_DESCTABLE;
 TOK_ALTERTABLE_RENAME;
 TOK_ALTERTABLE_ADDCOLS;
+TOK_ALTERTABLE_REPLACECOLS;
+TOK_ALTERTABLE_DROPPARTS;
 TOK_SHOWTABLES;
+TOK_SHOWPARTITIONS;
 TOK_CREATEEXTTABLE;
 TOK_DROPTABLE;
 TOK_TABCOLLIST;
@@ -102,6 +105,11 @@ TOK_TABSORTCOLNAMEDESC;
 TOK_CHARSETLITERAL;
 TOK_CREATEFUNCTION;
 TOK_EXPLAIN;
+TOK_TABLESERIALIZER;
+TOK_TABLSERDEPROPERTIES;
+TOK_TABLESERDEPROPLIST;
+TOK_LIMIT;
+TOKTABLESERDEPROPERTY;
 }
 
 
@@ -161,6 +169,7 @@ dropStatement
 alterStatement
     : alterStatementRename
     | alterStatementAddCol
+    | alterStatementDropPartitions
     ;
 
 alterStatementRename
@@ -169,16 +178,23 @@ alterStatementRename
     ;
 
 alterStatementAddCol
-    : KW_ALTER KW_TABLE Identifier KW_ADD KW_COLUMNS LPAREN columnNameTypeList RPAREN
-    -> ^(TOK_ALTERTABLE_ADDCOLS Identifier columnNameTypeList)
+    : KW_ALTER KW_TABLE Identifier (add=KW_ADD | replace=KW_REPLACE) KW_COLUMNS LPAREN columnNameTypeList RPAREN
+    -> {$add != null}? ^(TOK_ALTERTABLE_ADDCOLS Identifier columnNameTypeList)
+    ->                 ^(TOK_ALTERTABLE_REPLACECOLS Identifier columnNameTypeList)
+    ;
+
+alterStatementDropPartitions
+    : KW_ALTER KW_TABLE Identifier KW_DROP partitionSpec (COMMA partitionSpec)*
+    -> ^(TOK_ALTERTABLE_DROPPARTS Identifier partitionSpec+)
     ;
 
 descStatement
-    : KW_DESCRIBE Identifier  -> ^(TOK_DESCTABLE Identifier)
+    : KW_DESCRIBE (isExtended=KW_EXTENDED)? (tab=tabName)  -> ^(TOK_DESCTABLE $tab $isExtended?)
     ;
 
 showStatement
     : KW_SHOW KW_TABLES showStmtIdentifier?  -> ^(TOK_SHOWTABLES showStmtIdentifier?)
+    | KW_SHOW KW_PARTITIONS Identifier -> ^(TOK_SHOWPARTITIONS Identifier)
     ;
     
 createFunctionStatement
@@ -211,6 +227,23 @@ tableRowFormat
     :
       KW_ROW KW_FORMAT KW_DELIMITED tableRowFormatFieldIdentifier? tableRowFormatCollItemsIdentifier? tableRowFormatMapKeysIdentifier? tableRowFormatLinesIdentifier? 
     -> ^(TOK_TABLEROWFORMAT tableRowFormatFieldIdentifier? tableRowFormatCollItemsIdentifier? tableRowFormatMapKeysIdentifier? tableRowFormatLinesIdentifier?)
+    | KW_ROW KW_FORMAT KW_SERIALIZER name=StringLiteral tableSerializerProperties?
+    -> ^(TOK_TABLESERIALIZER $name tableSerializerProperties?)
+    ;
+
+tableSerializerProperties
+    :
+      KW_WITH KW_PROPERTIES LPAREN propertiesList RPAREN -> ^(TOK_TABLSERDEPROPERTIES propertiesList)
+    ;
+
+propertiesList
+    :
+      keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_TABLESERDEPROPLIST keyValueProperty+)
+    ;
+
+keyValueProperty
+    :
+      key=StringLiteral EQUAL value=StringLiteral -> ^(TOKTABLESERDEPROPERTY $key $value)
     ;
 
 tableRowFormatFieldIdentifier
@@ -328,14 +361,16 @@ regular_body
    whereClause?
    groupByClause?
    orderByClause?
-   clusterByClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause selectClause whereClause? groupByClause? orderByClause? clusterByClause?))
+   clusterByClause? 
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause selectClause whereClause? groupByClause? orderByClause? clusterByClause? limitClause?))
    |
    selectClause
    fromClause
    whereClause?
    groupByClause?
    orderByClause?
-   clusterByClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE)) selectClause whereClause? groupByClause? orderByClause? clusterByClause?))
+   clusterByClause? 
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE)) selectClause whereClause? groupByClause? orderByClause? clusterByClause? limitClause?))
    ;
 
 
@@ -346,13 +381,15 @@ body
    whereClause?
    groupByClause?
    orderByClause? 
-   clusterByClause? -> ^(TOK_INSERT insertClause? selectClause whereClause? groupByClause? orderByClause? clusterByClause?)
+   clusterByClause? 
+   limitClause? -> ^(TOK_INSERT insertClause? selectClause whereClause? groupByClause? orderByClause? clusterByClause? limitClause?)
    |
    selectClause
    whereClause?
    groupByClause?
    orderByClause? 
-   clusterByClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE)) selectClause whereClause? groupByClause? orderByClause? clusterByClause?)
+   clusterByClause? 
+   limitClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE)) selectClause whereClause? groupByClause? orderByClause? clusterByClause? limitClause?)
    ;
    
 insertClause
@@ -365,6 +402,11 @@ destination
      KW_LOCAL KW_DIRECTORY StringLiteral -> ^(TOK_LOCAL_DIR StringLiteral)
    | KW_DIRECTORY StringLiteral -> ^(TOK_DIR StringLiteral)
    | KW_TABLE tabName -> ^(tabName)
+   ;
+
+limitClause
+   :
+   KW_LIMIT num=Number -> ^(TOK_LIMIT $num)
    ;
 
 //----------------------- Rules for parsing selectClause -----------------------------
@@ -581,7 +623,7 @@ precedenceFieldExpression
 
 precedenceUnaryOperator
     :
-    MINUS | TILDE
+    PLUS | MINUS | TILDE
     ;
 
 precedenceUnaryExpression
@@ -741,6 +783,7 @@ KW_RIGHT : 'RIGHT';
 KW_FULL : 'FULL';
 KW_ON : 'ON';
 KW_PARTITION : 'PARTITION';
+KW_PARTITIONS : 'PARTITIONS';
 KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
 KW_SHOW: 'SHOW';
@@ -798,6 +841,7 @@ KW_OUT: 'OUT';
 KW_OF: 'OF';
 KW_CAST: 'CAST';
 KW_ADD: 'ADD';
+KW_REPLACE: 'REPLACE';
 KW_COLUMNS: 'COLUMNS';
 KW_RLIKE: 'RLIKE';
 KW_REGEXP: 'REGEXP';
@@ -805,6 +849,10 @@ KW_TEMPORARY: 'TEMPORARY';
 KW_FUNCTION: 'FUNCTION';
 KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
+KW_SERIALIZER: 'SERIALIZER';
+KW_WITH: 'WITH';
+KW_PROPERTIES: 'SERDEPROPERTIES';
+KW_LIMIT: 'LIMIT';
 
 // Operators
 

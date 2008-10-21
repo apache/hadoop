@@ -8,24 +8,6 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Map Reduce
-      Reduce Operator Tree:
-        Extract
-          Filter Operator
-            predicate:
-                expr: (0 < 100)
-                type: Boolean
-            Select Operator
-              expressions:
-                    expr: 0
-                    type: string
-                    expr: 1
-                    type: string
-              File Output Operator
-                table:
-                    name: dest1
-                    serde: simple_meta
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
       Alias -> Map Operator Tree:
         tmap:src 
             Select Operator
@@ -40,26 +22,44 @@ STAGE PLANS:
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
                 Reduce Output Operator
-                  tag: -1
                   key expressions:
                         expr: tkey
                         type: string
+                  # partition fields: 1
+                  tag: -1
                   value expressions:
                         expr: tkey
                         type: string
                         expr: tvalue
                         type: string
-                  # partition fields: 1
+      Reduce Operator Tree:
+        Extract
+          Filter Operator
+            predicate:
+                expr: (0 < 100)
+                type: Boolean
+            Select Operator
+              expressions:
+                    expr: 0
+                    type: string
+                    expr: 1
+                    type: string
+              File Output Operator
+                table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                    name: dest1
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest1
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
 
 
 0	val_0
@@ -146,4 +146,3 @@ STAGE PLANS:
 97	val_97
 98	val_98
 98	val_98
-

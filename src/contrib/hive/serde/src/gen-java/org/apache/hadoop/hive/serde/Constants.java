@@ -23,6 +23,8 @@ public class Constants {
 
   public static final String SERIALIZATION_DDL = "serialization.ddl";
 
+  public static final String SERIALIZATION_NULL_FORMAT = "serialization.null.format";
+
   public static final String FIELD_DELIM = "field.delim";
 
   public static final String COLLECTION_DELIM = "colelction.delim";

@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.exec.UDAF;
 public class UDAFSum extends UDAF {
 
   private double mSum;
+  private boolean mEmpty;
   
   public UDAFSum() {
     super();
@@ -33,24 +34,33 @@ public class UDAFSum extends UDAF {
 
   public void init() {
     mSum = 0;
+    mEmpty = true;
   }
 
   public boolean aggregate(String o) {
-    mSum += Double.parseDouble(o);
+    if (o != null && !o.isEmpty()) {
+      mSum += Double.parseDouble(o);
+      mEmpty = false;
+    }
     return true;
   }
   
   public String evaluatePartial() {
-    return new Double(mSum).toString();
+    // This is SQL standard - sum of zero items should be null.
+    return mEmpty ? null : new Double(mSum).toString();
   }
 
   public boolean aggregatePartial(String o) {
-    mSum += Double.parseDouble(o);
+    if (o != null && !o.isEmpty()) {
+      mSum += Double.parseDouble(o);
+      mEmpty = false;
+    }
     return true;
   }
 
   public String evaluate() {
-    return new Double(mSum).toString();
+    // This is SQL standard - sum of zero items should be null.
+    return mEmpty ? null : new Double(mSum).toString();
   }
 
 }

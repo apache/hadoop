@@ -27,11 +27,16 @@ public class exprNodeFieldDesc extends exprNodeDesc implements Serializable {
   exprNodeDesc desc;
   String fieldName;
   
+  // Used to support a.b where a is a list of struct that contains a field called b.
+  // a.b will return an array that contains field b of all elements of array a. 
+  Boolean isList;
+  
   public exprNodeFieldDesc() {}
-  public exprNodeFieldDesc(TypeInfo typeInfo, exprNodeDesc desc, String fieldName) {
+  public exprNodeFieldDesc(TypeInfo typeInfo, exprNodeDesc desc, String fieldName, Boolean isList) {
     super(typeInfo);
     this.desc = desc;
-    this.fieldName = fieldName;    
+    this.fieldName = fieldName;
+    this.isList = isList;
   }
   
   public exprNodeDesc getDesc() {
@@ -46,6 +51,13 @@ public class exprNodeFieldDesc extends exprNodeDesc implements Serializable {
   public void setFieldName(String fieldName) {
     this.fieldName = fieldName;
   }
+  public Boolean getIsList() {
+    return isList;
+  }
+  public void setIsList(Boolean isList) {
+    this.isList = isList;
+  }
+  
   @Override
   public String toString() {
     return this.desc.toString() + "." + this.fieldName;

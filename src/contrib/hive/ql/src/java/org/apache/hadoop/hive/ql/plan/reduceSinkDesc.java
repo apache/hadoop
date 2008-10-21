@@ -38,33 +38,25 @@ public class reduceSinkDesc implements Serializable {
   // If the value is -1, then data will go to a random reducer 
   private int numPartitionFields;
   
-  public reduceSinkDesc() { }
+  private boolean inferNumReducers;
+  private int numReducers;
 
-  public reduceSinkDesc
-    (final java.util.ArrayList<exprNodeDesc> keyCols,
-     final java.util.ArrayList<exprNodeDesc> valueCols,
-     final int numPartitionFields,
-     final tableDesc keySerializeInfo,
-     final tableDesc valueSerializeInfo) {
-    this.keyCols = keyCols;
-    this.valueCols = valueCols;
-    this.tag = -1;
-    this.numPartitionFields = numPartitionFields;
-    this.keySerializeInfo = keySerializeInfo;
-    this.valueSerializeInfo = valueSerializeInfo;
-  }
+  public reduceSinkDesc() { }
 
   public reduceSinkDesc
     (java.util.ArrayList<exprNodeDesc> keyCols,
      java.util.ArrayList<exprNodeDesc> valueCols,
      int tag,
      int numPartitionFields,
+     int numReducers,
+     boolean inferNumReducers,
      final tableDesc keySerializeInfo,
      final tableDesc valueSerializeInfo) {
     this.keyCols = keyCols;
     this.valueCols = valueCols;
-    assert tag != -1;
     this.tag = tag;
+    this.numReducers = numReducers;
+    this.inferNumReducers = inferNumReducers;
     this.numPartitionFields = numPartitionFields;
     this.keySerializeInfo = keySerializeInfo;
     this.valueSerializeInfo = valueSerializeInfo;
@@ -102,6 +94,20 @@ public class reduceSinkDesc implements Serializable {
   }
   public void setTag(int tag) {
     this.tag = tag;
+  }
+
+  public boolean getInferNumReducers() {
+    return this.inferNumReducers;
+  }
+  public void setInferNumReducers(boolean inferNumReducers) {
+    this.inferNumReducers = inferNumReducers;
+  }
+
+  public int getNumReducers() {
+    return this.numReducers;
+  }
+  public void setNumReducers(int numReducers) {
+    this.numReducers = numReducers;
   }
 
   public tableDesc getKeySerializeInfo() {

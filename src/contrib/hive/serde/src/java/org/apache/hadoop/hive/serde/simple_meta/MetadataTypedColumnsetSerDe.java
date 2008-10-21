@@ -37,25 +37,6 @@ public class MetadataTypedColumnsetSerDe  extends ByteStreamTypedSerDe implement
   protected TIOStreamTransport outTransport, inTransport;
   protected TProtocol outProtocol, inProtocol;
 
-  public String getShortName() {
-    return shortName();
-  }
-
-
-  public static String shortName() {
-    return "simple_meta";
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   final public static String DefaultSeparator = "\001";
 
   protected boolean inStreaming;
@@ -92,7 +73,7 @@ public class MetadataTypedColumnsetSerDe  extends ByteStreamTypedSerDe implement
     inTransport = new TIOStreamTransport(bis);
     outProtocol = outFactory.getProtocol(outTransport);
     inProtocol = inFactory.getProtocol(inTransport);
-    json_serializer = new TSerializer(new TJSONProtocol.Factory());
+    json_serializer = new TSerializer(new TSimpleJSONProtocol.Factory());
   }
 
   public void initialize(Configuration job, Properties tbl) throws SerDeException {

@@ -88,4 +88,15 @@ public class MapRedTask extends Task<mapredWork> implements Serializable {
       return (1);
     }
   }
+
+  @Override
+  public boolean isMapRedTask() {
+    return true;
+  }
+
+  @Override
+  public boolean hasReduce() {
+    mapredWork w = getWork();
+    return w.getReducer() != null;
+  }
 }

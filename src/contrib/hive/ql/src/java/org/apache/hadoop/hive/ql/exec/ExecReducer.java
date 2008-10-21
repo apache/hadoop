@@ -183,6 +183,20 @@ public class ExecReducer extends MapReduceBase implements Reducer {
   }
 
   public void close() {
+
+    // No row was processed
+    if(oc == null) {
+      try {
+        l4j.trace("Close called no row");
+        reducer.initialize(jc);
+        rp = null;
+      } catch (HiveException e) {
+        abort = true;
+        e.printStackTrace();
+        throw new RuntimeException ("Reduce operator close failed during initialize", e);
+      }
+    }
+
     try {
       if (groupKey != null) {
         // If a operator wants to do some work at the end of a group

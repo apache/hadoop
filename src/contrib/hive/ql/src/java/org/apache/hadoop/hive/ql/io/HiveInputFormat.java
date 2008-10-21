@@ -179,8 +179,8 @@ public class HiveInputFormat<K extends WritableComparable,
     }
 
     InputFormat inputFormat = getInputFormatFromCache(inputFormatClass);
-
-    return inputFormat.getRecordReader(inputSplit, job, reporter);
+    
+    return new HiveRecordReader(inputFormat.getRecordReader(inputSplit, job, reporter));
   }
 
 
@@ -218,6 +218,7 @@ public class HiveInputFormat<K extends WritableComparable,
     }
     return result.toArray(new HiveInputSplit[result.size()]);
   }
+
 
   private tableDesc getTableDescFromPath(Path dir) throws IOException {
 

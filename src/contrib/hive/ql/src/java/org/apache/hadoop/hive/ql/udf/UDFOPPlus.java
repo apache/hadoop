@@ -32,7 +32,7 @@ import org.apache.hadoop.hive.ql.exec.UDF;
  * The case of int + double will be handled by implicit type casting using 
  * UDFRegistry.implicitConvertable method. 
  */
-public class UDFOPPlus extends UDF {
+public class UDFOPPlus implements UDF {
 
   private static Log LOG = LogFactory.getLog("org.apache.hadoop.hive.ql.udf.UDFOPPlus");
 

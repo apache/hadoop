@@ -47,7 +47,7 @@ public class tableDesc implements Serializable {
   public Class<? extends Deserializer> getDeserializerClass() {
     return this.deserializerClass;
   }
-  public void setDeserializerClass(final Class<? extends Deserializer> serdeClass) {
+  public void setDeserializerClass(final Class<? extends SerDe> serdeClass) {
     this.deserializerClass = serdeClass;
   }
   public Class<? extends InputFormat> getInputFileFormatClass() {

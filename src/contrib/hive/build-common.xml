@@ -53,6 +53,7 @@
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.include" value="Test*"/>
+  <property name="test.exclude" value="TestSerDe"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="true"/>
   <property name="test.timeout" value="900000"/>
@@ -64,6 +65,7 @@
     <pathelement location="${hadoop.conf.dir}"/>
     <pathelement location="${test.data.dir}/conf"/>
     <pathelement location="${hive.conf.dir}"/>
+    <fileset dir="${test.src.data.dir}" includes="files/*.jar"/>
     <path refid="classpath"/>
   </path>
 
@@ -95,6 +97,7 @@
     <pathelement location="${hadoop.root}/build/contrib/hive/metastore/classes"/>
     <pathelement location="${hadoop.root}/build/contrib/hive/ql/classes"/>
     <pathelement location="${hadoop.root}/build/contrib/hive/cli/classes"/>
+    <fileset dir="${test.src.data.dir}" includes="files/*.jar"/>
     <fileset dir="${basedir}" includes="lib/*.jar"/>
     <path refid="common-classpath"/>
   </path>
@@ -215,7 +218,7 @@
       <sysproperty key="test.output.overwrite" value="${overwrite}"/>
       <sysproperty key="log4j.configuration" value="file://${test.data.dir}/conf/hive-log4j.properties"/>
       <sysproperty key="derby.stream.error.file" value="${test.build.dir}/derby.log"/>
-      <sysproperty key="hive.aux.jars.path" value="file://${test.build.dir}/test-udfs.jar"/>
+      <sysproperty key="hive.aux.jars.path" value="${test.build.dir}/test-udfs.jar,${test.src.data.dir}/files/TestSerDe.jar"/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">

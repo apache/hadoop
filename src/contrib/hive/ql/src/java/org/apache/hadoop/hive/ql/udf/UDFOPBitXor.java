@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.UDF;
 
 
-public class UDFOPBitXor extends UDF {
+public class UDFOPBitXor implements UDF {
 
   private static Log LOG = LogFactory.getLog(UDFOPBitXor.class.getName());
 

@@ -19,22 +19,28 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.List;
+
 import org.apache.hadoop.hive.ql.plan.loadDesc;
 
 public class loadFileDesc extends loadDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String targetDir;
   private boolean isDfsDir;
+  // list of columns, comma separated
+  private String  columns;
 
   public loadFileDesc() { }
   public loadFileDesc(
     final String sourceDir,
     final String targetDir,
-    final boolean isDfsDir) {
+    final boolean isDfsDir, 
+    final String  columns) {
 
     super(sourceDir);
     this.targetDir = targetDir;
     this.isDfsDir = isDfsDir;
+    this.columns = columns;
   }
   
   @explain(displayName="destination")
@@ -52,4 +58,18 @@ public class loadFileDesc extends loadDesc implements Serializable {
   public void setIsDfsDir(final boolean isDfsDir) {
     this.isDfsDir = isDfsDir;
   }
+  
+	/**
+	 * @return the columns
+	 */
+	public String getColumns() {
+		return columns;
+	}
+	
+	/**
+	 * @param columns the columns to set
+	 */
+	public void setColumns(String columns) {
+		this.columns = columns;
+	}
 }

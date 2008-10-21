@@ -48,19 +48,36 @@ done
 # add the auxillary jars such as serdes
 if [ -d "${HIVE_AUX_JARS_PATH}" ]; then
   for f in ${HIVE_AUX_JARS_PATH}/*.jar; do
-    AUX_CLASSPATH=${AUX_CLASSPATH}:$f;
+    if [[ ! -f $f ]]; then
+        continue;
+    fi
+    AUX_CLASSPATH=${AUX_CLASSPATH}:$f
     if [ "${AUX_PARAM}" == "" ]; then
-        AUX_PARAM=$f
+        AUX_PARAM=file://$f
     else
-        AUX_PARAM=${AUX_PARAM},$f;
+        AUX_PARAM=${AUX_PARAM},file://$f;
     fi
   done
-else
+elif [ "${HIVE_AUX_JARS_PATH}" != "" ]; then 
   AUX_CLASSPATH=${HIVE_AUX_JARS_PATH}
-  AUX_PARAM=${HIVE_AUX_JARS_PATH}
+  AUX_PARAM=file://${HIVE_AUX_JARS_PATH}
+  AUX_PARAM=`echo $AUX_PARAM | sed 's/,/,file:\/\//g'`
 fi
-CLASSPATH=${CLASSPATH}:${AUX_CLASSPATH}
 
+# adding jars from auxlib directory
+for f in ${HIVE_HOME}/auxlib/*.jar; do
+  if [[ ! -f $f ]]; then
+      continue;
+  fi
+
+  AUX_CLASSPATH=${AUX_CLASSPATH}:$f
+  if [ "${AUX_PARAM}" == "" ]; then
+    AUX_PARAM=file://$f
+  else
+    AUX_PARAM=${AUX_PARAM},file://$f;
+  fi
+done
+CLASSPATH=${CLASSPATH}:${AUX_CLASSPATH}
 
 # pass classpath to hadoop
 export HADOOP_CLASSPATH=${CLASSPATH}
@@ -79,23 +96,24 @@ fi
 
 HADOOP=$HADOOP_HOME/bin/hadoop
 if [ ! -f ${HADOOP} ]; then
-  echo "Cannot find hadoop installation: \"$HADOOP\" does not exist";
+  echo "Cannot find hadoop installation: \$HADOOP_HOME must be set or hadoop must be in the path";
   exit 4;
 fi
 
 # override default value of hadoop.bin.path to point to what we are running off
 # if the user specified a -D override - this will be further overriden
-export HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.bin.path=$HADOOP"
+export HIVE_OPTS="-hiveconf hadoop.bin.path=$HADOOP"
 
 CLASS=org.apache.hadoop.hive.cli.CliDriver
 
 if [ "${AUX_PARAM}" != "" ]; then
-  HADOOP_OPTS="-Dhive.aux.jars.path=${AUX_PARAM}"
+  HIVE_OPTS="$HIVE_OPTS -hiveconf hive.aux.jars.path=${AUX_PARAM}"
   AUX_JARS_CMD_LINE="-libjars ${AUX_PARAM}"
 fi
 #echo "CLASSPATH="$CLASSPATH
 #echo "AUX_LIB_PATH"=$AUX_PARAM
 #echo "HADOOP_OPTS="$HADOOP_OPTS
 # note: $@ only works in "$@"
-exec $HADOOP jar $AUX_JARS_CMD_LINE ${HIVE_LIB}/hive_cli.jar $CLASS "$@"
+#echo $HADOOP jar $AUX_JARS_CMD_LINE ${HIVE_LIB}/hive_cli.jar $CLASS $HIVE_OPTS "$@"
+exec $HADOOP jar $AUX_JARS_CMD_LINE ${HIVE_LIB}/hive_cli.jar $CLASS $HIVE_OPTS "$@"
 

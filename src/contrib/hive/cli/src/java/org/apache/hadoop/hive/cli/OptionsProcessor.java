@@ -200,6 +200,15 @@ public class OptionsProcessor {
       printUsage("-e and -f option cannot be specified simultaneously");
       return false;
     }
+
+    List<String> hiveConfArgs = (List<String>)cmdLine.getValue(confOptions); 
+    if (null != hiveConfArgs){
+      for(String s : hiveConfArgs){
+        String []parts = s.split("=", 2); 
+        ss.cmdProperties.setProperty(parts[0], parts[1]);
+      }
+    }
+
     return true;
   }
 

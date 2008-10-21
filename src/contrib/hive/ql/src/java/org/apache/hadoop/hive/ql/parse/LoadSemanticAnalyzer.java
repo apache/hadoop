@@ -156,7 +156,7 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   @Override
-  public void analyze(CommonTree ast, Context ctx) throws SemanticException {
+  public void analyzeInternal(CommonTree ast, Context ctx) throws SemanticException {
     isLocal = isOverWrite = false;
     Tree from_t = ast.getChild(0);
     Tree table_t = ast.getChild(1);
@@ -185,7 +185,7 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     // initialize destination table/partition
-    tableSpec ts = new tableSpec(db, (CommonTree) table_t);
+    tableSpec ts = new tableSpec(db, (CommonTree) table_t, true);
     URI toURI = (ts.partHandle != null) ? ts.partHandle.getDataLocation() : ts.tableHandle.getDataLocation();
 
     // make sure the arguments make sense

@@ -45,29 +45,11 @@ public class ThriftByteStreamTypedSerDe extends ByteStreamTypedSerDe {
     inTransport = new TIOStreamTransport(bis);
     outProtocol = outFactory.getProtocol(outTransport);
     inProtocol = inFactory.getProtocol(inTransport);
-    json_serializer = new TSerializer(new TJSONProtocol.Factory());
+    json_serializer = new TSerializer(new TSimpleJSONProtocol.Factory());
   }
 
   public void initialize(Configuration job, Properties tbl) throws SerDeException {
     throw new SerDeException("ThriftByteStreamTypedSerDe is still semi-abstract");
-  }
-
-  public static String shortName() {
-    return "thriftbytestream";
-  }
-
-  public  String getShortName() {
-    return shortName();
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public ThriftByteStreamTypedSerDe(Class<?> argType, TProtocolFactory inFactory,

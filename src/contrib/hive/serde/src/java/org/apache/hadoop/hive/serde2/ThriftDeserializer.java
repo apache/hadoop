@@ -28,26 +28,6 @@ import com.facebook.thrift.protocol.TProtocolFactory;
 
 public class ThriftDeserializer implements Deserializer {
 
-  public static String shortName() {
-    return "thrift";
-  }
-
-  public  String getShortName() {
-    return shortName();
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-      // For backward compatibility: this class replaces the following class.
-      SerDeUtils.registerSerDe("org.apache.hadoop.hive.serde.thrift.ThriftSerDe", Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-  
   private ThriftByteStreamTypedSerDe tsd;
 
   public ThriftDeserializer() { }

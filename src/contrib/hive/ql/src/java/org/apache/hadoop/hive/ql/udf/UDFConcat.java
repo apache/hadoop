@@ -21,7 +21,7 @@ package org.apache.hadoop.hive.ql.udf;
 import org.apache.hadoop.hive.ql.exec.UDF;
 
 
-public class UDFConcat extends UDF {
+public class UDFConcat implements UDF {
 
   public UDFConcat() {
   }

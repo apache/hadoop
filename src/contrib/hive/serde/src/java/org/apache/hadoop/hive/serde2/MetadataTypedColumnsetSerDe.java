@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hive.serde2;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.CharacterCodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,33 +43,24 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
 
   public static final Log LOG = LogFactory.getLog(MetadataTypedColumnsetSerDe.class.getName());
 
-  public String getShortName() {
-    return shortName();
-  }
-
-
-  public static String shortName() {
-    return "simple_meta";
-  }
-
   static {
     StackTraceElement[] sTrace = new Exception().getStackTrace();
     String className = sTrace[0].getClassName();
     try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-      // For backward compatibility: this class replaces the following class.
-      SerDeUtils.registerSerDe("org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe", 
+      // For backward compatibility: this class replaces the columnsetSerDe class.
+      SerDeUtils.registerSerDe("org.apache.hadoop.hive.serde.thrift.columnsetSerDe", 
           Class.forName(className));
-    } catch(Exception e) {
+      } catch(Exception e) {
       throw new RuntimeException(e);
     }
   }
   
   final public static String DefaultSeparator = "\001";
-
   private String separator;
-  // constant for now, will make it configurable later.
-  private String nullString = "\\N"; 
+
+  final public static String defaultNullString = "\\N";
+  private String nullString; 
+
   private List<String> columnNames;
   private ObjectInspector cachedObjectInspector;
 
@@ -82,20 +72,36 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
     separator = DefaultSeparator;
   }
 
-  public void initialize(Configuration job, Properties tbl) throws SerDeException {
-    separator = DefaultSeparator;
-    String alt_sep = tbl.getProperty(Constants.SERIALIZATION_FORMAT);
-    if(alt_sep != null && alt_sep.length() > 0) {
+  private String getByteValue(String altValue, String defaultVal) {
+    if (altValue != null && altValue.length() > 0) {
       try {
         byte b [] = new byte[1];
-        b[0] = Byte.valueOf(alt_sep).byteValue();
-        separator = new String(b);
+        b[0] = Byte.valueOf(altValue).byteValue();
+        return new String(b);
       } catch(NumberFormatException e) {
-        separator = alt_sep;
+        return altValue;
       }
     }
+    return defaultVal;
+  }
+
+  public void initialize(Configuration job, Properties tbl) throws SerDeException {
+    String alt_sep = tbl.getProperty(Constants.SERIALIZATION_FORMAT);
+    separator = getByteValue(alt_sep, DefaultSeparator);
+
+    String alt_null = tbl.getProperty(Constants.SERIALIZATION_NULL_FORMAT);
+    nullString = getByteValue(alt_null, defaultNullString);
+
     String columnProperty = tbl.getProperty("columns");
-    if (columnProperty == null || columnProperty.length() == 0) {
+    String serdeName = tbl.getProperty(Constants.SERIALIZATION_LIB);
+    // tables that were serialized with columnsetSerDe doesn't have metadata 
+    // so this hack applies to all such tables 
+    boolean columnsetSerDe = false;
+    if ((serdeName != null) && serdeName.equals("org.apache.hadoop.hive.serde.thrift.columnsetSerDe")) {
+      columnsetSerDe = true;
+    }
+    if (columnProperty == null || columnProperty.length() == 0 
+        || columnsetSerDe) {
       // Hack for tables with no columns
       // Treat it as a table with a single column called "col" 
       cachedObjectInspector = ObjectInspectorFactory.getReflectionObjectInspector(
@@ -104,9 +110,9 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
       columnNames = Arrays.asList(columnProperty.split(","));
       cachedObjectInspector = MetadataListStructObjectInspector.getInstance(columnNames);
     }
-    LOG.info(getClass().getName() + ": initialized with columnNames: " + columnNames );
+    LOG.debug(getClass().getName() + ": initialized with columnNames: " + columnNames + " and separator code=" + (int)separator.charAt(0) );
   }
-
+  
   public static Object deserialize(ColumnSet c, String row, String sep, String nullString) throws Exception {
     if (c.col == null) {
       c.col = new ArrayList<String>();

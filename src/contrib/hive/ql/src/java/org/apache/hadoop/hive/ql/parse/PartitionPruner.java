@@ -17,14 +17,6 @@
  */
 
 package org.apache.hadoop.hive.ql.parse;
-/*
- * PartitionPruner.java
- *
- * Created on April 9, 2008, 3:48 PM
- *
- * To change this template, choose Tools | Template Manager
- * and open the template in the editor.
- */
 
 import java.util.*;
 
@@ -73,7 +65,7 @@ public class PartitionPruner {
     this.tableAlias = tableAlias;
     this.metaData = metaData;
     this.tab = metaData.getTableForAlias(tableAlias);
-    this.prunerExpr = new exprNodeConstantDesc(Boolean.TRUE);
+    this.prunerExpr = null;
   }
 
   /**
@@ -106,8 +98,8 @@ public class PartitionPruner {
       case HiveParser.TOK_COLREF: {
 
         assert(expr.getChildCount() == 2);
-        String tabAlias = SemanticAnalyzer.getTableName(expr);
-        String colName = SemanticAnalyzer.getSerDeFieldExpression(expr);
+        String tabAlias = expr.getChild(0).getText();
+        String colName = expr.getChild(1).getText();
         if (tabAlias == null || colName == null) {
           throw new SemanticException(ErrorMsg.INVALID_XPATH.getMsg(expr));
         }
@@ -115,11 +107,17 @@ public class PartitionPruner {
         if (tabAlias.equals(tableAlias) && tab.isPartitionKey(colName)) {
           desc = new exprNodeColumnDesc(String.class, colName); 
         } else {
-          // might be a column from another table
           try {
-            TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromObjectInspector(
-                this.metaData.getTableForAlias(tabAlias).getDeserializer().getObjectInspector());
-            desc = new exprNodeConstantDesc(typeInfo.getStructFieldTypeInfo(colName), null);
+            // might be a column from another table
+            Table t = this.metaData.getTableForAlias(tabAlias);
+            if (t.isPartitionKey(colName)) {
+              desc = new exprNodeConstantDesc(String.class, null);
+            }
+            else {
+              TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromObjectInspector(
+                                                                               this.metaData.getTableForAlias(tabAlias).getDeserializer().getObjectInspector());
+              desc = new exprNodeConstantDesc(typeInfo.getStructFieldTypeInfo(colName), null);
+            }
           } catch (SerDeException e){
             throw new RuntimeException(e);
           }
@@ -189,6 +187,37 @@ public class PartitionPruner {
     return false;
   }
   
+  public boolean hasPartitionPredicate(CommonTree expr) {
+
+    int tokType = expr.getType();
+    boolean hasPPred = false;
+    switch (tokType) {
+      case HiveParser.TOK_COLREF: {
+
+        assert(expr.getChildCount() == 2);
+        String tabAlias = expr.getChild(0).getText();
+        String colName = expr.getChild(1).getText();
+        if (tabAlias.equals(tableAlias) && tab.isPartitionKey(colName)) {
+          hasPPred = true;
+        }
+        break;
+      }
+
+      default: {
+        boolean isFunction = (expr.getType() == HiveParser.TOK_FUNCTION);
+        
+        // Create all children
+        int childrenBegin = (isFunction ? 1 : 0);
+        for (int ci=childrenBegin; ci<expr.getChildCount(); ci++) {
+          hasPPred = (hasPPred || hasPartitionPredicate((CommonTree)expr.getChild(ci)));
+        }
+        break;
+      }
+    }
+
+    return hasPPred;
+  }
+
   /** Add an expression */
   @SuppressWarnings("nls")
   public void addExpression(CommonTree expr) throws SemanticException {
@@ -197,7 +226,10 @@ public class PartitionPruner {
     // Ignore null constant expressions
     if (!(desc instanceof exprNodeConstantDesc) || ((exprNodeConstantDesc)desc).getValue() != null ) {
       LOG.trace("adding pruning expr = " + desc);
-      this.prunerExpr = SemanticAnalyzer.getFuncExprNodeDesc("AND", this.prunerExpr, desc);
+      if (this.prunerExpr == null)
+      	this.prunerExpr = desc;
+      else
+        this.prunerExpr = SemanticAnalyzer.getFuncExprNodeDesc("OR", this.prunerExpr, desc);
     }
   }
   
@@ -208,13 +240,15 @@ public class PartitionPruner {
     LOG.trace("tabname = " + this.tab.getName());
     LOG.trace("prune Expression = " + this.prunerExpr);
 
-    HashSet<Partition> ret_parts = new HashSet<Partition>();
+    LinkedHashSet<Partition> ret_parts = new LinkedHashSet<Partition>();
     try {
       StructObjectInspector rowObjectInspector = (StructObjectInspector)this.tab.getDeserializer().getObjectInspector();
       Object[] rowWithPart = new Object[2];
       InspectableObject inspectableObject = new InspectableObject();
-      
-      ExprNodeEvaluator evaluator = ExprNodeEvaluatorFactory.get(this.prunerExpr);
+     
+      ExprNodeEvaluator evaluator = null;
+      if (this.prunerExpr != null)
+        evaluator = ExprNodeEvaluatorFactory.get(this.prunerExpr);
       for(Partition part: Hive.get().getPartitions(this.tab)) {
         // Set all the variables here
         LinkedHashMap<String, String> partSpec = part.getSpec();
@@ -237,14 +271,18 @@ public class PartitionPruner {
         StructObjectInspector rowWithPartObjectInspector = ObjectInspectorFactory.getUnionStructObjectInspector(ois);
         
         // evaluate the expression tree
-        evaluator.evaluate(rowWithPart, rowWithPartObjectInspector, inspectableObject);
-        LOG.trace("prune result for partition " + partSpec + ": " + inspectableObject.o);
-        if (!Boolean.FALSE.equals(inspectableObject.o)) {
-          LOG.debug("retained partition: " + partSpec);
-          ret_parts.add(part);
-        } else {
-          LOG.trace("pruned partition: " + partSpec);
+        if (evaluator != null) {
+          evaluator.evaluate(rowWithPart, rowWithPartObjectInspector, inspectableObject);
+          LOG.trace("prune result for partition " + partSpec + ": " + inspectableObject.o);
+          if (!Boolean.FALSE.equals(inspectableObject.o)) {
+            LOG.debug("retained partition: " + partSpec);
+            ret_parts.add(part);
+          } else {
+            LOG.trace("pruned partition: " + partSpec);
+          }
         }
+        else
+        	ret_parts.add(part);
       }
     }
     catch (Exception e) {

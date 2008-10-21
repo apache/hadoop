@@ -22,9 +22,7 @@ import java.lang.reflect.Type;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 
 import com.facebook.thrift.TBase;
@@ -47,15 +45,6 @@ public class ThriftByteStreamTypedSerDe extends ByteStreamTypedSerDe {
   public void initialize(Configuration job, Properties tbl) throws SerDeException {
     throw new SerDeException("ThriftByteStreamTypedSerDe is still semi-abstract");
   }
-
-  public static String shortName() {
-    return "thriftbytestream";
-  }
-
-  public  String getShortName() {
-    return shortName();
-  }
-
 
   public ThriftByteStreamTypedSerDe(Type objectType, TProtocolFactory inFactory,
                                     TProtocolFactory outFactory) throws SerDeException {

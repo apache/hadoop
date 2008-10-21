@@ -8,12 +8,12 @@ STAGE PLANS:
   Stage: Stage-0
       Create Table Operator:
         Create Table
-          isExternal:
-          name: INPUTDDL2
-          # buckets: -1
-          isSequenceFile:
           columns: key int, value string
+          # buckets: -1
           partition columns: ds datetime, country string
+          name: INPUTDDL2
+          isExternal:
+          isSequenceFile:
 
 
 key	int

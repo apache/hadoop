@@ -9,34 +9,35 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Map Reduce
-      Reduce Operator Tree:
-          Group By Operator
-            keys:
-                  expr: VALUE.2
-                  type: string
-            mode: partial1
-            File Output Operator
-              table:
-                  input format: org.apache.hadoop.mapred.TextInputFormat
-                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
       Alias -> Map Operator Tree:
         src 
             Reduce Output Operator
-              tag: -1
               key expressions:
-                    expr: 0
-                    type: int
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
                     expr: substr(key, 0, 1)
                     type: string
               # partition fields: -1
+              tag: -1
+      Reduce Operator Tree:
+        Group By Operator
+          keys:
+                expr: KEY.0
+                type: string
+          mode: partial1
+          File Output Operator
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
 
   Stage: Stage-2
     Map Reduce
+      Alias -> Map Operator Tree:
+        /tmp/hive-njain/1561965178/525265780.10001 
+          Reduce Output Operator
+            key expressions:
+                  expr: 0
+                  type: string
+            # partition fields: 1
+            tag: -1
       Reduce Operator Tree:
         Group By Operator
           keys:
@@ -49,28 +50,20 @@ STAGE PLANS:
                   type: string
             File Output Operator
               table:
-                  name: dest1
-                  serde: simple_meta
                   input format: org.apache.hadoop.mapred.TextInputFormat
                   output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-      Alias -> Map Operator Tree:
-        /tmp/hive-zshao/64182502.10001 
-          Reduce Output Operator
-            tag: -1
-            key expressions:
-                  expr: 0
-                  type: string
-            # partition fields: 1
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest1
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
 
 
 0
@@ -83,4 +76,3 @@ STAGE PLANS:
 7
 8
 9
-

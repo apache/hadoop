@@ -63,21 +63,14 @@ public class PlanUtils {
 
   
   // We will make reduce key and reduce value TableDesc with configurable SerDes   
-  public static reduceSinkDesc getReduceSinkDesc(ArrayList<exprNodeDesc> keyCols,
-      ArrayList<exprNodeDesc> valueCols, int numPartitionFields) {
+  public static reduceSinkDesc getReduceSinkDesc(ArrayList<exprNodeDesc> keyCols, 
+                                                 ArrayList<exprNodeDesc> valueCols, 
+                                                 int tag, int numPartitionFields, 
+                                                 int numReducers, boolean inferNumReducers) {
      
-     return new reduceSinkDesc(keyCols, valueCols, numPartitionFields,
-         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(keyCols.size())),
-         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(valueCols.size())));
-  }
-  
-  // We will make reduce key and reduce value TableDesc with configurable SerDes   
-  public static reduceSinkDesc getReduceSinkDesc(ArrayList<exprNodeDesc> keyCols,
-      ArrayList<exprNodeDesc> valueCols, int tag, int numPartitionFields) {
-     
-     return new reduceSinkDesc(keyCols, valueCols, tag, numPartitionFields,
-         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(keyCols.size())),
-         getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(valueCols.size())));
+    return new reduceSinkDesc(keyCols, valueCols, tag, numPartitionFields, numReducers, inferNumReducers,
+      getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(keyCols.size())),
+      getDefaultTableDesc("" + Utilities.ctrlaCode, ObjectInspectorUtils.getIntegerCSV(valueCols.size())));
   }
 
   // We should read the TableDesc from gWork when it is available.   

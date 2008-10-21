@@ -48,16 +48,14 @@ public class ColumnInfo implements Serializable {
   public ColumnInfo() {
   }
 
-  public ColumnInfo(String internalName, TypeInfo type, boolean isVirtual) {
+  public ColumnInfo(String internalName, TypeInfo type) {
     this.internalName = internalName;
     this.type = type;
-    this.isVirtual = isVirtual;
   }
   
-  public ColumnInfo(String internalName, Class type, boolean isVirtual) {
+  public ColumnInfo(String internalName, Class type) {
     this.internalName = internalName;
     this.type = TypeInfoFactory.getPrimitiveTypeInfo(type);
-    this.isVirtual = isVirtual;
   }
   
   public TypeInfo getType() {
@@ -67,10 +65,6 @@ public class ColumnInfo implements Serializable {
   public String getInternalName() {
     return internalName;
   }
-
-  public boolean getIsVirtual() {
-    return isVirtual;
-  }
   
   public void setType(TypeInfo type) {
     this.type = type;
@@ -79,9 +73,4 @@ public class ColumnInfo implements Serializable {
   public void setInternalName(String internalName) {
     this.internalName = internalName;
   }
-
-  public void setIsVirtual(boolean isVirtual) {
-    this.isVirtual = isVirtual;
-  }
-
 }

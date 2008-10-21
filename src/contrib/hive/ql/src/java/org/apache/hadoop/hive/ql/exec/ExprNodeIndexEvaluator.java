@@ -22,7 +22,9 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeIndexDesc;
 import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 
 public class ExprNodeIndexEvaluator extends ExprNodeEvaluator {
 
@@ -44,16 +46,38 @@ public class ExprNodeIndexEvaluator extends ExprNodeEvaluator {
     assert(result != null);
     mainEvaluator.evaluate(row, rowInspector, mainInspectableObject);
     indexEvaluator.evaluate(row, rowInspector, indexInspectableObject);
-    int index = ((Number)indexInspectableObject.o).intValue();
+
+    if (mainInspectableObject.oi.getCategory() == Category.LIST) {
+      int index = ((Number)indexInspectableObject.o).intValue();
     
-    ListObjectInspector loi = (ListObjectInspector)mainInspectableObject.oi;
-    result.oi = loi.getListElementObjectInspector();
-    result.o = loi.getListElement(mainInspectableObject.o, index);
+      ListObjectInspector loi = (ListObjectInspector)mainInspectableObject.oi;
+      result.oi = loi.getListElementObjectInspector();
+      result.o = loi.getListElement(mainInspectableObject.o, index);
+    }
+    else if (mainInspectableObject.oi.getCategory() == Category.MAP) {
+      MapObjectInspector moi = (MapObjectInspector)mainInspectableObject.oi;
+      result.oi = moi.getMapValueObjectInspector();
+      result.o = moi.getMapValueElement(mainInspectableObject.o, indexInspectableObject.o);
+    }
+    else {
+      // Should never happen because we checked this in SemanticAnalyzer.getXpathOrFuncExprNodeDesc
+      throw new RuntimeException("Hive 2 Internal error: cannot evaluate index expression on "
+          + mainInspectableObject.oi.getTypeName());
+    }
   }
 
   public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
       throws HiveException {
-    return ((ListObjectInspector)mainEvaluator.evaluateInspector(rowInspector)).getListElementObjectInspector();
+    ObjectInspector mainInspector = mainEvaluator.evaluateInspector(rowInspector);
+    if (mainInspector.getCategory() == Category.LIST) {
+      return ((ListObjectInspector)mainInspector).getListElementObjectInspector();
+    } else if (mainInspector.getCategory() == Category.MAP) {
+      return ((MapObjectInspector)mainInspector).getMapValueObjectInspector();
+    } else {
+      // Should never happen because we checked this in SemanticAnalyzer.getXpathOrFuncExprNodeDesc
+      throw new RuntimeException("Hive 2 Internal error: cannot evaluate index expression on "
+          + mainInspector.getTypeName());
+    }
   }
 
 }

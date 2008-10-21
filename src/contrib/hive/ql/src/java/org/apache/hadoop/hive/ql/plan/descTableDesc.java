@@ -19,6 +19,8 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.HashMap;
+
 import org.apache.hadoop.fs.Path;
 
 @explain(displayName="Describe Table")
@@ -26,25 +28,66 @@ public class descTableDesc extends ddlDesc implements Serializable
 {
   private static final long serialVersionUID = 1L;
   
-  String            tableName;
+  String tableName;
+  HashMap<String, String> partSpec;
   Path              resFile;
+  boolean           isExt;
   
   /**
+   * @param isExt
+   * @param partSpec
    * @param resFile
    * @param tableName
    */
-  public descTableDesc(Path resFile, String tableName) {
+  public descTableDesc(Path resFile, String tableName, HashMap<String, String> partSpec, boolean isExt) {
+    this.isExt = isExt;
+    this.partSpec = partSpec;
     this.resFile = resFile;
     this.tableName = tableName;
   }
 
+  /**
+   * @return the isExt
+   */
+  public boolean isExt() {
+    return isExt;
+  }
+
+  /**
+   * @param isExt the isExt to set
+   */
+  public void setExt(boolean isExt) {
+    this.isExt = isExt;
+  }
+
+  /**
+   * @return the tableName
+   */
   @explain(displayName="table")
   public String getTableName() {
     return tableName;
   }
 
+  /**
+   * @param tableName the tableName to set
+   */
   public void setTableName(String tableName) {
     this.tableName = tableName;
+  }
+
+  /**
+   * @return the partSpec
+   */
+  @explain(displayName="partition")
+  public HashMap<String, String> getPartSpec() {
+    return partSpec;
+  }
+
+  /**
+   * @param partSpec the partSpec to set
+   */
+  public void setPartSpecs(HashMap<String, String> partSpec) {
+    this.partSpec = partSpec;
   }
 
   /**

@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 public class QBParseInfo {
 
   private boolean isSubQ;
+  private boolean canOptTopQ;
   private String alias;
   private CommonTree joinExpr;
   private HashMap<String, CommonTree> aliasToSrc;
@@ -41,6 +42,8 @@ public class QBParseInfo {
   private HashMap<String, CommonTree> destToWhereExpr;
   private HashMap<String, CommonTree> destToGroupby;
   private HashMap<String, CommonTree> destToClusterby;
+  private HashMap<String, Integer>    destToLimit;
+  private int outerQueryLimit;
 
   // used by GroupBy
   private HashMap<String, HashMap<String, CommonTree> > destToAggregationExprs;
@@ -57,12 +60,15 @@ public class QBParseInfo {
     this.destToWhereExpr = new HashMap<String, CommonTree>();
     this.destToGroupby = new HashMap<String, CommonTree>();
     this.destToClusterby = new HashMap<String, CommonTree>();
+    this.destToLimit = new HashMap<String, Integer>();
     
     this.destToAggregationExprs = new HashMap<String, HashMap<String, CommonTree> >();
     this.destToDistinctFuncExpr = new HashMap<String, CommonTree>();
     
     this.alias = alias;
     this.isSubQ = isSubQ;
+    this.canOptTopQ = false;
+    this.outerQueryLimit = -1;
   }
 
   public void setAggregationExprsForClause(String clause, HashMap<String, CommonTree> aggregationTrees) {
@@ -102,7 +108,7 @@ public class QBParseInfo {
   }
 
   public void setSrcForAlias(String alias, CommonTree ast) {
-    this.aliasToSrc.put(alias, ast);
+    this.aliasToSrc.put(alias.toLowerCase(), ast);
   }
 
   public Set<String> getClauseNames() {
@@ -134,7 +140,7 @@ public class QBParseInfo {
   }
 
   public CommonTree getSrcForAlias(String alias) {
-    return this.aliasToSrc.get(alias);
+    return this.aliasToSrc.get(alias.toLowerCase());
   }
 
   public String getAlias() {
@@ -145,6 +151,14 @@ public class QBParseInfo {
     return this.isSubQ;
   }
 
+  public boolean getCanOptTopQ() {
+    return this.canOptTopQ;
+  }
+
+  public void setCanOptTopQ(boolean canOptTopQ) {
+    this.canOptTopQ = canOptTopQ;
+  }
+  
   public CommonTree getJoinExpr() {
     return this.joinExpr;
   }
@@ -152,12 +166,87 @@ public class QBParseInfo {
   public void setJoinExpr(CommonTree joinExpr) {
     this.joinExpr = joinExpr;
   }
-  
+
   public TableSample getTabSample(String alias) {
-    return this.nameToSample.get(alias);
+    return this.nameToSample.get(alias.toLowerCase());
   }
   
   public void setTabSample(String alias, TableSample tableSample) {
-    this.nameToSample.put(alias, tableSample);
+    this.nameToSample.put(alias.toLowerCase(), tableSample);
   }
+
+  public void setDestLimit(String dest, Integer limit) {
+    this.destToLimit.put(dest, limit);
+  }
+
+  public Integer getDestLimit(String dest) {
+    return this.destToLimit.get(dest);
+  }
+
+	/**
+	 * @return the outerQueryLimit
+	 */
+	public int getOuterQueryLimit() {
+		return outerQueryLimit;
+	}
+
+	/**
+	 * @param outerQueryLimit the outerQueryLimit to set
+	 */
+	public void setOuterQueryLimit(int outerQueryLimit) {
+		this.outerQueryLimit = outerQueryLimit;
+	}
+
+  public boolean isSelectStarQuery() {
+    if (isSubQ || 
+       (joinExpr != null) ||
+       (!nameToSample.isEmpty()) ||
+       (!destToWhereExpr.isEmpty()) ||
+       (!destToGroupby.isEmpty()) ||
+       (!destToClusterby.isEmpty()))
+      return false;
+    
+    Iterator<Map.Entry<String, HashMap<String, CommonTree>>> aggrIter = destToAggregationExprs.entrySet().iterator();
+    while (aggrIter.hasNext()) {
+      HashMap<String, CommonTree> h = aggrIter.next().getValue();
+      if ((h != null) && (!h.isEmpty()))
+        return false;
+    }
+      	
+    if (!destToDistinctFuncExpr.isEmpty()) {
+      Iterator<Map.Entry<String, CommonTree>> distn = destToDistinctFuncExpr.entrySet().iterator();
+      while (distn.hasNext()) {
+        CommonTree ct = distn.next().getValue();
+        if (ct != null) 
+          return false;
+      }
+    }
+        
+    Iterator<Map.Entry<String, CommonTree>> iter = nameToDest.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<String, CommonTree> entry = iter.next();
+      CommonTree v = entry.getValue();
+      if (!(((CommonTree)v.getChild(0)).getToken().getType() == HiveParser.TOK_TMP_FILE))
+        return false;
+    }
+      	
+    iter = destToSelExpr.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<String, CommonTree> entry = iter.next();
+      CommonTree selExprList = entry.getValue();
+      // Iterate over the selects
+      for (int i = 0; i < selExprList.getChildCount(); ++i) {
+        
+        // list of the columns
+        CommonTree selExpr = (CommonTree) selExprList.getChild(i);
+        CommonTree sel = (CommonTree)selExpr.getChild(0);
+        
+        if (sel.getToken().getType() != HiveParser.TOK_ALLCOLREF)
+          return false;
+      }
+    }
+
+    return true;
+  }
+  
 }

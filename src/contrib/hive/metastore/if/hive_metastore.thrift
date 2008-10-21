@@ -161,8 +161,9 @@ service ThriftHiveMetastore extends fb303.FacebookService
   // delete data (including partitions) if deleteData is set to true
   void drop_table(1:string dbname, 2:string name, 3:bool deleteData) 
                        throws(1:NoSuchObjectException o1, 2:MetaException o3)
-  list<string> get_tables(string db_name, string pattern)
-                       throws (MetaException o1, UnknownTableException o2, UnknownDBException o3)
+  list<string> get_tables(string db_name, string pattern) 
+                       throws (MetaException o1)
+
   Table get_table(1:string dbname, 2:string tbl_name) 
                        throws (1:MetaException o1, 2:NoSuchObjectException o2)
   // alter table applies to only future partitions not for existing partitions

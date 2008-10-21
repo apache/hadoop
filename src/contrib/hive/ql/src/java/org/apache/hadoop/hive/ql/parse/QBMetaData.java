@@ -64,8 +64,16 @@ public class QBMetaData {
     this.outTypes.add(cls);
   }
 
+  // All getXXX needs toLowerCase() because they are directly called from SemanticAnalyzer
+  // All setXXX does not need it because they are called from QB which already lowercases
+  // the aliases.
+
+  public HashMap<String, Table> getAliasToTable() {
+    return aliasToTable;
+  }
+
   public Table getTableForAlias(String alias) {
-    return this.aliasToTable.get(alias);
+    return this.aliasToTable.get(alias.toLowerCase());
   }
 
   public void setSrcForAlias(String alias, Table tab) {
@@ -89,23 +97,23 @@ public class QBMetaData {
   }
 
   public Integer getDestTypeForAlias(String alias) {
-    return this.nameToDestType.get(alias);
+    return this.nameToDestType.get(alias.toLowerCase());
   }
 
   public Table getDestTableForAlias(String alias) {
-    return this.nameToDestTable.get(alias);
+    return this.nameToDestTable.get(alias.toLowerCase());
   }
 
   public Partition getDestPartitionForAlias(String alias) {
-    return this.nameToDestPartition.get(alias);
+    return this.nameToDestPartition.get(alias.toLowerCase());
   }
 
   public String getDestFileForAlias(String alias) {
-    return this.nameToDestFile.get(alias);
+    return this.nameToDestFile.get(alias.toLowerCase());
   }
 
   public Table getSrcForAlias(String alias) {
-    return this.aliasToTable.get(alias);
+    return this.aliasToTable.get(alias.toLowerCase());
   }
   
 }

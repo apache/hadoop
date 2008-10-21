@@ -80,6 +80,7 @@ public class HiveConf extends Configuration {
     // for hive script operator
     HIVETABLENAME("hive.table.name", ""),
     HIVEPARTITIONNAME("hive.partition.name", ""),
+    HIVEPARTITIONPRUNER("hive.partition.pruning", "nonstrict"),
     HIVEALIAS("hive.alias", "");
     
     public final String varname;
@@ -170,13 +171,13 @@ public class HiveConf extends Configuration {
     // let's add the hive configuration 
     URL hconfurl = getClassLoader().getResource("hive-default.xml");
     if(hconfurl == null) {
-      l4j.warn("Unable to locate default hive configuration");
+      l4j.debug("hive-default.xml not found.");
     } else {
       addResource(hconfurl);
     }
     URL hsiteurl = getClassLoader().getResource("hive-site.xml");
     if(hsiteurl == null) {
-      l4j.warn("Unable to locate hive site configuration");
+      l4j.debug("hive-site.xml not found.");
     } else {
       addResource(hsiteurl);
     }

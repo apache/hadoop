@@ -8,12 +8,12 @@ STAGE PLANS:
   Stage: Stage-0
       Create Table Operator:
         Create Table
-          isExternal:
-          name: INPUTDDL3
-          # buckets: -1
-          field delimiter: 	
-          isSequenceFile:
           columns: key int, value string
+          field delimiter: 	
+          # buckets: -1
+          name: INPUTDDL3
+          isExternal:
+          isSequenceFile:
 
 
 key	int

@@ -55,8 +55,8 @@ STAGE PLANS:
   Stage: Stage-0
     Move Operator
       files:
-            destination: ../../../../build/contrib/hive/ql/test/data/warehouse/union.out
             hdfs directory:
+            destination: ../../../../build/contrib/hive/ql/test/data/warehouse/union.out
 
 
 238val_238

@@ -42,25 +42,6 @@ public class DynamicSerDe implements SerDe, Serializable {
   transient private TProtocol oprot_;
   transient private TProtocol iprot_;
 
-  public  String getShortName() {
-    return shortName();
-  }
-
-  public static String shortName() {
-    return "dynamic_thrift";
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-
   public static final String META_TABLE_NAME = "name";
 
     static public void main(String args[]) {

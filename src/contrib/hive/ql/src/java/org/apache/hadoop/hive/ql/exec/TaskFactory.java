@@ -44,6 +44,7 @@ public class TaskFactory {
     id = 0;
     taskvec = new ArrayList<taskTuple<? extends Serializable>>();
     taskvec.add(new taskTuple<moveWork>(moveWork.class, MoveTask.class));
+    taskvec.add(new taskTuple<fetchWork>(fetchWork.class, FetchTask.class));
     taskvec.add(new taskTuple<copyWork>(copyWork.class, CopyTask.class));
     taskvec.add(new taskTuple<DDLWork>(DDLWork.class, DDLTask.class));
     taskvec.add(new taskTuple<FunctionWork>(FunctionWork.class, FunctionTask.class));

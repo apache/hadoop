@@ -22,8 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
-import org.apache.hadoop.hive.serde2.thrift_test.Complex;
-import org.apache.hadoop.hive.serde2.thrift_test.IntString;
+import org.apache.hadoop.hive.serde2.thrift.test.Complex;
+import org.apache.hadoop.hive.serde2.thrift.test.IntString;
 
 import junit.framework.TestCase;
 
@@ -50,14 +50,14 @@ public class TestObjectInspectorUtils extends TestCase {
       // real object
       Complex cc = new Complex();
       cc.aint = 1;
-      cc.astring = "test";
+      cc.aString = "test";
       List<Integer> c2 = Arrays.asList(new Integer[]{1,2,3}); 
       cc.lint =  c2;
       List<String> c3 = Arrays.asList(new String[]{"one", "two"});
-      cc.lstring =  c3;
+      cc.lString =  c3;
       List<IntString> c4 = new ArrayList<IntString>(); 
-      cc.lintstring = c4;
-      cc.mstringstring = null; 
+      cc.lintString = c4;
+      cc.mStringString = null; 
       // standard object
       Object c = ObjectInspectorUtils.getStandardObject(cc, oi1);
       

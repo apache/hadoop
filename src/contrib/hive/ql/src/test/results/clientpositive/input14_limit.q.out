@@ -1,0 +1,95 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_COLLIST (TOK_COLREF src key) (TOK_COLREF src value)) (TOK_ALIASLIST tkey tvalue) '/bin/cat'))) (TOK_CLUSTERBY tkey) (TOK_LIMIT 20))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue))) (TOK_WHERE (< (TOK_COLREF tmap tkey) 100))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-2 depends on stages: Stage-1
+  Stage-0 depends on stages: Stage-2
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        tmap:src 
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+              Transform Operator
+                command: /bin/cat
+                output info:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                Reduce Output Operator
+                  key expressions:
+                        expr: tkey
+                        type: string
+                  # partition fields: 1
+                  tag: -1
+                  value expressions:
+                        expr: tkey
+                        type: string
+                        expr: tvalue
+                        type: string
+      Reduce Operator Tree:
+        Extract
+          Limit
+            File Output Operator
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-2
+    Map Reduce
+      Alias -> Map Operator Tree:
+        /tmp/hive-njain/945772770/1814909502.10001 
+          Reduce Output Operator
+            key expressions:
+                  expr: 0
+                  type: string
+            # partition fields: 1
+            tag: -1
+            value expressions:
+                  expr: 0
+                  type: string
+                  expr: 1
+                  type: string
+      # Reducers: 1
+      Reduce Operator Tree:
+        Extract
+          Limit
+            Filter Operator
+              predicate:
+                  expr: (0 < 100)
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: 0
+                      type: string
+                      expr: 1
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+0	val_0
+0	val_0
+0	val_0
+10	val_10
+11	val_11

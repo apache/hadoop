@@ -95,12 +95,14 @@ public class StructTypeInfo extends TypeInfo implements Serializable{
   }
   
   public TypeInfo getStructFieldTypeInfo(String field) {
+    String fieldLowerCase = field.toLowerCase();
     for(int i=0; i<allStructFieldNames.size(); i++) {
-      if (field.equals(allStructFieldNames.get(i))) {
+      if (fieldLowerCase.equals(allStructFieldNames.get(i))) {
         return allStructFieldTypeInfos.get(i);
       }
     }
-    throw new RuntimeException("cannot find field " + field + " in " + allStructFieldNames);
+    throw new RuntimeException("cannot find field " + field + "(lowercase form: " 
+        + fieldLowerCase + ") in " + allStructFieldNames);
     // return null;
   }
   

@@ -9,46 +9,51 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Map Reduce
-      Reduce Operator Tree:
-          Group By Operator
-            keys:
-                  expr: VALUE.2
-                  type: string
-            mode: partial1
-          
-                expr: sum(VALUE.3)
-            File Output Operator
-              table:
-                  input format: org.apache.hadoop.mapred.TextInputFormat
-                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
       Alias -> Map Operator Tree:
         src 
             Reduce Output Operator
-              tag: -1
               key expressions:
-                    expr: 0
-                    type: int
-              value expressions:
                     expr: key
-                    type: string
-                    expr: value
-                    type: string
-                    expr: key
-                    type: string
-                    expr: substr(value, 4)
                     type: string
               # partition fields: -1
+              tag: -1
+              value expressions:
+                    expr: substr(value, 4)
+                    type: string
+      Reduce Operator Tree:
+        Group By Operator
+        
+              expr: sum(VALUE.0)
+          keys:
+                expr: KEY.0
+                type: string
+          mode: partial1
+          File Output Operator
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
 
   Stage: Stage-2
     Map Reduce
+      Alias -> Map Operator Tree:
+        /tmp/hive-njain/748679827/1407352694.10001 
+          Reduce Output Operator
+            key expressions:
+                  expr: 0
+                  type: string
+            # partition fields: 1
+            tag: -1
+            value expressions:
+                  expr: 1
+                  type: string
       Reduce Operator Tree:
         Group By Operator
+        
+              expr: sum(VALUE.0)
           keys:
                 expr: KEY.0
                 type: string
           mode: partial2
-        
-              expr: sum(VALUE.0)
           Select Operator
             expressions:
                   expr: 0
@@ -57,31 +62,20 @@ STAGE PLANS:
                   type: string
             File Output Operator
               table:
-                  name: dest1
-                  serde: simple_meta
                   input format: org.apache.hadoop.mapred.TextInputFormat
                   output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-      Alias -> Map Operator Tree:
-        /tmp/hive-zshao/178504461.10001 
-          Reduce Output Operator
-            tag: -1
-            key expressions:
-                  expr: 0
-                  type: string
-            value expressions:
-                  expr: 1
-                  type: string
-            # partition fields: 1
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest1
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
 
 
 0	0.0
@@ -393,4 +387,3 @@ STAGE PLANS:
 96	96.0
 97	194.0
 98	196.0
-

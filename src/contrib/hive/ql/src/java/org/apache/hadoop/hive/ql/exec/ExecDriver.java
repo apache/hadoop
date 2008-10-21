@@ -27,12 +27,13 @@ import java.net.URLDecoder;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.StringUtils;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.plan.mapredWork;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 public class ExecDriver extends Task<mapredWork> implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  public static final long LOAD_PER_REDUCER = 1024 * 1024 * 1024;
 
   transient protected JobConf job;
 
@@ -80,7 +82,48 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
         LOG.warn("Number of reduce tasks not specified. Defaulting to jobconf value of: " + job.getNumReduceTasks());
         work.setNumReduceTasks(job.getNumReduceTasks());
       }
-    } 
+    }
+    else
+      LOG.info("Number of reduce tasks determined at compile : " + work.getNumReduceTasks());
+  }
+
+  /**
+   * A list of the currently running jobs spawned in this Hive instance that is used
+   * to kill all running jobs in the event of an unexpected shutdown - i.e., the JVM shuts
+   * down while there are still jobs running.
+   */
+  public static HashMap<String,String> runningJobKillURIs = new HashMap<String, String> ();
+
+
+  /**
+   * In Hive, when the user control-c's the command line, any running jobs spawned from that command 
+   * line are best-effort killed.
+   *
+   * This static constructor registers a shutdown thread to iterate over all the running job
+   * kill URLs and do a get on them.
+   *
+   */
+  static {
+    if(new org.apache.hadoop.conf.Configuration().getBoolean("webinterface.private.actions", false)) {
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+          public void run() {
+            for(Iterator<String> elems = runningJobKillURIs.values().iterator(); elems.hasNext() ;  ) {
+              String uri = elems.next();
+              try {
+                System.err.println("killing job with: " + uri);
+                int retCode = ((java.net.HttpURLConnection)new java.net.URL(uri).openConnection()).getResponseCode();
+                if(retCode != 200) {
+                  System.err.println("Got an error trying to kill job with URI: " + uri + " = " + retCode);
+                }
+              } catch(Exception e) {
+                System.err.println("trying to kill job, caught: " + e);
+                // do nothing 
+              }
+            }
+          }
+        }
+                                           );
+    }
   }
 
   /**
@@ -123,6 +166,33 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     return rj;
   }
 
+  private void inferNumReducers() throws Exception {
+    FileSystem fs = FileSystem.get(job);
+    
+    if ((work.getReducer() != null) && (work.getInferNumReducers() == true)) {
+      long inpSz = 0;
+      
+      // based on the input size - estimate the number of reducers
+      Path[] inputPaths = FileInputFormat.getInputPaths(job);
+      
+      for (Path inputP : inputPaths) {
+        if (fs.exists(inputP)) {
+          FileStatus[] fStats = fs.listStatus(inputP);
+          for (FileStatus fStat:fStats) 
+            inpSz += fStat.getLen();
+        }
+      }
+
+      
+      int newRed = (int)(inpSz / LOAD_PER_REDUCER) + 1;
+      if (newRed < work.getNumReduceTasks().intValue())
+      {
+        LOG.warn("Number of reduce tasks inferred based on input size to : " + newRed);
+        work.setNumReduceTasks(Integer.valueOf(newRed));
+      }
+    }
+  }
+
   /**
    * Execute a query plan using Hadoop
    */
@@ -141,24 +211,24 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
       LOG.info("Adding input file " + onefile);
       FileInputFormat.addInputPaths(job, onefile);
     }
-    
+        
     String hiveScratchDir = HiveConf.getVar(job, HiveConf.ConfVars.SCRATCHDIR);
     String jobScratchDir = hiveScratchDir + Utilities.randGen.nextInt();
     FileOutputFormat.setOutputPath(job, new Path(jobScratchDir));
     job.setMapperClass(ExecMapper.class);
-
+    
     job.setMapOutputValueClass(Text.class);
     job.setMapOutputKeyClass(HiveKey.class);    
-
+    
     job.setNumReduceTasks(work.getNumReduceTasks().intValue());
     job.setReducerClass(ExecReducer.class);
-
+    
     job.setInputFormat(org.apache.hadoop.hive.ql.io.HiveInputFormat.class);
-
+    
     // No-Op - we don't really write anything here .. 
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
-
+    
     String auxJars = HiveConf.getVar(job, HiveConf.ConfVars.HIVEAUXJARS);
     if (StringUtils.isNotBlank(auxJars)) {
       LOG.info("adding libjars: " + auxJars);
@@ -168,15 +238,41 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     int returnVal = 0;
     FileSystem fs = null;
     RunningJob rj = null;
-
+    
     try {
       fs = FileSystem.get(job);
+      
+      // if the input is empty exit gracefully
+      Path[] inputPaths = FileInputFormat.getInputPaths(job);
+      boolean emptyInput = true;
+      for (Path inputP : inputPaths) {
+        if(!fs.exists(inputP))
+          continue;
+        
+        FileStatus[] fStats = fs.listStatus(inputP);
+        for (FileStatus fStat:fStats) {
+        	if (fStat.getLen() > 0) {
+        	  emptyInput = false;
+        		break;
+        	}
+        }
+      }
+      	
+      if (emptyInput) {
+        console.printInfo("Job need not be submitted: no output: Success");
+      	return 0;
+      }
+      
+      inferNumReducers();
       JobClient jc = new JobClient(job);
       rj = jc.submitJob(job);
 
+      // add to list of running jobs so in case of abnormal shutdown can kill it.
+      runningJobKillURIs.put(rj.getJobID(),  rj.getTrackingURL() + "&action=kill");
+
       jobInfo(rj);
       rj = jobProgress(jc, rj);
-      
+
       String statusMesg = "Ended Job = " + rj.getJobID();
       if(!rj.isSuccessful()) {
         statusMesg += " with errors";
@@ -203,6 +299,7 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
         if(returnVal != 0 && rj != null) {
           rj.killJob();
         }
+        runningJobKillURIs.remove(rj.getJobID());
       } catch (Exception e) {}
     }
     return (returnVal);
@@ -296,6 +393,17 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
       sb.append(" ");
     }
     return sb.toString();
+  }
+
+  @Override
+  public boolean isMapRedTask() {
+    return true;
+  }
+
+  @Override
+  public boolean hasReduce() {
+    mapredWork w = getWork();
+    return w.getReducer() != null;
   }
 }
 

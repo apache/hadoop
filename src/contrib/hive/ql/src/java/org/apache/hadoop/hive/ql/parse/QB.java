@@ -22,6 +22,7 @@ import java.util.*;
 
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.QBMetaData;
+import org.apache.hadoop.hive.ql.metadata.Table;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,6 +46,7 @@ public class QB {
   private QBMetaData qbm;
   private QBJoinTree qbjoin;
   private String id;
+  private boolean isQuery;
 
   public void print(String msg) {
     LOG.info(msg + "alias=" + qbp.getAlias());
@@ -59,6 +61,9 @@ public class QB {
   public QB(String outer_id, String alias, boolean isSubQ) {
     aliasToTabs = new HashMap<String, String>();
     aliasToSubq = new HashMap<String, QBExpr>();
+    if (alias != null) {
+      alias = alias.toLowerCase();
+    }
     qbp = new QBParseInfo(alias, isSubQ);
     qbm = new QBMetaData();
     this.id = (outer_id == null ? alias : outer_id + ":" + alias);
@@ -85,6 +90,7 @@ public class QB {
   }
 
   public boolean exists(String alias) {
+    alias = alias.toLowerCase();
     if (aliasToTabs.get(alias) != null || aliasToSubq.get(alias) != null)
       return true;
 
@@ -92,11 +98,11 @@ public class QB {
   }
 
   public void setTabAlias(String alias, String tabName) {
-    aliasToTabs.put(alias, tabName);
+    aliasToTabs.put(alias.toLowerCase(), tabName);
   }
 
   public void setSubqAlias(String alias, QBExpr qbexpr) {
-    aliasToSubq.put(alias, qbexpr);
+    aliasToSubq.put(alias.toLowerCase(), qbexpr);
   }
 
   public String getId() {
@@ -128,11 +134,11 @@ public class QB {
   }
 
   public QBExpr getSubqForAlias(String alias) {
-    return aliasToSubq.get(alias);
+    return aliasToSubq.get(alias.toLowerCase());
   }
 
   public String getTabNameForAlias(String alias) {
-    return aliasToTabs.get(alias);
+    return aliasToTabs.get(alias.toLowerCase());
   }
 
   public QBJoinTree getQbJoinTree() {
@@ -141,5 +147,25 @@ public class QB {
 
   public void setQbJoinTree(QBJoinTree qbjoin) {
     this.qbjoin = qbjoin;
+  }
+
+  public void setIsQuery(boolean isQuery) {
+    this.isQuery = isQuery;
+  }
+
+  public boolean getIsQuery() {
+    return isQuery;
+  }
+
+  public boolean isSelectStarQuery() {
+    if (!qbp.isSelectStarQuery() || !aliasToSubq.isEmpty())
+      return false;
+
+    Iterator<Map.Entry<String, Table>> iter = qbm.getAliasToTable().entrySet().iterator();
+    Table tab = ((Map.Entry<String, Table>)iter.next()).getValue();
+    if (tab.isPartitioned())
+      return false;
+    
+    return true;
   }
 }

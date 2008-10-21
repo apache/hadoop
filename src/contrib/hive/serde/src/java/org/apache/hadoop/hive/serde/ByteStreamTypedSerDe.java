@@ -48,6 +48,7 @@ public abstract class ByteStreamTypedSerDe extends TypedSerDe {
     bos = new ByteStream.Output();
     bis = new ByteStream.Input();
     cachedBw = new BytesWritable();
+    json_serializer = new TSerializer();
   }
 
   public Object deserialize(Writable field) throws SerDeException {

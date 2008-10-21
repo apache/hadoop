@@ -21,11 +21,14 @@
          <object class="java.util.ArrayList"> 
           <void method="add"> 
            <object class="org.apache.hadoop.hive.ql.plan.loadFileDesc"> 
+            <void property="columns"> 
+             <string>value</string> 
+            </void> 
             <void property="isDfsDir"> 
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-zshao/160162101.10003.insclause-3</string> 
+             <string>/tmp/hive-njain/356693511/91381909.10003.insclause-3</string> 
             </void> 
             <void property="targetDir"> 
              <string>../../../../build/contrib/hive/ql/test/data/warehouse/dest4.out</string> 
@@ -45,7 +48,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-zshao/160162101.10000.insclause-0</string> 
+             <string>/tmp/hive-njain/356693511/91381909.10000.insclause-0</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc0" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -65,8 +68,8 @@
                  <string>dest1</string> 
                 </void> 
                 <void method="put"> 
-                 <string>bucket_field_name</string> 
-                 <string></string> 
+                 <string>serialization.ddl</string> 
+                 <string>struct dest1 { string key, string value}</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.format</string> 
@@ -77,16 +80,12 @@
                  <string>key,value</string> 
                 </void> 
                 <void method="put"> 
-                 <string>field_to_dimension</string> 
-                 <string></string> 
-                </void> 
-                <void method="put"> 
                  <string>bucket_count</string> 
                  <string>-1</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.lib</string> 
-                 <string>simple_meta</string> 
+                 <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
                 </void> 
                 <void method="put"> 
                  <string>file.inputformat</string> 
@@ -98,12 +97,12 @@
                 </void> 
                 <void method="put"> 
                  <string>location</string> 
-                 <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
+                 <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
                 </void> 
                </object> 
               </void> 
               <void property="serdeClassName"> 
-               <string>simple_meta</string> 
+               <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
               </void> 
              </object> 
             </void> 
@@ -118,7 +117,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-zshao/160162101.10001.insclause-1</string> 
+             <string>/tmp/hive-njain/356693511/91381909.10001.insclause-1</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc1" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -138,8 +137,8 @@
                  <string>dest2</string> 
                 </void> 
                 <void method="put"> 
-                 <string>bucket_field_name</string> 
-                 <string></string> 
+                 <string>serialization.ddl</string> 
+                 <string>struct dest2 { string key, string value}</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.format</string> 
@@ -150,16 +149,12 @@
                  <string>key,value</string> 
                 </void> 
                 <void method="put"> 
-                 <string>field_to_dimension</string> 
-                 <string></string> 
-                </void> 
-                <void method="put"> 
                  <string>bucket_count</string> 
                  <string>-1</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.lib</string> 
-                 <string>simple_meta</string> 
+                 <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
                 </void> 
                 <void method="put"> 
                  <string>file.inputformat</string> 
@@ -171,12 +166,12 @@
                 </void> 
                 <void method="put"> 
                  <string>location</string> 
-                 <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest2</string> 
+                 <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest2</string> 
                 </void> 
                </object> 
               </void> 
               <void property="serdeClassName"> 
-               <string>simple_meta</string> 
+               <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
               </void> 
              </object> 
             </void> 
@@ -200,7 +195,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-zshao/160162101.10002.insclause-2</string> 
+             <string>/tmp/hive-njain/356693511/91381909.10002.insclause-2</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc2" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -220,8 +215,8 @@
                  <string>dest3</string> 
                 </void> 
                 <void method="put"> 
-                 <string>bucket_field_name</string> 
-                 <string></string> 
+                 <string>serialization.ddl</string> 
+                 <string>struct dest3 { string key, string value}</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.format</string> 
@@ -236,16 +231,12 @@
                  <string>ds/hr</string> 
                 </void> 
                 <void method="put"> 
-                 <string>field_to_dimension</string> 
-                 <string></string> 
-                </void> 
-                <void method="put"> 
                  <string>bucket_count</string> 
                  <string>-1</string> 
                 </void> 
                 <void method="put"> 
                  <string>serialization.lib</string> 
-                 <string>simple_meta</string> 
+                 <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
                 </void> 
                 <void method="put"> 
                  <string>file.inputformat</string> 
@@ -257,12 +248,12 @@
                 </void> 
                 <void method="put"> 
                  <string>location</string> 
-                 <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest3</string> 
+                 <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest3</string> 
                 </void> 
                </object> 
               </void> 
               <void property="serdeClassName"> 
-               <string>simple_meta</string> 
+               <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
               </void> 
              </object> 
             </void> 
@@ -301,7 +292,7 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-zshao/160162101.10000.insclause-0</string> 
+                       <string>/tmp/hive-njain/356693511/91381909.10000.insclause-0</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc0"/> 
@@ -485,7 +476,7 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-zshao/160162101.10001.insclause-1</string> 
+                       <string>/tmp/hive-njain/356693511/91381909.10001.insclause-1</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc1"/> 
@@ -710,7 +701,7 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-zshao/160162101.10002.insclause-2</string> 
+                       <string>/tmp/hive-njain/356693511/91381909.10002.insclause-2</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc2"/> 
@@ -915,7 +906,7 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-zshao/160162101.10003.insclause-3</string> 
+                       <string>/tmp/hive-njain/356693511/91381909.10003.insclause-3</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -1067,7 +1058,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>src</string> 
@@ -1079,7 +1070,7 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+       <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
        <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
         <void property="partSpec"> 
          <object class="java.util.LinkedHashMap"/> 
@@ -1102,8 +1093,8 @@
              <string>src</string> 
             </void> 
             <void method="put"> 
-             <string>bucket_field_name</string> 
-             <string></string> 
+             <string>serialization.ddl</string> 
+             <string>struct src { string key, string value}</string> 
             </void> 
             <void method="put"> 
              <string>serialization.format</string> 
@@ -1114,16 +1105,12 @@
              <string>key,value</string> 
             </void> 
             <void method="put"> 
-             <string>field_to_dimension</string> 
-             <string></string> 
-            </void> 
-            <void method="put"> 
              <string>bucket_count</string> 
              <string>-1</string> 
             </void> 
             <void method="put"> 
              <string>serialization.lib</string> 
-             <string>simple_meta</string> 
+             <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
             </void> 
             <void method="put"> 
              <string>file.inputformat</string> 
@@ -1135,12 +1122,12 @@
             </void> 
             <void method="put"> 
              <string>location</string> 
-             <string>file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
+             <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src</string> 
             </void> 
            </object> 
           </void> 
           <void property="serdeClassName"> 
-           <string>simple_meta</string> 
+           <string>org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe</string> 
           </void> 
          </object> 
         </void> 

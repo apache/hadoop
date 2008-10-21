@@ -19,30 +19,20 @@
 package org.apache.hadoop.hive.ql.exec;
 
 /**
- * A dummy User-defined function (UDF) for the use with Hive.
+ * A User-defined function (UDF) for the use with Hive.
  * 
- * New UDF classes do NOT need to inherit from this UDF class.
+ * New UDF classes need to inherit from this UDF class.
  * 
  * Required for all UDF classes:
- * 1. Implement a single method named "evaluate" which will be called by Hive.
+ * 1. Implement one or more methods named "evaluate" which will be called by Hive.
  *    The following are some examples:
+ *    public int evaluate();
  *    public int evaluate(int a);
  *    public double evaluate(int a, double b);
  *    public String evaluate(String a, int b, String c);
  * 
- *    "evaluate" should neither be a void method, nor should it returns "null" in any case.
- *    In both cases, the Hive system will throw an HiveException saying the evaluation of UDF
- *    is failed.
+ *    "evaluate" should never be a void method.  However it can return "null" if needed.
  */
-public class UDF {
+public interface UDF {
 
-  public UDF() { }
-  
-  /** Evaluate the UDF.
-   *  @return plain old java object
-   **/
-  public int evaluate() {
-    return 0;
-  }
-  
 }

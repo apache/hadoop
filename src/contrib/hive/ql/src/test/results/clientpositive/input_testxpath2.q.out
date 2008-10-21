@@ -1,0 +1,52 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION size (TOK_COLREF src_thrift lint))) (TOK_SELEXPR (TOK_FUNCTION size (TOK_COLREF src_thrift lintstring))) (TOK_SELEXPR (TOK_FUNCTION size (TOK_COLREF src_thrift mstringstring)))) (TOK_WHERE (AND (TOK_FUNCTION TOK_ISNOTNULL (TOK_COLREF src_thrift lint)) (NOT (TOK_FUNCTION TOK_ISNULL (TOK_COLREF src_thrift mstringstring)))))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src_thrift 
+            Filter Operator
+              predicate:
+                  expr: (lint is not null and not mstringstring is null)
+                  type: Boolean
+              Select Operator
+                expressions:
+                      expr: size(lint)
+                      type: int
+                      expr: size(lintstring)
+                      type: int
+                      expr: size(mstringstring)
+                      type: int
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1
+3	1	1

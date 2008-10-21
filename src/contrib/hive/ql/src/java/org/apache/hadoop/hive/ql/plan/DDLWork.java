@@ -22,11 +22,12 @@ import java.io.Serializable;
 
 public class DDLWork implements Serializable {
   private static final long serialVersionUID = 1L;
-  private createTableDesc  createTblDesc;
-  private dropTableDesc    dropTblDesc;
-  private alterTableDesc   alterTblDesc;
-  private showTablesDesc   showTblsDesc;
-  private descTableDesc    descTblDesc;
+  private createTableDesc      createTblDesc;
+  private dropTableDesc        dropTblDesc;
+  private alterTableDesc       alterTblDesc;
+  private showTablesDesc       showTblsDesc;
+  private showPartitionsDesc   showPartsDesc;
+  private descTableDesc        descTblDesc;
 
   public DDLWork() { }
 
@@ -63,6 +64,13 @@ public class DDLWork implements Serializable {
    */
   public DDLWork(showTablesDesc showTblsDesc) {
     this.showTblsDesc = showTblsDesc;
+  }
+
+  /**
+   * @param showPartsDesc
+   */
+  public DDLWork(showPartitionsDesc showPartsDesc) {
+    this.showPartsDesc = showPartsDesc;
   }
 
   /**
@@ -123,6 +131,22 @@ public class DDLWork implements Serializable {
    */
   public void setShowTblsDesc(showTablesDesc showTblsDesc) {
     this.showTblsDesc = showTblsDesc;
+  }
+
+
+  /**
+   * @return the showPartsDesc
+   */
+  @explain(displayName="Show Partitions Operator")
+  public showPartitionsDesc getShowPartsDesc() {
+    return showPartsDesc;
+  }
+
+  /**
+   * @param showPartsDesc the showPartsDesc to set
+   */
+  public void setShowPartsDesc(showPartitionsDesc showPartsDesc) {
+    this.showPartsDesc = showPartsDesc;
   }
 
   /**

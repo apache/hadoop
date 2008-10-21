@@ -19,7 +19,6 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -29,7 +28,7 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 public class alterTableDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
-  public static enum alterTableTypes {RENAME, ADDCOLS};
+  public static enum alterTableTypes {RENAME, ADDCOLS, REPLACECOLS};
     
   alterTableTypes      op;
   String               oldName;
@@ -50,8 +49,8 @@ public class alterTableDesc extends ddlDesc implements Serializable
    * @param name name of the table
    * @param newCols new columns to be added
    */
-  public alterTableDesc(String name, List<FieldSchema> newCols) {
-    op = alterTableTypes.ADDCOLS;
+  public alterTableDesc(String name, List<FieldSchema> newCols, alterTableTypes alterType) {
+    this.op = alterType;
     this.oldName = name;
     this.newCols = newCols;
   }
@@ -100,6 +99,8 @@ public class alterTableDesc extends ddlDesc implements Serializable
       return "rename";
     case ADDCOLS:
       return "add columns";
+    case REPLACECOLS:
+      return "replace columns";
     }
     
     return "unknown";
@@ -128,4 +129,5 @@ public class alterTableDesc extends ddlDesc implements Serializable
   public void setNewCols(List<FieldSchema> newCols) {
     this.newCols = newCols;
   }
+
 }

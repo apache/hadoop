@@ -23,23 +23,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.UDF;
 
 
-public class UDFOPNull extends UDF {
+public class UDFOPNull implements UDF {
 
   private static Log LOG = LogFactory.getLog("org.apache.hadoop.hive.ql.udf.UDFOPNull");
 
   public UDFOPNull() {
   }
 
-  public Boolean evaluate(Long a)  {
-    return Boolean.valueOf(a == null ? true : false);
-  }
-
-  public Boolean evaluate(Number a)  {
-    return Boolean.valueOf(a == null ? true : false);
-  }
-
-  public Boolean evaluate(String a)  {
-    return Boolean.valueOf(a == null ? true : false);
+  public Boolean evaluate(Object a)  {
+    return Boolean.valueOf(a == null);
   }
 
 }

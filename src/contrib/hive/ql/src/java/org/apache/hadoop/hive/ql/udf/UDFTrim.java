@@ -24,7 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-public class UDFTrim extends UDF {
+public class UDFTrim implements UDF {
 
   public UDFTrim() {
   }
@@ -33,7 +33,7 @@ public class UDFTrim extends UDF {
     if (s == null) {
       return null;
     }
-    return StringUtils.stripEnd(s, " ");
+    return StringUtils.strip(s, " ");
   }
 
 }

@@ -29,7 +29,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.DB;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
-import org.apache.hadoop.hive.ql.thrift.Complex;
+import org.apache.hadoop.hive.serde2.thrift.test.Complex;
 import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
 import org.apache.hadoop.hive.serde2.ThriftDeserializer;
 import org.apache.hadoop.hive.serde.Constants;
@@ -137,7 +137,8 @@ public class TestHive extends TestCase {
         // now that URI is set correctly, set the original table's uri and then compare the two tables
         tbl.setDataLocation(ft.getDataLocation());
         assertTrue("Tables  doesn't match: " + tableName, ft.getTTable().equals(tbl.getTTable()));
-        assertEquals("Serde is not set correctly", tbl.getDeserializer().getShortName(), ft.getDeserializer().getShortName());
+        assertEquals("Serde is not set correctly", tbl.getDeserializer().getClass().getName(), ft.getDeserializer().getClass().getName());
+        assertEquals("SerializationLib is not set correctly", tbl.getSerializationLib(), MetadataTypedColumnsetSerDe.class.getName());
       } catch (HiveException e) {
         e.printStackTrace();
         assertTrue("Unable to fetch table correctly: " + tableName, false);
@@ -195,7 +196,8 @@ public class TestHive extends TestCase {
         // now that URI is set correctly, set the original table's uri and then compare the two tables
         tbl.setDataLocation(ft.getDataLocation());
         assertTrue("Tables  doesn't match: " + tableName, ft.getTTable().equals(tbl.getTTable()));
-        assertEquals("Serde is not set correctly", tbl.getDeserializer().getShortName(), ft.getDeserializer().getShortName());
+        assertEquals("SerializationLib is not set correctly", tbl.getSerializationLib(), ThriftDeserializer.class.getName());
+        assertEquals("Serde is not set correctly", tbl.getDeserializer().getClass().getName(), ft.getDeserializer().getClass().getName());
       } catch (HiveException e) {
         System.err.println(StringUtils.stringifyException(e));
         assertTrue("Unable to fetch table correctly: " + tableName, false);

@@ -54,5 +54,4 @@ public interface Serializer {
    */
   public Writable serialize(Object obj, ObjectInspector objInspector) throws SerDeException;
 
-  public String getShortName();
 }

@@ -116,11 +116,16 @@ public class ReflectionStructObjectInspector implements StructObjectInspector {
     if (data == null) {
       return null;
     }
+    if (!(fieldRef instanceof MyField)) {
+      throw new RuntimeException("fieldRef has to be of MyField");
+    }
+    MyField f = (MyField) fieldRef;
     try {
-      MyField f = (MyField) fieldRef;
-      return f.field.get(data);
+      Object r = f.field.get(data);
+      return r;
     } catch (Exception e) {
-      throw new RuntimeException(e); 
+      throw new RuntimeException("cannot get field " + f.field + " from " 
+    		  + data.getClass() + " " + data); 
     }
   }
   public List<Object> getStructFieldsDataAsList(Object data) {

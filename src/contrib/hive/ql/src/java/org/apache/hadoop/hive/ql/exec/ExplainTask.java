@@ -28,6 +28,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.ql.plan.explain;
@@ -183,7 +185,10 @@ public class ExplainTask extends Task<explainWork> implements Serializable {
     }
     
     // We look at all methods that generate values for explain
-    for(Method m: work.getClass().getMethods()) {
+    Method[] methods = work.getClass().getMethods();
+    Arrays.sort(methods, new MethodComparator());
+
+    for(Method m: methods) {
       int prop_indents = indent+2;
       note = m.getAnnotation(explain.class);
 
@@ -330,4 +335,13 @@ public class ExplainTask extends Task<explainWork> implements Serializable {
                  new HashSet<Task<? extends Serializable>>(), indent+2);
     }
   }
+
+  public static class MethodComparator implements Comparator {
+    public int compare(Object o1, Object o2) {
+      Method m1 = (Method)o1;
+      Method m2 = (Method)o2;
+      return m1.getName().compareTo(m2.getName());
+    }
+  }
+
 }

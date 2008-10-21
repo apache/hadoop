@@ -22,10 +22,10 @@ STAGE PLANS:
                       type: string
                 File Output Operator
                   table:
-                      name: dest1
-                      serde: simple_meta
                       input format: org.apache.hadoop.mapred.TextInputFormat
                       output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
             Filter Operator
               predicate:
                   expr: ((key >= 100) and (key < 200))
@@ -38,10 +38,10 @@ STAGE PLANS:
                       type: string
                 File Output Operator
                   table:
-                      name: dest2
-                      serde: simple_meta
                       input format: org.apache.hadoop.mapred.TextInputFormat
                       output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest2
             Filter Operator
               predicate:
                   expr: (key >= 200)
@@ -52,35 +52,35 @@ STAGE PLANS:
                       type: string
                 File Output Operator
                   table:
-                      name: dest3
-                      serde: simple_meta
                       input format: org.apache.hadoop.mapred.TextInputFormat
                       output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest3
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 name: dest1
-                serde: simple_meta
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
             replace:
             table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 name: dest2
-                serde: simple_meta
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
-            table:
-                name: dest3
-                serde: simple_meta
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
             partition:
               ds 2008-04-08
               hr 12
             replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest3
 
 
 86	val_86
@@ -167,7 +167,6 @@ STAGE PLANS:
 37	val_37
 90	val_90
 97	val_97
-
 165	val_165
 193	val_193
 150	val_150
@@ -273,7 +272,6 @@ STAGE PLANS:
 194	val_194
 126	val_126
 169	val_169
-
 238	NULL	2008-04-08	12
 311	NULL	2008-04-08	12
 409	NULL	2008-04-08	12
@@ -585,4 +583,3 @@ STAGE PLANS:
 403	NULL	2008-04-08	12
 400	NULL	2008-04-08	12
 200	NULL	2008-04-08	12
-

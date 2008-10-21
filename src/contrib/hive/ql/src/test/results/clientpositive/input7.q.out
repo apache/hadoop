@@ -18,34 +18,34 @@ STAGE PLANS:
                     type: string
               File Output Operator
                 table:
-                    name: dest1
-                    serde: simple_meta
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                    name: dest1
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest1
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
 
 
 NULL	238
-NULL	NULL
+NULL	
 NULL	311
-NULL	NULL
-NULL	NULL
-NULL	NULL
+NULL	
+NULL	
+NULL	
 NULL	255
 NULL	278
 NULL	98
-NULL	NULL
-NULL	NULL
-NULL	NULL
+NULL	
+NULL	
+NULL	
 NULL	401
 NULL	150
 NULL	273
@@ -56,7 +56,6 @@ NULL	128
 NULL	213
 NULL	146
 NULL	406
-NULL	NULL
-NULL	NULL
-NULL	NULL
-
+NULL	
+NULL	
+NULL	

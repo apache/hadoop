@@ -1,10 +1,8 @@
+CREATE TABLE dest1(c1 STRING);
+
+FROM src INSERT OVERWRITE TABLE dest1 SELECT '  abc  ' WHERE src.key = 86;
+
 EXPLAIN
-CREATE TEMPORARY FUNCTION testlength AS 'org.apache.hadoop.hive.ql.udf.UDFTestLength';
+SELECT '|', trim(dest1.c1), '|', rtrim(dest1.c1), '|', ltrim(dest1.c1), '|' FROM dest1;
 
-CREATE TEMPORARY FUNCTION testlength AS 'org.apache.hadoop.hive.ql.udf.UDFTestLength';
-
-CREATE TABLE dest1(len INT);
-
-FROM src INSERT OVERWRITE TABLE dest1 SELECT testlength(src.value);
-
-SELECT dest1.* FROM dest1;
+SELECT '|', trim(dest1.c1), '|', rtrim(dest1.c1), '|', ltrim(dest1.c1), '|' FROM dest1;

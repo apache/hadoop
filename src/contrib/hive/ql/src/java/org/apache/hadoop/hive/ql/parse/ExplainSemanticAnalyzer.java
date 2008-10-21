@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hive.ql.parse;
 
-import java.io.File;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.antlr.runtime.tree.CommonTree;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.Context;
+import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.plan.explainWork;
 
@@ -34,7 +37,7 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
     super(conf);
   }
 
-  public void analyze(CommonTree ast, Context ctx) throws SemanticException {
+  public void analyzeInternal(CommonTree ast, Context ctx) throws SemanticException {
     
     // Create a semantic analyzer for the query
     BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, (CommonTree)ast.getChild(0));
@@ -46,9 +49,18 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
     
     ctx.setResFile(new Path(getTmpFileName()));
-    
-    rootTasks.add(TaskFactory.get(new explainWork(ctx.getResFile(),
-                                                  sem.getRootTasks(),
+    List<Task<? extends Serializable>> tasks = sem.getRootTasks();
+    Task<? extends Serializable> fetchTask = sem.getFetchTask();
+    if (tasks == null) {
+    	if (fetchTask != null) {
+    		tasks = new ArrayList<Task<? extends Serializable>>();
+    		tasks.add(fetchTask);
+    	}
+    }
+    else if (fetchTask != null)
+    	tasks.add(fetchTask); 
+    		
+    rootTasks.add(TaskFactory.get(new explainWork(ctx.getResFile(), tasks,
                                                   ((CommonTree)ast.getChild(0)).toStringTree(),
                                                   extended), this.conf));
   }
