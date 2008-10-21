@@ -113,7 +113,7 @@ classes.<br />(Suresh Srinivas via cdouglas)</li>
 </a></h2>
 <ul id="release_0.19.0_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(20)
+</a>&nbsp;&nbsp;&nbsp;(21)
     <ol id="release_0.19.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
@@ -172,6 +172,15 @@ WritableJobConf. Configuration.write is renamed to writeXml.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4281">HADOOP-4281</a>. Change dfsadmin to report available disk space in a format
 consistent with the web interface as defined in <a href="http://issues.apache.org/jira/browse/HADOOP-2816">HADOOP-2816</a>.<br />(Suresh
 Srinivas via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4430">HADOOP-4430</a>. Further change the cluster summary at name node web that was
+changed in <a href="http://issues.apache.org/jira/browse/HADOOP-2816">HADOOP-2816</a>:
+  Non DFS Used - This indicates the disk space taken by non DFS file from
+                 the Configured capacity
+  DFS Used % - DFS Used % of Configured Capacity
+  DFS Remaining % - Remaing % Configured Capacity available for DFS use
+DFS command line report reflects the same change. Config parameter
+dfs.datanode.du.pct is no longer used and is removed from the
+hadoop-default.xml.<br />(Suresh Srinivas via hairong)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._new_features_')">  NEW FEATURES
@@ -262,7 +271,7 @@ changes from the prior release.<br />(cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(74)
+</a>&nbsp;&nbsp;&nbsp;(77)
     <ol id="release_0.19.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4205">HADOOP-4205</a>. hive: metastore and ql to use the refactored SerDe library.<br />(zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4106">HADOOP-4106</a>. libhdfs: add time, permission and user attribute support
@@ -395,6 +404,13 @@ incrementing the task attempt numbers by 1000 when the job restarts.<br />(Amar 
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3790">HADOOP-3790</a>. Add more unit tests for testing HDFS file append.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4150">HADOOP-4150</a>. Include librecordio in hadoop releases.<br />(Giridharan Kesavan
 via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4321">HADOOP-4321</a>. Include documentation for the capacity scheduler.<br />(Hemanth
+Yamijala via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4424">HADOOP-4424</a>. Change menu layout for Hadoop documentation (Boris Shkolnik
+via cdouglas).
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4438">HADOOP-4438</a>. Update forrest documentation to include missing FsShell
+commands.<br />(Suresh Srinivas via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -427,7 +443,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(139)
+</a>&nbsp;&nbsp;&nbsp;(140)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -687,9 +703,13 @@ Fix the case when primary is dead.<br />(dhruba via szetszwo)</li>
 append.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4449">HADOOP-4449</a>. Fix dfsadmin usage.<br />(Raghu Angadi via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4455">HADOOP-4455</a>. Added TestSerDe so that unit tests can run successfully.<br />(Ashish Thusoo via dhruba)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4457">HADOOP-4457</a>. Fixes an input split logging problem introduced by
 <a href="http://issues.apache.org/jira/browse/HADOOP-3245">HADOOP-3245</a>.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4464">HADOOP-4464</a>. Separate out TestFileCreationClient from TestFileCreation.
+(Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4404">HADOOP-4404</a>. saveFSImage() removes files from a storage directory that do
+not correspond to its type.<br />(shv)</li>
     </ol>
   </li>
 </ul>
@@ -699,7 +719,7 @@ append.<br />(szetszwo)</li>
 </a></h3>
 <ul id="release_0.18.2_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(8)
+</a>&nbsp;&nbsp;&nbsp;(9)
     <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
@@ -714,6 +734,7 @@ ArrayIndexOutOfBoundsException.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4398">HADOOP-4398</a>. No need to truncate access time in INode. Also fixes NPE
 in CreateEditsLog.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
     </ol>
   </li>
 </ul>
