@@ -20,22 +20,31 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   
   private MiniDFSCluster cluster;
+  private String defaultWorkingDirectory;
 
   @Override
   protected void setUp() throws Exception {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fs = cluster.getFileSystem();
+    defaultWorkingDirectory = "/user/" + 
+           UnixUserGroupInformation.login().getUserName();
   }
   
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
     cluster.shutdown();
+  }
+
+  @Override
+  protected String getDefaultWorkingDirectory() {
+    return defaultWorkingDirectory;
   }
   
 }
