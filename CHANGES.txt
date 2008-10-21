@@ -523,6 +523,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4438. Update forrest documentation to include missing FsShell
     commands. (Suresh Srinivas via cdouglas)
 
+    HADOOP-4105.  Add forrest documentation for libhdfs.
+    (Pete Wyckoff via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-3556. Removed lock contention in MD5Hash by changing the 
