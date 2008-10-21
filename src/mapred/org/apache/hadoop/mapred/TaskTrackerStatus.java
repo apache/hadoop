@@ -55,12 +55,12 @@ class TaskTrackerStatus implements Writable {
   static class ResourceStatus implements Writable {
     
     private long freeVirtualMemory;
-    private long defaultVirtualMemoryPerTask;
+    private long totalMemory;
     private long availableSpace;
     
     ResourceStatus() {
       freeVirtualMemory = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
-      defaultVirtualMemoryPerTask = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+      totalMemory = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
       availableSpace = Long.MAX_VALUE;
     }
     
@@ -87,25 +87,24 @@ class TaskTrackerStatus implements Writable {
     }
 
     /**
-     * Set the default amount of virtual memory per task.
-     * @param vmem amount of free virtual memory in kilobytes.
+     * Set the maximum amount of virtual memory on the tasktracker.
+     * @param vmem maximum amount of virtual memory on the tasktracker in kilobytes.
      */
-    void setDefaultVirtualMemoryPerTask(long defaultVmem) {
-      defaultVirtualMemoryPerTask = defaultVmem;
+    void setTotalMemory(long totalMem) {
+      totalMemory = totalMem;
     }
     
     /**
-     * Get the default amount of virtual memory per task.
+     * Get the maximum amount of virtual memory on the tasktracker.
      * 
-     * This amount will be returned if a task's job does not specify any
-     * virtual memory itself. If this is 
+     * If this is
      * {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should be ignored 
      * and not used in any computation.
      * 
-     * @return default amount of virtual memory per task in kilobytes. 
+     * @return maximum amount of virtual memory on the tasktracker in kilobytes. 
      */    
-    long getDefaultVirtualMemoryPerTask() {
-      return defaultVirtualMemoryPerTask;
+    long getTotalMemory() {
+      return totalMemory;
     }
     
     void setAvailableSpace(long availSpace) {
@@ -122,13 +121,13 @@ class TaskTrackerStatus implements Writable {
     
     public void write(DataOutput out) throws IOException {
       WritableUtils.writeVLong(out, freeVirtualMemory);
-      WritableUtils.writeVLong(out, defaultVirtualMemoryPerTask);
+      WritableUtils.writeVLong(out, totalMemory);
       WritableUtils.writeVLong(out, availableSpace);
     }
     
     public void readFields(DataInput in) throws IOException {
       freeVirtualMemory = WritableUtils.readVLong(in);;
-      defaultVirtualMemoryPerTask = WritableUtils.readVLong(in);;
+      totalMemory = WritableUtils.readVLong(in);;
       availableSpace = WritableUtils.readVLong(in);;
     }
   }

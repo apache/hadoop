@@ -74,7 +74,7 @@ Following deprecated methods in RawLocalFileSystem are removed:
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(8)
+</a>&nbsp;&nbsp;&nbsp;(9)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4234">HADOOP-4234</a>. Fix KFS "glue" layer to allow applications to interface
 with multiple KFS metaservers.<br />(Sriram Rao via lohit)</li>
@@ -90,6 +90,8 @@ message.<br />(stevel via omalley)</li>
 understandable.<br />(Yuri Pradkin via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4238">HADOOP-4238</a>. When listing jobs, if scheduling information isn't available
 print NA instead of empty output.<br />(Sreekanth Ramakrishnan via johan)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4284">HADOOP-4284</a>. Support filters that apply to all requests, or global filters,
+to HttpServer.<br />(Kan Zhang via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -443,7 +445,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(140)
+</a>&nbsp;&nbsp;&nbsp;(141)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -710,6 +712,8 @@ append.<br />(szetszwo)</li>
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4404">HADOOP-4404</a>. saveFSImage() removes files from a storage directory that do
 not correspond to its type.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4149">HADOOP-4149</a>. Fix handling of updates to the job priority, by changing the
+list of jobs to be keyed by the priority, submit time, and job tracker id.<br />(Amar Kamat via omalley)</li>
     </ol>
   </li>
 </ul>
@@ -719,7 +723,7 @@ not correspond to its type.<br />(shv)</li>
 </a></h3>
 <ul id="release_0.18.2_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(9)
+</a>&nbsp;&nbsp;&nbsp;(10)
     <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
@@ -735,6 +739,8 @@ ArrayIndexOutOfBoundsException.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4398">HADOOP-4398</a>. No need to truncate access time in INode. Also fixes NPE
 in CreateEditsLog.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4369">HADOOP-4369</a>. Use setMetric(...) instead of incrMetric(...) for metrics
+averages.<br />(Brian Bockelman via szetszwo)</li>
     </ol>
   </li>
 </ul>

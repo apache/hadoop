@@ -224,10 +224,6 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="dfs.datanode.du.pct">dfs.datanode.du.pct</a></td><td>0.98f</td><td>When calculating remaining space, only use this percentage of the real available space
-  </td>
-</tr>
-<tr>
 <td><a name="dfs.name.dir">dfs.name.dir</a></td><td>${hadoop.tmp.dir}/dfs/name</td><td>Determines where on the local filesystem the DFS name node
       should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
@@ -908,33 +904,6 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.task.cache.levels">mapred.task.cache.levels</a></td><td>2</td><td> This is the max level of the task cache. For example, if
     the level is 2, the tasks cached are at the host level and at the rack
     level.
-  </td>
-</tr>
-<tr>
-<td><a name="mapred.tasktracker.tasks.maxmemory">mapred.tasktracker.tasks.maxmemory</a></td><td>-1</td><td> The maximum amount of virtual memory in kilobytes all tasks 
-  	running on a tasktracker, including sub-processes they launch, can use. 
-  	This value is used to compute the amount of free memory available for 
-  	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
-  	 to use a share of this amount. Any task exceeding its share will be 
-  	killed. If set to -1, this functionality is disabled, and 
-  	mapred.task.maxmemory is ignored. Further, it will be enabled only on the
-  	systems where org.apache.hadoop.util.ProcfsBasedProcessTree is available,
-  	i.e at present only on Linux.
-  </td>
-</tr>
-<tr>
-<td><a name="mapred.task.maxmemory">mapred.task.maxmemory</a></td><td>-1</td><td> The maximum amount of memory in kilobytes any task of a job 
-    will use. A task of this job will be scheduled on a tasktracker, only if 
-    the amount of free memory on the tasktracker is greater than or 
-    equal to this value. If set to -1, tasks are assured a memory limit on
-    the tasktracker equal to 
-    mapred.tasktracker.tasks.maxmemory/number of slots. If the value of 
-    mapred.tasktracker.tasks.maxmemory is set to -1, this value is ignored.
-    
-    Note: If mapred.child.java.opts is specified with an Xmx value, or if 
-    mapred.child.ulimit is specified, then the value of mapred.task.maxmemory
-    must be set to a higher value than these. If not, the task might be 
-    killed even though these limits are not reached.
   </td>
 </tr>
 <tr>

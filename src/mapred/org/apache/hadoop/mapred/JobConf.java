@@ -108,7 +108,7 @@ public class JobConf extends Configuration {
    * A value which if set for memory related configuration options,
    * indicates that the options are turned off.
    */
-  public static final long DISABLED_VIRTUAL_MEMORY_LIMIT = -1L;
+  static final long DISABLED_VIRTUAL_MEMORY_LIMIT = -1L;
   
   /**
    * Name of the queue to which jobs will be submitted, if no queue
@@ -1337,37 +1337,6 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * The maximum amount of virtual memory all tasks running on a
-   * tasktracker, including sub-processes they launch, can use.
-   *  
-   * This value is used to compute the amount of free memory 
-   * available for tasks. Any task scheduled on this tasktracker is 
-   * guaranteed and constrained to use a share of this amount. Any task 
-   * exceeding its share will be killed.
-   * 
-   * If set to {@link #DISABLED_VIRTUAL_MEMORY_LIMIT}, this functionality 
-   * is disabled.
-   * 
-   * @return maximum amount of virtual memory in kilobytes to divide among
-   * @see #getMaxVirtualMemoryForTask()
-   */
-  public long getMaxVirtualMemoryForTasks() {
-    return getLong("mapred.tasktracker.tasks.maxmemory", 
-                      DISABLED_VIRTUAL_MEMORY_LIMIT);
-  }
-  
-  /**
-   * Set the maximum amount of virtual memory all tasks running on a
-   * tasktracker, including sub-processes they launch, can use.
-   * 
-   * @param vmem maximum amount of virtual memory in kilobytes that can be used.
-   * @see #getMaxVirtualMemoryForTasks()
-   */
-  public void setMaxVirtualMemoryForTasks(long vmem) {
-    setLong("mapred.tasktracker.tasks.maxmemory", vmem);
-  }
-  
-  /**
    * The maximum amount of memory any task of this job will use.
    * 
    * A task of this job will be scheduled on a tasktracker, only if the
@@ -1375,15 +1344,14 @@ public class JobConf extends Configuration {
    * or equal to this value.
    * 
    * If set to {@link #DISABLED_VIRTUAL_MEMORY_LIMIT}, tasks are assured 
-   * a memory limit on the tasktracker equal to
-   * mapred.tasktracker.tasks.maxmemory/number of slots. If the value of
+   * a memory limit set to mapred.task.default.maxmemory. If the value of
    * mapred.tasktracker.tasks.maxmemory is set to -1, this value is 
    * ignored.
    * 
    * @return The maximum amount of memory any task of this job will use, in kilobytes.
    * @see #getMaxVirtualMemoryForTasks()
    */
-  public long getMaxVirtualMemoryForTask() {
+  long getMaxVirtualMemoryForTask() {
     return getLong("mapred.task.maxmemory", DISABLED_VIRTUAL_MEMORY_LIMIT);
   }
   
@@ -1394,7 +1362,7 @@ public class JobConf extends Configuration {
    * can use.
    * @see #getMaxVirtualMemoryForTask()
    */
-  public void setMaxVirtualMemoryForTask(long vmem) {
+  void setMaxVirtualMemoryForTask(long vmem) {
     setLong("mapred.task.maxmemory", vmem);
   }
   
