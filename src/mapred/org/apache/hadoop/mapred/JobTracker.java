@@ -113,6 +113,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   final int MAX_COMPLETE_USER_JOBS_IN_MEMORY;
 
+   /**
+    * The minimum time (in ms) that a job's information has to remain
+    * in the JobTracker's memory before it is retired.
+    */
+  static final int MIN_TIME_BEFORE_RETIRE = 60000;
+
+
   private int nextJobId = 1;
 
   public static final Log LOG = LogFactory.getLog(JobTracker.class);
@@ -343,12 +350,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         try {
           Thread.sleep(RETIRE_JOB_CHECK_INTERVAL);
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
-          long retireBefore = System.currentTimeMillis() - 
-            RETIRE_JOB_INTERVAL;
+          long now = System.currentTimeMillis();
+          long retireBefore = now - RETIRE_JOB_INTERVAL;
+
           synchronized (jobs) {
             for(JobInProgress job: jobs.values()) {
               if (job.getStatus().getRunState() != JobStatus.RUNNING &&
                   job.getStatus().getRunState() != JobStatus.PREP &&
+                  (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now) &&
                   (job.getFinishTime()  < retireBefore)) {
                 retiredJobs.add(job);
               }
@@ -1524,7 +1533,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     } catch (IOException ioe) {
       LOG.info("Failed to finalize the log file recovery for job " + id, ioe);
     }
-    
+
+    long now = System.currentTimeMillis();
     
     // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
     // in memory; information about the purged jobs is available via
@@ -1551,6 +1561,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
               // Do not delete 'current'
               // finished job just yet.
               if (rjob == job) {
+                break;
+              }
+
+              // do not retire jobs that finished in the very recent past.
+              if (rjob.getFinishTime() + MIN_TIME_BEFORE_RETIRE > now) {
                 break;
               }
                 

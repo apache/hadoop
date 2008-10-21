@@ -1141,6 +1141,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
             break;
           }
           running = jc.getJob(jobId);
+          if (running == null) {
+            throw new IOException("Unable to fetch job status from server.");
+          }
           String report = 
             (" map " + StringUtils.formatPercent(running.mapProgress(), 0)+
              " reduce " + 
