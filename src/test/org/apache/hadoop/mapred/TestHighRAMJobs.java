@@ -78,7 +78,7 @@ public class TestHighRAMJobs extends TestCase {
       TestHighRAMJobs.LOG.info("status = " + status.getResourceStatus().getFreeVirtualMemory());
 
       long initialFreeMemory = getConf().getLong("initialFreeMemory", 0L);
-      long memoryPerTaskOnTT = getConf().getLong("memoryPerTaskOnTT", 0L);
+      long totalMemoryOnTT = getConf().getLong("totalMemoryOnTT", 0L);
 
       if (isFirstTime) {
         isFirstTime = false;
@@ -87,19 +87,15 @@ public class TestHighRAMJobs extends TestCase {
           message = "Initial memory expected = " + initialFreeMemory
                       + " reported = " + status.getResourceStatus().getFreeVirtualMemory();
         }
-        if (memoryPerTaskOnTT != status.getResourceStatus().getDefaultVirtualMemoryPerTask()) {
+        if (totalMemoryOnTT != status.getResourceStatus().getTotalMemory()) {
           hasPassed = false;
-          message = "Memory per task on TT expected = " + memoryPerTaskOnTT
+          message = "Total memory on TT expected = " + totalMemoryOnTT
                       + " reported = " 
-                      + status.getResourceStatus().getDefaultVirtualMemoryPerTask();
+                      + status.getResourceStatus().getTotalMemory();
         }
       } else if (initialFreeMemory != DISABLED_VIRTUAL_MEMORY_LIMIT) {
         
-        long memoryPerTask = memoryPerTaskOnTT; // by default
-        if (getConf().getLong("memoryPerTask", 0L) != 
-                                            DISABLED_VIRTUAL_MEMORY_LIMIT) {
-          memoryPerTask = getConf().getLong("memoryPerTask", 0L);
-        }
+        long memoryPerTask = getConf().getLong("memoryPerTask", 0L);
           
         long expectedFreeMemory = 0;
         int runningTaskCount = status.countMapTasks() +
@@ -127,8 +123,7 @@ public class TestHighRAMJobs extends TestCase {
   public void testDefaultValuesForHighRAMJobs() throws Exception {
     long defaultMemoryLimit = DISABLED_VIRTUAL_MEMORY_LIMIT;
     try {
-      setUpCluster(defaultMemoryLimit, defaultMemoryLimit, 
-                    defaultMemoryLimit, null);
+      setUpCluster(defaultMemoryLimit, defaultMemoryLimit, null);
       runJob(defaultMemoryLimit, DEFAULT_MAP_SLEEP_TIME, 
           DEFAULT_REDUCE_SLEEP_TIME, DEFAULT_SLEEP_JOB_MAP_COUNT, 
           DEFAULT_SLEEP_JOB_REDUCE_COUNT);
@@ -142,35 +137,15 @@ public class TestHighRAMJobs extends TestCase {
    * when the number of slots is non-default.
    */
   public void testDefaultMemoryPerTask() throws Exception {
-    long maxVmem = 1024*1024*1024L;
+    long maxVmem = 2*1024*1024*1024L;
     JobConf conf = new JobConf();
-    conf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
-    conf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
-    // change number of slots to 2.
-    long defaultMemPerTaskOnTT = maxVmem / 2;
+    conf.setInt("mapred.tasktracker.map.tasks.maximum", 2);
+    conf.setInt("mapred.tasktracker.reduce.tasks.maximum", 2);
+    // set a different value for the default memory per task
+    long defaultMemPerTask = 256*1024*1024L; 
     try {
-      setUpCluster(maxVmem, defaultMemPerTaskOnTT, 
-                    DISABLED_VIRTUAL_MEMORY_LIMIT, conf);
-      runJob(DISABLED_VIRTUAL_MEMORY_LIMIT, DEFAULT_MAP_SLEEP_TIME,
-              DEFAULT_REDUCE_SLEEP_TIME, DEFAULT_SLEEP_JOB_MAP_COUNT,
-              DEFAULT_SLEEP_JOB_REDUCE_COUNT);
-      verifyTestResults();
-    } finally {
-      tearDownCluster();
-    }
-  }
-  
-  /* Test that verifies configured value for free memory is
-   * reported correctly. The test does NOT configure a value for
-   * memory per task. Hence, it also verifies that the default value
-   * per task on the TT is calculated correctly.
-   */
-  public void testConfiguredValueForFreeMemory() throws Exception {
-    long maxVmem = 1024*1024*1024L;
-    long defaultMemPerTaskOnTT = maxVmem/4; // 4 = default number of slots.
-    try {
-      setUpCluster(maxVmem, defaultMemPerTaskOnTT,
-                    DISABLED_VIRTUAL_MEMORY_LIMIT, null);
+      setUpCluster(maxVmem, defaultMemPerTask, 
+                    defaultMemPerTask, conf);
       runJob(DISABLED_VIRTUAL_MEMORY_LIMIT, "10000",
               DEFAULT_REDUCE_SLEEP_TIME, DEFAULT_SLEEP_JOB_MAP_COUNT,
               DEFAULT_SLEEP_JOB_REDUCE_COUNT);
@@ -182,15 +157,14 @@ public class TestHighRAMJobs extends TestCase {
   
   public void testHighRAMJob() throws Exception {
     long maxVmem = 1024*1024*1024L;
-    long defaultMemPerTaskOnTT = maxVmem/4; // 4 = default number of slots.
+    //long defaultMemPerTaskOnTT = maxVmem/4; // 4 = default number of slots.
     /* Set a HIGH RAM requirement for a job. As 4 is the
      * default number of slots, we set up the memory limit
      * per task to be more than 25%. 
      */
     long maxVmemPerTask = maxVmem/3;
     try {
-      setUpCluster(maxVmem, defaultMemPerTaskOnTT,
-                    maxVmemPerTask, null);
+      setUpCluster(maxVmem, maxVmemPerTask, null);
       /* set up sleep limits higher, so the scheduler will see varying
        * number of running tasks at a time. Also modify the number of
        * map tasks so we test the iteration over more than one task.
@@ -203,20 +177,27 @@ public class TestHighRAMJobs extends TestCase {
     }
   }
   
-  private void setUpCluster(long initialFreeMemory, long memoryPerTaskOnTT,
-                            long memoryPerTask, JobConf conf) 
-                              throws Exception {
+  private void setUpCluster(long totalMemoryOnTT, long memoryPerTask,
+                              JobConf conf) throws Exception {
+    this.setUpCluster(totalMemoryOnTT, 512*1024*1024L, 
+                          memoryPerTask, conf);
+  }
+  
+  private void setUpCluster(long totalMemoryOnTT, long defaultMemoryPerTask,
+                              long memoryPerTask, JobConf conf)
+                                throws Exception {
     if (conf == null) {
       conf = new JobConf();
     }
     conf.setClass("mapred.jobtracker.taskScheduler", 
         TestHighRAMJobs.FakeTaskScheduler.class,
         TaskScheduler.class);
-    if (initialFreeMemory != -1L) {
-      conf.setMaxVirtualMemoryForTasks(initialFreeMemory);  
+    if (totalMemoryOnTT != -1L) {
+      conf.setLong("mapred.tasktracker.tasks.maxmemory", totalMemoryOnTT);  
     }
-    conf.setLong("initialFreeMemory", initialFreeMemory);
-    conf.setLong("memoryPerTaskOnTT", memoryPerTaskOnTT);
+    conf.setLong("mapred.task.default.maxmemory", defaultMemoryPerTask);
+    conf.setLong("initialFreeMemory", totalMemoryOnTT);
+    conf.setLong("totalMemoryOnTT", totalMemoryOnTT);
     conf.setLong("memoryPerTask", memoryPerTask);
     miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = miniDFSCluster.getFileSystem();

@@ -104,7 +104,8 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
 
-    fConf.setMaxVirtualMemoryForTasks(Long.valueOf(10000000000L)); // Fairly large value for WordCount to succeed
+    fConf.setLong("mapred.tasktracker.tasks.maxmemory", 
+                      Long.valueOf(10000000000L)); // Fairly large value for WordCount to succeed
     startCluster(fConf);
 
     // Set up job.
@@ -178,7 +179,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setMaxVirtualMemoryForTasks(Long.valueOf(100000));
+    fConf.setLong("mapred.tasktracker.tasks.maxmemory", Long.valueOf(100000));
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval", String.valueOf(300));
             //very small value, so that no task escapes to successful completion.
     startCluster(fConf);

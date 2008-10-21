@@ -1456,39 +1456,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.tasktracker.tasks.maxmemory</name>
-  <value>-1</value>
-  <description> The maximum amount of virtual memory in kilobytes all tasks 
-  	running on a tasktracker, including sub-processes they launch, can use. 
-  	This value is used to compute the amount of free memory available for 
-  	tasks. Any task scheduled on this tasktracker is guaranteed and constrained
-  	 to use a share of this amount. Any task exceeding its share will be 
-  	killed. If set to -1, this functionality is disabled, and 
-  	mapred.task.maxmemory is ignored. Further, it will be enabled only on the
-  	systems where org.apache.hadoop.util.ProcfsBasedProcessTree is available,
-  	i.e at present only on Linux.
-  </description>
-</property>
-
-<property>
-  <name>mapred.task.maxmemory</name>
-  <value>-1</value>
-  <description> The maximum amount of memory in kilobytes any task of a job 
-    will use. A task of this job will be scheduled on a tasktracker, only if 
-    the amount of free memory on the tasktracker is greater than or 
-    equal to this value. If set to -1, tasks are assured a memory limit on
-    the tasktracker equal to 
-    mapred.tasktracker.tasks.maxmemory/number of slots. If the value of 
-    mapred.tasktracker.tasks.maxmemory is set to -1, this value is ignored.
-    
-    Note: If mapred.child.java.opts is specified with an Xmx value, or if 
-    mapred.child.ulimit is specified, then the value of mapred.task.maxmemory
-    must be set to a higher value than these. If not, the task might be 
-    killed even though these limits are not reached.
-  </description>  
-</property>
-
-<property>
   <name>mapred.queue.names</name>
   <value>default</value>
   <description> Comma separated list of queues configured for this jobtracker.
