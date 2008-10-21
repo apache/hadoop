@@ -999,6 +999,9 @@ Release 0.19.0 - Unreleased
     list of jobs to be keyed by the priority, submit time, and job tracker id.
     (Amar Kamat via omalley)
 
+    HADOOP-4296. Fix job client failures by not retiring a job as soon as it
+    is finished. (dhruba)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
