@@ -1024,6 +1024,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int bytesPerChecksum;
     private int checksumSize;
     private boolean gotEOS = false;
+    private boolean sentChecksumOk = false;
     
     byte[] skipBuf = null;
     ByteBuffer checksumBytes = null;
@@ -1058,8 +1059,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       
       int nRead = super.read(buf, off, len);
       if (nRead >= 0 && gotEOS && needChecksum()) {
-        //checksum is verified and there are no errors.
-        checksumOk(dnSock);
+        if (sentChecksumOk) {
+           // this should not happen; log the error for the debugging purpose
+           LOG.info(StringUtils.stringifyException(new IOException(
+             "Checksum ok was sent and should not be sent again")));  
+        } else {
+          //checksum is verified and there are no errors.
+          checksumOk(dnSock);
+          sentChecksumOk = true;
+       }
       }
       return nRead;
     }
