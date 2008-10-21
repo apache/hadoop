@@ -43,6 +43,9 @@ Trunk (unreleased changes)
     HADOOP-4238. When listing jobs, if scheduling information isn't available 
     print NA instead of empty output. (Sreekanth Ramakrishnan via johan)
 
+    HADOOP-4284. Support filters that apply to all requests, or global filters,
+    to HttpServer. (Kan Zhang via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

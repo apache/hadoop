@@ -24,6 +24,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -35,10 +36,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.mortbay.http.HttpContext;
 import org.mortbay.http.SocketListener;
 import org.mortbay.http.SslListener;
-import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.jetty.servlet.Dispatcher;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.WebApplicationContext;
@@ -60,6 +59,8 @@ public class HttpServer implements FilterContainer {
 
   protected final org.mortbay.jetty.Server webServer;
   protected final WebApplicationContext webAppContext;
+  protected final Map<WebApplicationContext, Boolean> defaultContexts = 
+      new HashMap<WebApplicationContext, Boolean>();
   protected final boolean findPort;
   protected final SocketListener listener;
   private SslListener sslListener;
@@ -91,6 +92,7 @@ public class HttpServer implements FilterContainer {
 
     final String appDir = getWebAppsPath();
     webAppContext = webServer.addWebApplication("/", appDir + "/" + name);
+    addDefaultApps(appDir);
 
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
@@ -98,7 +100,7 @@ public class HttpServer implements FilterContainer {
         c.initFilter(this);
       }
     }
-    addWebapps(appDir);
+    addDefaultServlets();
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
@@ -121,11 +123,11 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
-   * Add webapps and servlets.
+   * Add default apps.
    * @param appDir The application directory
    * @throws IOException
    */
-  protected void addWebapps(final String appDir) throws IOException {
+  protected void addDefaultApps(final String appDir) throws IOException {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {
@@ -134,7 +136,12 @@ public class HttpServer implements FilterContainer {
 
     // set up the context for "/static/*"
     addContext("/static/*", appDir + "/static", true);
-
+  }
+  
+  /**
+   * Add default servlets.
+   */
+  protected void addDefaultServlets() {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
@@ -145,16 +152,11 @@ public class HttpServer implements FilterContainer {
    * @param pathSpec The path spec for the context
    * @param dir The directory containing the context
    * @param isFiltered if true, the servlet is added to the filter path mapping 
+   * @throws IOException
    */
-  protected void addContext(String pathSpec, String dir, boolean isFiltered) {
-    HttpContext context = new HttpContext();
-    context.setContextPath(pathSpec);
-    context.setResourceBase(dir);
-    context.addHandler(new ResourceHandler());
-    webServer.addContext(context);
-    if (isFiltered) {
-      addFilterPathMapping(pathSpec);
-    }
+  protected void addContext(String pathSpec, String dir, boolean isFiltered) throws IOException {
+    WebApplicationContext webAppCtx = webServer.addWebApplication(pathSpec, dir);
+    defaultContexts.put(webAppCtx, isFiltered);
   }
 
   /**
@@ -176,7 +178,7 @@ public class HttpServer implements FilterContainer {
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     addInternalServlet(name, pathSpec, clazz);
-    addFilterPathMapping(pathSpec);
+    addFilterPathMapping(pathSpec, webAppContext);
   }
 
   /**
@@ -207,11 +209,42 @@ public class HttpServer implements FilterContainer {
   /** {@inheritDoc} */
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
-    WebApplicationHandler handler = webAppContext.getWebApplicationHandler();
 
-    LOG.info("adding " + name + " (class=" + classname + ")");
+    final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
+    defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    for (Map.Entry<WebApplicationContext, Boolean> e : defaultContexts
+        .entrySet()) {
+      if (e.getValue()) {
+        WebApplicationContext ctx = e.getKey();
+        defineFilter(ctx, name, classname, parameters, USER_FACING_URLS);
+        WebApplicationHandler handler = ctx.getWebApplicationHandler();
+        handler.addFilterPathMapping(ctx.getContextPath() + "/*", name,
+            Dispatcher.__ALL);
+        LOG.info("Added filter " + name + " (class=" + classname
+            + ") to context path " + ctx.getContextPath() + "/*");
+      }
+    }
     filterNames.add(name);
+  }
 
+  /** {@inheritDoc} */
+  public void addGlobalFilter(String name, String classname,
+      Map<String, String> parameters) {
+    final String[] ALL_URLS = { "/*" };
+    defineFilter(webAppContext, name, classname, parameters, ALL_URLS);
+    for (WebApplicationContext ctx : defaultContexts.keySet()) {
+      defineFilter(ctx, name, classname, parameters, ALL_URLS);
+    }
+    LOG.info("Added global filter" + name + " (class=" + classname + ")");
+  }
+
+  /**
+   * Define a filter for a context and set up default url mappings.
+   */
+  protected void defineFilter(WebApplicationContext ctx, String name,
+      String classname, Map<String, String> parameters, String[] urls) {
+
+    WebApplicationHandler handler = ctx.getWebApplicationHandler();
     FilterHolder holder = handler.defineFilter(name, classname);
     if (parameters != null) {
       for(Map.Entry<String, String> e : parameters.entrySet()) {
@@ -219,8 +252,7 @@ public class HttpServer implements FilterContainer {
       }
     }
 
-    final String[] USER_FACING_URLS = {"*.html", "*.jsp"};
-    for(String url : USER_FACING_URLS) {
+    for (String url : urls) {
       handler.addFilterPathMapping(url, name, Dispatcher.__ALL);
     }
   }
@@ -228,14 +260,15 @@ public class HttpServer implements FilterContainer {
   /**
    * Add the path spec to the filter path mapping.
    * @param pathSpec The path spec
+   * @param webAppCtx The WebApplicationContext to add to
    */
-  protected void addFilterPathMapping(String pathSpec) {
-    WebApplicationHandler handler = webAppContext.getWebApplicationHandler();
+  protected void addFilterPathMapping(String pathSpec, WebApplicationContext webAppCtx) {
+    WebApplicationHandler handler = webAppCtx.getWebApplicationHandler();
     for(String name : filterNames) {
       handler.addFilterPathMapping(pathSpec, name, Dispatcher.__ALL);
     }
   }
-
+  
   /**
    * Get the value in the webapp context.
    * @param name The name of the attribute

@@ -30,4 +30,11 @@ public interface FilterContainer {
    * @param parameters a map from parameter names to initial values
    */
   void addFilter(String name, String classname, Map<String, String> parameters);
+  /**
+   * Add a global filter to the container.
+   * @param name filter name
+   * @param classname filter class name
+   * @param parameters a map from parameter names to initial values
+   */
+  void addGlobalFilter(String name, String classname, Map<String, String> parameters);
 }
