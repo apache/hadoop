@@ -49,6 +49,7 @@ public class mapredWork implements Serializable {
   private Integer numReduceTasks;
   
   private boolean needsTagging;
+  private boolean inferNumReducers;
 
   public mapredWork() { }
   public mapredWork(
@@ -197,4 +198,13 @@ public class mapredWork implements Serializable {
   public void setNeedsTagging(boolean needsTagging) {
     this.needsTagging = needsTagging;
   }
+
+  public boolean getInferNumReducers() {
+    return this.inferNumReducers;
+  }
+  
+  public void setInferNumReducers(boolean inferNumReducers) {
+    this.inferNumReducers = inferNumReducers;
+  }
+
 }

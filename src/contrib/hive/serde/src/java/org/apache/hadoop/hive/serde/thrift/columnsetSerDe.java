@@ -18,35 +18,26 @@
 
 package org.apache.hadoop.hive.serde.thrift;
 
-import org.apache.hadoop.hive.serde.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Properties;
 
-import com.facebook.thrift.TBase;
-import com.facebook.thrift.TSerializer;
-import com.facebook.thrift.protocol.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
-import java.util.*;
-import java.io.*;
+import org.apache.hadoop.hive.serde.ColumnSet;
+import org.apache.hadoop.hive.serde.ComplexSerDeField;
+import org.apache.hadoop.hive.serde.ExpressionUtils;
+import org.apache.hadoop.hive.serde.ReflectionSerDeField;
+import org.apache.hadoop.hive.serde.SerDe;
+import org.apache.hadoop.hive.serde.SerDeException;
+import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+
+import com.facebook.thrift.protocol.TBinaryProtocol;
 
 public class columnsetSerDe  extends ThriftByteStreamTypedSerDe implements SerDe {
-
-  public  String getShortName() {
-    return shortName();
-  }
-
-  public static String shortName() {
-    return "columnset";
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   protected boolean inStreaming;
   private String separator;

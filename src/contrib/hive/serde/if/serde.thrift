@@ -8,6 +8,7 @@ const string SERIALIZATION_LIB = "serialization.lib"
 const string SERIALIZATION_CLASS = "serialization.class"
 const string SERIALIZATION_FORMAT = "serialization.format"
 const string SERIALIZATION_DDL = "serialization.ddl"
+const string SERIALIZATION_NULL_FORMAT = "serialization.null.format"
 
 const string FIELD_DELIM = "field.delim"
 const string COLLECTION_DELIM = "colelction.delim"

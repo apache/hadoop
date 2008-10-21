@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.UDF;
 
 
-public class UDFStrLt extends UDF {
+public class UDFStrLt implements UDF {
 
   public UDFStrLt() {
   }

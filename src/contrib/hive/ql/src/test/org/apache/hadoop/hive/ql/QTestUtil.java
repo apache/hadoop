@@ -53,7 +53,7 @@ import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.ql.thrift.Complex;
+import org.apache.hadoop.hive.serde2.thrift.test.Complex;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
@@ -277,7 +277,7 @@ public class QTestUtil {
     Table srcThrift = new Table("src_thrift");
     srcThrift.setInputFormatClass(SequenceFileInputFormat.class.getName());
     srcThrift.setOutputFormatClass(SequenceFileOutputFormat.class.getName());
-    srcThrift.setSerializationLib(ThriftDeserializer.shortName());
+    srcThrift.setSerializationLib(ThriftDeserializer.class.getName());
     srcThrift.setSerdeParam(Constants.SERIALIZATION_CLASS, Complex.class.getName());
     srcThrift.setSerdeParam(Constants.SERIALIZATION_FORMAT, TBinaryProtocol.class.getName());
     db.createTable(srcThrift);
@@ -364,7 +364,6 @@ public class QTestUtil {
     CliSessionState ss = new CliSessionState(new HiveConf(SessionState.class));
 
     ss.in = System.in;
-    ss.err = System.err;
 
     File qf = new File(outDir, tname);
     File outf = null;
@@ -372,6 +371,7 @@ public class QTestUtil {
     outf = new File(outf, qf.getName().concat(".out"));
     FileOutputStream fo = new FileOutputStream(outf);
     ss.out = new PrintStream(fo, true, "UTF-8");
+    ss.err = ss.out;
     ss.setIsSilent(true);
     cliDriver = new CliDriver(ss);
     SessionState.start(ss);
@@ -644,7 +644,10 @@ public class QTestUtil {
   public List<Task<? extends Serializable>> analyzeAST(CommonTree ast) throws Exception {
 
     // Do semantic analysis and plan generation
-    sem.analyze(ast, new Context(conf));
+    Context ctx = new Context(conf);
+    ctx.makeScratchDir();
+    sem.analyze(ast, ctx);
+    ctx.removeScratchDir();
     return sem.getRootTasks();
   }
 

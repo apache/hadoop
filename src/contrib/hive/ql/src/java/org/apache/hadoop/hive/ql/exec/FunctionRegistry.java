@@ -52,7 +52,15 @@ public class FunctionRegistry {
     registerUDF("str_lt", UDFStrLt.class, OperatorType.PREFIX, false);
     registerUDF("str_ge", UDFStrGe.class, OperatorType.PREFIX, false);
     registerUDF("str_le", UDFStrLe.class, OperatorType.PREFIX, false);
+    
+    registerUDF("size", UDFSize.class, OperatorType.PREFIX, false);
 
+    registerUDF("round", UDFRound.class, OperatorType.PREFIX, false);
+    registerUDF("floor", UDFFloor.class, OperatorType.PREFIX, false);
+    registerUDF("ceil", UDFCeil.class, OperatorType.PREFIX, false);
+    registerUDF("ceiling", UDFCeil.class, OperatorType.PREFIX, false);
+    registerUDF("rand", UDFRand.class, OperatorType.PREFIX, false);
+    
     registerUDF("upper", UDFUpper.class, OperatorType.PREFIX, false);
     registerUDF("lower", UDFLower.class, OperatorType.PREFIX, false);
     registerUDF("ucase", UDFUpper.class, OperatorType.PREFIX, false);
@@ -66,6 +74,9 @@ public class FunctionRegistry {
     registerUDF("regexp", UDFRegExp.class, OperatorType.INFIX, true);
     registerUDF("regexp_replace", UDFRegExpReplace.class, OperatorType.PREFIX, false);
 
+    registerUDF("positive", UDFOPPositive.class, OperatorType.PREFIX, true, "+");
+    registerUDF("negative", UDFOPNegative.class, OperatorType.PREFIX, true, "-");
+
     registerUDF("+", UDFOPPlus.class, OperatorType.INFIX, true);
     registerUDF("-", UDFOPMinus.class, OperatorType.INFIX, true);
     registerUDF("*", UDFOPMultiply.class, OperatorType.INFIX, true);
@@ -75,7 +86,7 @@ public class FunctionRegistry {
     registerUDF("&", UDFOPBitAnd.class, OperatorType.INFIX, true);
     registerUDF("|", UDFOPBitOr.class, OperatorType.INFIX, true);
     registerUDF("^", UDFOPBitXor.class, OperatorType.INFIX, true);
-    registerUDF("~", UDFOPBitNot.class, OperatorType.INFIX, true);
+    registerUDF("~", UDFOPBitNot.class, OperatorType.PREFIX, true);
 
     registerUDF("=", UDFOPEqual.class, OperatorType.INFIX, true);
     registerUDF("==", UDFOPEqual.class, OperatorType.INFIX, true, "=");
@@ -89,8 +100,8 @@ public class FunctionRegistry {
     registerUDF("&&", UDFOPAnd.class, OperatorType.INFIX, true, "and");
     registerUDF("or", UDFOPOr.class, OperatorType.INFIX, true);
     registerUDF("||", UDFOPOr.class, OperatorType.INFIX, true, "or");
-    registerUDF("not", UDFOPNot.class, OperatorType.INFIX, true);
-    registerUDF("!", UDFOPNot.class, OperatorType.INFIX, true, "not");
+    registerUDF("not", UDFOPNot.class, OperatorType.PREFIX, true);
+    registerUDF("!", UDFOPNot.class, OperatorType.PREFIX, true, "not");
 
     registerUDF("isnull", UDFOPNull.class, OperatorType.POSTFIX, true, "is null");
     registerUDF("isnotnull", UDFOPNotNull.class, OperatorType.POSTFIX, true, "is not null");

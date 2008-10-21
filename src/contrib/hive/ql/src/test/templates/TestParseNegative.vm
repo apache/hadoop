@@ -63,10 +63,16 @@ public class $className extends TestCase {
       fail("Unexpected success for query: " + "$fname");
     }
     catch (ParseException pe) {
-      qt.checkNegativeResults("$fname", pe);
+      int ecode = qt.checkNegativeResults("$fname", pe);
+      if (ecode != 0) {
+        fail("failed with error code = " + ecode);
+      }
     }
     catch (SemanticException se) {
-      qt.checkNegativeResults("$fname", se);
+      int ecode = qt.checkNegativeResults("$fname", se);
+      if (ecode != 0) {
+        fail("failed with error code = " + ecode);
+      }
     }
     catch (Throwable e) {
       System.out.println("Exception: " + e.getMessage());

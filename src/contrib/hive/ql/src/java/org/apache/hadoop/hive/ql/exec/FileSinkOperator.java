@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.fileSinkDesc;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
+import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.Serializer;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -101,12 +102,27 @@ public class FileSinkOperator extends TerminalOperator <fileSinkDesc> implements
         if(isCompressed) {
           finalPath = new Path(conf.getDirName(), Utilities.getTaskId(hconf) + ".gz");
         }
+        String rowSeparatorString = conf.getTableInfo().getProperties().getProperty(Constants.LINE_DELIM, "\n");
+        int rowSeparator = 0;
+        try {
+          rowSeparator = Byte.parseByte(rowSeparatorString); 
+        } catch (NumberFormatException e) {
+          rowSeparator = rowSeparatorString.charAt(0); 
+        }
+        final int finalRowSeparator = rowSeparator;  
         final OutputStream outStream = Utilities.createCompressedStream(jc, fs.create(outPath));
         outWriter = new RecordWriter () {
             public void write(Writable r) throws IOException {
-              Text tr = (Text)r;
-              outStream.write(tr.getBytes(), 0, tr.getLength());
-              outStream.write('\n');
+              if (r instanceof Text) {
+                Text tr = (Text)r;
+                outStream.write(tr.getBytes(), 0, tr.getLength());
+                outStream.write(finalRowSeparator);
+              } else {
+                // DynamicSerDe always writes out BytesWritable
+                BytesWritable bw = (BytesWritable)r;
+                outStream.write(bw.get(), 0, bw.getSize());
+                outStream.write(finalRowSeparator);
+              }
             }
             public void close(boolean abort) throws IOException {
               outStream.close();

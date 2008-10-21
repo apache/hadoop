@@ -18,20 +18,20 @@ STAGE PLANS:
                     type: string
               File Output Operator
                 table:
-                    name: dest4_sequencefile
-                    serde: simple_meta
                     input format: org.apache.hadoop.mapred.SequenceFileInputFormat
                     output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                    name: dest4_sequencefile
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest4_sequencefile
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.SequenceFileInputFormat
                 output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest4_sequencefile
 
 
 238	val_238
@@ -534,4 +534,3 @@ STAGE PLANS:
 400	val_400
 200	val_200
 97	val_97
-

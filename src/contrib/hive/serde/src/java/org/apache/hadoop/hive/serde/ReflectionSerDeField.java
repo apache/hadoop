@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.serde;
 
 import java.lang.reflect.*;
+import java.util.HashMap;
 
 /**
  * The default implementation of Hive Field based on Java Reflection.
@@ -35,6 +36,7 @@ public class ReflectionSerDeField implements SerDeField {
   protected Class _valueClass;
   protected Class _keyClass;
 
+  private static HashMap<String, Field[]> cacheFields = new HashMap<String, Field[]>();
 
   public static boolean isClassPrimitive(Class c) {
     return ((c == String.class) || (c == Boolean.class) ||
@@ -46,7 +48,27 @@ public class ReflectionSerDeField implements SerDeField {
   public ReflectionSerDeField(String className, String fieldName) throws SerDeException {
     try {
       _parentClass = Class.forName(className);
-      _field = _parentClass.getDeclaredField(fieldName);
+      
+      // hack for now. Get all the fields and do a case-insensitive search over them
+      //      _field = _parentClass.getDeclaredField(fieldName);
+      Field[] allFields = cacheFields.get(className);
+      if (allFields == null) {
+        allFields = _parentClass.getDeclaredFields();
+        cacheFields.put(className, allFields);
+      }
+
+      boolean found = false;
+      for (Field f: allFields) {
+        if (f.getName().equalsIgnoreCase(fieldName)) {
+          _field = f;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) 
+        throw new SerDeException("Illegal class or member:"+className+"."+fieldName);
+
       _isList = java.util.List.class.isAssignableFrom(_field.getType());
       _isMap = java.util.Map.class.isAssignableFrom(_field.getType());
       _class = _field.getType();
@@ -123,7 +145,7 @@ public class ReflectionSerDeField implements SerDeField {
   }
 
   public String getName() {
-    return _field.getName();
+    return _field.getName().toLowerCase();
   }
 
 

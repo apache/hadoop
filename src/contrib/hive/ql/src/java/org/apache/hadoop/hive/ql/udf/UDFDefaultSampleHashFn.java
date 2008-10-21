@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class UDFDefaultSampleHashFn extends UDF {
+public class UDFDefaultSampleHashFn implements UDF {
   protected final Log LOG;
 
   public UDFDefaultSampleHashFn() {

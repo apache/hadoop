@@ -64,6 +64,13 @@
               resultsDirectory="${ql.test.results.dir}/clientpositive" className="TestCliDriver"
               logFile="${test.log.dir}/testclidrivergen.log"/>
 
+    <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
+              templatePath="${ql.test.template.dir}" template="TestNegativeCliDriver.vm" 
+              queryDirectory="${ql.test.query.dir}/clientnegative" 
+              queryFile="${qfile}"
+              resultsDirectory="${ql.test.results.dir}/clientnegative" className="TestNegativeCliDriver"
+              logFile="${test.log.dir}/testnegclidrivergen.log"/>
+
   </target>
 
   <uptodate property="grammarBuild.notRequired">

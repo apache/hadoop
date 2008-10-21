@@ -34,10 +34,8 @@ import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 import org.apache.hadoop.hive.ql.exec.Task;
-import org.apache.hadoop.hive.ql.exec.MapRedTask;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.exec.ExecDriver;
 import org.apache.hadoop.hive.serde.ByteStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 
@@ -55,19 +53,36 @@ public class Driver implements CommandProcessor {
   private DataInput    resStream;
   private LogHelper    console;
   private Context      ctx;
+  private BaseSemanticAnalyzer sem;
   
   public int countJobs(List<Task<? extends Serializable>> tasks) {
     if (tasks == null)
       return 0;
     int jobs = 0;
     for (Task<? extends Serializable> task: tasks) {
-      if ((task instanceof ExecDriver) || (task instanceof MapRedTask)) {
+      if (task.isMapRedTask()) {
         jobs++;
       }
       jobs += countJobs(task.getChildTasks());
     }
     return jobs;
   }
+
+  public boolean hasReduceTasks(List<Task<? extends Serializable>> tasks) {
+    if (tasks == null)
+      return false;
+
+    boolean hasReduce = false;
+    for (Task<? extends Serializable> task: tasks) {
+      if (task.hasReduce()) {
+        return true;
+      }
+
+      hasReduce = (hasReduce || hasReduceTasks(task.getChildTasks()));
+    }
+    return hasReduce;
+  }
+
 
   /**
    * for backwards compatibility with current tests
@@ -97,11 +112,10 @@ public class Driver implements CommandProcessor {
     try {
       
       TaskFactory.resetId();
-
-      BaseSemanticAnalyzer sem;
       LOG.info("Starting command: " + command);
 
       ctx.clear();
+      ctx.makeScratchDir();
       resStream = null;
       
       pd = new ParseDriver();
@@ -122,12 +136,18 @@ public class Driver implements CommandProcessor {
         console.printInfo("Total MapReduce jobs = " + jobs);
       }
       
- 
+      boolean hasReduce = hasReduceTasks(sem.getRootTasks());
+      if (hasReduce) {
+        console.printInfo("Number of reducers = " + conf.getIntVar(HiveConf.ConfVars.HADOOPNUMREDUCERS));
+        console.printInfo("In order to change numer of reducers use:");
+        console.printInfo("  set mapred.reduce.tasks = <number>");
+      }
+
       String jobname = Utilities.abbreviate(command, maxlen - 6);
       int curJob = 0;
       for(Task<? extends Serializable> rootTask: sem.getRootTasks()) {
         // assumption that only top level tasks are map-reduce tasks
-        if ((rootTask instanceof ExecDriver) || (rootTask instanceof MapRedTask)) {
+        if (rootTask.isMapRedTask()) {
           curJob ++;
           if(noName) {
             conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, jobname + "(" + curJob + "/" + jobs + ")");
@@ -175,10 +195,10 @@ public class Driver implements CommandProcessor {
         }
       }
     } catch (SemanticException e) {
-      console.printError("FAILED: Error in semantic analysis: " + e.getMessage());
+      console.printError("FAILED: Error in semantic analysis: " + e.getMessage(), "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
       return (10);
     } catch (ParseException e) {
-      console.printError("FAILED: Parse Error: " + e.getMessage());
+      console.printError("FAILED: Parse Error: " + e.getMessage(), "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
       return (11);
     } catch (Exception e) {
       // Has to use full name to make sure it does not conflict with org.apache.commons.lang.StringUtils
@@ -196,14 +216,23 @@ public class Driver implements CommandProcessor {
   }
   
   
-  public boolean getResults(Vector<Vector<String>> res) 
+  public boolean getResults(Vector<String> res) 
   {
+  	if (sem.getFetchTask() != null) {
+      if (!sem.getFetchTaskInit()) {
+        sem.setFetchTaskInit(true);
+        sem.getFetchTask().initialize(conf);
+      }
+  		boolean ret = sem.getFetchTask().fetch(res);
+  		return ret;  		
+  	}
+
     if (resStream == null)
       resStream = ctx.getStream();
     if (resStream == null) return false;
     
     int numRows = 0;
-    Vector<String> row = new Vector<String>();
+    String row = null;
 
     while (numRows < MAX_ROWS)
     {
@@ -215,47 +244,45 @@ public class Driver implements CommandProcessor {
           return false;
       }
 
-      String col = null;
       bos.reset();
-      Utilities.streamStatus ss = Utilities.streamStatus.NORMAL;
+      Utilities.streamStatus ss;
       try
       {
         ss = Utilities.readColumn(resStream, bos);
         if (bos.getCount() > 0)
-          col = new String(bos.getData(), 0, bos.getCount(), "UTF-8");
-        else if (ss == Utilities.streamStatus.NORMAL)
-          col = Utilities.NSTR;
+          row = new String(bos.getData(), 0, bos.getCount(), "UTF-8");
+        else if (ss == Utilities.streamStatus.TERMINATED)
+          row = new String();
+
+        if (row != null) {
+          numRows++;
+          res.add(row);
+        }
       } catch (IOException e) {
         console.printError("FAILED: Unexpected IO exception : " + e.getMessage());
         res = null;
         return false;
       }
-      
-      if ((ss == Utilities.streamStatus.EOF) || 
-          (ss == Utilities.streamStatus.TERMINATED))
-      {
-        if (col != null) 
-          row.add(col.equals(Utilities.nullStringStorage) ? null : col);
-        else if (row.size() != 0) 
-          row.add(null);
 
-        numRows++;
-        res.add(row);
-        row = new Vector<String>();
-        col = null;
-
-        if (ss == Utilities.streamStatus.EOF) 
-          resStream = ctx.getStream();
-      }
-      else if (ss == Utilities.streamStatus.NORMAL)
-      {
-        row.add(col.equals(Utilities.nullStringStorage) ? null : col);
-        col = null;
-      }
-      else
-        assert false;
+      if (ss == Utilities.streamStatus.EOF) 
+        resStream = ctx.getStream();
     }
     return true;
+  }
+
+  public int close() {
+    try {
+      // Delete the scratch directory from the context
+      ctx.removeScratchDir();
+      ctx.clear();
+    }
+    catch (Exception e) {
+      console.printError("FAILED: Unknown exception : " + e.getMessage(),
+                         "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
+      return(13);
+    }
+    
+    return(0);
   }
 }
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
@@ -43,6 +44,8 @@ public class createTableDesc extends ddlDesc implements Serializable
   String              comment;
   boolean             isSequenceFile;
   String              location;
+  String              serName;
+  Map<String, String> mapProp;
   
   public createTableDesc(String tableName, boolean isExternal, 
                          List<FieldSchema> cols, List<FieldSchema> partCols,
@@ -51,7 +54,7 @@ public class createTableDesc extends ddlDesc implements Serializable
                          String collItemDelim,
                          String mapKeyDelim, String lineDelim, 
                          String comment, boolean isSequenceFile, 
-                         String location) {
+                         String location, String serName, Map<String, String> mapProp) {
     this.tableName       = tableName;
     this.isExternal      = isExternal;
     this.bucketCols      = bucketCols;
@@ -66,6 +69,8 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.mapKeyDelim     = mapKeyDelim;
     this.numBuckets      = numBuckets;
     this.partCols        = partCols;
+    this.serName         = serName;
+    this.mapProp         = mapProp;
   }
 
   @explain(displayName="name")
@@ -166,7 +171,7 @@ public class createTableDesc extends ddlDesc implements Serializable
     this.comment = comment;
   }
 
-  @explain(displayName="isSequenceFile")  
+  @explain(displayName="isSequenceFile")
   public boolean isSequenceFile() {
     return isSequenceFile;
   }
@@ -207,4 +212,35 @@ public class createTableDesc extends ddlDesc implements Serializable
   public void setSortCols(List<Order> sortCols) {
     this.sortCols = sortCols;
   }
+
+	/**
+	 * @return the serDeName
+	 */
+  @explain(displayName="serde name")
+	public String getSerName() {
+		return serName;
+	}
+
+	/**
+	 * @param serName the serName to set
+	 */
+	public void setSerName(String serName) {
+		this.serName = serName;
+	}
+
+	/**
+	 * @return the serDe properties
+	 */
+  @explain(displayName="serde properties")
+  public Map<String,String> getMapProp() {
+		return mapProp;
+	}
+
+	/**
+	 * @param mapProp the map properties to set
+	 */
+	public void setMapProp(Map<String,String> mapProp) {
+		this.mapProp = mapProp;
+	}
+  
 }

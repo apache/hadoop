@@ -95,7 +95,7 @@ public class Table {
     initEmpty();
     this.schema = schema;
     this.deserializer = deserializer; //TODO: convert to SerDeInfo format
-    this.getTTable().getSd().getSerdeInfo().setSerializationLib(deserializer.getShortName());
+    this.getTTable().getSd().getSerdeInfo().setSerializationLib(deserializer.getClass().getName());
     getTTable().setTableName(name);
     getSerdeInfo().setSerializationLib(deserializer.getClass().getName());
     setInputFormatClass(inputFormatClass);
@@ -108,7 +108,7 @@ public class Table {
     initEmpty();
     getTTable().setTableName(name);
     getTTable().setDbName(MetaStoreUtils.DEFAULT_DATABASE_NAME);
-    getSerdeInfo().setSerializationLib(MetadataTypedColumnsetSerDe.shortName());
+    getSerdeInfo().setSerializationLib(MetadataTypedColumnsetSerDe.class.getName());
     getSerdeInfo().getParameters().put(Constants.SERIALIZATION_FORMAT, "1");
   }
   

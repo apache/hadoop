@@ -142,12 +142,13 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
     if(!open) {
       throw new MetaException("Could not connect to meta store using any of the URIs provided");
     }
+    LOG.info("Connected to metastore.");
   }
  
   private void openStore(URI store) throws MetaException {
     open = false;
     transport = new TSocket(store.getHost(), store.getPort());
-    ((TSocket)transport).setTimeout(2000);
+    ((TSocket)transport).setTimeout(20000);
     TProtocol protocol = new TBinaryProtocol(transport);
     client = new ThriftHiveMetastore.Client(protocol);
 

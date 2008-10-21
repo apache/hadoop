@@ -8,27 +8,6 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Map Reduce
-      Path -> Alias:
-        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
-      Path -> Partition:
-        file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
-          Partition
-          
-              properties:
-                name srcbucket
-                bucket_field_name 
-                serialization.format 1
-                columns key,value
-                field_to_dimension 
-                bucket_count 2
-                serialization.lib simple_meta
-                file.inputformat org.apache.hadoop.mapred.TextInputFormat
-                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket
-              name: srcbucket
-              serde: simple_meta
-              input format: org.apache.hadoop.mapred.TextInputFormat
-              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
       Alias -> Map Operator Tree:
         s 
             Select Operator
@@ -38,48 +17,66 @@ STAGE PLANS:
                     expr: value
                     type: string
               File Output Operator
+                directory: /tmp/hive-njain/1178661057/1120939755.10000.insclause-0
                 table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
                     properties:
                       name dest1
-                      bucket_field_name 
+                      serialization.ddl struct dest1 { i32 key, string value}
                       serialization.format 1
                       columns key,value
                       SORTBUCKETCOLSPREFIX TRUE
-                      field_to_dimension 
                       bucket_count -1
-                      serialization.lib simple_meta
+                      serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                       file.inputformat org.apache.hadoop.mapred.TextInputFormat
                       file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                      location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                      location file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                     name: dest1
-                    serde: simple_meta
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                directory: /tmp/hive-zshao/83464218.10000.insclause-0
       Needs Tagging:
+      Path -> Alias:
+        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
+      Path -> Partition:
+        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
+          Partition
+          
+              input format: org.apache.hadoop.mapred.TextInputFormat
+              output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+              properties:
+                name srcbucket
+                serialization.ddl struct srcbucket { string key, string value}
+                serialization.format 1
+                columns key,value
+                bucket_count 2
+                serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                location file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket
+              serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+              name: srcbucket
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
+            source: /tmp/hive-njain/1178661057/1120939755.10000.insclause-0
             table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
                 properties:
                   name dest1
-                  bucket_field_name 
+                  serialization.ddl struct dest1 { i32 key, string value}
                   serialization.format 1
                   columns key,value
                   SORTBUCKETCOLSPREFIX TRUE
-                  field_to_dimension 
                   bucket_count -1
-                  serialization.lib simple_meta
+                  serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat
                   file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                  location file:/data/zshao/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                  location file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 name: dest1
-                serde: simple_meta
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
-            source: /tmp/hive-zshao/83464218.10000.insclause-0
 
 
 238	val_238
@@ -582,4 +579,3 @@ STAGE PLANS:
 400	val_400
 200	val_200
 97	val_97
-

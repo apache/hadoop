@@ -31,7 +31,7 @@ public class TestSerDeUtils extends TestCase {
 
   public void testLookupSerDe() throws Exception {
     try {
-      String name = ThriftSerDe.shortName();
+      String name = ThriftSerDe.class.getName();
       SerDe s = SerDeUtils.lookupSerDe(name);
       assertTrue(s.getClass().getName().equals(org.apache.hadoop.hive.serde.thrift.ThriftSerDe.class.getName()));
     } catch(Exception e) {

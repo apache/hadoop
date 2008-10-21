@@ -134,10 +134,10 @@ public class ReduceSinkOperator extends TerminalOperator <reduceSinkDesc> implem
       }
       keyWritable.setHashCode(keyHashCode);
       
-      ArrayList<String> values = new ArrayList<String>(valueEval.length);
+      ArrayList<Object> values = new ArrayList<Object>(valueEval.length);
       for(ExprNodeEvaluator e: valueEval) {
         e.evaluate(row, rowInspector, tempInspectableObject);
-        values.add(tempInspectableObject.o == null ? null : tempInspectableObject.o.toString());
+        values.add(tempInspectableObject.o);
         if (valueObjectInspector == null) {
           valueFieldsObjectInspectors.add(tempInspectableObject.oi);
         }

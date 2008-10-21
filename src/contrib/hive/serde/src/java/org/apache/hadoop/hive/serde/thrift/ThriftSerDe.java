@@ -32,24 +32,6 @@ public class ThriftSerDe implements SerDe {
   private ThriftByteStreamTypedSerDe tsd;
   private boolean inStreaming;
 
-  public static String shortName() {
-    return "thrift";
-  }
-
-  public  String getShortName() {
-    return shortName();
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   public void initialize(Configuration job, Properties tbl) throws SerDeException {
     try {
       // both the classname and the protocol name are Table properties

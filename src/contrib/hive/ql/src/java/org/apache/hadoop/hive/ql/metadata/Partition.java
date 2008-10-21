@@ -58,6 +58,14 @@ public class Partition {
 
     private LinkedHashMap<String, String> spec;
     
+    /**
+     * @return
+     * @see org.apache.hadoop.hive.metastore.api.Partition#getValues()
+     */
+    public List<String> getValues() {
+      return tPartition.getValues();
+    }
+
     private Path partPath;
     private URI partURI;
 

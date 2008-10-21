@@ -22,8 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hive.serde2.thrift_test.Complex;
-import org.apache.hadoop.hive.serde2.thrift_test.IntString;
+import org.apache.hadoop.hive.serde2.thrift.test.Complex;
+import org.apache.hadoop.hive.serde2.thrift.test.IntString;
 
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 
@@ -53,14 +53,14 @@ public class TestThriftObjectInspectors extends TestCase {
       // real object
       Complex c = new Complex();
       c.aint = 1;
-      c.astring = "test";
+      c.aString = "test";
       List<Integer> c2 = Arrays.asList(new Integer[]{1,2,3}); 
       c.lint =  c2;
       List<String> c3 = Arrays.asList(new String[]{"one", "two"});
-      c.lstring =  c3;
+      c.lString =  c3;
       List<IntString> c4 = new ArrayList<IntString>(); 
-      c.lintstring = c4;
-      c.mstringstring = null; 
+      c.lintString = c4;
+      c.mStringString = null; 
       
       assertEquals(1, soi.getStructFieldData(c, fields.get(0)));
       assertEquals("test", soi.getStructFieldData(c, fields.get(1)));

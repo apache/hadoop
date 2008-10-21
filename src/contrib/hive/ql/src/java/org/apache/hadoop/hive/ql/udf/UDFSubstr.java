@@ -21,7 +21,7 @@ package org.apache.hadoop.hive.ql.udf;
 import org.apache.hadoop.hive.ql.exec.UDF;
 
 
-public class UDFSubstr extends UDF {
+public class UDFSubstr implements UDF {
 
   public UDFSubstr() {
   }

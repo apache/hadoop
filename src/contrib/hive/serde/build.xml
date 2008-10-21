@@ -26,8 +26,17 @@ to call at top-level: ant deploy-contrib compile-core-test
     
   <property name="src.dir"  location="${basedir}/src"/> 
   <import file="../build-common.xml"/>
-  
-  <target name="compile" depends="init">
+
+  <target name="dynamic-serde" depends="init" if="javacc.home">
+    <mkdir dir="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type"/>
+    <javacc
+      target="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type/thrift_grammar.jj"
+      outputdirectory="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type"
+      javacchome="${javacc.home}"
+    />
+  </target>
+
+  <target name="compile" depends="init, dynamic-serde">
     <echo message="Compiling: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -45,6 +54,10 @@ to call at top-level: ant deploy-contrib compile-core-test
     <echo>Executing thrift (which needs to be in your path) to build java serde Constants... </echo>
     <exec executable="thrift"  failonerror="true" dir=".">
       <arg line="--gen py -php --gen java -o ${src.dir} if/serde.thrift " />
+    </exec>
+    <echo>Executing thrift (which needs to be in your path) to build thrift test classes... </echo>
+    <exec executable="thrift"  failonerror="true" dir=".">
+      <arg line="--gen java -o ${src.dir} if/test/complex.thrift " />
     </exec>
   </target>
 

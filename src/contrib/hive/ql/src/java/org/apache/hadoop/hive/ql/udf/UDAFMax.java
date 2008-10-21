@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.exec.UDAF;
 public class UDAFMax extends UDAF {
 
   private double mMax;
+  private boolean mEmpty;
   
   public UDAFMax() {
     super();
@@ -33,24 +34,31 @@ public class UDAFMax extends UDAF {
 
   public void init() {
     mMax = 0;
+    mEmpty = true;
   }
 
   public boolean aggregate(String o) {
-    mMax = Math.max(mMax, Double.parseDouble(o));
+    if (o != null && !o.isEmpty()) {
+      if (mEmpty) {
+        mMax = Double.parseDouble(o);
+        mEmpty = false;
+      } else {
+        mMax = Math.max(mMax, Double.parseDouble(o));
+      }
+    }
     return true;
   }
   
   public String evaluatePartial() {
-    return new Double(mMax).toString();
+    return mEmpty ? null : String.valueOf(mMax);
   }
 
   public boolean aggregatePartial(String o) {
-    mMax = Math.max(mMax, Double.parseDouble(o));
-    return true;
+    return aggregate(o);
   }
 
   public String evaluate() {
-    return new Double(mMax).toString();
+    return mEmpty ? null : String.valueOf(mMax);
   }
 
 }

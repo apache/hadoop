@@ -50,6 +50,9 @@ public class RowResolver {
   }
   
   public void put(String tab_alias, String col_alias, ColumnInfo colInfo) {
+    if (tab_alias != null) {
+      tab_alias = tab_alias.toLowerCase();
+    }
     col_alias = col_alias.toLowerCase();
     if (rowSchema.getSignature() == null) {
       rowSchema.setSignature(new Vector<ColumnInfo>());
@@ -71,10 +74,11 @@ public class RowResolver {
   }
 
   public boolean hasTableAlias(String tab_alias) {
-    return rslvMap.get(tab_alias) != null ? true : false;
+    return rslvMap.get(tab_alias.toLowerCase()) != null;
   }
 
   public ColumnInfo get(String tab_alias, String col_alias) {
+    tab_alias = tab_alias.toLowerCase();
     col_alias = col_alias.toLowerCase();
     HashMap<String, ColumnInfo> f_map = rslvMap.get(tab_alias);
     if (f_map == null) {
@@ -88,7 +92,7 @@ public class RowResolver {
   }
  
   public HashMap<String, ColumnInfo> getFieldMap(String tab_alias) {
-    return rslvMap.get(tab_alias);
+    return rslvMap.get(tab_alias.toLowerCase());
   }
 
   public int getPosition(String internalName) {

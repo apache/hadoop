@@ -86,6 +86,12 @@ public abstract class Task <T extends Serializable> implements Serializable {
   }
 
   public abstract int execute();
+  
+  // dummy method - FetchTask overwrites this
+  public boolean fetch(Vector<String> res) { 
+    assert false;
+  	return false;
+  }
 
   public void setChildTasks(List<Task<? extends Serializable>> childTasks) {
     this.childTasks = childTasks;
@@ -158,4 +164,11 @@ public abstract class Task <T extends Serializable> implements Serializable {
     return id;
   }
 
+  public boolean isMapRedTask() {
+    return false;
+  }
+
+  public boolean hasReduce() {
+    return false;
+  }
 }

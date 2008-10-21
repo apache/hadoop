@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.exec.UDAF;
 public class UDAFMin extends UDAF {
 
   private double mMin;
+  private boolean mEmpty;
   
   public UDAFMin() {
     super();
@@ -33,24 +34,31 @@ public class UDAFMin extends UDAF {
 
   public void init() {
     mMin = 0;
+    mEmpty = true;
   }
 
   public boolean aggregate(String o) {
-    mMin = Math.min(mMin, Double.parseDouble(o));
+    if (o != null && !o.isEmpty()) {
+      if (mEmpty) {
+        mMin = Double.parseDouble(o);
+        mEmpty = false;
+      } else {
+        mMin = Math.min(mMin, Double.parseDouble(o));
+      }
+    }
     return true;
   }
   
   public String evaluatePartial() {
-    return new Double(mMin).toString();
+    return mEmpty ? null : String.valueOf(mMin);
   }
 
   public boolean aggregatePartial(String o) {
-    mMin = Math.min(mMin, Double.parseDouble(o));
-    return true;
+    return aggregate(o);
   }
 
   public String evaluate() {
-    return new Double(mMin).toString();
+    return mEmpty ? null : String.valueOf(mMin);
   }
 
 }

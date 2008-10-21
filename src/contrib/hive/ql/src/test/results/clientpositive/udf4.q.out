@@ -1,0 +1,57 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF dest1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION round 1.0)) (TOK_SELEXPR (TOK_FUNCTION round 1.5)) (TOK_SELEXPR (TOK_FUNCTION round (- 1.5))) (TOK_SELEXPR (TOK_FUNCTION floor 1.0)) (TOK_SELEXPR (TOK_FUNCTION floor 1.5)) (TOK_SELEXPR (TOK_FUNCTION floor (- 1.5))) (TOK_SELEXPR (TOK_FUNCTION ceil 1.0)) (TOK_SELEXPR (TOK_FUNCTION ceil 1.5)) (TOK_SELEXPR (TOK_FUNCTION ceil (- 1.5))) (TOK_SELEXPR (TOK_FUNCTION ceiling 1.0)) (TOK_SELEXPR (TOK_FUNCTION rand 3)) (TOK_SELEXPR (+ 3)) (TOK_SELEXPR (- 3)) (TOK_SELEXPR (+ 1 (+ 2))) (TOK_SELEXPR (+ 1 (- 2))) (TOK_SELEXPR (~ 1)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        dest1 
+            Select Operator
+              expressions:
+                    expr: round(1.0)
+                    type: bigint
+                    expr: round(1.5)
+                    type: bigint
+                    expr: round(- 1.5)
+                    type: bigint
+                    expr: floor(1.0)
+                    type: bigint
+                    expr: floor(1.5)
+                    type: bigint
+                    expr: floor(- 1.5)
+                    type: bigint
+                    expr: ceiling(1.0)
+                    type: bigint
+                    expr: ceiling(1.5)
+                    type: bigint
+                    expr: ceiling(- 1.5)
+                    type: bigint
+                    expr: ceiling(1.0)
+                    type: bigint
+                    expr: rand(UDFToLong(3))
+                    type: double
+                    expr: 3
+                    type: int
+                    expr: - 3
+                    type: int
+                    expr: (1 + 2)
+                    type: int
+                    expr: (1 + - 2)
+                    type: int
+                    expr: ~ 1
+                    type: int
+              File Output Operator
+                table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+
+
+1	2	-1	1	1	-2	1	2	-1	1	0.731057369148862	3	-3	3	-1	-2

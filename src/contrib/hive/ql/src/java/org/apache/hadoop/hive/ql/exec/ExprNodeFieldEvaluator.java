@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.exprNodeFieldDesc;
 
 import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
+import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 
@@ -31,9 +36,10 @@ public class ExprNodeFieldEvaluator extends ExprNodeEvaluator {
   protected exprNodeFieldDesc desc;
   transient ExprNodeEvaluator leftEvaluator;
   transient InspectableObject leftInspectableObject;
-  transient StructObjectInspector cachedLeftObjectInspector;
+  transient StructObjectInspector structObjectInspector;
   transient StructField field;
-  transient ObjectInspector fieldObjectInspector;
+  transient ObjectInspector structFieldObjectInspector;
+  transient ObjectInspector resultObjectInspector;
   
   public ExprNodeFieldEvaluator(exprNodeFieldDesc desc) {
     this.desc = desc;
@@ -50,14 +56,19 @@ public class ExprNodeFieldEvaluator extends ExprNodeEvaluator {
     leftEvaluator.evaluate(row, rowInspector, leftInspectableObject);
 
     if (field == null) {
-      cachedLeftObjectInspector = (StructObjectInspector)leftInspectableObject.oi;
-      field = cachedLeftObjectInspector.getStructFieldRef(desc.getFieldName());
-      fieldObjectInspector = field.getFieldObjectInspector();
-    } else {
-      assert(cachedLeftObjectInspector == leftInspectableObject.oi);
+      evaluateInspector(rowInspector);
     }
-    result.oi = fieldObjectInspector;
-    result.o = cachedLeftObjectInspector.getStructFieldData(leftInspectableObject.o, field); 
+    result.oi = resultObjectInspector;
+    if (desc.getIsList()) {
+      List<?> list = ((ListObjectInspector)leftInspectableObject.oi).getList(leftInspectableObject.o);
+      List<Object> r = new ArrayList<Object>(list.size());
+      for(int i=0; i<list.size(); i++) {
+        r.add(structObjectInspector.getStructFieldData(list.get(i), field));
+      }
+      result.o = r;
+    } else {
+      result.o = structObjectInspector.getStructFieldData(leftInspectableObject.o, field);
+    }
   }
 
   public ObjectInspector evaluateInspector(ObjectInspector rowInspector)
@@ -66,13 +77,20 @@ public class ExprNodeFieldEvaluator extends ExprNodeEvaluator {
     // is different from the previous row 
     leftInspectableObject.oi = leftEvaluator.evaluateInspector(rowInspector);
     if (field == null) {
-      cachedLeftObjectInspector = (StructObjectInspector)leftInspectableObject.oi;
-      field = cachedLeftObjectInspector.getStructFieldRef(desc.getFieldName());
-      fieldObjectInspector = field.getFieldObjectInspector();
-    } else {
-      assert(cachedLeftObjectInspector == leftInspectableObject.oi);      
+      if (desc.getIsList()) {
+        structObjectInspector = (StructObjectInspector)((ListObjectInspector)leftInspectableObject.oi).getListElementObjectInspector();
+      } else {
+        structObjectInspector = (StructObjectInspector)leftInspectableObject.oi;
+      }
+      field = structObjectInspector.getStructFieldRef(desc.getFieldName());
+      structFieldObjectInspector = field.getFieldObjectInspector();
     }
-    return fieldObjectInspector;
+    if (desc.getIsList()) {
+      resultObjectInspector = ObjectInspectorFactory.getStandardListObjectInspector(structFieldObjectInspector);
+    } else {
+      resultObjectInspector = structFieldObjectInspector;
+    }
+    return resultObjectInspector;
   }
 
 }

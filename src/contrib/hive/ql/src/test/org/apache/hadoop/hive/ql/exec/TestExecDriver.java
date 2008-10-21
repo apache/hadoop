@@ -203,8 +203,7 @@ public class TestExecDriver extends TestCase {
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
       (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
-        Utilities.makeList(new exprNodeColumnDesc(String.class, "value")),
-        1));
+        Utilities.makeList(new exprNodeColumnDesc(String.class, "value")), -1, 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
 
@@ -228,8 +227,7 @@ public class TestExecDriver extends TestCase {
       (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "key"),
-                           new exprNodeColumnDesc(String.class, "value")),
-        1));
+                           new exprNodeColumnDesc(String.class, "value")), -1, 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
 
@@ -260,8 +258,7 @@ public class TestExecDriver extends TestCase {
       (PlanUtils.getReduceSinkDesc
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList
-        (new exprNodeColumnDesc(String.class, "value")), Byte.valueOf((byte)0),
-        1));
+        (new exprNodeColumnDesc(String.class, "value")), Byte.valueOf((byte)0), 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
 
@@ -270,7 +267,7 @@ public class TestExecDriver extends TestCase {
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "key")),
         Byte.valueOf((byte)1),
-        Integer.MAX_VALUE));
+        Integer.MAX_VALUE, -1, false));
 
     Utilities.addMapWork(mr, src2, "b", op2);
 
@@ -291,7 +288,8 @@ public class TestExecDriver extends TestCase {
              new exprNodeColumnDesc(TypeInfoFactory.getListTypeInfo(
                  TypeInfoFactory.getPrimitiveTypeInfo(String.class)),
                  Utilities.ReduceField.VALUE.toString()),
-             "0"))), op4);
+             "0",
+             false))), op4);
 
     mr.setReducer(op5);
   }
@@ -307,7 +305,7 @@ public class TestExecDriver extends TestCase {
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey"),
                            new exprNodeColumnDesc(String.class, "tvalue")),
-        1));
+        -1, 1, -1, false));
 
     Operator<scriptDesc> op0 = OperatorFactory.get
     (new scriptDesc("/bin/cat",
@@ -343,7 +341,7 @@ public class TestExecDriver extends TestCase {
        (Utilities.makeList(new exprNodeColumnDesc(String.class, "0")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "0"),
                            new exprNodeColumnDesc(String.class, "1")),
-        1));
+        -1, 1, -1, false));
 
     Operator<selectDesc> op4 = OperatorFactory.get(new selectDesc(
                                      Utilities.makeList(new exprNodeColumnDesc(String.class, "key"),
@@ -373,7 +371,7 @@ public class TestExecDriver extends TestCase {
         Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey")),
         Utilities.makeList(new exprNodeColumnDesc(String.class, "tkey"),
                            new exprNodeColumnDesc(String.class, "tvalue")),
-        1));
+        -1, 1, -1, false));
 
     Operator<scriptDesc> op0 = OperatorFactory.get
       (new scriptDesc("\'/bin/cat\'",

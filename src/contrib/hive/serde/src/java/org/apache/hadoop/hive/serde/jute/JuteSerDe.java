@@ -34,24 +34,6 @@ import org.apache.hadoop.record.*;
 
 public class JuteSerDe implements SerDe {
 
-  public static String shortName() {
-    return "jute";
-  }
-
-  public  String getShortName() {
-    return shortName();
-  }
-
-  static {
-    StackTraceElement[] sTrace = new Exception().getStackTrace();
-    String className = sTrace[0].getClassName();
-    try {
-      SerDeUtils.registerSerDe(shortName(), Class.forName(className));
-    } catch(Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   protected Class<?> type;
   private static final Log LOG = LogFactory.getLog("hive.metastore");
   public void initialize(Configuration job, Properties tbl) throws SerDeException {

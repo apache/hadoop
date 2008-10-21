@@ -8,15 +8,52 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Map Reduce
+      Alias -> Map Operator Tree:
+        src2 
+            Reduce Output Operator
+              key expressions:
+                    expr: key
+                    type: string
+              # partition fields: 1
+              tag: 1
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+        src3 
+            Reduce Output Operator
+              key expressions:
+                    expr: key
+                    type: string
+              # partition fields: 1
+              tag: 2
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+        src1 
+            Reduce Output Operator
+              key expressions:
+                    expr: key
+                    type: string
+              # partition fields: 1
+              tag: 0
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
       Reduce Operator Tree:
         Join Operator
+          condition map:
+               Inner Join 0 to 1
+               Inner Join 0 to 1
           condition expressions:
             0 {VALUE.0} {VALUE.1}
             1 {VALUE.0} {VALUE.1}
             2 {VALUE.0} {VALUE.1}
-          condition map:
-               Inner Join 0 to 1
-               Inner Join 0 to 1
           Select Operator
             expressions:
                   expr: 0
@@ -25,57 +62,20 @@ STAGE PLANS:
                   type: string
             File Output Operator
               table:
-                  name: dest1
-                  serde: simple_meta
                   input format: org.apache.hadoop.mapred.TextInputFormat
                   output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-      Alias -> Map Operator Tree:
-        src2 
-            Reduce Output Operator
-              tag: 1
-              key expressions:
-                    expr: key
-                    type: string
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
-              # partition fields: 1
-        src3 
-            Reduce Output Operator
-              tag: 2
-              key expressions:
-                    expr: key
-                    type: string
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
-              # partition fields: 1
-        src1 
-            Reduce Output Operator
-              tag: 0
-              key expressions:
-                    expr: key
-                    type: string
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
-              # partition fields: 1
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
 
   Stage: Stage-0
     Move Operator
       tables:
+            replace:
             table:
-                name: dest1
-                serde: simple_meta
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-            replace:
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
 
 
 0	val_0
@@ -2732,4 +2732,3 @@ STAGE PLANS:
 98	val_98
 98	val_98
 98	val_98
-

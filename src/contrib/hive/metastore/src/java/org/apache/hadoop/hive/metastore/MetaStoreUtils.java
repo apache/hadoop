@@ -102,7 +102,7 @@ public class MetaStoreUtils {
       tTable.getPartitionKeys().add(part);
     }
     // not sure why these are needed
-    serdeInfo.setSerializationLib(MetadataTypedColumnsetSerDe.shortName());
+    serdeInfo.setSerializationLib(MetadataTypedColumnsetSerDe.class.getName());
     sd.setNumBuckets(-1);
     return tTable;
   }
@@ -266,14 +266,22 @@ public class MetaStoreUtils {
       oldName = oldName.replace("com.facebook.thrift.hive.MetadataTypedColumnsetSerDe",org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
 
       // columnset serde
-      oldName = oldName.replace("com.facebook.thrift.hive.columnsetSerDe",org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
+      oldName = oldName.replace("com.facebook.thrift.hive.columnsetSerDe",org.apache.hadoop.hive.serde.thrift.columnsetSerDe.class.getName());
       oldName = oldName.replace("org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe",
-          org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
-
+      	  org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
+      oldName = oldName.replace("com.facebook.thrift.hive.MetadataTypedColumnsetSerDe", org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
       // thrift serde
-      oldName = oldName.replace("com.facebook.thrift.hive.ThriftHiveSerDe",org.apache.hadoop.hive.serde2.ThriftDeserializer.class.getName());
-      oldName = oldName.replace("org.apache.hadoop.hive.serde.thrift.ThriftSerDe",
-          org.apache.hadoop.hive.serde2.ThriftDeserializer.class.getName());
+      oldName = oldName.replace("com.facebook.thrift.hive.ThriftHiveSerDe", org.apache.hadoop.hive.serde2.ThriftDeserializer.class.getName());
+      oldName = oldName.replace("org.apache.hadoop.hive.serde.thrift.ThriftSerDe", org.apache.hadoop.hive.serde2.ThriftDeserializer.class.getName());
+
+      // replace any old short names in filebased metadata
+      if(oldName.equals("columnset"))
+        oldName = org.apache.hadoop.hive.serde.thrift.columnsetSerDe.class.getName();
+      if(oldName.equals("simple_meta"))
+        oldName = org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName();
+      if(oldName.equals("thrift"))
+        oldName = org.apache.hadoop.hive.serde2.ThriftDeserializer.class.getName();
+
       p.setProperty(key,oldName);
     }
     return p;
@@ -328,6 +336,8 @@ public class MetaStoreUtils {
     }
     // needed for MetadataTypedColumnSetSerDe
     setSerdeParam(t.getSd().getSerdeInfo(), schema, org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_COLUMNS);
+    // needed for DynamicSerDe
+    setSerdeParam(t.getSd().getSerdeInfo(), schema, org.apache.hadoop.hive.serde.Constants.SERIALIZATION_DDL);
     
     String colstr = schema.getProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_COLUMNS);
     List<FieldSchema>  fields = new ArrayList<FieldSchema>();
@@ -349,6 +359,8 @@ public class MetaStoreUtils {
       }
     }
     t.getSd().setCols(fields);
+    
+    t.setOwner(schema.getProperty("creator"));
     
     // remove all the used up parameters to find out the remaining parameters
     schema.remove(Constants.META_TABLE_NAME);
@@ -373,13 +385,70 @@ public class MetaStoreUtils {
     return t;
   }
 
-  private static void setSerdeParam(SerDeInfo sdi, Properties schema, String param) {
+  public static void setSerdeParam(SerDeInfo sdi, Properties schema, String param) {
     String val = schema.getProperty(param);
     if(org.apache.commons.lang.StringUtils.isNotBlank(val)) {
       sdi.getParameters().put(param, val);
     }
   }
 
+  static HashMap<String, String> typeToThriftTypeMap; 
+  static {
+    typeToThriftTypeMap = new HashMap<String, String>();
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.TINYINT_TYPE_NAME, "byte");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME, "i32");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.BIGINT_TYPE_NAME, "i64");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.DOUBLE_TYPE_NAME, "double");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.FLOAT_TYPE_NAME, "float");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.LIST_TYPE_NAME, "list");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.MAP_TYPE_NAME, "map");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME, "string");
+    // These 3 types are not supported yet. 
+    // We should define a complex type date in thrift that contains a single int member, and DynamicSerDe
+    // should convert it to date type at runtime.
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.DATE_TYPE_NAME, "date");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.DATETIME_TYPE_NAME, "datetime");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.TIMESTAMP_TYPE_NAME, "timestamp");
+  }
+  /** Convert type to ThriftType.  We do that by tokenizing the type and convert each token.
+   */
+  public static String typeToThriftType(String type) {
+    StringBuilder thriftType = new StringBuilder();
+    int last = 0;
+    boolean lastAlphaDigit = Character.isLetterOrDigit(type.charAt(last));
+    for(int i=1; i<=type.length(); i++) {
+      if (i == type.length() || Character.isLetterOrDigit(type.charAt(i)) != lastAlphaDigit) {
+        String token = type.substring(last, i);
+        last = i;
+        String thriftToken = typeToThriftTypeMap.get(token);
+        thriftType.append(thriftToken == null? token : thriftToken);
+        lastAlphaDigit = !lastAlphaDigit;
+      }         
+    }
+    return thriftType.toString();
+  }
+  /** Convert FieldSchemas to Thrift DDL.
+   */
+  public static String getDDLFromFieldSchema(String structName, List<FieldSchema> fieldSchemas) {
+    StringBuilder ddl = new StringBuilder();
+    ddl.append("struct ");
+    ddl.append(structName);
+    ddl.append(" { ");
+    boolean first = true;
+    for (FieldSchema col: fieldSchemas) {
+      if (first) {
+        first = false;
+      } else {
+        ddl.append(", ");
+      }
+      ddl.append(typeToThriftType(col.getType()));
+      ddl.append(' ');
+      ddl.append(col.getName());
+    }
+    ddl.append("}");
+    LOG.warn("DDL: " + ddl);
+    return ddl.toString();
+  }
   public static Properties getSchema(org.apache.hadoop.hive.metastore.api.Table tbl) {
     Properties schema = new Properties();
     String inputFormat = tbl.getSd().getInputFormat();
@@ -404,7 +473,7 @@ public class MetaStoreUtils {
     if(tbl.getSd().getSerdeInfo().getSerializationLib() != null) {
       schema.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_LIB, tbl.getSd().getSerdeInfo().getSerializationLib());
     }
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     boolean first = true;
     for (FieldSchema col: tbl.getSd().getCols()) {
       if (!first) {
@@ -415,6 +484,8 @@ public class MetaStoreUtils {
     }
     String cols = buf.toString();
     schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_COLUMNS, cols);
+    schema.setProperty(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_DDL, 
+        getDDLFromFieldSchema(tbl.getTableName(), tbl.getSd().getCols()));
     
     String partString = "";
     String partStringSep = "";
@@ -428,10 +499,6 @@ public class MetaStoreUtils {
     if(partString.length() > 0) {
       schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_PARTITION_COLUMNS, partString);
     }
-    
-    //TODO:pc field_to_dimension doesn't seem to be used anywhere so skipping for now
-    schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.BUCKET_FIELD_NAME, "");
-    schema.setProperty(org.apache.hadoop.hive.metastore.api.Constants.FIELD_TO_DIMENSION, "");
     
     for(Entry<String, String> e: tbl.getParameters().entrySet()) {
       schema.setProperty(e.getKey(), e.getValue());

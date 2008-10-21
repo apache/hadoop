@@ -23,6 +23,7 @@ import jline.*;
 import java.io.*;
 import java.util.*;
 
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
@@ -35,9 +36,11 @@ import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 public class CliDriver {
 
   public final static String prompt = "hive";
+  public final static String prompt2 = "    "; // when ';' is not yet seen
 
   public static SetProcessor sp;
   public static Driver qp;
+  public static FsShell dfs;
 
   public CliDriver(CliSessionState ss) {
     SessionState.start(ss);
@@ -81,30 +84,46 @@ public class CliDriver {
       catch (Exception e) {
         e.printStackTrace();
       }
-
-    } 
-    else {
-      ret = qp.run(cmd);
-      Vector<Vector<String>> res = new Vector<Vector<String>>();
-      while (qp.getResults(res)) {
-        SessionState ss  = SessionState.get();
-        PrintStream out = ss.out;
-
-        for (Vector<String> row:res)
-        {
-          boolean firstCol = true;
-          for (String col:row)
-          {
-            if (!firstCol)
-              out.write(Utilities.tabCode);
-            out.print(col == null ? Utilities.nullStringOutput : col);
-            firstCol = false;
-          } 
-          out.write(Utilities.newLineCode);
+    } else if (cmd.startsWith("dfs")) {
+      // dfs shell commands
+      SessionState ss = SessionState.get();
+      if(dfs == null)
+        dfs = new FsShell(ss.getConf());
+      String hadoopCmd = cmd.replaceFirst("dfs\\s+", "");
+      hadoopCmd = hadoopCmd.trim();
+      if (hadoopCmd.endsWith(";")) {
+        hadoopCmd = hadoopCmd.substring(0, hadoopCmd.length()-1);
+      }
+      String[] args = hadoopCmd.split("\\s+");
+      try {
+        PrintStream oldOut = System.out;
+        System.setOut(ss.out);
+        int val = dfs.run(args);
+        System.setOut(oldOut);
+        if (val != 0) {
+          ss.err.write((new String("Command failed with exit code = " + val)).getBytes());
         }
+      } catch (Exception e) {
+        ss.err.println("Exception raised from DFSShell.run " + e.getLocalizedMessage()); 
+      }
+    } else {
+      ret = qp.run(cmd);
+      Vector<String> res = new Vector<String>();
+      while (qp.getResults(res)) {
+      	for (String r:res) {
+          SessionState ss  = SessionState.get();
+          PrintStream out = ss.out;
+          out.println(r);
+      	}
         res.clear();
       }
+
+      int cret = qp.close();
+      if (ret == 0) {
+        ret = cret;
+      }
     }
+
     return ret;
   }
 
@@ -162,8 +181,15 @@ public class CliDriver {
       System.exit(2);
     }
 
+    // set all properties specified via command line
+    HiveConf conf = ss.getConf();
+    for(Map.Entry<Object, Object> item: ss.cmdProperties.entrySet()) {
+      conf.set((String) item.getKey(), (String) item.getValue());
+    }
+
     sp = new SetProcessor();
     qp = new Driver();
+    dfs = new FsShell(ss.getConf());
 
     if(ss.execString != null) {
       System.exit(processLine(ss.execString));
@@ -199,9 +225,20 @@ public class CliDriver {
     int ret = 0;
     Log LOG = LogFactory.getLog("CliDriver");
     LogHelper console = new LogHelper(LOG);
-    while ((line = reader.readLine(prompt+"> ")) != null) {
+    String prefix = "";
+    String curPrompt = prompt;
+    while ((line = reader.readLine(curPrompt+"> ")) != null) {
       long start = System.currentTimeMillis();
-      ret = processLine(line);
+      if(line.trim().endsWith(";")) {
+        line = prefix + " " + line;
+        ret = processLine(line);
+        prefix = "";
+        curPrompt = prompt;
+      } else {
+        prefix = prefix + line;
+        curPrompt = prompt2;
+        continue;
+      }
       long end = System.currentTimeMillis();
       if (end > start) {
         double timeTaken = (double)(end-start)/1000.0;

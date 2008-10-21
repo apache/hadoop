@@ -26,11 +26,13 @@ import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
 public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String column;
+  private boolean isVirtual;
   
   public exprNodeColumnDesc() {}
   public exprNodeColumnDesc(TypeInfo typeInfo, String column) {
     super(typeInfo);
     this.column = column;
+    this.isVirtual = isVirtual;
   }
   public exprNodeColumnDesc(Class<?> c, String column) {
     super(TypeInfoFactory.getPrimitiveTypeInfo(c));
@@ -42,6 +44,7 @@ public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   public void setColumn(String column) {
     this.column = column;
   }
+
   public String toString() {
     return "Column[" + column + "]";
   }

@@ -382,7 +382,7 @@ public class Utilities {
   }
 
   public final static String NSTR = "";
-  public static enum streamStatus {EOF, TERMINATED, NORMAL}
+  public static enum streamStatus {EOF, TERMINATED}
   public static streamStatus readColumn(DataInput in, OutputStream out) throws IOException {
 
     while (true) {
@@ -395,10 +395,6 @@ public class Utilities {
 
       if (b == Utilities.newLineCode) {
         return streamStatus.TERMINATED;
-      }
-
-      if (b == Utilities.ctrlaCode) {
-        return streamStatus.NORMAL;
       }
 
       out.write(b);

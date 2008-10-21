@@ -105,7 +105,6 @@ public class Hive {
     this.conf = c;
     try {
        msc = this.createMetaStoreClient();
-       //msc = new HiveMetaStoreClient(this.conf);
     } catch (MetaException e) {
       throw new HiveException("Unable to open connection to metastore", e);
     }
@@ -169,7 +168,7 @@ public class Hive {
         tbl.getPartCols().add(part);
       }
     }
-    tbl.setSerializationLib(org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.shortName());
+    tbl.setSerializationLib(org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
     tbl.setNumBuckets(bucketCount);
     createTable(tbl);
   }
@@ -269,7 +268,7 @@ public class Hive {
     } catch (NoSuchObjectException e) {
       if(throwException) {
         LOG.error(StringUtils.stringifyException(e));
-        throw new InvalidTableException("Table not found " + tableName);
+        throw new InvalidTableException("Table not found ", tableName);
       }
       return null;
     } catch (Exception e) {
@@ -463,6 +462,17 @@ public class Hive {
     return new Partition(tbl, tpart);
   }
   
+  public boolean dropPartition(String db_name, String tbl_name, List<String> part_vals,
+      boolean deleteData) throws HiveException {
+    try {
+      return msc.dropPartition(db_name, tbl_name, part_vals, deleteData);
+    } catch (NoSuchObjectException e) {
+      throw new HiveException("Partition or table doesn't exist.", e);
+    } catch (Exception e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    }
+  }
+
   public List<String> getPartitionNames(String dbName, String tblName, short max) throws HiveException {
     List names = null;
     try {

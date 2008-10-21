@@ -38,25 +38,31 @@ public class UDAFAvg extends UDAF {
   }
 
   public boolean aggregate(String o) {
-    mSum += Double.parseDouble(o);
-    mCount ++;
+    if (o != null && !o.isEmpty()) {
+      mSum += Double.parseDouble(o);
+      mCount ++;
+    }
     return true;
   }
   
   public String evaluatePartial() {
-    return new Double(mSum).toString() + '/' + Long.valueOf(mCount).toString();
+    // This is SQL standard - average of zero items should be null.
+    return mCount == 0 ? null : String.valueOf(mSum) + '/' + String.valueOf(mCount);
   }
 
   public boolean aggregatePartial(String o) {
-    int pos = o.indexOf('/');
-    assert(pos != -1);
-    mSum += Double.parseDouble(o.substring(0, pos));
-    mCount += Long.parseLong(o.substring(pos+1));
+    if (o != null && !o.isEmpty()) {
+      int pos = o.indexOf('/');
+      assert(pos != -1);
+      mSum += Double.parseDouble(o.substring(0, pos));
+      mCount += Long.parseLong(o.substring(pos+1));
+    }
     return true;
   }
 
   public String evaluate() {
-    return new Double(mSum / mCount).toString();
+    // This is SQL standard - average of zero items should be null.
+    return mCount == 0 ? null : String.valueOf(mSum / mCount);
   }
 
 }

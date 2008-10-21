@@ -9,6 +9,21 @@
 <!-- users do not have to edit hadoop configuration files (that may be managed as a centralized -->
 <!-- resource).                                                                                 -->
 
+<!-- Hadoop Setup -->
+<property>
+  <name>hadoop.bin.path</name>
+  <value>${user.dir}/../../../bin/hadoop</value>
+  <!-- note that the hive shell script also uses this property name -->
+  <description>Path to hadoop binary. Assumes that by default we are executing from hive</description>
+</property>
+
+<property>
+  <name>hadoop.config.dir</name>
+  <value>${user.dir}/../../../conf</value>
+  <!-- note that the hive shell script also uses this property name -->
+  <description>Path to hadoop configuration. Again assumes that by default we are executing from hive/</description>
+</property>
+
 <!-- Hive Execution Parameters -->
 <property>
   <name>hive.exec.scratchdir</name>

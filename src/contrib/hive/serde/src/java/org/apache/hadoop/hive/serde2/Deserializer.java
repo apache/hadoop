@@ -58,6 +58,4 @@ public interface Deserializer {
    */
   public ObjectInspector getObjectInspector() throws SerDeException;
 
-  public String getShortName();
-  
 }

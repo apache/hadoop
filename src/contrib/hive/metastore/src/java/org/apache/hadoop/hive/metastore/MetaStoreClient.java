@@ -439,4 +439,9 @@ public class MetaStoreClient implements IMetaStoreClient {
     return new ArrayList<String>();
   }
 
+  public boolean dropPartition(String db_name, String tbl_name, List<String> part_vals, boolean deleteData)
+      throws NoSuchObjectException, MetaException, TException {
+    return false;
+  }
+
 }

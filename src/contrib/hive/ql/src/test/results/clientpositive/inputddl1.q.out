@@ -8,10 +8,10 @@ STAGE PLANS:
   Stage: Stage-0
       Create Table Operator:
         Create Table
-          isExternal:
-          name: INPUTDDL1
-          # buckets: -1
-          isSequenceFile:
           columns: key int, value string
+          # buckets: -1
+          name: INPUTDDL1
+          isExternal:
+          isSequenceFile:
 
 

@@ -528,11 +528,24 @@ public class ObjectStore implements RawStore, Configurable {
     try {
       openTransaction();
       dbName = dbName.toLowerCase();
-      pattern = "(?i)" + pattern; // add the case insensitivity 
-      Query q = pm.newQuery("select tableName from org.apache.hadoop.hive.metastore.model.MTable where database.name == dbName && tableName.matches(pattern)");
-      q.declareParameters("java.lang.String dbName, java.lang.String pattern");
+      // Take the pattern and split it on the | to get all the composing patterns
+      String [] subpatterns = pattern.trim().split("\\|");
+      String query = "select tableName from org.apache.hadoop.hive.metastore.model.MTable where database.name == dbName && (";
+      boolean first = true;
+      for(String subpattern: subpatterns) {
+        subpattern = "(?i)" + subpattern.replaceAll("\\*", ".*");
+        if (!first) {
+          query = query + " || ";
+        }
+        query = query + " tableName.matches(\"" + subpattern + "\")";
+        first = false;
+      }
+      query = query + ")";
+
+      Query q = pm.newQuery(query);
+      q.declareParameters("java.lang.String dbName");
       q.setResult("tableName");
-      Collection names = (Collection) q.execute(dbName.trim(), pattern.trim());
+      Collection names = (Collection) q.execute(dbName.trim());
       tbls = new ArrayList<String>(); 
       for (Iterator i = names.iterator (); i.hasNext ();) {
           tbls.add((String) i.next ()); 
@@ -817,7 +830,7 @@ public class ObjectStore implements RawStore, Configurable {
       LOG.debug("Executing getPartitionNames");
       dbName = dbName.toLowerCase();
       tableName = tableName.toLowerCase();
-      Query q = pm.newQuery("select partitionName from org.apache.hadoop.hive.metastore.model.MPartition where table.database.name == t1 && table.tableName == t2");
+      Query q = pm.newQuery("select partitionName from org.apache.hadoop.hive.metastore.model.MPartition where table.database.name == t1 && table.tableName == t2 order by partitionName asc");
       q.declareParameters("java.lang.String t1, java.lang.String t2");
       q.setResult("partitionName");
       Collection names = (Collection) q.execute(dbName.trim(), tableName.trim());
@@ -847,9 +860,10 @@ public class ObjectStore implements RawStore, Configurable {
       Query query = pm.newQuery(MPartition.class, "table.tableName == t1 && table.database.name == t2"); 
       query.declareParameters("java.lang.String t1, java.lang.String t2"); 
       mparts = (List<MPartition>) query.execute(tableName.trim(), dbName.trim()); 
+      LOG.debug("Done executing query for listMPartitions");
       pm.retrieveAll(mparts);
       success = commitTransaction();
-      LOG.debug("Done e xecuting listMPartitions");
+      LOG.debug("Done retrieving all objects for listMPartitions");
     } finally {
       if(!success) {
         rollbackTransaction();

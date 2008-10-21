@@ -140,9 +140,11 @@
     <copy file="${basedir}/conf/hive-log4j.properties" todir="${target.conf.dir}"/>
     <copy file="${basedir}/conf/jpox.properties" todir="${target.conf.dir}"/>
     <copy todir="${target.lib.dir}/php">
+      <fileset dir="${hive.root}/serde/src/gen-php"/>
       <fileset dir="${hive.root}/metastore/src/gen-php"/>
     </copy>
     <copy todir="${target.lib.dir}/py">
+      <fileset dir="${hive.root}/serde/src/gen-py"/>
       <fileset dir="${hive.root}/metastore/src/gen-py"/>
     </copy>
     <copy todir="${target.lib.dir}" preservelastmodified="true" flatten="true">

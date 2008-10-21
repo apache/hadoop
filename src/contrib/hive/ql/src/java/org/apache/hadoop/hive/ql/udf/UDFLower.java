@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-public class UDFLower extends UDF {
+public class UDFLower implements UDF {
 
   public UDFLower() {
   }
