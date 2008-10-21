@@ -851,6 +851,21 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               closeRegion(e.msg.getRegionInfo(), false);
               break;
 
+            case MSG_REGION_SPLIT: {
+              HRegionInfo info = e.msg.getRegionInfo();
+              // Force split a region
+              HRegion region = getRegion(info.getRegionName());
+              region.regionInfo.shouldSplit(true);
+              compactSplitThread.compactionRequested(region);
+            } break;
+
+            case MSG_REGION_COMPACT: {
+              // Compact a region
+              HRegionInfo info = e.msg.getRegionInfo();
+              HRegion region = getRegion(info.getRegionName());
+              compactSplitThread.compactionRequested(region);
+            } break;
+
             default:
               throw new AssertionError(
                   "Impossible state during msg processing.  Instruction: "

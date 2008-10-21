@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,15 +31,11 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Tests HTable
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
-  private static final Log LOG = LogFactory.getLog(TestHTable.class);
   private static final HColumnDescriptor column =
     new HColumnDescriptor(COLUMN_FAMILY);
 
@@ -146,7 +140,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       for (HColumnDescriptor c: desc.getFamilies())
         c.setValue(attrName, attrValue);
       // update metadata for all regions of this table
-      admin.modifyTableMeta(tableAname, desc);
+      admin.modifyTable(tableAname, HConstants.MODIFY_TABLE_SET_HTD, desc);
       // enable the table
       admin.enableTable(tableAname);
 

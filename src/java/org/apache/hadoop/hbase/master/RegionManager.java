@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
@@ -120,7 +122,18 @@ class RegionManager implements HConstants {
   private final HMaster master;
   private final RegionHistorian historian;
   private final float slop;
-  
+
+  /** Set of regions to split. */
+  private final Map<byte[],Pair<HRegionInfo,HServerAddress>> regionsToSplit = 
+    Collections.synchronizedSortedMap(
+      new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
+        (Bytes.BYTES_COMPARATOR));
+  /** Set of regions to compact. */
+  private final Map<byte[],Pair<HRegionInfo,HServerAddress>> regionsToCompact =
+    Collections.synchronizedSortedMap(
+      new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
+      (Bytes.BYTES_COMPARATOR));
+
   RegionManager(HMaster master) {
     this.master = master;
     this.historian = RegionHistorian.getInstance();
@@ -920,5 +933,75 @@ class RegionManager implements HConstants {
    */
   public void setNumMetaRegions(int num) {
     numberOfMetaRegions.set(num);
+  }
+
+  /**
+   * @param regionName
+   */
+  public void startAction(byte[] regionName, HRegionInfo info,
+      HServerAddress server, int op) {
+    switch (op) {
+      case HConstants.MODIFY_TABLE_SPLIT:
+        regionsToSplit.put(regionName, 
+          new Pair<HRegionInfo,HServerAddress>(info, server));
+        break;
+      case HConstants.MODIFY_TABLE_COMPACT:
+        regionsToCompact.put(regionName,
+          new Pair<HRegionInfo,HServerAddress>(info, server));
+        break;
+      default:
+        throw new IllegalArgumentException("illegal table action " + op);
+    }
+  }
+
+  /**
+   * @param regionName
+   */
+  public void endAction(byte[] regionName, int op) {
+    switch (op) {
+    case HConstants.MODIFY_TABLE_SPLIT:
+      regionsToSplit.remove(regionName);
+      break;
+    case HConstants.MODIFY_TABLE_COMPACT:
+      regionsToCompact.remove(regionName);
+      break;
+    default:
+      throw new IllegalArgumentException("illegal table action " + op);
+    }
+  }
+
+  /**
+   * @param regionName
+   */
+  public void endActions(byte[] regionName) {
+    regionsToSplit.remove(regionName);
+    regionsToCompact.remove(regionName);
+  }
+
+  /**
+   * Send messages to the given region server asking it to split any
+   * regions in 'regionsToSplit'
+   * @param serverInfo
+   * @param returnMsgs
+   */
+  public void applyActions(HServerInfo serverInfo, ArrayList<HMsg> returnMsgs) {
+    HServerAddress addr = serverInfo.getServerAddress();
+    Iterator<Pair<HRegionInfo,HServerAddress>> i =
+      regionsToCompact.values().iterator();
+    while (i.hasNext()) {
+      Pair<HRegionInfo,HServerAddress> pair = i.next();
+      if (addr.equals(pair.getSecond())) {
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_COMPACT, pair.getFirst()));
+        i.remove();
+      }
+    }
+    i = regionsToSplit.values().iterator();
+    while (i.hasNext()) {
+      Pair<HRegionInfo,HServerAddress> pair = i.next();
+      if (addr.equals(pair.getSecond())) {
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_SPLIT, pair.getFirst()));
+        i.remove();
+      }
+    }
   }
 }

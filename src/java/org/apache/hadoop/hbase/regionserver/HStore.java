@@ -768,6 +768,7 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   StoreSize compact(boolean majorCompaction) throws IOException {
+    boolean forceSplit = this.info.shouldSplit(false);
     synchronized (compactLock) {
       long maxId = -1;
       int nrows = -1;
@@ -803,11 +804,11 @@ public class HStore implements HConstants {
       }
       if (!majorCompaction && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
-        return checkSplit();
+        return checkSplit(forceSplit);
       }
       if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
         LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
-        return checkSplit();
+        return checkSplit(forceSplit);
       }
 
       // HBASE-745, preparing all store file size for incremental compacting
@@ -848,7 +849,7 @@ public class HStore implements HConstants {
               StringUtils.humanReadableInt(totalSize) + "; Skipped " + point +
               " files, size: " + skipped);
           }
-          return checkSplit();
+          return checkSplit(forceSplit);
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Compaction size of " + this.storeNameStr + ": " +
@@ -911,7 +912,7 @@ public class HStore implements HConstants {
           (lastMajorCompaction/1000) + " seconds"));
       }
     }
-    return checkSplit();
+    return checkSplit(forceSplit);
   }
 
   /*
@@ -1838,11 +1839,11 @@ public class HStore implements HConstants {
    * 
    * @return a StoreSize if store can be split, null otherwise
    */
-  StoreSize checkSplit() {
+  StoreSize checkSplit(boolean force) {
     if (this.storefiles.size() <= 0) {
       return null;
     }
-    if (storeSize < this.desiredMaxFileSize) {
+    if (!force && (storeSize < this.desiredMaxFileSize)) {
       return null;
     }
     this.lock.readLock().lock();

@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -64,10 +67,12 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 
@@ -672,10 +677,117 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     new ChangeTableState(this, tableName, false).process();
   }
 
-  public void modifyTableMeta(final byte[] tableName, HTableDescriptor desc)
-    throws IOException
-  {
-    new ModifyTableMeta(this, tableName, desc).process();
+  private List<Pair<HRegionInfo,HServerAddress>>
+  getTableRegions(final byte [] tableName) throws IOException {
+    List<Pair<HRegionInfo,HServerAddress>> result =
+        new ArrayList<Pair<HRegionInfo,HServerAddress>>();
+    Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
+    for (MetaRegion m: regions) {
+      byte [] metaRegionName = m.getRegionName();
+      HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
+      long scannerid = 
+        srvr.openScanner(metaRegionName, 
+          new byte[][] {COL_REGIONINFO, COL_SERVER},
+          tableName, 
+          LATEST_TIMESTAMP, 
+          null);
+      try {
+        while (true) {
+          RowResult data = srvr.next(scannerid);
+          if (data == null || data.size() <= 0)
+            break;
+          HRegionInfo info = Writables.getHRegionInfo(data.get(COL_REGIONINFO));
+          if (Bytes.compareTo(info.getTableDesc().getName(), tableName) == 0) {
+            Cell cell = data.get(COL_SERVER);
+            if (cell != null) {
+              HServerAddress server =
+                new HServerAddress(Bytes.toString(cell.getValue()));
+              result.add(new Pair<HRegionInfo,HServerAddress>(info, server));
+            }
+          } else {
+            break;
+          }
+        }
+      } finally {
+        srvr.close(scannerid);
+      }
+    }
+    return result;
+  }
+
+  private Pair<HRegionInfo,HServerAddress>
+  getTableRegionClosest(final byte [] tableName, final byte [] rowKey)
+    throws IOException {
+    Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
+    for (MetaRegion m: regions) {
+      byte [] metaRegionName = m.getRegionName();
+      HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
+      long scannerid = 
+          srvr.openScanner(metaRegionName, 
+            new byte[][] {COL_REGIONINFO, COL_SERVER},
+            tableName, 
+            LATEST_TIMESTAMP, 
+            null);
+      try {
+        while (true) {
+          RowResult data = srvr.next(scannerid);
+          if (data == null || data.size() <= 0)
+            break;
+          HRegionInfo info = Writables.getHRegionInfo(data.get(COL_REGIONINFO));
+          if (Bytes.compareTo(info.getTableDesc().getName(), tableName) == 0) {
+            if ((Bytes.compareTo(info.getStartKey(), rowKey) >= 0) &&
+                (Bytes.compareTo(info.getEndKey(), rowKey) < 0)) {
+                Cell cell = data.get(COL_SERVER);
+                if (cell != null) {
+                  HServerAddress server =
+                    new HServerAddress(Bytes.toString(cell.getValue()));
+                  return new Pair<HRegionInfo,HServerAddress>(info, server);
+                }
+            }
+          } else {
+            break;
+          }
+        }
+      } finally {
+        srvr.close(scannerid);
+      }
+    }
+    return null;
+  }
+
+  public void modifyTable(final byte[] tableName, int op, Writable[] args)
+    throws IOException {
+    switch (op) {
+    case MODIFY_TABLE_SET_HTD:
+      if (args == null || args.length < 1 || 
+          !(args[0] instanceof HTableDescriptor))
+        throw new IOException("SET_HTD request requires an HTableDescriptor");
+      HTableDescriptor htd = (HTableDescriptor) args[0];
+      LOG.info("modifyTable(SET_HTD): " + htd);
+      new ModifyTableMeta(this, tableName, htd).process();
+      break;
+    case MODIFY_TABLE_SPLIT:
+    case MODIFY_TABLE_COMPACT:
+      if (args != null && args.length > 0) {
+        if (!(args[0] instanceof ImmutableBytesWritable))
+          throw new IOException(
+            "request argument must be ImmutableBytesWritable");
+        byte[] rowKey = ((ImmutableBytesWritable)args[0]).get();
+        Pair<HRegionInfo,HServerAddress> pair =
+          getTableRegionClosest(tableName, rowKey);
+        if (pair != null) {
+          regionManager.startAction(pair.getFirst().getRegionName(),
+            pair.getFirst(), pair.getSecond(), op);
+        }
+      } else {
+        for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName))
+          regionManager.startAction(pair.getFirst().getRegionName(),
+            pair.getFirst(), pair.getSecond(), op);
+      }
+      break;
+    default:
+      throw new IOException("unsupported modifyTable op " + op);
+    }
   }
 
   public HServerAddress findRootRegion() {

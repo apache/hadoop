@@ -70,7 +70,7 @@ class ServerManager implements HConstants {
   /** Map of server names -> server load */
   final Map<String, HServerLoad> serversToLoad =
     new ConcurrentHashMap<String, HServerLoad>();  
-  
+
   private HMaster master;
   private final Leases serverLeases;
   
@@ -345,7 +345,7 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_SPLIT:
-          processSplitRegion(serverName, serverInfo, region, incomingMsgs[++i], 
+          processSplitRegion(serverName, serverInfo, region, incomingMsgs[++i],
             incomingMsgs[++i], returnMsgs);
           break;
 
@@ -364,9 +364,14 @@ class ServerManager implements HConstants {
         master.regionManager.setClosing(i.getRegionName());
       }
     }
+
     // Figure out what the RegionServer ought to do, and write back.
     master.regionManager.assignRegions(serverInfo, serverName, 
       mostLoadedRegions, returnMsgs);
+
+    // Send any pending table actions.
+    master.regionManager.applyActions(serverInfo, returnMsgs);
+
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
@@ -382,7 +387,12 @@ class ServerManager implements HConstants {
    */
   private void processSplitRegion(String serverName, HServerInfo serverInfo, 
     HRegionInfo region, HMsg splitA, HMsg splitB, ArrayList<HMsg> returnMsgs) {
-    
+
+    // Cancel any actions pending for the affected region.
+    // This prevents the master from sending a SPLIT message if the table
+    // has already split by the region server. 
+    master.regionManager.endActions(region.getRegionName());
+
     HRegionInfo newRegionA = splitA.getRegionInfo();
     master.regionManager.setUnassigned(newRegionA);
 

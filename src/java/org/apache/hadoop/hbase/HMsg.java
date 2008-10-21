@@ -49,7 +49,13 @@ public class HMsg implements Writable {
     
     /** Stop serving the specified region */
     MSG_REGION_CLOSE,
-    
+
+    /** Split the specified region */
+    MSG_REGION_SPLIT,
+
+    /** Compact the specified region */
+    MSG_REGION_COMPACT,
+
     /** Region server is unknown to master. Restart */
     MSG_CALL_SERVER_STARTUP,
     

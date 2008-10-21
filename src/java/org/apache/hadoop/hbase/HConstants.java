@@ -254,4 +254,12 @@ public interface HConstants {
    * backoff table, a bit more aggressive than simple exponential backoff.
    */ 
   public static int RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32 };
+
+  /** modifyTable op for replacing the table descriptor */
+  public static final int MODIFY_TABLE_SET_HTD = 1;
+  /** modifyTable op for forcing a split */
+  public static final int MODIFY_TABLE_SPLIT = 2;
+  /** modifyTable op for forcing a compaction */
+  public static final int MODIFY_TABLE_COMPACT = 3;
+
 }

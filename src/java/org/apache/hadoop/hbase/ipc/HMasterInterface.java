@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
@@ -39,8 +40,9 @@ public interface HMasterInterface extends VersionedProtocol {
    * of actual class names (HADOOP-2519).
    * <p>Version 4 when we moved to all byte arrays (HBASE-42).
    * <p>Version 5  HBASE-576.
+   * <p>Version 6  modifyTable.
    */
-  public static final long versionID = 5L;
+  public static final long versionID = 6L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();
@@ -110,10 +112,11 @@ public interface HMasterInterface extends VersionedProtocol {
    * Modify a table's metadata
    * 
    * @param tableName
-   * @param desc
+   * @param op
+   * @param args
    * @throws IOException
    */
-  public void modifyTableMeta(byte[] tableName, HTableDescriptor desc)
+  public void modifyTable(byte[] tableName, int op, Writable[] args)
     throws IOException;
 
   /**

@@ -35,11 +35,13 @@ import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -504,20 +506,48 @@ public class HBaseAdmin {
   }
 
   /**
-   * Modify a table's HTableDescriptor
+   * Modify an existing table
    * 
    * @param tableName name of table
-   * @param desc the updated descriptor
+   * @param op table modification operation
+   * @param args operation specific arguments
    * @throws IOException
    */
-  public void modifyTableMeta(final byte [] tableName, HTableDescriptor desc)
-  throws IOException {
+  public void modifyTable(final byte [] tableName, int op, Object... args)
+      throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
     HTableDescriptor.isLegalTableName(tableName);
     try {
-      this.master.modifyTableMeta(tableName, desc);
+      switch (op) {
+      case HConstants.MODIFY_TABLE_SET_HTD: {
+        if (args == null || args.length < 1 || 
+            !(args[0] instanceof HTableDescriptor))
+          throw new IOException("SET_HTD requires a HTableDescriptor");
+        Writable[] arr = new Writable[1];
+        arr[0] = (HTableDescriptor)args[0];
+        this.master.modifyTable(tableName, op, arr);
+      } break;
+      case HConstants.MODIFY_TABLE_SPLIT: {
+        Writable[] arr = null;
+        if (args != null && args.length > 0) {
+          arr = new Writable[1];
+          if (args[0] instanceof byte[]) {
+            arr[0] = new ImmutableBytesWritable((byte[])args[0]);
+          } else if (args[0] instanceof ImmutableBytesWritable) {
+            arr[0] = (ImmutableBytesWritable)args[0];
+          } else {
+            throw new IOException(
+              "SPLIT with arg requires byte[] or ImmutableBytesWritable");
+          }
+        }
+        this.master.modifyTable(tableName, op, arr);
+        break;
+      }
+      default:
+        throw new IOException("unknown modifyTable op " + op);
+      }
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
