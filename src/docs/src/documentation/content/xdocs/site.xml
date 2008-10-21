@@ -47,6 +47,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs      label="HDFS Admin Guide: Permissions"    href="hdfs_permissions_guide.html" />
     <hdfs      label="HDFS Admin Guide: Quotas" href="hdfs_quota_admin_guide.html" />
     <fs        label="HDFS Utilities"  href="SLG_user_guide.html" />
+    <libhdfs   label="HDFS C API"         href="libhdfs.html" />
     <hod-user-guide label="HOD User Guide" href="hod_user_guide.html"/>
     <hod-admin-guide label="HOD Admin Guide" href="hod_admin_guide.html"/>
     <hod-config-guide label="HOD Config Guide" href="hod_config_guide.html"/>
