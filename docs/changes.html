@@ -214,7 +214,7 @@ changes from the prior release.<br />(cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(77)
+</a>&nbsp;&nbsp;&nbsp;(78)
     <ol id="release_0.19.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4205">HADOOP-4205</a>. hive: metastore and ql to use the refactored SerDe library.<br />(zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4106">HADOOP-4106</a>. libhdfs: add time, permission and user attribute support
@@ -354,6 +354,7 @@ via cdouglas).
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4438">HADOOP-4438</a>. Update forrest documentation to include missing FsShell
 commands.<br />(Suresh Srinivas via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4105">HADOOP-4105</a>.  Add forrest documentation for libhdfs.<br />(Pete Wyckoff via cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -386,7 +387,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(143)
+</a>&nbsp;&nbsp;&nbsp;(146)
     <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -659,6 +660,11 @@ list of jobs to be keyed by the priority, submit time, and job tracker id.<br />
 is finished.<br />(dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4439">HADOOP-4439</a>. Remove configuration variables that aren't usable yet, in
 particular mapred.tasktracker.tasks.maxmemory and mapred.task.max.memory.<br />(Hemanth Yamijala via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4230">HADOOP-4230</a>. Fix for serde2 interface, limit operator, select * operator,
+UDF trim functions and sampling.<br />(Ashish Thusoo via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4358">HADOOP-4358</a>. No need to truncate access time in INode. Also fixes NPE
+in CreateEditsLog.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4387">HADOOP-4387</a>. TestHDFSFileSystemContract fails on windows nightly builds.<br />(Raghu Angadi)</li>
     </ol>
   </li>
 </ul>
@@ -666,7 +672,7 @@ particular mapred.tasktracker.tasks.maxmemory and mapred.task.max.memory.<br />(
 </a></h2>
 <ul id="release_0.18.2_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(11)
     <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
@@ -679,11 +685,11 @@ due to incorrect type used.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
 ArrayIndexOutOfBoundsException.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4398">HADOOP-4398</a>. No need to truncate access time in INode. Also fixes NPE
-in CreateEditsLog.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4369">HADOOP-4369</a>. Use setMetric(...) instead of incrMetric(...) for metrics
 averages.<br />(Brian Bockelman via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4469">HADOOP-4469</a>. Rename and add the ant task jar file to the tar file.<br />(nigel)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3914">HADOOP-3914</a>. DFSClient sends Checksum Ok only once for a block.<br />(Christain Kunz via hairong)</li>
     </ol>
   </li>
 </ul>
