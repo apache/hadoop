@@ -994,6 +994,9 @@ public class HTable {
       final RowLock rl) 
   throws IOException {
     checkRowAndColumns(batchUpdate);
+    if(rl != null) {
+      batchUpdate.setRowLock(rl.getLockId());
+    }
     writeBuffer.add(batchUpdate);
     currentWriteBufferSize += batchUpdate.getSize();
     if(autoFlush || currentWriteBufferSize > writeBufferSize) {

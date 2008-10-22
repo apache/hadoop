@@ -1147,7 +1147,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
-      region.batchUpdate(b, getLockFromId(lockId));
+      region.batchUpdate(b, getLockFromId(b.getRowLock()));
     } catch (OutOfMemoryError error) {
       abort();
       LOG.fatal("Ran out of memory", error);
@@ -1164,12 +1164,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HRegion region = getRegion(regionName);
       this.cacheFlusher.reclaimMemcacheMemory();
-      for (BatchUpdate batchUpdate : b) {
+      Integer[] locks = new Integer[b.length];
+      for (int j = 0; j < b.length; j++) {
         this.requestCount.incrementAndGet();
-        validateValuesLength(batchUpdate, region);
+        validateValuesLength(b[j], region);
+        locks[j] = getLockFromId(b[j].getRowLock());
       }
       i+= b.length-1;
-      region.batchUpdate(b);
+      region.batchUpdate(b, locks);
     } catch (OutOfMemoryError error) {
       abort();
       LOG.fatal("Ran out of memory", error);

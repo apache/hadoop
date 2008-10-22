@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -49,6 +50,8 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
     new ArrayList<BatchOperation>();
   
   private long timestamp = HConstants.LATEST_TIMESTAMP;
+  
+  private long rowLock = -1l;
   
   /**
    * Default constructor used serializing.  Do not use directly.
@@ -99,6 +102,22 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
     this.operations = new ArrayList<BatchOperation>();
     this.size = (row == null)? 0: row.length;
   }
+  /**
+   * Get the row lock associated with this update
+   * @return the row lock
+   */
+  public long getRowLock() {
+    return rowLock;
+  }
+
+  /**
+   * Set the lock to be used for this update
+   * @param rowLock the row lock
+   */
+  public void setRowLock(long rowLock) {
+    this.rowLock = rowLock;
+  }
+
 
   /** @return the row */
   public byte [] getRow() {
@@ -283,6 +302,7 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
       op.readFields(in);
       this.operations.add(op);
     }
+    this.rowLock = in.readLong();
   }
 
   public void write(final DataOutput out) throws IOException {
@@ -293,6 +313,7 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
     for (BatchOperation op: operations) {
       op.write(out);
     }
+    out.writeLong(this.rowLock);
   }
 
   public int compareTo(BatchUpdate o) {

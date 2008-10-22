@@ -1358,11 +1358,12 @@ public class HRegion implements HConstants {
    * blocked while updating.
    * @param bus 
    */
-  public void batchUpdate(BatchUpdate[] bus) throws IOException {
+  public void batchUpdate(BatchUpdate[] bus, Integer[] locks)
+      throws IOException {
     splitsAndClosesLock.readLock().lock();
     try {
-      for (BatchUpdate bu : bus) {
-        batchUpdate(bu, null);
+      for (int i = 0; i < bus.length; i++) {
+        batchUpdate(bus[i], locks[i]);
       }
     } finally {
       splitsAndClosesLock.readLock().unlock();
