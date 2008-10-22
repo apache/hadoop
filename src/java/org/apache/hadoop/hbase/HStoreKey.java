@@ -32,7 +32,7 @@ import org.apache.hadoop.io.WritableComparator;
 /**
  * A Key for a stored row.
  */
-public class HStoreKey implements WritableComparable {
+public class HStoreKey implements WritableComparable<HStoreKey> {
   /**
    * Colon character in UTF-8
    */
@@ -332,7 +332,14 @@ public class HStoreKey implements WritableComparable {
   
   @Override
   public boolean equals(Object obj) {
-    return compareTo(obj) == 0;
+    HStoreKey other = (HStoreKey)obj;
+    // Do a quick check.
+    if (this.row.length != other.row.length ||
+        this.column.length != other.column.length ||
+        this.timestamp != other.timestamp) {
+      return false;
+    }
+    return compareTo(other) == 0;
   }
   
   @Override
@@ -345,7 +352,7 @@ public class HStoreKey implements WritableComparable {
 
   // Comparable
 
-  public int compareTo(Object o) {
+  public int compareTo(final HStoreKey o) {
     return compareTo(this.regionInfo, this, (HStoreKey)o);
   }
   
@@ -514,8 +521,7 @@ public class HStoreKey implements WritableComparable {
    */
   public static int compareTwoRowKeys(HRegionInfo regionInfo, 
       byte[] rowA, byte[] rowB) {
-    if(regionInfo != null && (regionInfo.isMetaRegion() ||
-        regionInfo.isRootRegion())) {
+    if (regionInfo != null && regionInfo.isMetaRegion()) {
       byte[][] keysA = stripStartKeyMeta(rowA);
       byte[][] KeysB = stripStartKeyMeta(rowB);
       int rowCompare = Bytes.compareTo(keysA[0], KeysB[0]);

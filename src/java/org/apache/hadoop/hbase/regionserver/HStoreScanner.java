@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -146,7 +148,7 @@ class HStoreScanner implements InternalScanner {
         // are only keeping rows and columns that match those set on the
         // scanner and which have delete values.  If memory usage becomes a
         // problem, could redo as bloom filter.
-        List<HStoreKey> deletes = new ArrayList<HStoreKey>();
+        Set<HStoreKey> deletes = new HashSet<HStoreKey>();
         for (int i = 0; i < scanners.length && !filtered; i++) {
           while ((scanners[i] != null
               && !filtered
@@ -166,16 +168,14 @@ class HStoreScanner implements InternalScanner {
             // but this had the effect of overwriting newer
             // values with older ones. So now we only insert
             // a result if the map does not contain the key.
-            HStoreKey hsk = new HStoreKey(key.getRow(), HConstants.EMPTY_BYTE_ARRAY,
+            HStoreKey hsk = new HStoreKey(key.getRow(),
+              HConstants.EMPTY_BYTE_ARRAY,
               key.getTimestamp(), this.store.getHRegionInfo());
             for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
               hsk.setColumn(e.getKey());
               if (HLogEdit.isDeleted(e.getValue().getValue())) {
-                if (!deletes.contains(hsk)) {
-                  // Key changes as we cycle the for loop so add a copy to
-                  // the set of deletes.
-                  deletes.add(new HStoreKey(hsk));
-                }
+                // Only first key encountered is added; deletes is a Set.
+                deletes.add(new HStoreKey(hsk));
               } else if (!deletes.contains(hsk) &&
                   !filtered &&
                   moreToFollow &&

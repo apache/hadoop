@@ -25,17 +25,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JenkinsHash;
-import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.hbase.HBaseTestCase;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.WritableComparable;
 /**
  * Test HStoreFile
  */
@@ -234,7 +232,7 @@ public class TestHStoreFile extends HBaseTestCase {
           first = false;
           LOG.info("First in bottom: " + previous);
         }
-        assertTrue(key.compareTo(midkey) < 0);
+        assertTrue(key.compareTo((HStoreKey)midkey) < 0);
       }
       if (previous != null) {
         LOG.info("Last in bottom: " + previous.toString());
@@ -244,7 +242,7 @@ public class TestHStoreFile extends HBaseTestCase {
           HStoreFile.Range.top, midkey, null);
       first = true;
       while (top.next(key, value)) {
-        assertTrue(key.compareTo(midkey) >= 0);
+        assertTrue(key.compareTo((HStoreKey)midkey) >= 0);
         if (first) {
           first = false;
           assertTrue(Bytes.equals(((HStoreKey)midkey).getRow(),
@@ -255,7 +253,7 @@ public class TestHStoreFile extends HBaseTestCase {
       LOG.info("Last in top: " + key.toString());
       top.getClosest(midkey, value);
       // Assert value is same as key.
-      assertTrue(Bytes.equals(value.get(), ((HStoreKey) midkey).getRow()));
+      assertTrue(Bytes.equals(value.get(), ((HStoreKey)midkey).getRow()));
 
       // Next test using a midkey that does not exist in the file.
       // First, do a key that is < than first key. Ensure splits behave
@@ -270,7 +268,7 @@ public class TestHStoreFile extends HBaseTestCase {
           HStoreFile.Range.top, badkey, null);
       first = true;
       while (top.next(key, value)) {
-        assertTrue(key.compareTo(badkey) >= 0);
+        assertTrue(key.compareTo((HStoreKey)badkey) >= 0);
         if (first) {
           first = false;
           LOG.info("First top when key < bottom: " + key.toString());

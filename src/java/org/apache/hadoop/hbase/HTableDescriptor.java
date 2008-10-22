@@ -37,7 +37,7 @@ import org.apache.hadoop.io.WritableComparable;
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
  */
-public class HTableDescriptor implements WritableComparable {
+public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -52,7 +52,7 @@ public class HTableDescriptor implements WritableComparable {
 
   public static final String FAMILIES = "FAMILIES";
   public static final ImmutableBytesWritable FAMILIES_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(FAMILIES));;
+    new ImmutableBytesWritable(Bytes.toBytes(FAMILIES));
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   public static final ImmutableBytesWritable MAX_FILESIZE_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
@@ -83,7 +83,8 @@ public class HTableDescriptor implements WritableComparable {
 
   public static final int DEFAULT_MEMCACHE_FLUSH_SIZE = 1024*1024*64;
     
-  private transient Boolean meta = null;
+  private volatile Boolean meta = null;
+  private volatile Boolean root = null;
 
   // Key is hash of the family name.
   private final Map<Integer, HColumnDescriptor> families =
@@ -190,7 +191,10 @@ public class HTableDescriptor implements WritableComparable {
 
   /** @return true if this is the root region */
   public boolean isRootRegion() {
-    return isSomething(IS_ROOT_KEY, false);
+    if (this.root == null) {
+      this.root = isSomething(IS_ROOT_KEY, false)? Boolean.TRUE: Boolean.FALSE;
+    }
+    return this.root.booleanValue();
   }
 
   /** @param isRoot true if this is the root region */
@@ -338,7 +342,7 @@ public class HTableDescriptor implements WritableComparable {
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
-      return Boolean.valueOf(value);
+      return Boolean.valueOf(value).booleanValue();
     return DEFAULT_IN_MEMORY;
   }
 
@@ -472,7 +476,7 @@ public class HTableDescriptor implements WritableComparable {
 
   @Override
   public boolean equals(Object obj) {
-    return compareTo(obj) == 0;
+    return compareTo((HTableDescriptor)obj) == 0;
   }
   
   @Override
@@ -538,8 +542,7 @@ public class HTableDescriptor implements WritableComparable {
 
   // Comparable
 
-  public int compareTo(Object o) {
-    HTableDescriptor other = (HTableDescriptor) o;
+  public int compareTo(final HTableDescriptor other) {
     int result = Bytes.compareTo(this.name, other.name);
     if (result == 0) {
       result = families.size() - other.families.size();

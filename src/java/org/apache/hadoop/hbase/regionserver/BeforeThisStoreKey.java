@@ -48,7 +48,7 @@ public class BeforeThisStoreKey extends HStoreKey {
   }
   
   @Override
-  public int compareTo(Object o) {
+  public int compareTo(final HStoreKey o) {
     int result = this.beforeThisKey.compareTo(o);
     return result == 0? -1: result;
   }
