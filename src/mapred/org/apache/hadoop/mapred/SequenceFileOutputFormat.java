@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
@@ -58,8 +56,8 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
     }
     final SequenceFile.Writer out = 
       SequenceFile.createWriter(fs, job, file,
-                                job.getOutputKeyClass().asSubclass(WritableComparable.class),
-                                job.getOutputValueClass().asSubclass(Writable.class),
+                                job.getOutputKeyClass(),
+                                job.getOutputValueClass(),
                                 compressionType,
                                 codec,
                                 progress);
