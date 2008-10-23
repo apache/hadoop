@@ -19,22 +19,48 @@
 
 <project name="chukwa" default="main">
 
+  <import file="../build-contrib.xml"/>
+
+
 	<property name="chukwaVersion" value="0.0.1"/>
 
 	<property name="lib.dir" value="${basedir}/lib"/>
 	<property name="src.dir" value="${basedir}/src"/>
+        <property name="build.classes" value="${build.dir}/classes"/>
 	<property name="conf.dir" value="${basedir}/conf"/>
 	<property name="docs.dir" value="${basedir}/docs"/>
 	<property name="tools.dir" value="${basedir}/tools"/>
 	<property name="dist.dir" value="${basedir}/dist"/>
 	<property name="opt.dir" value="${basedir}/opt"/>
         <property name="javac.debug" value="on"/>
-
-	<import file="../build-contrib.xml"/>
+        <property name="javac.version" value="1.6"/>
+       
+        <property name="test.src.dir" value="${basedir}/src/test"/>
+        <property name="test.lib.dir" value="${basedir}/src/test/lib"/>
+        <property name="test.build.dir" value="${build.dir}/test"/>
+        <property name="test.generated.dir" value="${test.build.dir}/src"/>
+        <property name="test.build.data" value="${test.build.dir}/data"/>
+        <property name="test.cache.data" value="${test.build.dir}/cache"/>
+        <property name="test.debug.data" value="${test.build.dir}/debug"/>
+        <property name="test.log.dir" value="${test.build.dir}/logs"/>
+        <property name="test.build.classes" value="${test.build.dir}/classes"/>
+        <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
+        <property name="test.include" value="Test*"/>
+        <property name="test.classpath.id" value="test.classpath"/>
+        <property name="test.output" value="yes"/>
+        <property name="test.timeout" value="900000"/>
+        <property name="test.junit.output.format" value="plain"/>
+        <property name="test.junit.fork.mode" value="perTest" />
+        <property name="test.junit.printsummary" value="yes" />
+        <property name="test.junit.haltonfailure" value="yes" />
+        <property name="test.junit.maxmemory" value="256m" />
+ 
 
 	<target name="init">
 		<mkdir dir="${build.dir}"/>
+		<mkdir dir="${build.classes}"/>
 		<mkdir dir="${build.dir}/test"/>
+
 		<!-- 
     	<copy todir="${build.dir}">
             <fileset dir="${basedir}">
@@ -59,16 +85,49 @@
 	</target>
 
 	<target name="compile" depends="init" description="Compilation target">
-		<javac srcdir="src/java/org/apache/hadoop/chukwa" destdir="${build.dir}" excludes="**/ChukwaTTInstru.java" debug="${javac.debug}">
+		<javac srcdir="src/java/org/apache/hadoop/chukwa" destdir="${build.classes}" excludes="**/ChukwaTTInstru.java" debug="${javac.debug}">
 			<classpath refid="chukwaHadoopClasspath" />
 		</javac>
 	</target>
 
-	<target name="test" depends="init" description="Test target">
-		<javac srcdir="src/test/org/apache/hadoop/chukwa" destdir="${build.dir}" excludes="**/TestDemux.java" debug="${javac.debug}">
-			<classpath refid="chukwaHadoopClasspath" />
-		</javac>
+	<target name="compile-test" depends="init" description="Test target">
+	                      
+           <delete dir="${test.build.dir}"/>
+           <mkdir dir="${test.build.dir}"/>
+           <delete dir="${test.log.dir}"/>
+           <mkdir dir="${test.log.dir}"/>
+           <delete dir="${test.build.classes}"/>
+           <mkdir dir="${test.build.classes}"/>
+
+            <javac srcdir="${test.src.dir}/org/apache/hadoop/chukwa" destdir="${test.build.dir}/classes" excludes="**/TestDemux.java" debug="${javac.debug}">
+                 <classpath refid="chukwaTestClasspath" />
+            </javac>
+        </target>
+
+
+
+	<target name="test" depends="compile,compile-test,test-chunk" description="Chukwa Tests">
 	</target>
+
+	<target name="test-chunk" depends="compile,compile-test" description="Test chunk">
+               
+          <junit showoutput="yes"
+            fork="yes"
+            printsummary="${test.junit.printsummary}"
+            forkmode="${test.junit.fork.mode}"
+            maxmemory="${test.junit.maxmemory}"
+            dir="${test.build.dir}/classes/" timeout="${test.timeout}"
+            errorProperty="tests.failed" failureProperty="tests.failed">
+           <classpath refid="chukwaTestClasspath"/>
+           <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+           <formatter type="${test.junit.output.format}" />
+           <batchtest todir="${test.build.dir}" >
+            <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/*.java"/>
+           </batchtest>
+         </junit>
+         <fail if="tests.failed">Tests failed!</fail>
+
+        </target>
 
 	<target name="collector" depends="compile" description="Prepare collector.war">
 		<mkdir dir="${build.dir}/collector"/>
@@ -359,5 +418,18 @@
 			<exclude name="**/excluded/" />
 		</fileset>
 	</path>
+        <path id="chukwaTestClasspath">
+                <pathelement location="${hadoop.root}/build/classes"/>
+                <pathelement location="${hadoop.root}/build/contrib/chukwa/classes/"/>
+                <pathelement location="${hadoop.root}/build/contrib/chukwa/test/classes/"/>
+                <fileset dir="${lib.dir}">
+                        <include name="**/*.jar" />
+                        <exclude name="**/excluded/" />
+                </fileset>
+                <fileset dir="${hadoop.root}/lib">
+                        <include name="**/*.jar" />
+                        <exclude name="**/excluded/" />
+                </fileset>
+        </path>
 
 </project>

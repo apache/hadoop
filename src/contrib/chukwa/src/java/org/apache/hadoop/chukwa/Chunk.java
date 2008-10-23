@@ -92,5 +92,17 @@ public interface Chunk {
    */
   public int getSerializedSizeEstimate();
   
+/**
+ * @return tags from this chunk.
+ * 
+ */
+  public String getTags();  
+  
+  /**
+   * Set tags to this chunk.
+   * 
+   */
+    public void setTags(String tags);  
+  
   public void write(DataOutput data) throws IOException;
 }

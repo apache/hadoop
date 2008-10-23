@@ -18,6 +18,12 @@
   </property>
 
   <property>
+    <name>chukwaAgent.tags</name>
+    <value>cluster="demo"</value>
+    <description>The cluster's name for this agent</description>
+  </property>
+
+  <property>
     <name>chukwaAgent.checkpoint.name</name>
     <value>chukwa_agent_checkpoint</value>
     <description>the prefix to to prepend to the agent's checkpoint file(s)</description>

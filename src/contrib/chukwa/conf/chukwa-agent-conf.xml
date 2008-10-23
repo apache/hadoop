@@ -17,4 +17,11 @@
     <description>The hostname of the agent on this node. Usually localhost, this is used by the chukwa instrumentation agent-control interface library</description>
   </property>
 
+  <property>
+    <name>chukwaAgent.tags</name>
+    <value>cluster="demo"</value>
+    <description>The cluster's name for this agent</description>
+  </property>
+
+
 </configuration>

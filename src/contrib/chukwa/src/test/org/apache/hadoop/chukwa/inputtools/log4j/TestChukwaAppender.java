@@ -29,7 +29,8 @@ import org.apache.log4j.spi.*;
 
 public class TestChukwaAppender extends TestCase {
   
-  public void testChukwaAppender() {
+  @SuppressWarnings("deprecation")
+public void testChukwaAppender() {
     try {
     
     ChukwaAgent agent = new ChukwaAgent();

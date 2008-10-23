@@ -40,7 +40,8 @@ public class ChukwaAgent
 {
   boolean DO_CHECKPOINT_RESTORE = false;
   boolean WRITE_CHECKPOINTS = false;
-
+ 
+  static String tags = "";
   static Logger log = Logger.getLogger(ChukwaAgent.class);
 
   //doesn't need an equals(), comparator, etc
@@ -444,6 +445,8 @@ public class ChukwaAgent
     }
   //  String initialAdaptorsStr = conf.get("initial_adaptors_file");
     
+    tags = conf.get("chukwaAgent.tags", "cluster=\"unknown\"");
+    
     initialAdaptors = new File(chukwaHome + "conf/initial_adaptors");
   }
   
@@ -493,6 +496,10 @@ public class ChukwaAgent
    */
   AgentControlSocketListener getControlSock() {
     return controlSock;
+  }
+
+  public static String getTags() {
+	    return tags;
   }
 
 }

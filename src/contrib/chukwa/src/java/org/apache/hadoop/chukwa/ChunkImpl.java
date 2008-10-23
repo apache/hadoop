@@ -23,25 +23,28 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 
 import org.apache.hadoop.chukwa.datacollection.adaptor.Adaptor;
+import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
 
 public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk 
 {
-  
+  public static int PROTOCOL_VERSION=1;
+	
   private String source = "";
   private String application = "";
   private String dataType = "";
+  private String tags = "";
   private byte[] data = null;
   private int[] recordEndOffsets;
+  private int protocolVersion=1;
+  private long seqID;
   
   private String debuggingInfo="";
-  
   private transient Adaptor initiator;
-  long seqID;
   
   ChunkImpl() {
+    this.tags = ChukwaAgent.getTags();
   }
   
   public static ChunkImpl getBlankChunk() {
@@ -50,11 +53,12 @@ public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk
   
   public ChunkImpl(String dataType, String streamName, long seq, byte[] data, Adaptor source) {
     this.seqID = seq;
+    this.source = localHostAddr;
+    this.tags = ChukwaAgent.getTags();
     this.application = streamName;
     this.dataType = dataType;
     this.data = data;
     this.initiator = source;
-    this.source = localHostAddr;
   }
   
   /**
@@ -109,6 +113,13 @@ public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk
     seqID=l;
   }
   
+  public int getProtocolVersion() {
+	  return protocolVersion;
+  }
+  
+  public void setProtocolVersion(int pv) {
+	  this.protocolVersion = pv;
+  }
   public String getApplication(){
     return application;
   }
@@ -149,12 +160,30 @@ public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk
     dataType = t;
   }
   
+  @Override
+  public void setTags(String tags)
+  {
+  	this.tags = tags;
+  }
+  
+/**
+ * @see org.apache.hadoop.chukwa.Chunk#getTags()
+ */
+  public String getTags() {
+    return tags;
+  }
+  
   /**
    * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
    */
   public void readFields(DataInput in) throws IOException {
+	setProtocolVersion(in.readInt());
+	if(protocolVersion!=PROTOCOL_VERSION) {
+		throw new IOException("Protocol version mismatched, drop data.  source version: "+protocolVersion+", collector version:"+PROTOCOL_VERSION);
+	}
     setSeqID(in.readLong());
     setSource(in.readUTF());
+    tags =  in.readUTF();    //no public set method here
     setApplication(in.readUTF());
     setDataType(in.readUTF());
     setDebugInfo(in.readUTF());
@@ -167,12 +196,15 @@ public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk
     in.readFully(data);
     
   }
+
   /**
    * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
    */
   public void write(DataOutput out) throws IOException {
+	out.writeInt(PROTOCOL_VERSION);
     out.writeLong(seqID);
     out.writeUTF(source);
+    out.writeUTF(tags);
     out.writeUTF(application);
     out.writeUTF(dataType);
     out.writeUTF(debuggingInfo);

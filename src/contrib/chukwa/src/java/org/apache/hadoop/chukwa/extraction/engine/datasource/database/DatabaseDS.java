@@ -51,7 +51,7 @@ public class DatabaseDS implements DataSource
 		
 		 if(cluster==null)
 		 {
-			   cluster="mithrilgold";
+			   cluster="demo";
 		  }
 		
 		if (dataSource.equalsIgnoreCase("MRJob"))
