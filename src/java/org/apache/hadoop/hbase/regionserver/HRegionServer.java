@@ -561,7 +561,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         "running at " + this.serverInfo.getServerAddress().toString() +
         " because logdir " + logdir.toString() + " exists");
     }
-    return new HLog(fs, logdir, conf, logRoller);
+    HLog newlog = new HLog(fs, logdir, conf, logRoller);
+    newlog.start();
+    return newlog;
   }
   
   /*

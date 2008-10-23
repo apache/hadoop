@@ -25,7 +25,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.ConcurrentModificationException;
 
@@ -48,10 +47,8 @@ class Flusher extends Thread implements FlushRequester {
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
   private final long threadWakeFrequency;
-  private final long optionalFlushPeriod;
   private final HRegionServer server;
   private final ReentrantLock lock = new ReentrantLock();
-  private long lastOptionalCheck = System.currentTimeMillis();
 
   protected final long globalMemcacheLimit;
   protected final long globalMemcacheLimitLowMark;
@@ -63,8 +60,6 @@ class Flusher extends Thread implements FlushRequester {
   public Flusher(final HBaseConfiguration conf, final HRegionServer server) {
     super();
     this.server = server;
-    optionalFlushPeriod = conf.getLong(
-        "hbase.regionserver.optionalcacheflushinterval", 30 * 60 * 1000L);
     threadWakeFrequency = conf.getLong(
         HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
         
@@ -82,7 +77,6 @@ class Flusher extends Thread implements FlushRequester {
     while (!server.isStopRequested()) {
       HRegion r = null;
       try {
-        enqueueOptionalFlushRegions();
         r = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
         if (r == null) {
           continue;
@@ -109,15 +103,23 @@ class Flusher extends Thread implements FlushRequester {
   }
   
   public void request(HRegion r) {
-    addRegion(r, System.currentTimeMillis());
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.contains(r)) {
+        regionsInQueue.add(r);
+        flushQueue.add(r);
+      }
+    }
   }
   
   /**
    * Only interrupt once it's done with a run through the work loop.
    */ 
   void interruptIfNecessary() {
-    if (lock.tryLock()) {
+    lock.lock();
+    try {
       this.interrupt();
+    } finally {
+      lock.unlock();
     }
   }
   
@@ -195,52 +197,6 @@ class Flusher extends Thread implements FlushRequester {
     return true;
   }
   
-  /**
-   * Find the regions that should be optionally flushed and put them on the
-   * flush queue.
-   */
-  private void enqueueOptionalFlushRegions() {
-    long now = System.currentTimeMillis();
-    if (now - threadWakeFrequency > lastOptionalCheck) {
-      lastOptionalCheck = now;
-      // Queue up regions for optional flush if they need it
-      Set<HRegion> regions = server.getRegionsToCheck();
-      for (HRegion region: regions) {
-        optionallyAddRegion(region, now);
-      }
-    }
-  }
-
-  /*
-   * Add region if not already added and if optional flush period has been
-   * exceeded.
-   * @param r Region to add.
-   * @param now The 'now' to use.  Set last flush time to this value.
-   */
-  private void optionallyAddRegion(final HRegion r, final long now) {
-    synchronized (regionsInQueue) {
-      if (!regionsInQueue.contains(r) &&
-          (now - optionalFlushPeriod) > r.getLastFlushTime()) {
-        addRegion(r, now);
-      }
-    }
-  }
-  
-  /*
-   * Add region if not already added.
-   * @param r Region to add.
-   * @param now The 'now' to use.  Set last flush time to this value.
-   */
-  private void addRegion(final HRegion r,
-      @SuppressWarnings("unused") final long now) {
-    synchronized (regionsInQueue) {
-      if (!regionsInQueue.contains(r)) {
-        regionsInQueue.add(r);
-        flushQueue.add(r);
-      }
-    }
-  }
-
   /**
    * Check if the regionserver's memcache memory usage is greater than the 
    * limit. If so, flush regions with the biggest memcaches until we're down

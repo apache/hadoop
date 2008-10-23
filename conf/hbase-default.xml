@@ -156,30 +156,25 @@
   </property>
   <property>
     <name>hbase.regionserver.maxlogentries</name>
-    <value>30000</value>
+    <value>100000</value>
     <description>Rotate the HRegion HLogs when count of entries exceeds this
-    value.  Default: 30,000.  Value is checked by a thread that runs every
+    value.  Default: 100,000.  Value is checked by a thread that runs every
     hbase.server.thread.wakefrequency.
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.optionalcacheflushinterval</name>
-    <value>1800000</value>
-    <description>
-    Amount of time to wait since the last time a region was flushed before
-    invoking an optional cache flush (An optional cache flush is a
-    flush even though memcache is not at the memcache.flush.size).
-    Default: 30 minutes (in miliseconds)
+    <name>hbase.regionserver.flushlogentries</name>
+    <value>100</value>
+    <description>Sync the HLog to the HDFS when it has accumulated this many
+    entries. Default 100. Value is checked on every HLog.append
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.optionallogrollinterval</name>
-    <value>1800000</value>
-    <description>
-    Amount of time to wait since the last time a the region server's log was
-    rolled before invoking an optional log roll (An optional log roll is a
-    one in which the log does not contain hbase.regionserver.maxlogentries).
-    Default: 30 minutes (in miliseconds)
+    <name>hbase.regionserver.optionallogflushinterval</name>
+    <value>10000</value>
+    <description>Sync the HLog to the HDFS after this interval if it has not
+    accumulated enough entries to trigger a sync. Default 10 seconds. Units:
+    milliseconds.
     </description>
   </property>
   <property>

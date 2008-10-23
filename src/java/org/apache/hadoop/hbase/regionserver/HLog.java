@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -82,16 +83,8 @@ import org.apache.hadoop.io.SequenceFile.Reader;
  * rolling is not. To prevent log rolling taking place during this period, a
  * separate reentrant lock is used.
  *
- * <p>
- * TODO: Vuk Ercegovac also pointed out that keeping HBase HRegion edit logs in
- * HDFS is currently flawed. HBase writes edits to logs and to a memcache. The
- * 'atomic' write to the log is meant to serve as insurance against abnormal
- * RegionServer exit: on startup, the log is rerun to reconstruct an HRegion's
- * last wholesome state. But files in HDFS do not 'exist' until they are cleanly
- * closed -- something that will not happen if RegionServer exits without
- * running its 'close'.
  */
-public class HLog implements HConstants {
+public class HLog extends Thread implements HConstants, Syncable {
   private static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
   static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
@@ -100,8 +93,12 @@ public class HLog implements HConstants {
   final Path dir;
   final Configuration conf;
   final LogRollListener listener;
-  final long threadWakeFrequency;
   private final int maxlogentries;
+  private final long optionalFlushInterval;
+  private final int flushlogentries;
+  private volatile int unflushedEntries = 0;
+  private volatile long lastLogFlushTime;
+  final long threadWakeFrequency;
 
   /*
    * Current log file.
@@ -153,13 +150,22 @@ public class HLog implements HConstants {
    */
   public HLog(final FileSystem fs, final Path dir, final Configuration conf,
       final LogRollListener listener) throws IOException {
+    
+    super();
+    
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
     this.listener = listener;
-    this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.setName(this.getClass().getSimpleName());
     this.maxlogentries =
-      conf.getInt("hbase.regionserver.maxlogentries", 30 * 1000);
+      conf.getInt("hbase.regionserver.maxlogentries", 100000);
+    this.flushlogentries =
+      conf.getInt("hbase.regionserver.flushlogentries", 100);
+    this.optionalFlushInterval =
+      conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
+    this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.lastLogFlushTime = System.currentTimeMillis();
     if (fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
@@ -168,7 +174,7 @@ public class HLog implements HConstants {
   }
 
   /*
-   * Accessor for tests.
+   * Accessor for tests. Not a part of the public API.
    * @return Current state of the monotonically increasing file id.
    */
   public long getFilenum() {
@@ -313,6 +319,7 @@ public class HLog implements HConstants {
           }
         }
         this.numEntries = 0;
+        updateLock.notifyAll();
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -354,11 +361,15 @@ public class HLog implements HConstants {
     cacheFlushLock.lock();
     try {
       synchronized (updateLock) {
+        this.closed = true;
+        if (this.isAlive()) {
+          this.interrupt();
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing log writer in " + this.dir.toString());
         }
         this.writer.close();
-        this.closed = true;
+        updateLock.notifyAll();
       }
     } finally {
       cacheFlushLock.unlock();
@@ -415,10 +426,39 @@ public class HLog implements HConstants {
 
         this.numEntries++;
       }
+      updateLock.notifyAll();
     }
     if (this.numEntries > this.maxlogentries) {
         requestLogRoll();
     }
+  }
+  
+  /** {@inheritDoc} */
+  @Override
+  public void run() {
+    while (!this.closed) {
+      synchronized (updateLock) {
+        if (((System.currentTimeMillis() - this.optionalFlushInterval) >
+              this.lastLogFlushTime) && this.unflushedEntries > 0) {
+          try {
+            sync();
+          } catch (IOException e) {
+            LOG.error("Error flushing HLog", e);
+          }
+        }
+        try {
+          updateLock.wait(this.threadWakeFrequency);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+  }
+  
+  public void sync() throws IOException {
+    lastLogFlushTime = System.currentTimeMillis();
+    this.writer.sync();
+    unflushedEntries = 0;
   }
 
   private void requestLogRoll() {
@@ -430,6 +470,9 @@ public class HLog implements HConstants {
   private void doWrite(HLogKey logKey, HLogEdit logEdit) throws IOException {
     try {
       this.writer.append(logKey, logEdit);
+      if (++unflushedEntries >= flushlogentries) {
+        sync();
+      }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of log", e);
       requestLogRoll();
@@ -454,7 +497,8 @@ public class HLog implements HConstants {
    * @param logEdit
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit) throws IOException {
+  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit)
+  throws IOException {
     if (closed) {
       throw new IOException("Cannot append; log is closed");
     }
@@ -474,6 +518,7 @@ public class HLog implements HConstants {
       HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum);
       doWrite(logKey, logEdit);
       this.numEntries++;
+      updateLock.notifyAll();
     }
 
     if (this.numEntries > this.maxlogentries) {
@@ -563,6 +608,7 @@ public class HLog implements HConstants {
         if (seq != null && logSeqId >= seq.longValue()) {
           this.lastSeqWritten.remove(regionName);
         }
+        updateLock.notifyAll();
       }
     } finally {
       this.cacheFlushLock.unlock();

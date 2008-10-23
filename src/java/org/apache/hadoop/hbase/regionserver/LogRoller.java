@@ -25,57 +25,38 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /** Runs periodically to determine if the HLog should be rolled */
 class LogRoller extends Thread implements LogRollListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);  
   private final ReentrantLock rollLock = new ReentrantLock();
-  private final long optionalLogRollInterval;
-  private long lastLogRollTime;
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final HRegionServer server;
-  private final HBaseConfiguration conf;
   
   /** @param server */
   public LogRoller(final HRegionServer server) {
     super();
     this.server = server;
-    conf = server.conf;
-    this.optionalLogRollInterval = conf.getLong(
-      "hbase.regionserver.optionallogrollinterval", 30L * 60L * 1000L);
-    lastLogRollTime = System.currentTimeMillis();
   }
 
   @Override
   public void run() {
     while (!server.isStopRequested()) {
-      while (!rollLog.get() && !server.isStopRequested()) {
-        long now = System.currentTimeMillis();
-        if (this.lastLogRollTime + this.optionalLogRollInterval <= now) {
-          rollLog.set(true);
-          this.lastLogRollTime = now;
-        } else {
-          synchronized (rollLog) {
-            try {
-              rollLog.wait(server.threadWakeFrequency);
-            } catch (InterruptedException e) {
-              continue;
-            }
+      if (!rollLog.get()) {
+        synchronized (rollLog) {
+          try {
+            rollLog.wait(server.threadWakeFrequency);
+          } catch (InterruptedException e) {
+            continue;
           }
         }
-      }
-      if (!rollLog.get()) {
-        // There's only two reasons to break out of the while loop.
-        // 1. Log roll requested
-        // 2. Stop requested
-        // so if a log roll was not requested, continue and break out of loop
         continue;
       }
       rollLock.lock();          // Don't interrupt us. We're working
       try {
-        LOG.info("Rolling hlog. Number of entries: " + server.getLog().getNumEntries());
+        LOG.info("Rolling hlog. Number of entries: " +
+            server.getLog().getNumEntries());
         server.getLog().rollWriter();
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);
@@ -107,8 +88,11 @@ class LogRoller extends Thread implements LogRollListener {
    * It is sleeping if rollLock is not held.
    */
   public void interruptIfNecessary() {
-    if (rollLock.tryLock()) {
+    try {
+      rollLock.lock();
       this.interrupt();
+    } finally {
+      rollLock.unlock();
     }
   }
 }
