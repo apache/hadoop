@@ -1125,21 +1125,17 @@ public class HRegion implements HConstants {
    *
    * @param row
    * @param column
-   * @param timestamp
-   * @param numVersions
+   * @param ts
+   * @param nv
    * @return array of values one element per version that matches the timestamp, 
    * or null if there are no matches.
    * @throws IOException
    */
-  public Cell[] get(byte [] row, byte [] column, long timestamp,
-    int numVersions) 
+  public Cell[] get(final byte[] row, final byte[] column, final long ts,
+      final int nv) 
   throws IOException {
-    if (timestamp == -1) {
-      timestamp = Long.MAX_VALUE;
-    }
-    if (numVersions == -1) {
-      numVersions = 1;
-    }
+    long timestamp = ts == -1 ? HConstants.LATEST_TIMESTAMP : ts;
+    int numVersions = nv == -1 ? 1 : nv;
 
     splitsAndClosesLock.readLock().lock();
     try {
@@ -1354,19 +1350,14 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   /**
-   * Batch update many rows and take splitsAndClosesLock so we don't get 
-   * blocked while updating.
+   * Batch update many rows
    * @param bus 
+   * @param locks
+   * @throws IOException
    */
-  public void batchUpdate(BatchUpdate[] bus, Integer[] locks)
-      throws IOException {
-    splitsAndClosesLock.readLock().lock();
-    try {
-      for (int i = 0; i < bus.length; i++) {
-        batchUpdate(bus[i], locks[i]);
-      }
-    } finally {
-      splitsAndClosesLock.readLock().unlock();
+  public void batchUpdate(BatchUpdate[] bus, Integer[] locks) throws IOException {
+    for (int i = 0; i < bus.length; i++) {
+      batchUpdate(bus[i], locks[i]);
     }
   }
   
@@ -1413,60 +1404,65 @@ public class HRegion implements HConstants {
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
 
-    // We obtain a per-row lock, so other clients will block while one client
-    // performs an update. The read lock is released by the client calling
-    // #commit or #abort or if the HRegionServer lease on the lock expires.
-    // See HRegionServer#RegionListener for how the expire on HRegionServer
-    // invokes a HRegion#abort.
-    byte [] row = b.getRow();
-    // If we did not pass an existing row lock, obtain a new one
-    Integer lid = getLock(lockid,row);
-    long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP) ?
-      System.currentTimeMillis() : b.getTimestamp();
+    splitsAndClosesLock.readLock().lock();
     try {
-      List<byte []> deletes = null;
-      for (BatchOperation op: b) {
-        HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
-          this.regionInfo);
-        byte[] val = null;
-        if (op.isPut()) {
-          val = op.getValue();
-          if (HLogEdit.isDeleted(val)) {
-            throw new IOException("Cannot insert value: " + val);
-          }
-        } else {
-          if (b.getTimestamp() == LATEST_TIMESTAMP) {
-            // Save off these deletes
-            if (deletes == null) {
-              deletes = new ArrayList<byte []>();
+      // We obtain a per-row lock, so other clients will block while one client
+      // performs an update. The read lock is released by the client calling
+      // #commit or #abort or if the HRegionServer lease on the lock expires.
+      // See HRegionServer#RegionListener for how the expire on HRegionServer
+      // invokes a HRegion#abort.
+      byte [] row = b.getRow();
+      // If we did not pass an existing row lock, obtain a new one
+      Integer lid = getLock(lockid,row);
+      long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP) ?
+          System.currentTimeMillis() : b.getTimestamp();
+      try {
+        List<byte []> deletes = null;
+        for (BatchOperation op: b) {
+          HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
+              this.regionInfo);
+          byte[] val = null;
+          if (op.isPut()) {
+            val = op.getValue();
+            if (HLogEdit.isDeleted(val)) {
+              throw new IOException("Cannot insert value: " + val);
             }
-            deletes.add(op.getColumn());
           } else {
-            val = HLogEdit.deleteBytes.get();
+            if (b.getTimestamp() == LATEST_TIMESTAMP) {
+              // Save off these deletes
+              if (deletes == null) {
+                deletes = new ArrayList<byte []>();
+              }
+              deletes.add(op.getColumn());
+            } else {
+              val = HLogEdit.deleteBytes.get();
+            }
+          }
+          if (val != null) {
+            localput(lid, key, val);
           }
         }
-        if (val != null) {
-          localput(lid, key, val);
-        }
-      }
-      TreeMap<HStoreKey, byte[]> edits =
-        this.targetColumns.remove(lid);
+        TreeMap<HStoreKey, byte[]> edits =
+          this.targetColumns.remove(lid);
 
-      if (edits != null && edits.size() > 0) {
-        update(edits, writeToWAL);
-      }
-      
-      if (deletes != null && deletes.size() > 0) {
-        // We have some LATEST_TIMESTAMP deletes to run.
-        for (byte [] column: deletes) {
-          deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+        if (edits != null && edits.size() > 0) {
+          update(edits, writeToWAL);
         }
+
+        if (deletes != null && deletes.size() > 0) {
+          // We have some LATEST_TIMESTAMP deletes to run.
+          for (byte [] column: deletes) {
+            deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+          }
+        }
+      } catch (IOException e) {
+        this.targetColumns.remove(Long.valueOf(lid));
+        throw e;
+      } finally {
+        if(lockid == null) releaseRowLock(lid);
       }
-    } catch (IOException e) {
-      this.targetColumns.remove(Long.valueOf(lid));
-      throw e;
     } finally {
-      if(lockid == null) releaseRowLock(lid);
+      splitsAndClosesLock.readLock().unlock();
     }
   }
 
@@ -1539,8 +1535,8 @@ public class HRegion implements HConstants {
    * @param lockid Row lock
    * @throws IOException
    */
-  public void deleteAll(final byte [] row, final long ts,
-      final Integer lockid)
+  @SuppressWarnings("unchecked")
+  public void deleteAll(final byte [] row, final long ts, final Integer lockid)
   throws IOException {
     checkReadOnly();
     Integer lid = getLock(lockid, row);
@@ -1571,6 +1567,7 @@ public class HRegion implements HConstants {
    * @param lockid Row lock
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public void deleteFamily(byte [] row, byte [] family, long timestamp,
       final Integer lockid)
   throws IOException{
@@ -1606,6 +1603,7 @@ public class HRegion implements HConstants {
    * {@link HConstants#ALL_VERSIONS} to delete all.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   private void deleteMultiple(final byte [] row, final byte [] column,
       final long ts, final int versions)
   throws IOException {
@@ -1643,6 +1641,7 @@ public class HRegion implements HConstants {
    * @param val Value to enter into cell
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   private void localput(final Integer lockid, final HStoreKey key,
       final byte [] val)
   throws IOException {
@@ -1870,9 +1869,8 @@ public class HRegion implements HConstants {
     synchronized (locksToRows) {
       if(locksToRows.containsKey(lockid)) {
         return true;
-      } else {
-        return false;
       }
+      return false;
     }
   }
   
@@ -2219,6 +2217,7 @@ public class HRegion implements HConstants {
    *
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public static void addRegionToMETA(HRegion meta, HRegion r) 
   throws IOException {
     meta.checkResources();
