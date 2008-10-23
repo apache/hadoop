@@ -1052,6 +1052,10 @@ Release 0.18.2 - Unreleased
     HADOOP-3914. DFSClient sends Checksum Ok only once for a block. 
     (Christain Kunz via hairong)
  
+    HADOOP-4467. SerializationFactory now uses the current context ClassLoader
+    allowing for user supplied Serialization instances. (Chris Wensel via
+    acmurthy)
+ 
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
