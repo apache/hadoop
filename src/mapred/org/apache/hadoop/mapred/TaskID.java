@@ -47,8 +47,7 @@ import java.text.NumberFormat;
  */
 public class TaskID extends ID {
   private static final String TASK = "task";
-  private static char UNDERSCORE = '_';  
-  private static NumberFormat idFormat = NumberFormat.getInstance();
+  private static final NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setGroupingUsed(false);
     idFormat.setMinimumIntegerDigits(6);
@@ -83,7 +82,9 @@ public class TaskID extends ID {
     this(new JobID(jtIdentifier, jobId), isMap, id);
   }
   
-  private TaskID() { }
+  public TaskID() { 
+    jobId = new JobID();
+  }
   
   /** Returns the {@link JobID} object that this tip belongs to */
   public JobID getJobID() {
@@ -110,39 +111,45 @@ public class TaskID extends ID {
   public int compareTo(ID o) {
     TaskID that = (TaskID)o;
     int jobComp = this.jobId.compareTo(that.jobId);
-    if(jobComp == 0) {
-      if(this.isMap == that.isMap) {
+    if (jobComp == 0) {
+      if (this.isMap == that.isMap) {
         return this.id - that.id;
+      } else {
+        return this.isMap ? -1 : 1;
       }
-      else return this.isMap ? -1 : 1;
+    } else {
+      return jobComp;
     }
-    else return jobComp;
   }
   
   @Override
   public String toString() { 
-    StringBuilder builder = new StringBuilder();
-    return builder.append(TASK).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
+    return appendTo(new StringBuilder(TASK)).toString();
   }
 
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(jobId.toStringWOPrefix())
-      .append(isMap ? "_m_" : "_r_");
-    return builder.append(idFormat.format(id));
+  /**
+   * Add the unique string to the given builder.
+   * @param builder the builder to append to
+   * @return the builder that was passed in
+   */
+  protected StringBuilder appendTo(StringBuilder builder) {
+    return jobId.appendTo(builder).
+                 append(SEPARATOR).
+                 append(isMap ? 'm' : 'r').
+                 append(SEPARATOR).
+                 append(idFormat.format(id));
   }
   
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return jobId.hashCode() * 524287 + id;
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.jobId = JobID.read(in);
-    this.isMap = in.readBoolean();
+    jobId.readFields(in);
+    isMap = in.readBoolean();
   }
 
   @Override
@@ -151,7 +158,8 @@ public class TaskID extends ID {
     jobId.write(out);
     out.writeBoolean(isMap);
   }
-  
+
+  @Deprecated
   public static TaskID read(DataInput in) throws IOException {
     TaskID tipId = new TaskID();
     tipId.readFields(in);
@@ -167,7 +175,7 @@ public class TaskID extends ID {
     if(str == null)
       return null;
     try {
-      String[] parts = str.split("_");
+      String[] parts = str.split(Character.toString(SEPARATOR));
       if(parts.length == 5) {
         if(parts[0].equals(TASK)) {
           boolean isMap = false;
@@ -200,19 +208,21 @@ public class TaskID extends ID {
    * @param taskId taskId number, or null
    * @return a regex pattern matching TaskIDs
    */
+  @Deprecated
   public static String getTaskIDsPattern(String jtIdentifier, Integer jobId
       , Boolean isMap, Integer taskId) {
-    StringBuilder builder = new StringBuilder(TASK).append(UNDERSCORE)
+    StringBuilder builder = new StringBuilder(TASK).append(SEPARATOR)
       .append(getTaskIDsPatternWOPrefix(jtIdentifier, jobId, isMap, taskId));
     return builder.toString();
   }
   
+  @Deprecated
   static StringBuilder getTaskIDsPatternWOPrefix(String jtIdentifier
       , Integer jobId, Boolean isMap, Integer taskId) {
     StringBuilder builder = new StringBuilder();
     builder.append(JobID.getJobIDsPatternWOPrefix(jtIdentifier, jobId))
-      .append(UNDERSCORE)
-      .append(isMap != null ? (isMap ? "m" : "r") : "(m|r)").append(UNDERSCORE)
+      .append(SEPARATOR)
+      .append(isMap != null ? (isMap ? "m" : "r") : "(m|r)").append(SEPARATOR)
       .append(taskId != null ? idFormat.format(taskId) : "[0-9]*");
     return builder;
   }

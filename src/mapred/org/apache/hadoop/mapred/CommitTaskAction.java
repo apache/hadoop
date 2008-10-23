@@ -32,6 +32,7 @@ class CommitTaskAction extends TaskTrackerAction {
   
   public CommitTaskAction() {
     super(ActionType.COMMIT_TASK);
+    taskId = new TaskAttemptID();
   }
   
   public CommitTaskAction(TaskAttemptID taskId) {
@@ -48,6 +49,6 @@ class CommitTaskAction extends TaskTrackerAction {
   }
 
   public void readFields(DataInput in) throws IOException {
-    taskId = TaskAttemptID.read(in);
+    taskId.readFields(in);
   }
 }

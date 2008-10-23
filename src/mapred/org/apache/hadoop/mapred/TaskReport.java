@@ -28,7 +28,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 /** A report on the state of a task. */
 public class TaskReport implements Writable {
-  private TaskID taskid;
+  private final TaskID taskid;
   private float progress;
   private String state;
   private String[] diagnostics;
@@ -36,7 +36,9 @@ public class TaskReport implements Writable {
   private long finishTime; 
   private Counters counters;
 
-  public TaskReport() {}
+  public TaskReport() {
+    taskid = new TaskID();
+  }
 
   TaskReport(TaskID taskid, float progress, String state,
              String[] diagnostics, long startTime, long finishTime,
@@ -133,11 +135,11 @@ public class TaskReport implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.taskid = TaskID.read(in);
-    this.progress = in.readFloat();
-    this.state = Text.readString(in);
-    this.startTime = in.readLong(); 
-    this.finishTime = in.readLong();
+    taskid.readFields(in);
+    progress = in.readFloat();
+    state = Text.readString(in);
+    startTime = in.readLong(); 
+    finishTime = in.readLong();
     
     diagnostics = WritableUtils.readStringArray(in);
     counters = new Counters();

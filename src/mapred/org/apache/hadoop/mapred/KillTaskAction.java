@@ -29,10 +29,11 @@ import java.io.IOException;
  * 
  */
 class KillTaskAction extends TaskTrackerAction {
-  TaskAttemptID taskId;
+  final TaskAttemptID taskId;
   
   public KillTaskAction() {
     super(ActionType.KILL_TASK);
+    taskId = new TaskAttemptID();
   }
   
   public KillTaskAction(TaskAttemptID taskId) {
@@ -51,6 +52,6 @@ class KillTaskAction extends TaskTrackerAction {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    taskId = TaskAttemptID.read(in);
+    taskId.readFields(in);
   }
 }

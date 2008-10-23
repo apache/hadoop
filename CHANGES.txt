@@ -49,6 +49,9 @@ Trunk (unreleased changes)
     HADOOP-4431. Add versionning/tags to Chukwa Chunk. 
     (Jerome Boulon via Johan)
 
+    HADOOP-4276. Improve the hashing functions and deserialization of the 
+    mapred ID classes. (omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES

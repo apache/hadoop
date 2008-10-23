@@ -34,6 +34,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @see TaskAttemptID
  */
 public abstract class ID implements WritableComparable<ID> {
+  protected static final char SEPARATOR = '_';
   protected int id;
 
   /** constructs an ID object from the given int */

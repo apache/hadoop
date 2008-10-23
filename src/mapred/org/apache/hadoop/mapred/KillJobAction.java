@@ -30,10 +30,11 @@ import java.io.IOException;
  * 
  */
 class KillJobAction extends TaskTrackerAction {
-  JobID jobId;
+  final JobID jobId;
 
   public KillJobAction() {
     super(ActionType.KILL_JOB);
+    jobId = new JobID();
   }
 
   public KillJobAction(JobID jobId) {
@@ -52,7 +53,7 @@ class KillJobAction extends TaskTrackerAction {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    jobId = JobID.read(in);
+    jobId.readFields(in);
   }
 
 }

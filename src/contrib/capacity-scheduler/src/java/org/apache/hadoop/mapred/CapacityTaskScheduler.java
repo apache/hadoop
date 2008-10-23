@@ -665,7 +665,7 @@ class CapacityTaskScheduler extends TaskScheduler {
         t = obtainNewTask(taskTracker, j);
         if (t != null) {
           LOG.debug("Got task from job " + 
-              j.getJobID().toStringWOPrefix() + " in queue " + qsi.queueName);
+                    j.getJobID() + " in queue " + qsi.queueName);
           return t;
         }
       }
@@ -686,7 +686,7 @@ class CapacityTaskScheduler extends TaskScheduler {
         t = obtainNewTask(taskTracker, j);
         if (t != null) {
           LOG.debug("Getting task from job " + 
-              j.getJobID().toStringWOPrefix() + " in queue " + qsi.queueName);
+                    j.getJobID() + " in queue " + qsi.queueName);
           return t;
         }
       }
@@ -705,7 +705,7 @@ class CapacityTaskScheduler extends TaskScheduler {
             t = obtainNewTask(taskTracker, j);
             if (t != null) {
               LOG.debug("Getting task from job " + 
-                  j.getJobID().toStringWOPrefix() + " in queue " + qsi.queueName);
+                        j.getJobID() + " in queue " + qsi.queueName);
               return t;
             }
           }
@@ -718,7 +718,7 @@ class CapacityTaskScheduler extends TaskScheduler {
             t = obtainNewTask(taskTracker, j);
             if (t != null) {
               LOG.debug("Getting task from job " + 
-                  j.getJobID().toStringWOPrefix() + " in queue " + qsi.queueName);
+                        j.getJobID() + " in queue " + qsi.queueName);
               return t;
             }
           }

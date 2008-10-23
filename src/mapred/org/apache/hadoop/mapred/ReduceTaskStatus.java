@@ -131,7 +131,9 @@ class ReduceTaskStatus extends TaskStatus {
     int noFailedFetchTasks = in.readInt();
     failedFetchTasks = new ArrayList<TaskAttemptID>(noFailedFetchTasks);
     for (int i=0; i < noFailedFetchTasks; ++i) {
-      failedFetchTasks.add(TaskAttemptID.read(in));
+      TaskAttemptID id = new TaskAttemptID();
+      id.readFields(in);
+      failedFetchTasks.add(id);
     }
   }
 

@@ -27,7 +27,6 @@ class JVMId extends ID {
   boolean isMap;
   JobID jobId;
   private static final String JVM = "jvm";
-  private static char UNDERSCORE = '_';  
   private static NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setGroupingUsed(false);
@@ -44,7 +43,9 @@ class JVMId extends ID {
     this(new JobID(jtIdentifier, jobId), isMap, id);
   }
     
-  private JVMId() { }
+  public JVMId() { 
+    jobId = new JobID();
+  }
   
   public boolean isMapJVM() {
     return isMap;
@@ -73,35 +74,41 @@ class JVMId extends ID {
     if(jobComp == 0) {
       if(this.isMap == that.isMap) {
         return this.id - that.id;
+      } else {
+        return this.isMap ? -1 : 1;
       }
-      else return this.isMap ? -1 : 1;
+    } else {
+      return jobComp;
     }
-    else return jobComp;
   }
   
   @Override
   public String toString() { 
-    StringBuilder builder = new StringBuilder();
-    return builder.append(JVM).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
+    return appendTo(new StringBuilder(JVM)).toString();
   }
 
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(jobId.toStringWOPrefix())
-      .append(isMap ? "_m_" : "_r_");
-    return builder.append(idFormat.format(id));
+  /**
+   * Add the unique id to the given StringBuilder.
+   * @param builder the builder to append to
+   * @return the passed in builder.
+   */
+  protected StringBuilder appendTo(StringBuilder builder) {
+    return jobId.appendTo(builder).
+                 append(SEPARATOR).
+                 append(isMap ? 'm' : 'r').
+                 append(SEPARATOR).
+                 append(idFormat.format(id));
   }
   
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return jobId.hashCode() * 11 + id;
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.jobId = JobID.read(in);
+    this.jobId.readFields(in);
     this.isMap = in.readBoolean();
   }
 
@@ -110,12 +117,6 @@ class JVMId extends ID {
     super.write(out);
     jobId.write(out);
     out.writeBoolean(isMap);
-  }
-  
-  public static JVMId read(DataInput in) throws IOException {
-    JVMId jvmId = new JVMId();
-    jvmId.readFields(in);
-    return jvmId;
   }
   
   /** Construct a JVMId object from given string 

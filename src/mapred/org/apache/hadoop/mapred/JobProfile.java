@@ -43,7 +43,7 @@ public class JobProfile implements Writable {
   }
 
   String user;
-  JobID jobid;
+  final JobID jobid;
   String jobFile;
   String url;
   String name;
@@ -53,6 +53,7 @@ public class JobProfile implements Writable {
    * Construct an empty {@link JobProfile}.
    */
   public JobProfile() {
+    jobid = new JobID();
   }
 
   /**
@@ -166,8 +167,9 @@ public class JobProfile implements Writable {
     Text.writeString(out, name);
     Text.writeString(out, queueName);
   }
+
   public void readFields(DataInput in) throws IOException {
-    this.jobid = JobID.read(in);
+    jobid.readFields(in);
     this.jobFile = Text.readString(in);
     this.url = Text.readString(in);
     this.user = Text.readString(in);

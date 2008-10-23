@@ -43,7 +43,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
                             COMMIT_PENDING}
     
-  private TaskAttemptID taskid;
+  private final TaskAttemptID taskid;
   private float progress;
   private volatile State runState;
   private String diagnosticInfo;
@@ -59,7 +59,9 @@ abstract class TaskStatus implements Writable, Cloneable {
   private boolean includeCounters;
   private SortedRanges.Range nextRecordRange = new SortedRanges.Range();
 
-  public TaskStatus() {}
+  public TaskStatus() {
+    taskid = new TaskAttemptID();
+  }
 
   public TaskStatus(TaskAttemptID taskid, float progress,
                     State runState, String diagnosticInfo,
@@ -340,7 +342,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.taskid = TaskAttemptID.read(in);
+    this.taskid.readFields(in);
     this.progress = in.readFloat();
     this.runState = WritableUtils.readEnum(in, State.class);
     this.diagnosticInfo = Text.readString(in);

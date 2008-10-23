@@ -44,8 +44,7 @@ import java.io.IOException;
  */
 public class TaskAttemptID extends ID {
   private static final String ATTEMPT = "attempt";
-  private TaskID taskId;
-  private static final char UNDERSCORE = '_';
+  private final TaskID taskId;
   
   /**
    * Constructs a TaskAttemptID object from given {@link TaskID}.  
@@ -73,7 +72,9 @@ public class TaskAttemptID extends ID {
     this(new TaskID(jtIdentifier, jobId, isMap, taskId), id);
   }
   
-  private TaskAttemptID() { }
+  public TaskAttemptID() { 
+    taskId = new TaskID();
+  }
   
   /** Returns the {@link JobID} object that this task attempt belongs to */
   public JobID getJobID() {
@@ -114,26 +115,27 @@ public class TaskAttemptID extends ID {
   }
   @Override
   public String toString() { 
-    StringBuilder builder = new StringBuilder();
-    return builder.append(ATTEMPT).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
+    return appendTo(new StringBuilder(ATTEMPT)).toString();
   }
 
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    return builder.append(taskId.toStringWOPrefix())
-                  .append(UNDERSCORE).append(id);
+  /**
+   * Add the unique string to the StringBuilder
+   * @param builder the builder to append ot
+   * @return the builder that was passed in.
+   */
+  protected StringBuilder appendTo(StringBuilder builder) {
+    return taskId.appendTo(builder).append(SEPARATOR).append(id);
   }
   
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return taskId.hashCode() * 5 + id;
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.taskId = TaskID.read(in);
+    taskId.readFields(in);
   }
 
   @Override
@@ -142,6 +144,7 @@ public class TaskAttemptID extends ID {
     taskId.write(out);
   }
   
+  @Deprecated
   public static TaskAttemptID read(DataInput in) throws IOException {
     TaskAttemptID taskId = new TaskAttemptID();
     taskId.readFields(in);
@@ -152,11 +155,12 @@ public class TaskAttemptID extends ID {
    * @return constructed TaskAttemptID object or null if the given String is null
    * @throws IllegalArgumentException if the given string is malformed
    */
-  public static TaskAttemptID forName(String str) throws IllegalArgumentException {
+  public static TaskAttemptID forName(String str
+                                      ) throws IllegalArgumentException {
     if(str == null)
       return null;
     try {
-      String[] parts = str.split("_");
+      String[] parts = str.split(Character.toString(SEPARATOR));
       if(parts.length == 6) {
         if(parts[0].equals(ATTEMPT)) {
           boolean isMap = false;
@@ -167,7 +171,8 @@ public class TaskAttemptID extends ID {
               isMap, Integer.parseInt(parts[4]), Integer.parseInt(parts[5]));
         }
       }
-    }catch (Exception ex) {//fall below
+    } catch (Exception ex) {
+      //fall below
     }
     throw new IllegalArgumentException("TaskAttemptId string : " + str 
         + " is not properly formed");
@@ -191,20 +196,22 @@ public class TaskAttemptID extends ID {
    * @param attemptId the task attempt number, or null
    * @return a regex pattern matching TaskAttemptIDs
    */
+  @Deprecated
   public static String getTaskAttemptIDsPattern(String jtIdentifier,
       Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
-    StringBuilder builder = new StringBuilder(ATTEMPT).append(UNDERSCORE);
+    StringBuilder builder = new StringBuilder(ATTEMPT).append(SEPARATOR);
     builder.append(getTaskAttemptIDsPatternWOPrefix(jtIdentifier, jobId,
         isMap, taskId, attemptId));
     return builder.toString();
   }
   
+  @Deprecated
   static StringBuilder getTaskAttemptIDsPatternWOPrefix(String jtIdentifier
       , Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
     StringBuilder builder = new StringBuilder();
     builder.append(TaskID.getTaskIDsPatternWOPrefix(jtIdentifier
         , jobId, isMap, taskId))
-        .append(UNDERSCORE)
+        .append(SEPARATOR)
         .append(attemptId != null ? attemptId : "[0-9]*");
     return builder;
   }

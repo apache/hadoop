@@ -104,7 +104,7 @@ abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
-  private TaskAttemptID taskId;                          // unique, includes job id
+  private final TaskAttemptID taskId;             // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
   protected boolean cleanupJob = false;
@@ -135,6 +135,7 @@ abstract class Task implements Writable, Configurable {
 
   public Task() {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
+    taskId = new TaskAttemptID();
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition) {
@@ -262,7 +263,7 @@ abstract class Task implements Writable, Configurable {
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
-    taskId = TaskAttemptID.read(in);
+    taskId.readFields(in);
     partition = in.readInt();
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 

@@ -45,7 +45,10 @@ public class TaskCompletionEvent implements Writable{
    * Default constructor for Writable.
    *
    */
-  public TaskCompletionEvent(){}
+  public TaskCompletionEvent(){
+    taskId = new TaskAttemptID();
+  }
+
   /**
    * Constructor. eventId should be created externally and incremented
    * per event for each job. 
@@ -220,12 +223,12 @@ public class TaskCompletionEvent implements Writable{
   }
   
   public void readFields(DataInput in) throws IOException {
-    this.taskId = TaskAttemptID.read(in); 
-    this.idWithinJob = WritableUtils.readVInt(in);
-    this.isMap = in.readBoolean();
-    this.status = WritableUtils.readEnum(in, Status.class);
-    this.taskTrackerHttp = WritableUtils.readString(in);
-    this.taskRunTime = WritableUtils.readVInt(in);
-    this.eventId = WritableUtils.readVInt(in);
+    taskId.readFields(in); 
+    idWithinJob = WritableUtils.readVInt(in);
+    isMap = in.readBoolean();
+    status = WritableUtils.readEnum(in, Status.class);
+    taskTrackerHttp = WritableUtils.readString(in);
+    taskRunTime = WritableUtils.readVInt(in);
+    eventId = WritableUtils.readVInt(in);
   }
 }

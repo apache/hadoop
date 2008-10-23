@@ -48,7 +48,7 @@ public class JobStatus implements Writable, Cloneable {
   public static final int PREP = 4;
   public static final int KILLED = 5;
 
-  private JobID jobid;
+  private final JobID jobid;
   private float mapProgress;
   private float reduceProgress;
   private float cleanupProgress;
@@ -62,6 +62,7 @@ public class JobStatus implements Writable, Cloneable {
   /**
    */
   public JobStatus() {
+    jobid = new JobID();
   }
 
   /**
@@ -287,7 +288,7 @@ public class JobStatus implements Writable, Cloneable {
   }
 
   public synchronized void readFields(DataInput in) throws IOException {
-    this.jobid = JobID.read(in);
+    jobid.readFields(in);
     this.setupProgress = in.readFloat();
     this.mapProgress = in.readFloat();
     this.reduceProgress = in.readFloat();

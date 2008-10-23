@@ -134,7 +134,8 @@ class HeartbeatResponse implements Writable, Configurable {
     if (size != 0) {
       lastKnownIndexMap = new HashMap<JobID, Integer>(size);
       for (int i = 0; i < size; ++i) {
-        JobID id = JobID.read(in);
+        JobID id = new JobID();
+        id.readFields(in);
         int count = in.readInt();
         lastKnownIndexMap.put(id, count);
       }

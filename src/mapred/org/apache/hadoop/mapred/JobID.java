@@ -45,9 +45,8 @@ import org.apache.hadoop.io.Text;
  * @see JobTracker#getStartTime()
  */
 public class JobID extends ID {
-  private static final String JOB = "job";
-  private String jtIdentifier;
-  private static char UNDERSCORE = '_';
+  protected static final String JOB = "job";
+  private Text jtIdentifier = new Text();
   
   private static NumberFormat idFormat = NumberFormat.getInstance();
   static {
@@ -62,13 +61,13 @@ public class JobID extends ID {
    */
   public JobID(String jtIdentifier, int id) {
     super(id);
-    this.jtIdentifier = jtIdentifier;
+    this.jtIdentifier.set(jtIdentifier);
   }
   
-  private JobID() { }
+  public JobID() { }
   
   public String getJtIdentifier() {
-    return jtIdentifier;
+    return jtIdentifier.toString();
   }
   
   @Override
@@ -93,42 +92,47 @@ public class JobID extends ID {
   
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    return builder.append(JOB).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
+    return appendTo(new StringBuilder(JOB)).toString();
   }
-  
-  /** Returns the string representation w/o prefix */
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(jtIdentifier).append(UNDERSCORE)
-    .append(idFormat.format(id)).toString();
+
+  /**
+   * Add the stuff after the "job" prefix to the given builder. This is useful,
+   * because the sub-ids use this substring at the start of their string.
+   * @param builder the builder to append to
+   * @return the builder that was passed in
+   */
+  protected StringBuilder appendTo(StringBuilder builder) {
+    builder.append(SEPARATOR);
+    builder.append(jtIdentifier);
+    builder.append(SEPARATOR);
+    builder.append(idFormat.format(id));
     return builder;
   }
-  
+
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return jtIdentifier.hashCode() + id;
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.jtIdentifier = Text.readString(in);
+    jtIdentifier.readFields(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    Text.writeString(out, jtIdentifier);
+    jtIdentifier.write(out);
   }
   
+  @Deprecated
   public static JobID read(DataInput in) throws IOException {
     JobID jobId = new JobID();
     jobId.readFields(in);
     return jobId;
   }
-  
+
   /** Construct a JobId object from given string 
    * @return constructed JobId object or null if the given String is null
    * @throws IllegalArgumentException if the given string is malformed
@@ -137,7 +141,7 @@ public class JobID extends ID {
     if(str == null)
       return null;
     try {
-      String[] parts = str.split("_");
+      String[] parts = str.split(Character.toString(SEPARATOR));
       if(parts.length == 3) {
         if(parts[0].equals(JOB)) {
           return new JobID(parts[1], Integer.parseInt(parts[2]));
@@ -163,16 +167,23 @@ public class JobID extends ID {
    * @param jobId job number, or null
    * @return a regex pattern matching JobIDs
    */
+  @Deprecated
   public static String getJobIDsPattern(String jtIdentifier, Integer jobId) {
-    StringBuilder builder = new StringBuilder(JOB).append(UNDERSCORE);
+    StringBuilder builder = new StringBuilder(JOB).append(SEPARATOR);
     builder.append(getJobIDsPatternWOPrefix(jtIdentifier, jobId));
     return builder.toString();
   }
   
-  static StringBuilder getJobIDsPatternWOPrefix(String jtIdentifier
-      , Integer jobId) {
-    StringBuilder builder = new StringBuilder()
-      .append(jtIdentifier != null ? jtIdentifier : "[^_]*").append(UNDERSCORE)
+  @Deprecated
+  static StringBuilder getJobIDsPatternWOPrefix(String jtIdentifier,
+                                                Integer jobId) {
+    StringBuilder builder = new StringBuilder();
+    if (jtIdentifier != null) {
+      builder.append(jtIdentifier);
+    } else {
+      builder.append("[^").append(SEPARATOR).append("]*");
+    }
+    builder.append(SEPARATOR)
       .append(jobId != null ? idFormat.format(jobId) : "[0-9]*");
     return builder;
   }
