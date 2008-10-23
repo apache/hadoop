@@ -106,4 +106,46 @@ public class TestJavaSerialization extends ClusterMapReduceTestCase {
     reader.close();
   }
 
+  /**
+   * HADOOP-4466:
+   * This test verifies the JavSerialization impl can write to SequenceFiles. by virtue other
+   * SequenceFileOutputFormat is not coupled to Writable types, if so, the job will fail.
+   *
+   */
+  public void testWriteToSequencefile() throws Exception {
+    OutputStream os = getFileSystem().create(new Path(getInputDir(),
+        "text.txt"));
+    Writer wr = new OutputStreamWriter(os);
+    wr.write("b a\n");
+    wr.close();
+
+    JobConf conf = createJobConf();
+    conf.setJobName("JavaSerialization");
+
+    conf.set("io.serializations",
+    "org.apache.hadoop.io.serializer.JavaSerialization," +
+    "org.apache.hadoop.io.serializer.WritableSerialization");
+
+    conf.setInputFormat(TextInputFormat.class);
+    conf.setOutputFormat(SequenceFileOutputFormat.class); // test we can write to sequence files
+
+    conf.setOutputKeyClass(String.class);
+    conf.setOutputValueClass(Long.class);
+    conf.setOutputKeyComparatorClass(JavaSerializationComparator.class);
+
+    conf.setMapperClass(WordCountMapper.class);
+    conf.setReducerClass(SumReducer.class);
+
+    FileInputFormat.setInputPaths(conf, getInputDir());
+
+    FileOutputFormat.setOutputPath(conf, getOutputDir());
+
+    JobClient.runJob(conf);
+
+    Path[] outputFiles = FileUtil.stat2Paths(
+                           getFileSystem().listStatus(getOutputDir(),
+                           new OutputLogFilter()));
+    assertEquals(1, outputFiles.length);
+}
+
 }
