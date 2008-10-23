@@ -44,6 +44,10 @@ Release 0.18.2 - Unreleased
     HADOOP-2421.  Add jdiff output to documentation, listing all API
     changes from the prior release.  (cutting)
 
+    HADOOP-4467. SerializationFactory now uses the current context ClassLoader
+    allowing for user supplied Serialization instances. (Chris Wensel via
+    acmurthy)
+ 
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
