@@ -51,16 +51,16 @@ public class SerializationFactory extends Configured {
     super(conf);
     for (String serializerName : conf.getStrings("io.serializations", 
       new String[]{"org.apache.hadoop.io.serializer.WritableSerialization"})) {
-      add(serializerName);
+      add(conf, serializerName);
     }
   }
   
   @SuppressWarnings("unchecked")
-  private void add(String serializationName) {
+  private void add(Configuration conf, String serializationName) {
     try {
       
       Class<? extends Serialization> serializionClass =
-        (Class<? extends Serialization>) Class.forName(serializationName);
+        (Class<? extends Serialization>) conf.getClassByName(serializationName);
       serializations.add((Serialization)
           ReflectionUtils.newInstance(serializionClass, getConf()));
     } catch (ClassNotFoundException e) {
