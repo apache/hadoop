@@ -33,7 +33,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
   private static final int MIN_CLUSTER_SIZE_FOR_PADDING = 3;
   
   protected JobQueueJobInProgressListener jobQueueJobInProgressListener;
-  private EagerTaskInitializationListener eagerTaskInitializationListener;
+  protected EagerTaskInitializationListener eagerTaskInitializationListener;
   private float padFraction;
   
   public JobQueueTaskScheduler() {
