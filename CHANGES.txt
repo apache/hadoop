@@ -52,6 +52,8 @@ Trunk (unreleased changes)
     HADOOP-4276. Improve the hashing functions and deserialization of the 
     mapred ID classes. (omalley)
 
+    HADOOP-4485. Add a compile-native ant task, as a shorthand. (enis)
+
   OPTIMIZATIONS
 
   BUG FIXES

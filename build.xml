@@ -364,6 +364,12 @@
     </copy>
   </target>
 
+  <target name="compile-native">
+    <antcall target="compile-core-native">
+      <param name="compile.native" value="true"/>
+    </antcall> 
+  </target>
+
   <target name="compile-core-native" depends="compile-core-classes"
           if="compile.native">
   	
