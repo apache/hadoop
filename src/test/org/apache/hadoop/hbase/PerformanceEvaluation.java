@@ -81,10 +81,10 @@ public class PerformanceEvaluation implements HConstants {
   
   static final byte [] COLUMN_NAME = Bytes.toBytes(COLUMN_FAMILY_STR + "data");
   
-  protected static HTableDescriptor tableDescriptor;
+  protected static HTableDescriptor TABLE_DESCRIPTOR;
   static {
-    tableDescriptor = new HTableDescriptor("TestTable");
-    tableDescriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
+    TABLE_DESCRIPTOR = new HTableDescriptor("TestTable");
+    TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
   }
   
   private static final String RANDOM_READ = "randomRead";
@@ -198,21 +198,10 @@ public class PerformanceEvaluation implements HConstants {
    * @throws IOException
    */
   private boolean checkTable(HBaseAdmin admin) throws IOException {
-    HTableDescriptor [] extantTables = admin.listTables();
-    boolean tableExists = false;
-    if (extantTables.length > 0) {
-      // Check to see if our table already exists.  Print warning if it does.
-      for (int i = 0; i < extantTables.length; i++) {
-        if (extantTables[i].equals(tableDescriptor)) {
-          LOG.warn("Table " + tableDescriptor + " already exists");
-          tableExists = true;
-          break;
-        }
-      }
-    }
+    boolean tableExists = admin.tableExists(TABLE_DESCRIPTOR.getName());
     if (!tableExists) {
-      admin.createTable(tableDescriptor);
-      LOG.info("Table " + tableDescriptor + " created");
+      admin.createTable(TABLE_DESCRIPTOR);
+      LOG.info("Table " + TABLE_DESCRIPTOR + " created");
     }
     return !tableExists;
   }
@@ -371,7 +360,7 @@ public class PerformanceEvaluation implements HConstants {
     
     void testSetup() throws IOException {
       this.admin = new HBaseAdmin(conf);
-      this.table = new HTable(conf, tableDescriptor.getName());
+      this.table = new HTable(conf, TABLE_DESCRIPTOR.getName());
       this.table.setAutoFlush(false);
       this.table.setWriteBufferSize(1024*1024*12);
     }
