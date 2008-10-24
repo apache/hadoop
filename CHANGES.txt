@@ -65,6 +65,7 @@ Release 0.19.0 - Unreleased
                SubString operator (Clint Morgan via Stack)
    HBASE-937   Thrift getRow does not support specifying columns
                (Doğacan Güney via Stack)
+   HBASE-940   Make the TableOutputFormat batching-aware
     
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

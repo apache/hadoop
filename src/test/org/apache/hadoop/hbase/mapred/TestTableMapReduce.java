@@ -135,7 +135,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       TableMapReduceUtil.initTableReduceJob(Bytes.toString(table.getTableName()),
         IdentityTableReduce.class, jobConf);
             
-      LOG.info("Started " + table.getTableName());
+      LOG.info("Started " + Bytes.toString(table.getTableName()));
       JobClient.runJob(jobConf);
       LOG.info("After map/reduce completion");
 

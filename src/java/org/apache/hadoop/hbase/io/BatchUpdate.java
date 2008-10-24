@@ -89,6 +89,17 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
   public BatchUpdate(final String row, long timestamp){
     this(Bytes.toBytes(row), timestamp);
   }
+  
+  /**
+   * Recopy constructor
+   * @param buToCopy BatchUpdate to copy
+   */
+  public BatchUpdate(BatchUpdate buToCopy) {
+    this(buToCopy.getRow(), buToCopy.getTimestamp());
+    for(BatchOperation bo : buToCopy) {
+      this.put(bo.getColumn(), bo.getValue());
+    }
+  }
 
   /**
    * Initialize a BatchUpdate operation on a row with a specific timestamp.

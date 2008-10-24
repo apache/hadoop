@@ -64,12 +64,17 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
     }
 
     public void close(@SuppressWarnings("unused") Reporter reporter) {
-      // Nothing to do.
+      try {
+        m_table.flushCommits();
+      }
+      catch(IOException ioe) { 
+        LOG.error(ioe);
+      }
     }
 
     public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
         BatchUpdate value) throws IOException {
-      m_table.commit(value);
+      m_table.commit(new BatchUpdate(value));
     }
   }
   
@@ -91,6 +96,7 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
       LOG.error(e);
       throw e;
     }
+    table.setAutoFlush(false);
     return new TableRecordWriter(table);
   }
 
