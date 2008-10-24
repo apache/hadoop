@@ -63,13 +63,9 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
       m_table = table;
     }
 
-    public void close(@SuppressWarnings("unused") Reporter reporter) {
-      try {
-        m_table.flushCommits();
-      }
-      catch(IOException ioe) { 
-        LOG.error(ioe);
-      }
+    public void close(@SuppressWarnings("unused") Reporter reporter) 
+      throws IOException {
+      m_table.flushCommits();
     }
 
     public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
