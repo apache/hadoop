@@ -61,7 +61,9 @@ Release 0.19.0 - Unreleased
                (Clint Morgan via Stack)
    HBASE-943   to ColumnValueFilter: add filterIfColumnMissing property, add
                SubString operator (Clint Morgan via Stack)
-
+   HBASE-937   Thrift getRow does not support specifying columns
+               (Doğacan Güney via Stack)
+    
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
                (Andrzej Bialecki via Stack)

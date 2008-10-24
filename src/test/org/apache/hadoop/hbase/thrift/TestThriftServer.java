@@ -63,7 +63,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Run all tests
     doTestTableCreateDrop();
     doTestTableMutations();
-    doTestTableTimestamps();
+    doTestTableTimestampsAndColumns();
     doTestTableScanners();
   }
 
@@ -180,7 +180,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
    * 
    * @throws Exception
    */
-  public void doTestTableTimestamps() throws Exception {
+  public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
     ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler();
     handler.createTable(tableAname, getColumnDescriptors());
@@ -206,7 +206,18 @@ public class TestThriftServer extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
     assertFalse(rowResult2.columns.containsKey(columnAname));
+    
+    List<byte[]> columns = new ArrayList<byte[]>();
+    columns.add(columnBname);
 
+    rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns);
+    assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueCname));
+    assertFalse(rowResult1.columns.containsKey(columnAname));
+
+    rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1);
+    assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
+    assertFalse(rowResult1.columns.containsKey(columnAname));
+    
     // Apply some timestamped deletes
     handler.deleteAllTs(tableAname, rowAname, columnBname, time1);
     handler.deleteAllRowTs(tableAname, rowBname, time2);

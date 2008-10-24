@@ -300,18 +300,38 @@ public class ThriftServer {
     
     public TRowResult getRow(byte[] tableName, byte[] row)
         throws IOError {
-      return getRowTs(tableName, row, HConstants.LATEST_TIMESTAMP);
+      return getRowWithColumnsTs(tableName, row, null,
+                                 HConstants.LATEST_TIMESTAMP);
+    }
+    
+    public TRowResult getRowWithColumns(byte[] tableName, byte[] row,
+        List<byte[]> columns) throws IOError {
+      return getRowWithColumnsTs(tableName, row, columns,
+                                 HConstants.LATEST_TIMESTAMP);
     }
     
     public TRowResult getRowTs(byte[] tableName, byte[] row,
         long timestamp) throws IOError {
+      return getRowWithColumnsTs(tableName, row, null,
+                                 timestamp);
+    }
+    
+    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row,
+        List<byte[]> columns, long timestamp) throws IOError {
       if (LOG.isDebugEnabled()) {
         LOG.debug("getRowTs: table=" + new String(tableName) + ", row="
             + new String(row) + ", ts=" + timestamp);
       }
       try {
         HTable table = getTable(tableName);
-        return ThriftUtilities.rowResultFromHBase(table.getRow(getText(row), timestamp));
+        if (columns == null) {
+          return ThriftUtilities.rowResultFromHBase(table.getRow(getText(row),
+                                                        timestamp));
+        } else {
+          byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
+          return ThriftUtilities.rowResultFromHBase(table.getRow(getText(row),
+                                                        columnArr, timestamp));
+        }
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

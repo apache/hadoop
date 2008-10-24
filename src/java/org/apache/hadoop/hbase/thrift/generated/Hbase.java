@@ -146,6 +146,17 @@ public class Hbase {
     public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, TException;
 
     /**
+     * Get the specified columns for the specified table and row at the latest
+     * timestamp.
+     * 
+     * @param tableName name of table
+     * @param row row key
+     * @param columns List of columns to return, null for all columns
+     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     */
+    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException;
+
+    /**
      * Get all the data for the specified table and row at the specified
      * timestamp.
      * 
@@ -155,6 +166,17 @@ public class Hbase {
      * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
      */
     public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
+
+    /**
+     * Get the specified columns for the specified table and row at the specified
+     * timestamp.
+     * 
+     * @param tableName name of table
+     * @param row row key
+     * @param columns List of columns to return, null for all columns
+     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     */
+    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -810,6 +832,44 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRow failed: unknown result");
     }
 
+    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException
+    {
+      send_getRowWithColumns(tableName, row, columns);
+      return recv_getRowWithColumns();
+    }
+
+    public void send_getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRowWithColumns", TMessageType.CALL, seqid_));
+      getRowWithColumns_args args = new getRowWithColumns_args();
+      args.tableName = tableName;
+      args.row = row;
+      args.columns = columns;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public TRowResult recv_getRowWithColumns() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRowWithColumns_result result = new getRowWithColumns_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowWithColumns failed: unknown result");
+    }
+
     public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException
     {
       send_getRowTs(tableName, row, timestamp);
@@ -846,6 +906,45 @@ public class Hbase {
         throw result.io;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowTs failed: unknown result");
+    }
+
+    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException
+    {
+      send_getRowWithColumnsTs(tableName, row, columns, timestamp);
+      return recv_getRowWithColumnsTs();
+    }
+
+    public void send_getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getRowWithColumnsTs", TMessageType.CALL, seqid_));
+      getRowWithColumnsTs_args args = new getRowWithColumnsTs_args();
+      args.tableName = tableName;
+      args.row = row;
+      args.columns = columns;
+      args.timestamp = timestamp;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public TRowResult recv_getRowWithColumnsTs() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getRowWithColumnsTs_result result = new getRowWithColumnsTs_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowWithColumnsTs failed: unknown result");
     }
 
     public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException
@@ -1391,7 +1490,9 @@ public class Hbase {
       processMap_.put("getVer", new getVer());
       processMap_.put("getVerTs", new getVerTs());
       processMap_.put("getRow", new getRow());
+      processMap_.put("getRowWithColumns", new getRowWithColumns());
       processMap_.put("getRowTs", new getRowTs());
+      processMap_.put("getRowWithColumnsTs", new getRowWithColumnsTs());
       processMap_.put("mutateRow", new mutateRow());
       processMap_.put("mutateRowTs", new mutateRowTs());
       processMap_.put("mutateRows", new mutateRows());
@@ -1711,6 +1812,28 @@ public class Hbase {
 
     }
 
+    private class getRowWithColumns implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRowWithColumns_args args = new getRowWithColumns_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRowWithColumns_result result = new getRowWithColumns_result();
+        try {
+          result.success = iface_.getRowWithColumns(args.tableName, args.row, args.columns);
+          result.__isset.success = true;
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("getRowWithColumns", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
     private class getRowTs implements ProcessFunction {
       public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
       {
@@ -1726,6 +1849,28 @@ public class Hbase {
           result.__isset.io = true;
         }
         oprot.writeMessageBegin(new TMessage("getRowTs", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getRowWithColumnsTs implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getRowWithColumnsTs_args args = new getRowWithColumnsTs_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getRowWithColumnsTs_result result = new getRowWithColumnsTs_result();
+        try {
+          result.success = iface_.getRowWithColumnsTs(args.tableName, args.row, args.columns, args.timestamp);
+          result.__isset.success = true;
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("getRowWithColumnsTs", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -2254,7 +2399,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -2460,7 +2605,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -2697,7 +2842,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -2909,7 +3054,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -3168,7 +3313,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -3424,7 +3569,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -3743,11 +3888,11 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("createTable_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(",exist:");
-      sb.append(this.exist.toString());
+      sb.append(this.exist);
       sb.append(")");
       return sb.toString();
     }
@@ -3985,9 +4130,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",nf:");
-      sb.append(this.nf.toString());
+      sb.append(this.nf);
       sb.append(")");
       return sb.toString();
     }
@@ -4321,11 +4466,11 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("get_result(");
       sb.append("success:");
-      sb.append(this.success.toString());
+      sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",nf:");
-      sb.append(this.nf.toString());
+      sb.append(this.nf);
       sb.append(")");
       return sb.toString();
     }
@@ -4707,9 +4852,9 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",nf:");
-      sb.append(this.nf.toString());
+      sb.append(this.nf);
       sb.append(")");
       return sb.toString();
     }
@@ -5121,9 +5266,9 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",nf:");
-      sb.append(this.nf.toString());
+      sb.append(this.nf);
       sb.append(")");
       return sb.toString();
     }
@@ -5393,9 +5538,329 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRow_result(");
       sb.append("success:");
-      sb.append(this.success.toString());
+      sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getRowWithColumns_args implements TBase, java.io.Serializable   {
+    public byte[] tableName;
+    public byte[] row;
+    public List<byte[]> columns;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+      public boolean row = false;
+      public boolean columns = false;
+    }
+
+    public getRowWithColumns_args() {
+    }
+
+    public getRowWithColumns_args(
+      byte[] tableName,
+      byte[] row,
+      List<byte[]> columns)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+      this.row = row;
+      this.__isset.row = true;
+      this.columns = columns;
+      this.__isset.columns = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowWithColumns_args)
+        return this.equals((getRowWithColumns_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowWithColumns_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readBinary();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 2:
+            if (field.type == TType.STRING) {
+              this.row = iprot.readBinary();
+              this.__isset.row = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 3:
+            if (field.type == TType.LIST) {
+              {
+                TList _list34 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list34.size);
+                for (int _i35 = 0; _i35 < _list34.size; ++_i35)
+                {
+                  byte[] _elem36 = null;
+                  _elem36 = iprot.readBinary();
+                  this.columns.add(_elem36);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.columns = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getRowWithColumns_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.row != null) {
+        field.name = "row";
+        field.type = TType.STRING;
+        field.id = 2;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.row);
+        oprot.writeFieldEnd();
+      }
+      if (this.columns != null) {
+        field.name = "columns";
+        field.type = TType.LIST;
+        field.id = 3;
+        oprot.writeFieldBegin(field);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
+          for (byte[] _iter37 : this.columns)          {
+            oprot.writeBinary(_iter37);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowWithColumns_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(",row:");
+      sb.append(this.row);
+      sb.append(",columns:");
+      sb.append(this.columns);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getRowWithColumns_result implements TBase, java.io.Serializable   {
+    public TRowResult success;
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+      public boolean io = false;
+    }
+
+    public getRowWithColumns_result() {
+    }
+
+    public getRowWithColumns_result(
+      TRowResult success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowWithColumns_result)
+        return this.equals((getRowWithColumns_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowWithColumns_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.STRUCT) {
+              this.success = new TRowResult();
+              this.success.read(iprot);
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getRowWithColumns_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.STRUCT;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          this.success.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowWithColumns_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",io:");
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -5695,9 +6160,359 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRowTs_result(");
       sb.append("success:");
-      sb.append(this.success.toString());
+      sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getRowWithColumnsTs_args implements TBase, java.io.Serializable   {
+    public byte[] tableName;
+    public byte[] row;
+    public List<byte[]> columns;
+    public long timestamp;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+      public boolean row = false;
+      public boolean columns = false;
+      public boolean timestamp = false;
+    }
+
+    public getRowWithColumnsTs_args() {
+    }
+
+    public getRowWithColumnsTs_args(
+      byte[] tableName,
+      byte[] row,
+      List<byte[]> columns,
+      long timestamp)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+      this.row = row;
+      this.__isset.row = true;
+      this.columns = columns;
+      this.__isset.columns = true;
+      this.timestamp = timestamp;
+      this.__isset.timestamp = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowWithColumnsTs_args)
+        return this.equals((getRowWithColumnsTs_args)that);
+      return false;
+    }
+
+    public boolean equals(getRowWithColumnsTs_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableName, that.tableName))
+          return false;
+      }
+
+      boolean this_present_row = true && (this.row != null);
+      boolean that_present_row = true && (that.row != null);
+      if (this_present_row || that_present_row) {
+        if (!(this_present_row && that_present_row))
+          return false;
+        if (!java.util.Arrays.equals(this.row, that.row))
+          return false;
+      }
+
+      boolean this_present_columns = true && (this.columns != null);
+      boolean that_present_columns = true && (that.columns != null);
+      if (this_present_columns || that_present_columns) {
+        if (!(this_present_columns && that_present_columns))
+          return false;
+        if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readBinary();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 2:
+            if (field.type == TType.STRING) {
+              this.row = iprot.readBinary();
+              this.__isset.row = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 3:
+            if (field.type == TType.LIST) {
+              {
+                TList _list38 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list38.size);
+                for (int _i39 = 0; _i39 < _list38.size; ++_i39)
+                {
+                  byte[] _elem40 = null;
+                  _elem40 = iprot.readBinary();
+                  this.columns.add(_elem40);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.columns = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 4:
+            if (field.type == TType.I64) {
+              this.timestamp = iprot.readI64();
+              this.__isset.timestamp = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getRowWithColumnsTs_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      if (this.row != null) {
+        field.name = "row";
+        field.type = TType.STRING;
+        field.id = 2;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.row);
+        oprot.writeFieldEnd();
+      }
+      if (this.columns != null) {
+        field.name = "columns";
+        field.type = TType.LIST;
+        field.id = 3;
+        oprot.writeFieldBegin(field);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
+          for (byte[] _iter41 : this.columns)          {
+            oprot.writeBinary(_iter41);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      field.name = "timestamp";
+      field.type = TType.I64;
+      field.id = 4;
+      oprot.writeFieldBegin(field);
+      oprot.writeI64(this.timestamp);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowWithColumnsTs_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(",row:");
+      sb.append(this.row);
+      sb.append(",columns:");
+      sb.append(this.columns);
+      sb.append(",timestamp:");
+      sb.append(this.timestamp);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getRowWithColumnsTs_result implements TBase, java.io.Serializable   {
+    public TRowResult success;
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+      public boolean io = false;
+    }
+
+    public getRowWithColumnsTs_result() {
+    }
+
+    public getRowWithColumnsTs_result(
+      TRowResult success,
+      IOError io)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getRowWithColumnsTs_result)
+        return this.equals((getRowWithColumnsTs_result)that);
+      return false;
+    }
+
+    public boolean equals(getRowWithColumnsTs_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.STRUCT) {
+              this.success = new TRowResult();
+              this.success.read(iprot);
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getRowWithColumnsTs_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.STRUCT;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          this.success.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getRowWithColumnsTs_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",io:");
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -5809,14 +6624,14 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list34 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list34.size);
-                for (int _i35 = 0; _i35 < _list34.size; ++_i35)
+                TList _list42 = iprot.readListBegin();
+                this.mutations = new ArrayList<Mutation>(_list42.size);
+                for (int _i43 = 0; _i43 < _list42.size; ++_i43)
                 {
-                  Mutation _elem36 = new Mutation();
-                  _elem36 = new Mutation();
-                  _elem36.read(iprot);
-                  this.mutations.add(_elem36);
+                  Mutation _elem44 = new Mutation();
+                  _elem44 = new Mutation();
+                  _elem44.read(iprot);
+                  this.mutations.add(_elem44);
                 }
                 iprot.readListEnd();
               }
@@ -5861,8 +6676,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter37 : this.mutations)          {
-            _iter37.write(oprot);
+          for (Mutation _iter45 : this.mutations)          {
+            _iter45.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -6016,9 +6831,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRow_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(")");
       return sb.toString();
     }
@@ -6144,14 +6959,14 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list38 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list38.size);
-                for (int _i39 = 0; _i39 < _list38.size; ++_i39)
+                TList _list46 = iprot.readListBegin();
+                this.mutations = new ArrayList<Mutation>(_list46.size);
+                for (int _i47 = 0; _i47 < _list46.size; ++_i47)
                 {
-                  Mutation _elem40 = new Mutation();
-                  _elem40 = new Mutation();
-                  _elem40.read(iprot);
-                  this.mutations.add(_elem40);
+                  Mutation _elem48 = new Mutation();
+                  _elem48 = new Mutation();
+                  _elem48.read(iprot);
+                  this.mutations.add(_elem48);
                 }
                 iprot.readListEnd();
               }
@@ -6204,8 +7019,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter41 : this.mutations)          {
-            _iter41.write(oprot);
+          for (Mutation _iter49 : this.mutations)          {
+            _iter49.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -6367,9 +7182,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRowTs_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(")");
       return sb.toString();
     }
@@ -6459,14 +7274,14 @@ public class Hbase {
           case 2:
             if (field.type == TType.LIST) {
               {
-                TList _list42 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list42.size);
-                for (int _i43 = 0; _i43 < _list42.size; ++_i43)
+                TList _list50 = iprot.readListBegin();
+                this.rowBatches = new ArrayList<BatchMutation>(_list50.size);
+                for (int _i51 = 0; _i51 < _list50.size; ++_i51)
                 {
-                  BatchMutation _elem44 = new BatchMutation();
-                  _elem44 = new BatchMutation();
-                  _elem44.read(iprot);
-                  this.rowBatches.add(_elem44);
+                  BatchMutation _elem52 = new BatchMutation();
+                  _elem52 = new BatchMutation();
+                  _elem52.read(iprot);
+                  this.rowBatches.add(_elem52);
                 }
                 iprot.readListEnd();
               }
@@ -6503,8 +7318,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter45 : this.rowBatches)          {
-            _iter45.write(oprot);
+          for (BatchMutation _iter53 : this.rowBatches)          {
+            _iter53.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -6656,9 +7471,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRows_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(")");
       return sb.toString();
     }
@@ -6762,14 +7577,14 @@ public class Hbase {
           case 2:
             if (field.type == TType.LIST) {
               {
-                TList _list46 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list46.size);
-                for (int _i47 = 0; _i47 < _list46.size; ++_i47)
+                TList _list54 = iprot.readListBegin();
+                this.rowBatches = new ArrayList<BatchMutation>(_list54.size);
+                for (int _i55 = 0; _i55 < _list54.size; ++_i55)
                 {
-                  BatchMutation _elem48 = new BatchMutation();
-                  _elem48 = new BatchMutation();
-                  _elem48.read(iprot);
-                  this.rowBatches.add(_elem48);
+                  BatchMutation _elem56 = new BatchMutation();
+                  _elem56 = new BatchMutation();
+                  _elem56.read(iprot);
+                  this.rowBatches.add(_elem56);
                 }
                 iprot.readListEnd();
               }
@@ -6814,8 +7629,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter49 : this.rowBatches)          {
-            _iter49.write(oprot);
+          for (BatchMutation _iter57 : this.rowBatches)          {
+            _iter57.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -6975,9 +7790,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRowsTs_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(")");
       return sb.toString();
     }
@@ -7247,7 +8062,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAll_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -7547,7 +8362,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllTs_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -7785,7 +8600,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRow_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -8053,7 +8868,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRowTs_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -8165,13 +8980,13 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list50 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list50.size);
-                for (int _i51 = 0; _i51 < _list50.size; ++_i51)
+                TList _list58 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list58.size);
+                for (int _i59 = 0; _i59 < _list58.size; ++_i59)
                 {
-                  byte[] _elem52 = null;
-                  _elem52 = iprot.readBinary();
-                  this.columns.add(_elem52);
+                  byte[] _elem60 = null;
+                  _elem60 = iprot.readBinary();
+                  this.columns.add(_elem60);
                 }
                 iprot.readListEnd();
               }
@@ -8216,8 +9031,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter53 : this.columns)          {
-            oprot.writeBinary(_iter53);
+          for (byte[] _iter61 : this.columns)          {
+            oprot.writeBinary(_iter61);
           }
           oprot.writeListEnd();
         }
@@ -8370,7 +9185,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -8504,13 +9319,13 @@ public class Hbase {
           case 4:
             if (field.type == TType.LIST) {
               {
-                TList _list54 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list54.size);
-                for (int _i55 = 0; _i55 < _list54.size; ++_i55)
+                TList _list62 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list62.size);
+                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
                 {
-                  byte[] _elem56 = null;
-                  _elem56 = iprot.readBinary();
-                  this.columns.add(_elem56);
+                  byte[] _elem64 = null;
+                  _elem64 = iprot.readBinary();
+                  this.columns.add(_elem64);
                 }
                 iprot.readListEnd();
               }
@@ -8563,8 +9378,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter57 : this.columns)          {
-            oprot.writeBinary(_iter57);
+          for (byte[] _iter65 : this.columns)          {
+            oprot.writeBinary(_iter65);
           }
           oprot.writeListEnd();
         }
@@ -8719,7 +9534,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -8845,13 +9660,13 @@ public class Hbase {
           case 3:
             if (field.type == TType.LIST) {
               {
-                TList _list58 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list58.size);
-                for (int _i59 = 0; _i59 < _list58.size; ++_i59)
+                TList _list66 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list66.size);
+                for (int _i67 = 0; _i67 < _list66.size; ++_i67)
                 {
-                  byte[] _elem60 = null;
-                  _elem60 = iprot.readBinary();
-                  this.columns.add(_elem60);
+                  byte[] _elem68 = null;
+                  _elem68 = iprot.readBinary();
+                  this.columns.add(_elem68);
                 }
                 iprot.readListEnd();
               }
@@ -8904,8 +9719,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter61 : this.columns)          {
-            oprot.writeBinary(_iter61);
+          for (byte[] _iter69 : this.columns)          {
+            oprot.writeBinary(_iter69);
           }
           oprot.writeListEnd();
         }
@@ -9066,7 +9881,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -9214,13 +10029,13 @@ public class Hbase {
           case 4:
             if (field.type == TType.LIST) {
               {
-                TList _list62 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list62.size);
-                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
+                TList _list70 = iprot.readListBegin();
+                this.columns = new ArrayList<byte[]>(_list70.size);
+                for (int _i71 = 0; _i71 < _list70.size; ++_i71)
                 {
-                  byte[] _elem64 = null;
-                  _elem64 = iprot.readBinary();
-                  this.columns.add(_elem64);
+                  byte[] _elem72 = null;
+                  _elem72 = iprot.readBinary();
+                  this.columns.add(_elem72);
                 }
                 iprot.readListEnd();
               }
@@ -9281,8 +10096,8 @@ public class Hbase {
         oprot.writeFieldBegin(field);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter65 : this.columns)          {
-            oprot.writeBinary(_iter65);
+          for (byte[] _iter73 : this.columns)          {
+            oprot.writeBinary(_iter73);
           }
           oprot.writeListEnd();
         }
@@ -9445,7 +10260,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(")");
       return sb.toString();
     }
@@ -9745,13 +10560,13 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerGet_result(");
       sb.append("success:");
-      sb.append(this.success.toString());
+      sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(",nf:");
-      sb.append(this.nf.toString());
+      sb.append(this.nf);
       sb.append(")");
       return sb.toString();
     }
@@ -9987,9 +10802,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerClose_result(");
       sb.append("io:");
-      sb.append(this.io.toString());
+      sb.append(this.io);
       sb.append(",ia:");
-      sb.append(this.ia.toString());
+      sb.append(this.ia);
       sb.append(")");
       return sb.toString();
     }

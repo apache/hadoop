@@ -280,6 +280,18 @@ service Hbase {
     throws (1:IOError io)
 
   /** 
+   * Get the specified columns for the specified table and row at the latest
+   * timestamp.
+   * 
+   * @param tableName name of table
+   * @param row row key
+   * @param columns List of columns to return, null for all columns
+   * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+   */
+  TRowResult getRowWithColumns(1:Text tableName, 2:Text row, 3:list<Text> columns)
+    throws (1:IOError io)
+
+  /** 
    * Get all the data for the specified table and row at the specified
    * timestamp.
    * 
@@ -289,6 +301,18 @@ service Hbase {
    * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
    */
   TRowResult getRowTs(1:Text tableName, 2:Text row, 3:i64 timestamp)
+    throws (1:IOError io)
+    
+  /** 
+   * Get the specified columns for the specified table and row at the specified
+   * timestamp.
+   * 
+   * @param tableName name of table
+   * @param row row key
+   * @param columns List of columns to return, null for all columns
+   * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+   */
+  TRowResult getRowWithColumnsTs(1:Text tableName, 2:Text row, 3:list<Text> columns, 4:i64 timestamp)
     throws (1:IOError io)
 
   /** 
