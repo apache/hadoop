@@ -80,6 +80,22 @@ public class RowFilterSet implements RowFilterInterface {
     this.operator = operator;
   }
 
+  /** Get the operator.
+   * 
+   * @return operator
+   */
+  public Operator getOperator() {
+    return operator;
+  }
+  
+  /** Add a filter.
+   * 
+   * @param filter
+   */
+  public void addFilter(RowFilterInterface filter) {
+    this.filters.add(filter);
+  }
+  
   public void validate(final byte [][] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);

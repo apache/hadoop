@@ -53,13 +53,18 @@ public class ColumnValueFilter implements RowFilterInterface {
     /** greater than or equal to */
     GREATER_OR_EQUAL,
     /** greater than */
-    GREATER;
+    GREATER,
+    // Below are more specific operators.
+    /** sub-string. Case insensitive. */
+    SUB_STRING;
+    
   }
 
   private byte[] columnName;
   private CompareOp compareOp;
   private byte[] value;
   private WritableByteArrayComparable comparator;
+  private boolean filterIfColumnMissing;
 
   ColumnValueFilter() {
     // for Writable
@@ -74,9 +79,23 @@ public class ColumnValueFilter implements RowFilterInterface {
    */
   public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
       final byte[] value) {
+    this(columnName, compareOp, value, true);
+  }
+  
+  /**
+   * Constructor.
+   * 
+   * @param columnName name of column
+   * @param compareOp operator
+   * @param value value to compare column values against
+   * @param filterIfColumnMissing if true then we will filter rows that don't have the column. 
+   */
+  public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
+      final byte[] value, boolean filterIfColumnMissing) {
     this.columnName = columnName;
     this.compareOp = compareOp;
     this.value = value;
+    this.filterIfColumnMissing = filterIfColumnMissing;
   }
 
   /**
@@ -88,10 +107,24 @@ public class ColumnValueFilter implements RowFilterInterface {
    */
   public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
       final WritableByteArrayComparable comparator) {
-    this.columnName = columnName;
-    this.compareOp = compareOp;
-    this.comparator = comparator;
+    this(columnName, compareOp, comparator, true);
   }
+  
+  /**
+  * Constructor.
+  * 
+  * @param columnName name of column
+  * @param compareOp operator
+  * @param comparator Comparator to use.
+  * @param filterIfColumnMissing if true then we will filter rows that don't have the column. 
+  */
+ public ColumnValueFilter(final byte[] columnName, final CompareOp compareOp,
+     final WritableByteArrayComparable comparator, boolean filterIfColumnMissing) {
+   this.columnName = columnName;
+   this.compareOp = compareOp;
+   this.comparator = comparator;
+   this.filterIfColumnMissing = filterIfColumnMissing;
+ }
 
   public boolean filterRowKey(@SuppressWarnings("unused") final byte[] rowKey) {
     return false;
@@ -99,8 +132,21 @@ public class ColumnValueFilter implements RowFilterInterface {
 
   public boolean filterColumn(@SuppressWarnings("unused") final byte[] rowKey,
       final byte[] colKey, final byte[] data) {
+    if (!filterIfColumnMissing) {
+      return false; // Must filter on the whole row
+    }
     if (!Arrays.equals(colKey, columnName)) {
       return false;
+    }
+    return filterColumnValue(data); 
+    
+  }
+
+  private boolean filterColumnValue(final byte [] data) {
+    // Special case for Substring operator
+    if (compareOp == CompareOp.SUB_STRING) {
+      return !Bytes.toString(data).toLowerCase().contains(
+          (Bytes.toString(value)).toLowerCase());
     }
 
     int compareResult;
@@ -127,14 +173,22 @@ public class ColumnValueFilter implements RowFilterInterface {
       throw new RuntimeException("Unknown Compare op " + compareOp.name());
     }
   }
-
+  
   public boolean filterAllRemaining() {
     return false;
   }
 
   public boolean filterRow(final SortedMap<byte[], Cell> columns) {
-    // Don't let rows through if they don't have the column we are checking
-    return !columns.containsKey(columnName);
+    if (filterIfColumnMissing) {
+      return !columns.containsKey(columnName);
+    } 
+
+    // Otherwise we must do the filter here
+    Cell colCell = columns.get(columnName);
+      if (colCell == null) {
+        return false;
+      }
+      return this.filterColumnValue(colCell.getValue());
   }
 
   private int compare(final byte[] b1, final byte[] b2) {
@@ -175,6 +229,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     compareOp = CompareOp.valueOf(in.readUTF());
     comparator = (WritableByteArrayComparable) ObjectWritable.readObject(in,
         new HBaseConfiguration());
+    filterIfColumnMissing = in.readBoolean();
   }
 
   public void write(final DataOutput out) throws IOException {
@@ -188,6 +243,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     out.writeUTF(compareOp.name());
     ObjectWritable.writeObject(out, comparator,
         WritableByteArrayComparable.class, new HBaseConfiguration());
+    out.writeBoolean(filterIfColumnMissing);
   }
 
 }
