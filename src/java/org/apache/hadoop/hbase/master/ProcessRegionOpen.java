@@ -96,13 +96,8 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
                 regionInfo.getRegionName(), regionInfo.getStartKey());
             if (!master.regionManager.isInitialMetaScanComplete()) {
               // Put it on the queue to be scanned for the first time.
-              try {
-                LOG.debug("Adding " + m.toString() + " to regions to scan");
-                master.regionManager.addMetaRegionToScan(m);
-              } catch (InterruptedException e) {
-                throw new RuntimeException(
-                    "Putting into metaRegionsToScan was interrupted.", e);
-              }
+              LOG.debug("Adding " + m.toString() + " to regions to scan");
+              master.regionManager.addMetaRegionToScan(m);
             } else {
               // Add it to the online meta regions
               LOG.debug("Adding to onlineMetaRegions: " + m.toString());

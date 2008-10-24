@@ -662,7 +662,7 @@ public class HLog extends Thread implements HConstants, Syncable {
     try {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Splitting " + i + " of " + logfiles.length + ": " +
+          LOG.debug("Splitting " + (i + 1) + " of " + logfiles.length + ": " +
             logfiles[i].getPath());
         }
         // Check for empty file.
@@ -703,7 +703,7 @@ public class HLog extends Thread implements HConstants, Syncable {
               logWriters.put(regionName, w);
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Creating new log file writer for path " + logfile +
-                  " and region " + regionName);
+                  " and region " + Bytes.toString(regionName));
               }
               
               if (old != null) {

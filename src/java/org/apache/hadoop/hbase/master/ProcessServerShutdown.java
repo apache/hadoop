@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;    //TODO: remove
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -45,11 +44,13 @@ import org.apache.hadoop.hbase.io.RowResult;
  * serving, and the regions need to get reassigned.
  */
 class ProcessServerShutdown extends RegionServerOperation {
-  private HServerAddress deadServer;
-  private String deadServerName;
+  private final HServerAddress deadServer;
+  private final String deadServerName;
+  private final boolean rootRegionServer;
   private Path oldLogDir;
   private boolean logSplit;
   private boolean rootRescanned;
+  
 
   private class ToDoEntry {
     boolean regionOffline;
@@ -66,11 +67,14 @@ class ProcessServerShutdown extends RegionServerOperation {
   /**
    * @param master
    * @param serverInfo
+   * @param rootRegionServer
    */
-  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
+  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo,
+      boolean rootRegionServer) {
     super(master);
     this.deadServer = serverInfo.getServerAddress();
     this.deadServerName = this.deadServer.toString();
+    this.rootRegionServer = rootRegionServer;
     this.logSplit = false;
     this.rootRescanned = false;
     StringBuilder dirName = new StringBuilder("log_");
@@ -253,6 +257,9 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
 
     if (!rootAvailable()) {
+      // Get root region assigned now that log has been split
+      master.regionManager.reassignRootRegion();
+      
       // Return true so that worker does not put this request back on the
       // toDoQueue.
       // rootAvailable() has already put it on the delayedToDoQueue

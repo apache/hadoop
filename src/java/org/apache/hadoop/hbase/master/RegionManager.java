@@ -148,7 +148,7 @@ class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master, this);
     
-    unassignRootRegion();
+    reassignRootRegion();
   }
   
   void start() {
@@ -158,15 +158,11 @@ class RegionManager implements HConstants {
       "RegionManager.metaScanner");    
   }
   
-  /*
-   * Unassign the root region.
-   * This method would be used in case where root region server had died
-   * without reporting in.  Currently, we just flounder and never recover.  We
-   * could 'notice' dead region server in root scanner -- if we failed access
-   * multiple times -- but reassigning root is catastrophic.
-   * 
-   */
-  void unassignRootRegion() {
+  void unsetRootRegion() {
+    rootRegionLocation.set(null);
+  }
+  
+  void reassignRootRegion() {
     rootRegionLocation.set(null);
     if (!master.shutdownRequested) {
       unassignedRegions.put(HRegionInfo.ROOT_REGIONINFO, ZERO_L);
@@ -818,9 +814,8 @@ class RegionManager implements HConstants {
   /**
    * Add a meta region to the scan queue
    * @param m MetaRegion that needs to get scanned
-   * @throws InterruptedException
    */
-  public void addMetaRegionToScan(MetaRegion m) throws InterruptedException {
+  public void addMetaRegionToScan(MetaRegion m) {
     metaScannerThread.addMetaRegionToScan(m);
   }
   
@@ -937,6 +932,9 @@ class RegionManager implements HConstants {
 
   /**
    * @param regionName
+   * @param info
+   * @param server
+   * @param op
    */
   public void startAction(byte[] regionName, HRegionInfo info,
       HServerAddress server, int op) {
@@ -956,6 +954,7 @@ class RegionManager implements HConstants {
 
   /**
    * @param regionName
+   * @param op
    */
   public void endAction(byte[] regionName, int op) {
     switch (op) {
