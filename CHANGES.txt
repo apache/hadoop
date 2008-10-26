@@ -56,6 +56,8 @@ Trunk (unreleased changes)
 
     HADOOP-4510. Make getTaskOutputPath public. (Chris Wensel via omalley)
 
+    HADOOP-4454. Allow # comments in slaves file. (Rama Ramasamy via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
