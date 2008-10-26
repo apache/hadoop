@@ -54,6 +54,8 @@ Trunk (unreleased changes)
 
     HADOOP-4485. Add a compile-native ant task, as a shorthand. (enis)
 
+    HADOOP-4510. Make getTaskOutputPath public. (Chris Wensel via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
