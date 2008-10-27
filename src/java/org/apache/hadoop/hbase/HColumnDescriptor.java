@@ -86,6 +86,14 @@ public class HColumnDescriptor implements WritableComparable {
    * Default maximum cell length.
    */
   public static final int DEFAULT_LENGTH = Integer.MAX_VALUE;
+  public static final Integer DEFAULT_LENGTH_INTEGER =
+    Integer.valueOf(DEFAULT_LENGTH);
+  
+  /*
+   * Cache here the HCD value.
+   * Question: its OK to cache since when we're reenable, we create a new HCD?
+   */
+  private volatile Integer maxValueLength = null;
 
   /**
    * Default setting for whether to serve from memory or not.
@@ -322,7 +330,7 @@ public class HColumnDescriptor implements WritableComparable {
   public int getMaxVersions() {
     String value = getValue(HConstants.VERSIONS);
     if (value != null)
-      return Integer.valueOf(value);
+      return Integer.valueOf(value).intValue();
     return DEFAULT_VERSIONS;
   }
 
@@ -359,7 +367,7 @@ public class HColumnDescriptor implements WritableComparable {
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
-      return Boolean.valueOf(value);
+      return Boolean.valueOf(value).booleanValue();
     return DEFAULT_IN_MEMORY;
   }
   
@@ -374,11 +382,13 @@ public class HColumnDescriptor implements WritableComparable {
   /**
    * @return Maximum value length.
    */
-  public int getMaxValueLength() {
-    String value = getValue(LENGTH);
-    if (value != null)
-      return Integer.valueOf(value);
-    return DEFAULT_LENGTH;
+  public synchronized int getMaxValueLength() {
+    if (this.maxValueLength == null) {
+      String value = getValue(LENGTH);
+      this.maxValueLength = (value != null)?
+        Integer.decode(value): DEFAULT_LENGTH_INTEGER;
+    }
+    return this.maxValueLength.intValue();
   }
 
   /**
@@ -386,6 +396,7 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public void setMaxValueLength(int maxLength) {
     setValue(LENGTH, Integer.toString(maxLength));
+    this.maxValueLength = null;
   }
 
   /**
@@ -426,7 +437,7 @@ public class HColumnDescriptor implements WritableComparable {
   public boolean isBloomfilter() {
     String value = getValue(BLOOMFILTER);
     if (value != null)
-      return Boolean.valueOf(value);
+      return Boolean.valueOf(value).booleanValue();
     return DEFAULT_BLOOMFILTER;
   }
 
@@ -444,7 +455,7 @@ public class HColumnDescriptor implements WritableComparable {
   public int getMapFileIndexInterval() {
     String value = getValue(MAPFILE_INDEX_INTERVAL);
     if (value != null)
-      return Integer.valueOf(value);
+      return Integer.valueOf(value).intValue();
     return DEFAULT_MAPFILE_INDEX_INTERVAL;
   }
 

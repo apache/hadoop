@@ -1208,7 +1208,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     HTableDescriptor desc = region.getTableDesc();
     for (Iterator<BatchOperation> iter = 
       batchUpdate.iterator(); iter.hasNext();) {
-      
       BatchOperation operation = iter.next();
       if (operation.getValue() != null) {
         HColumnDescriptor fam = 
