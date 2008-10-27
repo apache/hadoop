@@ -84,7 +84,7 @@ import org.apache.hadoop.io.SequenceFile.Reader;
  * separate reentrant lock is used.
  *
  */
-public class HLog extends Thread implements HConstants, Syncable {
+public class HLog implements HConstants, Syncable {
   private static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
   static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
@@ -157,7 +157,6 @@ public class HLog extends Thread implements HConstants, Syncable {
     this.dir = dir;
     this.conf = conf;
     this.listener = listener;
-    this.setName(this.getClass().getSimpleName());
     this.maxlogentries =
       conf.getInt("hbase.regionserver.maxlogentries", 100000);
     this.flushlogentries =
@@ -362,9 +361,6 @@ public class HLog extends Thread implements HConstants, Syncable {
     try {
       synchronized (updateLock) {
         this.closed = true;
-        if (this.isAlive()) {
-          this.interrupt();
-        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing log writer in " + this.dir.toString());
         }
@@ -433,34 +429,27 @@ public class HLog extends Thread implements HConstants, Syncable {
     }
   }
   
-  /** {@inheritDoc} */
-  @Override
-  public void run() {
-    while (!this.closed) {
-      synchronized (updateLock) {
-        if (((System.currentTimeMillis() - this.optionalFlushInterval) >
-              this.lastLogFlushTime) && this.unflushedEntries > 0) {
-          try {
-            sync();
-          } catch (IOException e) {
-            LOG.error("Error flushing HLog", e);
-          }
-        }
-        try {
-          updateLock.wait(this.threadWakeFrequency);
-        } catch (InterruptedException e) {
-          // continue
-        }
-      }
-    }
-  }
-  
   public void sync() throws IOException {
     lastLogFlushTime = System.currentTimeMillis();
     this.writer.sync();
     unflushedEntries = 0;
   }
 
+  void optionalSync() {
+    if (!this.closed) {
+      synchronized (updateLock) {
+        if (((System.currentTimeMillis() - this.optionalFlushInterval) >
+        this.lastLogFlushTime) && this.unflushedEntries > 0) {
+          try {
+            sync();
+          } catch (IOException e) {
+            LOG.error("Error flushing HLog", e);
+          }
+        }
+      }
+    }
+  }
+  
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();
