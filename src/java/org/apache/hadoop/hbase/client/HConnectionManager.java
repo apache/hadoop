@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.SoftSortedMap;
+import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -64,7 +64,9 @@ public class HConnectionManager implements HConstants {
   /*
    * Not instantiable.
    */
-  protected HConnectionManager() {}
+  protected HConnectionManager() {
+    super();
+  }
   
   // A Map of master HServerAddress -> connection information for that instance
   // Note that although the Map is synchronized, the objects it contains
@@ -92,7 +94,7 @@ public class HConnectionManager implements HConstants {
   }
   
   /**
-   * Delete connection information for the instance specified by the configuration
+   * Delete connection information for the instance specified by configuration
    * @param conf
    * @param stopProxy
    */
@@ -131,9 +133,9 @@ public class HConnectionManager implements HConstants {
 
     private HRegionLocation rootRegionLocation; 
     
-    private final Map<Integer, SoftSortedMap<byte [], HRegionLocation>> 
+    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
       cachedRegionLocations = Collections.synchronizedMap(
-         new HashMap<Integer, SoftSortedMap<byte [], HRegionLocation>>());
+         new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>());
     
     /** 
      * constructor
@@ -207,8 +209,7 @@ public class HConnectionManager implements HConstants {
               getPauseTime(tries));
           }
 
-          // We either cannot connect to master or it is not running. Sleep & retry
-          
+          // Cannot connect to master or it is not running. Sleep & retry
           try {
             Thread.sleep(getPauseTime(tries));
           } catch (InterruptedException e) {
@@ -320,7 +321,8 @@ public class HConnectionManager implements HConstants {
         if (currentRegion != null) {
           byte[] endKey = currentRegion.getEndKey();
           if (endKey == null ||
-              HStoreKey.equalsTwoRowKeys(currentRegion, endKey, HConstants.EMPTY_BYTE_ARRAY)) {
+              HStoreKey.equalsTwoRowKeys(currentRegion, endKey,
+                HConstants.EMPTY_BYTE_ARRAY)) {
             // We have reached the end of the table and we're done
             break;
           }
@@ -580,12 +582,12 @@ public class HConnectionManager implements HConstants {
         final byte [] row) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftSortedMap<byte [], HRegionLocation> tableLocations =
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new SoftSortedMap<byte [],
+        tableLocations = new SoftValueSortedMap<byte [],
           HRegionLocation>(Bytes.BYTES_COMPARATOR);
         cachedRegionLocations.put(key, tableLocations);
       }
@@ -611,7 +613,7 @@ public class HConnectionManager implements HConstants {
 
       // Cut the cache so that we only get the part that could contain
       // regions that match our key
-      SoftSortedMap<byte[], HRegionLocation> matchingRegions =
+      SoftValueSortedMap<byte[], HRegionLocation> matchingRegions =
         tableLocations.headMap(row);
 
       // if that portion of the map is empty, then we're done. otherwise,
@@ -652,13 +654,13 @@ public class HConnectionManager implements HConstants {
         final byte [] row) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftSortedMap<byte [], HRegionLocation> tableLocations = 
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations = 
         cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations =
-          new SoftSortedMap<byte [], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+        tableLocations = new SoftValueSortedMap<byte [],
+          HRegionLocation>(Bytes.BYTES_COMPARATOR);
         cachedRegionLocations.put(key, tableLocations);
       }
 
@@ -667,7 +669,7 @@ public class HConnectionManager implements HConstants {
       if (!tableLocations.isEmpty()) {
         // cut the cache so that we only get the part that could contain
         // regions that match our key
-        SoftSortedMap<byte [], HRegionLocation> matchingRegions =
+        SoftValueSortedMap<byte [], HRegionLocation> matchingRegions =
           tableLocations.headMap(row);
 
         // if that portion of the map is empty, then we're done. otherwise,
@@ -704,13 +706,13 @@ public class HConnectionManager implements HConstants {
       
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftSortedMap<byte [], HRegionLocation> tableLocations = 
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations = 
         cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations =
-          new SoftSortedMap<byte [], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+        tableLocations = new SoftValueSortedMap<byte [],
+          HRegionLocation>(Bytes.BYTES_COMPARATOR);
         cachedRegionLocations.put(key, tableLocations);
       }
       
@@ -758,8 +760,8 @@ public class HConnectionManager implements HConstants {
     /*
      * Repeatedly try to find the root region by asking the master for where it is
      * @return HRegionLocation for root region if found
-     * @throws NoServerForRegionException - if the root region can not be located
-     * after retrying
+     * @throws NoServerForRegionException - if the root region can not be
+     * located after retrying
      * @throws IOException 
      */
     private HRegionLocation locateRootRegion()
@@ -856,7 +858,7 @@ public class HConnectionManager implements HConstants {
             t = t.getCause();
           }
           if (t instanceof RemoteException) {
-            t = RemoteExceptionHandler.decodeRemoteException((RemoteException) t);
+            t = RemoteExceptionHandler.decodeRemoteException((RemoteException)t);
           }
           if (t instanceof DoNotRetryIOException) {
             throw (DoNotRetryIOException)t;
@@ -918,6 +920,5 @@ public class HConnectionManager implements HConstants {
         }
       }
     }
-  }
-  
+  } 
 }

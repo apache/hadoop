@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.hbase.util.SoftValueMap;
 import org.apache.hadoop.io.DataInputBuffer;
 
 /**
@@ -69,11 +69,10 @@ public class BlockFSInputStream extends FSInputStream {
     this.fileLength = fileLength;
     this.blockSize = blockSize;
     // a memory-sensitive map that has soft references to values
-    this.blocks = new ReferenceMap() {
+    this.blocks = new SoftValueMap<Long, byte []>() {
       private long hits, misses;
-      @Override
-      public Object get(Object key) {
-        Object value = super.get(key);
+      public byte [] get(Object key) {
+        byte [] value = super.get(key);
         if (value == null) {
           misses++;
         } else {
@@ -81,7 +80,7 @@ public class BlockFSInputStream extends FSInputStream {
         }
         if (LOG.isDebugEnabled() && ((hits + misses) % 10000) == 0) {
           long hitRate = (100 * hits) / (hits + misses);
-          LOG.info("Hit rate for cache " + hashCode() + ": " + hitRate + "%");
+          LOG.debug("Hit rate for cache " + hashCode() + ": " + hitRate + "%");
         }
         return value;
       }

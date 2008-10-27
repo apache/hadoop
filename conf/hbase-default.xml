@@ -305,8 +305,12 @@
   </property>
   <property>
     <name>hbase.hstore.blockCache.blockSize</name>
-    <value>65536</value>
-    <description>The size of each block in any block caches.
+    <value>16384</value>
+    <description>The size of each block in the block cache.
+    Enable blockcaching on a per column family basis; see the BLOCKCACHE setting
+    in HColumnDescriptor.  Blocks are kept in a java Soft Reference cache so are
+    let go when high pressure on memory.  Block caching is enabled by default
+    as of hbase 0.19.0.
     </description>
   </property>
   <property>
