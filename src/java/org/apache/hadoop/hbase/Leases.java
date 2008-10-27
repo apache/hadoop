@@ -44,6 +44,11 @@ import java.io.IOException;
  * <p>The Leases class is a general reusable class for this kind of pattern.
  * An instance of the Leases class will create a thread to do its dirty work.  
  * You should close() the instance if you want to clean up the thread properly.
+ * 
+ * <p>
+ * NOTE: This class extends Thread rather than Chore because the sleep time
+ * can be interrupted when there is something to do, rather than the Chore
+ * sleep time which is invariant.
  */
 public class Leases extends Thread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());

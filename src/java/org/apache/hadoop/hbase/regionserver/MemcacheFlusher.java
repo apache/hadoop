@@ -37,10 +37,15 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /**
  * Thread that flushes cache on request
+ *
+ * NOTE: This class extends Thread rather than Chore because the sleep time
+ * can be interrupted when there is something to do, rather than the Chore
+ * sleep time which is invariant.
+ * 
  * @see FlushRequester
  */
-class Flusher extends Thread implements FlushRequester {
-  static final Log LOG = LogFactory.getLog(Flusher.class);
+class MemcacheFlusher extends Thread implements FlushRequester {
+  static final Log LOG = LogFactory.getLog(MemcacheFlusher.class);
   private final BlockingQueue<HRegion> flushQueue =
     new LinkedBlockingQueue<HRegion>();
   
@@ -57,7 +62,7 @@ class Flusher extends Thread implements FlushRequester {
    * @param conf
    * @param server
    */
-  public Flusher(final HBaseConfiguration conf, final HRegionServer server) {
+  public MemcacheFlusher(final HBaseConfiguration conf, final HRegionServer server) {
     super();
     this.server = server;
     threadWakeFrequency = conf.getLong(

@@ -286,6 +286,7 @@ public class HStore implements HConstants {
    * lower than maxSeqID.  (Because we know such log messages are already 
    * reflected in the MapFiles.)
    */
+  @SuppressWarnings("unchecked")
   private void doReconstructionLog(final Path reconstructionLog,
     final long maxSeqID, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
@@ -769,6 +770,7 @@ public class HStore implements HConstants {
    */
   StoreSize compact(boolean majorCompaction) throws IOException {
     boolean forceSplit = this.info.shouldSplit(false);
+    boolean doMajorCompaction = majorCompaction;
     synchronized (compactLock) {
       long maxId = -1;
       int nrows = -1;
@@ -785,10 +787,10 @@ public class HStore implements HConstants {
         maxId = this.storefiles.lastKey().longValue();
       }
       // Check to see if we need to do a major compaction on this region.
-      // If so, change majorCompaction to true to skip the incremental compacting below.
-      // Only check if majorCompaction is not true.
+      // If so, change doMajorCompaction to true to skip the incremental
+      // compacting below. Only check if doMajorCompaction is not true.
       long lastMajorCompaction = 0L;
-      if (!majorCompaction) {
+      if (!doMajorCompaction) {
         Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(), family.getName());
         long lowTimestamp = getLowestTimestamp(fs, mapdir);
         lastMajorCompaction = System.currentTimeMillis() - lowTimestamp;
@@ -799,10 +801,10 @@ public class HStore implements HConstants {
               ". Time since last major compaction: " +
               ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
           }
-          majorCompaction = true;
+          doMajorCompaction = true;
         }
       }
-      if (!majorCompaction && !hasReferences(filesToCompact) &&
+      if (!doMajorCompaction && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
         return checkSplit(forceSplit);
       }
@@ -828,7 +830,7 @@ public class HStore implements HConstants {
         fileSizes[i] = len;
         totalSize += len;
       }
-      if (!majorCompaction && !hasReferences(filesToCompact)) {
+      if (!doMajorCompaction && !hasReferences(filesToCompact)) {
         // Here we select files for incremental compaction.  
         // The rule is: if the largest(oldest) one is more than twice the 
         // size of the second, skip the largest, and continue to next...,
@@ -895,7 +897,7 @@ public class HStore implements HConstants {
         this.compression, this.family.isBloomfilter(), nrows);
       writer.setIndexInterval(family.getMapFileIndexInterval());
       try {
-        compact(writer, rdrs, majorCompaction);
+        compact(writer, rdrs, doMajorCompaction);
       } finally {
         writer.close();
       }
@@ -908,7 +910,7 @@ public class HStore implements HConstants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Completed compaction of " + this.storeNameStr +
           " store size is " + StringUtils.humanReadableInt(storeSize) +
-          (majorCompaction? "": "; time since last major compaction: " +
+          (doMajorCompaction? "": "; time since last major compaction: " +
           (lastMajorCompaction/1000) + " seconds"));
       }
     }
@@ -1450,6 +1452,7 @@ public class HStore implements HConstants {
    * @return Found row
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   byte [] getRowKeyAtOrBefore(final byte [] row)
   throws IOException{
     // Map of HStoreKeys that are candidates for holding the row key that

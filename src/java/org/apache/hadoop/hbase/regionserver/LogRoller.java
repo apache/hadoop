@@ -27,7 +27,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
-/** Runs periodically to determine if the HLog should be rolled */
+/**
+ * Runs periodically to determine if the HLog should be rolled
+ * 
+ * NOTE: This class extends Thread rather than Chore because the sleep time
+ * can be interrupted when there is something to do, rather than the Chore
+ * sleep time which is invariant.
+ */
 class LogRoller extends Thread implements LogRollListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);  
   private final ReentrantLock rollLock = new ReentrantLock();

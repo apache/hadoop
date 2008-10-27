@@ -201,12 +201,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final CompactSplitThread compactSplitThread;
 
   // Cache flushing  
-  final Flusher cacheFlusher;
+  final MemcacheFlusher cacheFlusher;
   
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
-  protected HLog log;
+  protected volatile HLog log;
   final LogRoller logRoller;
+  final LogFlusher logFlusher;
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -244,13 +245,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       conf.getInt("hbase.master.lease.period", 120 * 1000);
 
     // Cache flushing thread.
-    this.cacheFlusher = new Flusher(conf, this);
+    this.cacheFlusher = new MemcacheFlusher(conf, this);
     
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
     
     // Log rolling thread
     this.logRoller = new LogRoller(this);
+    
+    // Log flushing thread
+    this.logFlusher =
+      new LogFlusher(this.threadWakeFrequency, this.stopRequested);
 
     // Task thread to process requests from Master
     this.worker = new Worker();
@@ -350,6 +355,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   try {
                     serverInfo.setStartCode(System.currentTimeMillis());
                     log = setupHLog();
+                    this.logFlusher.setHLog(log);
                   } catch (IOException e) {
                     this.abortRequested = true;
                     this.stopRequested.set(true);
@@ -439,8 +445,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
+    logFlusher.interrupt();
     compactSplitThread.interruptIfNecessary();
-    this.logRoller.interruptIfNecessary();
+    logRoller.interruptIfNecessary();
 
     if (abortRequested) {
       if (this.fsOk) {
@@ -523,6 +530,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.log = setupHLog();
+      this.logFlusher.setHLog(log);
       startServiceThreads();
       isOnline = true;
     } catch (IOException e) {
@@ -562,14 +570,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         " because logdir " + logdir.toString() + " exists");
     }
     HLog newlog = new HLog(fs, logdir, conf, logRoller);
-    newlog.start();
     return newlog;
   }
   
   /*
-   * Start Chore Threads, Server, Worker and lease checker threads. Install an
-   * UncaughtExceptionHandler that calls abort of RegionServer if we get
-   * an unhandled exception.  We cannot set the handler on all threads.
+   * Start maintanence Threads, Server, Worker and lease checker threads.
+   * Install an UncaughtExceptionHandler that calls abort of RegionServer if we
+   * get an unhandled exception.  We cannot set the handler on all threads.
    * Server's internal Listener thread is off limits.  For Server, if an OOME,
    * it waits a while then retries.  Meantime, a flush or a compaction that
    * tries to run should trigger same critical condition and the shutdown will
@@ -587,6 +594,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     };
     Threads.setDaemonThreadRunning(this.logRoller, n + ".logRoller",
+        handler);
+    Threads.setDaemonThreadRunning(this.logFlusher, n + ".logFlusher",
         handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
@@ -1138,7 +1147,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  public void batchUpdate(final byte [] regionName, BatchUpdate b, long lockId)
+  public void batchUpdate(final byte [] regionName, BatchUpdate b,
+      @SuppressWarnings("unused") long lockId)
   throws IOException {
     if (b.getRow() == null)
       throw new IllegalArgumentException("update has null row");

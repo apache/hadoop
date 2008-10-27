@@ -40,6 +40,10 @@ import org.apache.hadoop.hbase.util.Writables;
 
 /** 
  * Compact region on request and then run split if appropriate
+ *
+ * NOTE: This class extends Thread rather than Chore because the sleep time
+ * can be interrupted when there is something to do, rather than the Chore
+ * sleep time which is invariant.
  */
 class CompactSplitThread extends Thread implements HConstants {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);

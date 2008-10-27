@@ -79,6 +79,10 @@ import org.apache.hadoop.ipc.Server;
 /**
  * HMaster is the "master server" for a HBase.
  * There is only one HMaster for a single HBase deployment.
+ * 
+ * NOTE: This class extends Thread rather than Chore because the sleep time
+ * can be interrupted when there is something to do, rather than the Chore
+ * sleep time which is invariant.
  */
 public class HMaster extends Thread implements HConstants, HMasterInterface, 
   HMasterRegionInterface {

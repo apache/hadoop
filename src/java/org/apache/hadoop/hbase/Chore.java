@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.util.Sleeper;
  * If an unhandled exception, the threads exit is logged.
  * Implementers just need to add checking if there is work to be done and if
  * so, do it.  Its the base of most of the chore threads in hbase.
+ * 
+ * Don't subclass Chore if the task relies on being woken up for something to
+ * do, such as an entry being added to a queue, etc.
  */
 public abstract class Chore extends Thread {
   private final Log LOG = LogFactory.getLog(this.getClass());
