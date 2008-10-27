@@ -45,7 +45,7 @@ Release 0.19.0 - Unreleased
    HBASE-952   Deadlock in HRegion.batchUpdate
    HBASE-954   Don't reassign root region until ProcessServerShutdown has split
                the former region server's log
-   HBASE-953   PerformanceEvaluation tests if table exists by comparing descriptors
+   HBASE-957   PerformanceEvaluation tests if table exists by comparing descriptors
    HBASE-728, HBASE-956, HBASE-955 Address thread naming, which threads are
               Chores, vs Threads, make HLog manager the write ahead log and
               not extend it to provided optional HLog sync operations.
@@ -72,6 +72,8 @@ Release 0.19.0 - Unreleased
    HBASE-937   Thrift getRow does not support specifying columns
                (Doğacan Güney via Stack)
    HBASE-940   Make the TableOutputFormat batching-aware
+   HBASE-967   [Optimization] Cache cell maximum length (HCD.getMaxValueLength);
+               its used checking batch size
     
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
