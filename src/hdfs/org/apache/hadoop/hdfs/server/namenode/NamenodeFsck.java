@@ -172,6 +172,9 @@ public class NamenodeFsck {
     }
     long fileLen = file.getLen();
     LocatedBlocks blocks = nn.namesystem.getBlockLocations(path, 0, fileLen);
+    if (blocks == null) { // the file is deleted
+      return;
+    }
     isOpen = blocks.isUnderConstruction();
     if (isOpen && !showOpenFiles) {
       // We collect these stats about open files to report with default options
