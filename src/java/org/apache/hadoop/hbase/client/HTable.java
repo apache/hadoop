@@ -1338,6 +1338,25 @@ public class HTable {
       return null;
     }
 
+    /**
+     * @param nbRows number of rows to return
+     * @return Between zero and <param>nbRows</param> RowResults
+     * @throws IOException
+     */
+    public RowResult[] next(int nbRows) throws IOException {
+      // Collect values to be returned here
+      ArrayList<RowResult> resultSets = new ArrayList<RowResult>(nbRows);
+      for(int i = 0; i < nbRows; i++) {
+        RowResult next = next();
+        if (next != null) {
+          resultSets.add(next);
+        } else {
+          break;
+        }
+      }
+      return resultSets.toArray(new RowResult[resultSets.size()]);
+    }
+    
     public void close() {
       if (callable != null) {
         callable.setClose();

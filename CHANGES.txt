@@ -74,6 +74,8 @@ Release 0.19.0 - Unreleased
    HBASE-940   Make the TableOutputFormat batching-aware
    HBASE-967   [Optimization] Cache cell maximum length (HCD.getMaxValueLength);
                its used checking batch size
+   HBASE-959   Be able to get multiple RowResult at one time from client side
+               (Sishen Freecity via Stack)
     
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
