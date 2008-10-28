@@ -1077,6 +1077,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4467. SerializationFactory now uses the current context ClassLoader
     allowing for user supplied Serialization instances. (Chris Wensel via
     acmurthy)
+
+    HADOOP-4517. Release FSDataset lock before joining ongoing create threads.
+    (szetszwo)
  
 Release 0.18.1 - 2008-09-17
 
