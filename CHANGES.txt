@@ -1042,6 +1042,8 @@ Release 0.19.0 - Unreleased
     HADOOP-4525. Fix ipc.server.ipcnodelay originally missed in in HADOOP-2232.
     (cdouglas via Clint Morgan)
 
+    HADOOP-4499. DFSClient should invoke checksumOk only once. (Raghu Angadi)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
