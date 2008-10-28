@@ -175,6 +175,8 @@ Release 0.19.0 - Unreleased
     dfs.datanode.du.pct is no longer used and is removed from the 
     hadoop-default.xml. (Suresh Srinivas via hairong)
 
+    HADOOP-4116. Balancer should provide better resource management. (hairong)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
@@ -1043,8 +1045,6 @@ Release 0.19.0 - Unreleased
 Release 0.18.2 - Unreleased
 
   BUG FIXES
-
-    HADOOP-4116. Balancer should provide better resource management. (hairong)
 
     HADOOP-3614. Fix a bug that Datanode may use an old GenerationStamp to get
     meta file. (szetszwo)
