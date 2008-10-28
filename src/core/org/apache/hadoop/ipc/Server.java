@@ -136,7 +136,7 @@ public abstract class Server {
 
   private int maxQueueSize;
   private int socketSendBufferSize;
-  private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
   volatile private boolean running = true;         // true while server runs
   private BlockingQueue<Call> callQueue; // queued calls
@@ -955,6 +955,7 @@ public abstract class Server {
     this.port = listener.getAddress().getPort();    
     this.rpcMetrics = new RpcMetrics(serverName,
                           Integer.toString(this.port), this);
+    this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
 
 
     // Create the responder here

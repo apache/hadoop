@@ -1040,6 +1040,9 @@ Release 0.19.0 - Unreleased
     and can be used with other Serialization frameworks. (Chris Wensel via
     acmurthy)
 
+    HADOOP-4525. Fix ipc.server.ipcnodelay originally missed in in HADOOP-2232.
+    (cdouglas via Clint Morgan)
+
 Release 0.18.2 - Unreleased
 
   BUG FIXES
