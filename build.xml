@@ -64,13 +64,14 @@
 
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
+  <property name="javac.version" value="1.6"/>
 
   <property name="clover.db.dir" location="${build.dir}/test/clover/db"/>
   <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
 
 
   <property name="javadoc.link.java"
-    value="http://java.sun.com/j2se/1.5/docs/api/"/>
+    value="http://java.sun.com/javase/6/docs/api/index.html"/>
   <property name="javadoc.packages" value="org.apache.hadoop.hbase.*"/>
   <property name="jarfile" value="${build.dir}/${final.name}.jar" />
 
@@ -146,6 +147,8 @@
     includes="**/*.java"
     destdir="${build.classes}"
     debug="${javac.debug}"
+     target="${javac.version}"
+     source="${javac.version}"
     deprecation="${javac.deprecation}">
      <classpath refid="classpath"/>
    </javac>
@@ -397,6 +400,8 @@
        includes="**/*.java" 
        destdir="${build.test}" 
        debug="${javac.debug}"
+       target="${javac.version}"
+       source="${javac.version}"
        deprecation="${javac.deprecation}"> 
     <classpath refid="test.classpath"/> 
     </javac>
