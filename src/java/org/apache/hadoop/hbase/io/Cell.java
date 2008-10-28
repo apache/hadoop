@@ -166,7 +166,7 @@ public class Cell implements Writable, Iterable<Cell> {
     }
     
     public boolean hasNext() {
-      return currentValue < values.length;
+      return currentValue + 1 < values.length;
     }
     
     public Cell next() {
