@@ -305,9 +305,6 @@ Release 0.19.0 - Unreleased
     HADOOP-3924. Added a 'KILLED' job status. (Subramaniam Krishnan via
     acmurthy) 
 
-    HADOOP-2421.  Add jdiff output to documentation, listing all API
-    changes from the prior release.  (cutting)
-
   IMPROVEMENTS
 
     HADOOP-4205. hive: metastore and ql to use the refactored SerDe library.
@@ -1084,6 +1081,11 @@ Release 0.18.2 - Unreleased
     HADOOP-4517. Release FSDataset lock before joining ongoing create threads.
     (szetszwo)
  
+  NEW FEATURES
+
+    HADOOP-2421.  Add jdiff output to documentation, listing all API
+    changes from the prior release.  (cutting)
+
 Release 0.18.1 - 2008-09-17
 
   IMPROVEMENTS
