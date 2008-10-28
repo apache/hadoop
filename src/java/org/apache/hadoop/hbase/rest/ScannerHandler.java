@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -37,14 +39,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.mortbay.servlet.MultiPartResponse;
 import org.znerd.xmlenc.XMLOutputter;
 
 /**
  * ScannderHandler fields all scanner related requests. 
  */
 public class ScannerHandler extends GenericHandler {
-
+  private static final String ROWS = "rows";
+  
   public ScannerHandler(HBaseConfiguration conf, HBaseAdmin admin) 
   throws ServletException{
     super(conf, admin);
@@ -52,20 +54,24 @@ public class ScannerHandler extends GenericHandler {
     
   private class ScannerRecord {
     private final Scanner scanner;
-    private RowResult next;
+    private List<RowResult> nextRows;
     
     ScannerRecord(final Scanner s) {
       this.scanner = s;
+      nextRows = new ArrayList<RowResult>();
     }
   
     public Scanner getScanner() {
       return this.scanner;
     }
     
-    public boolean hasNext() throws IOException {
-      if (next == null) {
-        next = scanner.next();
-        return next != null;
+    public boolean hasNext(int nbRows) throws IOException {
+      if (nextRows.size() < nbRows) {
+        RowResult[] results = scanner.next(nbRows - nextRows.size());
+        for (RowResult result : results) {
+          nextRows.add(result);
+        }
+        return nextRows.size() > 0;
       } else {
         return true;
       }
@@ -76,12 +82,12 @@ public class ScannerHandler extends GenericHandler {
      * @return Null if finished, RowResult otherwise
      * @throws IOException
      */
-    public RowResult next() throws IOException {
-      if (!hasNext()) {
+    public RowResult[] next(int nbRows) throws IOException {
+      if (!hasNext(nbRows)) {
         return null;
       }
-      RowResult temp = next;
-      next = null;
+      RowResult[] temp = nextRows.toArray(new RowResult[nextRows.size()]);
+      nextRows.clear();
       return temp;
     }
   }
@@ -142,10 +148,15 @@ public class ScannerHandler extends GenericHandler {
       return;
     }
 
-    if (sr.hasNext()) {
+    String limitString = request.getParameter(LIMIT);
+    int limit = 1;
+    if (limitString != null && limitString.length() > 0) {
+      limit = Integer.valueOf(limitString);
+    }
+    if (sr.hasNext(limit)) {
       switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
         case XML:
-          outputScannerEntryXML(response, sr);
+          outputScannerEntryXML(response, sr, limit);
           break;
         case MIME:
 /*          outputScannerEntryMime(response, sr);*/
@@ -162,24 +173,38 @@ public class ScannerHandler extends GenericHandler {
   }
 
   private void outputScannerEntryXML(final HttpServletResponse response,
-    final ScannerRecord sr)
-  throws IOException {
-    RowResult rowResult = sr.next();
-    
+      final ScannerRecord sr, int limit)
+  throws IOException {    
     // respond with a 200 and Content-type: text/xml
     setResponseHeader(response, 200, ContentType.XML.toString());
     
     // setup an xml outputter
     XMLOutputter outputter = getXMLOutputter(response.getWriter());
     
-    outputter.startTag(ROW);
+    boolean rows = false;
     
-    // write the row key
-    doElement(outputter, "name", 
-      org.apache.hadoop.hbase.util.Base64.encodeBytes(rowResult.getRow()));
+    if (limit > 1) {
+      outputter.startTag(ROWS);
+      rows = true;
+    }
     
-    outputColumnsXml(outputter, rowResult);
-    outputter.endTag();
+    RowResult[] rowResults = sr.next(limit);
+    
+    for (RowResult rowResult: rowResults) {
+      outputter.startTag(ROW);
+      
+      // write the row key
+      doElement(outputter, "name", 
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(rowResult.getRow()));
+      
+      outputColumnsXml(outputter, rowResult);
+      outputter.endTag();
+    }
+    
+    if (rows) {
+      outputter.endTag();
+    }
+    
     outputter.endDocument();
     outputter.getWriter().close();
   }

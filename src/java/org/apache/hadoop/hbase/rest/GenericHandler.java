@@ -25,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
@@ -56,6 +57,8 @@ public abstract class GenericHandler {
   protected static final String ROW = "row";
   protected static final String REGIONS = "regions";
   protected static final String VERSION = "version";
+  protected static final String OFFSET = "offset";
+  protected static final String LIMIT = "limit";
   
   protected final Log LOG = LogFactory.getLog(this.getClass());
 
