@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -173,11 +174,6 @@ public class Balancer implements Tool {
     LogFactory.getLog("org.apache.hadoop.dfs.Balancer");
   final private static long MAX_BLOCKS_SIZE_TO_FETCH = 2*1024*1024*1024L; //2GB
 
-  /** The maximum number of concurrent blocks moves for 
-   * balancing purpose at a datanode
-   */
-  public static final int MAX_NUM_CONCURRENT_MOVES = 5;
-  
   private Configuration conf;
 
   private double threshold = 10D;
@@ -212,10 +208,10 @@ public class Balancer implements Tool {
   
   private double avgUtilization = 0.0D;
   
-  final static private int MOVER_THREAD_POOL_SIZE = 1000;
+  final private int MOVER_THREAD_POOL_SIZE = 1000;
   final private ExecutorService moverExecutor = 
     Executors.newFixedThreadPool(MOVER_THREAD_POOL_SIZE);
-  final static private int DISPATCHER_THREAD_POOL_SIZE = 200;
+  final private int DISPATCHER_THREAD_POOL_SIZE = 200;
   final private ExecutorService dispatcherExecutor =
     Executors.newFixedThreadPool(DISPATCHER_THREAD_POOL_SIZE);
   
@@ -260,13 +256,11 @@ public class Balancer implements Tool {
             this.block = block;
             if ( chooseProxySource() ) {
               addToMoved(block);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Decided to move block "+ block.getBlockId()
-                    +" with a length of "+FsShell.byteDesc(block.getNumBytes())
-                    + " bytes from " + source.getName() 
-                    + " to " + target.getName()
-                    + " using proxy source " + proxySource.getName() );
-              }
+              LOG.info("Decided to move block "+ block.getBlockId()
+                  +" with a length of "+FsShell.byteDesc(block.getNumBytes())
+                  + " bytes from " + source.getName() 
+                  + " to " + target.getName()
+                  + " using proxy source " + proxySource.getName() );
               return true;
             }
           }
@@ -307,8 +301,10 @@ public class Balancer implements Tool {
       DataInputStream in = null;
       try {
         sock.connect(DataNode.createSocketAddr(
-            target.datanode.getName()), FSConstants.READ_TIMEOUT);
-        sock.setKeepAlive(true);
+            proxySource.datanode.getName()), FSConstants.READ_TIMEOUT);
+        long bandwidth = conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024);
+        sock.setSoTimeout(2*FSConstants.READ_TIMEOUT+
+            (int)(block.getNumBytes()*1500/bandwidth));
         out = new DataOutputStream( new BufferedOutputStream(
             sock.getOutputStream(), FSConstants.BUFFER_SIZE));
         sendRequest(out);
@@ -316,17 +312,25 @@ public class Balancer implements Tool {
             sock.getInputStream(), FSConstants.BUFFER_SIZE));
         receiveResponse(in);
         bytesMoved.inc(block.getNumBytes());
-        LOG.info( "Moving block " + block.getBlock().getBlockId() +
+        if (LOG.isDebugEnabled()) {
+          LOG.debug( "Moving block " + block.getBlock().getBlockId() +
               " from "+ source.getName() + " to " +
               target.getName() + " through " +
               proxySource.getName() +
-              " is succeeded." );
+              " succeeded." );
+        }
+      } catch (SocketTimeoutException te) { 
+        LOG.warn("Timeout moving block "+block.getBlockId()+
+            " from " + source.getName() + " to " +
+            target.getName() + " through " +
+            proxySource.getName());
       } catch (IOException e) {
         LOG.warn("Error moving block "+block.getBlockId()+
             " from " + source.getName() + " to " +
             target.getName() + " through " +
             proxySource.getName() +
-            ": "+e.getMessage());
+            ": "+e.getMessage()+ "\n" +
+            StringUtils.stringifyException(e) );
       } finally {
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
@@ -349,11 +353,11 @@ public class Balancer implements Tool {
     /* Send a block copy request to the outputstream*/
     private void sendRequest(DataOutputStream out) throws IOException {
       out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
-      out.writeByte(FSConstants.OP_REPLACE_BLOCK);
+      out.writeByte(FSConstants.OP_COPY_BLOCK);
       out.writeLong(block.getBlock().getBlockId());
       out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
-      proxySource.write(out);
+      target.write(out);
       out.flush();
     }
     
@@ -361,7 +365,11 @@ public class Balancer implements Tool {
     private void receiveResponse(DataInputStream in) throws IOException {
       short status = in.readShort();
       if (status != FSConstants.OP_STATUS_SUCCESS) {
-        throw new IOException("block move is failed.");
+        throw new IOException("Moving block "+block.getBlockId()+
+            " from "+source.getName() + " to " +
+            target.getName() + " through " +
+            proxySource.getName() +
+        "failed");
       }
     }
 
@@ -377,10 +385,8 @@ public class Balancer implements Tool {
     private void scheduleBlockMove() {
       moverExecutor.execute(new Runnable() {
         public void run() {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Starting moving "+ block.getBlockId() +
-                " from " + proxySource.getName() + " to " + target.getName());
-          }
+          LOG.info("Starting moving "+ block.getBlockId() +
+              " from " + proxySource.getName() + " to " + target.getName());
           dispatch();
         }
       });
@@ -470,6 +476,8 @@ public class Balancer implements Tool {
   /* A class that keeps track of a datanode in Balancer */
   private static class BalancerDatanode implements Writable {
     final private static long MAX_SIZE_TO_MOVE = 10*1024*1024*1024L; //10GB
+    final protected static short MAX_NUM_CONCURRENT_MOVES =
+      DataNode.MAX_BALANCING_THREADS;
     protected DatanodeInfo datanode;
     private double utilization;
     protected long maxSizeToMove;
@@ -906,9 +914,6 @@ public class Balancer implements Tool {
     // compute average utilization
     long totalCapacity=0L, totalUsedSpace=0L;
     for (DatanodeInfo datanode : datanodes) {
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
-        continue; // ignore decommissioning or decommissioned nodes
-      }
       totalCapacity += datanode.getCapacity();
       totalUsedSpace += datanode.getDfsUsed();
     }
@@ -922,9 +927,6 @@ public class Balancer implements Tool {
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     shuffleArray(datanodes);
     for (DatanodeInfo datanode : datanodes) {
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
-        continue; // ignore decommissioning or decommissioned nodes
-      }
       cluster.add(datanode);
       BalancerDatanode datanodeS;
       if (getUtilization(datanode) > avgUtilization) {

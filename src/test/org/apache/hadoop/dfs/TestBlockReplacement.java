@@ -203,7 +203,7 @@ public class TestBlockReplacement extends TestCase {
   }
 
   /* Copy a block from sourceProxy to destination. If the block becomes
-   * over-replicated, preferably remove it from source.
+   * overreplicated, preferrably remove it from source.
    * 
    * Return true if a block is successfully copied; otherwise false.
    */
@@ -211,16 +211,16 @@ public class TestBlockReplacement extends TestCase {
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(
-        destination.getName()), FSConstants.READ_TIMEOUT);
-    sock.setKeepAlive(true);
+        sourceProxy.getName()), FSConstants.READ_TIMEOUT);
+    sock.setSoTimeout(FSConstants.READ_TIMEOUT);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
     out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
-    out.writeByte(FSConstants.OP_REPLACE_BLOCK);
+    out.writeByte(FSConstants.OP_COPY_BLOCK);
     out.writeLong(block.getBlockId());
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
-    sourceProxy.write(out);
+    destination.write(out);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());
