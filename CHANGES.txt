@@ -1052,7 +1052,7 @@ Release 0.18.2 - Unreleased
     HADOOP-4314. Simulated datanodes should not include blocks that are still
     being written in their block report. (Raghu Angadi)
 
-    HADOOP-4228. dfs datanoe metrics, bytes_read and bytes_written, overflow
+    HADOOP-4228. dfs datanode metrics, bytes_read and bytes_written, overflow
     due to incorrect type used. (hairong)
 
     HADOOP-4395. The FSEditLog loading is incorrect for the case OP_SET_OWNER.
@@ -1072,7 +1072,7 @@ Release 0.18.2 - Unreleased
     HADOOP-4469. Rename and add the ant task jar file to the tar file. (nigel)
 
     HADOOP-3914. DFSClient sends Checksum Ok only once for a block. 
-    (Christain Kunz via hairong)
+    (Christian Kunz via hairong)
  
     HADOOP-4467. SerializationFactory now uses the current context ClassLoader
     allowing for user supplied Serialization instances. (Chris Wensel via
@@ -1081,6 +1081,8 @@ Release 0.18.2 - Unreleased
     HADOOP-4517. Release FSDataset lock before joining ongoing create threads.
     (szetszwo)
  
+    HADOOP-4526. fsck failing with NullPointerException. (hairong)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
