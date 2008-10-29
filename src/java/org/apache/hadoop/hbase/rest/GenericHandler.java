@@ -230,10 +230,35 @@ public abstract class GenericHandler {
    * @throws IllegalArgumentException
    * @throws IOException
    */
-  protected void outputColumnsXml(final XMLOutputter outputter,
-    final Map<byte [], Cell> m)
+  protected void outputColumnsXml(final XMLOutputter outputter, final Map<byte [], Cell> m)
   throws IllegalStateException, IllegalArgumentException, IOException {
+    outputColumnsXml(null, outputter, m);
+  }
+  
+  protected void outputColumnsXml(final HttpServletRequest request,
+      final XMLOutputter outputter, final Map<byte [], Cell> m)
+  throws IllegalStateException, IllegalArgumentException, IOException {
+    int offset = 0, limit = Integer.MAX_VALUE;
+    if (request != null) {
+      String offset_string = request.getParameter(OFFSET);
+      if (offset_string != null && !offset_string.equals(""))
+        offset = Integer.parseInt(offset_string);
+      String limit_string = request.getParameter(LIMIT);
+      if (limit_string != null && !limit_string.equals("")) {
+        limit = Integer.parseInt(limit_string);
+      }
+    }
+    
     for (Map.Entry<byte [], Cell> e: m.entrySet()) {
+      if (offset > 0) {
+        --offset;
+        continue;
+      }
+      if (limit < 1) {
+        break;
+      } else {
+        --limit;
+      }
       outputter.startTag(COLUMN);
       doElement(outputter, "name", 
         org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getKey()));
@@ -242,10 +267,36 @@ public abstract class GenericHandler {
     }
   }
 
-  protected void outputColumnsWithMultiVersionsXml(final XMLOutputter outputter,
-    final Map<byte [], Cell[]> m)
+  protected void outputColumnsWithMultiVersionsXml(final XMLOutputter outputter, 
+      final Map<byte [], Cell[]> m)
   throws IllegalStateException, IllegalArgumentException, IOException {
+    outputColumnsWithMultiVersionsXml(null, outputter, m);
+  }
+  
+  protected void outputColumnsWithMultiVersionsXml(final HttpServletRequest request, 
+      final XMLOutputter outputter, final Map<byte [], Cell[]> m)
+  throws IllegalStateException, IllegalArgumentException, IOException {
+    int offset = 0, limit = Integer.MAX_VALUE;
+    if (request != null) {
+      String offset_string = request.getParameter(OFFSET);
+      if (offset_string != null && !offset_string.equals(""))
+        offset = Integer.parseInt(offset_string);
+      String limit_string = request.getParameter(LIMIT);
+      if (limit_string != null && !limit_string.equals("")) {
+        limit = Integer.parseInt(limit_string);
+      }
+    }
+    
     for (Map.Entry<byte [], Cell[]> e: m.entrySet()) {
+      if (offset > 0) {
+        --offset;
+        continue;
+      }
+      if (limit < 1) {
+        break;
+      } else {
+        --limit;
+      }
       for (Cell c : e.getValue()) {
         outputter.startTag(COLUMN);
         doElement(outputter, "name", 

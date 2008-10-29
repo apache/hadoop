@@ -321,7 +321,7 @@ public class TableHandler extends GenericHandler {
 
       for (int i = 0; i < columnfamily_nodes.getLength(); i++) {
         Element columnfamily = (Element) columnfamily_nodes.item(i);
-        HColumnDescriptor hcd = putColumnFamilyXml(columnfamily);
+        HColumnDescriptor hcd = putColumnFamilyXml(columnfamily, htd);
         if (htd.hasFamily(Bytes.toBytes(hcd.getNameAsString()))) {
           admin.modifyColumn(tableName, hcd.getNameAsString(), hcd);
         } else {
@@ -334,45 +334,83 @@ public class TableHandler extends GenericHandler {
   }
   
   private HColumnDescriptor putColumnFamilyXml(Element columnfamily) {
+    return putColumnFamilyXml(columnfamily, null);
+  }
+  
+  private HColumnDescriptor putColumnFamilyXml(Element columnfamily, HTableDescriptor currentTDesp) {
     Node name_node = columnfamily.getElementsByTagName("name").item(0);
     String colname = makeColumnName(name_node.getFirstChild().getNodeValue());
     
     int max_versions = HColumnDescriptor.DEFAULT_VERSIONS;
+    CompressionType compression = HColumnDescriptor.DEFAULT_COMPRESSION;
+    boolean in_memory = HColumnDescriptor.DEFAULT_IN_MEMORY;
+    boolean block_cache = HColumnDescriptor.DEFAULT_BLOCKCACHE;
+    int max_cell_size = HColumnDescriptor.DEFAULT_LENGTH;
+    int ttl = HColumnDescriptor.DEFAULT_TTL;
+    boolean bloomfilter = HColumnDescriptor.DEFAULT_BLOOMFILTER;
+    
+    if (currentTDesp != null) {
+      HColumnDescriptor currentCDesp = currentTDesp.getFamily(Bytes.toBytes(colname));
+      if (currentCDesp != null) {
+        max_versions = currentCDesp.getMaxVersions();
+        compression = currentCDesp.getCompression();
+        in_memory = currentCDesp.isInMemory();
+        block_cache = currentCDesp.isBlockCacheEnabled();
+        max_cell_size = currentCDesp.getMaxValueLength();
+        ttl = currentCDesp.getTimeToLive();
+        bloomfilter = currentCDesp.isBloomfilter();
+      }
+    }
+    
     NodeList max_versions_list = columnfamily.getElementsByTagName("max-versions");
     if (max_versions_list.getLength() > 0) {
       max_versions = Integer.parseInt(max_versions_list.item(0).getFirstChild().getNodeValue());
     }
-    CompressionType compression = HColumnDescriptor.DEFAULT_COMPRESSION;
+
     NodeList compression_list = columnfamily.getElementsByTagName("compression");
     if (compression_list.getLength() > 0) {
       compression = CompressionType.valueOf(compression_list.item(0).getFirstChild().getNodeValue());
     }
-    boolean in_memory = HColumnDescriptor.DEFAULT_IN_MEMORY;
+
     NodeList in_memory_list = columnfamily.getElementsByTagName("in-memory");
     if (in_memory_list.getLength() > 0) {
       in_memory = Boolean.valueOf(in_memory_list.item(0).getFirstChild().getNodeValue());
     }
-    boolean block_cache = HColumnDescriptor.DEFAULT_BLOCKCACHE;
+    
     NodeList block_cache_list = columnfamily.getElementsByTagName("block-cache");
     if (block_cache_list.getLength() > 0) {
       block_cache = Boolean.valueOf(block_cache_list.item(0).getFirstChild().getNodeValue());
     }
-    int max_cell_size = HColumnDescriptor.DEFAULT_LENGTH;
+
     NodeList max_cell_size_list = columnfamily.getElementsByTagName("max-cell-size");
     if (max_cell_size_list.getLength() > 0) {
       max_cell_size = Integer.valueOf(max_cell_size_list.item(0).getFirstChild().getNodeValue());
     }
-    int ttl = HColumnDescriptor.DEFAULT_TTL;
+
     NodeList ttl_list = columnfamily.getElementsByTagName("time-to-live");
     if (ttl_list.getLength() > 0) {
       ttl = Integer.valueOf(ttl_list.item(0).getFirstChild().getNodeValue());
     }
-    boolean bloomfilter = HColumnDescriptor.DEFAULT_BLOOMFILTER;
+
     NodeList bloomfilter_list = columnfamily.getElementsByTagName("bloomfilter");
     if (bloomfilter_list.getLength() > 0) {
       bloomfilter = Boolean.valueOf(bloomfilter_list.item(0).getFirstChild().getNodeValue());
     }
-    return new HColumnDescriptor(Bytes.toBytes(colname), max_versions,
+    
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(colname), max_versions,
         compression, in_memory, block_cache, max_cell_size, ttl, bloomfilter);
+    
+    NodeList metadataList = columnfamily.getElementsByTagName("metadata");
+    for (int i = 0; i < metadataList.getLength(); i++) {
+      Element metadataColumn = (Element)metadataList.item(i);
+      // extract the name and value children
+      Node mname_node = metadataColumn.getElementsByTagName("name").item(0);
+      String mname = mname_node.getFirstChild().getNodeValue();
+      Node mvalue_node = metadataColumn.getElementsByTagName("value").item(0);
+      String mvalue = mvalue_node.getFirstChild().getNodeValue();
+      hcd.setValue(mname, mvalue);
+    }
+    
+    return hcd;
   }
 }

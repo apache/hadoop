@@ -28,7 +28,7 @@ import org.znerd.xmlenc.XMLOutputter;
 
 public class RowHandler extends GenericHandler {
 
-	public RowHandler(HBaseConfiguration conf, HBaseAdmin admin)
+  public RowHandler(HBaseConfiguration conf, HBaseAdmin admin)
 	throws ServletException {
 		super(conf, admin);
 	}
@@ -121,7 +121,7 @@ public class RowHandler extends GenericHandler {
       } else {
         switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
         case XML:
-          outputRowWithMultiVersionsXml(response, result);
+          outputRowWithMultiVersionsXml(request, response, result);
           break;
         case MIME:
         default:
@@ -136,7 +136,7 @@ public class RowHandler extends GenericHandler {
       } else {
         switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
         case XML:
-          outputRowXml(response, result);
+          outputRowXml(request, response, result);
           break;
         case MIME:
         default:
@@ -153,27 +153,29 @@ public class RowHandler extends GenericHandler {
    * @param result
    * @throws IOException
    */
-  private void outputRowXml(final HttpServletResponse response,
-      final Map<byte [], Cell> result)
+  private void outputRowXml(final HttpServletRequest request, 
+      final HttpServletResponse response, final Map<byte [], Cell> result)
   throws IOException {
     setResponseHeader(response, result.size() > 0? 200: 204,
         ContentType.XML.toString());
     XMLOutputter outputter = getXMLOutputter(response.getWriter());
     outputter.startTag(ROW);
-    outputColumnsXml(outputter, result);
+    doElement(outputter, "count", String.valueOf(result.size()));
+    outputColumnsXml(request, outputter, result);
     outputter.endTag();
     outputter.endDocument();
     outputter.getWriter().close();
   }
   
-  private void outputRowWithMultiVersionsXml(final HttpServletResponse response,
-      final Map<byte[], Cell[]> result) 
+  private void outputRowWithMultiVersionsXml(final HttpServletRequest request, 
+      final HttpServletResponse response, final Map<byte[], Cell[]> result) 
   throws IOException {
     setResponseHeader(response, result.size() > 0? 200: 204,
         ContentType.XML.toString());
     XMLOutputter outputter = getXMLOutputter(response.getWriter());
     outputter.startTag(ROW);
-    outputColumnsWithMultiVersionsXml(outputter, result);
+    doElement(outputter, "count", String.valueOf(result.size()));    
+    outputColumnsWithMultiVersionsXml(request, outputter, result);
     outputter.endTag();
     outputter.endDocument();
     outputter.getWriter().close();   
