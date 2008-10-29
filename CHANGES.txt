@@ -77,9 +77,6 @@ Trunk (unreleased changes)
     HADOOP-4440.  TestJobInProgressListener tests for jobs killed in queued 
     state (Amar Kamat via ddas)
 
-    HADOOP-4482. Make the JMX monitoring use predictable names for the 
-    datanodes to enable Nagios monitoring. (Brian Bockelman via omalley)
-
     HADOOP-4346. Implement blocking connect so that Hadoop is not affected
     by selector problem with JDK default implementation. (Raghu Angadi)
 
