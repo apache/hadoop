@@ -1350,18 +1350,6 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   /**
-   * Batch update many rows
-   * @param bus 
-   * @param locks
-   * @throws IOException
-   */
-  public void batchUpdate(BatchUpdate[] bus, Integer[] locks) throws IOException {
-    for (int i = 0; i < bus.length; i++) {
-      batchUpdate(bus[i], locks[i]);
-    }
-  }
-  
-  /**
    * @param b
    * @throws IOException
    */

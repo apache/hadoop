@@ -1059,7 +1059,7 @@ public class HTable {
                   return i;
                 }
               });
-          if (index != updates.length - 1) {
+          if (index !=  -1) {
             // Basic waiting time. If many updates are flushed, tests have shown
             // that this is barely needed but when commiting 1 update this may
             // get retried hundreds of times.
