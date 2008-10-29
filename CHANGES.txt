@@ -65,7 +65,6 @@ Release 0.19.0 - Unreleased
                (Doğacan Güney via Stack)
    HBASE-908   Add approximate counting to CountingBloomFilter
                (Andrzej Bialecki via Stack)
-   HBASE-576   Investigate IPC performance
    HBASE-920   Make region balancing sloppier
    HBASE-902   Add force compaction and force split operations to UI and Admin
    HBASE-942   Add convenience methods to RowFilterSet
@@ -74,9 +73,6 @@ Release 0.19.0 - Unreleased
                SubString operator (Clint Morgan via Stack)
    HBASE-937   Thrift getRow does not support specifying columns
                (Doğacan Güney via Stack)
-   HBASE-940   Make the TableOutputFormat batching-aware
-   HBASE-967   [Optimization] Cache cell maximum length (HCD.getMaxValueLength);
-               its used checking batch size
    HBASE-959   Be able to get multiple RowResult at one time from client side
                (Sishen Freecity via Stack)
    HBASE-936   REST Interface: enable get number of rows from scanner interface
@@ -88,10 +84,15 @@ Release 0.19.0 - Unreleased
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
                (Andrzej Bialecki via Stack)
+   HBASE-625   Metrics support for cluster load history: emissions and graphs
 
   OPTIMIZATIONS
    HBASE-748   Add an efficient way to batch update many rows
    HBASE-887   Fix a hotspot in scanners
+   HBASE-967   [Optimization] Cache cell maximum length (HCD.getMaxValueLength);
+               its used checking batch size
+   HBASE-940   Make the TableOutputFormat batching-aware
+   HBASE-576   Investigate IPC performance
 
 Release 0.18.0 - September 21st, 2008
 

@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -146,6 +147,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   ServerManager serverManager;
   RegionManager regionManager;
+  
+  private MasterMetrics metrics;
   
   /** Build the HMaster out of a raw configuration item.
    * 
@@ -357,7 +360,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           startShutdown();
           break;
         }
-        
         // work on the TodoQueue. If that fails, we should shut down.
         if (!processToDoQueue()) {
           break;
@@ -484,6 +486,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    *  need to install an unexpected exception handler.
    */
   private void startServiceThreads() {
+    // Do after main thread name has been set
+    this.metrics = new MasterMetrics();
     try {
       regionManager.start();
       serverManager.start();
@@ -800,6 +804,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       rootServer = regionManager.getRootRegionLocation();
     }
     return rootServer;
+  }
+
+  /**
+   * @return Server metrics
+   */
+  public MasterMetrics getMetrics() {
+    return this.metrics;
   }
 
   /*

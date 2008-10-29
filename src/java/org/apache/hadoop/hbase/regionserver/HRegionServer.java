@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -171,6 +172,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
   
+  private RegionServerMetrics metrics;
+  
   /**
    * Thread to shutdown the region server in an orderly manner.  This thread
    * is registered as a shutdown hook in the HRegionServer constructor and is
@@ -236,7 +239,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.connection = ServerConnectionManager.getConnection(conf);
 
     this.isOnline = false;
-
+    
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -296,8 +299,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public void run() {
     boolean quiesceRequested = false;
     // A sleeper that sleeps for msgInterval.
-    Sleeper sleeper =
-      new Sleeper(this.msgInterval, this.stopRequested);
+    Sleeper sleeper = new Sleeper(this.msgInterval, this.stopRequested);
     try {
       init(reportForDuty(sleeper));
       long lastMsg = 0;
@@ -317,8 +319,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             this.outboundMsgs.clear();
           }
           try {
+            doMetrics();
             this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
-                onlineRegions.size()));
+                onlineRegions.size(), this.metrics.storefiles.get(),
+                this.metrics.memcacheSizeMB.get()));
             this.requestCount.set(0);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
@@ -531,6 +535,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.log = setupHLog();
       this.logFlusher.setHLog(log);
+      // Init in here rather than in constructor after thread name has been set
+      this.metrics = new RegionServerMetrics();
       startServiceThreads();
       isOnline = true;
     } catch (IOException e) {
@@ -543,7 +549,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw ex;
     }
   }
-
+  
   /**
    * Report the status of the server. A server is online once all the startup 
    * is completed (setting up filesystem, starting service threads, etc.). This
@@ -573,6 +579,39 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return newlog;
   }
   
+  /*
+   * @param interval Interval since last time metrics were called.
+   */
+  protected void doMetrics() {
+    this.metrics.regions.set(this.onlineRegions.size());
+    this.metrics.incrementRequests(this.requestCount.get());
+    // Is this too expensive every three seconds getting a lock on onlineRegions
+    // and then per store carried?  Can I make metrics be sloppier and avoid
+    // the synchronizations?
+    int storefiles = 0;
+    long memcacheSize = 0;
+    synchronized (this.onlineRegions) {
+      for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
+        HRegion r = e.getValue();
+        memcacheSize += r.memcacheSize.get();
+        synchronized(r.stores) {
+          for(Map.Entry<Integer, HStore> ee: r.stores.entrySet()) {
+            storefiles += ee.getValue().getStorefilesCount();
+          }
+        }
+      }
+    }
+    this.metrics.storefiles.set(storefiles);
+    this.metrics.memcacheSizeMB.set((int)(memcacheSize/(1024*1024)));
+  }
+
+  /**
+   * @return Region server metrics instance.
+   */
+  public RegionServerMetrics getMetrics() {
+    return this.metrics;
+  }
+
   /*
    * Start maintanence Threads, Server, Worker and lease checker threads.
    * Install an UncaughtExceptionHandler that calls abort of RegionServer if we
@@ -748,7 +787,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     while(!stopRequested.get()) {
       try {
         this.requestCount.set(0);
-        this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size()));
+        this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size(), 0, 0));
         lastMsg = System.currentTimeMillis();
         result = this.hbaseMaster.regionServerStartup(serverInfo);
         break;

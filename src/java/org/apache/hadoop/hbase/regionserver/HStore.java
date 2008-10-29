@@ -1960,6 +1960,13 @@ public class HStore implements HConstants {
     }
   }
   
+  /**
+   * @return Count of store files
+   */
+  int getStorefilesCount() {
+    return this.storefiles.size();
+  }
+  
   class StoreSize {
     private final long size;
     private final byte[] key;

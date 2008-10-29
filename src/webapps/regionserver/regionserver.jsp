@@ -3,12 +3,14 @@
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
+  import="org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HRegionInfo" %><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   HServerInfo serverInfo = regionServer.getServerInfo();
+  RegionServerMetrics metrics = regionServer.getMetrics();
   Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 %><?xml version="1.0" encoding="UTF-8" ?>
@@ -32,7 +34,7 @@
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
 <tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
-<tr><td>Load</td><td><%= serverInfo.getLoad().toString(interval) %></td><td>Requests per second and count of loaded regions</td></tr>
+<tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics</td></tr>
 </table>
 
 <h2>Online Regions</h2>

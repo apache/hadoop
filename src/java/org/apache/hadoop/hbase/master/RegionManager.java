@@ -242,11 +242,9 @@ class RegionManager implements HConstants {
       nregions = 0;
       
       // Advance past any less-loaded servers
-      for (HServerLoad load =
-        new HServerLoad(thisServersLoad.getNumberOfRequests(),
-            thisServersLoad.getNumberOfRegions());
-      load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
-      load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
+      for (HServerLoad load = new HServerLoad(thisServersLoad);
+        load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
+        load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
         // continue;
       }
 
@@ -310,9 +308,7 @@ class RegionManager implements HConstants {
     // unassigned. That is how many regions we should assign to this server.
     int nRegions = 0;
     for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
-      HServerLoad lightLoad = new HServerLoad(e.getKey().getNumberOfRequests(),
-        e.getKey().getNumberOfRegions());
-
+      HServerLoad lightLoad = new HServerLoad(e.getKey());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
         nRegions += 1;

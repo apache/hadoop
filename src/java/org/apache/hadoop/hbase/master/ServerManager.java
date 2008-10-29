@@ -293,6 +293,7 @@ class ServerManager implements HConstants {
     serversToServerInfo.put(serverName, serverInfo);
 
     HServerLoad load = serversToLoad.get(serverName);
+    this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
     if (load != null && !load.equals(serverInfo.getLoad())) {
       // We have previous information about the load on this server
       // and the load on this server has changed

@@ -31,6 +31,15 @@ import org.apache.hadoop.io.WritableComparable;
 public class HServerLoad implements WritableComparable {
   private int numberOfRequests;         // number of requests since last report
   private int numberOfRegions;          // number of regions being served
+  /*
+   * Number of storefiles on the regionserver
+   */
+  private int storefiles;
+  
+  /*
+   * Size of the memcaches on this machine in MB.
+   */
+  private int memcacheSizeMB;
   
   /*
    * TODO: Other metrics that might be considered when the master is actually
@@ -44,18 +53,28 @@ public class HServerLoad implements WritableComparable {
    *   <li>server death rate (maybe there is something wrong with this server)</li>
    * </ul>
    */
-  
+
   /** default constructior (used by Writable) */
-  public HServerLoad() {}
+  public HServerLoad() {
+    super();
+  }
   
   /**
    * Constructor
    * @param numberOfRequests
    * @param numberOfRegions
    */
-  public HServerLoad(int numberOfRequests, int numberOfRegions) {
+  public HServerLoad(final int numberOfRequests, final int numberOfRegions,
+      final int storefiles, final int memcacheSizeMB) {
     this.numberOfRequests = numberOfRequests;
     this.numberOfRegions = numberOfRegions;
+    this.storefiles = storefiles;
+    this.memcacheSizeMB = memcacheSizeMB;
+  }
+  
+  public HServerLoad(final HServerLoad hsl) {
+    this(hsl.numberOfRequests, hsl.numberOfRegions, hsl.storefiles,
+      hsl.memcacheSizeMB);
   }
   
   /**
@@ -85,7 +104,8 @@ public class HServerLoad implements WritableComparable {
    * @return The load as a String
    */
   public String toString(int msgInterval) {
-    return "requests: " + numberOfRequests/msgInterval + " regions: " + numberOfRegions;
+    return "requests: " + numberOfRequests/msgInterval +
+      " regions: " + numberOfRegions;
   }
   
   @Override
@@ -116,8 +136,34 @@ public class HServerLoad implements WritableComparable {
     return numberOfRequests;
   }
 
-  // Setters
-  
+  /**
+   * @return Count of storefiles on this regionserver
+   */
+  public int getStorefiles() {
+    return this.storefiles;
+  }
+
+  /**
+   * @return Size of memcaches in kb.
+   */
+  public int getMemcacheSizeInKB() {
+    return this.memcacheSizeMB;
+  }
+
+  /**
+   * @param storefiles Count of storefiles on this server.
+   */
+  public void setStorefiles(int storefiles) {
+    this.storefiles = storefiles;
+  }
+
+  /**
+   * @param memcacheSizeInKB Size of memcache in kb.
+   */
+  public void setMemcacheSizeInKB(int memcacheSizeInKB) {
+    this.memcacheSizeMB = memcacheSizeInKB;
+  }
+
   /**
    * @param numberOfRegions the numberOfRegions to set
    */
