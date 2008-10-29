@@ -134,7 +134,7 @@ begin
           LOG.info("Removing " + Bytes.toString(key.getRow()) + " from .META.")
           metaRegion.deleteAll(key.getRow(), HConstants::LATEST_TIMESTAMP)
           # Create 'new' region
-          newR = HRegion.new(rootdir, utils.getLog(), fs, c, newHRI, nil, nil)
+          newR = HRegion.new(rootdir, utils.getLog(), fs, c, newHRI, nil)
           # Add new row. NOTE: Presumption is that only one .META. region. If not,
           # need to do the work to figure proper region to add this new region to.
           LOG.info("Adding to meta: " + newR.toString())
