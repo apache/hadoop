@@ -65,6 +65,7 @@ public class JobShell extends Configured implements Tool {
   
   public static void main(String[] argv) throws Exception {
     JobShell jshell = new JobShell();
-    ToolRunner.run(jshell, argv);
+    int status = ToolRunner.run(jshell, argv);
+    System.exit(status);
   }
 }

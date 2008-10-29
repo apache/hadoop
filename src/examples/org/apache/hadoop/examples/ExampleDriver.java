@@ -31,6 +31,7 @@ import org.apache.hadoop.util.ProgramDriver;
 public class ExampleDriver {
   
   public static void main(String argv[]){
+    int exitCode = -1;
     ProgramDriver pgd = new ProgramDriver();
     try {
       pgd.addClass("wordcount", WordCount.class, 
@@ -58,10 +59,15 @@ public class ExampleDriver {
       pgd.addClass("terasort", TeraSort.class, "Run the terasort");
       pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
       pgd.driver(argv);
+      
+      // Success
+      exitCode = 0;
     }
     catch(Throwable e){
       e.printStackTrace();
     }
+    
+    System.exit(exitCode);
   }
 }
 	
