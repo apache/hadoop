@@ -50,6 +50,9 @@ Release 0.18.2 - Unreleased
     0.18.2 incompatibility problem and fixed the balancing semaphore 
     contention problem without changing the datanode protocol. (hairong)
 
+    HADOOP-4483 Honor the max parameter in DatanodeDescriptor.getBlockArray(..)
+    (Ahad Rana and Hairong Kuang via szetszwo)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
