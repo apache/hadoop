@@ -329,14 +329,36 @@ public class DatanodeDescriptor extends DatanodeInfo {
   static private Block[] getBlockArray(Collection<Block> blocks, int max) {
     Block[] blockarray = null;
     synchronized(blocks) {
-      int n = blocks.size();
+      int available = blocks.size();
+      int n = available;
       if (max > 0 && n > 0) {
         if (max < n) {
           n = max;
         }
-        blockarray = blocks.toArray(new Block[n]);
-        blocks.clear();
-        assert(blockarray.length > 0);
+        // allocate the properly sized block array ... 
+        blockarray = new Block[n];
+
+        // iterate tree collecting n blocks... 
+        Iterator<Block> e = blocks.iterator();
+        int blockCount = 0;
+
+        while (blockCount < n && e.hasNext()) {
+          // insert into array ... 
+          blockarray[blockCount++] = e.next();
+
+          // remove from tree via iterator, if we are removing 
+          // less than total available blocks
+          if (n < available){
+            e.remove();
+          }
+        }
+        assert(blockarray.length == n);
+        
+        // now if the number of blocks removed equals available blocks,
+        // them remove all blocks in one fell swoop via clear
+        if (n == available) { 
+          blocks.clear();
+        }
       }
     }
     return blockarray;

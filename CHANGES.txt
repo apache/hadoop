@@ -955,9 +955,6 @@ Release 0.19.0 - Unreleased
     HADOOP-4400. Add "hdfs://" to fs.default.name on quickstart.html.
     (Jeff Hammerbacher via omalley)
 
-    HADOOP-4403. Make TestLeaseRecovery and TestFileCreation more robust.
-    (szetszwo)
-
     HADOOP-4378. Fix TestJobQueueInformation to use SleepJob rather than
     WordCount via TestMiniMRWithDFS. (Sreekanth Ramakrishnan via acmurthy) 
 
@@ -1063,6 +1060,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4351. FSNamesystem.getBlockLocationsInternal throws
     ArrayIndexOutOfBoundsException. (hairong)
 
+    HADOOP-4403. Make TestLeaseRecovery and TestFileCreation more robust.
+    (szetszwo)
+
     HADOOP-4292. Do not support append() for LocalFileSystem. (hairong)
 
     HADOOP-4399. Make fuse-dfs multi-thread access safe.
@@ -1084,6 +1084,9 @@ Release 0.18.2 - Unreleased
     (szetszwo)
  
     HADOOP-4526. fsck failing with NullPointerException. (hairong)
+
+    HADOOP-4483 Honor the max parameter in DatanodeDescriptor.getBlockArray(..)
+    (Ahad Rana and Hairong Kuang via szetszwo)
 
   NEW FEATURES
 
