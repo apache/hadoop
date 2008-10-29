@@ -46,6 +46,10 @@ Release 0.18.2 - Unreleased
  
     HADOOP-4526. fsck failing with NullPointerException. (hairong)
 
+    HADOOP-4533. Reverted the patch to HADOOP-4116 to solve the 0.18.1 and
+    0.18.2 incompatibility problem and fixed the balancing semaphore 
+    contention problem without changing the datanode protocol. (hairong)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API

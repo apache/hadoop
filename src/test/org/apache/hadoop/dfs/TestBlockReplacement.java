@@ -212,7 +212,7 @@ public class TestBlockReplacement extends TestCase {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(
         sourceProxy.getName()), FSConstants.READ_TIMEOUT);
-    sock.setSoTimeout(FSConstants.READ_TIMEOUT);
+    sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
     out.writeShort(FSConstants.DATA_TRANSFER_VERSION);

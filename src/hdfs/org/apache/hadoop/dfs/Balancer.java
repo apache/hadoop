@@ -174,6 +174,11 @@ public class Balancer implements Tool {
     LogFactory.getLog("org.apache.hadoop.dfs.Balancer");
   final private static long MAX_BLOCKS_SIZE_TO_FETCH = 2*1024*1024*1024L; //2GB
 
+  /** The maximum number of concurrent blocks moves for
+   * balancing purpose at a datanode
+   */
+  public static final int MAX_NUM_CONCURRENT_MOVES = 5;
+
   private Configuration conf;
 
   private double threshold = 10D;
@@ -302,9 +307,7 @@ public class Balancer implements Tool {
       try {
         sock.connect(DataNode.createSocketAddr(
             proxySource.datanode.getName()), FSConstants.READ_TIMEOUT);
-        long bandwidth = conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024);
-        sock.setSoTimeout(2*FSConstants.READ_TIMEOUT+
-            (int)(block.getNumBytes()*1500/bandwidth));
+        sock.setKeepAlive(true);
         out = new DataOutputStream( new BufferedOutputStream(
             sock.getOutputStream(), FSConstants.BUFFER_SIZE));
         sendRequest(out);
@@ -319,11 +322,6 @@ public class Balancer implements Tool {
               proxySource.getName() +
               " succeeded." );
         }
-      } catch (SocketTimeoutException te) { 
-        LOG.warn("Timeout moving block "+block.getBlockId()+
-            " from " + source.getName() + " to " +
-            target.getName() + " through " +
-            proxySource.getName());
       } catch (IOException e) {
         LOG.warn("Error moving block "+block.getBlockId()+
             " from " + source.getName() + " to " +
@@ -476,8 +474,6 @@ public class Balancer implements Tool {
   /* A class that keeps track of a datanode in Balancer */
   private static class BalancerDatanode implements Writable {
     final private static long MAX_SIZE_TO_MOVE = 10*1024*1024*1024L; //10GB
-    final protected static short MAX_NUM_CONCURRENT_MOVES =
-      DataNode.MAX_BALANCING_THREADS;
     protected DatanodeInfo datanode;
     private double utilization;
     protected long maxSizeToMove;
