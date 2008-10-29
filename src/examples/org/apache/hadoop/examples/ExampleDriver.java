@@ -28,6 +28,7 @@ import org.apache.hadoop.util.ProgramDriver;
 public class ExampleDriver {
   
   public static void main(String argv[]){
+    int exitCode = -1;
     ProgramDriver pgd = new ProgramDriver();
     try {
       pgd.addClass("wordcount", WordCount.class, 
@@ -51,10 +52,15 @@ public class ExampleDriver {
       pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");
       pgd.addClass("multifilewc", MultiFileWordCount.class, "A job that counts words from several files.");
       pgd.driver(argv);
+      
+      // Success
+      exitCode = 0;
     }
     catch(Throwable e){
       e.printStackTrace();
     }
+    
+    System.exit(exitCode);
   }
 }
 	
