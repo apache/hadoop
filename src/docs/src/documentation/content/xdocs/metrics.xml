@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2008 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title> 
+      HBase Metrics
+    </title>
+  </header>
+
+  <body>
+    <section>
+      <title> Introduction </title>
+      <p>
+      HBase emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      </p>
+      </section>
+      <section>
+        <title>HOWTO</title>
+      <p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      If you are using ganglia, the <a href="http://wiki.apache.org/hadoop/GangliaMetrics">GangliaMetrics</a>
+      wiki page is useful read.</p>
+      <p>To have HBase emit metrics, edit <code>$HBASE_HOME/conf/hadoop-metrics.properties</code>
+      and enable metric 'contexts' per plugin.  As of this writing, hadoop supports
+      <strong>file</strong> and <strong>ganglia</strong> plugins.
+      Yes, the hbase metrics files is named hadoop-metrics rather than
+      <em>hbase-metrics</em> because currently at least the hadoop metrics system has the
+      properties filename hardcoded. Per metrics <em>context</em>,
+      comment out the NullContext and enable one or more plugins instead.
+      </p>
+      <p>
+      If you enable the <em>hbase</em> context, on regionservers you'll see total requests since last
+      metric emission, count of regions and storefiles as well as a count of memcache size.
+      On the master, you'll see a count of the cluster's requests.
+      </p>
+      <p>
+      Enabling the <em>rpc</em> context is good if you are interested in seeing
+      metrics on each hbase rpc method invocation (counts and time taken).
+      </p>
+      <p>
+      The <em>jvm</em> context is
+      useful for long-term stats on running hbase jvms -- memory used, thread counts, etc.
+      As of this writing, if more than one jvm is running emitting metrics, at least
+      in ganglia, the stats are aggregated rather than reported per instance.
+      </p>
+    </section>
+  </body>
+</document>

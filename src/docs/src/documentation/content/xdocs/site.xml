@@ -35,6 +35,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <overview  label="Overview"           href="index.html" />
     <started   label="Getting Started"    href="ext:api/started" />
     <api       label="API Docs"           href="ext:api/index" />
+    <api       label="HBase Metrics"      href="metrics.html" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
     <lists     label="Mailing Lists"      href="ext:lists" />
