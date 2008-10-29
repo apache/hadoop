@@ -1088,6 +1088,9 @@ Release 0.18.2 - Unreleased
     HADOOP-4483 Honor the max parameter in DatanodeDescriptor.getBlockArray(..)
     (Ahad Rana and Hairong Kuang via szetszwo)
 
+    HADOOP-4340. Correctly set the exit code from JobShell.main so that the
+    'hadoop jar' command returns the right code to the user. (acmurthy)
+
   NEW FEATURES
 
     HADOOP-2421.  Add jdiff output to documentation, listing all API
