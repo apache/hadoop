@@ -190,6 +190,8 @@ HBASE SHELL COMMANDS:
            hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
            hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, \\
              STARTROW => 'xyz'}
+
+ truncate  Disables, drops and recreates the specified table.
            
  version   Output this HBase version
 
@@ -263,6 +265,10 @@ end
 
 def exists(table)
   admin().exists(table)
+end
+
+def truncate(table)
+  admin().truncate(table)
 end
   
 # CRUD

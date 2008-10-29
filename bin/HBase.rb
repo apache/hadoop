@@ -104,6 +104,21 @@ module HBase
       @formatter.footer(now)
     end
 
+    def truncate(tableName)
+      now = Time.now
+      @formatter.header()
+      hTable = HTable.new(tableName)
+      tableDescription = hTable.getTableDescriptor()
+      puts 'Truncating ' + tableName + '; it may take a while'
+      puts 'Disabling table...'
+      disable(tableName)
+      puts 'Dropping table...'
+      drop(tableName)
+      puts 'Creating table...'
+      @admin.createTable(tableDescription)
+      @formatter.footer(now)
+    end
+
     # Pass tablename and an array of Hashes
     def create(tableName, args)
       now = Time.now 

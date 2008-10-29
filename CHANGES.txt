@@ -81,6 +81,7 @@ Release 0.19.0 - Unreleased
                (Sishen Freecity via Stack)
    HBASE-960   REST interface: more generic column family configure and also
                get Rows using offset and limit (Sishen Freecity via Stack)
+   HBASE-817   Hbase/Shell Truncate
     
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
