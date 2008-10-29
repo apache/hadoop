@@ -1033,7 +1033,7 @@ public class DataNode extends Configured
         InetSocketAddress curTarget = 
           NetUtils.createSocketAddr(targets[0].getName());
         sock = newSocket();
-        sock.connect(curTarget, socketTimeout);
+        NetUtils.connect(sock, curTarget, socketTimeout);
         sock.setSoTimeout(targets.length * socketTimeout);
 
         long writeTimeout = socketWriteTimeout + 

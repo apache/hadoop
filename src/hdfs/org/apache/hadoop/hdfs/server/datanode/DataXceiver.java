@@ -278,7 +278,7 @@ class DataXceiver implements Runnable, FSConstants {
           int timeoutValue = numTargets * datanode.socketTimeout;
           int writeTimeout = datanode.socketWriteTimeout + 
                              (HdfsConstants.WRITE_TIMEOUT_EXTENSION * numTargets);
-          mirrorSock.connect(mirrorTarget, timeoutValue);
+          NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
           mirrorOut = new DataOutputStream(
@@ -557,7 +557,7 @@ class DataXceiver implements Runnable, FSConstants {
       InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
           proxySource.getName());
       proxySock = datanode.newSocket();
-      proxySock.connect(proxyAddr, datanode.socketTimeout);
+      NetUtils.connect(proxySock, proxyAddr, datanode.socketTimeout);
       proxySock.setSoTimeout(datanode.socketTimeout);
 
       OutputStream baseStream = NetUtils.getOutputStream(proxySock, 

@@ -23,8 +23,10 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 import java.util.Map.Entry;
 import java.util.*;
 
@@ -367,6 +369,40 @@ public class NetUtils {
                                              throws IOException {
     return (socket.getChannel() == null) ? 
             socket.getOutputStream() : new SocketOutputStream(socket, timeout);            
+  }
+  
+  /**
+   * This is a drop-in replacement for 
+   * {@link Socket#connect(SocketAddress, int)}.
+   * In the case of normal sockets that don't have associated channels, this 
+   * just invokes <code>socket.connect(endpoint, timeout)</code>. If 
+   * <code>socket.getChannel()</code> returns a non-null channel,
+   * connect is implemented using Hadoop's selectors. This is done mainly
+   * to avoid Sun's connect implementation from creating thread-local 
+   * selectors, since Hadoop does not have control on when these are closed
+   * and could end up taking all the available file descriptors.
+   * 
+   * @see java.net.Socket#connect(java.net.SocketAddress, int)
+   * 
+   * @param socket
+   * @param endpoint 
+   * @param timeout - timeout in milliseconds
+   */
+  public static void connect(Socket socket, 
+                             SocketAddress endpoint, 
+                             int timeout) throws IOException {
+    if (socket == null || endpoint == null || timeout < 0) {
+      throw new IllegalArgumentException("Illegal argument for connect()");
+    }
+    
+    SocketChannel ch = socket.getChannel();
+    
+    if (ch == null) {
+      // let the default implementation handle it.
+      socket.connect(endpoint, timeout);
+    } else {
+      SocketIOWithTimeout.connect(ch, endpoint, timeout);
+    }
   }
   
   /** 

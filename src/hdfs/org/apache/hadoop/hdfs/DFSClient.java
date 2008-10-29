@@ -619,7 +619,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       for(int j = 0; !done && j < datanodes.length; j++) {
         //connect to a datanode
         final Socket sock = socketFactory.createSocket();
-        sock.connect(NetUtils.createSocketAddr(datanodes[j].getName()), timeout);
+        NetUtils.connect(sock, 
+                         NetUtils.createSocketAddr(datanodes[j].getName()),
+                         timeout);
         sock.setSoTimeout(timeout);
 
         DataOutputStream out = new DataOutputStream(
@@ -1531,7 +1533,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
         try {
           s = socketFactory.createSocket();
-          s.connect(targetAddr, socketTimeout);
+          NetUtils.connect(s, targetAddr, socketTimeout);
           s.setSoTimeout(socketTimeout);
           Block blk = targetBlock.getBlock();
           
@@ -1733,7 +1735,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             
         try {
           dn = socketFactory.createSocket();
-          dn.connect(targetAddr, socketTimeout);
+          NetUtils.connect(dn, targetAddr, socketTimeout);
           dn.setSoTimeout(socketTimeout);
               
           int len = (int) (end - start + 1);
@@ -2737,7 +2739,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         s = socketFactory.createSocket();
         int timeoutValue = 3000 * nodes.length + socketTimeout;
-        s.connect(target, timeoutValue);
+        NetUtils.connect(s, target, timeoutValue);
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
         LOG.debug("Send buf size " + s.getSendBufferSize());
