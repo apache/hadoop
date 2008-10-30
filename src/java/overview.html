@@ -91,6 +91,10 @@ HDFS whose namenode is at port 9000 on your local machine:
   ...
 &lt;/configuration&gt;
 </pre>
+<p>Note: Let hbase create the directory.  If you don't, you'll get warning saying hbase
+needs a migration run because the directory is missing files expected by hbase (it'll
+create them if you let it).
+</p>
 
 <h3><a name="fully-distrib">Fully-Distributed Operation</a></h3>
 For running a fully-distributed operation on more than one host, the following configurations 
