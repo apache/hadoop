@@ -334,7 +334,10 @@ class ServerManager implements HConstants {
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     Map<byte [], HRegionInfo> regionsToKill = 
       master.regionManager.removeMarkedToClose(serverName);
-
+    if (serverInfo.getServerAddress() == null) {
+      throw new NullPointerException("Server address cannot be null; " +
+        "hbase-958 debugging");
+    }
     // Get reports on what the RegionServer did.
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();

@@ -274,6 +274,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       new InetSocketAddress(DEFAULT_HOST,
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
       this.conf.getInt("hbase.regionserver.info.port", 60030));
+    if (this.serverInfo.getServerAddress() == null) {
+      throw new NullPointerException("Server address cannot be null; " +
+        "hbase-958 debugging");
+    }
     this.numRegionsToReport =                                        
       conf.getInt("hbase.regionserver.numregionstoreport", 10);      
       

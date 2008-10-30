@@ -49,6 +49,10 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
   throws IOException {
     super(master, regionInfo);
     this.serverAddress = info.getServerAddress();
+    if (this.serverAddress == null) {
+      throw new NullPointerException("Server address cannot be null; " +
+        "hbase-958 debugging");
+    }
     this.startCode = Bytes.toBytes(info.getStartCode());
   }
 
@@ -92,7 +96,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           this.historian.addRegionOpen(regionInfo, serverAddress);
           if (isMetaTable) {
             // It's a meta region.
-            MetaRegion m = new MetaRegion(serverAddress,
+            MetaRegion m = new MetaRegion(new HServerAddress(serverAddress),
                 regionInfo.getRegionName(), regionInfo.getStartKey());
             if (!master.regionManager.isInitialMetaScanComplete()) {
               // Put it on the queue to be scanned for the first time.
