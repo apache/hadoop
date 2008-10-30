@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -99,7 +100,7 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
       ImmutableBytesWritable.class, RowResult.class, c);
     c.setReducerClass(IdentityReducer.class);
     // First arg is the output directory.
-    c.setOutputPath(new Path(args[0]));
+    FileOutputFormat.setOutputPath(c, new Path(args[0]));
     return c;
   }
   

@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Subclass of hadoop's Client just so we can make some methods accessible
@@ -31,16 +32,9 @@ public class HBaseClient extends Client {
    * @param conf
    * @param factory
    */
-  public HBaseClient(Class valueClass, Configuration conf, SocketFactory factory) {
+  public HBaseClient(Class<? extends Writable> valueClass, Configuration conf,
+      SocketFactory factory) {
     super(valueClass, conf, factory);
-  }
-
-  /**
-   * @param valueClass
-   * @param conf
-   */
-  public HBaseClient(Class<?> valueClass, Configuration conf) {
-    super(valueClass, conf);
   }
   
   @Override

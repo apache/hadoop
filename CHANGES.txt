@@ -82,6 +82,8 @@ Release 0.19.0 - Unreleased
                get Rows using offset and limit (Sishen Freecity via Stack)
    HBASE-817   Hbase/Shell Truncate
    HBASE-949   Add an HBase Manual
+   HBASE-839   Update hadoop libs in hbase; move hbase TRUNK on to an hadoop
+               0.19.0 RC
     
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

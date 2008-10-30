@@ -90,7 +90,8 @@ public class HbaseRPC {
 
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
-    // Here we maintain two static maps of method names to code and vice versa.
+    // Here, for hbase, we maintain two static maps of method names to code and
+    // vice versa.
     private static final Map<Byte, String> CODE_TO_METHODNAME =
       new HashMap<Byte, String>();
     private static final Map<String, Byte> METHODNAME_TO_CODE =
@@ -104,6 +105,7 @@ public class HbaseRPC {
       code = addToMap(HMasterRegionInterface.class, code);
       code = addToMap(TransactionalRegionInterface.class, code);
     }
+    // End of hbase modifications.
 
     private String methodName;
     @SuppressWarnings("unchecked")
@@ -160,7 +162,7 @@ public class HbaseRPC {
 
     @Override
     public String toString() {
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder(256);
       buffer.append(methodName);
       buffer.append("(");
       for (int i = 0; i < parameters.length; i++) {
@@ -180,6 +182,7 @@ public class HbaseRPC {
       return this.conf;
     }
     
+    // Hbase additions.
     private static void addToMap(final String name, final byte code) {
       if (METHODNAME_TO_CODE.containsKey(name)) {
         return;
@@ -227,6 +230,7 @@ public class HbaseRPC {
       }
       out.writeByte(code.byteValue());
     }
+    // End of hbase additions.
   }
 
   /* Cache a client using its socket factory as the hash key */
@@ -250,6 +254,7 @@ public class HbaseRPC {
       // per-job, we choose (a).
       Client client = clients.get(factory);
       if (client == null) {
+        // Make an hbase client instead of hadoop Client.
         client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
         clients.put(factory, client);
       } else {
@@ -310,11 +315,17 @@ public class HbaseRPC {
     public Object invoke(@SuppressWarnings("unused") Object proxy,
         Method method, Object[] args)
       throws Throwable {
-      long startTime = System.currentTimeMillis();
+      final boolean logDebug = LOG.isDebugEnabled();
+      long startTime = 0;
+      if (logDebug) {
+        startTime = System.currentTimeMillis();
+      }
       HbaseObjectWritable value = (HbaseObjectWritable)
         client.call(new Invocation(method, args), address, ticket);
-      long callTime = System.currentTimeMillis() - startTime;
-      LOG.debug("Call: " + method.getName() + " " + callTime);
+      if (logDebug) {
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.debug("Call: " + method.getName() + " " + callTime);
+      }
       return value.get();
     }
     
@@ -391,6 +402,7 @@ public class HbaseRPC {
                                                Configuration conf,
                                                int maxAttempts
                                                ) throws IOException {
+    // HBase does limited number of reconnects which is different from hadoop.
     int reconnectAttempts = 0;
     while (true) {
       try {

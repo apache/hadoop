@@ -368,7 +368,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass,
         Text.readString(in));
     } else {                                      // Writable
-      Class<?> instanceClass = null;
+      Class instanceClass = null;
       Byte b = in.readByte();
       if (b.byteValue() == NOT_ENCODED) {
         String className = Text.readString(in);
@@ -407,5 +407,4 @@ public class HbaseObjectWritable implements Writable, Configurable {
   public Configuration getConf() {
     return this.conf;
   }
-  
 }
