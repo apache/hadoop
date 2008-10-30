@@ -424,6 +424,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               LOG.error("Exceeded max retries: " + this.numRetries, e);
               checkFileSystem();
             }
+            if (this.stopRequested.get()) {
+            	LOG.info("Stop was requested, clearing the toDo " +
+            			"despite of the exception");
+                toDo.clear();
+                continue;
+            }
           }
         }
         // Do some housekeeping before going to sleep
