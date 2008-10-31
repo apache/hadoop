@@ -610,6 +610,10 @@ public class JobHistory {
       return jobName;
     }
     
+    private static String escapeRegexChars( String string ) {
+      return "\\Q"+string.replaceAll("\\\\E", "\\\\E\\\\\\\\E\\\\Q")+"\\E";
+    }
+
     /**
      * Recover the job history filename from the history folder. 
      * Uses the following pattern
@@ -628,6 +632,8 @@ public class JobHistory {
         return null;
       }
       
+      jobName = escapeRegexChars( jobName );
+
       // Make the pattern matching the job's history file
       final Pattern historyFilePattern = 
         Pattern.compile(jobtrackerHostname + "_" + "[0-9]+" + "_" 
