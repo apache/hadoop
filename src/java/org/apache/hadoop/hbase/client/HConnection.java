@@ -20,11 +20,13 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
@@ -150,4 +152,15 @@ public interface HConnection {
    */
   public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable) 
   throws IOException, RuntimeException;
+  
+    
+  /**
+   * Process a batch of rows. Currently it only works for updates until 
+   * HBASE-880 is available. Does the retries.
+   * @param list A batch of rows to process
+   * @param tableName The name of the table
+   * @throws IOException
+   */
+  public void processBatchOfRows(ArrayList<BatchUpdate> list, byte[] tableName)
+      throws IOException;
 }

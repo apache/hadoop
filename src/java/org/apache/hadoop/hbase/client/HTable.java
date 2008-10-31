@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -1029,59 +1028,19 @@ public class HTable {
    */
   public void flushCommits() throws IOException {
     try {
-      // See HBASE-748 for pseudo code of this method
-      if (writeBuffer.isEmpty()) {
-        return;
-      }
-      Collections.sort(writeBuffer);
-      List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
-      byte[] currentRegion = connection.getRegionLocation(tableName,
-          writeBuffer.get(0).getRow(), false).getRegionInfo().getRegionName();
-      byte[] region = currentRegion;
-      boolean isLastRow = false;
-      for (int i = 0; i < writeBuffer.size(); i++) {
-        BatchUpdate batchUpdate = writeBuffer.get(i);
-        tempUpdates.add(batchUpdate);
-        isLastRow = (i + 1) == writeBuffer.size();
-        if (!isLastRow) {
-          region = connection.getRegionLocation(tableName,
-              writeBuffer.get(i + 1).getRow(), false).getRegionInfo()
-              .getRegionName();
-        }
-        if (!Bytes.equals(currentRegion, region) || isLastRow) {
-          final BatchUpdate[] updates = tempUpdates.toArray(new BatchUpdate[0]);
-          int index = connection
-              .getRegionServerForWithoutRetries(new ServerCallable<Integer>(
-                  connection, tableName, batchUpdate.getRow()) {
-                public Integer call() throws IOException {
-                  int i = server.batchUpdates(location.getRegionInfo()
-                      .getRegionName(), updates);
-                  return i;
-                }
-              });
-          if (index !=  -1) {
-            // Basic waiting time. If many updates are flushed, tests have shown
-            // that this is barely needed but when commiting 1 update this may
-            // get retried hundreds of times.
-            try {
-              Thread.sleep(1000);
-            } catch (InterruptedException e) {
-              // continue
-            }
-            i = i - updates.length + index;
-            region = connection.getRegionLocation(tableName,
-                writeBuffer.get(i + 1).getRow(), true).getRegionInfo()
-                .getRegionName();
-
-          }
-          currentRegion = region;
-          tempUpdates.clear();
-        }
-      }
+      connection.processBatchOfRows(writeBuffer, tableName);
     } finally {
       currentWriteBufferSize = 0;
       writeBuffer.clear();
     }
+  }
+   
+  /**
+   * Release held resources
+   *
+  */
+  public void close() throws IOException{
+    flushCommits();
   }
 
   /**

@@ -934,7 +934,7 @@ public class HConnectionManager implements HConstants {
               return i;
             }
           });
-          if (index != updates.length - 1) {
+          if (index != -1) {
             if (tries == numRetries - 1) {
               throw new RetriesExhaustedException("Some server",
                   currentRegion, batchUpdate.getRow(), 
