@@ -211,7 +211,7 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    * @return path to the task's temporary output file
    * @throws IOException
    */
-  protected static Path getTaskOutputPath(JobConf conf, String name) 
+  public static Path getTaskOutputPath(JobConf conf, String name) 
   throws IOException {
     // ${mapred.out.dir}
     Path outputPath = getOutputPath(conf);
