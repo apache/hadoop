@@ -151,7 +151,7 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   private synchronized void blockSeekTo(long target) throws IOException {
-    int targetBlock = (int) (target / blockSize);
+    long targetBlock = target/blockSize;
     long targetBlockStart = targetBlock * blockSize;
     long targetBlockEnd = Math.min(targetBlockStart + blockSize, fileLength) - 1;
     long blockLength = targetBlockEnd - targetBlockStart + 1;
