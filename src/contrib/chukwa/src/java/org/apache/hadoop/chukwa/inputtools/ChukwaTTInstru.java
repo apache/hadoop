@@ -27,27 +27,28 @@ import org.apache.hadoop.mapred.*;
 /**
  * An instrumentation plugin for Hadoop, to trigger Chukwa-based task logfile collection.
  * 
- * WARNING:  This code depends on hadoop features that have not yet been committed.
- *   To allow it to compile, the key lines have been commented out, and marked with
- *   'PENDING'.
+ * WARNING:  This code depends on hadoop features only available in 0.19.
+ * It won't do any good if you try to use it with an earlier Hadoop.
  *
  */
-public class ChukwaTTInstru 
-extends TaskTrackerMetricsInst  //PENDING on getting new metrics code into Hadoop
+public class ChukwaTTInstru extends TaskTrackerMetricsInst 
 {
 
   private Map<TaskAttemptID, Long> stdOutAdaptors;
   private Map<TaskAttemptID, Long> stdErrAdaptors;
   private ChukwaAgentController chukwa;
+//  private TaskTrackerMetricsInst parent; //for chaining together multiple
+      //instrumentation subsystems
   
   public ChukwaTTInstru(TaskTracker t) {
-    super(t);  //PENDING
+    super(t);
     stdOutAdaptors = new HashMap<TaskAttemptID, Long>();
     stdErrAdaptors = new HashMap<TaskAttemptID, Long>();
     chukwa = new ChukwaAgentController();
   }
   
   public void reportTaskLaunch(TaskAttemptID taskid, File stdout, File stderr)  {
+//    parent.reportTaskLaunch(taskid, stdout, stderr);
     long stdoutID = chukwa.addFile("unknown-userdata", stdout.getAbsolutePath());
     long stderrID = chukwa.addFile("unknown-userdata", stderr.getAbsolutePath());
     stdOutAdaptors.put(taskid, stdoutID);

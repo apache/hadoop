@@ -1,3 +1,6 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
 # The ASF licenses this file to You under the Apache License, Version 2.0
@@ -12,17 +15,92 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pid=$$
-
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "$CHUKWA_HOME/var/run/systemDataLoader.pid"
+JVM_OPTS="-Xms4M -Xmx4M"
 
-${JAVA_HOME}/bin/java -DCHUKWA_HOME=${CHUKWA_HOME} -DRECORD_TYPE=Sar -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${chukwaCore}:${hadoop_jar}:${common}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec sar -q -r -n FULL 55 &
-${JAVA_HOME}/bin/java -DCHUKWA_HOME=${CHUKWA_HOME} -DRECORD_TYPE=Iostat -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${chukwaCore}:${hadoop_jar}:${common}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec iostat -x 55 2 &
-${JAVA_HOME}/bin/java -DCHUKWA_HOME=${CHUKWA_HOME} -DRECORD_TYPE=Top -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${chukwaCore}:${hadoop_jar}:${common}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec top -b -n 1 -c &
-#${JAVA_HOME}/bin/java -DRECORD_TYPE=Df -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${chukwaAgent}:${hadoop_jar}:${common}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec df -x nfs -x none &
+if [ "X$1" = "Xstop" ]; then
+  echo -n "Shutting down System Data Loader..."
+  if [ -f ${CHUKWA_HOME}/var/run/Sar-data-loader.pid ]; then
+    kill -TERM `cat ${CHUKWA_HOME}/var/run/Sar-data-loader.pid`
+  fi
+  if [ -f ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid ]; then
+    kill -TERM `cat ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid`
+  fi
+  if [ -f ${CHUKWA_HOME}/var/run/Top-data-loader.pid ]; then
+    kill -TERM `cat ${CHUKWA_HOME}/var/run/Top-data-loader.pid`
+  fi
+  if [ -f ${CHUKWA_HOME}/var/run/Df-data-loader.pid ]; then
+    kill -TERM `cat ${CHUKWA_HOME}/var/run/Df-data-loader.pid`
+  fi
+  echo "done"
+  exit 0
+fi
 
+echo -n "Starting System Data Loader..."
+
+#test=`grep -q SysLog ${CHUKWA_HOME}/var/chukwa_checkpoint*`
+#if [ "X${test}"="X1" ]; then
+#  echo "add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.CharFileTailingAdaptorUTF8NewLineEscaped SysLog 0 /var/log/messages 0" | nc localhost 9093 >&/dev/null & disown -h 
+#fi
+
+EXISTS=0
+pidFile="${CHUKWA_HOME}/var/run/Sar-data-loader.pid"
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -ge 1 ]; then
+    EXISTS=1
+  fi
+fi
+
+if [ ${EXISTS} -lt 1 ]; then
+    ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Sar -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec sar -q -r -n FULL 55 &
+fi
+
+EXISTS=0
+pidFile="${CHUKWA_HOME}/var/run/Iostat-data-loader.pid"
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -ge 1 ]; then
+    EXISTS=1
+  fi
+fi
+
+if [ ${EXISTS} -lt 1 ]; then
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Iostat -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec iostat -x 55 2 &
+fi
+
+EXISTS=0
+pidFile="${CHUKWA_HOME}/var/run/Top-data-loader.pid"
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -ge 1 ]; then
+    EXISTS=1
+  fi
+fi
+
+if [ ${EXISTS} -lt 1 ]; then
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Top -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec top -b -n 1 -c &
+fi
+
+EXISTS=0
+pidFile="${CHUKWA_HOME}/var/run/Df-data-loader.pid"
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -ge 1 ]; then
+    EXISTS=1
+  fi
+fi
+
+if [ ${EXISTS} -lt 1 ]; then
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Df -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec df -l &
+fi
+
+echo "done"

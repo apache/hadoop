@@ -9,22 +9,22 @@
 
 package org.apache.hadoop.chukwa.inputtools.log4j;
 
-import java.io.IOException;
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Calendar;
-import java.util.TimeZone;
 import java.util.Locale;
+import java.util.TimeZone;
 
+import org.apache.hadoop.chukwa.datacollection.controller.ChukwaAgentController;
+import org.apache.hadoop.chukwa.util.RecordConstants;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
+import org.apache.log4j.Logger;
 import org.apache.log4j.helpers.LogLog;
 import org.apache.log4j.spi.LoggingEvent;
-
-import org.apache.hadoop.chukwa.util.RecordConstants;
-import org.apache.hadoop.chukwa.datacollection.controller.ChukwaAgentController;
 
 /**
     ChukwaDailyRollingFileAppender is a slightly modified version of
@@ -129,14 +129,13 @@ import org.apache.hadoop.chukwa.datacollection.controller.ChukwaAgentController;
     <p>Do not use the colon ":" character in anywhere in the
     <b>DatePattern</b> option. The text before the colon is interpeted
     as the protocol specificaion of a URL which is probably not what
-    you want.
+    you want. 
 
+*/
 
-    @author Eirik Lygre
-    @author Ceki G&uuml;lc&uuml; */
 public class ChukwaDailyRollingFileAppender extends FileAppender {
 
-
+	static Logger log = Logger.getLogger(ChukwaDailyRollingFileAppender.class);
   // The code assumes that the following constants are in a increasing
   // sequence.
   static final int TOP_OF_TROUBLE=-1;
@@ -149,6 +148,9 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
 
   static final String adaptorType = ChukwaAgentController.CharFileTailUTF8NewLineEscaped;
 
+  static final Object lock = new Object();
+  static String lastRotation = "";
+  
   /**
     The date pattern. By default, the pattern is set to
     "'.'yyyy-MM-dd" meaning daily rollover.
@@ -180,6 +182,9 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
   int checkPeriod = TOP_OF_TROUBLE;
 
   ChukwaAgentController chukwaClient;
+  boolean chukwaClientIsNull = true;
+  static final Object chukwaLock = new Object();
+  
   String chukwaClientHostname;
   int chukwaClientPortNum;
   long chukwaClientConnectNumRetry;
@@ -203,7 +208,7 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
   /**
      Instantiate a <code>DailyRollingFileAppender</code> and open the
      file designated by <code>filename</code>. The opened filename will
-     become the ouput destination for this appender.
+     become the output destination for this appender.
 
    */
   public ChukwaDailyRollingFileAppender (Layout layout, String filename,
@@ -336,12 +341,10 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
       return;
     }
 
+	
     // close current file, and rename it to datedFilename
     this.closeFile();
 
-    if (chukwaClient != null){
-      chukwaClient.pauseFile(getRecordType(),fileName);
-    }
 
     File target  = new File(scheduledFilename);
     if (target.exists()) {
@@ -363,19 +366,44 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
     }
     catch(IOException e) {
       errorHandler.error("setFile("+fileName+", false) call failed.");
-    }
-
-    //resume the adaptor for the file now that we have emptied it (i.e. rolled it over)
-    if (chukwaClient.isFilePaused(getRecordType(), fileName)){
-      chukwaClient.resumeFile(getRecordType(), fileName);
-    }
-    else {
-      LogLog.warn("chukwa appender for file " + fileName + " was not paused, so we didn't do resumeFile() for it");
-    }
-    
+    }    
     scheduledFilename = datedFilename;
   }
 
+  
+  private class ClientFinalizer extends Thread 
+  {
+	  private ChukwaAgentController chukwaClient = null;
+	  private String recordType = null;
+	  private String fileName = null;
+	  public ClientFinalizer(ChukwaAgentController chukwaClient,String recordType, String fileName)
+	  {
+		  this.chukwaClient = chukwaClient;
+		  this.recordType = recordType;
+		  this.fileName = fileName;
+	  }
+	    public synchronized void run() 
+	    {
+	      try 
+	      {
+	    	  if (chukwaClient != null)
+	    	  {
+	    		  log.debug("ShutdownHook: removing:" + fileName);
+	    		  chukwaClient.removeFile(recordType, fileName);
+	    	  }
+	    	  else
+	    	  {
+	    		  LogLog.warn("chukwaClient is null cannot do any cleanup");
+	    	  }
+	      } 
+	      catch (Throwable e) 
+	      {
+	    	  LogLog.warn("closing the controller threw an exception:\n" + e);
+	      }
+	    }
+	  }
+	  private ClientFinalizer clientFinalizer = null;
+  
   /**
    * This method differentiates DailyRollingFileAppender from its
    * super class.
@@ -384,64 +412,96 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
    * time to do a rollover. If it is, it will schedule the next
    * rollover time and then rollover.
    * */
-  protected void subAppend(LoggingEvent event) {
-    //we set up the chukwa adaptor here because this is the first
-    //point which is called after all setters have been called with
-    //their values from the log4j.properties file, in particular we
-    //needed to give setCukwaClientPortNum() and -Hostname() a shot
-    if (chukwaClient == null){
-        if (getChukwaClientHostname() != null && getChukwaClientPortNum() != 0){
-        chukwaClient = new ChukwaAgentController(getChukwaClientHostname(), getChukwaClientPortNum());
-        System.out.println("setup adaptor with hostname " + getChukwaClientHostname() + " and portnum " + getChukwaClientPortNum());
-      }
-      else{
-        chukwaClient = new ChukwaAgentController();
-        System.out.println("setup adaptor with no args, which means it used its defaults");
-      }
-        
-      //if they haven't specified, default to retrying every 10 seconds for 5 minutes
-      long retryInterval = chukwaClientConnectRetryInterval;
-      if (retryInterval == 0)
-        retryInterval = 1000;
-      long numRetries = chukwaClientConnectNumRetry;
-      if (numRetries == 0)
-        numRetries = 30;
-      long adaptorID = chukwaClient.addFile(getRecordType(), getFile(), numRetries, retryInterval);
-      if (adaptorID > 0){
-        System.out.println("Added file tailing adaptor to chukwa agent for file " + getFile());
-      }
-      else{
-        System.out.println("Chukwa adaptor not added, addFile(" + getFile() + ") returned " + adaptorID);
-      }
-    }
-    long n = System.currentTimeMillis();
-    if (n >= nextCheck) {
-      now.setTime(n);
-      nextCheck = rc.getNextCheckMillis(now);
-      try {
-        rollOver();
-      }
-      catch(IOException ioe) {
-        LogLog.error("rollOver() failed.", ioe);
-      }
-    }
-    //escape the newlines from record bodies and then write this record to the log file
-    this.qw.write(RecordConstants.escapeAllButLastRecordSeparator("\n",this.layout.format(event)));
-    
-    if(layout.ignoresThrowable()) {
-      String[] s = event.getThrowableStrRep();
-      if (s != null) {
-        int len = s.length;
-        for(int i = 0; i < len; i++) {
-          this.qw.write(s[i]);
-          this.qw.write(Layout.LINE_SEP);
-        }
-      }
-    }
+  protected void subAppend(LoggingEvent event) 
+  {
+	  try
+	  {
+		  //we set up the chukwa adaptor here because this is the first
+		  //point which is called after all setters have been called with
+		  //their values from the log4j.properties file, in particular we
+		  //needed to give setCukwaClientPortNum() and -Hostname() a shot
+		  
+		  // Make sure only one thread can do this
+		  // and use the boolean to avoid the first level locking
+		  if (chukwaClientIsNull)
+		  {
+			  synchronized(chukwaLock)
+			  {
+				  if (chukwaClient == null){
+					  if (getChukwaClientHostname() != null && getChukwaClientPortNum() != 0){
+						  chukwaClient = new ChukwaAgentController(getChukwaClientHostname(), getChukwaClientPortNum());
+						  log.debug("setup adaptor with hostname " + getChukwaClientHostname() + " and portnum " + getChukwaClientPortNum());
+					  }
+					  else{
+						  chukwaClient = new ChukwaAgentController();
+						  log.debug("setup adaptor with no args, which means it used its defaults");
+					  }
 
-    if(this.immediateFlush) {
-      this.qw.flush();
-    }
+					  chukwaClientIsNull = false;
+					  
+					  //if they haven't specified, default to retrying every minute for 2 hours
+					  long retryInterval = chukwaClientConnectRetryInterval;
+					  if (retryInterval == 0)
+						  retryInterval = 1000 * 60;
+					  long numRetries = chukwaClientConnectNumRetry;
+					  if (numRetries == 0)
+						  numRetries = 120;
+					  String log4jFileName = getFile();
+					  String recordType = getRecordType();
+					  long adaptorID = chukwaClient.addFile(recordType, log4jFileName, numRetries, retryInterval);
+
+					  // Setup a shutdownHook for the controller
+					  clientFinalizer = new ClientFinalizer(chukwaClient,recordType,log4jFileName);
+					  Runtime.getRuntime().addShutdownHook(clientFinalizer);
+
+					  
+					  if (adaptorID > 0){
+						  log.debug("Added file tailing adaptor to chukwa agent for file " + log4jFileName + "using this recordType :" + recordType);
+					  }
+					  else{
+						  log.debug("Chukwa adaptor not added, addFile(" + log4jFileName + ") returned " + adaptorID);
+					  }
+					  
+				  }				  
+			  }
+		  }
+		  
+
+		  long n = System.currentTimeMillis();
+		  if (n >= nextCheck) {
+			  now.setTime(n);
+			  nextCheck = rc.getNextCheckMillis(now);
+			  try {
+				  rollOver();
+			  }
+			  catch(IOException ioe) {
+				  LogLog.error("rollOver() failed.", ioe);
+			  }
+		  }
+		  //escape the newlines from record bodies and then write this record to the log file
+		  this.qw.write(RecordConstants.escapeAllButLastRecordSeparator("\n",this.layout.format(event)));
+
+		  if(layout.ignoresThrowable()) {
+			  String[] s = event.getThrowableStrRep();
+			  if (s != null) {
+				  int len = s.length;
+				  for(int i = 0; i < len; i++) {
+					  this.qw.write(s[i]);
+					  this.qw.write(Layout.LINE_SEP);
+				  }
+			  }
+		  }
+
+		  if(this.immediateFlush) {
+			  this.qw.flush();
+		  }		  
+	  }
+	  catch(Throwable e)
+	  {
+		  System.err.println("Exception in ChukwaRollingAppender: " + e.getMessage());
+		  e.printStackTrace();
+	  }
+    
   }
 
   public String getChukwaClientHostname() {
@@ -479,7 +539,11 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
  * */
 class RollingCalendar extends GregorianCalendar {
 
-  int type = ChukwaDailyRollingFileAppender.TOP_OF_TROUBLE;
+  /**
+	 * 
+	 */
+	private static final long serialVersionUID = 2153481574198792767L;
+int type = ChukwaDailyRollingFileAppender.TOP_OF_TROUBLE;
 
   RollingCalendar() {
     super();

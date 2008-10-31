@@ -46,9 +46,6 @@ Trunk (unreleased changes)
     HADOOP-4284. Support filters that apply to all requests, or global filters,
     to HttpServer. (Kan Zhang via cdouglas)
     
-    HADOOP-4431. Add versionning/tags to Chukwa Chunk. 
-    (Jerome Boulon via Johan)
-
     HADOOP-4276. Improve the hashing functions and deserialization of the 
     mapred ID classes. (omalley)
 

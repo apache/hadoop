@@ -36,69 +36,70 @@ script=`basename "$this"`
 bin=`cd "$bin"; pwd`
 this="$bin/$script"
 
-. ${bin}/../conf/chukwa-env.sh
-
-export HADOOP_HOME="${HADOOP_HOME:-${bin}/../../../..}"
 
 # the root of the Chukwa installation
-if [ -z $CHUKWA_HOME ] ; then
-CHUKWA_HOME=`dirname "$this"`/..
-export CHUKWA_HOME=`cd $CHUKWA_HOME; pwd`
+export CHUKWA_HOME=`dirname "$this"`/..
+
+#check to see if the conf dir is given as an optional argument
+if [ $# -gt 1 ]
+then
+    if [ "--config" = "$1" ]
+          then
+              shift
+              confdir=$1
+              shift
+              CHUKWA_CONF_DIR=$confdir
+    fi
 fi
 
-chukwaVersion=`cat ${CHUKWA_HOME}/bin/VERSION`
-DEFAULT_CHUKWA_HOME=${CHUKWA_HOME}/logs/
-export CHUKWA_LOG_DIR="${CHUKWA_LOG_DIR:-$DEFAULT_CHUKWA_HOME}"
-if [ ! -d $CHUKWA_LOG_DIR ]; then
-  mkdir -p $CHUKWA_LOG_DIR
+#check to see it is specified whether to use the slaves or the
+# masters file
+if [ $# -gt 1 ]
+then
+    if [ "--hosts" = "$1" ]
+    then
+        shift
+        slavesfile=$1
+        shift
+        export CHUKWA_SLAVES="${CHUKWA_CONF_DIR}/$slavesfile"
+    fi
 fi
 
-export chuwaRecordsRepository="/chukwa/repos/demo"
-
-export DATACONFIG=${CHUKWA_HOME}/conf/mdl.xml
-common=`ls ${CHUKWA_HOME}/lib/*.jar`
-export common=`echo ${common} | sed 'y/ /:/'`
-
-#chukwaCore=${HADOOP_HOME}/build/contrib/chukwa/chukwa-core-${chukwaVersion}.jar
-chukwaCore=${HADOOP_HOME}/build/contrib/chukwa
-if [ -a $chukwaCore ] ; then
-  export chukwaCore
-else
-  echo ${chukwaCore} does not exist
-  export chukwaCore=${CHUKWA_HOME}/chukwa-core-${chukwaVersion}.jar
+#check to see if the conf dir is given as an optional argument
+if [ $# -gt 1 ]
+then
+    if [ "--watchdog" = "$1" ]
+          then
+              shift
+              WATCHDOG="true"
+    fi
 fi
 
-#chukwaAgent=${HADOOP_HOME}/build/contrib/chukwa/chukwa-agent-${chukwaVersion}.jar
-chukwaAgent=${HADOOP_HOME}/build/contrib/chukwa
-if [ -a $chukwaAgent ] ; then
-  export chukwaAgent
-else
-  echo ${chukwaAgent} does not exist
-  export chukwaAgent=${CHUKWA_HOME}/chukwa-agent-${chukwaVersion}.jar
+export CHUKWA_LOG_DIR="$CHUKWA_HOME/logs"
+
+CHUKWA_VERSION=`cat ${CHUKWA_HOME}/bin/VERSION`
+
+# Allow alternate conf dir location.
+if [ -z "$CHUKWA_CONF_DIR" ]; then
+    CHUKWA_CONF_DIR="${CHUKWA_CONF_DIR:-$CHUKWA_HOME/conf}"
+    export CHUKWA_CONF_DIR=${CHUKWA_HOME}/conf
 fi
 
-echo chukwaCore is ${chukwaCore} and chukwaAgent is ${chukwaAgent}
+if [ -f "${CHUKWA_CONF_DIR}/chukwa-env.sh" ]; then
+  . "${CHUKWA_CONF_DIR}/chukwa-env.sh"
+fi
 
+export DATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml
+COMMON=`ls ${CHUKWA_HOME}/lib/*.jar`
+export COMMON=`echo ${COMMON} | sed 'y/ /:/'`
+export CHUKWA_CORE=${CHUKWA_HOME}/chukwa-core-${CHUKWA_VERSION}.jar
+export CHUKWA_AGENT=${CHUKWA_HOME}/chukwa-agent-${CHUKWA_VERSION}.jar
+export HADOOP_JAR=`ls ${HADOOP_HOME}/hadoop-*-core.jar`
 export CURRENT_DATE=`date +%Y%m%d%H%M`
-export TS_CONFIG=${CHUKWA_HOME}/conf/ts
-export tomcat=${CHUKWA_HOME}/opt/apache-tomcat-6.0.16
-if [ -d ${HADOOP_HOME}/build/classes ]; then
-  DEFAULT_HADOOP_JAR=${HADOOP_HOME}/build/classes
-# this doesn't work, but needs to be replaced with something that does
-#elif [ls ${HADOOP_HOME}/build/hadoop-*-core.jar` ]; then
-#  echo setting DEFAULT_HADOOP_JAR to `ls ${HADOOP_HOME}/build/hadoop-*-core.jar`
-#  DEFAULT_HADOOP_JAR=`ls ${HADOOP_HOME}/build/hadoop-*-core.jar`
-else
-  DEFAULT_HADOOP_JAR=${CHUKWA_HOME}/hadoopjars/hadoop-0.18.0-core.jar
+
+if [ -z "$JAVA_HOME" ] ; then
+    export JAVA_HOME=/usr/lib/j2sdk1.5-sun
 fi
-export HADOOP_JAR=${HADOOP_JAR:-$DEFAULT_HADOOP_JAR}
 
-echo
-echo HADOOP_JAR is $HADOOP_JAR
-echo
-
-export CHUKWA_LOG_DIR="${CHUKWA_HOME}/logs/"
-DEFAULT_PID_DIR=${CHUKWA_HOME}/var/run
-export CHUKWA_PID_DIR="${CHUKWA_PID_DIR:-$DEFAULT_PID_DIR}"
-export chuwaRecordsRepository="/chukwa/repos/demo"
+export JPS=${JAVA_HOME}/bin/jps
 

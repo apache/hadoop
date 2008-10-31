@@ -20,9 +20,7 @@
 <project name="chukwa" default="main">
 
   <import file="../build-contrib.xml"/>
-
-
-	<property name="chukwaVersion" value="0.0.1"/>
+	<property name="chukwaVersion" value="0.1.0"/>
 
 	<property name="lib.dir" value="${basedir}/lib"/>
 	<property name="src.dir" value="${basedir}/src"/>
@@ -60,15 +58,6 @@
 		<mkdir dir="${build.dir}"/>
 		<mkdir dir="${build.classes}"/>
 		<mkdir dir="${build.dir}/test"/>
-
-		<!-- 
-    	<copy todir="${build.dir}">
-            <fileset dir="${basedir}">
-                <exclude name="**/VERSION"/>
-            </fileset>
-        </copy>
-      
--->
 		<exec executable="echo" output="${basedir}/bin/VERSION">
 			<arg line="${chukwaVersion}" />
 		</exec>
@@ -106,9 +95,6 @@
 
 
 
-	<target name="test" depends="compile,compile-test,test-chunk" description="Chukwa Tests">
-	</target>
-
 	<target name="test-chunk" depends="compile,compile-test" description="Test chunk">
                
           <junit showoutput="yes"
@@ -136,16 +122,16 @@
 		<mkdir dir="${build.dir}/collector/WEB-INF/lib"/>
 		<mkdir dir="${build.dir}/collector/META-INF"/>
 		<copy todir="${build.dir}/collector/WEB-INF/classes">
-			<fileset dir="${build.dir}">
+			<fileset dir="${build.classes}">
 				<include name="org/apache/hadoop/chukwa/conf/**/*.class" />
 			</fileset>
-			<fileset dir="${build.dir}">
+			<fileset dir="${build.classes}">
 				<include name="org/apache/hadoop/chukwa/datacollection/**/*.class" />
 			</fileset>
-			<fileset dir="${build.dir}">
+			<fileset dir="${build.classes}">
 				<include name="org/apache/hadoop/chukwa/extraction/**/*.class" />
 			</fileset>
-			<fileset dir="${build.dir}">
+			<fileset dir="${build.classes}">
 				<include name="org/apache/hadoop/chukwa/util/**/*.class" />
 			</fileset>
 			<fileset dir="${basedir}/src/java">
@@ -182,7 +168,7 @@
 		</jar>
 	</target>
 	<target name="tools_jar" depends="compile, collector" description="Create tools jar">
-		<jar jarfile="${build.dir}/tools-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/inputtools/**/*.class">
+		<jar jarfile="${build.dir}/tools-${chukwaVersion}.jar" basedir="${build.classes}" includes="org/apache/hadoop/chukwa/inputtools/**/*.class">
 			<fileset dir="${basedir}/src/java">
 				<include name="org/apache/hadoop/chukwa/inputtools/**/*.java"/>
 			</fileset>
@@ -190,7 +176,7 @@
 	</target>
 
 	<target name="agent_jar" depends="compile, collector" description="Create agent jar">
-		<jar jarfile="${build.dir}/chukwa-agent-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/client/**/*.class" >
+		<jar jarfile="${build.dir}/chukwa-agent-${chukwaVersion}.jar" basedir="${build.classes}" includes="org/apache/hadoop/chukwa/client/**/*.class" >
 			<fileset dir="${build.dir}">
 				<include name="org/apache/hadoop/chukwa/conf/**/*.class"/>
 			</fileset>
@@ -226,7 +212,7 @@
 	</target>
 
 	<target name="chukwa_jar" depends="compile, collector" description="Create chukwa-core jar">
-		<jar jarfile="${build.dir}/chukwa-core-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/datacollection/**/*.class" >
+		<jar jarfile="${build.dir}/chukwa-core-${chukwaVersion}.jar" basedir="${build.classes}" includes="org/apache/hadoop/chukwa/datacollection/**/*.class" >
                         <manifest>
                             <section name="org/apache/hadoop/chukwa">
                                 <attribute name="Implementation-Title" value="Chukwa"/>
@@ -246,7 +232,7 @@
 
 	<target name="chukwa-hadoop_jar" depends="compile" description="Create chukwa_hadoop jar for use with getting hadoop to use chukwa">
 
-		<jar jarfile="${build.dir}/chukwa-hadoop-${chukwaVersion}-client.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/inputtools/log4j/**/*.class">
+		<jar jarfile="${build.dir}/chukwa-hadoop-${chukwaVersion}-client.jar" basedir="${build.classes}" includes="org/apache/hadoop/chukwa/inputtools/log4j/**/*.class">
 			<fileset dir="${basedir}/src/java">
 				<include name="org/apache/hadoop/chukwa/inputtools/log4j/**/*.java"/>
 		        <include name="org/apache/hadoop/chukwa/datacollection/client/**/*.java"/>
@@ -261,7 +247,6 @@
 	</target>
 
 	<target name="compress" depends="compile,collector,collector_jar,tools_jar,agent_jar,chukwa_jar,chukwa-hadoop_jar" description="Compression target">
-		<!-- 	<jar jarfile="${build.dir}/chukwa.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/**/*.class" /> -->
 
 		<copy todir="." includeEmptyDirs="false">
 			<fileset dir="${build.dir}">
@@ -269,6 +254,32 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</copy>
+	</target>
+
+	<target name="test" depends="compile,compile-test,test-chunk,test-input-tools" description="Automated Test Framework">
+	</target>
+
+	<target name="test-input-tools" depends="compile,compile-test" description="Test Input Tools">
+            <junit showoutput="${test.output}"
+             printsummary="${test.junit.printsummary}"
+             haltonfailure="${test.junit.haltonfailure}"
+             fork="yes"
+             forkmode="${test.junit.fork.mode}"
+             maxmemory="${test.junit.maxmemory}"
+             dir="${basedir}" timeout="${test.timeout}"
+             errorProperty="tests.failed" failureProperty="tests.failed">
+               <sysproperty key="CHUKWA_HOME" value="${basedir}"/>
+               <sysproperty key="CHUKWA_CONF_DIR" value="${basedir}/conf"/>
+               <classpath refid="chukwaTestClasspath"/>
+               <formatter type="${test.junit.output.format}" />
+               <batchtest todir="${build.dir}/test" >
+               <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/datacollection/adaptor/filetailer/*.java"/>
+               </batchtest>
+            </junit>
+            <delete>
+               <fileset dir="${basedir}/var" includes="*"/>
+            </delete>
+            <fail if="tests.failed">Tests failed!</fail>
 	</target>
 
 	<!-- ====================================================== -->
@@ -323,7 +334,7 @@
 		</copy>
 
 		<copy todir="${build.dir}/${final.name}/conf">
-			<fileset dir="${conf.dir}" excludes="**/*.template"/>
+			<fileset dir="${conf.dir}"/>
 		</copy>
 
 		<copy todir="${build.dir}/${final.name}/docs">
@@ -372,6 +383,8 @@
 			<param.listofitems>
 				<tarfileset dir="${build.dir}" mode="664">
 					<exclude name="${final.name}/org/*" />
+					<exclude name="${final.name}/collector/**" />
+					<exclude name="${final.name}/${final.name}/**" />
 					<include name="${final.name}/**" />
 				</tarfileset>
 				<tarfileset dir="${build.dir}" mode="755">
@@ -420,8 +433,8 @@
 	</path>
         <path id="chukwaTestClasspath">
                 <pathelement location="${hadoop.root}/build/classes"/>
-                <pathelement location="${hadoop.root}/build/contrib/chukwa/classes/"/>
-                <pathelement location="${hadoop.root}/build/contrib/chukwa/test/classes/"/>
+                <pathelement location="${build.classes}"/>
+                <pathelement location="${test.build.classes}"/>
                 <fileset dir="${lib.dir}">
                         <include name="**/*.jar" />
                         <exclude name="**/excluded/" />

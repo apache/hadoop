@@ -21,92 +21,127 @@ bin=`cd "$bin"; pwd`
 . "$bin"/chukwa-config.sh
 
 java=$JAVA_HOME/bin/java
-jps=$JAVA_HOME/bin/jps
 
 
 min=`date +%M`
 
+if [ "$CHUKWA_IDENT_STRING" = "" ]; then
+  export CHUKWA_IDENT_STRING="$USER"
+fi
 
-# start torque data loader
+# monitor agent
+pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-agent.sh.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep agent.sh | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: agent pid file exists, but process missing.  Restarting agent.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start agent.sh &
+  fi 
+fi
+
+# monitor collector
+pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-jettyCollector.sh.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep jettyCollector.sh | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: collector pid file exists, but process missing.  Restarting jettyCollector.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start jettyCollector.sh &
+  fi
+fi
+
+# monitor node activity data loader
+pidFile=$CHUKWA_HOME/var/run/PbsNodes-data-loader.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: PbsNodes-data-loader pid file exists, but process missing.  Restarting nodeActivityDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start nodeActivityDataLoader.sh &
+  fi
+fi
+
+# monitor system data loader
+pidFile=$CHUKWA_HOME/var/run/Df-data-loader.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: Df-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+  fi
+fi
+
+pidFile=$CHUKWA_HOME/var/run/Iostat-data-loader.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: Iostat-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+  fi
+fi
+
+pidFile=$CHUKWA_HOME/var/run/Sar-data-loader.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: Sar-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+  fi
+fi
+
+pidFile=$CHUKWA_HOME/var/run/Top-data-loader.pid
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -lt 1 ]; then
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: Top-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+  fi
+fi
+
+# monitor torque data loader
 pidFile=$CHUKWA_HOME/var/run/TorqueDataLoader.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${jps} | grep ${pid} | grep TorqueDataLoader | grep -v grep | wc -l`
-  #ChildPIDRunningStatus=`ps -ef | grep TorqueDataLoader | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=torque.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.TorqueDataLoader&
-  fi 
-else
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=torque.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.TorqueDataLoader&
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: pid file exists, but process missing.  Restarting torqueDataLoader.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start torqueDataLoader.sh &
+  fi
 fi
-# start util data loader
-pidFile=$CHUKWA_HOME/var/run/UtilDataLoader.pid
+
+# monitor dataSinkFiles.sh
+pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${jps} | grep ${pid} | grep UtilDataLoader | grep -v grep | wc -l`
-  #ChildPIDRunningStatus=`ps -ef | grep UtilDataLoader | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep processSinkFiles.sh | grep -v grep | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=util.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.UtilDataLoader&
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: pid file exists, but process missing.  Restarting processSinkFiles.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start processSinkFiles.sh &
   fi
-else 
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=util.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.UtilDataLoader&
 fi
 
-# start queue info data loader
-pidFile=$CHUKWA_HOME/var/run/QueueInfoDataLoader.pid
+# monitor dbAdmin.sh
+pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${jps} | grep ${pid} | grep QueueInfoDataLoader | grep -v grep | wc -l`
-  #ChildPIDRunningStatus=`ps -ef | grep QueueInfoDataLoader | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep dbAdmin.sh | grep -v grep | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=queueinfo.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.QueueInfoDataLoader&
-  fi
-else
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=queueinfo.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.QueueInfoDataLoader&
-fi
-
-# start map reduce log data loader
-tenmin=`echo ${min} | cut -b 2-`
-if [ "X${tenmin}" == "X0" ]; then
-    pidFile=$CHUKWA_HOME/var/run/JobLogDataLoader.pid
-    if [ -f $pidFile ]; then
-        pid=`head ${pidFile}`
-        ChildPIDRunningStatus=`${jps} | grep ${pid} | grep JobLogDataLoader |  wc -l`
-        if [ $ChildPIDRunningStatus -lt 1 ]; then
-            ${java} -Xms128m -Xmx1280m -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=joblog.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.JobLogDataLoader &
-        fi
-    else
-        ${java} -Xms128m -Xmx1280m -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=joblog.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.mdl.JobLogDataLoader &
-    fi
-fi
-
-# start node activity plugin
-tenmin=`echo ${min} | cut -b 2-`
-if [ "X${tenmin}" == "X0" ]; then
-  pidFile=$CHUKWA_HOME/var/run/NodeActivityPlugin.pid
-  if [ -f $pidFile ]; then
-    pid=`head ${pidFile}`
-    ChildPIDRunningStatus=`${jps} | grep ${pid} | grep NodeActivityMDL | wc -l`
-    if [ $ChildPIDRunningStatus -lt 1 ]; then
-       ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=nodeActivity.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.plugin.nodeactivity.NodeActivityMDL&
-    fi
-  else
-      ${java} -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=nodeActivity.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${common} org.apache.hadoop.chukwa.sources.plugin.nodeactivity.NodeActivityMDL&
+      HOSTNAME=`hostname`
+      echo "${HOSTNAME}: pid file exists, but process missing.  Restarting dbAdmin.sh."
+      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start dbAdmin.sh &
   fi
 fi
-
-# start database summary loader
-tenmin=`echo ${min} | cut -b 2-`
-if [ "X${tenmin}" == "X0" ]; then
-    pidFile=$CHUKWA_HOME/var/run/DBSummaryLoader.pid
-    if [ -f $pidFile ]; then
-        pid=`head ${pidFile}`
-        ChildPIDRunningStatus=`${jps} | grep ${pid} | grep DBSummaryLoader | wc -l`
-        if [ $ChildPIDRunningStatus -lt 1 ]; then
-            ${java} -Xms128m -Xmx1280m -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=log4j.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${ckit}:${common} org.apache.hadoop.chukwa.extraction.DBSummaryLoader &
-        fi
-    else
-        ${java} -Xms128m -Xmx1280m -DCHUKWA_HOME=${CHUKWA_HOME} -Dlog4j.configuration=log4j.properties -classpath ${CLASSPATH}:${chukwa}:${ikit}:${ckit}:${common} org.apache.hadoop.chukwa.extraction.DBSummaryLoader &
-    fi
-fi
-
