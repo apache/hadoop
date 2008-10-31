@@ -56,10 +56,6 @@ public class InfoServer extends HttpServer{
       logContext.addHandler(new ResourceHandler());
       webServer.addContext(logContext);
     }
-    if (name.equals("master")) {
-      // Put up the rest webapp.
-      this.webServer.addWebApplication("/api", getWebAppDir("rest"));
-    }
   }
   
   /**
@@ -67,10 +63,25 @@ public class InfoServer extends HttpServer{
   * @param path Path to find.
   * @return the pathname as a URL
   */
-  private static String getWebAppsPath(final String path) throws IOException {
+  protected String getWebAppsPath() throws IOException {
+    // Hack: webapps is not a unique enough element to find in CLASSPATH
+    // We'll more than likely find the hadoop webapps dir.  So, instead
+    // look for the 'master' webapp in the webapps subdir.  That should
+    // get us the hbase context.  Presumption is that place where the
+    // master webapp resides is where we want this InfoServer picking up
+    // web applications.
+    final String master = "master";
+    String p = getWebAppDir(master);
+    // Now strip master + the separator off the end of our context
+    return p.substring(0, p.length() - (master.length() + 1/* The separator*/));
+  }
+
+  private static String getWebAppsPath(final String path)
+  throws IOException {
     URL url = InfoServer.class.getClassLoader().getResource(path);
     if (url == null) 
       throw new IOException("webapps not found in CLASSPATH: " + path); 
+    System.out.println("URL " + url);
     return url.toString();
   }
 
@@ -80,7 +91,8 @@ public class InfoServer extends HttpServer{
    * @return path
    * @throws IOException
    */
-  public static String getWebAppDir(final String webappName) throws IOException {
+  public static String getWebAppDir(final String webappName)
+  throws IOException {
     String webappDir = null;
     try {
       webappDir = getWebAppsPath("webapps" + File.separator + webappName);
@@ -90,5 +102,4 @@ public class InfoServer extends HttpServer{
     }
     return webappDir;
   }
-  
 }
