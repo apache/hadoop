@@ -53,6 +53,8 @@ Trunk (unreleased changes)
 
     HADOOP-4454. Allow # comments in slaves file. (Rama Ramasamy via omalley)
 
+    HADOOP-3461. Remove hdfs.StringBytesWritable. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

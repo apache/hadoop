@@ -1043,7 +1043,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         // If the file is under construction , then it must be in our
         // leases. Find the appropriate lease record.
         //
-        Lease lease = leaseManager.getLease(new StringBytesWritable(holder));
+        Lease lease = leaseManager.getLease(holder);
         //
         // We found the lease for this file. And surprisingly the original
         // holder is trying to recreate this file. This should never occur.
@@ -1327,7 +1327,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                                      throws IOException {
 
     if (file == null || file.isDirectory()) {
-      Lease lease = leaseManager.getLease(new StringBytesWritable(holder));
+      Lease lease = leaseManager.getLease(holder);
       throw new LeaseExpiredException("No lease on " + src +
                                       " File does not exist. " +
                                       (lease != null ? lease.toString() :
@@ -1335,7 +1335,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                        " does not have any open files."));
     }
     if (!file.isUnderConstruction()) {
-      Lease lease = leaseManager.getLease(new StringBytesWritable(holder));
+      Lease lease = leaseManager.getLease(holder);
       throw new LeaseExpiredException("No lease on " + src + 
                                       " File is not open for writing. " +
                                       (lease != null ? lease.toString() :
@@ -4553,10 +4553,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       out.writeInt(leaseManager.countPath()); // write the size
 
       for (Lease lease : leaseManager.getSortedLeases()) {
-        Collection<StringBytesWritable> files = lease.getPaths();
-        for (Iterator<StringBytesWritable> i = files.iterator(); i.hasNext();){
-          String path = i.next().getString();
-
+        for(String path : lease.getPaths()) {
           // verify that path exists in namespace
           INode node = dir.getFileINode(path);
           if (node == null) {

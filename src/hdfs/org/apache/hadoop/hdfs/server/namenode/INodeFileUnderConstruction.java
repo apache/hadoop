@@ -25,28 +25,25 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 
 public class INodeFileUnderConstruction extends INodeFile {
-  StringBytesWritable clientName = null;         // lease holder
-  StringBytesWritable clientMachine = null;
-  DatanodeDescriptor clientNode = null; // if client is a cluster node too.
+  final String clientName;         // lease holder
+  private final String clientMachine;
+  private final DatanodeDescriptor clientNode; // if client is a cluster node too.
 
   private int primaryNodeIndex = -1; //the node working on lease recovery
   private DatanodeDescriptor[] targets = null;   //locations for last block
   private long lastRecoveryTime = 0;
   
-  INodeFileUnderConstruction() {}
-
   INodeFileUnderConstruction(PermissionStatus permissions,
                              short replication,
                              long preferredBlockSize,
                              long modTime,
                              String clientName,
                              String clientMachine,
-                             DatanodeDescriptor clientNode) 
-                             throws IOException {
+                             DatanodeDescriptor clientNode) {
     super(permissions.applyUMask(UMASK), 0, replication, modTime, modTime,
         preferredBlockSize);
-    this.clientName = new StringBytesWritable(clientName);
-    this.clientMachine = new StringBytesWritable(clientMachine);
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
 
@@ -58,22 +55,21 @@ public class INodeFileUnderConstruction extends INodeFile {
                              PermissionStatus perm,
                              String clientName,
                              String clientMachine,
-                             DatanodeDescriptor clientNode)
-                             throws IOException {
+                             DatanodeDescriptor clientNode) {
     super(perm, blocks, blockReplication, modificationTime, modificationTime,
           preferredBlockSize);
     setLocalName(name);
-    this.clientName = new StringBytesWritable(clientName);
-    this.clientMachine = new StringBytesWritable(clientMachine);
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
 
-  String getClientName() throws IOException {
-    return clientName.getString();
+  String getClientName() {
+    return clientName;
   }
 
-  String getClientMachine() throws IOException {
-    return clientMachine.getString();
+  String getClientMachine() {
+    return clientMachine;
   }
 
   DatanodeDescriptor getClientNode() {

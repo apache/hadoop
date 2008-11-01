@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -67,7 +66,7 @@ public class LeaseManager {
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
   //
-  private SortedMap<StringBytesWritable, Lease> leases = new TreeMap<StringBytesWritable, Lease>();
+  private SortedMap<String, Lease> leases = new TreeMap<String, Lease>();
   // Set of: Lease
   private SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
 
@@ -79,7 +78,7 @@ public class LeaseManager {
 
   LeaseManager(FSNamesystem fsnamesystem) {this.fsnamesystem = fsnamesystem;}
 
-  Lease getLease(StringBytesWritable holder) throws IOException {
+  Lease getLease(String holder) {
     return leases.get(holder);
   }
   
@@ -103,8 +102,7 @@ public class LeaseManager {
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
-  synchronized void addLease(StringBytesWritable holder, String src
-      ) throws IOException {
+  synchronized void addLease(String holder, String src) {
     Lease lease = getLease(holder);
     if (lease == null) {
       lease = new Lease(holder);
@@ -114,13 +112,13 @@ public class LeaseManager {
       renewLease(lease);
     }
     sortedLeasesByPath.put(src, lease);
-    lease.paths.add(new StringBytesWritable(src));
+    lease.paths.add(src);
   }
 
   /**
    * Remove the specified lease and src.
    */
-  synchronized void removeLease(Lease lease, String src) throws IOException {
+  synchronized void removeLease(Lease lease, String src) {
     sortedLeasesByPath.remove(src);
     if (!lease.removePath(src)) {
       LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
@@ -137,8 +135,7 @@ public class LeaseManager {
   /**
    * Remove the lease for the specified holder and src
    */
-  synchronized void removeLease(StringBytesWritable holder, String src
-      ) throws IOException {
+  synchronized void removeLease(String holder, String src) {
     Lease lease = getLease(holder);
     if (lease != null) {
       removeLease(lease, src);
@@ -164,8 +161,8 @@ public class LeaseManager {
   /**
    * Renew the lease(s) held by the given client
    */
-  synchronized void renewLease(String holder) throws IOException {
-    renewLease(getLease(new StringBytesWritable(holder)));
+  synchronized void renewLease(String holder) {
+    renewLease(getLease(holder));
   }
   synchronized void renewLease(Lease lease) {
     if (lease != null) {
@@ -183,12 +180,12 @@ public class LeaseManager {
    * expire, all the corresponding locks can be released.
    *************************************************************/
   class Lease implements Comparable<Lease> {
-    private StringBytesWritable holder;
+    private final String holder;
     private long lastUpdate;
-    private Collection<StringBytesWritable> paths = new TreeSet<StringBytesWritable>();
+    private final Collection<String> paths = new TreeSet<String>();
   
     /** Only LeaseManager object can create a lease */
-    private Lease(StringBytesWritable holder) throws IOException {
+    private Lease(String holder) {
       this.holder = holder;
       renew();
     }
@@ -211,8 +208,7 @@ public class LeaseManager {
      * @return the path associated with the pendingFile and null if not found.
      */
     private String findPath(INodeFileUnderConstruction pendingFile) {
-      for(Iterator<StringBytesWritable> i = paths.iterator(); i.hasNext(); ) {
-        String src = i.next().toString();
+      for(String src : paths) {
         if (fsnamesystem.dir.getFileINode(src) == pendingFile) {
           return src;
         }
@@ -223,8 +219,8 @@ public class LeaseManager {
     /** Does this lease contain any path? */
     boolean hasPath() {return !paths.isEmpty();}
 
-    boolean removePath(String src) throws IOException {
-      return paths.remove(new StringBytesWritable(src));
+    boolean removePath(String src) {
+      return paths.remove(src);
     }
 
     /** {@inheritDoc} */
@@ -266,18 +262,18 @@ public class LeaseManager {
       return holder.hashCode();
     }
     
-    Collection<StringBytesWritable> getPaths() {
+    Collection<String> getPaths() {
       return paths;
     }
     
-    void replacePath(String oldpath, String newpath) throws IOException {
-      paths.remove(new StringBytesWritable(oldpath));
-      paths.add(new StringBytesWritable(newpath));
+    void replacePath(String oldpath, String newpath) {
+      paths.remove(oldpath);
+      paths.add(newpath);
     }
   }
 
   synchronized void changeLease(String src, String dst,
-      String overwrite, String replaceBy) throws IOException {
+      String overwrite, String replaceBy) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".changelease: " +
                " src=" + src + ", dest=" + dst + 
@@ -298,7 +294,7 @@ public class LeaseManager {
     }
   }
 
-  synchronized void removeLeaseWithPrefixPath(String prefix) throws IOException {
+  synchronized void removeLeaseWithPrefixPath(String prefix) {
     for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
@@ -352,8 +348,8 @@ public class LeaseManager {
                 if (top.expiredHardLimit()) {
                   LOG.info("Lease Monitor: Removing lease " + top
                       + ", sortedLeases.size()=: " + sortedLeases.size());
-                  for(StringBytesWritable s : top.paths) {
-                    fsnamesystem.internalReleaseLease(top, s.getString());
+                  for(String s : top.paths) {
+                    fsnamesystem.internalReleaseLease(top, s);
                   }
                 } else {
                   break;
