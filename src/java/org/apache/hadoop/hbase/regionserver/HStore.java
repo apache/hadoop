@@ -1655,7 +1655,7 @@ public class HStore implements HConstants {
       // expired candidate, we need to look at the key before that
       if (!foundCandidate && deletedOrExpiredRow != null) {
         knownNoGoodKey = deletedOrExpiredRow;
-        searchKey = new BeforeThisStoreKey(deletedOrExpiredRow);
+        searchKey = new HStoreKey.BeforeThisStoreKey(deletedOrExpiredRow);
       } else {
         // No candidates and no deleted or expired candidates. Give up.
         break;
