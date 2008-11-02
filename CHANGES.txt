@@ -92,7 +92,8 @@ Release 0.19.0 - Unreleased
                0.19.0 RC
    HBASE-785   Remove InfoServer, use HADOOP-3824 StatusHttpServer 
                instead (requires hadoop 0.19)
-    
+   HBASE-81    When a scanner lease times out, throw a more "user friendly" exception
+       
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
                (Andrzej Bialecki via Stack)

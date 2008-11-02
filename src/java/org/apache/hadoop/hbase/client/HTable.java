@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -53,12 +54,13 @@ import org.apache.hadoop.hbase.util.Writables;
 public class HTable {
   private final HConnection connection;
   private final byte [] tableName;
-  private HBaseConfiguration configuration;
+  protected final int scannerTimeout;
+  private volatile HBaseConfiguration configuration;
   private ArrayList<BatchUpdate> writeBuffer;
   private long writeBufferSize;
   private boolean autoFlush;
   private long currentWriteBufferSize;
-  private int scannerCaching;
+  protected int scannerCaching;
 
   /**
    * Creates an object to access a HBase table
@@ -104,8 +106,10 @@ public class HTable {
   public HTable(HBaseConfiguration conf, final byte [] tableName)
   throws IOException {
     this.connection = HConnectionManager.getConnection(conf);
-    this.configuration = conf;
     this.tableName = tableName;
+    this.scannerTimeout =
+      conf.getInt("hbase.regionserver.lease.period", 60 * 1000);
+    this.configuration = conf;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.writeBuffer = new ArrayList<BatchUpdate>();
     this.writeBufferSize = 
@@ -1037,7 +1041,8 @@ public class HTable {
    
   /**
    * Release held resources
-   *
+   * 
+   * @throws IOException
   */
   public void close() throws IOException{
     flushCommits();
@@ -1154,8 +1159,10 @@ public class HTable {
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     protected RowFilterInterface filter;
-    final private LinkedList<RowResult> cache = new LinkedList<RowResult>();
-    final private int scannerCaching = HTable.this.scannerCaching;
+    private final LinkedList<RowResult> cache = new LinkedList<RowResult>();
+    @SuppressWarnings("hiding")
+    private final int scannerCaching = HTable.this.scannerCaching;
+    private long lastNext;
 
     protected ClientScanner(final byte[][] columns, final byte [] startRow,
         final long timestamp, final RowFilterInterface filter) {
@@ -1175,6 +1182,7 @@ public class HTable {
       if (filter != null) {
         filter.validate(columns);
       }
+      this.lastNext = System.currentTimeMillis();
     }
 
     //TODO: change visibility to protected
@@ -1280,7 +1288,19 @@ public class HTable {
         // with a countdown in nextScanner
         callable.setCaching(this.scannerCaching);
         do {
-          values = getConnection().getRegionServerWithRetries(callable);
+          try {
+            values = getConnection().getRegionServerWithRetries(callable);
+          } catch (IOException e) {
+            if (e instanceof UnknownScannerException &&
+                lastNext + scannerTimeout < System.currentTimeMillis()) {
+              
+              ScannerTimeoutException ex = new ScannerTimeoutException();
+              ex.initCause(e);
+              throw ex;
+            }
+            throw e;
+          }
+          lastNext = System.currentTimeMillis();
           if (values != null && values.length > 0) {
             for (RowResult rs : values) {
               cache.add(rs);
