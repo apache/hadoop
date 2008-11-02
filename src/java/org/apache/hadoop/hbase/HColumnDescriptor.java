@@ -528,8 +528,9 @@ public class HColumnDescriptor implements WritableComparable {
         // version 5, we need to skip over it to read the rest of the column
         // descriptor. There are no BloomFilterDescriptors written to disk for
         // column descriptors with a version number >= 5
-        BloomFilterDescriptor junk = new BloomFilterDescriptor();
-        junk.readFields(in);
+        throw new UnsupportedClassVersionError(this.getClass().getName() +
+            " does not support backward compatibility with versions older " +
+            "than version 5");
       }
       if (version > 1) {
         setBlockCacheEnabled(in.readBoolean());
