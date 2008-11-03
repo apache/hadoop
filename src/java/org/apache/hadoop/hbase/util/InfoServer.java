@@ -34,7 +34,7 @@ import org.mortbay.http.handler.ResourceHandler;
  *   "/static/" -> points to common static files (src/webapps/static)
  *   "/" -> the jsp server code from (src/webapps/<name>)
  */
-public class InfoServer extends HttpServer{  
+public class InfoServer extends HttpServer {  
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<code>name<code>.
@@ -55,6 +55,11 @@ public class InfoServer extends HttpServer{
       logContext.setResourceBase(logDir);
       logContext.addHandler(new ResourceHandler());
       webServer.addContext(logContext);
+    }
+    
+    if (name.equals("master")) {
+      // Put up the rest webapp.
+      webServer.addWebApplication("/api", getWebAppDir("rest"));
     }
   }
   
