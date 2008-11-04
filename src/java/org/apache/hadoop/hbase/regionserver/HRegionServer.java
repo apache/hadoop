@@ -123,7 +123,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final HBaseConfiguration conf;
 
   private final ServerConnection connection;
-  private final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
@@ -304,8 +303,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     boolean quiesceRequested = false;
     // A sleeper that sleeps for msgInterval.
     Sleeper sleeper = new Sleeper(this.msgInterval, this.stopRequested);
+    boolean haveRootRegion = false;
     try {
       init(reportForDuty(sleeper));
+      // Try to get the root region location from the master. 
+      if (!haveRootRegion) {
+        HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
+        if (rootServer != null) {
+          // By setting the root region location, we bypass the wait imposed on
+          // HTable for all regions being assigned.
+          this.connection.setRootRegionLocation(
+              new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
+          haveRootRegion = true;
+        }
+      }
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -693,17 +704,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * the end of the main HRegionServer run loop.
    */
   private void housekeeping() {
-    // Try to get the root region location from the master. 
-    if (!haveRootRegion.get()) {
-      HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
-      if (rootServer != null) {
-        // By setting the root region location, we bypass the wait imposed on
-        // HTable for all regions being assigned.
-        this.connection.setRootRegionLocation(
-            new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
-        haveRootRegion.set(true);
-      }
-    }
     // If the todo list has > 0 messages, iterate looking for open region
     // messages. Send the master a message that we're working on its
     // processing so it doesn't assign the region elsewhere.
