@@ -30,11 +30,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.onelab.filter.BloomFilter;
+import org.onelab.filter.Key;
 
 /**
  * On write, all keys are added to a bloom filter.  On read, all keys are
@@ -227,5 +229,14 @@ public class BloomFilterMapFile extends HBaseMapFile {
         LOG.debug("flushed bloom filter for " + this.dirName);
       }
     }
+  }
+
+  /**
+   * Custom bloom filter key maker.
+   * @param key
+   * @return Key made of bytes of row only.
+   */
+  protected static Key getBloomFilterKey(WritableComparable key) {
+    return new Key(((HStoreKey) key).getRow());
   }
 }

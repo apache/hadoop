@@ -1371,7 +1371,6 @@ public class HStore implements HConstants {
           i >= 0 && !hasEnoughVersions(versions, results); i--) {
         MapFile.Reader map = maparray[i];
         synchronized(map) {
-          map.reset();
           // Do the priming read
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
@@ -1379,7 +1378,9 @@ public class HStore implements HConstants {
             // map.getClosest returns null if the passed key is > than the
             // last key in the map file.  getClosest is a bit of a misnomer
             // since it returns exact match or the next closest key AFTER not
-            // BEFORE.
+            // BEFORE.  We use getClosest because we're usually passed a
+            // key that has a timestamp of maximum long to indicate we want
+            // most recent update.
             continue;
           }
           if (!readkey.matchesRowCol(key)) {
@@ -1868,9 +1869,6 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   private HStoreKey getFinalKey(final MapFile.Reader mf) throws IOException {
-    if (mf instanceof HBaseMapFile.HBaseReader) {
-      return ((HBaseMapFile.HBaseReader)mf).getFinalKey();
-    }
     HStoreKey finalKey = new HStoreKey(); 
     mf.finalKey(finalKey);
     finalKey.setHRegionInfo(this.info);
@@ -1961,16 +1959,18 @@ public class HStore implements HConstants {
       // Cast to HbaseReader.
       HBaseMapFile.HBaseReader r =
         (HBaseMapFile.HBaseReader)this.readers.get(mapIndex);
-
-      // get the midkey
+      // Get first, last, and mid keys.
+      r.reset();
+      HStoreKey firstKey = new HStoreKey();
+      HStoreKey lastKey = new HStoreKey();
+      r.next(firstKey, new ImmutableBytesWritable());
+      r.finalKey(lastKey);
       HStoreKey mk = (HStoreKey)r.midKey();
       if (mk != null) {
         // if the midkey is the same as the first and last keys, then we cannot
         // (ever) split this region. 
-        if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(),
-              r.getFirstKey().getRow()) && 
-            HStoreKey.equalsTwoRowKeys(info, mk.getRow(),
-              r.getFinalKey().getRow())) {
+        if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(), firstKey.getRow()) && 
+            HStoreKey.equalsTwoRowKeys(info, mk.getRow(), lastKey.getRow())) {
           return null;
         }
         return new StoreSize(maxSize, mk.getRow());

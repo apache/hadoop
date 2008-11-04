@@ -23,17 +23,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.HBaseMapFile;
 import org.apache.hadoop.hbase.io.HalfMapFileReader;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableComparable;
@@ -117,25 +116,6 @@ public class TestHStoreFile extends HBaseTestCase {
     }
   }
   
-  public void testContains() throws Exception {
-    HStoreFile hsf = new HStoreFile(this.conf, this.fs, this.dir,
-      HRegionInfo.FIRST_META_REGIONINFO,
-      Bytes.toBytes("colfamily"), 1234567890L, null);
-    MapFile.Writer writer =
-      hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, false, 0);
-    writeStoreFile(writer);
-    MapFile.Reader r = hsf.getReader(this.fs, false, false);
-    HBaseMapFile.HBaseReader reader =
-      (HBaseMapFile.HBaseReader)r;
-    // Store file should contain 'aa' and 'bb' but not 'AA' nor 'ZZ'.
-    assertTrue(reader.containsKey(new HStoreKey("aa", "bb")));
-    assertTrue(reader.containsKey(new HStoreKey("bb")));
-    assertTrue(reader.containsKey(new HStoreKey("zz")));
-    assertFalse(reader.containsKey(new HStoreKey("AA")));
-    assertFalse(reader.containsKey(new HStoreKey("{{")));
-    assertFalse(reader.containsKey(new HStoreKey()));
-  }
-  
   /**
    * Test that our mechanism of writing store files in one region to reference
    * store files in other regions works.
@@ -192,13 +172,6 @@ public class TestHStoreFile extends HBaseTestCase {
       }
     }
     assertTrue(Bytes.equals(key.getRow(), finalKey));
-    // Assert contains works properly.
-    HBaseMapFile.HBaseReader hbaseMapfileHalfReader =
-      (HBaseMapFile.HBaseReader)halfReader;
-    assertTrue(hbaseMapfileHalfReader.containsKey(midkey));
-    assertTrue(hbaseMapfileHalfReader.containsKey(new HStoreKey(finalKey)));
-    assertFalse(hbaseMapfileHalfReader.containsKey(new HStoreKey("aa")));
-    assertFalse(hbaseMapfileHalfReader.containsKey(new HStoreKey("{{")));
   }
 
   /**

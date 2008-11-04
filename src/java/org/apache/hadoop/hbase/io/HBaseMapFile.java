@@ -41,26 +41,18 @@ import org.onelab.filter.Key;
  */
 public class HBaseMapFile extends MapFile {
   private static final Log LOG = LogFactory.getLog(HBaseMapFile.class);
+  
+  /**
+   * Values are instances of this class.
+   */
   public static final Class<? extends Writable>  VALUE_CLASS =
     ImmutableBytesWritable.class;
-
-  /**
-   * Custom bloom filter key maker.
-   * @param key
-   * @return Key made of bytes of row only.
-   */
-  protected static Key getBloomFilterKey(WritableComparable key) {
-    return new Key(((HStoreKey) key).getRow());
-  }
 
   /**
    * A reader capable of reading and caching blocks of the data file.
    */
   public static class HBaseReader extends MapFile.Reader {
     private final boolean blockCacheEnabled;
-    private final HStoreKey firstKey;
-    private final HStoreKey finalKey;
-    private final String dirName;
 
     /**
      * @param fs
@@ -88,37 +80,17 @@ public class HBaseMapFile extends MapFile {
     throws IOException {
       super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), 
           conf, false); // defer opening streams
-      this.dirName = dirName;
       this.blockCacheEnabled = blockCacheEnabled;
       open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), conf);
       
-      // Force reading of the mapfile index by calling midKey.
-      // Reading the index will bring the index into memory over
-      // here on the client and then close the index file freeing
-      // up socket connection and resources in the datanode. 
-      // Usually, the first access on a MapFile.Reader will load the
-      // index force the issue in HStoreFile MapFiles because an
-      // access may not happen for some time; meantime we're
-      // using up datanode resources.  See HADOOP-2341.
-      // Of note, midKey just goes to index.  Does not seek.
+      // Force reading of the mapfile index by calling midKey. Reading the
+      // index will bring the index into memory over here on the client and
+      // then close the index file freeing up socket connection and resources
+      // in the datanode. Usually, the first access on a MapFile.Reader will
+      // load the index force the issue in HStoreFile MapFiles because an
+      // access may not happen for some time; meantime we're using up datanode
+      // resources (See HADOOP-2341). midKey() goes to index. Does not seek.
       midKey();
-
-      // Read in the first and last key.  Cache them.  Make sure we are at start
-      // of the file.
-      reset();
-      HStoreKey key = new HStoreKey();
-      super.next(key, new ImmutableBytesWritable());
-      key.setHRegionInfo(hri);
-      this.firstKey = key;
-      // Set us back to start of file.  Call to finalKey restores whatever
-      // the previous position.
-      reset();
-
-      // Get final key.
-      key = new HStoreKey();
-      super.finalKey(key);
-      key.setHRegionInfo(hri);
-      this.finalKey = key;
     }
 
     @Override
@@ -129,70 +101,17 @@ public class HBaseMapFile extends MapFile {
         return super.createDataFileReader(fs, dataFile, conf);
       }
       final int blockSize = conf.getInt("hbase.hstore.blockCache.blockSize",
-          64 * 1024);
+        64 * 1024);
       return new SequenceFile.Reader(fs, dataFile,  conf) {
         @Override
         protected FSDataInputStream openFile(FileSystem fs, Path file,
-            int bufferSize, long length) throws IOException {
-          
+          int bufferSize, long length)
+        throws IOException {
           return new FSDataInputStream(new BlockFSInputStream(
                   super.openFile(fs, file, bufferSize, length), length,
                   blockSize));
         }
       };
-    }
-    
-    @Override
-    public synchronized void finalKey(final WritableComparable fk)
-    throws IOException {
-      Writables.copyWritable(this.finalKey, fk);
-    }
-    
-    /**
-     * @param hsk
-     * @return True if the file *could* contain <code>hsk</code> and false if
-     * outside the bounds of this files' start and end keys.
-     */
-    public boolean containsKey(final HStoreKey hsk) {
-      return this.firstKey.compareTo(hsk) <= 0 &&
-         this.finalKey.compareTo(hsk) >= 0;
-    }
-    
-    public String toString() {
-      HStoreKey midkey = null;
-      try {
-        midkey = (HStoreKey)midKey();
-      } catch (IOException ioe) {
-        LOG.warn("Failed get of midkey", ioe);
-      }
-      return "dirName=" + this.dirName + ", firstKey=" +
-        this.firstKey.toString() + ", midKey=" + midkey +
-          ", finalKey=" + this.finalKey;
-    }
-    
-    /**
-     * @return First key in this file.  Can be null around construction time.
-     */
-    public HStoreKey getFirstKey() {
-      return this.firstKey;
-    }
-
-    /**
-     * @return Final key in file.  Can be null around construction time.
-     */
-    public HStoreKey getFinalKey() {
-      return this.finalKey;
-    }
-    
-    @Override
-    public synchronized WritableComparable getClosest(WritableComparable key,
-        Writable value, boolean before)
-    throws IOException {
-      if ((!before && ((HStoreKey)key).compareTo(this.finalKey) > 0) ||
-          (before && ((HStoreKey)key).compareTo(this.firstKey) < 0)) {
-        return null;
-      }
-      return  super.getClosest(key, value, before);
     }
   }
   
@@ -213,7 +132,7 @@ public class HBaseMapFile extends MapFile {
       // Default for mapfiles is 128.  Makes random reads faster if we
       // have more keys indexed and we're not 'next'-ing around in the
       // mapfile.
-      setIndexInterval(conf.getInt("hbase.io.index.interval", 128));
+      setIndexInterval(conf.getInt("hbase.io.index.interval", 32));
     }
   }
 }
