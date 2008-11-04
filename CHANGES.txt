@@ -55,6 +55,9 @@ Trunk (unreleased changes)
 
     HADOOP-3461. Remove hdfs.StringBytesWritable. (szetszwo)
 
+    HADOOP-4437. Use Halton sequence instead of java.util.Random in PiEstimator.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

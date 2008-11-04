@@ -19,8 +19,8 @@
 package org.apache.hadoop.examples;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Iterator;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -46,17 +46,78 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * A Map-reduce program to estimaate the valu eof Pi using monte-carlo
- * method.
+ * A Map-reduce program to estimate the value of Pi
+ * using quasi-Monte Carlo method.
  */
 public class PiEstimator extends Configured implements Tool {
   
+  /** 2-dimensional Halton sequence {H(i)},
+   * where H(i) is a 2-dimensional point and i >= 1 is the index. 
+   */
+  private static class HaltonSequence {
+    /** Bases */
+    static final int[] P = {2, 3}; 
+    /** Maximum number of digits allowed */
+    static final int[] K = {63, 40}; 
+
+    private long index;
+    private double[] x;
+    private double[][] q;
+    private int[][] d;
+
+    /** Initialize to H(startindex),
+     * so the sequence begins with H(startindex+1).
+     */
+    HaltonSequence(long startindex) {
+      index = startindex;
+      x = new double[K.length];
+      q = new double[K.length][];
+      d = new int[K.length][];
+      for(int i = 0; i < K.length; i++) {
+        q[i] = new double[K[i]];
+        d[i] = new int[K[i]];
+      }
+
+      for(int i = 0; i < K.length; i++) {
+        long k = index;
+        x[i] = 0;
+        
+        for(int j = 0; j < K[i]; j++) {
+          q[i][j] = (j == 0? 1.0: q[i][j-1])/P[i];
+          d[i][j] = (int)(k % P[i]);
+          k = (k - d[i][j])/P[i];
+          x[i] += d[i][j] * q[i][j];
+        }
+      }
+    }
+
+    /** Compute next point.
+     * Assume the current point is H(index).
+     * Compute H(index+1).
+     */
+    double[] nextPoint() {
+      index++;
+      for(int i = 0; i < K.length; i++) {
+        for(int j = 0; j < K[i]; j++) {
+          d[i][j]++;
+          x[i] += q[i][j];
+          if (d[i][j] < P[i]) {
+            break;
+          }
+          d[i][j] = 0;
+          x[i] -= (j == 0? 1.0: q[i][j-1]);
+        }
+      }
+      return x;
+    }
+  }
+
   /**
    * Mappper class for Pi estimation.
    */
   
   public static class PiMapper extends MapReduceBase
-    implements Mapper<LongWritable, Writable, LongWritable, LongWritable> {
+    implements Mapper<LongWritable, LongWritable, LongWritable, LongWritable> {
     
     /** Mapper configuration.
      *
@@ -64,8 +125,6 @@ public class PiEstimator extends Configured implements Tool {
     @Override
     public void configure(JobConf job) {
     }
-    
-    static Random r = new Random();
     
     long numInside = 0L;
     long numOutside = 0L;
@@ -77,15 +136,17 @@ public class PiEstimator extends Configured implements Tool {
      * @param reporter
      */
     public void map(LongWritable key,
-                    Writable val,
+                    LongWritable val,
                     OutputCollector<LongWritable, LongWritable> out,
                     Reporter reporter) throws IOException {
-      long nSamples = key.get();
+      final HaltonSequence haltonsequence = new HaltonSequence(key.get());
+      final long nSamples = val.get();
+
       for(long idx = 0; idx < nSamples; idx++) {
-        double x = r.nextDouble();
-        double y = r.nextDouble();
-        double d = (x-0.5)*(x-0.5)+(y-0.5)*(y-0.5);
-        if (d > 0.25) {
+        final double[] point = haltonsequence.nextPoint();
+        final double x = point[0] - 0.5;
+        final double y = point[1] - 0.5;
+        if (x*x + y*y > 0.25) {
           numOutside++;
         } else {
           numInside++;
@@ -105,7 +166,7 @@ public class PiEstimator extends Configured implements Tool {
   }
   
   public static class PiReducer extends MapReduceBase
-    implements Reducer<LongWritable, LongWritable, WritableComparable, Writable> {
+    implements Reducer<LongWritable, LongWritable, WritableComparable<?>, Writable> {
     
     long numInside = 0;
     long numOutside = 0;
@@ -126,7 +187,7 @@ public class PiEstimator extends Configured implements Tool {
      */
     public void reduce(LongWritable key,
                        Iterator<LongWritable> values,
-                       OutputCollector<WritableComparable, Writable> output,
+                       OutputCollector<WritableComparable<?>, Writable> output,
                        Reporter reporter) throws IOException {
       if (key.get() == 1) {
         while (values.hasNext()) {
@@ -159,7 +220,7 @@ public class PiEstimator extends Configured implements Tool {
    * This is the main driver for computing the value of Pi using
    * monte-carlo method.
    */
-  double launch(int numMaps, long numPoints, String jt, String dfs)
+  BigDecimal launch(int numMaps, long numPoints, String jt, String dfs)
     throws IOException {
 
     JobConf jobConf = new JobConf(getConf(), PiEstimator.class);
@@ -199,13 +260,12 @@ public class PiEstimator extends Configured implements Tool {
       Path file = new Path(inDir, "part"+idx);
       SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, jobConf, 
                                                              file, LongWritable.class, LongWritable.class, CompressionType.NONE);
-      writer.append(new LongWritable(numPoints), new LongWritable(0));
+      writer.append(new LongWritable(idx * numPoints), new LongWritable(numPoints));
       writer.close();
       System.out.println("Wrote input for Map #"+idx);
     }
     
-    double estimate = 0.0;
-    
+    BigDecimal estimate = BigDecimal.ZERO;
     try {
       System.out.println("Starting Job");
       long startTime = System.currentTimeMillis();
@@ -219,7 +279,11 @@ public class PiEstimator extends Configured implements Tool {
       LongWritable numOutside = new LongWritable();
       reader.next(numInside, numOutside);
       reader.close();
-      estimate = (numInside.get()*4.0)/(numMaps*numPoints);
+
+      estimate = BigDecimal.valueOf(4).setScale(20)
+          .multiply(BigDecimal.valueOf(numInside.get()))
+          .divide(BigDecimal.valueOf(numMaps))
+          .divide(BigDecimal.valueOf(numPoints));
     } finally {
       fileSys.delete(tmpDir, true);
     }
