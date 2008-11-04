@@ -97,7 +97,13 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
   public BatchUpdate(BatchUpdate buToCopy) {
     this(buToCopy.getRow(), buToCopy.getTimestamp());
     for(BatchOperation bo : buToCopy) {
-      this.put(bo.getColumn(), bo.getValue());
+      byte [] val = bo.getValue();
+      if (val == null) {
+        // Presume a delete is intended.
+        this.delete(bo.getColumn());
+      } else {
+        this.put(bo.getColumn(), val);
+      }
     }
   }
 

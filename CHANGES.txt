@@ -62,6 +62,7 @@ Release 0.19.0 - Unreleased
    HBASE-979   REST web app is not started automatically
    HBASE-964   Startup stuck "waiting for root region"
    HBASE-980   Undo core of HBASE-975, caching of start and end row
+   HBASE-982   Deleting a column in MapReduce fails (Doğacan Güney via Stack)
    
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
