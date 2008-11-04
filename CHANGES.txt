@@ -77,6 +77,10 @@ Trunk (unreleased changes)
     HADOOP-4346. Implement blocking connect so that Hadoop is not affected
     by selector problem with JDK default implementation. (Raghu Angadi)
 
+    HADOOP-4388. If there are invalid blocks in the transfer list, Datanode
+    should handle them and keep transferring the remaining blocks.  (Suresh
+    Srinivas via szetszwo)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

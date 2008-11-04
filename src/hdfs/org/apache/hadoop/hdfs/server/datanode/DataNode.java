@@ -858,34 +858,43 @@ public class DataNode extends Configured
     um.startUpgrade();
     return;
   }
+
+  private void transferBlock( Block block, 
+                              DatanodeInfo xferTargets[] 
+                              ) throws IOException {
+    if (!data.isValidBlock(block)) {
+      String errStr = "Can't send invalid block " + block;
+      LOG.info(errStr);
+      namenode.errorReport(dnRegistration, 
+                           DatanodeProtocol.INVALID_BLOCK, 
+                           errStr);
+      return;
+    }
+
+    int numTargets = xferTargets.length;
+    if (numTargets > 0) {
+      if (LOG.isInfoEnabled()) {
+        StringBuilder xfersBuilder = new StringBuilder();
+        for (int i = 0; i < numTargets; i++) {
+          xfersBuilder.append(xferTargets[i].getName());
+          xfersBuilder.append(" ");
+        }
+        LOG.info(dnRegistration + " Starting thread to transfer block " + 
+                 block + " to " + xfersBuilder);                       
+      }
+
+      new Daemon(new DataTransfer(xferTargets, block, this)).start();
+    }
+  }
+
   private void transferBlocks( Block blocks[], 
                                DatanodeInfo xferTargets[][] 
-                               ) throws IOException {
+                               ) {
     for (int i = 0; i < blocks.length; i++) {
-      if (!data.isValidBlock(blocks[i])) {
-        String errStr = "Can't send invalid block " + blocks[i];
-        LOG.info(errStr);
-        namenode.errorReport(dnRegistration, 
-                             DatanodeProtocol.INVALID_BLOCK, 
-                             errStr);
-        break;
-      }
-      int numTargets = xferTargets[i].length;
-      if (numTargets > 0) {
-        if (LOG.isInfoEnabled()) {
-          StringBuilder xfersBuilder = new StringBuilder();
-          for (int j = 0; j < numTargets; j++) {
-            DatanodeInfo nodeInfo = xferTargets[i][j];
-            xfersBuilder.append(nodeInfo.getName());
-            if (j < (numTargets - 1)) {
-              xfersBuilder.append(", ");
-            }
-          }
-          String xfersTo = xfersBuilder.toString();
-          LOG.info(dnRegistration + " Starting thread to transfer block " + 
-                   blocks[i] + " to " + xfersTo);                       
-        }
-        new Daemon(new DataTransfer(xferTargets[i], blocks[i], this)).start();
+      try {
+        transferBlock(blocks[i], xferTargets[i]);
+      } catch (IOException ie) {
+        LOG.warn("Failed to transfer block " + blocks[i], ie);
       }
     }
   }
