@@ -19,19 +19,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,18 +33,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.BlockFSInputStream;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.BloomFilterMapFile;
+import org.apache.hadoop.hbase.io.HalfMapFileReader;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Hash;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.onelab.filter.BloomFilter;
-import org.onelab.filter.Key;
 
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They
@@ -99,17 +87,6 @@ public class HStoreFile implements HConstants {
   static final String HSTORE_INFO_DIR = "info";
   static final String HSTORE_FILTER_DIR = "filter";
   
-  /** 
-   * For split HStoreFiles, specifies if the file covers the lower half or
-   * the upper half of the key range
-   */
-  public static enum Range {
-    /** HStoreFile contains upper half of key range */
-    top,
-    /** HStoreFile contains lower half of key range */
-    bottom
-  }
-  
   private final static Random rand = new Random();
 
   private final Path basedir;
@@ -154,8 +131,7 @@ public class HStoreFile implements HConstants {
     this.fileId = id;
     
     // If a reference, construction does not write the pointer files.  Thats
-    // done by invocations of writeReferenceFiles(hsf, fs).  Happens at fast
-    // split time.
+    // done by invocations of writeReferenceFiles(hsf, fs). Happens at split.
     this.reference = ref;
   }
 
@@ -287,11 +263,11 @@ public class HStoreFile implements HConstants {
   /**
    * @see #writeSplitInfo(FileSystem fs)
    */
-  static HStoreFile.Reference readSplitInfo(final Path p, final FileSystem fs)
+  static Reference readSplitInfo(final Path p, final FileSystem fs)
   throws IOException {
     FSDataInputStream in = fs.open(p);
     try {
-      HStoreFile.Reference r = new HStoreFile.Reference();
+      Reference r = new Reference();
       r.readFields(in);
       return r;
     } finally {
@@ -319,7 +295,8 @@ public class HStoreFile implements HConstants {
   long loadInfo(FileSystem fs) throws IOException {
     Path p = null;
     if (isReference()) {
-      p = getInfoFilePath(reference.getEncodedRegionName(), reference.getFileId());
+      p = getInfoFilePath(reference.getEncodedRegionName(),
+        this.reference.getFileId());
     } else {
       p = getInfoFilePath();
     }
@@ -405,7 +382,7 @@ public class HStoreFile implements HConstants {
       final boolean bloomFilter, final boolean blockCacheEnabled)
   throws IOException {
     if (isReference()) {
-      return new HStoreFile.HalfMapFileReader(fs,
+      return new HalfMapFileReader(fs,
           getMapFilePath(reference).toString(), conf, 
           reference.getFileRegion(), reference.getMidkey(), bloomFilter,
           blockCacheEnabled, this.hri);
@@ -452,10 +429,6 @@ public class HStoreFile implements HConstants {
   public String toString() {
     return encodedRegionName + "/" + Bytes.toString(colFamily) + "/" + fileId +
       (isReference()? "-" + reference.toString(): "");
-  }
-  
-  static boolean isTopFileRegion(final Range r) {
-    return r.equals(Range.top);
   }
 
   private static String createHStoreFilename(final long fid,
@@ -509,526 +482,5 @@ public class HStoreFile implements HConstants {
       final int encodedRegionName, final byte [] f, final String subdir) {
     return new Path(base, new Path(Integer.toString(encodedRegionName),
         new Path(Bytes.toString(f), subdir)));
-  }
-
-  /*
-   * Data structure to hold reference to a store file over in another region.
-   */
-  static class Reference implements Writable {
-    private int encodedRegionName;
-    private long fileid;
-    private Range region;
-    private HStoreKey midkey;
-    
-    Reference(final int ern, final long fid, final HStoreKey m,
-        final Range fr) {
-      this.encodedRegionName = ern;
-      this.fileid = fid;
-      this.region = fr;
-      this.midkey = m;
-    }
-    
-    Reference() {
-      this(-1, -1, null, Range.bottom);
-    }
-
-    long getFileId() {
-      return fileid;
-    }
-
-    Range getFileRegion() {
-      return region;
-    }
-    
-    HStoreKey getMidkey() {
-      return midkey;
-    }
-    
-    int getEncodedRegionName() {
-      return this.encodedRegionName;
-    }
-   
-    @Override
-    public String toString() {
-      return encodedRegionName + "/" + fileid + "/" + region;
-    }
-
-    // Make it serializable.
-
-    public void write(DataOutput out) throws IOException {
-      // Write out the encoded region name as a String.  Doing it as a String
-      // keeps a Reference's serialziation backword compatible with
-      // pre-HBASE-82 serializations.  ALternative is rewriting all
-      // info files in hbase (Serialized References are written into the
-      // 'info' file that accompanies HBase Store files).
-      out.writeUTF(Integer.toString(encodedRegionName));
-      out.writeLong(fileid);
-      // Write true if we're doing top of the file.
-      out.writeBoolean(isTopFileRegion(region));
-      midkey.write(out);
-    }
-
-    public void readFields(DataInput in) throws IOException {
-      this.encodedRegionName = Integer.parseInt(in.readUTF());
-      fileid = in.readLong();
-      boolean tmp = in.readBoolean();
-      // If true, set region to top.
-      region = tmp? Range.top: Range.bottom;
-      midkey = new HStoreKey();
-      midkey.readFields(in);
-    }
-  }
-
-  /**
-   * Hbase customizations of MapFile.
-   */
-  static class HbaseMapFile extends MapFile {
-    static final Class<? extends Writable>  VALUE_CLASS =
-      ImmutableBytesWritable.class;
-
-    /**
-     * Custom bloom filter key maker.
-     * @param key
-     * @return Key made of bytes of row only.
-     */
-    protected static Key getBloomFilterKey(WritableComparable key) {
-      return new Key(((HStoreKey) key).getRow());
-    }
-
-    /**
-     * A reader capable of reading and caching blocks of the data file.
-     */
-    static class HbaseReader extends MapFile.Reader {
-
-      private final boolean blockCacheEnabled;
-
-      /**
-       * @param fs
-       * @param dirName
-       * @param conf
-       * @param hri
-       * @throws IOException
-       */
-      public HbaseReader(FileSystem fs, String dirName, Configuration conf,
-        HRegionInfo hri)
-      throws IOException {
-        this(fs, dirName, conf, false, hri);
-      }
-      
-      /**
-       * @param fs
-       * @param dirName
-       * @param conf
-       * @param blockCacheEnabled
-       * @param hri
-       * @throws IOException
-       */
-      public HbaseReader(FileSystem fs, String dirName, Configuration conf,
-          boolean blockCacheEnabled, HRegionInfo hri)
-      throws IOException {
-        super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), 
-            conf, false); // defer opening streams
-        this.blockCacheEnabled = blockCacheEnabled;
-        open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), conf);
-        
-        // Force reading of the mapfile index by calling midKey.
-        // Reading the index will bring the index into memory over
-        // here on the client and then close the index file freeing
-        // up socket connection and resources in the datanode. 
-        // Usually, the first access on a MapFile.Reader will load the
-        // index force the issue in HStoreFile MapFiles because an
-        // access may not happen for some time; meantime we're
-        // using up datanode resources.  See HADOOP-2341.
-        midKey();
-      }
-
-      @Override
-      protected org.apache.hadoop.io.SequenceFile.Reader createDataFileReader(
-          FileSystem fs, Path dataFile, Configuration conf)
-      throws IOException {
-        if (!blockCacheEnabled) {
-          return super.createDataFileReader(fs, dataFile, conf);
-        }
-        LOG.info("Block Cache enabled");
-        final int blockSize = conf.getInt("hbase.hstore.blockCache.blockSize",
-            64 * 1024);
-        return new SequenceFile.Reader(fs, dataFile,  conf) {
-          @Override
-          protected FSDataInputStream openFile(FileSystem fs, Path file,
-              int bufferSize, long length) throws IOException {
-            
-            return new FSDataInputStream(new BlockFSInputStream(
-                    super.openFile(fs, file, bufferSize, length), length,
-                    blockSize));
-          }
-        };
-      }
-    }
-    
-    static class HbaseWriter extends MapFile.Writer {
-      /**
-       * @param conf
-       * @param fs
-       * @param dirName
-       * @param compression
-       * @param hri
-       * @throws IOException
-       */
-      public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
-          SequenceFile.CompressionType compression, final HRegionInfo hri)
-      throws IOException {
-        super(conf, fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri),
-           VALUE_CLASS, compression);
-        // Default for mapfiles is 128.  Makes random reads faster if we
-        // have more keys indexed and we're not 'next'-ing around in the
-        // mapfile.
-        setIndexInterval(conf.getInt("hbase.io.index.interval", 128));
-      }
-    }
-  }
-  
-  /**
-   * On write, all keys are added to a bloom filter.  On read, all keys are
-   * tested first against bloom filter. Keys are HStoreKey.  If passed bloom
-   * filter is null, just passes invocation to parent.
-   */
-  static class BloomFilterMapFile extends HbaseMapFile {
-    protected static final String BLOOMFILTER_FILE_NAME = "filter";
-
-    static class Reader extends HbaseReader {
-      private final BloomFilter bloomFilter;
-
-      /**
-       * @param fs
-       * @param dirName
-       * @param conf
-       * @param filter
-       * @param blockCacheEnabled
-       * @param hri
-       * @throws IOException
-       */
-      public Reader(FileSystem fs, String dirName, Configuration conf,
-          final boolean filter, final boolean blockCacheEnabled, 
-          HRegionInfo hri)
-      throws IOException {
-        super(fs, dirName, conf, blockCacheEnabled, hri);
-        if (filter) {
-          this.bloomFilter = loadBloomFilter(fs, dirName);
-        } else {
-          this.bloomFilter = null;
-        }
-      }
-
-      private BloomFilter loadBloomFilter(FileSystem fs, String dirName)
-      throws IOException {
-        Path filterFile = new Path(dirName, BLOOMFILTER_FILE_NAME);
-        if(!fs.exists(filterFile)) {
-          throw new FileNotFoundException("Could not find bloom filter: " +
-              filterFile);
-        }
-        BloomFilter filter = new BloomFilter();
-        FSDataInputStream in = fs.open(filterFile);
-        try {
-          filter.readFields(in);
-        } finally {
-          in.close();
-        }
-        return filter;
-      }
-      
-      @Override
-      public Writable get(WritableComparable key, Writable val)
-      throws IOException {
-        if (bloomFilter == null) {
-          return super.get(key, val);
-        }
-        if(bloomFilter.membershipTest(getBloomFilterKey(key))) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("bloom filter reported that key exists");
-          }
-          return super.get(key, val);
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("bloom filter reported that key does not exist");
-        }
-        return null;
-      }
-
-      @Override
-      public WritableComparable getClosest(WritableComparable key,
-          Writable val) throws IOException {
-        if (bloomFilter == null) {
-          return super.getClosest(key, val);
-        }
-        // Note - the key being passed to us is always a HStoreKey
-        if(bloomFilter.membershipTest(getBloomFilterKey(key))) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("bloom filter reported that key exists");
-          }
-          return super.getClosest(key, val);
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("bloom filter reported that key does not exist");
-        }
-        return null;
-      }
-      
-      /* @return size of the bloom filter */
-      int getBloomFilterSize() {
-        return bloomFilter == null ? 0 : bloomFilter.getVectorSize();
-      }
-    }
-    
-    static class Writer extends HbaseWriter {
-      private static final double DEFAULT_NUMBER_OF_HASH_FUNCTIONS = 4.0;
-      private final BloomFilter bloomFilter;
-      private final String dirName;
-      private final FileSystem fs;
-      
-      /**
-       * @param conf
-       * @param fs
-       * @param dirName
-       * @param compression
-       * @param filter
-       * @param nrows
-       * @param hri
-       * @throws IOException
-       */
-      @SuppressWarnings("unchecked")
-      public Writer(Configuration conf, FileSystem fs, String dirName,
-        SequenceFile.CompressionType compression, final boolean filter,
-        int nrows, final HRegionInfo hri)
-      throws IOException {
-        super(conf, fs, dirName, compression, hri);
-        this.dirName = dirName;
-        this.fs = fs;
-        if (filter) {
-          /* 
-           * There is no way to automatically determine the vector size and the
-           * number of hash functions to use. In particular, bloom filters are
-           * very sensitive to the number of elements inserted into them. For
-           * HBase, the number of entries depends on the size of the data stored
-           * in the column. Currently the default region size is 256MB, so the
-           * number of entries is approximately 
-           * 256MB / (average value size for column).
-           * 
-           * If m denotes the number of bits in the Bloom filter (vectorSize),
-           * n denotes the number of elements inserted into the Bloom filter and
-           * k represents the number of hash functions used (nbHash), then
-           * according to Broder and Mitzenmacher,
-           * 
-           * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey.pdf )
-           * 
-           * the probability of false positives is minimized when k is
-           * approximately m/n ln(2).
-           * 
-           * If we fix the number of hash functions and know the number of
-           * entries, then the optimal vector size m = (k * n) / ln(2)
-           */
-          this.bloomFilter = new BloomFilter(
-              (int) Math.ceil(
-                  (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
-                  Math.log(2.0)),
-              (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
-              Hash.getHashType(conf)
-          );
-        } else {
-          this.bloomFilter = null;
-        }
-      }
-
-      @Override
-      public void append(WritableComparable key, Writable val)
-      throws IOException {
-        if (bloomFilter != null) {
-          bloomFilter.add(getBloomFilterKey(key));
-        }
-        super.append(key, val);
-      }
-
-      @Override
-      public synchronized void close() throws IOException {
-        super.close();
-        if (this.bloomFilter != null) {
-          flushBloomFilter();
-        }
-      }
-      
-      /**
-       * Flushes bloom filter to disk
-       * 
-       * @throws IOException
-       */
-      private void flushBloomFilter() throws IOException {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("flushing bloom filter for " + this.dirName);
-        }
-        FSDataOutputStream out =
-          fs.create(new Path(dirName, BLOOMFILTER_FILE_NAME));
-        try {
-          bloomFilter.write(out);
-        } finally {
-          out.close();
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("flushed bloom filter for " + this.dirName);
-        }
-      }
-    }
-  }
-  
-  /**
-   * A facade for a {@link MapFile.Reader} that serves up either the top or
-   * bottom half of a MapFile (where 'bottom' is the first half of the file
-   * containing the keys that sort lowest and 'top' is the second half of the
-   * file with keys that sort greater than those of the bottom half).
-   * Subclasses BloomFilterMapFile.Reader in case 
-   * 
-   * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
-   */
-  static class HalfMapFileReader extends BloomFilterMapFile.Reader {
-    private final boolean top;
-    private final WritableComparable midkey;
-    private boolean firstNextCall = true;
-    
-    HalfMapFileReader(final FileSystem fs, final String dirName, 
-        final Configuration conf, final Range r,
-        final WritableComparable midKey,
-        final HRegionInfo hri)
-    throws IOException {
-      this(fs, dirName, conf, r, midKey, false, false, hri);
-    }
-    
-    HalfMapFileReader(final FileSystem fs, final String dirName, 
-        final Configuration conf, final Range r,
-        final WritableComparable midKey, final boolean filter,
-        final boolean blockCacheEnabled,
-        final HRegionInfo hri)
-    throws IOException {
-      super(fs, dirName, conf, filter, blockCacheEnabled, hri);
-      top = isTopFileRegion(r);
-      midkey = midKey;
-    }
-    
-    @SuppressWarnings("unchecked")
-    private void checkKey(final WritableComparable key)
-    throws IOException {
-      if (top) {
-        if (key.compareTo(midkey) < 0) {
-          throw new IOException("Illegal Access: Key is less than midKey of " +
-          "backing mapfile");
-        }
-      } else if (key.compareTo(midkey) >= 0) {
-        throw new IOException("Illegal Access: Key is greater than or equal " +
-        "to midKey of backing mapfile");
-      }
-    }
-
-    @Override
-    public synchronized void finalKey(WritableComparable key)
-    throws IOException {
-      if (top) {
-        super.finalKey(key); 
-      } else {
-        reset();
-        Writable value = new ImmutableBytesWritable();
-        WritableComparable k = super.getClosest(midkey, value, true);
-        ByteArrayOutputStream byteout = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(byteout);
-        k.write(out);
-        ByteArrayInputStream bytein =
-          new ByteArrayInputStream(byteout.toByteArray());
-        DataInputStream in = new DataInputStream(bytein);
-        key.readFields(in);
-      }
-    }
-
-    @Override
-    public synchronized Writable get(WritableComparable key, Writable val)
-        throws IOException {
-      checkKey(key);
-      return super.get(key, val);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public synchronized WritableComparable getClosest(WritableComparable key,
-      Writable val)
-    throws IOException {
-      WritableComparable closest = null;
-      if (top) {
-        // If top, the lowest possible key is midkey.  Do not have to check
-        // what comes back from super getClosest.  Will return exact match or
-        // greater.
-        closest = (key.compareTo(this.midkey) < 0)?
-          this.midkey: super.getClosest(key, val);
-      } else {
-        // We're serving bottom of the file.
-        if (key.compareTo(this.midkey) < 0) {
-          // Check key is within range for bottom.
-          closest = super.getClosest(key, val);
-          // midkey was made against largest store file at time of split. Smaller
-          // store files could have anything in them.  Check return value is
-          // not beyond the midkey (getClosest returns exact match or next
-          // after).
-          if (closest != null && closest.compareTo(this.midkey) >= 0) {
-            // Don't let this value out.
-            closest = null;
-          }
-        }
-        // Else, key is > midkey so let out closest = null.
-      }
-      return closest;
-    }
-
-    @SuppressWarnings("unused")
-    @Override
-    public synchronized WritableComparable midKey() throws IOException {
-      // Returns null to indicate file is not splitable.
-      return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public synchronized boolean next(WritableComparable key, Writable val)
-    throws IOException {
-      if (firstNextCall) {
-        firstNextCall = false;
-        if (this.top) {
-          // Seek to midkey.  Midkey may not exist in this file.  That should be
-          // fine.  Then we'll either be positioned at end or start of file.
-          WritableComparable nearest = getClosest(midkey, val);
-          // Now copy the mid key into the passed key.
-          if (nearest != null) {
-            Writables.copyWritable(nearest, key);
-            return true;
-          }
-          return false;
-        }
-      }
-      boolean result = super.next(key, val);
-      if (!top && key.compareTo(midkey) >= 0) {
-        result = false;
-      }
-      return result;
-    }
-
-    @Override
-    public synchronized void reset() throws IOException {
-      if (top) {
-        firstNextCall = true;
-        seek(midkey);
-        return;
-      }
-      super.reset();
-    }
-
-    @Override
-    public synchronized boolean seek(WritableComparable key)
-    throws IOException {
-      checkKey(key);
-      return super.seek(key);
-    }
   }
 }

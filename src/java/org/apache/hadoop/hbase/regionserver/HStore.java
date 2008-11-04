@@ -49,13 +49,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.BloomFilterMapFile;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.HBaseMapFile;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -191,9 +193,11 @@ public class HStore implements HConstants {
     }
     this.desiredMaxFileSize = maxFileSize;
 
-    this.majorCompactionTime = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 86400000);
+    this.majorCompactionTime =
+      conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 86400000);
     if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
-      String strCompactionTime = family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
+      String strCompactionTime =
+        family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
       this.majorCompactionTime = (new Long(strCompactionTime)).longValue();
     }
 
@@ -209,16 +213,10 @@ public class HStore implements HConstants {
       this.compression = SequenceFile.CompressionType.NONE;
     }
     
-    Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(),
-        family.getName());
-    if (!fs.exists(mapdir)) {
-      fs.mkdirs(mapdir);
-    }
-    Path infodir = HStoreFile.getInfoDir(basedir, info.getEncodedName(),
-        family.getName());
-    if (!fs.exists(infodir)) {
-      fs.mkdirs(infodir);
-    }
+    Path mapdir = checkdir(HStoreFile.getMapDir(basedir, info.getEncodedName(),
+        family.getName()));
+    Path infodir = checkdir(HStoreFile.getInfoDir(basedir, info.getEncodedName(),
+        family.getName()));
     
     // Go through the 'mapdir' and 'infodir' together, make sure that all 
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
@@ -232,27 +230,19 @@ public class HStore implements HConstants {
         Bytes.toString(this.storeName) + ", max sequence id " + this.maxSeqId);
     }
     
-    try {
-      doReconstructionLog(reconstructionLog, maxSeqId, reporter);
-    } catch (EOFException e) {
-      // Presume we got here because of lack of HADOOP-1700; for now keep going
-      // but this is probably not what we want long term.  If we got here there
-      // has been data-loss
-      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + this.storeName +
-        " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
-    } catch (IOException e) {
-      // Presume we got here because of some HDFS issue. Don't just keep going.
-      // Fail to open the HStore.  Probably means we'll fail over and over
-      // again until human intervention but alternative has us skipping logs
-      // and losing edits: HBASE-642.
-      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + this.storeName, e);
-      throw e;
-    }
-
-    // Finally, start up all the map readers! (There could be more than one
-    // since we haven't compacted yet.)
+    // Do reconstruction log.
+    runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
+    
+    // Finally, start up all the map readers!
+    setupReaders();
+  }
+  
+  /*
+   * Setup the mapfile readers for this store. There could be more than one
+   * since we haven't compacted yet.
+   * @throws IOException
+   */
+  private void setupReaders() throws IOException {
     boolean first = true;
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
       MapFile.Reader r = null;
@@ -270,6 +260,18 @@ public class HStore implements HConstants {
     }
   }
 
+  /*
+   * @param dir If doesn't exist, create it.
+   * @return Passed <code>dir</code>.
+   * @throws IOException
+   */
+  private Path checkdir(final Path dir) throws IOException {
+    if (!fs.exists(dir)) {
+      fs.mkdirs(dir);
+    }
+    return dir;
+  }
+
   HColumnDescriptor getFamily() {
     return this.family;
   }
@@ -278,6 +280,36 @@ public class HStore implements HConstants {
     return this.maxSeqId;
   }
   
+  /*
+   * Run reconstuction log
+   * @param reconstructionLog
+   * @param msid
+   * @param reporter
+   * @throws IOException
+   */
+  private void runReconstructionLog(final Path reconstructionLog,
+    final long msid, final Progressable reporter)
+  throws IOException {
+    try {
+      doReconstructionLog(reconstructionLog, msid, reporter);
+    } catch (EOFException e) {
+      // Presume we got here because of lack of HADOOP-1700; for now keep going
+      // but this is probably not what we want long term.  If we got here there
+      // has been data-loss
+      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
+        " opening " + this.storeName +
+        " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
+    } catch (IOException e) {
+      // Presume we got here because of some HDFS issue. Don't just keep going.
+      // Fail to open the HStore.  Probably means we'll fail over and over
+      // again until human intervention but alternative has us skipping logs
+      // and losing edits: HBASE-642.
+      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
+        " opening " + this.storeName, e);
+      throw e;
+    }
+  }
+
   /*
    * Read the reconstructionLog to see whether we need to build a brand-new 
    * MapFile out of non-flushed log entries.  
@@ -396,7 +428,7 @@ public class HStore implements HConstants {
       long fid = Long.parseLong(m.group(1));
       
       HStoreFile curfile = null;
-      HStoreFile.Reference reference = null;
+      Reference reference = null;
       if (isReference) {
         reference = HStoreFile.readSplitInfo(p, fs);
       }
@@ -437,7 +469,7 @@ public class HStore implements HConstants {
           // TODO: This is going to fail if we are to rebuild a file from
           // meta because it won't have right comparator: HBASE-848.
           long count = MapFile.fix(this.fs, mapfile, HStoreKey.class,
-            HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
+            HBaseMapFile.VALUE_CLASS, false, this.conf);
           if (LOG.isDebugEnabled()) {
             LOG.debug("Fixed index on " + mapfile.toString() + "; had " +
               count + " entries");
@@ -448,21 +480,33 @@ public class HStore implements HConstants {
           continue;
         }
       }
-      storeSize += curfile.length();
+      long length = curfile.length();
+      storeSize += length;
       
       // TODO: Confirm referent exists.
       
       // Found map and sympathetic info file.  Add this hstorefile to result.
       if (LOG.isDebugEnabled()) {
         LOG.debug("loaded " + FSUtils.getPath(p) + ", isReference=" +
-          isReference + ", sequence id=" + storeSeqId);
+          isReference + ", sequence id=" + storeSeqId + ", length=" + length);
       }
       results.put(Long.valueOf(storeSeqId), curfile);
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
       // section.  Make sure path is fully qualified for compare.
       mapfiles.add(this.fs.makeQualified(mapfile));
     }
-    
+    cleanDataFiles(mapfiles, mapdir);
+    return results;
+  }
+  
+  /*
+   * If no info file delete the sympathetic data file.
+   * @param mapfiles List of mapfiles.
+   * @param mapdir Directory to check.
+   * @throws IOException
+   */
+  private void cleanDataFiles(final List<Path> mapfiles, final Path mapdir)
+  throws IOException {
     // List paths by experience returns fully qualified names -- at least when
     // running on a mini hdfs cluster.
     FileStatus [] datfiles = fs.listStatus(mapdir);
@@ -474,7 +518,6 @@ public class HStore implements HConstants {
         fs.delete(p, true);
       }
     }
-    return results;
   }
 
   /* 
@@ -732,19 +775,20 @@ public class HStore implements HConstants {
    * @param dir
    * @throws IOException
    */
-  private static long getLowestTimestamp(FileSystem fs, Path dir) throws IOException {
-   FileStatus[] stats = fs.listStatus(dir);
-   if (stats == null || stats.length == 0) {
-     return 0l;
-   }
-   long lowTimestamp = Long.MAX_VALUE;   
-   for (int i = 0; i < stats.length; i++) {
-     long timestamp = stats[i].getModificationTime();
-     if (timestamp < lowTimestamp){
-       lowTimestamp = timestamp;
-     }
-   }
-  return lowTimestamp;
+  private static long getLowestTimestamp(FileSystem fs, Path dir)
+  throws IOException {
+    FileStatus[] stats = fs.listStatus(dir);
+    if (stats == null || stats.length == 0) {
+      return 0l;
+    }
+    long lowTimestamp = Long.MAX_VALUE;   
+    for (int i = 0; i < stats.length; i++) {
+      long timestamp = stats[i].getModificationTime();
+      if (timestamp < lowTimestamp){
+        lowTimestamp = timestamp;
+      }
+    }
+    return lowTimestamp;
   }
 
   /**
@@ -768,12 +812,11 @@ public class HStore implements HConstants {
    * @return mid key if a split is needed, null otherwise
    * @throws IOException
    */
-  StoreSize compact(boolean majorCompaction) throws IOException {
+  StoreSize compact(final boolean majorCompaction) throws IOException {
     boolean forceSplit = this.info.shouldSplit(false);
     boolean doMajorCompaction = majorCompaction;
     synchronized (compactLock) {
       long maxId = -1;
-      int nrows = -1;
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         if (this.storefiles.size() <= 0) {
@@ -791,18 +834,7 @@ public class HStore implements HConstants {
       // compacting below. Only check if doMajorCompaction is not true.
       long lastMajorCompaction = 0L;
       if (!doMajorCompaction) {
-        Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(), family.getName());
-        long lowTimestamp = getLowestTimestamp(fs, mapdir);
-        lastMajorCompaction = System.currentTimeMillis() - lowTimestamp;
-        if (lowTimestamp < (System.currentTimeMillis() - majorCompactionTime) &&
-            lowTimestamp > 0l) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Major compaction triggered on store: " + this.storeNameStr +
-              ". Time since last major compaction: " +
-              ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
-          }
-          doMajorCompaction = true;
-        }
+        doMajorCompaction = isMajorCompaction();
       }
       if (!doMajorCompaction && !hasReferences(filesToCompact) &&
           filesToCompact.size() < compactionThreshold) {
@@ -813,7 +845,7 @@ public class HStore implements HConstants {
         return checkSplit(forceSplit);
       }
 
-      // HBASE-745, preparing all store file size for incremental compacting
+      // HBASE-745, preparing all store file sizes for incremental compacting
       // selection.
       int countOfFiles = filesToCompact.size();
       long totalSize = 0;
@@ -866,25 +898,7 @@ public class HStore implements HConstants {
        * based access pattern is practically designed to ruin the cache.
        */
       List<MapFile.Reader> rdrs = new ArrayList<MapFile.Reader>();
-      for (HStoreFile file: filesToCompact) {
-        try {
-          HStoreFile.BloomFilterMapFile.Reader reader =
-            file.getReader(fs, false, false);
-          rdrs.add(reader);
-          
-          // Compute the size of the new bloomfilter if needed
-          if (this.family.isBloomfilter()) {
-            nrows += reader.getBloomFilterSize();
-          }
-        } catch (IOException e) {
-          // Add info about which file threw exception. It may not be in the
-          // exception message so output a message here where we know the
-          // culprit.
-          LOG.warn("Failed with " + e.toString() + ": " + file.toString());
-          closeCompactionReaders(rdrs);
-          throw e;
-        }
-      }
+      int nrows = createReaders(rdrs, filesToCompact);
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
@@ -915,8 +929,74 @@ public class HStore implements HConstants {
       }
     }
     return checkSplit(forceSplit);
-  }
+  }  
 
+  /*
+   * @return True if we should run a major compaction.
+   */
+  private boolean isMajorCompaction() throws IOException {
+    boolean result = false;
+    Path mapdir = HStoreFile.getMapDir(this.basedir, this.info.getEncodedName(),
+        this.family.getName());
+    long lowTimestamp = getLowestTimestamp(fs, mapdir);
+    if (lowTimestamp < (System.currentTimeMillis() - this.majorCompactionTime) &&
+        lowTimestamp > 0l) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Major compaction triggered on store: " +
+          this.storeNameStr + ". Time since last major compaction: " +
+          ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+      }
+      result = true;
+    }
+    return result;
+  }
+  
+  /*
+   * Create readers for the passed in list of HStoreFiles and add them to
+   * <code>readers</code> list.
+   * @param readers Add Readers here.
+   * @param files List of HSFs to make Readers for.
+   * @return Count of rows for bloom filter sizing.  Returns -1 if no bloom
+   * filter wanted.
+   */
+  private int createReaders(final List<MapFile.Reader> rs,
+    final List<HStoreFile> files)
+  throws IOException {
+    /* We create a new list of MapFile.Reader objects so we don't screw up
+     * the caching associated with the currently-loaded ones. Our iteration-
+     * based access pattern is practically designed to ruin the cache.
+     */
+    int nrows = -1;
+    for (HStoreFile file: files) {
+      try {
+        // TODO: Readers are opened without block-cache enabled.  Means we don't
+        // get the prefetch that makes the read faster.  But we don't want to
+        // enable block-cache for these readers that are about to be closed.
+        // The compaction of soon-to-be closed readers will probably force out
+        // blocks that may be needed servicing real-time requests whereas
+        // compaction runs in background.  TODO: We know we're going to read
+        // this file straight through.  Leverage this fact.  Use a big buffer
+        // client side to speed things up or read it all up into memory one file
+        // at a time or pull local and memory-map the file but leave the writer
+        // up in hdfs?
+        BloomFilterMapFile.Reader reader = file.getReader(fs, false, false);
+        rs.add(reader);
+        // Compute the size of the new bloomfilter if needed
+        if (this.family.isBloomfilter()) {
+          nrows += reader.getBloomFilterSize();
+        }
+      } catch (IOException e) {
+        // Add info about which file threw exception. It may not be in the
+        // exception message so output a message here where we know the
+        // culprit.
+        LOG.warn("Failed with " + e.toString() + ": " + file.toString());
+        closeCompactionReaders(rs);
+        throw e;
+      }
+    }
+    return nrows;
+  }
+  
   /*
    * Compact a list of MapFile.Readers into MapFile.Writer.
    * 
@@ -1166,7 +1246,6 @@ public class HStore implements HConstants {
         // time
         getFullFromMapFile(map, key, columns, deletes, results);
       }
-      
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1203,7 +1282,7 @@ public class HStore implements HConstants {
             // recent delete timestamp, record it for later
             if (!deletes.containsKey(readcol) 
               || deletes.get(readcol).longValue() < readkey.getTimestamp()) {
-              deletes.put(readcol, readkey.getTimestamp());              
+              deletes.put(readcol, Long.valueOf(readkey.getTimestamp()));              
             }
           } else if (!(deletes.containsKey(readcol) 
             && deletes.get(readcol).longValue() >= readkey.getTimestamp()) ) {
@@ -1377,7 +1456,8 @@ public class HStore implements HConstants {
    * @return Matching keys.
    * @throws IOException
    */
-  public List<HStoreKey> getKeys(final HStoreKey origin, final int versions, final long now)
+  public List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
+    final long now)
   throws IOException {
     // This code below is very close to the body of the get method.  Any 
     // changes in the flow below should also probably be done in get.  TODO:
@@ -1788,6 +1868,9 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   private HStoreKey getFinalKey(final MapFile.Reader mf) throws IOException {
+    if (mf instanceof HBaseMapFile.HBaseReader) {
+      return ((HBaseMapFile.HBaseReader)mf).getFinalKey();
+    }
     HStoreKey finalKey = new HStoreKey(); 
     mf.finalKey(finalKey);
     finalKey.setHRegionInfo(this.info);
@@ -1839,10 +1922,10 @@ public class HStore implements HConstants {
   
   /**
    * Determines if HStore can be split
-   * 
+   * @param force Whether to force a split or not.
    * @return a StoreSize if store can be split, null otherwise
    */
-  StoreSize checkSplit(boolean force) {
+  StoreSize checkSplit(final boolean force) {
     if (this.storefiles.size() <= 0) {
       return null;
     }
@@ -1859,39 +1942,35 @@ public class HStore implements HConstants {
       synchronized (storefiles) {
         for (Map.Entry<Long, HStoreFile> e: storefiles.entrySet()) {
           HStoreFile curHSF = e.getValue();
+          if (splitable) {
+            splitable = !curHSF.isReference();
+            if (!splitable) {
+              // RETURN IN MIDDLE OF FUNCTION!!! If not splitable, just return.
+              return null;
+            }
+          }
           long size = curHSF.length();
           if (size > maxSize) {
             // This is the largest one so far
             maxSize = size;
             mapIndex = e.getKey();
           }
-          if (splitable) {
-            splitable = !curHSF.isReference();
-          }
         }
       }
-      if (!splitable) {
-        return null;
-      }
-      MapFile.Reader r = this.readers.get(mapIndex);
 
-      // seek back to the beginning of mapfile
-      r.reset();
-
-      // get the first and last keys
-      HStoreKey firstKey = new HStoreKey();
-      HStoreKey lastKey = new HStoreKey();
-      Writable value = new ImmutableBytesWritable();
-      r.next(firstKey, value);
-      r.finalKey(lastKey);
+      // Cast to HbaseReader.
+      HBaseMapFile.HBaseReader r =
+        (HBaseMapFile.HBaseReader)this.readers.get(mapIndex);
 
       // get the midkey
       HStoreKey mk = (HStoreKey)r.midKey();
       if (mk != null) {
         // if the midkey is the same as the first and last keys, then we cannot
         // (ever) split this region. 
-        if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(), firstKey.getRow()) && 
-            HStoreKey.equalsTwoRowKeys(info, mk.getRow(), lastKey.getRow())) {
+        if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(),
+              r.getFirstKey().getRow()) && 
+            HStoreKey.equalsTwoRowKeys(info, mk.getRow(),
+              r.getFinalKey().getRow())) {
           return null;
         }
         return new StoreSize(maxSize, mk.getRow());
@@ -1967,6 +2046,9 @@ public class HStore implements HConstants {
     return this.storefiles.size();
   }
   
+  /*
+   * Datastructure that holds size and key.
+   */
   class StoreSize {
     private final long size;
     private final byte[] key;

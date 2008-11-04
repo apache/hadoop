@@ -103,7 +103,7 @@ public class TestSplit extends HBaseClusterTestCase {
       Thread splitThread = new Thread() {
         public void run() {
           try {
-            HRegion [] regions = split(regionForThread, midkey);
+            split(regionForThread, midkey);
           } catch (IOException e) {
             fail("Unexpected exception " + e);
           } 

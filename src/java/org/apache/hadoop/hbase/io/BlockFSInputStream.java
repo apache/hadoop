@@ -59,7 +59,6 @@ public class BlockFSInputStream extends FSInputStream {
    * @param fileLength
    * @param blockSize the size of each block in bytes.
    */
-  @SuppressWarnings({"unchecked",  "serial"})
   public BlockFSInputStream(InputStream in, long fileLength, int blockSize) {
     this.in = in;
     if (!(in instanceof Seekable) || !(in instanceof PositionedReadable)) {
@@ -157,12 +156,12 @@ public class BlockFSInputStream extends FSInputStream {
     long blockLength = targetBlockEnd - targetBlockStart + 1;
     long offsetIntoBlock = target - targetBlockStart;
 
-    byte[] block = blocks.get(targetBlockStart);
+    byte[] block = blocks.get(Long.valueOf(targetBlockStart));
     if (block == null) {
       block = new byte[blockSize];
       ((PositionedReadable) in).readFully(targetBlockStart, block, 0,
           (int) blockLength);
-      blocks.put(targetBlockStart, block);
+      blocks.put(Long.valueOf(targetBlockStart), block);
     }
     
     this.pos = target;

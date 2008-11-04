@@ -29,7 +29,10 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.HBaseMapFile;
+import org.apache.hadoop.hbase.io.HalfMapFileReader;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
@@ -114,6 +117,25 @@ public class TestHStoreFile extends HBaseTestCase {
     }
   }
   
+  public void testContains() throws Exception {
+    HStoreFile hsf = new HStoreFile(this.conf, this.fs, this.dir,
+      HRegionInfo.FIRST_META_REGIONINFO,
+      Bytes.toBytes("colfamily"), 1234567890L, null);
+    MapFile.Writer writer =
+      hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, false, 0);
+    writeStoreFile(writer);
+    MapFile.Reader r = hsf.getReader(this.fs, false, false);
+    HBaseMapFile.HBaseReader reader =
+      (HBaseMapFile.HBaseReader)r;
+    // Store file should contain 'aa' and 'bb' but not 'AA' nor 'ZZ'.
+    assertTrue(reader.containsKey(new HStoreKey("aa", "bb")));
+    assertTrue(reader.containsKey(new HStoreKey("bb")));
+    assertTrue(reader.containsKey(new HStoreKey("zz")));
+    assertFalse(reader.containsKey(new HStoreKey("AA")));
+    assertFalse(reader.containsKey(new HStoreKey("{{")));
+    assertFalse(reader.containsKey(new HStoreKey()));
+  }
+  
   /**
    * Test that our mechanism of writing store files in one region to reference
    * store files in other regions works.
@@ -137,9 +159,9 @@ public class TestHStoreFile extends HBaseTestCase {
     reader.finalKey(hsk);
     byte [] finalKey = hsk.getRow();
     // Make a reference for the bottom half of the just written file.
-    HStoreFile.Reference reference =
-      new HStoreFile.Reference(hsf.getEncodedRegionName(), hsf.getFileId(),
-          midkey, HStoreFile.Range.top);
+    Reference reference =
+      new Reference(hsf.getEncodedRegionName(), hsf.getFileId(),
+          midkey, Reference.Range.top);
     HStoreFile refHsf = new HStoreFile(this.conf, this.fs, 
         new Path(DIR, getName()),
         HRegionInfo.FIRST_META_REGIONINFO,
@@ -149,7 +171,7 @@ public class TestHStoreFile extends HBaseTestCase {
     refHsf.writeReferenceFiles(this.fs);
     assertTrue(this.fs.exists(refHsf.getMapFilePath()));
     assertTrue(this.fs.exists(refHsf.getInfoFilePath()));
-    HStoreFile.Reference otherReference =
+    Reference otherReference =
       HStoreFile.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
     assertEquals(reference.getEncodedRegionName(),
         otherReference.getEncodedRegionName());
@@ -170,6 +192,13 @@ public class TestHStoreFile extends HBaseTestCase {
       }
     }
     assertTrue(Bytes.equals(key.getRow(), finalKey));
+    // Assert contains works properly.
+    HBaseMapFile.HBaseReader hbaseMapfileHalfReader =
+      (HBaseMapFile.HBaseReader)halfReader;
+    assertTrue(hbaseMapfileHalfReader.containsKey(midkey));
+    assertTrue(hbaseMapfileHalfReader.containsKey(new HStoreKey(finalKey)));
+    assertFalse(hbaseMapfileHalfReader.containsKey(new HStoreKey("aa")));
+    assertFalse(hbaseMapfileHalfReader.containsKey(new HStoreKey("{{")));
   }
 
   /**
@@ -223,8 +252,8 @@ public class TestHStoreFile extends HBaseTestCase {
       // Now make two HalfMapFiles and assert they can read the full backing
       // file, one from the top and the other from the bottom.
       // Test bottom half first.
-      bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey, null);
+      bottom = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.bottom, midkey, null);
       boolean first = true;
       while (bottom.next(key, value)) {
         previous = key.toString();
@@ -238,34 +267,29 @@ public class TestHStoreFile extends HBaseTestCase {
         LOG.info("Last in bottom: " + previous.toString());
       }
       // Now test reading from the top.
-      top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, midkey, null);
+      top = new HalfMapFileReader(this.fs, p.toString(), this.conf,
+          Reference.Range.top, midkey, null);
       first = true;
       while (top.next(key, value)) {
         assertTrue(key.compareTo((HStoreKey)midkey) >= 0);
         if (first) {
           first = false;
-          assertTrue(Bytes.equals(((HStoreKey)midkey).getRow(),
-            key.getRow()));
           LOG.info("First in top: " + key.toString());
         }
       }
       LOG.info("Last in top: " + key.toString());
-      top.getClosest(midkey, value);
-      // Assert value is same as key.
-      assertTrue(Bytes.equals(value.get(), ((HStoreKey)midkey).getRow()));
 
       // Next test using a midkey that does not exist in the file.
       // First, do a key that is < than first key. Ensure splits behave
       // properly.
       WritableComparable badkey = new HStoreKey("   ");
-      bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, badkey, null);
+      bottom = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.bottom, badkey, null);
       // When badkey is < than the bottom, should return no values.
       assertFalse(bottom.next(key, value));
       // Now read from the top.
-      top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, badkey, null);
+      top = new HalfMapFileReader(this.fs, p.toString(), this.conf,
+          Reference.Range.top, badkey, null);
       first = true;
       while (top.next(key, value)) {
         assertTrue(key.compareTo((HStoreKey)badkey) >= 0);
@@ -286,8 +310,8 @@ public class TestHStoreFile extends HBaseTestCase {
 
       // Test when badkey is > than last key in file ('||' > 'zz').
       badkey = new HStoreKey("|||");
-      bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, badkey, null);
+      bottom = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.bottom, badkey, null);
       first = true;
       while (bottom.next(key, value)) {
         if (first) {
@@ -305,8 +329,8 @@ public class TestHStoreFile extends HBaseTestCase {
         assertTrue(tmp.charAt(i) == 'z');
       }
       // Now look at top. Should not return any values.
-      top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(), this.conf,
-          HStoreFile.Range.top, badkey, null);
+      top = new HalfMapFileReader(this.fs, p.toString(), this.conf,
+          Reference.Range.top, badkey, null);
       assertFalse(top.next(key, value));
       
     } finally {
@@ -338,13 +362,13 @@ public class TestHStoreFile extends HBaseTestCase {
         // First, do a key that is < than first key.  Ensure splits behave
         // properly.
         HStoreKey midkey = new HStoreKey("   ");
-        bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey, null);
+        bottom = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.bottom, midkey, null);
         // When midkey is < than the bottom, should return no values.
         assertFalse(bottom.next(key, value));
         // Now read from the top.
-        top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.top, midkey, null);
+        top = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.top, midkey, null);
         boolean first = true;
         while (top.next(key, value)) {
           assertTrue(key.compareTo(midkey) >= 0);
@@ -359,8 +383,8 @@ public class TestHStoreFile extends HBaseTestCase {
         
         // Test when midkey is > than last key in file ('||' > 'zz').
         midkey = new HStoreKey("|||");
-        bottom = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.bottom, midkey, null);
+        bottom = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.bottom, midkey, null);
         first = true;
         while (bottom.next(key, value)) {
           if (first) {
@@ -372,8 +396,8 @@ public class TestHStoreFile extends HBaseTestCase {
         LOG.info("Last bottom when key > top: " + key.toString());
         assertEquals("zz", Bytes.toString(key.getRow()));
         // Now look at top.  Should not return any values.
-        top = new HStoreFile.HalfMapFileReader(this.fs, p.toString(),
-          this.conf, HStoreFile.Range.top, midkey, null);
+        top = new HalfMapFileReader(this.fs, p.toString(),
+          this.conf, Reference.Range.top, midkey, null);
         assertFalse(top.next(key, value));
       } finally {
         if (top != null) {

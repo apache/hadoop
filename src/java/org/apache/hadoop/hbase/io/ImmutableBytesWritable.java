@@ -79,7 +79,7 @@ public class ImmutableBytesWritable implements WritableComparable {
    * Get the data from the BytesWritable.
    * @return The data is only valid between 0 and getSize() - 1.
    */
-  public byte[] get() {
+  public byte [] get() {
     if (this.bytes == null) {
       throw new IllegalStateException("Uninitialiized. Null constructor " +
         "called w/o accompaying readFields invocation");

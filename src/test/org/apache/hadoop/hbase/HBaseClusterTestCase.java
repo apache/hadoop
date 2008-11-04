@@ -21,24 +21,22 @@ package org.apache.hadoop.hbase;
 
 import java.io.PrintWriter;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
  * cluster in setup and tears it down again in tearDown.
  */
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
-  private static final Log LOG =
-    LogFactory.getLog(HBaseClusterTestCase.class.getName());
-  
+  private static final Log LOG = LogFactory.getLog(HBaseClusterTestCase.class);
   protected MiniHBaseCluster cluster;
   protected MiniDFSCluster dfsCluster;
   protected int regionServers;
@@ -85,7 +83,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   /**
    * Actually start the MiniHBase instance.
    */
-  @SuppressWarnings("unused")
   protected void hBaseClusterSetup() throws Exception {
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
@@ -93,7 +90,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // We need to sleep because we cannot open a HTable when the cluster
     // is not ready
     Thread.sleep(5000);
-    HTable meta = new HTable(conf, ".META.");
+    new HTable(conf, HConstants.META_TABLE_NAME);
   }
   
   /**
@@ -112,12 +109,12 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
         // mangle the conf so that the fs parameter points to the minidfs we
         // just started up
-        FileSystem fs = dfsCluster.getFileSystem();
-        conf.set("fs.default.name", fs.getUri().toString());      
-        Path parentdir = fs.getHomeDirectory();
+        FileSystem filesystem = dfsCluster.getFileSystem();
+        conf.set("fs.default.name", filesystem.getUri().toString());      
+        Path parentdir = filesystem.getHomeDirectory();
         conf.set(HConstants.HBASE_DIR, parentdir.toString());
-        fs.mkdirs(parentdir);
-        FSUtils.setVersion(fs, parentdir);
+        filesystem.mkdirs(parentdir);
+        FSUtils.setVersion(filesystem, parentdir);
       }
 
       // do the super setup now. if we had done it first, then we would have

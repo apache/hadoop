@@ -1,5 +1,5 @@
   /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -775,15 +776,15 @@ public class HRegion implements HConstants {
       // Split each store file.
       for(HStoreFile h: hstoreFilesToSplit) {
         // A reference to the bottom half of the hsf store file.
-        HStoreFile.Reference aReference = new HStoreFile.Reference(
+        Reference aReference = new Reference(
             this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey, this.regionInfo), HStoreFile.Range.bottom);
+            new HStoreKey(midKey, this.regionInfo), Reference.Range.bottom);
         HStoreFile a = new HStoreFile(this.conf, fs, splits,
             regionAInfo, h.getColFamily(), -1, aReference);
         // Reference to top half of the hsf store file.
-        HStoreFile.Reference bReference = new HStoreFile.Reference(
+        Reference bReference = new Reference(
             this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey, this.regionInfo), HStoreFile.Range.top);
+            new HStoreKey(midKey, this.regionInfo), Reference.Range.top);
         HStoreFile b = new HStoreFile(this.conf, fs, splits,
             regionBInfo, h.getColFamily(), -1, bReference);
         h.splitStoreFile(a, b, this.fs);

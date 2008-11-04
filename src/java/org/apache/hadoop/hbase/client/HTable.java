@@ -225,7 +225,6 @@ public class HTable {
    * @return Array of region starting row keys
    * @throws IOException
    */
-  @SuppressWarnings("null")
   public byte[][] getStartKeys() throws IOException {
     final List<byte[]> keyList = new ArrayList<byte[]>();
 
@@ -1154,7 +1153,6 @@ public class HTable {
     private byte[][] columns;
     private byte [] startRow;
     protected long scanTime;
-    @SuppressWarnings("hiding")
     private boolean closed = false;
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
