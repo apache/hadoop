@@ -1049,12 +1049,16 @@ Release 0.19.0 - Unreleased
     HADOOP-4525. Fix ipc.server.ipcnodelay originally missed in in HADOOP-2232.
     (cdouglas via Clint Morgan)
 
-    HADOOP-4499. DFSClient should invoke checksumOk only once. (Raghu Angadi)
-
     HADOOP-4498. Ensure that JobHistory correctly escapes the job name so that
     regex patterns work. (Chris Wensel via acmurthy)
 
-Release 0.18.2 - Unreleased
+Release 0.18.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-4499. DFSClient should invoke checksumOk only once. (Raghu Angadi)
+
+Release 0.18.2 - 2008-11-03
 
   BUG FIXES
 
