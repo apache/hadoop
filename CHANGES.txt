@@ -58,6 +58,8 @@ Trunk (unreleased changes)
     HADOOP-4437. Use Halton sequence instead of java.util.Random in PiEstimator.
     (szetszwo)
 
+    HADOOP-4572. Change INode and its sub-classes to package private. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

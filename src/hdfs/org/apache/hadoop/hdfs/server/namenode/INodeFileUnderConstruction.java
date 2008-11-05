@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 
-public class INodeFileUnderConstruction extends INodeFile {
+class INodeFileUnderConstruction extends INodeFile {
   final String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.

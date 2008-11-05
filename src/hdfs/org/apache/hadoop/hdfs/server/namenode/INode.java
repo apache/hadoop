@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
  * This is a base INode class containing common fields for file and 
  * directory inodes.
  */
-public abstract class INode implements Comparable<byte[]> {
+abstract class INode implements Comparable<byte[]> {
   protected byte[] name;
   protected INodeDirectory parent;
   protected long modificationTime;

@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 /**
  * Directory INode class.
  */
-public class INodeDirectory extends INode {
+class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
