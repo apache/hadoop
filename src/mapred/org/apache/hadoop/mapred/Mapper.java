@@ -82,7 +82,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  *       
  *       public void configure(JobConf job) {
  *         mapTaskId = job.get("mapred.task.id");
- *         inputFile = job.get("mapred.input.file");
+ *         inputFile = job.get("map.input.file");
  *       }
  *       
  *       public void map(K key, V val,

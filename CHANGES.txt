@@ -84,6 +84,8 @@ Trunk (unreleased changes)
     should handle them and keep transferring the remaining blocks.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-4587. Fix a typo in Mapper javadoc.  (Koji Noguchi via szetszwo)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
