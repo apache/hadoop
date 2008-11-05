@@ -823,7 +823,7 @@ class DFSClient implements FSConstants {
     private int bytesPerChecksum;
     private int checksumSize;
     private boolean gotEOS = false;
-    private boolean sentChecksumOk = false;
+    private boolean sentChecksumOk = false; //temp : to be removed in 0.20.0
     
     byte[] skipBuf = null;
     ByteBuffer checksumBytes = null;
@@ -856,12 +856,15 @@ class DFSClient implements FSConstants {
         }
       }
       
+      boolean eosBefore = gotEOS;
       int nRead = super.read(buf, off, len);
-      if (nRead >= 0 && gotEOS && needChecksum()) {
+      
+      // if gotEOS was set in the previous read and checksum is enabled :
+      if (gotEOS && !eosBefore && nRead >= 0 && needChecksum()) {
         if (sentChecksumOk) {
            // this should not happen; log the error for the debugging purpose
            LOG.info(StringUtils.stringifyException(new IOException(
-             "Checksum ok was sent and should not be sent again")));  
+             "Checksum ok was sent and should not be sent again"))); 
         } else {
           //checksum is verified and there are no errors.
           checksumOk(dnSock);
