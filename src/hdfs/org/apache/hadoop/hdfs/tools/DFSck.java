@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -123,18 +124,22 @@ public class DFSck extends Configured implements Tool {
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));
     String line = null;
-    int errCode = 0;
-    // errCode returned indicating the status of Filesystem (HEALTHY/CORRUPT)
-    // depends on the format of the string. Changing the script might break
-    // fsck related testcases. For now, we scan for "is CORRUPT" as it unique.
+    String lastLine = null;
+    int errCode = -1;
     try {
       while ((line = input.readLine()) != null) {
         System.out.println(line);
-        if (line.contains("is CORRUPT"))
-          errCode = 1;
+        lastLine = line;
       }
     } finally {
       input.close();
+    }
+    if (lastLine.endsWith(NamenodeFsck.HEALTHY_STATUS)) {
+      errCode = 0;
+    } else if (lastLine.endsWith(NamenodeFsck.CORRUPT_STATUS)) {
+      errCode = 1;
+    } else if (lastLine.endsWith(NamenodeFsck.NONEXISTENT_STATUS)) {
+      errCode = 0;
     }
     return errCode;
   }

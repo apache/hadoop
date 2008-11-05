@@ -88,6 +88,9 @@ Trunk (unreleased changes)
 
     HADOOP-4587. Fix a typo in Mapper javadoc.  (Koji Noguchi via szetszwo)
 
+    HADOOP-4530. In fsck, HttpServletResponse sendError fails with
+    IllegalStateException. (hairong)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

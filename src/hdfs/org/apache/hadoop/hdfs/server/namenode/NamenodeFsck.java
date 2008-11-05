@@ -68,6 +68,12 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 public class NamenodeFsck {
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   
+  // return string marking fsck status
+  public static final String CORRUPT_STATUS = "is CORRUPT";
+  public static final String HEALTHY_STATUS = "is HEALTHY";
+  public static final String NONEXISTENT_STATUS = "does not exist";
+  public static final String FAILURE_STATUS = "FAILED";
+  
   /** Don't attempt any fixing . */
   public static final int FIXING_NONE = 0;
   /** Move corrupted files to /lost+found . */
@@ -139,13 +145,18 @@ public class NamenodeFsck {
         // of file system and return appropriate code. Changing the output string
         // might break testcases. 
         if (res.isHealthy()) {
-          out.println("\n\nThe filesystem under path '" + path + "' is HEALTHY");
+          out.print("\n\nThe filesystem under path '" + path + "' " + HEALTHY_STATUS);
         }  else {
-          out.println("\n\nThe filesystem under path '" + path + "' is CORRUPT");
+          out.print("\n\nThe filesystem under path '" + path + "' " + CORRUPT_STATUS);
         }
       } else {
-        out.println("\n\nPath '" + path + "' does not exist.");
+        out.print("\n\nPath '" + path + "' " + NONEXISTENT_STATUS);
       }
+    } catch (Exception e) {
+      String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
+      LOG.warn(errMsg, e);
+      out.println(e.getMessage());
+      out.print("\n\n"+errMsg);
     } finally {
       out.close();
     }

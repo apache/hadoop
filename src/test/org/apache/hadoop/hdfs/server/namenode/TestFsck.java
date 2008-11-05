@@ -26,7 +26,6 @@ import java.io.RandomAccessFile;
 import java.lang.Exception;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -77,7 +76,7 @@ public class TestFsck extends TestCase {
       util.createFiles(fs, "/srcdat");
       util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, 0, true, "/");
-      assertTrue(-1 != outStr.indexOf("HEALTHY"));
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
@@ -86,7 +85,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster(conf, 0, false, null);
       outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
-      assertTrue(outStr.contains("CORRUPT"));
+      assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
       System.out.println(outStr);
       
       // bring up data nodes & cleanup cluster
@@ -112,7 +111,7 @@ public class TestFsck extends TestCase {
       util.createFiles(fs, "/srcdat");
       util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, 0, true, "/non-existent");
-      assertEquals(-1, outStr.indexOf("HEALTHY"));
+      assertEquals(-1, outStr.indexOf(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
       util.cleanup(fs, "/srcdat");
     } finally {
@@ -135,7 +134,7 @@ public class TestFsck extends TestCase {
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
       String outStr = runFsck(conf, 0, true, "/");
-      assertTrue(outStr.contains("HEALTHY"));
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       
       // Corrupt a block by deleting it
       String[] fileNames = util.getFileNames(topDir);
@@ -154,7 +153,7 @@ public class TestFsck extends TestCase {
 
       // We excpect the filesystem to be corrupted
       outStr = runFsck(conf, 1, false, "/");
-      while (!outStr.contains("CORRUPT")) {
+      while (!outStr.contains(NamenodeFsck.CORRUPT_STATUS)) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException ignore) {
@@ -164,11 +163,11 @@ public class TestFsck extends TestCase {
       
       // Fix the filesystem by moving corrupted files to lost+found
       outStr = runFsck(conf, 1, true, "/", "-move");
-      assertTrue(outStr.contains("CORRUPT"));
+      assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
       
       // Check to make sure we have healthy filesystem
       outStr = runFsck(conf, 0, true, "/");
-      assertTrue(outStr.contains("HEALTHY")); 
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS)); 
       util.cleanup(fs, topDir);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
@@ -192,7 +191,7 @@ public class TestFsck extends TestCase {
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
       String outStr = runFsck(conf, 0, true, "/");
-      assertTrue(outStr.contains("HEALTHY"));
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       // Open a file for writing and do not close for now
       Path openFile = new Path(topDir + "/openFile");
       FSDataOutputStream out = fs.create(openFile);
@@ -204,7 +203,7 @@ public class TestFsck extends TestCase {
       // We expect the filesystem to be HEALTHY and show one open file
       outStr = runFsck(conf, 0, true, topDir);
       System.out.println(outStr);
-      assertTrue(outStr.contains("HEALTHY"));
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE")); 
       // Use -openforwrite option to list open files
       outStr = runFsck(conf, 0, true, topDir, "-openforwrite");
@@ -216,7 +215,7 @@ public class TestFsck extends TestCase {
       // Now, fsck should show HEALTHY fs and should not show any open files
       outStr = runFsck(conf, 0, true, topDir);
       System.out.println(outStr);
-      assertTrue(outStr.contains("HEALTHY"));
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE"));
       util.cleanup(fs, topDir);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -237,7 +236,9 @@ public class TestFsck extends TestCase {
     Random random = new Random();
     String outStr = null;
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = null;
+    try {
+    cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     fs = cluster.getFileSystem();
     Path file1 = new Path("/testCorruptBlock");
@@ -249,7 +250,7 @@ public class TestFsck extends TestCase {
     // Make sure filesystem is in healthy state
     outStr = runFsck(conf, 0, true, "/");
     System.out.println(outStr);
-    assertTrue(outStr.contains("HEALTHY"));
+    assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas 
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
@@ -293,9 +294,45 @@ public class TestFsck extends TestCase {
     // Check if fsck reports the same
     outStr = runFsck(conf, 1, true, "/");
     System.out.println(outStr);
-    assertTrue(outStr.contains("CORRUPT"));
+    assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     assertTrue(outStr.contains("testCorruptBlock"));
-
-    cluster.shutdown();
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+  
+  /** Test if fsck can return -1 in case of failure
+   * 
+   * @throws Exception
+   */
+  public void testFsckError() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      // bring up a one-node cluster
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 1, true, null);
+      String fileName = "/test.txt";
+      Path filePath = new Path(fileName);
+      FileSystem fs = cluster.getFileSystem();
+      
+      // create a one-block file
+      DFSTestUtil.createFile(fs, filePath, 1L, (short)1, 1L);
+      DFSTestUtil.waitReplication(fs, filePath, (short)1);
+      
+      // intentionally corrupt NN data structure
+      INodeFile node = (INodeFile)cluster.getNameNode().namesystem.dir.rootDir.getNode(fileName);
+      assertEquals(node.blocks.length, 1);
+      node.blocks[0].setNumBytes(-1L);  // set the block length to be negative
+      
+      // run fsck and expect a failure with -1 as the error code
+      String outStr = runFsck(conf, -1, true, fileName);
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.FAILURE_STATUS));
+      
+      // clean up file system
+      fs.delete(filePath, true);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
   }
 }
