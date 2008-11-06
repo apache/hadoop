@@ -648,7 +648,7 @@ public class HStore implements HConstants {
         this.info,  family.getName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.family.isBloomfilter(), cache.size());
-       out.setIndexInterval(family.getMapFileIndexInterval());
+      setIndexInterval(out);
       
       // Here we tried picking up an existing HStoreFile from disk and
       // interlacing the memcache flush compacting as we go.  The notion was
@@ -909,7 +909,7 @@ public class HStore implements HConstants {
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
         this.compression, this.family.isBloomfilter(), nrows);
-      writer.setIndexInterval(family.getMapFileIndexInterval());
+      setIndexInterval(writer);
       try {
         compact(writer, rdrs, doMajorCompaction);
       } finally {
@@ -930,6 +930,27 @@ public class HStore implements HConstants {
     }
     return checkSplit(forceSplit);
   }  
+
+  /*
+   * Set the index interval for the mapfile. There are two sources for
+   * configuration information: the HCD, and the global HBase config.
+   * If a source returns the default value, it is ignored. Otherwise,
+   * the smallest non-default value is preferred. 
+   */
+  private void setIndexInterval(MapFile.Writer writer) {
+    int familyInterval = this.family.getMapFileIndexInterval();
+    int interval = this.conf.getInt("hbase.io.index.interval",
+        HColumnDescriptor.DEFAULT_MAPFILE_INDEX_INTERVAL);
+    if (familyInterval != HColumnDescriptor.DEFAULT_MAPFILE_INDEX_INTERVAL) {
+      if (interval != HColumnDescriptor.DEFAULT_MAPFILE_INDEX_INTERVAL) {
+        if (familyInterval < interval)
+          interval = familyInterval;
+      } else {
+        interval = familyInterval;
+      }
+    }
+    writer.setIndexInterval(interval);
+  }
 
   /*
    * @return True if we should run a major compaction.
