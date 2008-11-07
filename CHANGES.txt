@@ -60,6 +60,9 @@ Trunk (unreleased changes)
 
     HADOOP-4572. Change INode and its sub-classes to package private. (szetszwo)
 
+    HADOOP-4187. Does a runtime lookup for JobConf/JobConfigurable, and if found,
+    invokes the appropriate configure method. (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES

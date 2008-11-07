@@ -22,6 +22,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobConfigurable;
+
 import junit.framework.TestCase;
 
 public class TestReflectionUtils extends TestCase {
@@ -107,5 +111,26 @@ public class TestReflectionUtils extends TestCase {
     
   public static class NoDefaultCtor {
     public NoDefaultCtor(int x) {}
+  }
+  
+  /**
+   * This is to test backward compatibility of ReflectionUtils for 
+   * JobConfigurable objects. 
+   * This should be made deprecated along with the mapred package HADOOP-1230. 
+   * Should be removed when mapred package is removed.
+   */
+  public void testSetConf() {
+    JobConfigurableOb ob = new JobConfigurableOb();
+    ReflectionUtils.setConf(ob, new Configuration());
+    assertFalse(ob.configured);
+    ReflectionUtils.setConf(ob, new JobConf());
+    assertTrue(ob.configured);
+  }
+  
+  private static class JobConfigurableOb implements JobConfigurable {
+    boolean configured;
+    public void configure(JobConf job) {
+      configured = true;
+    }
   }
 }

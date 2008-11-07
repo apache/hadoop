@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.io.*;
 import java.lang.management.*;
 import java.util.Map;
@@ -26,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.mapred.*;
 
 /**
  * General reflection utils
@@ -53,10 +53,36 @@ public class ReflectionUtils {
       if (theObject instanceof Configurable) {
         ((Configurable) theObject).setConf(conf);
       }
-      if (conf instanceof JobConf && 
-          theObject instanceof JobConfigurable) {
-        ((JobConfigurable)theObject).configure((JobConf) conf);
+      setJobConf(theObject, conf);
+    }
+  }
+  
+  /**
+   * This code is to support backward compatibility and break the compile  
+   * time dependency of core on mapred.
+   * This should be made deprecated along with the mapred package HADOOP-1230. 
+   * Should be removed when mapred package is removed.
+   */
+  private static void setJobConf(Object theObject, Configuration conf) {
+    //If JobConf and JobConfigurable are in classpath, AND
+    //theObject is of type JobConfigurable AND
+    //conf is of type JobConf then
+    //invoke configure on theObject
+    try {
+      Class<?> jobConfClass = 
+        conf.getClassByName("org.apache.hadoop.mapred.JobConf");
+      Class<?> jobConfigurableClass = 
+        conf.getClassByName("org.apache.hadoop.mapred.JobConfigurable");
+       if (jobConfClass.isAssignableFrom(conf.getClass()) &&
+            jobConfigurableClass.isAssignableFrom(theObject.getClass())) {
+        Method configureMethod = 
+          jobConfigurableClass.getMethod("configure", jobConfClass);
+        configureMethod.invoke(theObject, conf);
       }
+    } catch (ClassNotFoundException e) {
+      //JobConf/JobConfigurable not in classpath. no need to configure
+    } catch (Exception e) {
+      throw new RuntimeException("Error in configuring object", e);
     }
   }
 
