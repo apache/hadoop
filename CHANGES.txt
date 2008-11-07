@@ -1060,11 +1060,15 @@ Release 0.19.0 - Unreleased
     HADOOP-4498. Ensure that JobHistory correctly escapes the job name so that
     regex patterns work. (Chris Wensel via acmurthy)
 
+    HADOOP-4610. Always calculate mis-replicated blocks when safe-mode is 
+    turned off. (shv)
+
 Release 0.18.3 - Unreleased
 
   BUG FIXES
 
     HADOOP-4499. DFSClient should invoke checksumOk only once. (Raghu Angadi)
+
     HADOOP-4597. Calculate mis-replicated blocks when safe-mode is turned
     off manually. (shv)
 
