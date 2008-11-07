@@ -1072,6 +1072,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4597. Calculate mis-replicated blocks when safe-mode is turned
     off manually. (shv)
 
+    HADOOP-3121. lsr should keep listing the remaining items but not
+    terminate if there is any IOException. (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
