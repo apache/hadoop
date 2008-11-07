@@ -371,7 +371,7 @@ class TransactionalRegion extends HRegion {
 
     for (HStore store : super.stores.values()) {
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
-          ALL_VERSIONS, now);
+          ALL_VERSIONS, now, null);
       BatchUpdate deleteUpdate = new BatchUpdate(row, timestamp);
 
       for (HStoreKey key : keys) {

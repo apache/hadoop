@@ -145,6 +145,21 @@ public interface HRegionInterface extends VersionedProtocol {
   public void deleteAll(byte [] regionName, byte [] row, long timestamp,
       long lockId)
   throws IOException;
+  
+  /**
+   * Delete all cells that match the passed row & the column regex and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   * 
+   * @param regionName
+   * @param row
+   * @param colRegex
+   * @param timestamp
+   * @param lockId
+   * @throws IOException
+   */
+  public void deleteAllByRegex(byte [] regionName, byte [] row, String colRegex, 
+      long timestamp, long lockId)
+  throws IOException;
 
   /**
    * Delete all cells for a row with matching column family with timestamps
@@ -159,6 +174,21 @@ public interface HRegionInterface extends VersionedProtocol {
    */
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp, long lockId)
+  throws IOException;
+  
+  /**
+   * Delete all cells for a row with matching column family regex with 
+   * timestamps less than or equal to <i>timestamp</i>.
+   * 
+   * @param regionName The name of the region to operate on
+   * @param row The row to operate on
+   * @param familyRegex column family regex
+   * @param timestamp Timestamp to match
+   * @param lockId lock id
+   * @throws IOException
+   */
+  public void deleteFamilyByRegex(byte [] regionName, byte [] row, String familyRegex, 
+    long timestamp, long lockId) 
   throws IOException;
 
   

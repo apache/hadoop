@@ -35,6 +35,9 @@ public class TestDeleteFamily extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestDeleteFamily.class);
   private MiniDFSCluster miniHdfs;
 
+  //for family regex deletion test
+  protected static final String COLFAMILY_REGEX = "col[a-zA-Z]*1";
+  
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -60,6 +63,10 @@ public class TestDeleteFamily extends HBaseTestCase {
       makeSureItWorks(region, region_incommon, false);
       // test hstore
       makeSureItWorks(region, region_incommon, true);
+      // family regex test memcache
+      makeSureRegexWorks(region, region_incommon, false);
+      // family regex test hstore
+      makeSureRegexWorks(region, region_incommon, true);
       
     } finally {
       if (region != null) {
@@ -137,6 +144,71 @@ public class TestDeleteFamily extends HBaseTestCase {
     assertCellEquals(region, row, colC, t2, cellData(2, flush));        
     
   }
+  
+  private void makeSureRegexWorks(HRegion region, HRegionIncommon region_incommon, 
+      boolean flush)
+    throws Exception{
+      // insert a few versions worth of data for a row
+      byte [] row = Bytes.toBytes("test_row");
+      long t0 = System.currentTimeMillis();
+      long t1 = t0 - 15000;
+      long t2 = t1 - 15000;
+
+      byte [] colA = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "a");
+      byte [] colB = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "b");
+      byte [] colC = Bytes.toBytes(Bytes.toString(COLUMNS[1]) + "c");
+
+      BatchUpdate batchUpdate = null;
+      batchUpdate = new BatchUpdate(row, t0);
+      batchUpdate.put(colA, cellData(0, flush).getBytes());
+      batchUpdate.put(colB, cellData(0, flush).getBytes());
+      batchUpdate.put(colC, cellData(0, flush).getBytes());      
+      region_incommon.commit(batchUpdate);
+
+      batchUpdate = new BatchUpdate(row, t1);
+      batchUpdate.put(colA, cellData(1, flush).getBytes());
+      batchUpdate.put(colB, cellData(1, flush).getBytes());
+      batchUpdate.put(colC, cellData(1, flush).getBytes());      
+      region_incommon.commit(batchUpdate);
+      
+      batchUpdate = new BatchUpdate(row, t2);
+      batchUpdate.put(colA, cellData(2, flush).getBytes());
+      batchUpdate.put(colB, cellData(2, flush).getBytes());
+      batchUpdate.put(colC, cellData(2, flush).getBytes());      
+      region_incommon.commit(batchUpdate);
+
+      if (flush) {region_incommon.flushcache();}
+
+      // call delete family at a timestamp, make sure only the most recent stuff
+      // for column c is left behind
+      region.deleteFamilyByRegex(row, COLFAMILY_REGEX, t1, null);
+      if (flush) {region_incommon.flushcache();}
+      // most recent for A,B,C should be fine
+      // A,B at older timestamps should be gone
+      // C should be fine for older timestamps
+      assertCellEquals(region, row, colA, t0, cellData(0, flush));
+      assertCellEquals(region, row, colA, t1, null);    
+      assertCellEquals(region, row, colA, t2, null);
+      assertCellEquals(region, row, colB, t0, cellData(0, flush));
+      assertCellEquals(region, row, colB, t1, null);
+      assertCellEquals(region, row, colB, t2, null);    
+      assertCellEquals(region, row, colC, t0, cellData(0, flush));
+      assertCellEquals(region, row, colC, t1, cellData(1, flush));
+      assertCellEquals(region, row, colC, t2, cellData(2, flush));        
+
+      // call delete family w/o a timestamp, make sure nothing is left except for
+      // column C.
+      region.deleteFamilyByRegex(row, COLFAMILY_REGEX, HConstants.LATEST_TIMESTAMP, null);
+      if (flush) {region_incommon.flushcache();}
+      // A,B for latest timestamp should be gone
+      // C should still be fine
+      assertCellEquals(region, row, colA, t0, null);
+      assertCellEquals(region, row, colB, t0, null);
+      assertCellEquals(region, row, colC, t0, cellData(0, flush));
+      assertCellEquals(region, row, colC, t1, cellData(1, flush));
+      assertCellEquals(region, row, colC, t2, cellData(2, flush));        
+      
+    }
   
   private String cellData(int tsNum, boolean flush){
     return "t" + tsNum + " data" + (flush ? " - with flush" : "");

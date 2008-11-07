@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1299,7 +1300,7 @@ public class HRegion implements HConstants {
       if (targetStore != null) {
         // Pass versions without modification since in the store getKeys, it
         // includes the size of the passed <code>keys</code> array when counting.
-        List<HStoreKey> r = targetStore.getKeys(origin, versions, now);
+        List<HStoreKey> r = targetStore.getKeys(origin, versions, now, null);
         if (r != null) {
           keys.addAll(r);
         }
@@ -1533,13 +1534,46 @@ public class HRegion implements HConstants {
     try {
       for (HStore store : stores.values()) {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts, this.regionInfo),
-          ALL_VERSIONS, now);
+          ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
           new HStoreKey.HStoreKeyWritableComparator(regionInfo));
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.deleteBytes.get());
         }
         update(edits);
+      }
+    } finally {
+      if(lockid == null) releaseRowLock(lid);
+    }
+  }
+  
+  /**
+   * Delete all cells for a row with matching columns with timestamps
+   * less than or equal to <i>timestamp</i>. 
+   * 
+   * @param row The row to operate on
+   * @param columnRegex The column regex 
+   * @param timestamp Timestamp to match
+   * @param lockid Row lock
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public void deleteAllByRegex(final byte [] row, final String columnRegex, 
+      final long timestamp, final Integer lockid) throws IOException {
+    checkReadOnly();
+    Pattern columnPattern = Pattern.compile(columnRegex);
+    Integer lid = getLock(lockid, row);
+    long now = System.currentTimeMillis();
+    try {
+      for (HStore store : stores.values()) {
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp, this.regionInfo),
+            ALL_VERSIONS, now, columnPattern);
+          TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+            new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+          for (HStoreKey key: keys) {
+            edits.put(key, HLogEdit.deleteBytes.get());
+          }
+          update(edits);
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
@@ -1568,7 +1602,7 @@ public class HRegion implements HConstants {
       HStore store = getStore(family);
       // find all the keys that match our criteria
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp,
-        this.regionInfo), ALL_VERSIONS, now);
+        this.regionInfo), ALL_VERSIONS, now, null);
       // delete all the cells
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
         new HStoreKey.HStoreKeyWritableComparator(regionInfo));
@@ -1576,6 +1610,46 @@ public class HRegion implements HConstants {
         edits.put(key, HLogEdit.deleteBytes.get());
       }
       update(edits);
+    } finally {
+      if(lockid == null) releaseRowLock(lid);
+    }
+  }
+  
+  /**
+   * Delete all cells for a row with all the matching column families by
+   * familyRegex with timestamps less than or equal to <i>timestamp</i>.
+   * 
+   * @param row The row to operate on
+   * @param familyRegex The column family regex for matching. This regex
+   * expression just match the family name, it didn't include <code>:<code>
+   * @param timestamp Timestamp to match
+   * @param lockid Row lock
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public void deleteFamilyByRegex(byte [] row, String familyRegex, long timestamp, 
+      final Integer lockid) throws IOException {
+    checkReadOnly();
+    // construct the family regex pattern
+    Pattern familyPattern = Pattern.compile(familyRegex);
+    Integer lid = getLock(lockid, row);
+    long now = System.currentTimeMillis();
+    try {
+      for(HStore store : stores.values()) {
+        String familyName = Bytes.toString(store.getFamily().getName());
+        // check the family name match the family pattern.
+        if(!(familyPattern.matcher(familyName).matches())) 
+          continue;
+        
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp, 
+            this.regionInfo), ALL_VERSIONS, now, null);
+        TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+          new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+        for (HStoreKey key: keys) {
+          edits.put(key, HLogEdit.deleteBytes.get());
+        }
+        update(edits);
+      }
     } finally {
       if(lockid == null) releaseRowLock(lid);
     }

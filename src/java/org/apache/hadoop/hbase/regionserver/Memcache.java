@@ -33,6 +33,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -601,21 +602,26 @@ class Memcache {
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
    * @param now
    * @param deletes Accumulating list of deletes
+   * @param columnPattern regex pattern for column matching. if columnPattern
+   * is not null, we use column pattern to match columns. And the columnPattern
+   * only works when origin's column is null or its length is zero.
    * @return Ordered list of <code>versions</code> keys going from newest back.
    * @throws IOException
    */
   List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
-      final Set<HStoreKey> deletes, final long now) {
+      final Set<HStoreKey> deletes, final long now, 
+      final Pattern columnPattern) {
     this.lock.readLock().lock();
     try {
       List<HStoreKey> results;
       synchronized (memcache) {
-        results = getKeys(this.memcache, origin, versions, deletes, now);
+        results = 
+          getKeys(this.memcache, origin, versions, deletes, now, columnPattern);
       }
       synchronized (snapshot) {
         results.addAll(results.size(), getKeys(snapshot, origin,
             versions == HConstants.ALL_VERSIONS ? versions :
-              (versions - results.size()), deletes, now));
+              (versions - results.size()), deletes, now, columnPattern));
       }
       return results;
     } finally {
@@ -629,13 +635,17 @@ class Memcache {
    * {@link HConstants.ALL_VERSIONS} to retrieve all.
    * @param now
    * @param deletes
+   * @param columnPattern regex pattern for column matching. if columnPattern
+   * is not null, we use column pattern to match columns. And the columnPattern
+   * only works when origin's column is null or its length is zero.
    * @return List of all keys that are of the same row and column and of
    * equal or older timestamp.  If no keys, returns an empty List. Does not
    * return null.
    */
   private List<HStoreKey> getKeys(final SortedMap<HStoreKey,
       byte []> map, final HStoreKey origin, final int versions,
-      final Set<HStoreKey> deletes, final long now) {
+      final Set<HStoreKey> deletes, final long now, 
+      final Pattern columnPattern) {
     List<HStoreKey> result = new ArrayList<HStoreKey>();
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
@@ -648,6 +658,13 @@ class Memcache {
         if (!HStoreKey.equalsTwoRowKeys(regionInfo, key.getRow(), 
             origin.getRow())) {
           break;
+        }
+        // if the column pattern is not null, we use it for column matching.
+        // we will skip the keys whose column doesn't match the pattern.
+        if (columnPattern != null) {
+          if (!(columnPattern.matcher(Bytes.toString(key.getColumn())).matches())) {
+            continue;
+          }
         }
         // if the rows match but the timestamp is newer, skip it so we can
         // get to the ones we actually want.

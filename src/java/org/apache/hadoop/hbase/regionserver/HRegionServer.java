@@ -1388,10 +1388,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, timestamp, getLockFromId(lockId));
   }
 
+  @Override
+  public void deleteAllByRegex(byte[] regionName, byte[] row, String colRegex,
+      long timestamp, long lockId) throws IOException {
+    getRegion(regionName).deleteAllByRegex(row, colRegex, timestamp, 
+        getLockFromId(lockId));
+  }
+
   public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp, final long lockId)
   throws IOException{
     getRegion(regionName).deleteFamily(row, family, timestamp,
+        getLockFromId(lockId));
+  }
+
+  @Override
+  public void deleteFamilyByRegex(byte[] regionName, byte[] row, String familyRegex,
+      long timestamp, long lockId) throws IOException {
+    getRegion(regionName).deleteFamilyByRegex(row, familyRegex, timestamp, 
         getLockFromId(lockId));
   }
 

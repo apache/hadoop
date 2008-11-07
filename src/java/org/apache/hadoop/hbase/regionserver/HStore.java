@@ -1475,11 +1475,14 @@ public class HStore implements HConstants {
    * @param versions How many versions to return. Pass
    * {@link HConstants#ALL_VERSIONS} to retrieve all.
    * @param now
+   * @param columnPattern regex pattern for column matching. if columnPattern
+   * is not null, we use column pattern to match columns. And the columnPattern
+   * only works when origin's column is null or its length is zero.
    * @return Matching keys.
    * @throws IOException
    */
   public List<HStoreKey> getKeys(final HStoreKey origin, final int versions,
-    final long now)
+    final long now, final Pattern columnPattern)
   throws IOException {
     // This code below is very close to the body of the get method.  Any 
     // changes in the flow below should also probably be done in get.  TODO:
@@ -1489,7 +1492,7 @@ public class HStore implements HConstants {
     try {
       // Check the memcache
       List<HStoreKey> keys =
-        this.memcache.getKeys(origin, versions, deletes, now);
+        this.memcache.getKeys(origin, versions, deletes, now, columnPattern);
       // If we got sufficient versions from memcache, return. 
       if (keys.size() >= versions) {
         return keys;
@@ -1514,6 +1517,13 @@ public class HStore implements HConstants {
           do {
             // if the row matches, we might want this one.
             if (rowMatches(origin, readkey)) {
+              // if the column pattern is not null, we use it for column matching.
+              // we will skip the keys whose column doesn't match the pattern.
+              if (columnPattern != null) {
+                if (!(columnPattern.matcher(Bytes.toString(readkey.getColumn())).matches())) {
+                  continue;
+                }
+              }
               // if the cell address matches, then we definitely want this key.
               if (cellMatches(origin, readkey)) {
                 // Store key if isn't deleted or superceded by memcache

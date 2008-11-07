@@ -891,6 +891,71 @@ public class HTable {
         }
     );
   }
+  
+  /** 
+   * Delete all cells that match the passed row and column.
+   * @param row Row to update
+   * @param colRegex column regex expression
+   * @throws IOException 
+   */
+  public void deleteAllByRegex(final String row, final String colRegex)
+  throws IOException {
+    deleteAll(row, colRegex, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /** 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   * @param row Row to update
+   * @param colRegex Column Regex expression
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException 
+   */
+  public void deleteAllByRegex(final String row, final String colRegex, 
+      final long ts) throws IOException {
+    deleteAllByRegex(Bytes.toBytes(row), colRegex, ts);
+  }
+
+  /** 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   * @param row Row to update
+   * @param colRegex Column Regex expression
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException 
+   */
+  public void deleteAllByRegex(final byte [] row, final String colRegex, 
+      final long ts) throws IOException {
+    deleteAllByRegex(row, colRegex, ts, null);
+  }
+  
+  /** 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp, using an
+   * existing row lock.
+   * @param row Row to update
+   * @param colRegex Column regex expression
+   * @param ts Delete all cells of the same timestamp or older.
+   * @param rl Existing row lock
+   * @throws IOException 
+   */
+  public void deleteAllByRegex(final byte [] row, final String colRegex, 
+      final long ts, final RowLock rl)
+  throws IOException {
+    connection.getRegionServerWithRetries(
+        new ServerCallable<Boolean>(connection, tableName, row) {
+          public Boolean call() throws IOException {
+            long lockId = -1L;
+            if(rl != null) {
+              lockId = rl.getLockId();
+            }
+            this.server.deleteAllByRegex(location.getRegionInfo().getRegionName(),
+              row, colRegex, ts, lockId);
+            return null;
+          }
+        }
+    );
+  }
 
   /**
    * Delete all cells for a row with matching column family at all timestamps.
@@ -968,6 +1033,90 @@ public class HTable {
             }
             server.deleteFamily(location.getRegionInfo().getRegionName(), row, 
                 family, timestamp, lockId);
+            return null;
+          }
+        }
+    );
+  }
+  
+  /**
+   * Delete all cells for a row with matching column family regex 
+   * at all timestamps.
+   *
+   * @param row The row to operate on
+   * @param familyRegex Column family regex
+   * @throws IOException
+   */
+  public void deleteFamilyByRegex(final String row, final String familyRegex) 
+  throws IOException {
+    deleteFamilyByRegex(row, familyRegex, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family regex 
+   * at all timestamps.
+   *
+   * @param row The row to operate on
+   * @param familyRegex Column family regex
+   * @throws IOException
+   */
+  public void deleteFamilyByRegex(final byte[] row, final String familyRegex) 
+  throws IOException {
+    deleteFamilyByRegex(row, familyRegex, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family regex
+   * with timestamps less than or equal to <i>timestamp</i>.
+   *
+   * @param row The row to operate on
+   * @param familyRegex Column family regex
+   * @param timestamp Timestamp to match
+   * @throws IOException
+   */  
+  public void deleteFamilyByRegex(final String row, final String familyRegex,
+      final long timestamp)
+  throws IOException{
+    deleteFamilyByRegex(Bytes.toBytes(row), familyRegex, timestamp);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family regex
+   * with timestamps less than or equal to <i>timestamp</i>.
+   *
+   * @param row The row to operate on
+   * @param familyRegex Column family regex
+   * @param timestamp Timestamp to match
+   * @throws IOException
+   */
+  public void deleteFamilyByRegex(final byte [] row, final String familyRegex, 
+    final long timestamp)
+  throws IOException {
+    deleteFamilyByRegex(row,familyRegex,timestamp,null);
+  }
+  
+  /**
+   * Delete all cells for a row with matching column family regex with
+   * timestamps less than or equal to <i>timestamp</i>, using existing
+   * row lock.
+   * 
+   * @param row The row to operate on
+   * @param familyRegex Column Family Regex
+   * @param timestamp Timestamp to match
+   * @param r1 Existing row lock
+   * @throws IOException
+   */
+  public void deleteFamilyByRegex(final byte[] row, final String familyRegex,
+    final long timestamp, final RowLock r1) throws IOException {
+    connection.getRegionServerWithRetries(
+        new ServerCallable<Boolean>(connection, tableName, row) {
+          public Boolean call() throws IOException {
+            long lockId = -1L;
+            if(r1 != null) {
+              lockId = r1.getLockId();
+            }
+            server.deleteFamilyByRegex(location.getRegionInfo().getRegionName(), 
+                row, familyRegex, timestamp, lockId);
             return null;
           }
         }
