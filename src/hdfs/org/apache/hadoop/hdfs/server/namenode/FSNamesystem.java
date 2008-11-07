@@ -4153,7 +4153,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkSuperuserPrivilege();
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
-        leaveSafeMode(false, false);
+        leaveSafeMode(false, true);
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode();
