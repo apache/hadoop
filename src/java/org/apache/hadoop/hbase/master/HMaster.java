@@ -885,6 +885,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     System.exit(0);
   }
 
+  @SuppressWarnings("null")
   protected static void doMain(String [] args,
       Class<? extends HMaster> masterClass) {
 
@@ -923,11 +924,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       if (cmd.equals("stop")) {
+        if (LocalHBaseCluster.isLocal(conf)) {
+          conf = LocalHBaseCluster.doLocal(conf);
+        }
+        HBaseAdmin adm = null;
         try {
-          if (LocalHBaseCluster.isLocal(conf)) {
-            LocalHBaseCluster.doLocal(conf);
-          }
-          HBaseAdmin adm = new HBaseAdmin(conf);
+          adm = new HBaseAdmin(conf);
+        } catch (MasterNotRunningException e) {
+          LOG.error("master is not running");
+          System.exit(0);
+        }
+        try {
           adm.shutdown();
         } catch (Throwable t) {
           LOG.error( "Can not stop master", t);
