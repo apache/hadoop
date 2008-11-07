@@ -17,21 +17,36 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.security.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.security.Permission;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
 import java.util.zip.GZIPOutputStream;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSInputChecker;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.shell.*;
+import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -1220,5 +1235,53 @@ public class TestDFSShell extends TestCase {
       try {dfs.close();} catch (Exception e) {}
       cluster.shutdown();
     }
+  }
+
+  public void testLsr() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+    try {
+      final String root = createTree(dfs, "lsr");
+      dfs.mkdirs(new Path(root, "zzz"));
+      
+      runLsr(new FsShell(conf), root, 0);
+      
+      final Path sub = new Path(root, "sub");
+      dfs.setPermission(sub, new FsPermission((short)0));
+
+      final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+      final String tmpusername = ugi.getUserName() + "1";
+      UnixUserGroupInformation tmpUGI = new UnixUserGroupInformation(
+          tmpusername, new String[] {tmpusername});
+      UnixUserGroupInformation.saveToConf(conf,
+            UnixUserGroupInformation.UGI_PROPERTY_NAME, tmpUGI);
+      String results = runLsr(new FsShell(conf), root, -1);
+      assertTrue(results.contains("zzz"));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  private static String runLsr(final FsShell shell, String root, int returnvalue
+      ) throws Exception {
+    System.out.println("root=" + root + ", returnvalue=" + returnvalue);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    final PrintStream oldErr = System.err;
+    System.setOut(out);
+    System.setErr(out);
+    final String results;
+    try {
+      assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
+      results = bytes.toString();
+    } finally {
+      IOUtils.closeStream(out);
+      System.setOut(oldOut);
+      System.setErr(oldErr);
+    }
+    System.out.println("results:\n" + results);
+    return results;
   }
 }

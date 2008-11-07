@@ -569,7 +569,7 @@ public class FsShell extends Configured implements Tool {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
-  void ls(String srcf, boolean recursive) throws IOException {
+  private int ls(String srcf, boolean recursive) throws IOException {
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(this.getConf());
     FileStatus[] srcs = srcFs.globStatus(srcPath);
@@ -579,20 +579,24 @@ public class FsShell extends Configured implements Tool {
     }
  
     boolean printHeader = (srcs.length == 1) ? true: false;
+    int numOfErrors = 0;
     for(int i=0; i<srcs.length; i++) {
-      ls(srcs[i].getPath(), srcFs, recursive, printHeader);
+      numOfErrors += ls(srcs[i].getPath(), srcFs, recursive, printHeader);
     }
+    return numOfErrors == 0 ? 0 : -1;
   }
 
   /* list all files under the directory <i>src</i>
    * ideally we should provide "-l" option, that lists like "ls -l".
    */
-  private void ls(Path src, FileSystem srcFs, boolean recursive, boolean printHeader) throws IOException {
-    FileStatus items[] = srcFs.listStatus(src);
-    if ((items == null) || ((items.length == 0) 
-        && (!srcFs.exists(src)))) {
-      throw new FileNotFoundException(src + ": No such file or directory.");
+  private int ls(Path src, FileSystem srcFs, boolean recursive,
+      boolean printHeader) throws IOException {
+    final String cmd = recursive? "lsr": "ls";
+    final FileStatus[] items = shellListStatus(cmd, srcFs, src);
+    if (items == null) {
+      return 1;
     } else {
+      int numOfErrors = 0;
       if (!recursive && printHeader) {
         if (items.length != 0) {
           System.out.println("Found " + items.length + " items");
@@ -631,9 +635,10 @@ public class FsShell extends Configured implements Tool {
         System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
         if (recursive && stat.isDir()) {
-          ls(cur,srcFs, recursive, printHeader);
+          numOfErrors += ls(cur,srcFs, recursive, printHeader);
         }
       }
+      return numOfErrors;
     }
   }
 
@@ -1134,19 +1139,19 @@ public class FsShell extends Configured implements Tool {
     public abstract void run(FileStatus file, FileSystem fs) throws IOException;
   }
   
-  ///helper for runCmdHandler*() returns listStatus()
-  private static FileStatus[] cmdHandlerListStatus(CmdHandler handler, 
+  /** helper returns listStatus() */
+  private static FileStatus[] shellListStatus(String cmd, 
                                                    FileSystem srcFs,
                                                    Path path) {
     try {
       FileStatus[] files = srcFs.listStatus(path);
       if ( files == null ) {
-        System.err.println(handler.getName() + 
+        System.err.println(cmd + 
                            ": could not get listing for '" + path + "'");
       }
       return files;
     } catch (IOException e) {
-      System.err.println(handler.getName() + 
+      System.err.println(cmd + 
                          ": could not get get listing for '" + path + "' : " +
                          e.getMessage().split("\n")[0]);
     }
@@ -1164,7 +1169,7 @@ public class FsShell extends Configured implements Tool {
     int errors = 0;
     handler.run(stat, srcFs);
     if (recursive && stat.isDir() && handler.okToContinue()) {
-      FileStatus[] files = cmdHandlerListStatus(handler, srcFs, 
+      FileStatus[] files = shellListStatus(handler.getName(), srcFs, 
                                                 stat.getPath());
       if (files == null) {
         return 1;
@@ -1525,9 +1530,9 @@ public class FsShell extends Configured implements Tool {
         } else if (Count.matches(cmd)) {
           new Count(argv, i, getConf()).runAll();
         } else if ("-ls".equals(cmd)) {
-          ls(argv[i], false);
+          exitCode = ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
-          ls(argv[i], true);
+          exitCode = ls(argv[i], true);
         } else if ("-touchz".equals(cmd)) {
           touchz(argv[i]);
         } else if ("-text".equals(cmd)) {
@@ -1742,13 +1747,13 @@ public class FsShell extends Configured implements Tool {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);
         } else {
-          ls(Path.CUR_DIR, false);
+          exitCode = ls(Path.CUR_DIR, false);
         } 
       } else if ("-lsr".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);
         } else {
-          ls(Path.CUR_DIR, true);
+          exitCode = ls(Path.CUR_DIR, true);
         } 
       } else if ("-mv".equals(cmd)) {
         exitCode = rename(argv, getConf());
