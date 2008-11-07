@@ -26,12 +26,12 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * block's metadata currently includes INode it belongs to and
  * the datanodes that store the block.
  */
-public class BlocksMap {
+class BlocksMap {
         
   /**
    * Internal class for block metadata.
    */
-  public static class BlockInfo extends Block {
+  static class BlockInfo extends Block {
     private INodeFile          inode;
 
     /**
@@ -44,7 +44,7 @@ public class BlocksMap {
      */
     private Object[] triplets;
 
-    public BlockInfo(Block blk, int replication) {
+    BlockInfo(Block blk, int replication) {
       super(blk);
       this.triplets = new Object[3*replication];
       this.inode = null;

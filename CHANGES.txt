@@ -191,6 +191,8 @@ Release 0.19.0 - Unreleased
 
     HADOOP-4116. Balancer should provide better resource management. (hairong)
 
+    HADOOP-4599. BlocksMap and BlockInfo made package private. (shv)
+
   NEW FEATURES
 
     HADOOP-3341. Allow streaming jobs to specify the field separator for map
