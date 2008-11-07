@@ -148,7 +148,7 @@ public class NativeS3FileSystem extends FileSystem {
 
     private File newBackupFile() throws IOException {
       File dir = new File(conf.get("fs.s3.buffer.dir"));
-      if (!dir.exists() && !dir.mkdirs()) {
+      if (!dir.mkdirs() && !dir.exists()) {
         throw new IOException("Cannot create S3 buffer directory: " + dir);
       }
       File result = File.createTempFile("output-", ".tmp", dir);

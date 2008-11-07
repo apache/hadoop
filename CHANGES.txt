@@ -101,6 +101,9 @@ Trunk (unreleased changes)
     HADOOP-4530. In fsck, HttpServletResponse sendError fails with
     IllegalStateException. (hairong)
 
+    HADOOP-4377. Fix a race condition in directory creation in
+    NativeS3FileSystem. (David Phillips via cdouglas)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
