@@ -309,7 +309,9 @@ public class HttpServer implements FilterContainer {
    * @param keystore location of the keystore
    * @param storPass password for the keystore
    * @param keyPass password for the key
+   * @deprecated Use {@link #addSslListener(InetSocketAddress, Configuration, boolean)}
    */
+  @Deprecated
   public void addSslListener(InetSocketAddress addr, String keystore,
       String storPass, String keyPass) throws IOException {
     if (sslListener != null || webServer.isStarted()) {
@@ -321,6 +323,37 @@ public class HttpServer implements FilterContainer {
     sslListener.setKeystore(keystore);
     sslListener.setPassword(storPass);
     sslListener.setKeyPassword(keyPass);
+    webServer.addListener(sslListener);
+  }
+
+  /**
+   * Configure an ssl listener on the server.
+   * @param addr address to listen on
+   * @param sslConf conf to retrieve ssl options
+   * @param needClientAuth whether client authentication is required
+   */
+  public void addSslListener(InetSocketAddress addr, Configuration sslConf,
+      boolean needClientAuth) throws IOException {
+    if (sslListener != null || webServer.isStarted()) {
+      throw new IOException("Failed to add ssl listener");
+    }
+    if (needClientAuth) {
+      // setting up SSL truststore for authenticating clients
+      System.setProperty("javax.net.ssl.trustStore", sslConf.get(
+          "ssl.server.truststore.location", ""));
+      System.setProperty("javax.net.ssl.trustStorePassword", sslConf.get(
+          "ssl.server.truststore.password", ""));
+      System.setProperty("javax.net.ssl.trustStoreType", sslConf.get(
+          "ssl.server.truststore.type", "jks"));
+    }
+    sslListener = new SslListener();
+    sslListener.setHost(addr.getHostName());
+    sslListener.setPort(addr.getPort());
+    sslListener.setKeystore(sslConf.get("ssl.server.keystore.location"));
+    sslListener.setPassword(sslConf.get("ssl.server.keystore.password", ""));
+    sslListener.setKeyPassword(sslConf.get("ssl.server.keystore.keypassword", ""));
+    sslListener.setKeystoreType(sslConf.get("ssl.server.keystore.type", "jks"));
+    sslListener.setNeedClientAuth(needClientAuth);
     webServer.addListener(sslListener);
   }
 

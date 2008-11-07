@@ -346,15 +346,14 @@ public class DataNode extends Configured
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new HttpServer("datanode", infoHost, tmpInfoPort,
         tmpInfoPort == 0, conf);
-    InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
-        conf.get("dfs.datanode.https.address", infoHost + ":" + 0));
-    Configuration sslConf = new Configuration(conf);
-    sslConf.addResource(conf.get("https.keystore.info.rsrc", "sslinfo.xml"));
-    String keyloc = sslConf.get("https.keystore.location");
-    if (null != keyloc) {
-      this.infoServer.addSslListener(secInfoSocAddr, keyloc,
-          sslConf.get("https.keystore.password", ""),
-          sslConf.get("https.keystore.keypassword", ""));
+    if (conf.getBoolean("dfs.https.enable", false)) {
+      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
+      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
+          "dfs.datanode.https.address", infoHost + ":" + 0));
+      Configuration sslConf = new Configuration(false);
+      sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
+          "ssl-server.xml"));
+      this.infoServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
     }
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",

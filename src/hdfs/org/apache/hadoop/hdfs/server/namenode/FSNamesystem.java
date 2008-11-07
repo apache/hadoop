@@ -352,21 +352,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
         tmpInfoPort == 0, conf);
-    InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
-        conf.get("dfs.https.address", infoHost + ":" + 0));
-    Configuration sslConf = new Configuration(conf);
-    sslConf.addResource(conf.get("https.keystore.info.rsrc", "sslinfo.xml"));
-    String keyloc = sslConf.get("https.keystore.location");
-    if (null != keyloc) {
-      this.infoServer.addSslListener(secInfoSocAddr, keyloc,
-          sslConf.get("https.keystore.password", ""),
-          sslConf.get("https.keystore.keypassword", ""));
+    if (conf.getBoolean("dfs.https.enable", false)) {
+      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
+      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
+          "dfs.https.address", infoHost + ":" + 0));
+      Configuration sslConf = new Configuration(false);
+      sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
+          "ssl-server.xml"));
+      this.infoServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
+      // assume same ssl port for all datanodes
+      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
+          "dfs.datanode.https.address", infoHost + ":" + 50475));
+      this.infoServer.setAttribute("datanode.https.port", datanodeSslPort
+          .getPort());
     }
-    // assume same ssl port for all datanodes
-    InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(
-        conf.get("dfs.datanode.https.address", infoHost + ":" + 50475));
-    this.infoServer.setAttribute("datanode.https.port",
-        datanodeSslPort.getPort());
     this.infoServer.setAttribute("name.node", nn);
     this.infoServer.setAttribute("name.node.address", nn.getNameNodeAddress());
     this.infoServer.setAttribute("name.system.image", getFSImage());

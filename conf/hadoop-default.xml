@@ -319,6 +319,36 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.https.enable</name>
+  <value>false</value>
+  <description>Decide if HTTPS(SSL) is supported on HDFS
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.need.client.auth</name>
+  <value>false</value>
+  <description>Whether SSL client certificate authentication is required
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.server.keystore.resource</name>
+  <value>ssl-server.xml</value>
+  <description>Resource file from which ssl server keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.client.keystore.resource</name>
+  <value>ssl-client.xml</value>
+  <description>Resource file from which ssl client keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.https.address</name>
   <value>0.0.0.0:50475</value>
 </property>
@@ -326,14 +356,6 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.https.address</name>
   <value>0.0.0.0:50470</value>
-</property>
-
-<property>
-  <name>https.keystore.info.rsrc</name>
-  <value>sslinfo.xml</value>
-  <description>The name of the resource from which ssl keystore information
-  will be extracted
-  </description>
 </property>
 
  <property>

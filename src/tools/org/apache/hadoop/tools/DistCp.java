@@ -95,6 +95,7 @@ public class DistCp implements Tool {
     "\n-filelimit <n>         Limit the total number of files to be <= n" +
     "\n-sizelimit <n>         Limit the total size to be <= n bytes" +
     "\n-delete                Delete the files existing in the dst but not in src" +
+    "\n-mapredSslConf <f>     Filename of SSL configuration for mapper task" +
     
     "\n\nNOTE 1: if -overwrite or -update are set, each source URI is " +
     "\n      interpreted as an isomorphic update to an existing directory." +
@@ -608,7 +609,7 @@ public class DistCp implements Tool {
 
     final Path dst = new Path(destPath);
     copy(conf, new Arguments(tmp, dst, logPath, flags, null,
-        Long.MAX_VALUE, Long.MAX_VALUE));
+        Long.MAX_VALUE, Long.MAX_VALUE, null));
   }
 
   /** Sanity check for srcPath */
@@ -639,6 +640,9 @@ public class DistCp implements Tool {
     JobConf job = createJobConf(conf);
     if (args.preservedAttributes != null) {
       job.set(PRESERVE_STATUS_LABEL, args.preservedAttributes);
+    }
+    if (args.mapredSslConf != null) {
+      job.set("dfs.https.client.keystore.resource", args.mapredSslConf);
     }
     
     //Initialize the mapper
@@ -714,6 +718,7 @@ public class DistCp implements Tool {
     final String preservedAttributes;
     final long filelimit;
     final long sizelimit;
+    final String mapredSslConf;
     
     /**
      * Arguments for distcp
@@ -727,7 +732,7 @@ public class DistCp implements Tool {
      */
     Arguments(List<Path> srcs, Path dst, Path log,
         EnumSet<Options> flags, String preservedAttributes,
-        long filelimit, long sizelimit) {
+        long filelimit, long sizelimit, String mapredSslConf) {
       this.srcs = srcs;
       this.dst = dst;
       this.log = log;
@@ -735,6 +740,7 @@ public class DistCp implements Tool {
       this.preservedAttributes = preservedAttributes;
       this.filelimit = filelimit;
       this.sizelimit = sizelimit;
+      this.mapredSslConf = mapredSslConf;
       
       if (LOG.isTraceEnabled()) {
         LOG.trace("this = " + this);
@@ -748,6 +754,7 @@ public class DistCp implements Tool {
       Path log = null;
       EnumSet<Options> flags = EnumSet.noneOf(Options.class);
       String presevedAttributes = null;
+      String mapredSslConf = null;
       long filelimit = Long.MAX_VALUE;
       long sizelimit = Long.MAX_VALUE;
 
@@ -778,6 +785,11 @@ public class DistCp implements Tool {
             throw new IllegalArgumentException("logdir not specified in -log");
           }
           log = new Path(args[idx]);
+        } else if ("-mapredSslConf".equals(args[idx])) {
+          if (++idx ==  args.length) {
+            throw new IllegalArgumentException("ssl conf file not specified in -mapredSslConf");
+          }
+          mapredSslConf = args[idx];
         } else if ("-m".equals(args[idx])) {
           if (++idx == args.length) {
             throw new IllegalArgumentException("num_maps not specified in -m");
@@ -814,7 +826,7 @@ public class DistCp implements Tool {
             + Options.UPDATE + ".");
       }
       return new Arguments(srcs, dst, log, flags, presevedAttributes,
-          filelimit, sizelimit);
+          filelimit, sizelimit, mapredSslConf);
     }
     
     /** {@inheritDoc} */
@@ -827,6 +839,7 @@ public class DistCp implements Tool {
           + "\n  preservedAttributes = " + preservedAttributes 
           + "\n  filelimit = " + filelimit 
           + "\n  sizelimit = " + sizelimit
+          + "\n  mapredSslConf = " + mapredSslConf
           + "\n}"; 
     }
   }
