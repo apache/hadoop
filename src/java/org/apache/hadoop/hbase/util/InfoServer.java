@@ -39,9 +39,11 @@ public class InfoServer extends HttpServer {
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<code>name<code>.
    * @param name The name of the server
+   * @param bindAddress
    * @param port The port to use on the server
    * @param findPort whether the server should start at the given port and 
    * increment by 1 until it finds a free port.
+   * @throws IOException
    */
   public InfoServer(String name, String bindAddress, int port, boolean findPort)
   throws IOException {
@@ -64,10 +66,10 @@ public class InfoServer extends HttpServer {
   }
   
   /**
-  * Get the pathname to the <code>path</code> files.
-  * @param path Path to find.
-  * @return the pathname as a URL
-  */
+   * Get the pathname to the <code>path</code> files.
+   * @return the pathname as a URL
+   */
+  @Override
   protected String getWebAppsPath() throws IOException {
     // Hack: webapps is not a unique enough element to find in CLASSPATH
     // We'll more than likely find the hadoop webapps dir.  So, instead

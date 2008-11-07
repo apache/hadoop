@@ -27,17 +27,16 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * A facade for a {@link MapFile.Reader} that serves up either the top or
- * bottom half of a MapFile where 'bottom' is the first half of the file
- * containing the keys that sort lowest and 'top' is the second half of the
- * file with keys that sort greater than those of the bottom half.  The top
- * includes the split files midkey, of the key that follows if it does not
- * exist in the file.
+ * A facade for a {@link org.apache.hadoop.io.MapFile.Reader} that serves up
+ * either the top or bottom half of a MapFile where 'bottom' is the first half
+ * of the file containing the keys that sort lowest and 'top' is the second half
+ * of the file with keys that sort greater than those of the bottom half.
+ * The top includes the split files midkey, of the key that follows if it does
+ * not exist in the file.
  * 
  * <p>This type works in tandem with the {@link Reference} type.  This class
  * is used reading while Reference is used writing.
@@ -49,6 +48,15 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
   private final HStoreKey midkey;
   private boolean firstNextCall = true;
   
+  /**
+   * @param fs
+   * @param dirName
+   * @param conf
+   * @param r
+   * @param mk
+   * @param hri
+   * @throws IOException
+   */
   public HalfMapFileReader(final FileSystem fs, final String dirName, 
       final Configuration conf, final Range r,
       final WritableComparable<HStoreKey> mk,
@@ -57,6 +65,17 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     this(fs, dirName, conf, r, mk, false, false, hri);
   }
   
+  /**
+   * @param fs
+   * @param dirName
+   * @param conf
+   * @param r
+   * @param mk
+   * @param filter
+   * @param blockCacheEnabled
+   * @param hri
+   * @throws IOException
+   */
   @SuppressWarnings("unchecked")
   public HalfMapFileReader(final FileSystem fs, final String dirName, 
       final Configuration conf, final Range r,
@@ -94,6 +113,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public synchronized void finalKey(WritableComparable key)
   throws IOException {
