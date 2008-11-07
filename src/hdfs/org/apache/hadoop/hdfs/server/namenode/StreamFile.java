@@ -36,12 +36,18 @@ public class StreamFile extends DfsServlet {
       nameNodeAddr = datanode.getNameNodeAddr();
     }
   }
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
+  
+  /** getting a client for connecting to dfs */
+  protected DFSClient getDFSClient(HttpServletRequest request)
+      throws IOException {
     Configuration conf = new Configuration(masterConf);
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
-
+    return new DFSClient(nameNodeAddr, conf);
+  }
+  
+  public void doGet(HttpServletRequest request, HttpServletResponse response)
+    throws ServletException, IOException {
     String filename = request.getParameter("filename");
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");
@@ -49,7 +55,7 @@ public class StreamFile extends DfsServlet {
       out.print("Invalid input");
       return;
     }
-    DFSClient dfs = new DFSClient(nameNodeAddr, conf);
+    DFSClient dfs = getDFSClient(request);
     FSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();
     response.setHeader("Content-Disposition", "attachment; filename=\"" + 

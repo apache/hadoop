@@ -35,9 +35,11 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
  */
 public class FileDataServlet extends DfsServlet {
 
-  private URI createUri(FileStatus i, UnixUserGroupInformation ugi,
-      ClientProtocol nnproxy, String scheme)
+  /** Create a redirection URI */
+  protected URI createUri(FileStatus i, UnixUserGroupInformation ugi,
+      ClientProtocol nnproxy, HttpServletRequest request)
       throws IOException, URISyntaxException {
+    String scheme = request.getScheme();
     final DatanodeID host = pickSrcDatanode(i, nnproxy);
     final String hostname;
     if (host instanceof DatanodeInfo) {
@@ -52,7 +54,7 @@ public class FileDataServlet extends DfsServlet {
         "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
   }
 
-  private final static JspHelper jspHelper = new JspHelper();
+  private static JspHelper jspHelper = null;
 
   /** Select a datanode to service this request.
    * Currently, this looks at no more than the first five blocks of a file,
@@ -60,6 +62,11 @@ public class FileDataServlet extends DfsServlet {
    */
   private static DatanodeID pickSrcDatanode(FileStatus i,
       ClientProtocol nnproxy) throws IOException {
+    // a race condition can happen by initializing a static member this way.
+    // A proper fix should make JspHelper a singleton. Since it doesn't affect 
+    // correctness, we leave it as is for now.
+    if (jspHelper == null)
+      jspHelper = new JspHelper();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
         i.getPath().toUri().getPath(), 0, 1);
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
@@ -87,7 +94,7 @@ public class FileDataServlet extends DfsServlet {
       FileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
         response.sendRedirect(createUri(info, ugi, nnproxy,
-              request.getScheme()).toURL().toString());
+              request).toURL().toString());
       } else if (info == null){
         response.sendError(400, "cat: File not found " + path);
       } else {

@@ -24,6 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.UnknownHostException;
 
 import org.apache.hadoop.fs.Path;
 
@@ -39,7 +40,7 @@ public class HsftpFileSystem extends HftpFileSystem {
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
-      final URL url = new URI("https", null, nnAddr.getHostName(),
+      final URL url = new URI("https", null, pickOneAddress(nnAddr.getHostName()),
           nnAddr.getPort(), path, query, null).toURL();
       return (HttpURLConnection)url.openConnection();
     } catch (URISyntaxException e) {
@@ -50,9 +51,11 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   public URI getUri() {
     try {
-      return new URI("hsftp", null, nnAddr.getHostName(), nnAddr.getPort(),
+      return new URI("hsftp", null, pickOneAddress(nnAddr.getHostName()), nnAddr.getPort(),
                      null, null, null);
     } catch (URISyntaxException e) {
+      return null;
+    } catch (UnknownHostException e) {
       return null;
     }
   }

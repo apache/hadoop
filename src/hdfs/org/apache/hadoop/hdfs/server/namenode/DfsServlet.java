@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -63,12 +64,12 @@ abstract class DfsServlet extends HttpServlet {
   protected ClientProtocol createNameNodeProxy(UnixUserGroupInformation ugi
       ) throws IOException {
     ServletContext context = getServletContext();
-    NameNode nn = (NameNode)context.getAttribute("name.node");
+    InetSocketAddress nnAddr = (InetSocketAddress)context.getAttribute("name.node.address");
     Configuration conf = new Configuration(
         (Configuration)context.getAttribute("name.conf"));
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-    return DFSClient.createNamenode(nn.getNameNodeAddress(), conf);
+    return DFSClient.createNamenode(nnAddr, conf);
   }
 
   /** Create a URI for redirecting request */

@@ -368,6 +368,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.infoServer.setAttribute("datanode.https.port",
         datanodeSslPort.getPort());
     this.infoServer.setAttribute("name.node", nn);
+    this.infoServer.setAttribute("name.node.address", nn.getNameNodeAddress());
     this.infoServer.setAttribute("name.system.image", getFSImage());
     this.infoServer.setAttribute("name.conf", conf);
     this.infoServer.addInternalServlet("fsck", "/fsck", FsckServlet.class);

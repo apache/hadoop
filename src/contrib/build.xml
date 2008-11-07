@@ -46,6 +46,7 @@
   <!-- ====================================================== -->
   <target name="test">
     <subant target="test">
+      <fileset dir="." includes="hdfsproxy/build.xml"/>
       <fileset dir="." includes="streaming/build.xml"/>
       <fileset dir="." includes="fairscheduler/build.xml"/>
       <fileset dir="." includes="capacity-scheduler/build.xml"/>

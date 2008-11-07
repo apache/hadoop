@@ -17,6 +17,10 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
+    Includes client authentication via user certificates and config-based
+    access control. (Kan Zhang via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
