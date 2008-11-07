@@ -71,7 +71,7 @@
 
 
   <property name="javadoc.link.java"
-    value="http://java.sun.com/javase/6/docs/api/index.html"/>
+    value="http://java.sun.com/javase/6/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.hbase.*"/>
   <property name="jarfile" value="${build.dir}/${final.name}.jar" />
 
