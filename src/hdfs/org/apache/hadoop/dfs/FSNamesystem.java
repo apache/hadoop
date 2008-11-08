@@ -3788,8 +3788,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * Switch to manual safe mode if distributed upgrade is required.<br>
      * Check for invalid, under- & over-replicated blocks in the end of startup.
      */
-    synchronized void leave(boolean checkForUpgrades,
-                            boolean checkBlockReplication) {
+    synchronized void leave(boolean checkForUpgrades) {
       if(checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
         boolean needUpgrade = false;
@@ -3804,9 +3803,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
           return;
         }
       }
-      if(checkBlockReplication)
-        // verify blocks replications
-        processMisReplicatedBlocks();
+      // verify blocks replications
+      processMisReplicatedBlocks();
       long timeInSafemode = now() - systemStart;
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
                                     + timeInSafemode/1000 + " secs.");
@@ -3868,7 +3866,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // the threshold is reached
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave(true, false); // leave safe mode
+        this.leave(true); // leave safe mode
         return;
       }
       if (reached > 0) {  // threshold has already been reached before
@@ -4006,7 +4004,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       // leave safe mode and stop the monitor
       if(safeMode != null)
-        safeMode.leave(true, true);
+        safeMode.leave(true);
       smmthread = null;
     }
   }
@@ -4024,7 +4022,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkSuperuserPrivilege();
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
-        leaveSafeMode(false, true);
+        leaveSafeMode(false);
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode();
@@ -4095,9 +4093,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Leave safe mode.
    * @throws IOException
    */
-  synchronized void leaveSafeMode(boolean checkForUpgrades,
-                                  boolean checkBlockReplication
-                                 ) throws IOException {
+  synchronized void leaveSafeMode(boolean checkForUpgrades) throws IOException {
     if (!isInSafeMode()) {
       NameNode.stateChangeLog.info("STATE* Safe mode is already OFF."); 
       return;
@@ -4105,7 +4101,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if(getDistributedUpgradeState())
       throw new SafeModeException("Distributed upgrade is in progress",
                                   safeMode);
-    safeMode.leave(checkForUpgrades, checkBlockReplication);
+    safeMode.leave(checkForUpgrades);
   }
     
   String getSafeModeTip() {

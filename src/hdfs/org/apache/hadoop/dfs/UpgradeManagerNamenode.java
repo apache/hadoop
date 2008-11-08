@@ -101,7 +101,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     FSNamesystem.getFSNamesystem().getFSImage().writeAll();
     currentUpgrades = null;
     broadcastCommand = null;
-    FSNamesystem.getFSNamesystem().leaveSafeMode(false, true);
+    FSNamesystem.getFSNamesystem().leaveSafeMode(false);
   }
 
   UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
