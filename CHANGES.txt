@@ -1070,9 +1070,6 @@ Release 0.19.0 - Unreleased
     HADOOP-4498. Ensure that JobHistory correctly escapes the job name so that
     regex patterns work. (Chris Wensel via acmurthy)
 
-    HADOOP-4610. Always calculate mis-replicated blocks when safe-mode is 
-    turned off. (shv)
-
 Release 0.18.3 - Unreleased
 
   BUG FIXES
@@ -1084,6 +1081,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-3121. lsr should keep listing the remaining items but not
     terminate if there is any IOException. (szetszwo)
+
+    HADOOP-4610. Always calculate mis-replicated blocks when safe-mode is 
+    turned off. (shv)
 
 Release 0.18.2 - 2008-11-03
 
