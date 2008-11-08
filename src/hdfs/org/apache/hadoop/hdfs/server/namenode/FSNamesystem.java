@@ -1433,11 +1433,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    *        <code>inodes[inodes.length-1]</code> is the INode for the file.
    */
   private Block allocateBlock(String src, INode[] inodes) throws IOException {
-    Block b = null;
-    do {
-      b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 
-                    getGenerationStamp());
-    } while (isValidBlock(b));
+    Block b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 0); 
+    while(isValidBlock(b)) {
+      b.setBlockId(FSNamesystem.randBlockId.nextLong());
+    }
+    b.setGenerationStamp(getGenerationStamp());
     b = dir.addBlock(src, inodes, b);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
                                  +src+ ". "+b);
@@ -3879,7 +3879,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * @see SafeModeInfo
      */
     private SafeModeInfo() {
-      this.threshold = 1.5f;  // this threshold can never be riched
+      this.threshold = 1.5f;  // this threshold can never be reached
       this.extension = 0;
       this.safeReplication = Short.MAX_VALUE + 1; // more than maxReplication
       this.blockTotal = -1;

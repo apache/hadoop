@@ -98,9 +98,7 @@ class INodeFile extends INode {
     } else {
       int size = this.blocks.length;
       BlockInfo[] newlist = new BlockInfo[size + 1];
-      for (int i = 0; i < size; i++) {
-        newlist[i] = this.blocks[i];
-      }
+      System.arraycopy(this.blocks, 0, newlist, 0, size);
       newlist[size] = newblock;
       this.blocks = newlist;
     }

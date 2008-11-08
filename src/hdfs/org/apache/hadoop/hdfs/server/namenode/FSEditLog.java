@@ -449,12 +449,13 @@ public class FSEditLog {
     for (int idx = 0; idx < errorStreams.size(); idx++) {
       EditLogOutputStream eStream = errorStreams.get(idx);
       int j = 0;
-      for (j = 0; j < editStreams.size(); j++) {
+      int numEditStreams = editStreams.size();
+      for (j = 0; j < numEditStreams; j++) {
         if (editStreams.get(j) == eStream) {
           break;
         }
       }
-      if (j == editStreams.size()) {
+      if (j == numEditStreams) {
           FSNamesystem.LOG.error("Unable to find sync log on which " +
                                  " IO error occured. " +
                                  "Fatal Error.");
@@ -841,7 +842,8 @@ public class FSEditLog {
   synchronized void logEdit(byte op, Writable ... writables) {
     assert this.getNumEditStreams() > 0 : "no editlog streams";
     long start = FSNamesystem.now();
-    for (int idx = 0; idx < editStreams.size(); idx++) {
+    int numEditStreams = editStreams.size();
+    for (int idx = 0; idx < numEditStreams; idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
       try {
         eStream.write(op, writables);
@@ -874,11 +876,12 @@ public class FSEditLog {
     long syncStart = 0;
 
     // Fetch the transactionId of this thread. 
-    TransactionId id = myTransactionId.get();
-    long mytxid = id.txid;
+    long mytxid = myTransactionId.get().txid;
 
+    final int numEditStreams;
     synchronized (this) {
-      assert this.getNumEditStreams() > 0 : "no editlog streams";
+      numEditStreams = editStreams.size();
+      assert numEditStreams > 0 : "no editlog streams";
       printStatistics(false);
 
       // if somebody is already syncing, then wait
@@ -901,15 +904,14 @@ public class FSEditLog {
       isSyncRunning = true;   
 
       // swap buffers
-      for (int idx = 0; idx < editStreams.size(); idx++) {
-        EditLogOutputStream eStream = editStreams.get(idx);
-        eStream.setReadyToFlush();
+      for (int idx = 0; idx < numEditStreams; idx++) {
+        editStreams.get(idx).setReadyToFlush();
       }
     }
 
     // do the sync
     long start = FSNamesystem.now();
-    for (int idx = 0; idx < editStreams.size(); idx++) {
+    for (int idx = 0; idx < numEditStreams; idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
       try {
         eStream.flush();
@@ -950,14 +952,17 @@ public class FSEditLog {
       return;
     }
     lastPrintTime = now;
-    StringBuffer buf = new StringBuffer();
-
-    buf.append("Number of transactions: " + numTransactions +
-               " Total time for transactions(ms): " + 
-               totalTimeTransactions);
-    buf.append(" Number of syncs: " + editStreams.get(0).getNumSync());
+    StringBuilder buf = new StringBuilder();
+    buf.append("Number of transactions: ");
+    buf.append(numTransactions);
+    buf.append(" Total time for transactions(ms): ");
+    buf.append(totalTimeTransactions);
+    buf.append(" Number of syncs: ");
+    buf.append(editStreams.get(0).getNumSync());
     buf.append(" SyncTimes(ms): ");
-    for (int idx = 0; idx < editStreams.size(); idx++) {
+
+    int numEditStreams = editStreams.size();
+    for (int idx = 0; idx < numEditStreams; idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
       buf.append(eStream.getTotalSyncTime());
       buf.append(" ");
