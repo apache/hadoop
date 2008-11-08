@@ -123,6 +123,8 @@ public interface FSConstants {
   public static long BLOCKREPORT_INITIAL_DELAY = 0;
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
   public static final long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
+  public static final long LEASE_RECOVER_PERIOD = 10 * 1000; //in ms
+
   public static int READ_TIMEOUT = 60 * 1000;
   public static int WRITE_TIMEOUT = 8 * 60 * 1000;  
   public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline

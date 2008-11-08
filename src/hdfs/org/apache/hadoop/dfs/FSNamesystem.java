@@ -1783,10 +1783,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (!closeFile) {
       dir.persistBlocks(src, pendingFile);
       getEditLog().logSync();
-      LOG.info("commitBlockSynchronization(lastblock=" + lastblock
-          + ", newgenerationstamp=" + newgenerationstamp
-          + ", newlength=" + newlength
-          + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
+      LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
       return;
     }
     
@@ -4367,14 +4364,20 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Increments, logs and then returns the stamp
    */
   synchronized long nextGenerationStampForBlock(Block block) throws IOException {
-    String msg = "Block " + block + " is already commited.";
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if (storedBlock == null) {
+      String msg = block + " is already commited, storedBlock == null.";
       LOG.info(msg);
       throw new IOException(msg);
     }
-    INode fileINode = storedBlock.getINode();
+    INodeFile fileINode = storedBlock.getINode();
     if (!fileINode.isUnderConstruction()) {
+      String msg = block + " is already commited, !fileINode.isUnderConstruction().";
+      LOG.info(msg);
+      throw new IOException(msg);
+    }
+    if (!((INodeFileUnderConstruction)fileINode).setLastRecoveryTime(now())) {
+      String msg = block + " is beening recovered, ignoring this request.";
       LOG.info(msg);
       throw new IOException(msg);
     }

@@ -409,9 +409,10 @@ class LeaseManager {
       DataNode primary, DatanodeProtocol namenode, Configuration conf) {
     for(int i = 0; i < blocks.length; i++) {
       try {
+        DataNode.logRecoverBlock("NameNode", blocks[i], targets[i]);
         recoverBlock(blocks[i], targets[i], primary, namenode, conf, true);
       } catch (IOException e) {
-        LOG.warn("recoverBlocks, i=" + i, e);
+        LOG.warn("recoverBlocks FAILED, blocks[" + i + "]=" + blocks[i], e);
       }
     }
   }
@@ -436,10 +437,6 @@ class LeaseManager {
       ongoingRecovery.put(block, block);
     }
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("block=" + block
-            + ", datanodeids=" + Arrays.asList(datanodeids));
-      }
       List<BlockRecord> syncList = new ArrayList<BlockRecord>();
       long minlength = Long.MAX_VALUE;
       int errorCount = 0;
@@ -514,6 +511,12 @@ class LeaseManager {
           successList.toArray(new DatanodeID[successList.size()]));
       return newblock; // success
     }
-    return null; // failed
-  }
+
+    //failed
+    StringBuilder b = new StringBuilder();
+    for(BlockRecord r : syncList) {
+      b.append("\n  " + r.id);
+    }
+    throw new IOException("Cannot recover " + block + ", none of these "
+        + syncList.size() + " datanodes success {" + b + "\n}");  }
 }

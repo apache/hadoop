@@ -3174,8 +3174,17 @@ public class DataNode extends Configured
   /** {@inheritDoc} */
   public Block recoverBlock(Block block, DatanodeInfo[] targets
       ) throws IOException {
-    LOG.info("Client invoking recoverBlock for block " + block);
+    logRecoverBlock("Client", block, targets);
     return LeaseManager.recoverBlock(block, targets, this, namenode, 
                                      getConf(), false);
+  }
+
+  static void logRecoverBlock(String who, Block block, DatanodeID[] targets) {
+    StringBuilder msg = new StringBuilder(targets[0].getName());
+    for (int i = 1; i < targets.length; i++) {
+      msg.append(", " + targets[i].getName());
+    }
+    LOG.info(who + " calls recoverBlock(block=" + block
+        + ", targets=[" + msg + "])");
   }
 }

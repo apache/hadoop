@@ -18,12 +18,22 @@
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Random;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.log4j.Level;
 
 public class TestLeaseRecovery2 extends junit.framework.TestCase {
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final int BLOCK_SIZE = 64;
   static final int FILE_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
