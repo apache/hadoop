@@ -104,6 +104,7 @@ Release 0.19.0 - Unreleased
    HBASE-975   Improve MapFile performance for start and end key
    HBASE-961   Delete multiple columns by regular expression
                (Samuel Guo via Stack)
+   HBASE-964   Startup stuck "waiting for root region"
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

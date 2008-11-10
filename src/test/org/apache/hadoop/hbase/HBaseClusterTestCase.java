@@ -87,9 +87,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
     // opening the META table ensures that cluster is running
-    // We need to sleep because we cannot open a HTable when the cluster
-    // is not ready
-    Thread.sleep(5000);
     new HTable(conf, HConstants.META_TABLE_NAME);
   }
   
