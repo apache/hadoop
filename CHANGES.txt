@@ -106,6 +106,7 @@ Release 0.19.0 - Unreleased
    HBASE-961   Delete multiple columns by regular expression
                (Samuel Guo via Stack)
    HBASE-722   Shutdown and Compactions
+   HBASE-983   Declare Perl namespace in Hbase.thrift
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
