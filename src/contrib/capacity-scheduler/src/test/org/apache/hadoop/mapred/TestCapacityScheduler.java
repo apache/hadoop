@@ -783,7 +783,7 @@ public class TestCapacityScheduler extends TestCase {
                                           String queue) throws IOException {
     String schedInfo = taskTrackerManager.getQueueManager().
                           getSchedulerInfo(queue).toString();
-    assertTrue(schedInfo.contains("Current Capacity Maps : " 
+    assertTrue(schedInfo.contains("Guaranteed Capacity Maps : " 
                                     + expectedCapacity));
   }
   
@@ -1115,6 +1115,38 @@ public class TestCapacityScheduler extends TestCase {
     // one task from j1 will be killed
     assertEquals(j1.runningMapTasks, 2);
     
+  }
+  
+  public void testSchedulingInformation() throws IOException {
+    String[] qs = {"default", "q2"};
+    taskTrackerManager.addQueues(qs);
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 50.0f, 1000000, true, 25));
+    queues.add(new FakeQueueInfo("q2", 50.0f, 1000000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+    scheduler.assignTasks(tracker("tt1")); // heartbeat
+    scheduler.assignTasks(tracker("tt2")); // heartbeat
+    int totalMaps = taskTrackerManager.getClusterStatus().getMaxMapTasks();
+    int totalReduces = taskTrackerManager.getClusterStatus().getMaxReduceTasks();
+    QueueManager queueManager = scheduler.taskTrackerManager.getQueueManager();
+    String schedulingInfo = queueManager.getJobQueueInfo("default").getSchedulingInfo();
+    String schedulingInfo2 = queueManager.getJobQueueInfo("q2").getSchedulingInfo();
+    String[] infoStrings = schedulingInfo.split("\n");
+    assertEquals(infoStrings.length, 10);
+    assertEquals(infoStrings[0] , "Guaranteed Capacity (%) : 50.0 ");
+    assertEquals(infoStrings[1] , "Guaranteed Capacity Maps : " + totalMaps * 50/100 + " ");
+    assertEquals(infoStrings[2] , "Guaranteed Capacity Reduces : " + totalReduces * 50/100 + " ");
+    assertEquals(infoStrings[3] , "User Limit : 25 ");
+    assertEquals(infoStrings[4] , "Reclaim Time limit : 1000000 " );
+    assertEquals(infoStrings[5] , "Number of Running Maps : 0 ");
+    assertEquals(infoStrings[6] , "Number of Running Reduces : 0 ");
+    assertEquals(infoStrings[7] , "Number of Waiting Maps : 0 ");
+    assertEquals(infoStrings[8] , "Number of Waiting Reduces : 0 ");
+    assertEquals(infoStrings[9] , "Priority Supported : YES ");
+    assertEquals(schedulingInfo, schedulingInfo2);   
   }
 
   protected TaskTrackerStatus tracker(String taskTrackerName) {

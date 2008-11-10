@@ -33,7 +33,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -207,17 +206,13 @@ class CapacityTaskScheduler extends TaskScheduler {
     
     @Override
     public String toString(){
-      String queue = mqsi.queueName;
       StringBuffer sb = new StringBuffer();
-      sb.append("Guaranteed Capacity Maps (%) :");
+      sb.append("Guaranteed Capacity (%) : ");
       sb.append(mqsi.guaranteedCapacityPercent);
-      sb.append("\n");
-      sb.append("Guaranteed Capacity Reduces (%) :");
-      sb.append(rqsi.guaranteedCapacityPercent);
-      sb.append("\n");
-      sb.append(String.format("Current Capacity Maps : %d \n",
+      sb.append(" \n");
+      sb.append(String.format("Guaranteed Capacity Maps : %d \n",
           mqsi.guaranteedCapacity));
-      sb.append(String.format("Current Capacity Reduces : %d \n",
+      sb.append(String.format("Guaranteed Capacity Reduces : %d \n",
           rqsi.guaranteedCapacity));
       sb.append(String.format("User Limit : %d \n",mqsi.ulMin));
       sb.append(String.format("Reclaim Time limit : %d \n",mqsi.reclaimTime));
