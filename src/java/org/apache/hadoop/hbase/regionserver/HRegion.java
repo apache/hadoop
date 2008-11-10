@@ -111,213 +111,6 @@ public class HRegion implements HConstants {
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
   private final RegionHistorian historian;
-  
-  /**
-   * Merge two HRegions.  The regions must be adjacent andmust not overlap.
-   * 
-   * @param srcA
-   * @param srcB
-   * @return new merged HRegion
-   * @throws IOException
-   */
-  public static HRegion mergeAdjacent(final HRegion srcA, final HRegion srcB)
-  throws IOException {
-
-    HRegion a = srcA;
-    HRegion b = srcB;
-
-    // Make sure that srcA comes first; important for key-ordering during
-    // write of the merged file.
-    if (srcA.getStartKey() == null) {
-      if (srcB.getStartKey() == null) {
-        throw new IOException("Cannot merge two regions with null start key");
-      }
-      // A's start key is null but B's isn't. Assume A comes before B
-    } else if ((srcB.getStartKey() == null)         // A is not null but B is
-        || (HStoreKey.compareTwoRowKeys(srcA.getRegionInfo(), 
-            srcA.getStartKey(), srcB.getStartKey()) > 0)) { // A > B
-      a = srcB;
-      b = srcA;
-    }
-
-    if (!HStoreKey.equalsTwoRowKeys(srcA.getRegionInfo(),
-      a.getEndKey(), b.getStartKey())) {
-      throw new IOException("Cannot merge non-adjacent regions");
-    }
-    return merge(a, b);
-  }
-
-  /**
-   * Merge two regions whether they are adjacent or not.
-   * 
-   * @param a region a
-   * @param b region b
-   * @return new merged region
-   * @throws IOException
-   */
-  public static HRegion merge(HRegion a, HRegion b) throws IOException {
-    if (!a.getRegionInfo().getTableDesc().getNameAsString().equals(
-        b.getRegionInfo().getTableDesc().getNameAsString())) {
-      throw new IOException("Regions do not belong to the same table");
-    }
-
-    FileSystem fs = a.getFilesystem();
-
-    // Make sure each region's cache is empty
-    
-    a.flushcache();
-    b.flushcache();
-    
-    // Compact each region so we only have one store file per family
-    
-    a.compactStores(true);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Files for region: " + a);
-      listPaths(fs, a.getRegionDir());
-    }
-    b.compactStores(true);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Files for region: " + b);
-      listPaths(fs, b.getRegionDir());
-    }
-    
-    HBaseConfiguration conf = a.getConf();
-    HTableDescriptor tabledesc = a.getTableDesc();
-    HLog log = a.getLog();
-    Path basedir = a.getBaseDir();
-    final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-        a.getStartKey(), EMPTY_BYTE_ARRAY) ||
-      HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-          b.getStartKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getStartKey(), 
-            b.getStartKey()) <= 0 ?
-            a.getStartKey() : b.getStartKey();
-    final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-        a.getEndKey(), EMPTY_BYTE_ARRAY) ||
-      HStoreKey.equalsTwoRowKeys(b.getRegionInfo(), b.getEndKey(), 
-          EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getEndKey(), 
-            b.getEndKey()) <= 0 ?
-            b.getEndKey() : a.getEndKey();
-
-    HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
-    LOG.info("Creating new region " + newRegionInfo.toString());
-    int encodedName = newRegionInfo.getEncodedName(); 
-    Path newRegionDir = HRegion.getRegionDir(a.getBaseDir(), encodedName);
-    if(fs.exists(newRegionDir)) {
-      throw new IOException("Cannot merge; target file collision at " +
-          newRegionDir);
-    }
-    fs.mkdirs(newRegionDir);
-
-    LOG.info("starting merge of regions: " + a + " and " + b +
-      " into new region " + newRegionInfo.toString() +
-        " with start key <" + startKey + "> and end key <" + endKey + ">");
-
-    // Move HStoreFiles under new region directory
-    
-    Map<byte [], List<HStoreFile>> byFamily =
-      new TreeMap<byte [], List<HStoreFile>>(Bytes.BYTES_COMPARATOR);
-    byFamily = filesByFamily(byFamily, a.close());
-    byFamily = filesByFamily(byFamily, b.close());
-    for (Map.Entry<byte [], List<HStoreFile>> es : byFamily.entrySet()) {
-      byte [] colFamily = es.getKey();
-      makeColumnFamilyDirs(fs, basedir, encodedName, colFamily, tabledesc);
-      
-      // Because we compacted the source regions we should have no more than two
-      // HStoreFiles per family and there will be no reference store
-      List<HStoreFile> srcFiles = es.getValue();
-      if (srcFiles.size() == 2) {
-        long seqA = srcFiles.get(0).loadInfo(fs);
-        long seqB = srcFiles.get(1).loadInfo(fs);
-        if (seqA == seqB) {
-          // We can't have duplicate sequence numbers
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Adjusting sequence id of storeFile " + srcFiles.get(1) +
-              " down by one; sequence id A=" + seqA + ", sequence id B=" +
-              seqB);
-          }
-          srcFiles.get(1).writeInfo(fs, seqB - 1);
-        }
-      }
-      for (HStoreFile hsf: srcFiles) {
-        HStoreFile dst = new HStoreFile(conf, fs, basedir,
-            newRegionInfo, colFamily, -1, null);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Renaming " + hsf + " to " + dst);
-        }
-        hsf.rename(fs, dst);
-      }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Files for new region");
-      listPaths(fs, newRegionDir);
-    }
-    HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo, null);
-    dstRegion.initialize(null, null);
-    dstRegion.compactStores();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Files for new region");
-      listPaths(fs, dstRegion.getRegionDir());
-    }
-    deleteRegion(fs, a.getRegionDir());
-    deleteRegion(fs, b.getRegionDir());
-
-    LOG.info("merge completed. New region is " + dstRegion);
-
-    return dstRegion;
-  }
-
-  /*
-   * Fills a map with a vector of store files keyed by column family. 
-   * @param byFamily Map to fill.
-   * @param storeFiles Store files to process.
-   * @return Returns <code>byFamily</code>
-   */
-  private static Map<byte [], List<HStoreFile>> filesByFamily(
-      Map<byte [], List<HStoreFile>> byFamily, List<HStoreFile> storeFiles) {
-    for (HStoreFile src: storeFiles) {
-      List<HStoreFile> v = byFamily.get(src.getColFamily());
-      if (v == null) {
-        v = new ArrayList<HStoreFile>();
-        byFamily.put(src.getColFamily(), v);
-      }
-      v.add(src);
-    }
-    return byFamily;
-  }
-
-  /*
-   * Method to list files in use by region
-   */
-  static void listFiles(FileSystem fs, HRegion r) throws IOException {
-    listPaths(fs, r.getRegionDir());
-  }
-  
-  /*
-   * List the files under the specified directory
-   * 
-   * @param fs
-   * @param dir
-   * @throws IOException
-   */
-  private static void listPaths(FileSystem fs, Path dir) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      FileStatus[] stats = fs.listStatus(dir);
-      if (stats == null || stats.length == 0) {
-        return;
-      }
-      for (int i = 0; i < stats.length; i++) {
-        String path = stats[i].getPath().toString();
-        if (stats[i].isDir()) {
-          LOG.debug("d " + path);
-          listPaths(fs, stats[i].getPath());
-        } else {
-          LOG.debug("f " + path + " size=" + stats[i].getLen());
-        }
-      }
-    }
-  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Members
@@ -911,7 +704,6 @@ public class HRegion implements HConstants {
         String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
             startTime);
         LOG.info("compaction completed on region " + this + " in " + timeTaken);
-        
         this.historian.addRegionCompaction(regionInfo, timeTaken);
       } finally {
         synchronized (writestate) {
@@ -2411,5 +2203,212 @@ public class HRegion implements HConstants {
   throws IOException {
     fs.mkdirs(HStoreFile.getMapDir(basedir, encodedRegionName, colFamily));
     fs.mkdirs(HStoreFile.getInfoDir(basedir, encodedRegionName, colFamily));
+  }
+  
+  /**
+   * Merge two HRegions.  The regions must be adjacent andmust not overlap.
+   * 
+   * @param srcA
+   * @param srcB
+   * @return new merged HRegion
+   * @throws IOException
+   */
+  public static HRegion mergeAdjacent(final HRegion srcA, final HRegion srcB)
+  throws IOException {
+
+    HRegion a = srcA;
+    HRegion b = srcB;
+
+    // Make sure that srcA comes first; important for key-ordering during
+    // write of the merged file.
+    if (srcA.getStartKey() == null) {
+      if (srcB.getStartKey() == null) {
+        throw new IOException("Cannot merge two regions with null start key");
+      }
+      // A's start key is null but B's isn't. Assume A comes before B
+    } else if ((srcB.getStartKey() == null)         // A is not null but B is
+        || (HStoreKey.compareTwoRowKeys(srcA.getRegionInfo(), 
+            srcA.getStartKey(), srcB.getStartKey()) > 0)) { // A > B
+      a = srcB;
+      b = srcA;
+    }
+
+    if (!HStoreKey.equalsTwoRowKeys(srcA.getRegionInfo(),
+      a.getEndKey(), b.getStartKey())) {
+      throw new IOException("Cannot merge non-adjacent regions");
+    }
+    return merge(a, b);
+  }
+
+  /**
+   * Merge two regions whether they are adjacent or not.
+   * 
+   * @param a region a
+   * @param b region b
+   * @return new merged region
+   * @throws IOException
+   */
+  public static HRegion merge(HRegion a, HRegion b) throws IOException {
+    if (!a.getRegionInfo().getTableDesc().getNameAsString().equals(
+        b.getRegionInfo().getTableDesc().getNameAsString())) {
+      throw new IOException("Regions do not belong to the same table");
+    }
+
+    FileSystem fs = a.getFilesystem();
+
+    // Make sure each region's cache is empty
+    
+    a.flushcache();
+    b.flushcache();
+    
+    // Compact each region so we only have one store file per family
+    
+    a.compactStores(true);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for region: " + a);
+      listPaths(fs, a.getRegionDir());
+    }
+    b.compactStores(true);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for region: " + b);
+      listPaths(fs, b.getRegionDir());
+    }
+    
+    HBaseConfiguration conf = a.getConf();
+    HTableDescriptor tabledesc = a.getTableDesc();
+    HLog log = a.getLog();
+    Path basedir = a.getBaseDir();
+    final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+        a.getStartKey(), EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+          b.getStartKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
+        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getStartKey(), 
+            b.getStartKey()) <= 0 ?
+            a.getStartKey() : b.getStartKey();
+    final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
+        a.getEndKey(), EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(b.getRegionInfo(), b.getEndKey(), 
+          EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
+        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getEndKey(), 
+            b.getEndKey()) <= 0 ?
+            b.getEndKey() : a.getEndKey();
+
+    HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
+    LOG.info("Creating new region " + newRegionInfo.toString());
+    int encodedName = newRegionInfo.getEncodedName(); 
+    Path newRegionDir = HRegion.getRegionDir(a.getBaseDir(), encodedName);
+    if(fs.exists(newRegionDir)) {
+      throw new IOException("Cannot merge; target file collision at " +
+          newRegionDir);
+    }
+    fs.mkdirs(newRegionDir);
+
+    LOG.info("starting merge of regions: " + a + " and " + b +
+      " into new region " + newRegionInfo.toString() +
+        " with start key <" + startKey + "> and end key <" + endKey + ">");
+
+    // Move HStoreFiles under new region directory
+    
+    Map<byte [], List<HStoreFile>> byFamily =
+      new TreeMap<byte [], List<HStoreFile>>(Bytes.BYTES_COMPARATOR);
+    byFamily = filesByFamily(byFamily, a.close());
+    byFamily = filesByFamily(byFamily, b.close());
+    for (Map.Entry<byte [], List<HStoreFile>> es : byFamily.entrySet()) {
+      byte [] colFamily = es.getKey();
+      makeColumnFamilyDirs(fs, basedir, encodedName, colFamily, tabledesc);
+      
+      // Because we compacted the source regions we should have no more than two
+      // HStoreFiles per family and there will be no reference store
+      List<HStoreFile> srcFiles = es.getValue();
+      if (srcFiles.size() == 2) {
+        long seqA = srcFiles.get(0).loadInfo(fs);
+        long seqB = srcFiles.get(1).loadInfo(fs);
+        if (seqA == seqB) {
+          // We can't have duplicate sequence numbers
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Adjusting sequence id of storeFile " + srcFiles.get(1) +
+              " down by one; sequence id A=" + seqA + ", sequence id B=" +
+              seqB);
+          }
+          srcFiles.get(1).writeInfo(fs, seqB - 1);
+        }
+      }
+      for (HStoreFile hsf: srcFiles) {
+        HStoreFile dst = new HStoreFile(conf, fs, basedir,
+            newRegionInfo, colFamily, -1, null);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Renaming " + hsf + " to " + dst);
+        }
+        hsf.rename(fs, dst);
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for new region");
+      listPaths(fs, newRegionDir);
+    }
+    HRegion dstRegion = new HRegion(basedir, log, fs, conf, newRegionInfo, null);
+    dstRegion.initialize(null, null);
+    dstRegion.compactStores();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Files for new region");
+      listPaths(fs, dstRegion.getRegionDir());
+    }
+    deleteRegion(fs, a.getRegionDir());
+    deleteRegion(fs, b.getRegionDir());
+
+    LOG.info("merge completed. New region is " + dstRegion);
+
+    return dstRegion;
+  }
+
+  /*
+   * Fills a map with a vector of store files keyed by column family. 
+   * @param byFamily Map to fill.
+   * @param storeFiles Store files to process.
+   * @return Returns <code>byFamily</code>
+   */
+  private static Map<byte [], List<HStoreFile>> filesByFamily(
+      Map<byte [], List<HStoreFile>> byFamily, List<HStoreFile> storeFiles) {
+    for (HStoreFile src: storeFiles) {
+      List<HStoreFile> v = byFamily.get(src.getColFamily());
+      if (v == null) {
+        v = new ArrayList<HStoreFile>();
+        byFamily.put(src.getColFamily(), v);
+      }
+      v.add(src);
+    }
+    return byFamily;
+  }
+
+  /*
+   * Method to list files in use by region
+   */
+  static void listFiles(FileSystem fs, HRegion r) throws IOException {
+    listPaths(fs, r.getRegionDir());
+  }
+  
+  /*
+   * List the files under the specified directory
+   * 
+   * @param fs
+   * @param dir
+   * @throws IOException
+   */
+  private static void listPaths(FileSystem fs, Path dir) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      FileStatus[] stats = fs.listStatus(dir);
+      if (stats == null || stats.length == 0) {
+        return;
+      }
+      for (int i = 0; i < stats.length; i++) {
+        String path = stats[i].getPath().toString();
+        if (stats[i].isDir()) {
+          LOG.debug("d " + path);
+          listPaths(fs, stats[i].getPath());
+        } else {
+          LOG.debug("f " + path + " size=" + stats[i].getLen());
+        }
+      }
+    }
   }
 }

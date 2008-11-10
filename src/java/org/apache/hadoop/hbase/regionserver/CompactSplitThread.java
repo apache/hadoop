@@ -73,11 +73,11 @@ class CompactSplitThread extends Thread implements HConstants {
   
   @Override
   public void run() {
-    while (!server.isStopRequested()) {
+    while (!this.server.isStopRequested()) {
       HRegion r = null;
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null) {
+        if (r != null && !this.server.isStopRequested()) {
           synchronized (regionsInQueue) {
             regionsInQueue.remove(r);
           }
@@ -85,7 +85,7 @@ class CompactSplitThread extends Thread implements HConstants {
           try {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
-            if (midKey != null) {
+            if (midKey != null && !this.server.isStopRequested()) {
               split(r, midKey);
             }
           } finally {
@@ -119,6 +119,9 @@ class CompactSplitThread extends Thread implements HConstants {
    * @param r HRegion store belongs to
    */
   public synchronized void compactionRequested(HRegion r) {
+    if (this.server.stopRequested.get()) {
+      return;
+    }
     LOG.debug("Compaction requested for region: " +
       Bytes.toString(r.getRegionName()));
     synchronized (regionsInQueue) {

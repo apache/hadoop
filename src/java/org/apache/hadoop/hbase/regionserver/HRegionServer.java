@@ -1055,6 +1055,31 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     return regionsToClose;
   }
+  
+  /*
+   * Thread to run close of a region.
+   */
+  private static class RegionCloserThread extends Thread {
+    private final HRegion r;
+
+    public RegionCloserThread(final HRegion r) {
+      super(Thread.currentThread().getName() + ".regionCloser." + r.toString());
+      this.r = r;
+    }
+
+    @Override
+    public void run() {
+      try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Closing region " + r.toString());
+        }
+        r.close();
+      } catch (IOException e) {
+        LOG.error("Error closing region " + r.toString(),
+          RemoteExceptionHandler.checkIOException(e));
+      }
+    }
+  }
 
   /** Called as the first stage of cluster shutdown. */
   void closeUserRegions() {
@@ -1075,15 +1100,23 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     } finally {
       this.lock.writeLock().unlock();
     }
-    for(HRegion region: regionsToClose) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
+    // Run region closes in parallel.
+    Set<Thread> threads = new HashSet<Thread>();
+    try {
+      for (final HRegion r : regionsToClose) {
+        RegionCloserThread t = new RegionCloserThread(r);
+        t.start();
+        threads.add(t);
       }
-      try {
-        region.close();
-      } catch (IOException e) {
-        LOG.error("error closing region " + region.getRegionName(),
-          RemoteExceptionHandler.checkIOException(e));
+    } finally {
+      for (Thread t : threads) {
+        while (t.isAlive()) {
+          try {
+            t.join();
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
       }
     }
     this.quiesced.set(true);
@@ -1620,7 +1653,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Copy over all regions. Regions are sorted by size with biggest first.
     synchronized (this.onlineRegions) {
       for (HRegion region : this.onlineRegions.values()) {
-        sortedRegions.put(region.memcacheSize.get(), region);
+        sortedRegions.put(Long.valueOf(region.memcacheSize.get()), region);
       }
     }
     return sortedRegions;
