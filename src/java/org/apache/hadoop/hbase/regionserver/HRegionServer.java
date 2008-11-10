@@ -123,6 +123,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final HBaseConfiguration conf;
 
   private final ServerConnection connection;
+  private final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
@@ -303,23 +304,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     boolean quiesceRequested = false;
     // A sleeper that sleeps for msgInterval.
     Sleeper sleeper = new Sleeper(this.msgInterval, this.stopRequested);
-    boolean haveRootRegion = false;
     try {
       init(reportForDuty(sleeper));
-      // Try to get the root region location from the master. 
-      if (!haveRootRegion) {
-        HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
-        if (rootServer != null) {
-          // By setting the root region location, we bypass the wait imposed on
-          // HTable for all regions being assigned.
-          this.connection.setRootRegionLocation(
-              new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
-          haveRootRegion = true;
-        }
-      }
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
+        // Try to get the root region location from the master. 
+        if (!haveRootRegion.get()) {
+          HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
+          if (rootServer != null) {
+            // By setting the root region location, we bypass the wait imposed on
+            // HTable for all regions being assigned.
+            this.connection.setRootRegionLocation(
+                new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
+            haveRootRegion.set(true);
+          }
+        }
         long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
@@ -890,6 +890,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               continue;
             }
             LOG.info(e.msg);
+            HRegionInfo info = e.msg.getRegionInfo();
             switch(e.msg.getType()) {
 
             case MSG_REGIONSERVER_QUIESCE:
@@ -898,7 +899,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             case MSG_REGION_OPEN:
               // Open a region
-              openRegion(e.msg.getRegionInfo());
+              if (!haveRootRegion.get() && !info.isRootRegion()) {
+                // root region is not online yet. requeue this task
+                LOG.info("putting region open request back into queue because" +
+                    " root region is not yet available");
+                try {
+                  toDo.put(e);
+                } catch (InterruptedException ex) {
+                  LOG.warn("insertion into toDo queue was interrupted", ex);
+                  break;
+                }
+              }
+              openRegion(info);
               break;
 
             case MSG_REGION_CLOSE:
@@ -912,7 +924,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               break;
 
             case MSG_REGION_SPLIT: {
-              HRegionInfo info = e.msg.getRegionInfo();
               // Force split a region
               HRegion region = getRegion(info.getRegionName());
               region.regionInfo.shouldSplit(true);
@@ -921,7 +932,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             case MSG_REGION_COMPACT: {
               // Compact a region
-              HRegionInfo info = e.msg.getRegionInfo();
               HRegion region = getRegion(info.getRegionName());
               compactSplitThread.compactionRequested(region);
             } break;

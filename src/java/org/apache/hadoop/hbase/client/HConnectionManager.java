@@ -132,7 +132,7 @@ public class HConnectionManager implements HConstants {
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
 
-    private HRegionLocation rootRegionLocation; 
+    private volatile HRegionLocation rootRegionLocation; 
     
     private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
       cachedRegionLocations = Collections.synchronizedMap(

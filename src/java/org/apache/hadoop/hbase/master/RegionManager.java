@@ -62,6 +62,8 @@ class RegionManager implements HConstants {
   private volatile AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
   
+  private volatile boolean safeMode = true;
+  
   final Lock splitLogLock = new ReentrantLock();
   
   private final RootScanner rootScannerThread;
@@ -190,7 +192,7 @@ class RegionManager implements HConstants {
       Set<HRegionInfo> regionsToAssign = regionsAwaitingAssignment();
       if (regionsToAssign.size() == 0) {
         // There are no regions waiting to be assigned.
-        if (allRegionsAssigned()) {
+        if (!inSafeMode()) {
           // We only do load balancing once all regions are assigned.
           // This prevents churn while the cluster is starting up.
           double avgLoad = master.serverManager.getAverageLoad();
@@ -860,9 +862,17 @@ class RegionManager implements HConstants {
    * @return true if the initial meta scan is complete and there are no
    * unassigned or pending regions
    */
-  public boolean allRegionsAssigned() {
-    return isInitialMetaScanComplete() && unassignedRegions.size() == 0 &&
-      pendingRegions.size() == 0;
+  public boolean inSafeMode() {
+    if (safeMode) {
+      if(isInitialMetaScanComplete() && unassignedRegions.size() == 0 &&
+          pendingRegions.size() == 0) {
+        safeMode = false;
+        LOG.info("exiting safe mode");
+      } else {
+        LOG.info("in safe mode");
+      }
+    }
+    return safeMode;
   }
   
   /** 

@@ -800,7 +800,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   public HServerAddress findRootRegion() {
     HServerAddress rootServer = null;
-    if (regionManager.isInitialMetaScanComplete()) {
+    if (!regionManager.inSafeMode()) {
       rootServer = regionManager.getRootRegionLocation();
     }
     return rootServer;
