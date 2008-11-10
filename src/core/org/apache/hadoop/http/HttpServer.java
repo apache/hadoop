@@ -212,16 +212,15 @@ public class HttpServer implements FilterContainer {
 
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
     defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+
+    final String[] ALL_URLS = { "/*" };
     for (Map.Entry<WebApplicationContext, Boolean> e : defaultContexts
         .entrySet()) {
       if (e.getValue()) {
         WebApplicationContext ctx = e.getKey();
-        defineFilter(ctx, name, classname, parameters, USER_FACING_URLS);
-        WebApplicationHandler handler = ctx.getWebApplicationHandler();
-        handler.addFilterPathMapping(ctx.getContextPath() + "/*", name,
-            Dispatcher.__ALL);
+        defineFilter(ctx, name, classname, parameters, ALL_URLS);
         LOG.info("Added filter " + name + " (class=" + classname
-            + ") to context path " + ctx.getContextPath() + "/*");
+            + ") to context " + ctx.getName());
       }
     }
     filterNames.add(name);

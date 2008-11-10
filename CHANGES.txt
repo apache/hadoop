@@ -1077,6 +1077,9 @@ Release 0.19.0 - Unreleased
     to reflect the information being displayed. (Sreekanth Ramakrishnan via 
     yhemanth)
 
+    HADOOP-4282. Some user facing URLs are not filtered by user filters.
+    (szetszwo)
+
 Release 0.18.3 - Unreleased
 
   BUG FIXES
