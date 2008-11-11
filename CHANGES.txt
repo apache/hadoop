@@ -28,6 +28,8 @@ Trunk (unreleased changes)
     HADOOP-4435. The JobTracker WebUI displays the amount of heap memory 
     in use. (dhruba)
 
+    HADOOP-4628. Move Hive into a standalone subproject. (omalley)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
