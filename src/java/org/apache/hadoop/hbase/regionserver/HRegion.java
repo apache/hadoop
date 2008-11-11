@@ -369,7 +369,7 @@ public class HRegion implements HConstants {
         // Disable compacting and flushing by background threads for this
         // region.
         writestate.writesEnabled = false;
-        LOG.debug("Compactions and cache flushes disabled for region " + this);
+        LOG.debug("Closing " + this + ": compactions & flushes disabled ");
         while (writestate.compacting || writestate.flushing) {
           LOG.debug("waiting for" +
               (writestate.compacting ? " compaction" : "") +
@@ -384,7 +384,6 @@ public class HRegion implements HConstants {
         }
       }
       newScannerLock.writeLock().lock();
-      LOG.debug("Scanners disabled for region " + this);
       try {
         // Wait for active scanners to finish. The write lock we hold will
         // prevent new scanners from being created.
@@ -399,9 +398,9 @@ public class HRegion implements HConstants {
             }
           }
         }
-        LOG.debug("No more active scanners for region " + this);
         splitsAndClosesLock.writeLock().lock();
-        LOG.debug("Updates disabled for region " + this);
+        LOG.debug("Updates disabled for region, no outstanding scanners on " +
+          this);
         try {
           // Write lock means no more row locks can be given out.  Wait on
           // outstanding row locks to come in before we close so we do not drop
@@ -420,7 +419,7 @@ public class HRegion implements HConstants {
           }
           this.closed.set(true);
           
-          LOG.info("closed " + this);
+          LOG.info("Closed " + this);
           return result;
         } finally {
           splitsAndClosesLock.writeLock().unlock();

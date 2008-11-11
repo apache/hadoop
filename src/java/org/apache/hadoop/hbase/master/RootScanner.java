@@ -36,14 +36,17 @@ class RootScanner extends BaseScanner {
     super(master, regionManager, true, master.metaRescanInterval, master.closed);
   }
 
-  // Don't retry if we get an error while scanning. Errors are most often
-  // caused by the server going away. Wait until next rescan interval when
-  // things should be back to normal
+  /*
+   * Don't retry if we get an error while scanning. Errors are most often
+   *
+   * caused by the server going away. Wait until next rescan interval when
+   * things should be back to normal.
+   * @return True if successfully scanned.
+   */
   private boolean scanRoot() {
-    boolean scanSuccessful = false;
     master.waitForRootRegionLocation();
     if (master.closed.get()) {
-      return scanSuccessful;
+      return false;
     }
 
     try {
@@ -54,7 +57,6 @@ class RootScanner extends BaseScanner {
             HRegionInfo.ROOT_REGIONINFO.getRegionName()));
         }
       }
-      scanSuccessful = true;
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Scan ROOT region", e);
@@ -65,12 +67,12 @@ class RootScanner extends BaseScanner {
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
     }
-    return scanSuccessful;
+    return true;
   }
 
   @Override
   protected boolean initialScan() {
-    initialScanComplete = scanRoot();
+    this.initialScanComplete = scanRoot();
     return initialScanComplete;
   }
 

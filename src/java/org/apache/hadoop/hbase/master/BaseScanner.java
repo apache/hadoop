@@ -154,11 +154,11 @@ abstract class BaseScanner extends Chore implements HConstants {
     Map<HRegionInfo, RowResult> splitParents =
       new HashMap<HRegionInfo, RowResult>();
     List<byte []> emptyRows = new ArrayList<byte []>();
+    int rows = 0;
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
       scannerId = regionServer.openScanner(region.getRegionName(),
         COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
-      int numberOfRegionsFound = 0;
       while (true) {
         RowResult values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
@@ -171,20 +171,16 @@ abstract class BaseScanner extends Chore implements HConstants {
         }
         String serverName = Writables.cellToString(values.get(COL_SERVER));
         long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() + " " + info.toString() +
-            "}, SERVER => '" + serverName + "', STARTCODE => " + startCode);
-        }
 
         // Note Region has been assigned.
         checkAssigned(info, serverName, startCode);
         if (isSplitParent(info)) {
           splitParents.put(info, values);
         }
-        numberOfRegionsFound += 1;
+        rows += 1;
       }
       if (rootRegion) {
-        regionManager.setNumMetaRegions(numberOfRegionsFound);
+        regionManager.setNumMetaRegions(rows);
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
@@ -226,8 +222,8 @@ abstract class BaseScanner extends Chore implements HConstants {
         cleanupSplits(region.getRegionName(), regionServer, hri, e.getValue());
       }
     }
-    LOG.info(Thread.currentThread().getName() + " scan of meta region " +
-      region.toString() + " complete");
+    LOG.info(Thread.currentThread().getName() + " scan of " + rows +
+      " row(s) of meta region " + region.toString() + " complete");
   }
 
   /*

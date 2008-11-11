@@ -57,15 +57,14 @@ class MetaScanner extends BaseScanner {
 
   // Don't retry if we get an error while scanning. Errors are most often
   // caused by the server going away. Wait until next rescan interval when
-  // things should be back to normal
+  // things should be back to normal.
   private boolean scanOneMetaRegion(MetaRegion region) {
-    boolean scanSuccessful = false;
     while (!master.closed.get() && !regionManager.isInitialRootScanComplete() &&
       regionManager.getRootRegionLocation() == null) {
       master.sleeper.sleep();
     }
     if (master.closed.get()) {
-      return scanSuccessful;
+      return false;
     }
 
     try {
@@ -74,7 +73,6 @@ class MetaScanner extends BaseScanner {
         scanRegion(region);
         regionManager.putMetaRegionOnline(region);
       }
-      scanSuccessful = true;
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Scan one META region: " + region.toString(), e);
@@ -85,7 +83,7 @@ class MetaScanner extends BaseScanner {
       if (!regionManager.isMetaRegionOnline(region.getStartKey())) {
         LOG.debug("Scanned region is no longer in map of online " +
         "regions or its value has changed");
-        return scanSuccessful;
+        return false;
       }
       // Make sure the file system is still available
       master.checkFileSystem();
@@ -94,7 +92,7 @@ class MetaScanner extends BaseScanner {
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
     }
-    return scanSuccessful;
+    return true;
   }
 
   @Override
@@ -125,22 +123,27 @@ class MetaScanner extends BaseScanner {
   @Override
   protected void maintenanceScan() {
     List<MetaRegion> regions = regionManager.getListOfOnlineMetaRegions();
+    int regionCount = 0;
     for (MetaRegion r: regions) {
       scanOneMetaRegion(r);
+      regionCount++;
     }
+    LOG.info("All " + regionCount + " .META. region(s) scanned");
     metaRegionsScanned();
   }
 
-  /**
+  /*
    * Called by the meta scanner when it has completed scanning all meta 
    * regions. This wakes up any threads that were waiting for this to happen.
+   * @param totalRows Total rows scanned.
+   * @param regionCount Count of regions in  .META. table.
+   * @return False if number of meta regions matches count of online regions.
    */
   private synchronized boolean metaRegionsScanned() {
     if (!regionManager.isInitialRootScanComplete() ||
       regionManager.numMetaRegions() != regionManager.numOnlineMetaRegions()) {
       return false;
     }
-    LOG.info("all meta regions scanned");
     notifyAll();
     return true;
   }

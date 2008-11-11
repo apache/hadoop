@@ -87,7 +87,7 @@ class ServerManager implements HConstants {
       master.getConfiguration().getInt("hbase.master.lease.thread.wakefrequency",
         15 * 1000));
     this.loggingPeriodForAverageLoad = master.getConfiguration().
-      getLong("hbase.master.avgload.logging.period", 15000);
+      getLong("hbase.master.avgload.logging.period", 60000);
   }
   
   /**
