@@ -221,6 +221,10 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   private synchronized void flushSomeRegions() {
     SortedMap<Long, HRegion> m =
       this.server.getCopyOfOnlineRegionsSortedBySize();
+    if (m.size() <= 0) {
+      LOG.info("No online regions to flush though we've been asked flush some.");
+      return;
+    }
     // keep flushing until we hit the low water mark
     while (server.getGlobalMemcacheSize() >= globalMemcacheLimitLowMark) {
       // flush the region with the biggest memcache
