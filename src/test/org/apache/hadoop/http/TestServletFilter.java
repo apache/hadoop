@@ -110,9 +110,12 @@ public class TestServletFilter extends junit.framework.TestCase {
     final String fsckURL = "/fsck";
     final String stacksURL = "/stacks";
     final String ajspURL = "/a.jsp";
-    final String[] urls = {fsckURL, stacksURL, ajspURL};
+    final String logURL = "/logs/a.log";
+    final String hadooplogoURL = "/static/hadoop-logo.jpg";
+    
+    final String[] urls = {fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL};
     final Random ran = new Random();
-    final int[] sequence = new int[20];
+    final int[] sequence = new int[50];
     final int[] counts = new int[urls.length]; 
 
     //generate a random sequence and update counts 
@@ -140,7 +143,8 @@ public class TestServletFilter extends junit.framework.TestCase {
       if (counts[i] == 0) {
         assertFalse(COUNTS.containsKey(urls[i]));
       } else {
-        assertEquals(counts[i], COUNTS.remove(urls[i]).intValue());
+        assertEquals("url[" + i + "]=" + urls[i],
+            Integer.valueOf(counts[i]), COUNTS.remove(urls[i]));
       }
     }
     assertTrue(COUNTS.isEmpty());

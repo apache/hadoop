@@ -858,9 +858,6 @@ Release 0.19.0 - Unreleased
     HADOOP-4288. Fixes a NPE problem in CapacityScheduler. 
     (Amar Kamat via ddas)
 
-    HADOOP-3883. Limit namenode to assign at most one generation stamp for
-    a particular block within a short period. (szetszwo)
-
     HADOOP-4014. Create hard links with 'fsutil hardlink' on Windows. (shv)
 
     HADOOP-4393. Merged org.apache.hadoop.fs.permission.AccessControlException
@@ -968,6 +965,9 @@ Release 0.19.0 - Unreleased
     to reflect the information being displayed. (Sreekanth Ramakrishnan via 
     yhemanth)
 
+    HADOOP-4282. Some user facing URLs are not filtered by user filters.
+    (szetszwo)
+
 Release 0.18.3 - Unreleased
 
   BUG FIXES
@@ -982,6 +982,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4610. Always calculate mis-replicated blocks when safe-mode is 
     turned off. (shv)
+
+    HADOOP-3883. Limit namenode to assign at most one generation stamp for
+    a particular block within a short period. (szetszwo)
 
     HADOOP-4556. Block went missing. (hairong)
 
