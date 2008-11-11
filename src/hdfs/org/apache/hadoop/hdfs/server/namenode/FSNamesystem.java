@@ -947,7 +947,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       LOG.info("Reducing replication for file " + src 
                + ". New replication is " + replication);
       for(int idx = 0; idx < fileBlocks.length; idx++)
-        proccessOverReplicatedBlock(fileBlocks[idx], replication, null, null);
+        processOverReplicatedBlock(fileBlocks[idx], replication, null, null);
     }
     return true;
   }
@@ -1474,20 +1474,40 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
+   * Remove a datanode from the invalidatesSet
+   * @param n datanode
+   */
+  private void removeFromInvalidates(DatanodeInfo n) {
+    recentInvalidateSets.remove(n.getStorageID());
+  }
+
+  /**
    * Adds block to list of blocks which will be invalidated on 
-   * specified datanode.
+   * specified datanode and log the move
+   * @param b block
+   * @param n datanode
    */
   private void addToInvalidates(Block b, DatanodeInfo n) {
+    addToInvalidatesNoLog(b, n);
+    NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
+        + b.getBlockName() + " is added to invalidSet of " + n.getName());
+  }
+
+  /**
+   * Adds block to list of blocks which will be invalidated on 
+   * specified datanode
+   * @param b block
+   * @param n datanode
+   */
+  private void addToInvalidatesNoLog(Block b, DatanodeInfo n) {
     Collection<Block> invalidateSet = recentInvalidateSets.get(n.getStorageID());
     if (invalidateSet == null) {
       invalidateSet = new HashSet<Block>();
       recentInvalidateSets.put(n.getStorageID(), invalidateSet);
     }
     invalidateSet.add(b);
-    NameNode.stateChangeLog.info("BLOCK* NameSystem.delete: "
-        + b.getBlockName() + " is added to invalidSet of " + n.getName());
   }
-
+  
   /**
    * Adds block to list of blocks which will be invalidated on 
    * all its datanodes.
@@ -2639,6 +2659,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
     nodeDescr.resetBlocks();
+    removeFromInvalidates(nodeDescr);
     NameNode.stateChangeLog.debug(
                                   "BLOCK* NameSystem.unprotectedRemoveDatanode: "
                                   + nodeDescr.getName() + " is out of service now.");
@@ -2929,7 +2950,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       updateNeededReplications(block, curReplicaDelta, 0);
     }
     if (numCurrentReplica > fileReplication) {
-      proccessOverReplicatedBlock(block, fileReplication, node, delNodeHint);
+      processOverReplicatedBlock(block, fileReplication, node, delNodeHint);
     }
     // If the file replication has reached desired value
     // we can remove any corrupt replicas the block may have
@@ -3010,7 +3031,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (numCurrentReplica > expectedReplication) {
         // over-replicated block
         nrOverReplicated++;
-        proccessOverReplicatedBlock(block, expectedReplication, null, null);
+        processOverReplicatedBlock(block, expectedReplication, null, null);
       }
     }
     LOG.info("Total number of blocks = " + blocksMap.size());
@@ -3024,7 +3045,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * If there are any extras, call chooseExcessReplicates() to
    * mark them in the excessReplicateMap.
    */
-  private void proccessOverReplicatedBlock(Block block, short replication, 
+  private void processOverReplicatedBlock(Block block, short replication, 
       DatanodeDescriptor addedNode, DatanodeDescriptor delNodeHint) {
     if(addedNode == delNodeHint) {
       delNodeHint = null;
@@ -3156,14 +3177,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // should be deleted.  Items are removed from the invalidate list
       // upon giving instructions to the namenode.
       //
-      Collection<Block> invalidateSet = recentInvalidateSets.get(cur.getStorageID());
-      if (invalidateSet == null) {
-        invalidateSet = new ArrayList<Block>();
-        recentInvalidateSets.put(cur.getStorageID(), invalidateSet);
-      }
-      invalidateSet.add(b);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
-                                    +"("+cur.getName()+", "+b+") is added to recentInvalidateSets");
+      addToInvalidatesNoLog(b, cur);
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.chooseExcessReplicates: "
+                +"("+cur.getName()+", "+b+") is added to recentInvalidateSets");
     }
   }
 
@@ -3205,6 +3221,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         excessReplicateMap.remove(node.getStorageID());
       }
     }
+    
     // Remove the replica from corruptReplicas
     corruptReplicas.removeFromCorruptReplicasMap(block, node);
   }
