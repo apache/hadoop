@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
@@ -1036,7 +1037,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                    );
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
-  StatusHttpServer infoServer;
+  final HttpServer infoServer;
   int infoPort;
 
   Server interTrackerServer;
@@ -1103,7 +1104,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     String infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.startTime = System.currentTimeMillis();
-    infoServer = new StatusHttpServer("job", infoBindAddress, tmpInfoPort, 
+    infoServer = new HttpServer("job", infoBindAddress, tmpInfoPort, 
         tmpInfoPort == 0, conf);
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
@@ -1117,6 +1118,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       historyFS = new Path(historyLogDir).getFileSystem(conf);
       infoServer.setAttribute("fileSys", historyFS);
     }
+    infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
     
     trackerIdentifier = getDateFormat().format(new Date());

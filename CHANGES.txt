@@ -88,6 +88,8 @@ Trunk (unreleased changes)
     HADOOP-4583. Several code optimizations in HDFS.  (Suresh Srinivas via
     szetszwo)
 
+    HADOOP-3923. Remove org.apache.hadoop.mapred.StatusHttpServer.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

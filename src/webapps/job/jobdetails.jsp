@@ -179,7 +179,7 @@
     }
 %>
 
-<%@page import="org.apache.hadoop.mapred.StatusHttpServer.TaskGraphServlet"%>
+<%@page import="org.apache.hadoop.mapred.TaskGraphServlet"%>
 <html>
 <head>
   <% 
@@ -328,8 +328,8 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
 <%} else { %> 
 <a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&map.graph=off" > close </a>
 <br><embed src="/taskgraph?type=map&jobid=<%=jobId%>" 
-       width="<%=StatusHttpServer.TaskGraphServlet.width + 2 * StatusHttpServer.TaskGraphServlet.xmargin%>" 
-       height="<%=StatusHttpServer.TaskGraphServlet.height + 3 * StatusHttpServer.TaskGraphServlet.ymargin%>"
+       width="<%=TaskGraphServlet.width + 2 * TaskGraphServlet.xmargin%>" 
+       height="<%=TaskGraphServlet.height + 3 * TaskGraphServlet.ymargin%>"
        style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
 <%}%>
 
@@ -341,8 +341,8 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
 <a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&reduce.graph=off" > close </a>
  
  <br><embed src="/taskgraph?type=reduce&jobid=<%=jobId%>" 
-       width="<%=StatusHttpServer.TaskGraphServlet.width + 2 * StatusHttpServer.TaskGraphServlet.xmargin%>" 
-       height="<%=StatusHttpServer.TaskGraphServlet.height + 3 * StatusHttpServer.TaskGraphServlet.ymargin%>" 
+       width="<%=TaskGraphServlet.width + 2 * TaskGraphServlet.xmargin%>" 
+       height="<%=TaskGraphServlet.height + 3 * TaskGraphServlet.ymargin%>" 
        style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
 <%} }%>
 

@@ -17,15 +17,10 @@
  */
  package org.apache.hadoop.mapred;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -35,13 +30,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.LinkedHashMap;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -59,20 +54,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.mapred.JobClient.TaskStatusFilter;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -80,7 +73,6 @@ import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DiskChecker;
@@ -91,7 +83,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.log4j.LogManager;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -149,7 +140,7 @@ public class TaskTracker
   // The filesystem where job files are stored
   FileSystem systemFS = null;
   
-  StatusHttpServer server = null;
+  private final HttpServer server;
     
   volatile boolean shuttingDown = false;
     
@@ -583,7 +574,6 @@ public class TaskTracker
           }
           synchronized (waitingOn) {
             try {
-              int waitTime;
               if (!fetchAgain) {
                 waitingOn.wait(heartbeatInterval);
               }
@@ -623,7 +613,6 @@ public class TaskTracker
       // Note that the sync is first on fromEventId and then on allMapEvents
       synchronized (fromEventId) {
         synchronized (allMapEvents) {
-          int index = 0;
           if (allMapEvents.size() > lastKnownIndex) {
             fromEventId.set(lastKnownIndex);
             allMapEvents = allMapEvents.subList(0, lastKnownIndex);
@@ -874,7 +863,7 @@ public class TaskTracker
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String httpBindAddress = infoSocAddr.getHostName();
     int httpPort = infoSocAddr.getPort();
-    this.server = new StatusHttpServer("task", httpBindAddress, httpPort,
+    this.server = new HttpServer("task", httpBindAddress, httpPort,
         httpPort == 0, conf);
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
     this.shuffleServerMetrics = new ShuffleServerMetrics(conf);

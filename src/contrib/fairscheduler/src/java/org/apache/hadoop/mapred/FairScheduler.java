@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -145,7 +146,7 @@ public class FairScheduler extends TaskScheduler {
       // Register servlet with JobTracker's Jetty server
       if (taskTrackerManager instanceof JobTracker) {
         JobTracker jobTracker = (JobTracker) taskTrackerManager;
-        StatusHttpServer infoServer = jobTracker.infoServer;
+        HttpServer infoServer = jobTracker.infoServer;
         infoServer.setAttribute("scheduler", this);
         infoServer.addServlet("scheduler", "/scheduler",
             FairSchedulerServlet.class);
