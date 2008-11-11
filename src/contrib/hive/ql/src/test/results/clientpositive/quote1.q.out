@@ -1,0 +1,179 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1 (TOK_PARTSPEC (TOK_PARTVAL `table` '2008-04-08')))) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key) `partition`) (TOK_SELEXPR (TOK_COLREF src value) `from`)) (TOK_WHERE (and (>= (TOK_COLREF src key) 200) (< (TOK_COLREF src key) 300)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src 
+            Filter Operator
+              predicate:
+                  expr: ((key >= 200) and (key < 300))
+                  type: boolean
+              Select Operator
+                expressions:
+                      expr: key
+                      type: string
+                      expr: value
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            partition:
+              table 2008-04-08
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF dest1 `table`)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF `table` `location`)) (TOK_SELEXPR (TOK_COLREF `table` `type`)) (TOK_SELEXPR (TOK_COLREF `table` `table`))) (TOK_WHERE (= (TOK_COLREF `table` `table`) '2008-04-08'))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        table 
+            Filter Operator
+              predicate:
+                  expr: (table = '2008-04-08')
+                  type: boolean
+              Select Operator
+                expressions:
+                      expr: location
+                      type: string
+                      expr: type
+                      type: string
+                      expr: table
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+
+
+238	val_238	2008-04-08
+255	val_255	2008-04-08
+278	val_278	2008-04-08
+265	val_265	2008-04-08
+273	val_273	2008-04-08
+224	val_224	2008-04-08
+213	val_213	2008-04-08
+281	val_281	2008-04-08
+277	val_277	2008-04-08
+209	val_209	2008-04-08
+252	val_252	2008-04-08
+292	val_292	2008-04-08
+219	val_219	2008-04-08
+287	val_287	2008-04-08
+237	val_237	2008-04-08
+207	val_207	2008-04-08
+208	val_208	2008-04-08
+247	val_247	2008-04-08
+266	val_266	2008-04-08
+203	val_203	2008-04-08
+205	val_205	2008-04-08
+221	val_221	2008-04-08
+280	val_280	2008-04-08
+277	val_277	2008-04-08
+208	val_208	2008-04-08
+286	val_286	2008-04-08
+239	val_239	2008-04-08
+213	val_213	2008-04-08
+216	val_216	2008-04-08
+278	val_278	2008-04-08
+289	val_289	2008-04-08
+221	val_221	2008-04-08
+275	val_275	2008-04-08
+241	val_241	2008-04-08
+284	val_284	2008-04-08
+230	val_230	2008-04-08
+260	val_260	2008-04-08
+272	val_272	2008-04-08
+217	val_217	2008-04-08
+230	val_230	2008-04-08
+208	val_208	2008-04-08
+298	val_298	2008-04-08
+230	val_230	2008-04-08
+205	val_205	2008-04-08
+288	val_288	2008-04-08
+282	val_282	2008-04-08
+282	val_282	2008-04-08
+238	val_238	2008-04-08
+277	val_277	2008-04-08
+273	val_273	2008-04-08
+224	val_224	2008-04-08
+242	val_242	2008-04-08
+272	val_272	2008-04-08
+242	val_242	2008-04-08
+226	val_226	2008-04-08
+229	val_229	2008-04-08
+233	val_233	2008-04-08
+223	val_223	2008-04-08
+218	val_218	2008-04-08
+228	val_228	2008-04-08
+209	val_209	2008-04-08
+230	val_230	2008-04-08
+296	val_296	2008-04-08
+216	val_216	2008-04-08
+274	val_274	2008-04-08
+219	val_219	2008-04-08
+239	val_239	2008-04-08
+223	val_223	2008-04-08
+256	val_256	2008-04-08
+263	val_263	2008-04-08
+288	val_288	2008-04-08
+244	val_244	2008-04-08
+202	val_202	2008-04-08
+229	val_229	2008-04-08
+280	val_280	2008-04-08
+283	val_283	2008-04-08
+235	val_235	2008-04-08
+257	val_257	2008-04-08
+258	val_258	2008-04-08
+203	val_203	2008-04-08
+262	val_262	2008-04-08
+201	val_201	2008-04-08
+217	val_217	2008-04-08
+298	val_298	2008-04-08
+291	val_291	2008-04-08
+255	val_255	2008-04-08
+200	val_200	2008-04-08
+237	val_237	2008-04-08
+248	val_248	2008-04-08
+277	val_277	2008-04-08
+230	val_230	2008-04-08
+207	val_207	2008-04-08
+249	val_249	2008-04-08
+265	val_265	2008-04-08
+214	val_214	2008-04-08
+233	val_233	2008-04-08
+256	val_256	2008-04-08
+298	val_298	2008-04-08
+285	val_285	2008-04-08
+273	val_273	2008-04-08
+281	val_281	2008-04-08
+222	val_222	2008-04-08
+200	val_200	2008-04-08

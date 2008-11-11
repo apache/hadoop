@@ -28,7 +28,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-njain/356693511/91381909.10003.insclause-3</string> 
+             <string>/tmp/hive-njain/346624347/1822685820.10003.insclause-3</string> 
             </void> 
             <void property="targetDir"> 
              <string>../../../../build/contrib/hive/ql/test/data/warehouse/dest4.out</string> 
@@ -48,7 +48,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-njain/356693511/91381909.10000.insclause-0</string> 
+             <string>/tmp/hive-njain/346624347/1822685820.10000.insclause-0</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc0" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -117,7 +117,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-njain/356693511/91381909.10001.insclause-1</string> 
+             <string>/tmp/hive-njain/346624347/1822685820.10001.insclause-1</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc1" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -195,7 +195,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-njain/356693511/91381909.10002.insclause-2</string> 
+             <string>/tmp/hive-njain/346624347/1822685820.10002.insclause-2</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc2" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -276,15 +276,15 @@
      <object class="java.util.HashMap"> 
       <void method="put"> 
        <string>src</string> 
-       <object class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
+       <object id="ForwardOperator0" class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
         <void property="childOperators"> 
          <object class="java.util.ArrayList"> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator0" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator0" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
@@ -292,10 +292,17 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-njain/356693511/91381909.10000.insclause-0</string> 
+                       <string>/tmp/hive-njain/346624347/1822685820.10000.insclause-0</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc0"/> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -360,6 +367,16 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                  <void property="selectStar"> 
+                   <boolean>true</boolean> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -433,6 +450,13 @@
               </void> 
              </object> 
             </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
+              </void> 
+             </object> 
+            </void> 
             <void property="schema"> 
              <object class="org.apache.hadoop.hive.ql.exec.RowSchema"> 
               <void property="signature"> 
@@ -464,11 +488,11 @@
            </object> 
           </void> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator1" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator1" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
@@ -476,10 +500,17 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-njain/356693511/91381909.10001.insclause-1</string> 
+                       <string>/tmp/hive-njain/346624347/1822685820.10001.insclause-1</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc1"/> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator1"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -540,6 +571,13 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator1"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -679,6 +717,13 @@
               </void> 
              </object> 
             </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
+              </void> 
+             </object> 
+            </void> 
             <void property="schema"> 
              <object class="org.apache.hadoop.hive.ql.exec.RowSchema"> 
               <void property="signature"> 
@@ -689,11 +734,11 @@
            </object> 
           </void> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator2" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator2" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
@@ -701,10 +746,17 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-njain/356693511/91381909.10002.insclause-2</string> 
+                       <string>/tmp/hive-njain/346624347/1822685820.10002.insclause-2</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc2"/> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator2"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -719,6 +771,16 @@
                           </void> 
                           <void property="type"> 
                            <object idref="PrimitiveTypeInfo0"/> 
+                          </void> 
+                         </object> 
+                        </void> 
+                        <void method="add"> 
+                         <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+                          <void property="internalName"> 
+                           <string>1</string> 
+                          </void> 
+                          <void property="type"> 
+                           <object idref="PrimitiveTypeInfo1"/> 
                           </void> 
                          </object> 
                         </void> 
@@ -744,7 +806,24 @@
                       </void> 
                      </object> 
                     </void> 
+                    <void method="add"> 
+                     <object class="org.apache.hadoop.hive.ql.plan.exprNodeConstantDesc"> 
+                      <void property="typeInfo"> 
+                       <object idref="PrimitiveTypeInfo1"/> 
+                      </void> 
+                      <void property="value"> 
+                       <int>2</int> 
+                      </void> 
+                     </object> 
+                    </void> 
                    </object> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator2"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -884,6 +963,13 @@
               </void> 
              </object> 
             </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
+              </void> 
+             </object> 
+            </void> 
             <void property="schema"> 
              <object class="org.apache.hadoop.hive.ql.exec.RowSchema"> 
               <void property="signature"> 
@@ -894,11 +980,11 @@
            </object> 
           </void> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator3" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator3" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
@@ -906,7 +992,7 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-njain/356693511/91381909.10003.insclause-3</string> 
+                       <string>/tmp/hive-njain/346624347/1822685820.10003.insclause-3</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -922,12 +1008,23 @@
                         <void property="properties"> 
                          <object class="java.util.Properties"> 
                           <void method="put"> 
+                           <string>columns</string> 
+                           <string>value</string> 
+                          </void> 
+                          <void method="put"> 
                            <string>serialization.format</string> 
                            <string>1</string> 
                           </void> 
                          </object> 
                         </void> 
                        </object> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator3"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -968,6 +1065,13 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator3"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -1030,6 +1134,13 @@
                  <object idref="PrimitiveTypeInfo2"/> 
                 </void> 
                </object> 
+              </void> 
+             </object> 
+            </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
               </void> 
              </object> 
             </void> 
@@ -1134,6 +1245,9 @@
        </object> 
       </void> 
      </object> 
+    </void> 
+    <void property="tagToValueDesc"> 
+     <object class="java.util.ArrayList"/> 
     </void> 
    </object> 
   </void> 

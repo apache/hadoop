@@ -218,7 +218,7 @@ public class Driver implements CommandProcessor {
   
   public boolean getResults(Vector<String> res) 
   {
-  	if (sem.getFetchTask() != null) {
+  	if (sem != null && sem.getFetchTask() != null) {
       if (!sem.getFetchTaskInit()) {
         sem.setFetchTaskInit(true);
         sem.getFetchTask().initialize(conf);

@@ -19,34 +19,127 @@
 package org.apache.hadoop.hive.ql.parse;
 
 import java.util.ArrayList;
+import org.antlr.runtime.tree.CommonTree;
 
+/**
+ * 
+ * This class stores all the information specified in the TABLESAMPLE clause. e.g. 
+ * for the clause "FROM t TABLESAMPLE(1 OUT OF 2 ON c1) it will store the numerator
+ * 1, the denominator 2 and the list of expressions(in this case c1) in the appropriate
+ * fields. The afore-mentioned sampling clause causes the 1st bucket to be picked out of
+ * the 2 buckets created by hashing on c1.
+ *
+ */
 public class TableSample {
+	
+  /**
+   * The numerator of the TABLESAMPLE clause
+   */
   private int numerator;
-  private int denominator;
-  private ArrayList<String> cols;
   
-  public TableSample(String num, String den, ArrayList<String> cols) {
+  /**
+   * The denominator of the TABLESAMPLE clause
+   */
+  private int denominator;
+  
+  /**
+   * The list of expressions following ON part of the TABLESAMPLE clause. This list is
+   * empty in case there are no expressions such as in the clause
+   * "FROM t TABLESAMPLE(1 OUT OF 2)". For this expression the sampling is done
+   * on the tables clustering column(as specified when the table was created). In case
+   * the table does not have any clustering column, the usage of a table sample clause
+   * without an ON part is disallowed by the compiler
+   */
+  private ArrayList<CommonTree> exprs;
+  
+  /**
+   * Flag to indicate that input files can be pruned
+   */
+  private boolean inputPruning;
+  
+  /**
+   * Constructs the TableSample given the numerator, denominator and the list of
+   * ON clause expressions
+   * 
+   * @param num The numerator
+   * @param den The denominator
+   * @param exprs The list of expressions in the ON part of the TABLESAMPLE clause
+   */
+  public TableSample(String num, String den, ArrayList<CommonTree> exprs) {
     this.numerator = Integer.valueOf(num).intValue();
     this.denominator = Integer.valueOf(den).intValue();
-    this.cols = cols;
+    this.exprs = exprs;
   }
+  
+  /**
+   * Gets the numerator
+   * 
+   * @return int
+   */
   public int getNumerator() {
     return this.numerator;
   }
+  
+  /**
+   * Sets the numerator
+   * 
+   * @param num The numerator
+   */
   public void setNumerator(int num) {
     this.numerator = num;
   }
+  
+  /**
+   * Gets the denominator
+   * 
+   * @return int
+   */
   public int getDenominator() {
     return this.denominator;
   }
+  
+  /**
+   * Sets the denominator
+   * 
+   * @param den The denominator
+   */
   public void setDenominator(int den) {
     this.denominator = den;
   }
-  public ArrayList<String> getCols() {
-    return this.cols;
+  
+  /**
+   * Gets the ON part's expression list
+   * 
+   * @return ArrayList<CommonTree>
+   */
+  public ArrayList<CommonTree> getExprs() {
+    return this.exprs;
   }
-  public void setCols(ArrayList<String> cols) {
-    this.cols = cols;
+  
+  /**
+   * Sets the expression list
+   * 
+   * @param exprs The expression list
+   */
+  public void setExprs(ArrayList<CommonTree> exprs) {
+    this.exprs = exprs;
   }
 
+  /**
+   * Gets the flag that indicates whether input pruning is possible
+   * 
+   * @return boolean
+   */
+  public boolean getInputPruning() {
+	  return this.inputPruning;
+  }
+ 
+  /**
+   * Sets the flag that indicates whether input pruning is possible or not
+   * 
+   * @param inputPruning true if input pruning is possible
+   */
+  public void setInputPruning(boolean inputPruning) {
+	  this.inputPruning = inputPruning;
+  }
 }

@@ -31,7 +31,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-zshao/554218395/580685485.10000.insclause-0</string> 
+             <string>/tmp/hive-njain/404713103/151871838.10000.insclause-0</string> 
             </void> 
             <void property="table"> 
              <object id="tableDesc0" class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -80,7 +80,7 @@
                 </void> 
                 <void method="put"> 
                  <string>location</string> 
-                 <string>file:/data/users/zshao/tubbs-svnroot/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
+                 <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1</string> 
                 </void> 
                </object> 
               </void> 
@@ -108,15 +108,15 @@
      <object class="java.util.HashMap"> 
       <void method="put"> 
        <string>s</string> 
-       <object class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
+       <object id="ForwardOperator0" class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
         <void property="childOperators"> 
          <object class="java.util.ArrayList"> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator0" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator0" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
@@ -124,10 +124,17 @@
                     <void property="conf"> 
                      <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                       <void property="dirName"> 
-                       <string>/tmp/hive-zshao/554218395/580685485.10000.insclause-0</string> 
+                       <string>/tmp/hive-njain/404713103/151871838.10000.insclause-0</string> 
                       </void> 
                       <void property="tableInfo"> 
                        <object idref="tableDesc0"/> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator0"/> 
                       </void> 
                      </object> 
                     </void> 
@@ -192,6 +199,16 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                  <void property="selectStar"> 
+                   <boolean>true</boolean> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -363,6 +380,13 @@
               </void> 
              </object> 
             </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
+              </void> 
+             </object> 
+            </void> 
            </object> 
           </void> 
          </object> 
@@ -402,7 +426,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/users/zshao/tubbs-svnroot/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket</string> 
+       <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>s</string> 
@@ -414,7 +438,7 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/users/zshao/tubbs-svnroot/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket</string> 
+       <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt</string> 
        <object class="org.apache.hadoop.hive.ql.plan.partitionDesc"> 
         <void property="partSpec"> 
          <object class="java.util.LinkedHashMap"/> 
@@ -437,16 +461,20 @@
              <string>srcbucket</string> 
             </void> 
             <void method="put"> 
+             <string>bucket_field_name</string> 
+             <string>key</string> 
+            </void> 
+            <void method="put"> 
              <string>serialization.ddl</string> 
              <string>struct srcbucket { string key, string value}</string> 
             </void> 
             <void method="put"> 
-             <string>serialization.format</string> 
-             <string>1</string> 
-            </void> 
-            <void method="put"> 
              <string>columns</string> 
              <string>key,value</string> 
+            </void> 
+            <void method="put"> 
+             <string>serialization.format</string> 
+             <string>1</string> 
             </void> 
             <void method="put"> 
              <string>bucket_count</string> 
@@ -466,7 +494,7 @@
             </void> 
             <void method="put"> 
              <string>location</string> 
-             <string>file:/data/users/zshao/tubbs-svnroot/projects/hadoop/trunk/VENDOR/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket</string> 
+             <string>file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket</string> 
             </void> 
            </object> 
           </void> 
@@ -478,6 +506,9 @@
        </object> 
       </void> 
      </object> 
+    </void> 
+    <void property="tagToValueDesc"> 
+     <object class="java.util.ArrayList"/> 
     </void> 
    </object> 
   </void> 

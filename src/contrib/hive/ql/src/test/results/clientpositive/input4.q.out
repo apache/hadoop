@@ -9,7 +9,7 @@ STAGE PLANS:
   Stage: Stage-0
     Copy
       source: file:/home/njain/workspace/hadoop-0.17/src/contrib/hive/data/files/kv1.txt
-      destination: file:/tmp/hive-njain/-478939701
+      destination: file:/tmp/hive-njain/-1533162426
 
   Stage: Stage-1
     Move Operator

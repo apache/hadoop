@@ -22,12 +22,24 @@ STAGE PLANS:
                     type: int
                     expr: astring
                     type: string
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.dynamic_type.DynamicSerDe
-                    name: dest1
+              Select Operator
+                expressions:
+                      expr: 0
+                      type: array<int>
+                      expr: 1
+                      type: array<string>
+                      expr: 2
+                      type: map<string,string>
+                      expr: 3
+                      type: int
+                      expr: 4
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.dynamic_type.DynamicSerDe
+                      name: dest1
 
   Stage: Stage-0
     Move Operator
@@ -50,3 +62,13 @@ STAGE PLANS:
 [7,14,21]	["70","700","7000"]	{"key_7":"value_7"}	1539139264	record_7
 [8,16,24]	["80","800","8000"]	{"key_8":"value_8"}	-1103622763	record_8
 [9,18,27]	["90","900","9000"]	{"key_9":"value_9"}	-1883609167	record_9
+0	0	NULL	-1220068486	record_0
+1	10	NULL	-1147582750	record_1
+2	20	NULL	-2091002570	record_2
+3	30	NULL	-1587372273	record_3
+4	40	NULL	-240543265	record_4
+5	50	NULL	1914724537	record_5
+6	60	NULL	-1281615210	record_6
+7	70	NULL	1539139264	record_7
+8	80	NULL	-1103622763	record_8
+9	90	NULL	-1883609167	record_9

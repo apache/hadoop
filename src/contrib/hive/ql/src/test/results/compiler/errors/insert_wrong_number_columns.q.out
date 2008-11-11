@@ -1,0 +1,2 @@
+Semantic Exception: 
+line 2:23 Cannot insert into target table because column number/types are different dest1: Table insclause-0 has 2 columns but query has [0: string, 1: string, 2: int].

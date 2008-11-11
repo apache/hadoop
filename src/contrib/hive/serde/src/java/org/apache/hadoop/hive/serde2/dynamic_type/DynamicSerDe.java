@@ -108,7 +108,7 @@ public class DynamicSerDe implements SerDe, Serializable {
 
       this.bt.initialize();
     } catch (Exception e) {
-      System.out.println(StringUtils.stringifyException(e));
+      System.err.println(StringUtils.stringifyException(e));
       throw new SerDeException(e);
     }
   }

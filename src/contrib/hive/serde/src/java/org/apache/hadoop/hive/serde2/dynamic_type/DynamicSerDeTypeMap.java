@@ -86,7 +86,12 @@ public class DynamicSerDeTypeMap extends DynamicSerDeTypeBase {
       deserializeReuse = new HashMap<Object, Object>();
     }
     TMap themap = iprot.readMapBegin();
-    for(int i = 0; i < themap.size; i++) {
+    if (themap == null) {
+      return null;
+    }
+    // themap might be reused by the Protocol.
+    int mapSize = themap.size;
+    for(int i = 0; i < mapSize; i++) {
       Object key = this.getKeyType().deserialize(null, iprot);
       Object value = this.getValueType().deserialize(null, iprot);
       deserializeReuse.put(key,value);
@@ -97,6 +102,7 @@ public class DynamicSerDeTypeMap extends DynamicSerDeTypeBase {
     return deserializeReuse;
   }
 
+  TMap serializeMap = new TMap();
   @Override
   public void serialize(Object o, ObjectInspector oi, TProtocol oprot)
   throws TException, SerDeException, NoSuchFieldException,
@@ -104,19 +110,33 @@ public class DynamicSerDeTypeMap extends DynamicSerDeTypeBase {
     DynamicSerDeTypeBase keyType = this.getKeyType();
     DynamicSerDeTypeBase valueType = this.getValueType();
 
+    org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol nullProtocol = 
+      (oprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)
+      ? (org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)oprot
+      : null;
+    
     assert(oi.getCategory() == ObjectInspector.Category.MAP);
     MapObjectInspector moi = (MapObjectInspector)oi;
     ObjectInspector koi = moi.getMapKeyObjectInspector();
     ObjectInspector voi = moi.getMapValueObjectInspector();
 
     Map<?,?> map = moi.getMap(o);
-    oprot.writeMapBegin(new TMap(keyType.getType(),valueType.getType(),map.size()));
+    serializeMap.size = map.size();
+    serializeMap.keyType = keyType.getType();
+    serializeMap.valueType = valueType.getType();
+    oprot.writeMapBegin(serializeMap);
+    
     for(Iterator i = map.entrySet().iterator(); i.hasNext(); ) {
       Map.Entry it = (Map.Entry)i.next();
       Object key = it.getKey();
       Object value = it.getValue();
       keyType.serialize(key, koi, oprot);
-      valueType.serialize(value, voi, oprot);
+      if (value == null) {
+        assert(nullProtocol != null);
+        nullProtocol.writeNull();
+      } else {
+        valueType.serialize(value, voi, oprot);
+      }
     }
     // in theory, the below call isn't needed in non thrift_mode, but let's not get too crazy
     oprot.writeMapEnd();      

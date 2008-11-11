@@ -1,5 +1,5 @@
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF srcpart (TOK_TABLESAMPLE 1 1) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s))) (TOK_WHERE (and (= (TOK_COLREF s ds) '2008-04-08') (= (TOK_COLREF s hr) '11')))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcpart (TOK_TABLESAMPLE 1 1 (TOK_FUNCTION rand)) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s))) (TOK_WHERE (and (= (TOK_COLREF s ds) '2008-04-08') (= (TOK_COLREF s hr) '11')))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -12,36 +12,39 @@ STAGE PLANS:
         s 
             Filter Operator
               predicate:
-                  expr: ((ds = '2008-04-08') and (hr = '11'))
-                  type: Boolean
-              Select Operator
-                expressions:
-                      expr: key
-                      type: string
-                      expr: value
-                      type: string
-                      expr: ds
-                      type: string
-                      expr: hr
-                      type: string
-                File Output Operator
-                  directory: /tmp/hive-njain/1799446246/1449752317.10000.insclause-0
-                  table:
-                      input format: org.apache.hadoop.mapred.TextInputFormat
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                      properties:
-                        name dest1
-                        serialization.ddl struct dest1 { i32 key, string value, string dt, string hr}
-                        serialization.format 1
-                        columns key,value,dt,hr
-                        SORTBUCKETCOLSPREFIX TRUE
-                        bucket_count -1
-                        serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                        file.inputformat org.apache.hadoop.mapred.TextInputFormat
-                        file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                        location file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
-                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                      name: dest1
+                  expr: (((default_sample_hashfn(rand()) & 2147483647) % 1) = 0)
+                  type: boolean
+              Filter Operator
+                predicate:
+                    expr: ((ds = '2008-04-08') and (hr = '11'))
+                    type: boolean
+                Select Operator
+                  expressions:
+                        expr: key
+                        type: string
+                        expr: value
+                        type: string
+                        expr: ds
+                        type: string
+                        expr: hr
+                        type: string
+                  File Output Operator
+                    directory: /tmp/hive-njain/804625404/371878036.10000.insclause-0
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        properties:
+                          name dest1
+                          serialization.ddl struct dest1 { i32 key, string value, string dt, string hr}
+                          serialization.format 1
+                          columns key,value,dt,hr
+                          bucket_count -1
+                          serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                          file.inputformat org.apache.hadoop.mapred.TextInputFormat
+                          file.outputformat org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                          location file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/dest1
+                        serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                        name: dest1
       Needs Tagging:
       Path -> Alias:
         file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcpart/ds=2008-04-08/hr=11 
@@ -72,7 +75,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/1799446246/1449752317.10000.insclause-0
+            source: /tmp/hive-njain/804625404/371878036.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -81,7 +84,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value, string dt, string hr}
                   serialization.format 1
                   columns key,value,dt,hr
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat

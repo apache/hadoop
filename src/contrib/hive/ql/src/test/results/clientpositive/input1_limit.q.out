@@ -13,7 +13,7 @@ STAGE PLANS:
             Filter Operator
               predicate:
                   expr: (key < 100)
-                  type: Boolean
+                  type: boolean
               Select Operator
                 expressions:
                       expr: key
@@ -30,7 +30,7 @@ STAGE PLANS:
             Filter Operator
               predicate:
                   expr: (key < 100)
-                  type: Boolean
+                  type: boolean
               Select Operator
                 expressions:
                       expr: key

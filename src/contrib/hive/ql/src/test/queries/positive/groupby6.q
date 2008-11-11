@@ -1,2 +1,2 @@
 FROM src
-INSERT OVERWRITE TABLE dest1 SELECT DISTINCT substr(src.value,4,1)
+SELECT DISTINCT substr(src.value,4,1)

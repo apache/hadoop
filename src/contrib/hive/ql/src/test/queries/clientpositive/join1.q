@@ -1,4 +1,4 @@
-CREATE TABLE dest1(key INT, value STRING);
+CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 EXPLAIN
 FROM src src1 JOIN src src2 ON (src1.key = src2.key)

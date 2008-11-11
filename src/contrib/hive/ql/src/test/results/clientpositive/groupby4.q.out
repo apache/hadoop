@@ -11,12 +11,18 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         src 
-            Reduce Output Operator
-              key expressions:
-                    expr: substr(key, 0, 1)
+            Select Operator
+              expressions:
+                    expr: key
                     type: string
-              # partition fields: -1
-              tag: -1
+              Reduce Output Operator
+                key expressions:
+                      expr: substr(0, 0, 1)
+                      type: string
+                Map-reduce partition columns:
+                      expr: rand()
+                      type: double
+                tag: -1
       Reduce Operator Tree:
         Group By Operator
           keys:
@@ -25,25 +31,28 @@ STAGE PLANS:
           mode: partial1
           File Output Operator
             table:
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                name: binary_table
 
   Stage: Stage-2
     Map Reduce
       Alias -> Map Operator Tree:
-        /tmp/hive-njain/1561965178/525265780.10001 
+        /tmp/hive-njain/213545057/773995409.10001 
           Reduce Output Operator
             key expressions:
                   expr: 0
                   type: string
-            # partition fields: 1
+            Map-reduce partition columns:
+                  expr: 0
+                  type: string
             tag: -1
       Reduce Operator Tree:
         Group By Operator
           keys:
                 expr: KEY.0
                 type: string
-          mode: partial2
+          mode: unknown
           Select Operator
             expressions:
                   expr: 0

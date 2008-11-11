@@ -10,24 +10,32 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         src_thrift 
-            Filter Operator
-              predicate:
-                  expr: (lint is not null and not mstringstring is null)
-                  type: Boolean
-              Select Operator
-                expressions:
-                      expr: size(lint)
-                      type: int
-                      expr: size(lintstring)
-                      type: int
-                      expr: size(mstringstring)
-                      type: int
-                File Output Operator
-                  table:
-                      input format: org.apache.hadoop.mapred.TextInputFormat
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                      name: dest1
+            Select Operator
+              expressions:
+                    expr: lint
+                    type: array<int>
+                    expr: lintstring
+                    type: array<struct{myint:int,mystring:string}>
+                    expr: mstringstring
+                    type: map<string,string>
+              Filter Operator
+                predicate:
+                    expr: (0 is not null and not 2 is null)
+                    type: boolean
+                Select Operator
+                  expressions:
+                        expr: size(0)
+                        type: int
+                        expr: size(1)
+                        type: int
+                        expr: size(2)
+                        type: int
+                  File Output Operator
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                        name: dest1
 
   Stage: Stage-0
     Move Operator

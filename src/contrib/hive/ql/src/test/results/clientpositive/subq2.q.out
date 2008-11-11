@@ -11,15 +11,21 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         a:b 
-            Reduce Output Operator
-              key expressions:
+            Select Operator
+              expressions:
                     expr: key
                     type: string
-              # partition fields: -1
-              tag: -1
-              value expressions:
-                    expr: 1
-                    type: int
+              Reduce Output Operator
+                key expressions:
+                      expr: 0
+                      type: string
+                Map-reduce partition columns:
+                      expr: rand()
+                      type: double
+                tag: -1
+                value expressions:
+                      expr: 1
+                      type: int
       Reduce Operator Tree:
         Group By Operator
         
@@ -30,22 +36,25 @@ STAGE PLANS:
           mode: partial1
           File Output Operator
             table:
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                name: binary_table
 
   Stage: Stage-2
     Map Reduce
       Alias -> Map Operator Tree:
-        /tmp/hive-njain/57219117/75379653.10002 
+        /tmp/hive-njain/158235739/1374397779.10002 
           Reduce Output Operator
             key expressions:
                   expr: 0
                   type: string
-            # partition fields: 1
+            Map-reduce partition columns:
+                  expr: 0
+                  type: string
             tag: -1
             value expressions:
                   expr: 1
-                  type: string
+                  type: bigint
       Reduce Operator Tree:
         Group By Operator
         
@@ -53,23 +62,23 @@ STAGE PLANS:
           keys:
                 expr: KEY.0
                 type: string
-          mode: partial2
+          mode: unknown
           Select Operator
             expressions:
                   expr: 0
                   type: string
                   expr: 1
-                  type: string
+                  type: bigint
             Filter Operator
               predicate:
                   expr: (0 >= 90)
-                  type: Boolean
+                  type: boolean
               Select Operator
                 expressions:
                       expr: 0
                       type: string
                       expr: 1
-                      type: string
+                      type: bigint
                 File Output Operator
                   table:
                       input format: org.apache.hadoop.mapred.TextInputFormat

@@ -49,7 +49,12 @@ public class DynamicSerDeTypei64 extends DynamicSerDeTypeBase {
 
   @Override
   public Object deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return Long.valueOf(iprot.readI64());
+    long val = iprot.readI64();
+    if (val == 0 && iprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol && 
+        ((org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)iprot).lastPrimitiveWasNull()) {
+      return null;
+    }
+    return Long.valueOf(val);
   }
 
   @Override

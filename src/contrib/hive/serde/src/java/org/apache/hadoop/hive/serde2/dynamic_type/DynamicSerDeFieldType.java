@@ -37,6 +37,4 @@ public class DynamicSerDeFieldType extends DynamicSerDeSimpleNode {
     // and thus we can quickly find this comment and limitation.
     return (DynamicSerDeTypeBase)this.jjtGetChild(FD_FIELD_TYPE);
   }
-
-
 }

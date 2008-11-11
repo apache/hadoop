@@ -1,4 +1,4 @@
-CREATE TABLE dest1(key INT, value STRING);
+CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 -- input pruning, no sample filter
 -- default table sample columns

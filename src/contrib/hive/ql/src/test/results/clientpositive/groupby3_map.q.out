@@ -1,0 +1,119 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION sum (TOK_FUNCTION substr (TOK_COLREF src value) 4))) (TOK_SELEXPR (TOK_FUNCTION avg (TOK_FUNCTION substr (TOK_COLREF src value) 4))) (TOK_SELEXPR (TOK_FUNCTIONDI avg (TOK_FUNCTION substr (TOK_COLREF src value) 4))) (TOK_SELEXPR (TOK_FUNCTION max (TOK_FUNCTION substr (TOK_COLREF src value) 4))) (TOK_SELEXPR (TOK_FUNCTION min (TOK_FUNCTION substr (TOK_COLREF src value) 4))))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-2 depends on stages: Stage-1
+  Stage-0 depends on stages: Stage-2
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src 
+            Select Operator
+              expressions:
+                    expr: value
+                    type: string
+              Group By Operator
+              
+                    expr: avg(DISTINCT UDFToDouble(substr(0, 4)))
+                    expr: sum(UDFToDouble(substr(0, 4)))
+                    expr: avg(UDFToDouble(substr(0, 4)))
+                    expr: min(UDFToDouble(substr(0, 4)))
+                    expr: max(UDFToDouble(substr(0, 4)))
+                keys:
+                      expr: substr(0, 4)
+                      type: string
+                mode: hash
+                Reduce Output Operator
+                  key expressions:
+                        expr: 0
+                        type: string
+                  Map-reduce partition columns:
+                        expr: 0
+                        type: string
+                  tag: -1
+                  value expressions:
+                        expr: 1
+                        type: string
+                        expr: 2
+                        type: double
+                        expr: 3
+                        type: string
+                        expr: 4
+                        type: double
+                        expr: 5
+                        type: double
+      Reduce Operator Tree:
+        Group By Operator
+        
+              expr: avg(DISTINCT UDFToDouble(KEY.0))
+              expr: sum(VALUE.1)
+              expr: avg(VALUE.2)
+              expr: min(VALUE.3)
+              expr: max(VALUE.4)
+          mode: partial2
+          File Output Operator
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                name: binary_table
+
+  Stage: Stage-2
+    Map Reduce
+      Alias -> Map Operator Tree:
+        /tmp/hive-njain/130240402/83496104.10001 
+          Reduce Output Operator
+            tag: -1
+            value expressions:
+                  expr: 0
+                  type: string
+                  expr: 1
+                  type: double
+                  expr: 2
+                  type: string
+                  expr: 3
+                  type: double
+                  expr: 4
+                  type: double
+      Reduce Operator Tree:
+        Group By Operator
+        
+              expr: avg(VALUE.0)
+              expr: sum(VALUE.1)
+              expr: avg(VALUE.2)
+              expr: min(VALUE.3)
+              expr: max(VALUE.4)
+          mode: unknown
+          Select Operator
+            expressions:
+                  expr: 1
+                  type: double
+                  expr: 2
+                  type: string
+                  expr: 0
+                  type: string
+                  expr: 4
+                  type: double
+                  expr: 3
+                  type: double
+            File Output Operator
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+130091.0	260.182	256.10355987055016	498.0	0.0

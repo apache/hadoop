@@ -1,5 +1,5 @@
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_COLLIST (TOK_COLREF src key) (TOK_COLREF src value)) (TOK_ALIASLIST tkey tvalue) '/bin/cat'))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue))) (TOK_WHERE (< (TOK_COLREF tmap tkey) 100))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_EXPLIST (TOK_COLREF src key) (TOK_COLREF src value)) '/bin/cat' (TOK_ALIASLIST tkey tvalue)))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue))) (TOK_WHERE (< (TOK_COLREF tmap tkey) 100))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -25,7 +25,9 @@ STAGE PLANS:
                   key expressions:
                         expr: tkey
                         type: string
-                  # partition fields: 1
+                  Map-reduce partition columns:
+                        expr: tkey
+                        type: string
                   tag: -1
                   value expressions:
                         expr: tkey
@@ -37,7 +39,7 @@ STAGE PLANS:
           Filter Operator
             predicate:
                 expr: (0 < 100)
-                type: Boolean
+                type: boolean
             Select Operator
               expressions:
                     expr: 0

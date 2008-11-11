@@ -81,7 +81,13 @@ public class HiveConf extends Configuration {
     HIVETABLENAME("hive.table.name", ""),
     HIVEPARTITIONNAME("hive.partition.name", ""),
     HIVEPARTITIONPRUNER("hive.partition.pruning", "nonstrict"),
-    HIVEALIAS("hive.alias", "");
+    HIVEALIAS("hive.alias", ""),
+    HIVEMAPSIDEAGGREGATE("hive.map.aggr", "false"),
+    HIVEJOINEMITINTERVAL("hive.join.emit.interval", 1000),
+    
+    // Default file format for CREATE TABLE statement
+    // Options: TextFile, SequenceFile
+    HIVEDEFAULTFILEFORMAT("hive.default.fileformat", "TextFile");
     
     public final String varname;
     public final String defaultVal;

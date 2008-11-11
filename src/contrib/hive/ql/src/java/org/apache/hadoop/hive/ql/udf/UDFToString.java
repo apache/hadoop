@@ -78,12 +78,4 @@ public class UDFToString implements UDF {
     }
   }
   
-  public String evaluate(java.sql.Date i) {
-    if (i == null) {
-      return null;
-    } else {
-      return i.toString();
-    }
-  }
-  
 }

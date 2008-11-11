@@ -12,18 +12,22 @@ STAGE PLANS:
         src1 
             Select Operator
               expressions:
-                    expr: (4 + null)
-                    type: int
-                    expr: (UDFToDouble(key) - null)
-                    type: double
-                    expr: (null + null)
-                    type: Byte
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                    name: dest1
+                    expr: key
+                    type: string
+              Select Operator
+                expressions:
+                      expr: (4 + null)
+                      type: int
+                      expr: (UDFToDouble(0) - null)
+                      type: double
+                      expr: (null + null)
+                      type: tinyint
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
 
   Stage: Stage-0
     Move Operator

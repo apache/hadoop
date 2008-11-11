@@ -1,0 +1,336 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key) c1) (TOK_SELEXPR (TOK_COLREF src value) c2)))) src1) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key) c3) (TOK_SELEXPR (TOK_COLREF src value) c4)))) src2) (AND (= (TOK_COLREF src1 c1) (TOK_COLREF src2 c3)) (< (TOK_COLREF src1 c1) 100))) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src key) c5) (TOK_SELEXPR (TOK_COLREF src value) c6)))) src3) (AND (= (TOK_COLREF src1 c1) (TOK_COLREF src3 c5)) (< (TOK_COLREF src3 c5) 80)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src1 c1)) (TOK_SELEXPR (TOK_COLREF src2 c4)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src2:src 
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+              Reduce Output Operator
+                key expressions:
+                      expr: 0
+                      type: string
+                Map-reduce partition columns:
+                      expr: 0
+                      type: string
+                tag: 1
+                value expressions:
+                      expr: 0
+                      type: string
+                      expr: 1
+                      type: string
+        src1:src 
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+              Filter Operator
+                predicate:
+                    expr: (0 < 100)
+                    type: boolean
+                Reduce Output Operator
+                  key expressions:
+                        expr: 0
+                        type: string
+                  Map-reduce partition columns:
+                        expr: 0
+                        type: string
+                  tag: 0
+                  value expressions:
+                        expr: 0
+                        type: string
+                        expr: 1
+                        type: string
+        src3:src 
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+              Filter Operator
+                predicate:
+                    expr: (0 < 80)
+                    type: boolean
+                Reduce Output Operator
+                  key expressions:
+                        expr: 0
+                        type: string
+                  Map-reduce partition columns:
+                        expr: 0
+                        type: string
+                  tag: 2
+                  value expressions:
+                        expr: 0
+                        type: string
+                        expr: 1
+                        type: string
+      Reduce Operator Tree:
+        Join Operator
+          condition map:
+               Inner Join 0 to 1
+               Inner Join 0 to 1
+          condition expressions:
+            0 {VALUE.0} {VALUE.1}
+            1 {VALUE.0} {VALUE.1}
+            2 {VALUE.0} {VALUE.1}
+          Select Operator
+            expressions:
+                  expr: 0
+                  type: string
+                  expr: 3
+                  type: string
+            File Output Operator
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+
+
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+10	val_10
+11	val_11
+12	val_12
+12	val_12
+12	val_12
+12	val_12
+12	val_12
+12	val_12
+12	val_12
+12	val_12
+15	val_15
+15	val_15
+15	val_15
+15	val_15
+15	val_15
+15	val_15
+15	val_15
+15	val_15
+17	val_17
+18	val_18
+18	val_18
+18	val_18
+18	val_18
+18	val_18
+18	val_18
+18	val_18
+18	val_18
+19	val_19
+2	val_2
+20	val_20
+24	val_24
+24	val_24
+24	val_24
+24	val_24
+24	val_24
+24	val_24
+24	val_24
+24	val_24
+26	val_26
+26	val_26
+26	val_26
+26	val_26
+26	val_26
+26	val_26
+26	val_26
+26	val_26
+27	val_27
+28	val_28
+30	val_30
+33	val_33
+34	val_34
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+35	val_35
+37	val_37
+37	val_37
+37	val_37
+37	val_37
+37	val_37
+37	val_37
+37	val_37
+37	val_37
+4	val_4
+41	val_41
+42	val_42
+42	val_42
+42	val_42
+42	val_42
+42	val_42
+42	val_42
+42	val_42
+42	val_42
+43	val_43
+44	val_44
+47	val_47
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+5	val_5
+51	val_51
+51	val_51
+51	val_51
+51	val_51
+51	val_51
+51	val_51
+51	val_51
+51	val_51
+53	val_53
+54	val_54
+57	val_57
+58	val_58
+58	val_58
+58	val_58
+58	val_58
+58	val_58
+58	val_58
+58	val_58
+58	val_58
+64	val_64
+65	val_65
+66	val_66
+67	val_67
+67	val_67
+67	val_67
+67	val_67
+67	val_67
+67	val_67
+67	val_67
+67	val_67
+69	val_69
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+70	val_70
+72	val_72
+72	val_72
+72	val_72
+72	val_72
+72	val_72
+72	val_72
+72	val_72
+72	val_72
+74	val_74
+76	val_76
+76	val_76
+76	val_76
+76	val_76
+76	val_76
+76	val_76
+76	val_76
+76	val_76
+77	val_77
+78	val_78
+8	val_8
+9	val_9

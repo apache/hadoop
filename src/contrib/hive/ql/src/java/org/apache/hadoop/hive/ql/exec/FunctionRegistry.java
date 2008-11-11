@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +30,8 @@ import java.util.Map;
 import java.lang.Void;
 
 import org.apache.hadoop.hive.ql.exec.FunctionInfo.OperatorType;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.plan.groupByDesc;
 import org.apache.hadoop.hive.ql.udf.*;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 
@@ -247,7 +250,7 @@ public class FunctionRegistry {
 
   /**
    * This method is shared between UDFRegistry and UDAFRegistry.
-   * methodName will be "evaluate" for UDFRegistry, and "aggregate" for UDAFRegistry. 
+   * methodName will be "evaluate" for UDFRegistry, and "aggregate"/"evaluate"/"evaluatePartial" for UDAFRegistry. 
    */
   public static <T> Method getMethodInternal(Class<? extends T> udfClass, String methodName, boolean exact, List<Class<?>> argumentClasses) {
     int leastImplicitConversions = Integer.MAX_VALUE;
@@ -319,6 +322,9 @@ public class FunctionRegistry {
     return result;
   }
 
+  /**
+   * Returns the "aggregate" method of the UDAF.
+   */
   public static Method getUDAFMethod(String name, List<Class<?>> argumentClasses) {
     Class<? extends UDAF> udaf = getUDAF(name);
     if (udaf == null)
@@ -327,7 +333,62 @@ public class FunctionRegistry {
                                          argumentClasses);
   }
 
+  /**
+   * Returns the evaluate method for the UDAF based on the aggregation mode.
+   * See groupByDesc.Mode for details.
+   * 
+   * @param name  name of the UDAF
+   * @param mode  the mode of the aggregation
+   * @return      null if no such UDAF is found
+   */
+  public static Method getUDAFEvaluateMethod(String name, groupByDesc.Mode mode) {
+    Class<? extends UDAF> udaf = getUDAF(name);
+    if (udaf == null)
+      return null;
+    return FunctionRegistry.getMethodInternal(udaf, 
+        (mode == groupByDesc.Mode.COMPLETE || mode == groupByDesc.Mode.FINAL) 
+        ? "evaluate" : "evaluatePartial", true,
+        new ArrayList<Class<?>>() );
+  }
+
+  /**
+   * Returns the "aggregate" method of the UDAF.
+   */
   public static Method getUDAFMethod(String name, Class<?>... argumentClasses) {
     return getUDAFMethod(name, Arrays.asList(argumentClasses));
+  }
+  
+  public static Object invoke(Method m, Object thisObject, Object[] arguments) throws HiveException {
+    Object o;
+    try {
+      o = m.invoke(thisObject, arguments);
+    } catch (Exception e) {
+      String thisObjectString = "" + thisObject + " of class " + 
+        (thisObject == null? "null" : thisObject.getClass().getName());
+
+      StringBuilder argumentString = new StringBuilder();
+      if (arguments == null) {
+        argumentString.append("null");
+      } else {
+        argumentString.append("{");
+        for (int i=0; i<arguments.length; i++) {
+          if (i>0) {
+            argumentString.append(", ");
+          }
+          if (arguments[i] == null) {
+            argumentString.append("null");
+          } else {
+            argumentString.append("" + arguments[i] + ":" + arguments[i].getClass().getName());
+          }
+        }
+        argumentString.append("} of size " + arguments.length);
+      }
+      
+      throw new HiveException("Unable to execute method " + m + " " 
+          + " on object " + thisObjectString
+          + " with arguments " + argumentString.toString() 
+          + ":" + e.getMessage());
+    }
+    return o;
   }
 }

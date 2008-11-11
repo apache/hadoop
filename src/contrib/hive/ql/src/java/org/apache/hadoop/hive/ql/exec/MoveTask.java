@@ -20,8 +20,11 @@ package org.apache.hadoop.hive.ql.exec;
 
 import java.io.Serializable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -30,6 +33,9 @@ import org.apache.hadoop.hive.ql.plan.loadFileDesc;
 import org.apache.hadoop.hive.ql.plan.loadTableDesc;
 import org.apache.hadoop.hive.ql.plan.moveWork;
 import org.apache.hadoop.hive.ql.metadata.Hive;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -107,6 +113,44 @@ public class MoveTask extends Task<moveWork> implements Serializable {
             " partition " + tbd.getPartitionSpec().toString() : "");
         String mesg_detail = " from " + tbd.getSourceDir();
         console.printInfo(mesg, mesg_detail);
+
+        // Get the file format of the table
+        boolean tableIsSequenceFile = tbd.getTable().getInputFileFormatClass().equals(SequenceFileInputFormat.class);
+        // Get all files from the src directory
+        FileStatus [] dirs;
+        ArrayList<FileStatus> files;
+        try {
+          fs = FileSystem.get(db.getTable(tbd.getTable().getTableName()).getDataLocation(),
+              Hive.get().getConf());
+          dirs = fs.globStatus(new Path(tbd.getSourceDir()));
+          files = new ArrayList<FileStatus>();
+          for (int i=0; i<dirs.length; i++) {
+            files.addAll(Arrays.asList(fs.listStatus(dirs[i].getPath())));
+            // We only check one file, so exit the loop when we have at least one.
+            if (files.size()>0) break;
+          }
+        } catch (IOException e) {
+          throw new HiveException("addFiles: filesystem error in check phase", e);
+        }
+        // Check if the file format of the file matches that of the table.
+        if (files.size() > 0) {
+          int fileId = 0;
+          boolean fileIsSequenceFile = true;   
+          try {
+            SequenceFile.Reader reader = new SequenceFile.Reader(
+              fs, files.get(fileId).getPath(), conf);
+            reader.close();
+          } catch (IOException e) {
+            fileIsSequenceFile = false;
+          }
+          if (!fileIsSequenceFile && tableIsSequenceFile) {
+            throw new HiveException("Cannot load text files into a table stored as SequenceFile.");
+          }
+          if (fileIsSequenceFile && !tableIsSequenceFile) {
+            throw new HiveException("Cannot load SequenceFiles into a table stored as TextFile.");
+          }
+        }
+         
 
         if(tbd.getPartitionSpec().size() == 0) {
           db.loadTable(new Path(tbd.getSourceDir()), tbd.getTable().getTableName(), tbd.getReplace());

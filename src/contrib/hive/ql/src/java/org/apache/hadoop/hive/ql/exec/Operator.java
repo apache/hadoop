@@ -22,6 +22,7 @@ import java.util.*;
 import java.io.*;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.plan.mapredWork;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -31,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.plan.explain;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * Base operator implementation
@@ -42,6 +45,7 @@ public abstract class Operator <T extends Serializable> implements Serializable 
   private static final long serialVersionUID = 1L;
   
   protected List<Operator<? extends Serializable>> childOperators;
+  protected List<Operator<? extends Serializable>> parentOperators;
 
   public Operator() {}
 
@@ -51,6 +55,14 @@ public abstract class Operator <T extends Serializable> implements Serializable 
 
   public List<Operator<? extends Serializable>> getChildOperators() {
     return childOperators;
+  }
+
+  public void setParentOperators(List<Operator<? extends Serializable>> parentOperators) {
+    this.parentOperators = parentOperators;
+  }
+
+  public List<Operator<? extends Serializable>> getParentOperators() {
+    return parentOperators;
   }
 
   protected String id;
@@ -275,6 +287,24 @@ public abstract class Operator <T extends Serializable> implements Serializable 
     for(Enum<?> e: statsMap.keySet()) {
       LOG.info(e.toString() + ":" + statsMap.get(e).toString());
     }    
+  }
+
+  public List<String> mergeColListsFromChildren(List<String> colList, 
+                                        HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) {
+    return colList;
+  }
+
+  public List<String> genColLists(HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) 
+    throws SemanticException {
+    List<String> colList = new ArrayList<String>();
+    if (childOperators != null)
+      for(Operator<? extends Serializable> o: childOperators)
+        colList = Utilities.mergeUniqElems(colList, o.genColLists(opParseCtx));
+
+    List<String> cols = mergeColListsFromChildren(colList, opParseCtx);
+    OpParseContext ctx = opParseCtx.get(this);
+    ctx.setColNames(cols);
+    return cols;
   }
 
 }

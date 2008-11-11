@@ -23,20 +23,34 @@ import java.io.Serializable;
 @explain(displayName="Reduce Output Operator")
 public class reduceSinkDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  // these are the expressions that go into the reduce key
+  /**
+   * Key columns are passed to reducer in the "key". 
+   */
   private java.util.ArrayList<exprNodeDesc> keyCols;
+  /**
+   * Value columns are passed to reducer in the "value". 
+   */
   private java.util.ArrayList<exprNodeDesc> valueCols;
-  // Describe how to serialize the key
+  /** 
+   * Describe how to serialize the key.
+   */
   private tableDesc keySerializeInfo;
-  // Describe how to serialize the value
+  /**
+   * Describe how to serialize the value.
+   */
   private tableDesc valueSerializeInfo;
   
+  /**
+   * The tag for this reducesink descriptor.
+   */
   private int tag;
   
-  // The partition key will be the first #numPartitionFields of keyCols
-  // If the value is 0, then all data will go to a single reducer
-  // If the value is -1, then data will go to a random reducer 
-  private int numPartitionFields;
+  /**
+   * The partition columns (CLUSTER BY or DISTRIBUTE BY in Hive language).
+   * Partition columns decide the reducer that the current row goes to.
+   * Partition columns are not passed to reducer.
+   */
+  private java.util.ArrayList<exprNodeDesc> partitionCols;
   
   private boolean inferNumReducers;
   private int numReducers;
@@ -47,7 +61,7 @@ public class reduceSinkDesc implements Serializable {
     (java.util.ArrayList<exprNodeDesc> keyCols,
      java.util.ArrayList<exprNodeDesc> valueCols,
      int tag,
-     int numPartitionFields,
+     java.util.ArrayList<exprNodeDesc> partitionCols,
      int numReducers,
      boolean inferNumReducers,
      final tableDesc keySerializeInfo,
@@ -57,7 +71,7 @@ public class reduceSinkDesc implements Serializable {
     this.tag = tag;
     this.numReducers = numReducers;
     this.inferNumReducers = inferNumReducers;
-    this.numPartitionFields = numPartitionFields;
+    this.partitionCols = partitionCols;
     this.keySerializeInfo = keySerializeInfo;
     this.valueSerializeInfo = valueSerializeInfo;
   }
@@ -80,12 +94,12 @@ public class reduceSinkDesc implements Serializable {
     this.valueCols=valueCols;
   }
   
-  @explain(displayName="# partition fields")
-  public int getNumPartitionFields() {
-    return this.numPartitionFields;
+  @explain(displayName="Map-reduce partition columns")
+  public java.util.ArrayList<exprNodeDesc> getPartitionCols() {
+    return this.partitionCols;
   }
-  public void setNumPartitionFields(int numPartitionFields) {
-    this.numPartitionFields = numPartitionFields;
+  public void setPartitionCols(final java.util.ArrayList<exprNodeDesc> partitionCols) {
+    this.partitionCols = partitionCols;
   }
   
   @explain(displayName="tag")

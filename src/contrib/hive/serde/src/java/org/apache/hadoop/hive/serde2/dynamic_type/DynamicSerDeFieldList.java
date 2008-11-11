@@ -87,6 +87,9 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
       for(int i = 0 ; i < this.jjtGetNumChildren(); i++) {
         DynamicSerDeField mt = this.getField(i);
         DynamicSerDeTypeBase type = mt.getFieldType().getMyType();
+        // types get initialized in case they need to setup any 
+        // internal data structures - e.g., DynamicSerDeStructBase
+        type.initialize();
         type.fieldid = mt.fieldid;
         type.name = mt.name;
 
@@ -106,6 +109,15 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
     return types_by_column_name.get(fieldname);
   }
 
+  /**
+   * Indicates whether fields can be out of order or missing. i.e., is it really real
+   * thrift serialization.
+   * This is used by dynamicserde to do some optimizations if it knows all the fields exist
+   * and are required and are serialized in order.
+   * For now, those optimizations are only done for DynamicSerDe serialized data so always
+   * set to false for now.
+   */
+  protected boolean isRealThrift = false;
 
   public Object deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
     ArrayList<Object> struct = null;
@@ -120,16 +132,33 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
       assert(struct.size() == this.getNumFields());
     }
 
+    boolean fastSkips = iprot instanceof org.apache.hadoop.hive.serde2.thrift.SkippableTProtocol;
+
+    // may need to strip away the STOP marker when in thrift mode
+    boolean stopSeen = false;
+
     // Read the fields.
     for(int i = 0; i < this.getNumFields(); i++) {
       DynamicSerDeTypeBase mt = null;
       TField field = null;
-
+      
+      if(!isRealThrift && this.getField(i).isSkippable()) {
+        // PRE - all the fields are required and serialized in order - is !isRealThrift
+        mt = this.ordered_types[i];
+        if(fastSkips) {
+          ((org.apache.hadoop.hive.serde2.thrift.SkippableTProtocol)iprot).skip(mt.getType());
+        } else {
+          TProtocolUtil.skip(iprot,mt.getType());
+        }
+        struct.set(i, null);
+        continue;
+      }
       if (thrift_mode) {
         field = iprot.readFieldBegin();
 
         if(field.type >= 0) {
           if(field.type == TType.STOP) {
+            stopSeen = true;
             break;
           }
           mt = this.getFieldByFieldId(field.id);
@@ -157,10 +186,14 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
         orderedId = ordered_column_id_by_name.get(mt.name); 
       }
       struct.set(orderedId, mt.deserialize(struct.get(orderedId), iprot));
-
       if(thrift_mode) {
         iprot.readFieldEnd();
       }
+    }
+    if(thrift_mode && !stopSeen) {
+      // strip off the STOP marker, which may be left if all the fields were in the serialization
+      TField field = iprot.readFieldBegin();
+      assert(field.type == TType.STOP);
     }
     return struct;
   }
@@ -168,12 +201,13 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
 
   TField field = new TField();
   public void serialize(Object o, ObjectInspector oi, TProtocol oprot) throws TException, SerDeException, NoSuchFieldException,IllegalAccessException  {
-
     // Assuming the ObjectInspector represents exactly the same type as this struct.
     // This assumption should be checked during query compile time.
     assert(oi instanceof StructObjectInspector);
     StructObjectInspector soi = (StructObjectInspector) oi;
 
+    boolean writeNulls = oprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol;
+    
     // For every field
     List<? extends StructField> fields = soi.getAllStructFieldRefs();
     if (fields.size() != ordered_types.length) {
@@ -184,6 +218,10 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
       Object f = soi.getStructFieldData(o, fields.get(i));
       DynamicSerDeTypeBase mt = ordered_types[i];
       
+      if (f == null && !writeNulls) {
+        continue;
+      }
+
       if(thrift_mode) {
         field.name = mt.name;
         field.type = mt.getType();
@@ -191,8 +229,11 @@ public class DynamicSerDeFieldList extends DynamicSerDeSimpleNode implements Ser
         oprot.writeFieldBegin(field);
       }
 
-      mt.serialize(f, fields.get(i).getFieldObjectInspector(), oprot);
-
+      if(f == null) {
+        ((org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)oprot).writeNull();
+      } else {
+        mt.serialize(f, fields.get(i).getFieldObjectInspector(), oprot);
+      }
       if(thrift_mode) {
         oprot.writeFieldEnd();
       }

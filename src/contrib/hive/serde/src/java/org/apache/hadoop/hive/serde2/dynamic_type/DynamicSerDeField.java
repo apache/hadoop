@@ -32,6 +32,10 @@ public class DynamicSerDeField extends DynamicSerDeSimpleNode {
   private final int FD_FIELD_TYPE = 1;
   private final int FD_FIELD_VALUE =2;
 
+  public boolean isSkippable() {
+    return ((DynamicSerDeFieldRequiredness)this.jjtGetChild(FD_REQUIREDNESS)).getRequiredness() == DynamicSerDeFieldRequiredness.RequirednessTypes.Skippable;
+  }
+
   public DynamicSerDeFieldType getFieldType() {
     return (DynamicSerDeFieldType)this.jjtGetChild(FD_FIELD_TYPE);
   }

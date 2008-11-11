@@ -12,16 +12,20 @@ STAGE PLANS:
         src1 
             Select Operator
               expressions:
-                    expr: null
-                    type: string
                     expr: key
                     type: string
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                    name: dest1
+              Select Operator
+                expressions:
+                      expr: null
+                      type: string
+                      expr: 0
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
 
   Stage: Stage-0
     Move Operator

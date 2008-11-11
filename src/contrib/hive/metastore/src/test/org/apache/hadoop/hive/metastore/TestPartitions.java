@@ -60,8 +60,8 @@ public class TestPartitions extends MetaStoreTestBase {
       fileSys_.mkdirs(part2);
       List<String> partitions = bar1.getPartitions();
       assertTrue(partitions.size() == 2);
-      assertTrue(partitions.get(0).equals("ds=2008-01-01"));
-      assertTrue(partitions.get(1).equals("ds=2008-01-02"));
+      assertTrue(partitions.contains("ds=2008-01-01"));
+      assertTrue(partitions.contains("ds=2008-01-02"));
       cleanup();
     } catch(MetaException e) {
       e.printStackTrace();

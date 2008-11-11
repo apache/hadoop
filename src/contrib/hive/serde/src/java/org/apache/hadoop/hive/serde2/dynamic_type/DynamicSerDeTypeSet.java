@@ -76,6 +76,9 @@ public class DynamicSerDeTypeSet extends DynamicSerDeTypeBase {
   public Object deserialize(Object reuse, TProtocol iprot)
   throws SerDeException, TException, IllegalAccessException {
     TSet theset = iprot.readSetBegin();
+    if (theset == null) {
+      return null;
+    }
     Set<Object> result;
     if (reuse != null) {
       result = (Set<Object>)reuse;
@@ -96,6 +99,7 @@ public class DynamicSerDeTypeSet extends DynamicSerDeTypeBase {
    *  The code uses ListObjectInspector right now. We need to change it to 
    *  SetObjectInspector when that is done.
    */
+  TSet tset = new TSet();
   @Override
   public void serialize(Object o, ObjectInspector oi, TProtocol oprot)
   throws TException, SerDeException, NoSuchFieldException,
@@ -105,7 +109,9 @@ public class DynamicSerDeTypeSet extends DynamicSerDeTypeBase {
 
     Set<Object> set = (Set<Object>)o;
     DynamicSerDeTypeBase mt = this.getElementType();
-    oprot.writeSetBegin(new TSet(mt.getType(),set.size()));
+    tset.elemType = mt.getType();
+    tset.size = set.size();
+    oprot.writeSetBegin(tset);
     for(Object element: set) {
       mt.serialize(element, loi.getListElementObjectInspector(), oprot);
     }

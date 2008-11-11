@@ -81,7 +81,6 @@ abstract public class DynamicSerDeStructBase extends DynamicSerDeTypeBase implem
     fieldList.serialize(o, oi, oprot);
 
     if(thrift_mode) {
-      oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
   }

@@ -28,6 +28,8 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
+import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
@@ -350,6 +352,81 @@ public class TestHiveMetaStore extends TestCase {
     }
   }
 
+  public void testAlterTable() throws Exception {
+    try {
+      String dbName = "alterdb";
+      String invTblName = "alter-tbl";
+      String tblName = "altertbl";
+
+      client.dropTable(dbName, tblName);
+      client.dropDatabase(dbName);
+      boolean ret = client.createDatabase(dbName, "strange_loc");
+      assertTrue("Unable to create the databse " + dbName, ret);
+
+      ArrayList<FieldSchema> invCols = new ArrayList<FieldSchema>(2);
+      invCols.add(new FieldSchema("n-ame", Constants.STRING_TYPE_NAME, ""));
+      invCols.add(new FieldSchema("in.come", Constants.INT_TYPE_NAME, ""));
+
+      Table tbl = new Table();
+      tbl.setDbName(dbName);
+      tbl.setTableName(invTblName);
+      StorageDescriptor sd = new StorageDescriptor();
+      tbl.setSd(sd);
+      sd.setCols(invCols);
+      sd.setCompressed(false);
+      sd.setNumBuckets(1);
+      sd.setParameters(new HashMap<String, String>());
+      sd.getParameters().put("test_param_1", "Use this for comments etc");
+      sd.setBucketCols(new ArrayList<String>(2));
+      sd.getBucketCols().add("name");
+      sd.setSerdeInfo(new SerDeInfo());
+      sd.getSerdeInfo().setName(tbl.getTableName());
+      sd.getSerdeInfo().setParameters(new HashMap<String, String>());
+      sd.getSerdeInfo().getParameters().put(org.apache.hadoop.hive.serde.Constants.SERIALIZATION_FORMAT, "1");
+      boolean failed = false;
+      try {
+        client.createTable(tbl);
+      } catch (InvalidObjectException ex) {
+        failed = true;
+      }
+      if(!failed) {
+        assertTrue("Able to create table with invalid name: " + invTblName, false);
+      }
+      ArrayList<FieldSchema> cols = new ArrayList<FieldSchema>(2);
+      cols.add(new FieldSchema("name", Constants.STRING_TYPE_NAME, ""));
+      cols.add(new FieldSchema("income", Constants.INT_TYPE_NAME, ""));
+
+      // create a valid table
+      tbl.setTableName(tblName);
+      tbl.getSd().setCols(cols);
+      client.createTable(tbl);
+      
+      // now try to invalid alter table
+      Table tbl2 = client.getTable(dbName, tblName);
+      failed = false;
+      try {
+        tbl2.setTableName(invTblName);
+        tbl2.getSd().setCols(invCols);
+        client.alter_table(dbName, tblName, tbl2);
+      } catch (InvalidOperationException ex) {
+        failed = true;
+      }
+      if(!failed) {
+        assertTrue("Able to rename table with invalid name: " + invTblName, false);
+      }
+      // try a valid alter table
+      tbl2.setTableName(tblName);
+      tbl2.getSd().setCols(cols);
+      tbl2.getSd().setNumBuckets(32);
+      client.alter_table(dbName, tblName, tbl2);
+      Table tbl3 = client.getTable(dbName, tblName);
+      assertEquals("Alter table didn't succeed. Num buckets ", tbl2.getSd().getNumBuckets(), tbl3.getSd().getNumBuckets());
+    } catch (Exception e) {
+      System.err.println(StringUtils.stringifyException(e));
+      System.err.println("testSimpleTable() failed.");
+      throw e;
+    }
+  }
   public void testComplexTable() throws Exception {
   
     String dbName = "compdb";

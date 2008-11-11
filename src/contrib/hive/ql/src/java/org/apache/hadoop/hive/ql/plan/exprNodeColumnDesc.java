@@ -19,20 +19,22 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.ql.typeinfo.TypeInfoFactory;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 
 public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private String column;
-  private boolean isVirtual;
   
   public exprNodeColumnDesc() {}
   public exprNodeColumnDesc(TypeInfo typeInfo, String column) {
     super(typeInfo);
     this.column = column;
-    this.isVirtual = isVirtual;
   }
   public exprNodeColumnDesc(Class<?> c, String column) {
     super(TypeInfoFactory.getPrimitiveTypeInfo(c));
@@ -54,4 +56,11 @@ public class exprNodeColumnDesc extends exprNodeDesc implements Serializable {
   public String getExprString() {
     return getColumn();
   }
+
+  public List<String> getCols() {
+  	List<String> lst = new ArrayList<String>();
+  	lst.add(column);
+  	return lst;
+  }
+
 }

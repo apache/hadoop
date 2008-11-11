@@ -59,6 +59,10 @@ public class DynamicSerDeTypeList extends DynamicSerDeTypeBase {
   @Override
   public ArrayList<Object> deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
     TList thelist = iprot.readListBegin();
+    if (thelist == null) {
+      return null;
+    }
+
     ArrayList<Object> deserializeReuse;
     if (reuse != null) {
       deserializeReuse = (ArrayList<Object>)reuse;
@@ -89,17 +93,32 @@ public class DynamicSerDeTypeList extends DynamicSerDeTypeBase {
     ObjectInspector elementObjectInspector = loi.getListElementObjectInspector();
     DynamicSerDeTypeBase mt = this.getElementType();
 
+    org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol nullProtocol = 
+      (oprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)
+      ? (org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)oprot
+      : null;
+    
     if (o instanceof List) {
       List<?> list = (List<?>)o;
       oprot.writeListBegin(new TList(mt.getType(),list.size()));
       for (Object element: list) {
-        mt.serialize(element, elementObjectInspector, oprot);
+        if (element == null) {
+          assert(nullProtocol != null);
+          nullProtocol.writeNull();
+        } else {
+          mt.serialize(element, elementObjectInspector, oprot);
+        }
       }
     } else {
       Object[] list = (Object[])o;
       oprot.writeListBegin(new TList(mt.getType(),list.length));
       for (Object element: list) {
-        mt.serialize(element, elementObjectInspector, oprot);
+        if (element == null && nullProtocol != null) {
+          assert(nullProtocol != null);
+          nullProtocol.writeNull();
+        } else {
+          mt.serialize(element, elementObjectInspector, oprot);
+        }
       }
     }
     // in theory, the below call isn't needed in non thrift_mode, but let's not get too crazy

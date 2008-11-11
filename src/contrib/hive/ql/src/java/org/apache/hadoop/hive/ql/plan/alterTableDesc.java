@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -28,12 +29,14 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 public class alterTableDesc extends ddlDesc implements Serializable 
 {
   private static final long serialVersionUID = 1L;
-  public static enum alterTableTypes {RENAME, ADDCOLS, REPLACECOLS};
+  public static enum alterTableTypes {RENAME, ADDCOLS, REPLACECOLS, ADDPROPS, ADDSERDE, ADDSERDEPROPS};
     
   alterTableTypes      op;
   String               oldName;
   String               newName;
   List<FieldSchema>    newCols;
+  String               serdeName;
+  Map<String, String>  props;
   
   /**
    * @param oldName old name of the table
@@ -53,6 +56,13 @@ public class alterTableDesc extends ddlDesc implements Serializable
     this.op = alterType;
     this.oldName = name;
     this.newCols = newCols;
+  }
+  
+  /**
+   * @param alterType type of alter op
+   */
+  public alterTableDesc(alterTableTypes alterType) {
+    this.op = alterType;
   }
 
   /**
@@ -128,6 +138,36 @@ public class alterTableDesc extends ddlDesc implements Serializable
    */
   public void setNewCols(List<FieldSchema> newCols) {
     this.newCols = newCols;
+  }
+
+  /**
+   * @return the serdeName
+   */
+  @explain(displayName="deserializer library")
+  public String getSerdeName() {
+    return serdeName;
+  }
+
+  /**
+   * @param serdeName the serdeName to set
+   */
+  public void setSerdeName(String serdeName) {
+    this.serdeName = serdeName;
+  }
+
+  /**
+   * @return the props
+   */
+  @explain(displayName="properties")
+  public Map<String, String> getProps() {
+    return props;
+  }
+
+  /**
+   * @param props the props to set
+   */
+  public void setProps(Map<String, String> props) {
+    this.props = props;
   }
 
 }

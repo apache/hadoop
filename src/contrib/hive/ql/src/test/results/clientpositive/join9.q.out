@@ -14,7 +14,9 @@ STAGE PLANS:
               key expressions:
                     expr: key
                     type: string
-              # partition fields: 1
+              Map-reduce partition columns:
+                    expr: key
+                    type: string
               tag: 1
               value expressions:
                     expr: key
@@ -22,21 +24,29 @@ STAGE PLANS:
                     expr: value
                     type: string
         src1 
-            Reduce Output Operator
-              key expressions:
+            Select Operator
+              expressions:
                     expr: key
-                    type: string
-              # partition fields: 1
-              tag: 0
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
                     type: string
                     expr: ds
                     type: string
                     expr: hr
                     type: string
+              Reduce Output Operator
+                key expressions:
+                      expr: 0
+                      type: string
+                Map-reduce partition columns:
+                      expr: 0
+                      type: string
+                tag: 0
+                value expressions:
+                      expr: 0
+                      type: string
+                      expr: 1
+                      type: string
+                      expr: 2
+                      type: string
       Needs Tagging:
       Path -> Alias:
         file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/src 
@@ -85,20 +95,20 @@ STAGE PLANS:
           condition map:
                Inner Join 0 to 1
           condition expressions:
-            0 {VALUE.0} {VALUE.1} {VALUE.2} {VALUE.3}
+            0 {VALUE.0} {VALUE.1} {VALUE.2}
             1 {VALUE.0} {VALUE.1}
           Filter Operator
             predicate:
-                expr: ((2 = '2008-04-08') and (3 = '12'))
-                type: Boolean
+                expr: ((1 = '2008-04-08') and (2 = '12'))
+                type: boolean
             Select Operator
               expressions:
                     expr: 0
                     type: string
-                    expr: 5
+                    expr: 4
                     type: string
               File Output Operator
-                directory: /tmp/hive-njain/465936460/211979279.10000.insclause-0
+                directory: /tmp/hive-njain/653311979.10000.insclause-0
                 table:
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -107,7 +117,6 @@ STAGE PLANS:
                       serialization.ddl struct dest1 { i32 key, string value}
                       serialization.format 1
                       columns key,value
-                      SORTBUCKETCOLSPREFIX TRUE
                       bucket_count -1
                       serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                       file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -120,7 +129,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/465936460/211979279.10000.insclause-0
+            source: /tmp/hive-njain/653311979.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -129,7 +138,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value}
                   serialization.format 1
                   columns key,value
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat

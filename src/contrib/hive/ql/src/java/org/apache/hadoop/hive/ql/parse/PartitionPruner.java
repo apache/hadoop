@@ -59,6 +59,12 @@ public class PartitionPruner {
   private Table tab;
 
   private exprNodeDesc prunerExpr;
+  
+  // is set to true if the expression only contains partitioning columns and not any other column reference.
+  // This is used to optimize select * from table where ... scenario, when the where condition only references
+  // partitioning columns - the partitions are identified and streamed directly to the client without requiring 
+  // a map-reduce job
+  private boolean containsPartCols;
 
   /** Creates a new instance of PartitionPruner */
   public PartitionPruner(String tableAlias, QBMetaData metaData) {
@@ -66,8 +72,13 @@ public class PartitionPruner {
     this.metaData = metaData;
     this.tab = metaData.getTableForAlias(tableAlias);
     this.prunerExpr = null;
+    containsPartCols = true;
   }
 
+  public boolean containsPartitionCols() {
+    return containsPartCols;
+  }
+  
   /**
    * We use exprNodeConstantDesc(class,null) to represent unknown values.
    * Except UDFOPAnd, UDFOPOr, and UDFOPNot, all UDFs are assumed to return unknown values 
@@ -97,12 +108,18 @@ public class PartitionPruner {
     switch (tokType) {
       case HiveParser.TOK_COLREF: {
 
-        assert(expr.getChildCount() == 2);
-        String tabAlias = expr.getChild(0).getText();
-        String colName = expr.getChild(1).getText();
-        if (tabAlias == null || colName == null) {
-          throw new SemanticException(ErrorMsg.INVALID_XPATH.getMsg(expr));
+        String tabAlias = null;
+        String colName = null;
+        if (expr.getChildCount() != 1) {
+          assert(expr.getChildCount() == 2);
+          tabAlias = BaseSemanticAnalyzer.unescapeIdentifier(expr.getChild(0).getText());
+          colName = BaseSemanticAnalyzer.unescapeIdentifier(expr.getChild(1).getText());
         }
+        else {
+          colName = BaseSemanticAnalyzer.unescapeIdentifier(expr.getChild(0).getText());
+          tabAlias = SemanticAnalyzer.getTabAliasForCol(this.metaData, colName, (CommonTree)expr.getChild(0));
+        }
+
         // Set value to null if it's not partition column
         if (tabAlias.equals(tableAlias) && tab.isPartitionKey(colName)) {
           desc = new exprNodeColumnDesc(String.class, colName); 
@@ -117,6 +134,7 @@ public class PartitionPruner {
               TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromObjectInspector(
                                                                                this.metaData.getTableForAlias(tabAlias).getDeserializer().getObjectInspector());
               desc = new exprNodeConstantDesc(typeInfo.getStructFieldTypeInfo(colName), null);
+              containsPartCols = false;
             }
           } catch (SerDeException e){
             throw new RuntimeException(e);
@@ -195,8 +213,8 @@ public class PartitionPruner {
       case HiveParser.TOK_COLREF: {
 
         assert(expr.getChildCount() == 2);
-        String tabAlias = expr.getChild(0).getText();
-        String colName = expr.getChild(1).getText();
+        String tabAlias = BaseSemanticAnalyzer.unescapeIdentifier(expr.getChild(0).getText());
+        String colName = BaseSemanticAnalyzer.unescapeIdentifier(expr.getChild(1).getText());
         if (tabAlias.equals(tableAlias) && tab.isPartitionKey(colName)) {
           hasPPred = true;
         }
@@ -227,9 +245,28 @@ public class PartitionPruner {
     if (!(desc instanceof exprNodeConstantDesc) || ((exprNodeConstantDesc)desc).getValue() != null ) {
       LOG.trace("adding pruning expr = " + desc);
       if (this.prunerExpr == null)
-      	this.prunerExpr = desc;
+        this.prunerExpr = desc;
       else
         this.prunerExpr = SemanticAnalyzer.getFuncExprNodeDesc("OR", this.prunerExpr, desc);
+    }
+  }
+
+  /** 
+   * Add an expression from the JOIN condition. Since these expressions will be used for all the where clauses, they 
+   * are always ANDed. Then we walk through the remaining filters (in the where clause) and OR them with the existing
+   * condition.
+   */
+  @SuppressWarnings("nls")
+  public void addJoinOnExpression(CommonTree expr) throws SemanticException {
+    LOG.trace("adding pruning Tree = " + expr.toStringTree());
+    exprNodeDesc desc = genExprNodeDesc(expr);
+    // Ignore null constant expressions
+    if (!(desc instanceof exprNodeConstantDesc) || ((exprNodeConstantDesc)desc).getValue() != null ) {
+      LOG.trace("adding pruning expr = " + desc);
+      if (this.prunerExpr == null)
+        this.prunerExpr = desc;
+      else
+        this.prunerExpr = SemanticAnalyzer.getFuncExprNodeDesc("AND", this.prunerExpr, desc);
     }
   }
   
@@ -282,7 +319,7 @@ public class PartitionPruner {
           }
         }
         else
-        	ret_parts.add(part);
+          ret_parts.add(part);
       }
     }
     catch (Exception e) {

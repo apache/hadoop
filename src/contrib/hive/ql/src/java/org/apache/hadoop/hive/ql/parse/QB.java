@@ -22,7 +22,6 @@ import java.util.*;
 
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.QBMetaData;
-import org.apache.hadoop.hive.ql.metadata.Table;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -158,14 +157,6 @@ public class QB {
   }
 
   public boolean isSelectStarQuery() {
-    if (!qbp.isSelectStarQuery() || !aliasToSubq.isEmpty())
-      return false;
-
-    Iterator<Map.Entry<String, Table>> iter = qbm.getAliasToTable().entrySet().iterator();
-    Table tab = ((Map.Entry<String, Table>)iter.next()).getValue();
-    if (tab.isPartitioned())
-      return false;
-    
-    return true;
+    return qbp.isSelectStarQuery() && aliasToSubq.isEmpty();
   }
 }

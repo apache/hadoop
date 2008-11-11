@@ -73,4 +73,11 @@ public class ColumnInfo implements Serializable {
   public void setInternalName(String internalName) {
     this.internalName = internalName;
   }
+
+  /**
+   * Returns the string representation of the ColumnInfo.
+   */
+  public String toString() {
+    return internalName + ": " + type;
+  }
 }

@@ -19,8 +19,13 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
+
 
 
 public class exprNodeIndexDesc extends exprNodeDesc implements Serializable {
@@ -61,5 +66,15 @@ public class exprNodeIndexDesc extends exprNodeDesc implements Serializable {
   @Override
   public String getExprString() {
     return this.desc.getExprString() + "[" + this.index.getExprString() + "]";
+  }
+  
+  public List<String> getCols() {
+    List<String> colList = new ArrayList<String>();
+    if (desc != null) 
+    	colList = Utilities.mergeUniqElems(colList, desc.getCols());
+    if (index != null)
+    	colList = Utilities.mergeUniqElems(colList, index.getCols());
+    
+    return colList;
   }
 }

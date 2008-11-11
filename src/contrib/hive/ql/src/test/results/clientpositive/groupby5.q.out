@@ -15,7 +15,9 @@ STAGE PLANS:
               key expressions:
                     expr: key
                     type: string
-              # partition fields: -1
+              Map-reduce partition columns:
+                    expr: rand()
+                    type: double
               tag: -1
               value expressions:
                     expr: substr(value, 4)
@@ -23,29 +25,32 @@ STAGE PLANS:
       Reduce Operator Tree:
         Group By Operator
         
-              expr: sum(VALUE.0)
+              expr: sum(UDFToDouble(VALUE.0))
           keys:
                 expr: KEY.0
                 type: string
           mode: partial1
           File Output Operator
             table:
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                name: binary_table
 
   Stage: Stage-2
     Map Reduce
       Alias -> Map Operator Tree:
-        /tmp/hive-njain/888102295/1013886705.10001 
+        /tmp/hive-njain/485297652/61546074.10001 
           Reduce Output Operator
             key expressions:
                   expr: 0
                   type: string
-            # partition fields: 1
+            Map-reduce partition columns:
+                  expr: 0
+                  type: string
             tag: -1
             value expressions:
                   expr: 1
-                  type: string
+                  type: double
       Reduce Operator Tree:
         Group By Operator
         
@@ -53,13 +58,13 @@ STAGE PLANS:
           keys:
                 expr: KEY.0
                 type: string
-          mode: partial2
+          mode: unknown
           Select Operator
             expressions:
                   expr: 0
                   type: string
                   expr: 1
-                  type: string
+                  type: double
             File Output Operator
               table:
                   input format: org.apache.hadoop.mapred.TextInputFormat

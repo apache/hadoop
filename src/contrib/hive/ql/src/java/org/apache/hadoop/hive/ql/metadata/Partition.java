@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
-import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 
 /**
@@ -203,6 +202,10 @@ public class Partition {
         Path [] ret = new Path [1];
         ret[0] = this.partPath;
         return(ret);
+    }
+
+    public Path getPartitionPath() {
+      return this.partPath;
     }
 
     final public URI getDataLocation() {

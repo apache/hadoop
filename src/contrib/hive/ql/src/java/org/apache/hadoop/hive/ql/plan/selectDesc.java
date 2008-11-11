@@ -24,16 +24,36 @@ import java.io.Serializable;
 public class selectDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList;
+  private boolean selectStar;
   public selectDesc() { }
-  public selectDesc(
-    final java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList) {
-    this.colList = colList;
+  public selectDesc(final java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList) {
+    this(colList, false);
   }
+  
+  public selectDesc(
+    final java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList, final boolean selectStar) {
+    this.colList = colList;
+    this.selectStar = selectStar;
+  }
+  
   @explain(displayName="expressions")
   public java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> getColList() {
     return this.colList;
   }
   public void setColList(final java.util.ArrayList<org.apache.hadoop.hive.ql.plan.exprNodeDesc> colList) {
     this.colList=colList;
+  }
+  
+  /**
+   * @return the selectStar
+   */
+  public boolean isSelectStar() {
+    return selectStar;
+  }
+  /**
+   * @param selectStar the selectStar to set
+   */
+  public void setSelectStar(boolean selectStar) {
+    this.selectStar = selectStar;
   }
 }

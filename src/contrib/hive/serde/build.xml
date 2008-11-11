@@ -27,21 +27,27 @@ to call at top-level: ant deploy-contrib compile-core-test
   <property name="src.dir"  location="${basedir}/src"/> 
   <import file="../build-common.xml"/>
 
+
   <target name="dynamic-serde" depends="init" if="javacc.home">
-    <mkdir dir="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type"/>
+
+<!--    <mkdir dir="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type"/> -->
+    <jjtree buildnodefiles="true"
+      target="${src.dir}/java/org/apache/hadoop/hive/serde2/dynamic_type/thrift_grammar.jjt"
+      outputdirectory="${src.dir}/java/org/apache/hadoop/hive/serde2/dynamic_type"
+      javacchome="${javacc.home}"
+    />
     <javacc
-      target="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type/thrift_grammar.jj"
-      outputdirectory="${src.dir}/gen-java/org/apache/hadoop/hive/serde2/dynamic_type"
+      target="${src.dir}/java/org/apache/hadoop/hive/serde2/dynamic_type/thrift_grammar.jj"
+      outputdirectory="${src.dir}/java/org/apache/hadoop/hive/serde2/dynamic_type"
       javacchome="${javacc.home}"
     />
   </target>
 
-  <target name="compile" depends="init, dynamic-serde">
+  <target name="compile" depends="init,dynamic-serde">
     <echo message="Compiling: ${name}"/>
     <javac
      encoding="${build.encoding}"
-     srcdir="${src.dir}/java:${src.dir}/gen-java"
-     includes="**/*.java"
+     srcdir="${src.dir}/java/:${src.dir}/gen-java/"
      destdir="${build.classes}"
      debug="${javac.debug}"
      deprecation="${javac.deprecation}">

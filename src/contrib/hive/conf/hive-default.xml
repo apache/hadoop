@@ -84,4 +84,22 @@
   <description>Name of the class that implements org.apache.hadoop.hive.metastore.rawstore interface. This class is used to store and retrieval of raw metadata objects such as table, database</description>
 </property>
 
+<property>
+  <name>hive.default.fileformat</name>
+  <value>TextFile</value>
+  <description>Default file format for CREATE TABLE statement. Options are TextFile and SequenceFile. Users can explicitly say CREATE TABLE ... STORED AS &lt;TEXTFILE|SEQUENCEFILE&gt; to override</description>
+</property>
+
+<property>
+  <name>hive.map.aggr</name>
+  <value>false</value>
+  <description>Whether to use map-side aggregation in Hive Group By queries</description>
+</property>
+
+<property>
+  <name>hive.join.emit.interval</name>
+  <value>1000</value>
+  <description>How many rows in the right-most join operand Hive should buffer before emitting the join result. </description>
+</property>
+
 </configuration>

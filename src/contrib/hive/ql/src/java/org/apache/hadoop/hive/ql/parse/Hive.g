@@ -49,7 +49,7 @@ TOK_OP_LIKE;
 TOK_TRUE;
 TOK_FALSE;
 TOK_TRANSFORM;
-TOK_COLLIST;
+TOK_EXPLIST;
 TOK_ALIASLIST;
 TOK_GROUPBY;
 TOK_ORDERBY;
@@ -64,6 +64,7 @@ TOK_NULL;
 TOK_ISNULL;
 TOK_ISNOTNULL;
 TOK_TINYINT;
+TOK_SMALLINT;
 TOK_INT;
 TOK_BIGINT;
 TOK_BOOLEAN;
@@ -81,6 +82,9 @@ TOK_ALTERTABLE_RENAME;
 TOK_ALTERTABLE_ADDCOLS;
 TOK_ALTERTABLE_REPLACECOLS;
 TOK_ALTERTABLE_DROPPARTS;
+TOK_ALTERTABLE_SERDEPROPERTIES;
+TOK_ALTERTABLE_SERIALIZER;
+TOK_ALTERTABLE_PROPERTIES;
 TOK_SHOWTABLES;
 TOK_SHOWPARTITIONS;
 TOK_CREATEEXTTABLE;
@@ -96,6 +100,7 @@ TOK_TABLEROWFORMATCOLLITEMS;
 TOK_TABLEROWFORMATMAPKEYS;
 TOK_TABLEROWFORMATLINES;
 TOK_TBLSEQUENCEFILE;
+TOK_TBLTEXTFILE;
 TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_TABLESAMPLE;
@@ -106,10 +111,10 @@ TOK_CHARSETLITERAL;
 TOK_CREATEFUNCTION;
 TOK_EXPLAIN;
 TOK_TABLESERIALIZER;
-TOK_TABLSERDEPROPERTIES;
-TOK_TABLESERDEPROPLIST;
+TOK_TABLEPROPERTIES;
+TOK_TABLEPROPLIST;
 TOK_LIMIT;
-TOKTABLESERDEPROPERTY;
+TOK_TABLEPROPERTY;
 }
 
 
@@ -157,9 +162,9 @@ ddlStatement
     ;
 
 createStatement
-    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE name=Identifier LPAREN columnNameTypeList RPAREN tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?
-    -> {$ext == null}? ^(TOK_CREATETABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
-    ->                 ^(TOK_CREATEEXTTABLE $name columnNameTypeList tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
+    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE name=Identifier (LPAREN columnNameTypeList RPAREN)? tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?
+    -> {$ext == null}? ^(TOK_CREATETABLE $name columnNameTypeList? tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
+    ->                 ^(TOK_CREATEEXTTABLE $name columnNameTypeList? tableComment? tablePartition? tableBuckets? tableRowFormat? tableFileFormat? tableLocation?)
     ;
 
 dropStatement
@@ -170,6 +175,8 @@ alterStatement
     : alterStatementRename
     | alterStatementAddCol
     | alterStatementDropPartitions
+    | alterStatementProperties
+    | alterStatementSerdeProperties
     ;
 
 alterStatementRename
@@ -186,6 +193,18 @@ alterStatementAddCol
 alterStatementDropPartitions
     : KW_ALTER KW_TABLE Identifier KW_DROP partitionSpec (COMMA partitionSpec)*
     -> ^(TOK_ALTERTABLE_DROPPARTS Identifier partitionSpec+)
+    ;
+
+alterStatementProperties
+    : KW_ALTER KW_TABLE name=Identifier KW_SET KW_PROPERTIES tableProperties
+    -> ^(TOK_ALTERTABLE_PROPERTIES $name tableProperties)
+    ;
+
+alterStatementSerdeProperties
+    : KW_ALTER KW_TABLE name=Identifier KW_SET KW_SERDE serde=StringLiteral (KW_WITH KW_SERDEPROPERTIES tableProperties)?
+    -> ^(TOK_ALTERTABLE_SERIALIZER $name $serde tableProperties?)
+    | KW_ALTER KW_TABLE name=Identifier KW_SET KW_SERDEPROPERTIES tableProperties
+    -> ^(TOK_ALTERTABLE_SERDEPROPERTIES $name tableProperties)
     ;
 
 descStatement
@@ -227,23 +246,23 @@ tableRowFormat
     :
       KW_ROW KW_FORMAT KW_DELIMITED tableRowFormatFieldIdentifier? tableRowFormatCollItemsIdentifier? tableRowFormatMapKeysIdentifier? tableRowFormatLinesIdentifier? 
     -> ^(TOK_TABLEROWFORMAT tableRowFormatFieldIdentifier? tableRowFormatCollItemsIdentifier? tableRowFormatMapKeysIdentifier? tableRowFormatLinesIdentifier?)
-    | KW_ROW KW_FORMAT KW_SERIALIZER name=StringLiteral tableSerializerProperties?
-    -> ^(TOK_TABLESERIALIZER $name tableSerializerProperties?)
+    | KW_ROW KW_FORMAT KW_SERDE name=StringLiteral (KW_WITH KW_SERDEPROPERTIES serdeprops=tableProperties)?
+    -> ^(TOK_TABLESERIALIZER $name $serdeprops?)
     ;
 
-tableSerializerProperties
+tableProperties
     :
-      KW_WITH KW_PROPERTIES LPAREN propertiesList RPAREN -> ^(TOK_TABLSERDEPROPERTIES propertiesList)
+      LPAREN propertiesList RPAREN -> ^(TOK_TABLEPROPERTIES propertiesList)
     ;
 
 propertiesList
     :
-      keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_TABLESERDEPROPLIST keyValueProperty+)
+      keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_TABLEPROPLIST keyValueProperty+)
     ;
 
 keyValueProperty
     :
-      key=StringLiteral EQUAL value=StringLiteral -> ^(TOKTABLESERDEPROPERTY $key $value)
+      key=StringLiteral EQUAL value=StringLiteral -> ^(TOK_TABLEPROPERTY $key $value)
     ;
 
 tableRowFormatFieldIdentifier
@@ -273,6 +292,7 @@ tableRowFormatLinesIdentifier
 tableFileFormat
     :
       KW_STORED KW_AS KW_SEQUENCEFILE  -> TOK_TBLSEQUENCEFILE
+      | KW_STORED KW_AS KW_TEXTFILE  -> TOK_TBLTEXTFILE
     ;
 
 tableLocation
@@ -317,6 +337,7 @@ colType
 
 primitiveType
     : KW_TINYINT       ->    TOK_TINYINT
+    | KW_SMALLINT      ->    TOK_SMALLINT
     | KW_INT           ->    TOK_INT
     | KW_BIGINT        ->    TOK_BIGINT
     | KW_BOOLEAN       ->    TOK_BOOLEAN
@@ -420,23 +441,22 @@ selectClause
 
 selectList
     :
-    selectItem
-    ( COMMA  selectItem )* -> selectItem+
+    selectItem ( COMMA  selectItem )* -> selectItem+
+    | trfmClause -> ^(TOK_SELEXPR trfmClause)
     ;
 
 selectItem
     :
-      trfmClause -> ^(TOK_SELEXPR trfmClause)
-    | (selectExpression  (KW_AS Identifier)?) -> ^(TOK_SELEXPR selectExpression Identifier?)
+    ( selectExpression  (KW_AS Identifier)?) -> ^(TOK_SELEXPR selectExpression Identifier?)
     ;
     
 trfmClause
     :
     KW_TRANSFORM
-    LPAREN columnList RPAREN
-    KW_AS 
-    LPAREN aliasList RPAREN
-    KW_USING StringLiteral -> ^(TOK_TRANSFORM columnList aliasList StringLiteral)
+    LPAREN expressionList RPAREN
+    KW_USING StringLiteral
+    (KW_AS LPAREN aliasList RPAREN)?
+    -> ^(TOK_TRANSFORM expressionList StringLiteral aliasList?)
     ;
     
 selectExpression
@@ -448,18 +468,19 @@ selectExpression
 
 tableAllColumns
     :
-    Identifier DOT STAR -> ^(TOK_ALLCOLREF Identifier)
+    STAR -> ^(TOK_ALLCOLREF)
+    | Identifier DOT STAR -> ^(TOK_ALLCOLREF Identifier)
     ;
     
 // table.column
 tableColumn
     :
-    (tab=Identifier)? DOT col=Identifier -> ^(TOK_COLREF $tab? $col)
+    (tab=Identifier  DOT)? col=Identifier -> ^(TOK_COLREF $tab? $col)
     ;
 
-columnList
+expressionList
     :
-    tableColumn (COMMA tableColumn)* -> ^(TOK_COLLIST tableColumn+)
+    expression (COMMA expression)* -> ^(TOK_EXPLIST expression+)
     ;
 
 aliasList
@@ -478,7 +499,7 @@ fromClause
 joinSource    
     :
     fromSource 
-    ( joinToken^ fromSource (KW_ON! precedenceEqualExpression)? )+
+    ( joinToken^ fromSource (KW_ON! expression)? )+
     ;
 
 joinToken
@@ -496,7 +517,7 @@ fromSource
     
 tableSample
     :
-    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON col+=Identifier (COMMA col+=Identifier)*)? RPAREN -> ^(TOK_TABLESAMPLE $numerator $denominator $col*)
+    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON expr+=expression (COMMA expr+=expression)*)? RPAREN -> ^(TOK_TABLESAMPLE $numerator $denominator $expr*)
     ;
 
 tableSource
@@ -570,12 +591,12 @@ function
     : // LEFT and RIGHT keywords are also function names
     Identifier
     LPAREN (
-          (dist=KW_DISTINCT)?
-          expression
-          (COMMA expression)*
+          ((dist=KW_DISTINCT)?
+           expression
+           (COMMA expression)*)?
         )?
-    RPAREN -> {$dist == null}? ^(TOK_FUNCTION Identifier expression+)
-                          -> ^(TOK_FUNCTIONDI Identifier expression+)
+    RPAREN -> {$dist == null}? ^(TOK_FUNCTION Identifier (expression+)?)
+                          -> ^(TOK_FUNCTIONDI Identifier (expression+)?)
 
     ;
 
@@ -644,7 +665,7 @@ precedenceBitwiseXorExpression
     precedenceUnaryExpression (precedenceBitwiseXorOperator^ precedenceUnaryExpression)*
     ;
 
-
+	
 precedenceStarOperator
     :
     STAR | DIVIDE | MOD
@@ -808,6 +829,7 @@ KW_TO: 'TO';
 KW_COMMENT: 'COMMENT';
 KW_BOOLEAN: 'BOOLEAN';
 KW_TINYINT: 'TINYINT';
+KW_SMALLINT: 'SMALLINT';
 KW_INT: 'INT';
 KW_BIGINT: 'BIGINT';
 KW_FLOAT: 'FLOAT';
@@ -834,6 +856,7 @@ KW_KEYS: 'KEYS';
 KW_LINES: 'LINES';
 KW_STORED: 'STORED';
 KW_SEQUENCEFILE: 'SEQUENCEFILE';
+KW_TEXTFILE: 'TEXTFILE';
 KW_LOCATION: 'LOCATION';
 KW_TABLESAMPLE: 'TABLESAMPLE';
 KW_BUCKET: 'BUCKET';
@@ -849,10 +872,12 @@ KW_TEMPORARY: 'TEMPORARY';
 KW_FUNCTION: 'FUNCTION';
 KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
-KW_SERIALIZER: 'SERIALIZER';
+KW_SERDE: 'SERDE';
 KW_WITH: 'WITH';
-KW_PROPERTIES: 'SERDEPROPERTIES';
+KW_SERDEPROPERTIES: 'SERDEPROPERTIES';
 KW_LIMIT: 'LIMIT';
+KW_SET: 'SET';
+KW_PROPERTIES: 'TBLPROPERTIES';
 
 // Operators
 
@@ -909,7 +934,7 @@ Exponent
 
 StringLiteral
     :
-    '\'' (~'\'')* '\'' ( '\'' (~'\'')* '\'' )*
+    ( '\'' (~'\'')* '\'' | '\"' (~'\"')* '\"' )+
     ;
 
 CharSetLiteral
@@ -926,6 +951,7 @@ Number
 Identifier
     :
     (Letter | Digit) (Letter | Digit | '_')*
+    | '`' (Letter | Digit) (Letter | Digit | '_')* '`'
     ;
 
 CharSetName

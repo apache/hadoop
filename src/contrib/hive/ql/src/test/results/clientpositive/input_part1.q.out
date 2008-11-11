@@ -13,7 +13,7 @@ STAGE PLANS:
             Filter Operator
               predicate:
                   expr: (((key < 100) and (ds = '2008-04-08')) and (hr = '12'))
-                  type: Boolean
+                  type: boolean
               Select Operator
                 expressions:
                       expr: key
@@ -25,7 +25,7 @@ STAGE PLANS:
                       expr: ds
                       type: string
                 File Output Operator
-                  directory: /tmp/hive-njain/13222008/293248514.10000.insclause-0
+                  directory: /tmp/hive-njain/482622140/1009180747.10000.insclause-0
                   table:
                       input format: org.apache.hadoop.mapred.TextInputFormat
                       output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -34,7 +34,6 @@ STAGE PLANS:
                         serialization.ddl struct dest1 { i32 key, string value, string hr, string ds}
                         serialization.format 1
                         columns key,value,hr,ds
-                        SORTBUCKETCOLSPREFIX TRUE
                         bucket_count -1
                         serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                         file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -72,7 +71,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/13222008/293248514.10000.insclause-0
+            source: /tmp/hive-njain/482622140/1009180747.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -81,7 +80,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value, string hr, string ds}
                   serialization.format 1
                   columns key,value,hr,ds
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat

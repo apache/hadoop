@@ -1,5 +1,5 @@
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 5 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 5 (TOK_COLREF key)) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -13,7 +13,7 @@ STAGE PLANS:
             Filter Operator
               predicate:
                   expr: (((default_sample_hashfn(key) & 2147483647) % 5) = 0)
-                  type: Boolean
+                  type: boolean
               Select Operator
                 expressions:
                       expr: key
@@ -21,7 +21,7 @@ STAGE PLANS:
                       expr: value
                       type: string
                 File Output Operator
-                  directory: /tmp/hive-njain/535229973/587370170.10000.insclause-0
+                  directory: /tmp/hive-njain/126424010/37680496.10000.insclause-0
                   table:
                       input format: org.apache.hadoop.mapred.TextInputFormat
                       output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -30,7 +30,6 @@ STAGE PLANS:
                         serialization.ddl struct dest1 { i32 key, string value}
                         serialization.format 1
                         columns key,value
-                        SORTBUCKETCOLSPREFIX TRUE
                         bucket_count -1
                         serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                         file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -49,9 +48,10 @@ STAGE PLANS:
               output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
               properties:
                 name srcbucket
+                bucket_field_name key
                 serialization.ddl struct srcbucket { string key, string value}
-                serialization.format 1
                 columns key,value
+                serialization.format 1
                 bucket_count 2
                 serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -64,7 +64,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/535229973/587370170.10000.insclause-0
+            source: /tmp/hive-njain/126424010/37680496.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -73,7 +73,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value}
                   serialization.format 1
                   columns key,value
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat

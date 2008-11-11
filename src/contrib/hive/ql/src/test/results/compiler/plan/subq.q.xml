@@ -28,7 +28,7 @@
              <boolean>true</boolean> 
             </void> 
             <void property="sourceDir"> 
-             <string>/tmp/hive-njain/560916151/1453534343.10000.insclause-0</string> 
+             <string>/tmp/hive-njain/361852244/1393208672.10000.insclause-0</string> 
             </void> 
             <void property="targetDir"> 
              <string>../../../../build/contrib/hive/ql/test/data/warehouse/union.out</string> 
@@ -55,19 +55,19 @@
      <object class="java.util.HashMap"> 
       <void method="put"> 
        <string>unioninput:src</string> 
-       <object class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
+       <object id="ForwardOperator0" class="org.apache.hadoop.hive.ql.exec.ForwardOperator"> 
         <void property="childOperators"> 
          <object class="java.util.ArrayList"> 
           <void method="add"> 
-           <object class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
+           <object id="FilterOperator0" class="org.apache.hadoop.hive.ql.exec.FilterOperator"> 
             <void property="childOperators"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+               <object id="SelectOperator0" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                 <void property="childOperators"> 
                  <object class="java.util.ArrayList"> 
                   <void method="add"> 
-                   <object class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
+                   <object id="SelectOperator1" class="org.apache.hadoop.hive.ql.exec.SelectOperator"> 
                     <void property="childOperators"> 
                      <object class="java.util.ArrayList"> 
                       <void method="add"> 
@@ -75,7 +75,7 @@
                         <void property="conf"> 
                          <object class="org.apache.hadoop.hive.ql.plan.fileSinkDesc"> 
                           <void property="dirName"> 
-                           <string>/tmp/hive-njain/560916151/1453534343.10000.insclause-0</string> 
+                           <string>/tmp/hive-njain/361852244/1393208672.10000.insclause-0</string> 
                           </void> 
                           <void property="tableInfo"> 
                            <object class="org.apache.hadoop.hive.ql.plan.tableDesc"> 
@@ -91,12 +91,23 @@
                             <void property="properties"> 
                              <object class="java.util.Properties"> 
                               <void method="put"> 
+                               <string>columns</string> 
+                               <string>key,value</string> 
+                              </void> 
+                              <void method="put"> 
                                <string>serialization.format</string> 
                                <string>1</string> 
                               </void> 
                              </object> 
                             </void> 
                            </object> 
+                          </void> 
+                         </object> 
+                        </void> 
+                        <void property="parentOperators"> 
+                         <object class="java.util.ArrayList"> 
+                          <void method="add"> 
+                           <object idref="SelectOperator1"/> 
                           </void> 
                          </object> 
                         </void> 
@@ -162,6 +173,16 @@
                         </void> 
                        </object> 
                       </void> 
+                      <void property="selectStar"> 
+                       <boolean>true</boolean> 
+                      </void> 
+                     </object> 
+                    </void> 
+                    <void property="parentOperators"> 
+                     <object class="java.util.ArrayList"> 
+                      <void method="add"> 
+                       <object idref="SelectOperator0"/> 
+                      </void> 
                      </object> 
                     </void> 
                     <void property="schema"> 
@@ -200,6 +221,16 @@
                      </object> 
                     </void> 
                    </object> 
+                  </void> 
+                  <void property="selectStar"> 
+                   <boolean>true</boolean> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void property="parentOperators"> 
+                 <object class="java.util.ArrayList"> 
+                  <void method="add"> 
+                   <object idref="FilterOperator0"/> 
                   </void> 
                  </object> 
                 </void> 
@@ -291,6 +322,13 @@
                  </object> 
                 </void> 
                </object> 
+              </void> 
+             </object> 
+            </void> 
+            <void property="parentOperators"> 
+             <object class="java.util.ArrayList"> 
+              <void method="add"> 
+               <object idref="ForwardOperator0"/> 
               </void> 
              </object> 
             </void> 
@@ -416,6 +454,9 @@
        </object> 
       </void> 
      </object> 
+    </void> 
+    <void property="tagToValueDesc"> 
+     <object class="java.util.ArrayList"/> 
     </void> 
    </object> 
   </void> 

@@ -34,11 +34,13 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.plan.mapredWork;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.io.*;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
+import org.apache.hadoop.hive.ql.session.SessionState;
 
 public class ExecDriver extends Task<mapredWork> implements Serializable {
 
@@ -54,12 +56,37 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     super();
   }
 
+  public static String getRealFiles(Configuration conf) {
+    // fill in local files to be added to the task environment
+    SessionState ss = SessionState.get();
+    Set<String> files = (ss == null) ? null : ss.list_resource(SessionState.ResourceType.FILE, null);
+    if(files != null) {
+      ArrayList<String> realFiles = new ArrayList<String> (files.size());
+      for(String one: files) {
+        try {
+          realFiles.add(Utilities.realFile(one, conf));
+        } catch (IOException e) {
+          throw new RuntimeException ("Cannot validate file " + one +
+                                      "due to exception: " + e.getMessage(), e);
+        }
+      }
+      return StringUtils.join(realFiles, ",");
+    } else {
+      return "";
+    }
+  }
+
+
   /**
    * Initialization when invoked from QL
    */
   public void initialize (HiveConf conf) {
     super.initialize(conf);
     job = new JobConf(conf, ExecDriver.class);
+    String realFiles = getRealFiles(job);
+    if (realFiles != null && realFiles.length() > 0) {
+      job.set("tmpfiles", realFiles);
+    }
   }
 
   /**
@@ -121,8 +148,7 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
               }
             }
           }
-        }
-                                           );
+        });
     }
   }
 
@@ -207,6 +233,7 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
 
     Utilities.setMapRedWork(job, work);
     
+    
     for(String onefile: work.getPathToAliases().keySet()) {
       LOG.info("Adding input file " + onefile);
       FileInputFormat.addInputPaths(job, onefile);
@@ -217,8 +244,8 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     FileOutputFormat.setOutputPath(job, new Path(jobScratchDir));
     job.setMapperClass(ExecMapper.class);
     
-    job.setMapOutputValueClass(Text.class);
     job.setMapOutputKeyClass(HiveKey.class);    
+    job.setMapOutputValueClass(BytesWritable.class);
     
     job.setNumReduceTasks(work.getNumReduceTasks().intValue());
     job.setReducerClass(ExecReducer.class);
@@ -265,6 +292,10 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
       
       inferNumReducers();
       JobClient jc = new JobClient(job);
+      
+      // make this client wait if job trcker is not behaving well.
+      Throttle.checkJobTracker(job, LOG);
+
       rj = jc.submitJob(job);
 
       // add to list of running jobs so in case of abnormal shutdown can kill it.
@@ -306,7 +337,8 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
   }
   
   private static void printUsage() {
-    System.out.println("ExecDriver -plan <plan-file> [-jobconf k1=v1 [-jobconf k2=v2] ...]");
+    System.out.println("ExecDriver -plan <plan-file> [-jobconf k1=v1 [-jobconf k2=v2] ...] "+
+                       "[-files <file1>[,<file2>] ...]");
     System.exit(1);
   }
 
@@ -314,15 +346,19 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
     String planFileName = null;
     ArrayList<String> jobConfArgs = new ArrayList<String> ();
     boolean isSilent = false;
+    String files = null;
 
     try{
       for(int i=0; i<args.length; i++) {
         if(args[i].equals("-plan")) {
           planFileName = args[++i];
+          System.out.println("plan = "+planFileName);
         } else if (args[i].equals("-jobconf")) {
           jobConfArgs.add(args[++i]);
         } else if (args[i].equals("-silent")) {
           isSilent = true;
+        } else if (args[i].equals("-files")) {
+          files = args[++i];
         }
       }
     } catch (IndexOutOfBoundsException e) {
@@ -348,6 +384,10 @@ public class ExecDriver extends Task<mapredWork> implements Serializable {
           System.exit(3);
         }
       }
+    }
+
+    if(files != null) {
+      conf.set("tmpfiles", files);
     }
 
     URI pathURI = (new Path(planFileName)).toUri();

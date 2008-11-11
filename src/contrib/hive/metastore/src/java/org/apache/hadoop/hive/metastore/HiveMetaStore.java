@@ -271,8 +271,10 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         this.incrementCounter("create_table");
         logStartFunction("create_table: db=" + tbl.getDbName() + " tbl=" + tbl.getTableName());
         boolean success = false;
-        if(!MetaStoreUtils.validateName(tbl.getTableName())) {
-          throw new InvalidObjectException(tbl.getTableName() + " is not a valid object name");
+        if(!MetaStoreUtils.validateName(tbl.getTableName()) ||
+            !MetaStoreUtils.validateColNames(tbl.getSd().getCols()) ||
+             (tbl.getPartitionKeys() != null && !MetaStoreUtils.validateColNames(tbl.getPartitionKeys()))) {
+            throw new InvalidObjectException(tbl.getTableName() + " is not a valid object name");
         }
         try {
           getMS().openTransaction();
@@ -540,11 +542,15 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         logStartFunction("getVersion");
         return "3.0";
       }
-
+      
       public void alter_table(String dbname, String name, Table newTable) throws InvalidOperationException,
           MetaException {
         this.incrementCounter("alter_table");
         logStartFunction("truncate_table: db=" + dbname + " tbl=" + name + " newtbl=" + newTable.getTableName());
+        if(!MetaStoreUtils.validateName(newTable.getTableName()) ||
+            !MetaStoreUtils.validateColNames(newTable.getSd().getCols())) {
+          throw new InvalidOperationException(newTable.getTableName() + " is not a valid object name");
+        }
         try {
           getMS().alterTable(dbname, name, newTable);
         } catch (InvalidObjectException e) {

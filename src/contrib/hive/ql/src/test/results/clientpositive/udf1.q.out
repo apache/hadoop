@@ -10,52 +10,56 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         src 
-            Filter Operator
-              predicate:
-                  expr: (key = 86)
-                  type: Boolean
-              Select Operator
-                expressions:
-                      expr: ('a' like '%a%')
-                      type: Boolean
-                      expr: ('b' like '%a%')
-                      type: Boolean
-                      expr: ('ab' like '%a%')
-                      type: Boolean
-                      expr: ('ab' like '%a_')
-                      type: Boolean
-                      expr: ('%_' like '\%\_')
-                      type: Boolean
-                      expr: ('ab' like '\%\_')
-                      type: Boolean
-                      expr: ('ab' like '_a%')
-                      type: Boolean
-                      expr: ('ab' like 'a')
-                      type: Boolean
-                      expr: ('' regexp '.*')
-                      type: Boolean
-                      expr: ('a' regexp '[ab]')
-                      type: Boolean
-                      expr: ('' regexp '[ab]')
-                      type: Boolean
-                      expr: ('hadoop' regexp '[a-z]*')
-                      type: Boolean
-                      expr: ('hadoop' regexp 'o*')
-                      type: Boolean
-                      expr: regexp_replace('abc', 'b', 'c')
-                      type: string
-                      expr: regexp_replace('abc', 'z', 'a')
-                      type: string
-                      expr: regexp_replace('abbbb', 'bb', 'b')
-                      type: string
-                      expr: regexp_replace('hadoop', '(.)[a-z]*', '$1ive')
-                      type: string
-                File Output Operator
-                  table:
-                      input format: org.apache.hadoop.mapred.TextInputFormat
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                      name: dest1
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+              Filter Operator
+                predicate:
+                    expr: (0 = 86)
+                    type: boolean
+                Select Operator
+                  expressions:
+                        expr: ('a' like '%a%')
+                        type: boolean
+                        expr: ('b' like '%a%')
+                        type: boolean
+                        expr: ('ab' like '%a%')
+                        type: boolean
+                        expr: ('ab' like '%a_')
+                        type: boolean
+                        expr: ('%_' like '\%\_')
+                        type: boolean
+                        expr: ('ab' like '\%\_')
+                        type: boolean
+                        expr: ('ab' like '_a%')
+                        type: boolean
+                        expr: ('ab' like 'a')
+                        type: boolean
+                        expr: ('' regexp '.*')
+                        type: boolean
+                        expr: ('a' regexp '[ab]')
+                        type: boolean
+                        expr: ('' regexp '[ab]')
+                        type: boolean
+                        expr: ('hadoop' regexp '[a-z]*')
+                        type: boolean
+                        expr: ('hadoop' regexp 'o*')
+                        type: boolean
+                        expr: regexp_replace('abc', 'b', 'c')
+                        type: string
+                        expr: regexp_replace('abc', 'z', 'a')
+                        type: string
+                        expr: regexp_replace('abbbb', 'bb', 'b')
+                        type: string
+                        expr: regexp_replace('hadoop', '(.)[a-z]*', '$1ive')
+                        type: string
+                  File Output Operator
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                        name: dest1
 
   Stage: Stage-0
     Move Operator

@@ -1,0 +1,2 @@
+Failed with exception Cannot load text files into a table stored as SequenceFile.
+FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.MoveTask

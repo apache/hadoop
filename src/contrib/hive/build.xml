@@ -161,10 +161,6 @@
     <copy todir="${target.example.dir}/queries" preservelastmodified="true" flatten="true">
       <fileset dir="${ql.test.query.dir}/positive" includes="*.q"/>
     </copy>
-    <mkdir dir="${dist.dir}/contrib/hive"/>
-    <copy todir="${dist.dir}/contrib/hive">
-      <fileset dir="${target.dir}"/>
-    </copy>
   </target>
 
 </project>

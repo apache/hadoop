@@ -28,6 +28,7 @@ import com.facebook.thrift.*;
 import com.facebook.thrift.protocol.*;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
 import java.util.Properties;
@@ -39,7 +40,8 @@ import java.util.Properties;
  * This is not thrift compliant in that it doesn't write out field ids
  * so things cannot actually be versioned.
  */
-public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTProtocol {
+public class TCTLSeparatedProtocol extends TProtocol 
+  implements ConfigurableTProtocol, WriteNullsProtocol, SkippableTProtocol {
 
   final static Log LOG = LogFactory.getLog(TCTLSeparatedProtocol.class.getName());
   
@@ -57,29 +59,36 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   /**
    * These are defaults, but for now leaving them like this
    */
-  final static protected byte defaultPrimarySeparatorByte = 1;
-  final static protected byte defaultSecondarySeparatorByte = 2;
-  final static protected byte defaultRowSeparatorByte = (byte)'\n';
-  final static protected byte defaultMapSeparatorByte = 3;
+  final static protected String defaultPrimarySeparator = "\001";
+  final static protected String defaultSecondarySeparator = "\002";
+  final static protected String defaultRowSeparator = "\n";
+  final static protected String defaultMapSeparator = "\003";
 
   /**
    * The separators for this instance
    */
-  protected byte primarySeparatorByte;
-  protected byte secondarySeparatorByte;
-  protected byte rowSeparatorByte;
-  protected byte mapSeparatorByte;
+  protected String primarySeparator;
+  protected String secondarySeparator;
+  protected String rowSeparator;
+  protected String mapSeparator;
   protected Pattern primaryPattern;
   protected Pattern secondaryPattern;
   protected Pattern mapPattern;
 
   /**
+   * The quote character when supporting quotes with ability to not split across quoted entries. Like csv.
+   * Note that escaping the quote is not currently supported.
+   */
+  protected String quote;
+  
+
+  /**
    * Inspect the separators this instance is configured with.
    */
-  public byte getPrimarySeparator() { return primarySeparatorByte; }
-  public byte getSecondarySeparator() { return secondarySeparatorByte; }
-  public byte getRowSeparator() { return rowSeparatorByte; }
-  public byte getMapSeparator() { return mapSeparatorByte; }
+  public String getPrimarySeparator() { return primarySeparator; }
+  public String getSecondarySeparator() { return secondarySeparator; }
+  public String getRowSeparator() { return rowSeparator; }
+  public String getMapSeparator() { return mapSeparator; }
 
 
   /**
@@ -164,6 +173,17 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   protected int bufferSize;
 
   /**
+   * The string representing nulls in the serialized data. e.g., \N as in mysql
+   */
+  protected String nullString;
+
+  /**
+   * The nullString in bytes
+   */ 
+  protected byte nullBuf[];
+
+
+  /**
    * A convenience class for tokenizing a TTransport
    */
 
@@ -174,12 +194,12 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
     final String separator;
     byte buf[];
 
-    public SimpleTransportTokenizer(TTransport trans, byte separator, int buffer_length) {
+    public SimpleTransportTokenizer(TTransport trans, String separator, int buffer_length) {
       this.trans = trans;
-      byte [] separators = new byte[1];
-      separators[0] = separator;
-      this.separator = new String(separators);
+      this.separator = separator;
       buf = new byte[buffer_length];
+      // do not fill tokenizer until user requests since filling it could read in data
+      // not meant for this instantiation.
       fillTokenizer();
     }
 
@@ -191,7 +211,7 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
             return false;
           }
           String row = new String(buf, 0, length);
-          tokenizer = new StringTokenizer(row, new String(separator), true);
+          tokenizer = new StringTokenizer(row, separator, true);
         } catch(TTransportException e) {
           e.printStackTrace();
           tokenizer = null;
@@ -204,6 +224,10 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
       StringBuffer ret = null;
       boolean done = false;
 
+      if(tokenizer == null) {
+        fillTokenizer();
+      }
+
       while(! done) {
 
         if(! tokenizer.hasMoreTokens()) {
@@ -211,7 +235,6 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
             break;
           }
         }
-
         try {
           final String nextToken = tokenizer.nextToken();
 
@@ -229,7 +252,8 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
           done = true;
         }
       } // while ! done
-      return ret == null ? null : ret.toString();
+      final String theRet = ret == null ? null : ret.toString();
+      return theRet;
     }
   };
 
@@ -242,23 +266,23 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
    */
 
   public TCTLSeparatedProtocol(TTransport trans) {
-    this(trans, defaultPrimarySeparatorByte, defaultSecondarySeparatorByte, defaultMapSeparatorByte, defaultRowSeparatorByte, false, 4096);
+    this(trans, defaultPrimarySeparator, defaultSecondarySeparator, defaultMapSeparator, defaultRowSeparator, false, 4096);
   }
 
   public TCTLSeparatedProtocol(TTransport trans, int buffer_size) {
-    this(trans, defaultPrimarySeparatorByte, defaultSecondarySeparatorByte, defaultMapSeparatorByte, defaultRowSeparatorByte, false, buffer_size);
+    this(trans, defaultPrimarySeparator, defaultSecondarySeparator, defaultMapSeparator, defaultRowSeparator, false, buffer_size);
   }
 
   /**
    * @param trans - the ttransport to use as input or output
-   * @param primarySeparatorByte the separator between columns (aka fields)
-   * @param secondarySeparatorByte the separator within a field for things like sets and maps and lists
-   * @param mapSeparatorByte - the key/value separator
-   * @param rowSeparatorByte - the record separator
+   * @param primarySeparator the separator between columns (aka fields)
+   * @param secondarySeparator the separator within a field for things like sets and maps and lists
+   * @param mapSeparator - the key/value separator
+   * @param rowSeparator - the record separator
    * @param returnNulls - whether to return a null or an empty string for fields that seem empty (ie two primary separators back to back)
    */
 
-  public TCTLSeparatedProtocol(TTransport trans, byte primarySeparatorByte, byte secondarySeparatorByte, byte mapSeparatorByte, byte rowSeparatorByte, 
+  public TCTLSeparatedProtocol(TTransport trans, String primarySeparator, String secondarySeparator, String mapSeparator, String rowSeparator, 
                                boolean returnNulls,
                                int bufferSize) {
     super(trans);
@@ -266,33 +290,102 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
     returnNulls = returnNulls;
 
 
-    this.primarySeparatorByte = primarySeparatorByte;
-    this.secondarySeparatorByte = secondarySeparatorByte;
-    this.rowSeparatorByte = rowSeparatorByte;
-    this.mapSeparatorByte = mapSeparatorByte;
+    this.primarySeparator = primarySeparator;
+    this.secondarySeparator = secondarySeparator;
+    this.rowSeparator = rowSeparator;
+    this.mapSeparator = mapSeparator;
 
     this.innerTransport = trans;
     this.bufferSize = bufferSize;
+    this.nullString  = "\\N";
 
     internalInitialize();
   }
+
 
 
   /**
    * Sets the internal separator patterns and creates the internal tokenizer.
    */
   protected void internalInitialize() {
-    byte []primarySeparator = new byte[1];
-    byte []secondarySeparator = new byte[1];
-    primarySeparator[0] = primarySeparatorByte;
-    secondarySeparator[0] = secondarySeparatorByte;
 
-    primaryPattern = Pattern.compile(new String(primarySeparator));
-    secondaryPattern = Pattern.compile(new String(secondarySeparator));
-    mapPattern = Pattern.compile("\\0" + secondarySeparatorByte + "|\\0" + mapSeparatorByte);
+    // in the future could allow users to specify a quote character that doesn't need escaping but for now ...
+    final String primaryPatternString = 
+      quote == null ? primarySeparator : 
+      "(?:^|" + primarySeparator + ")(" + quote + "(?:[^"  + quote + "]+|" + quote + quote + ")*" + quote + "|[^" + primarySeparator + "]*)";
 
-    transportTokenizer = new SimpleTransportTokenizer(innerTransport, rowSeparatorByte, bufferSize);
+    if (quote != null) {
+      stripSeparatorPrefix = Pattern.compile("^" + primarySeparator);
+      stripQuotePrefix = Pattern.compile("^" + quote);
+      stripQuotePostfix = Pattern.compile(quote + "$");
+    }      
+
+    primaryPattern = Pattern.compile(primaryPatternString);
+    secondaryPattern = Pattern.compile(secondarySeparator);
+    mapPattern = Pattern.compile(secondarySeparator + "|" + mapSeparator);
+    nullBuf = nullString.getBytes();
+    transportTokenizer = new SimpleTransportTokenizer(innerTransport, rowSeparator, bufferSize);
   }
+
+  /**
+   * For quoted fields, strip away the quotes and also need something to strip away the control separator when using
+   * complex split method defined here.
+   */
+  protected Pattern stripSeparatorPrefix;
+  protected Pattern stripQuotePrefix;
+  protected Pattern stripQuotePostfix;
+
+
+  /** 
+   *
+   * Split the line based on a complex regex pattern
+   *
+   * @param line the current row
+   * @param p the pattern for matching fields in the row
+   * @return List of Strings - not including the separator in them
+   */
+  protected String[] complexSplit(String line, Pattern p) {
+
+    ArrayList<String> list = new ArrayList<String>();
+    Matcher m = p.matcher(line);
+    // For each field
+    while (m.find()) {
+      String match = m.group();
+      if (match == null)
+        break;
+      if (match.length() == 0)
+        match = null;
+      else {
+        if(stripSeparatorPrefix.matcher(match).find()) {
+          match = match.substring(1);
+        }
+        if(stripQuotePrefix.matcher(match).find()) {
+          match = match.substring(1);
+        }
+        if(stripQuotePostfix.matcher(match).find()) {
+          match = match.substring(0,match.length() - 1);
+        }
+      }
+      list.add(match);
+    }
+    return (String[])list.toArray(new String[1]);
+  }
+
+
+
+  protected String getByteValue(String altValue, String defaultVal) {
+    if (altValue != null && altValue.length() > 0) {
+      try {
+        byte b [] = new byte[1];
+        b[0] = Byte.valueOf(altValue).byteValue();
+        return new String(b);
+      } catch(NumberFormatException e) {
+        return altValue;
+      }
+    }
+    return defaultVal;
+  }
+  
 
   /**
    * Initialize the TProtocol
@@ -301,13 +394,16 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
    * @throws TException
    */
   public void initialize(Configuration conf, Properties tbl) throws TException {
-    primarySeparatorByte = Byte.valueOf(tbl.getProperty(Constants.FIELD_DELIM, String.valueOf(primarySeparatorByte))).byteValue();
-    LOG.debug("collections delim=<" + tbl.getProperty(Constants.COLLECTION_DELIM) + ">" );
-    secondarySeparatorByte = Byte.valueOf(tbl.getProperty(Constants.COLLECTION_DELIM, String.valueOf(secondarySeparatorByte))).byteValue();
-    rowSeparatorByte = Byte.valueOf(tbl.getProperty(Constants.LINE_DELIM, String.valueOf(rowSeparatorByte))).byteValue();
-    mapSeparatorByte = Byte.valueOf(tbl.getProperty(Constants.MAPKEY_DELIM, String.valueOf(mapSeparatorByte))).byteValue();
+
+
+    primarySeparator = getByteValue(tbl.getProperty(Constants.FIELD_DELIM), primarySeparator);
+    secondarySeparator = getByteValue(tbl.getProperty(Constants.COLLECTION_DELIM), secondarySeparator);
+    rowSeparator = getByteValue(tbl.getProperty(Constants.LINE_DELIM), rowSeparator);
+    mapSeparator = getByteValue(tbl.getProperty(Constants.MAPKEY_DELIM), mapSeparator);
     returnNulls = Boolean.valueOf(tbl.getProperty(ReturnNullsKey, String.valueOf(returnNulls))).booleanValue();
     bufferSize =  Integer.valueOf(tbl.getProperty(BufferSizeKey, String.valueOf(bufferSize))).intValue();
+    nullString  = tbl.getProperty(Constants.SERIALIZATION_NULL_FORMAT, "\\N");
+    quote  = tbl.getProperty(Constants.QUOTE_CHAR, null);
 
     internalInitialize();
 
@@ -329,7 +425,7 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
 
   public void writeFieldBegin(TField field) throws TException {
     if(! firstField) {
-      writeByte(primarySeparatorByte);
+      internalWriteString(primarySeparator);
     }
     firstField = false;
   }
@@ -424,21 +520,34 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
     writeString(String.valueOf(dub));
   }
 
+  public void internalWriteString(String str) throws TException {
+    if(str != null) {
+      final byte buf[] = str.getBytes();
+      trans_.write(buf, 0, buf.length);
+    } else {
+      trans_.write(nullBuf, 0, nullBuf.length);
+    }
+  }
+
   public void writeString(String str) throws TException {
     if(inner) {
       if(!firstInnerField) {
         // super hack city notice the mod plus only happens after firstfield hit, so == 0 is right.
         if(isMap && elemIndex++ % 2 == 0) {
-          writeByte(mapSeparatorByte);
+          internalWriteString(mapSeparator);
         } else {
-          writeByte(secondarySeparatorByte);
+          internalWriteString(secondarySeparator);
         }
       } else {
         firstInnerField = false;
       }
     }
-    final byte buf[] = str.getBytes();
-    trans_.write(buf, 0, buf.length);
+    if(str != null) {
+      final byte buf[] = str.getBytes();
+      trans_.write(buf, 0, buf.length);
+    } else {
+      trans_.write(nullBuf, 0, nullBuf.length);
+    }
   }
 
   public void writeBinary(byte[] bin) throws TException {
@@ -456,7 +565,7 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
    assert(!inner);
    try {
      final String tmp = transportTokenizer.nextToken();
-     columns = primaryPattern.split(tmp);
+     columns = quote == null ? primaryPattern.split(tmp) : complexSplit(tmp, primaryPattern);
      index = 0;
      return new TStruct();
    } catch(EOFException e) {
@@ -467,6 +576,20 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   public void readStructEnd() throws TException {
     columns = null;
   }
+
+
+  /**
+   * Skip past the current field
+   * Just increments the field index counter.
+   */
+  public void skip(byte type) {
+    if( inner) {
+      innerIndex++;
+    } else {
+      index++;
+    }
+  }
+
 
   public TField readFieldBegin() throws TException {
     assert( !inner);
@@ -483,11 +606,19 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   public TMap readMapBegin() throws TException {
     assert( !inner);
     TMap map = new TMap();
-    fields = mapPattern.split(columns[index++]);
-    if(fields != null) {
-      map.size = fields.length/2;
-    } else {
+    if(columns[index] == null ||
+       columns[index].equals(nullString)) {
+      index++;
+      if(returnNulls) {
+        return null;
+      }
       map.size = 0;
+    } else if(columns[index].isEmpty()) {
+      map.size = 0;
+      index++;
+    } else {
+      fields = mapPattern.split(columns[index++]);
+      map.size = fields.length/2;
     }
     innerIndex = 0;
     inner = true;
@@ -503,11 +634,19 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   public TList readListBegin() throws TException {
     assert( !inner);
     TList list = new TList();
-    fields = secondaryPattern.split(columns[index++]);
-    if(fields != null) {
-      list.size = fields.length ;
-    } else {
+    if(columns[index] == null ||
+       columns[index].equals(nullString)) {
+      index++;
+      if(returnNulls) {
+        return null;
+      }
+     list.size = 0;
+    } else if(columns[index].isEmpty()) {
       list.size = 0;
+      index++;
+    } else {
+      fields = secondaryPattern.split(columns[index++]);
+      list.size = fields.length ;
     }
     innerIndex = 0;
     inner = true;
@@ -521,53 +660,88 @@ public class TCTLSeparatedProtocol extends TProtocol implements ConfigurableTPro
   public TSet readSetBegin() throws TException {
     assert( !inner);
     TSet set = new TSet();
-    fields = secondaryPattern.split(columns[index++]);
-    if(fields != null) {
-      set.size = fields.length ;
-    } else {
+    if(columns[index] == null ||
+       columns[index].equals(nullString)) {
+      index++;
+      if(returnNulls) {
+        return null;
+      }
       set.size = 0;
+    } else if(columns[index].isEmpty()) {
+      set.size = 0;
+      index++;
+    } else {
+      fields = secondaryPattern.split(columns[index++]);
+      set.size = fields.length ;
     }
     inner = true;
     innerIndex = 0;
     return set;
   }
 
+  protected boolean lastPrimitiveWasNullFlag;
+
+  public boolean lastPrimitiveWasNull() throws TException {
+    return lastPrimitiveWasNullFlag;
+  }
+
+  public void writeNull() throws TException {
+    writeString(null);
+  }
+
   public void readSetEnd() throws TException {
     inner = false;
   }
+
   public boolean readBool() throws TException {
-    return Boolean.valueOf(readString()).booleanValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return val == null || val.isEmpty() ? false : Boolean.valueOf(val).booleanValue();
   }
 
   public byte readByte() throws TException {
-    return Byte.valueOf(readString()).byteValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return  val == null || val.isEmpty() ? 0 : Byte.valueOf(val).byteValue();
   }
 
   public short readI16() throws TException {
-    return Short.valueOf(readString()).shortValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return val == null || val.isEmpty() ? 0 : Short.valueOf(val).shortValue();
   }
 
   public int readI32() throws TException {
-    return Integer.valueOf(readString()).intValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return val == null || val.isEmpty() ? 0 : Integer.valueOf(val).intValue();
   }
 
   public long readI64() throws TException {
-    return Long.valueOf(readString()).longValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return val == null || val.isEmpty() ? 0 : Long.valueOf(val).longValue();
   }
 
   public double readDouble() throws TException {
-    return Double.valueOf(readString()).doubleValue();
+    String val = readString();
+    lastPrimitiveWasNullFlag = val == null;
+    return val == null || val.isEmpty() ? 0 :Double.valueOf(val).doubleValue();
   }
 
-  protected String [] curMapPair;
   public String readString() throws TException {
     String ret;
     if(!inner) {
-      ret = columns != null && index < columns.length ? columns[index++] : null;
+      ret = columns != null && index < columns.length ? columns[index] :  null;
+      index++;
     } else {
-      ret = fields != null && innerIndex < fields.length ? fields[innerIndex++] : null;
+      ret = fields != null && innerIndex < fields.length ? fields[innerIndex] : null;
+      innerIndex++;
     }
-    return ret == null && ! returnNulls ? "" : ret;
+    if(ret == null || ret.equals(nullString))
+      return returnNulls ? null : "";
+    else
+      return ret;
   }
 
   public byte[] readBinary() throws TException {

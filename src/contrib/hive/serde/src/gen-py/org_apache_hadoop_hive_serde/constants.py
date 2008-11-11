@@ -15,6 +15,12 @@ SERIALIZATION_FORMAT = 'serialization.format'
 
 SERIALIZATION_DDL = 'serialization.ddl'
 
+SERIALIZATION_NULL_FORMAT = 'serialization.null.format'
+
+SERIALIZATION_LAST_COLUMN_TAKES_REST = 'serialization.last.column.takes.rest'
+
+SERIALIZATION_SORT_ORDER = 'serialization.sort.order'
+
 FIELD_DELIM = 'field.delim'
 
 COLLECTION_DELIM = 'colelction.delim'
@@ -23,7 +29,13 @@ LINE_DELIM = 'line.delim'
 
 MAPKEY_DELIM = 'mapkey.delim'
 
+QUOTE_CHAR = 'quote.delim'
+
+BOOLEAN_TYPE_NAME = 'boolean'
+
 TINYINT_TYPE_NAME = 'tinyint'
+
+SMALLINT_TYPE_NAME = 'smallint'
 
 INT_TYPE_NAME = 'int'
 
@@ -46,7 +58,9 @@ LIST_TYPE_NAME = 'array'
 MAP_TYPE_NAME = 'map'
 
 PrimitiveTypes = set([
+  'boolean',
   'tinyint',
+  'smallint',
   'int',
   'bigint',
   'float',

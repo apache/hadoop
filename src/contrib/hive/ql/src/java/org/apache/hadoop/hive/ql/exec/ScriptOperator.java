@@ -34,6 +34,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.FileUtil;
 
 
 public class ScriptOperator extends Operator<scriptDesc> implements Serializable {
@@ -89,6 +90,77 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
     }
   }
 
+
+  /**
+   * Maps a relative pathname to an absolute pathname using the
+   * PATH enviroment.
+   */
+  public class PathFinder
+  {
+    String pathenv;        // a string of pathnames
+    String pathSep;        // the path seperator
+    String fileSep;        // the file seperator in a directory
+
+    /**
+     * Construct a PathFinder object using the path from
+     * the specified system environment variable.
+     */
+    public PathFinder(String envpath)
+    {
+      pathenv = System.getenv(envpath);
+      pathSep = System.getProperty("path.separator");
+      fileSep = System.getProperty("file.separator");
+    }
+
+    /**
+     * Appends the specified component to the path list
+     */
+    public void prependPathComponent(String str)
+    {
+      pathenv = str + pathSep + pathenv;
+    }
+
+    /**
+     * Returns the full path name of this file if it is listed in the
+     * path
+     */
+    public File getAbsolutePath(String filename)
+    {
+      if (pathenv == null || pathSep == null  || fileSep == null) {
+        return null;
+      }
+      int     val = -1;
+      String    classvalue = pathenv + pathSep;
+
+      while (((val = classvalue.indexOf(pathSep)) >= 0) &&
+             classvalue.length() > 0) {
+        //
+        // Extract each entry from the pathenv
+        //
+        String entry = classvalue.substring(0, val).trim();
+        File f = new File(entry);
+
+        try {
+          if (f.isDirectory()) {
+            //
+            // this entry in the pathenv is a directory.
+            // see if the required file is in this directory
+            //
+            f = new File(entry + fileSep + filename);
+          }
+          //
+          // see if the filename matches and  we can read it
+          //
+          if (f.isFile() && f.canRead()) {
+            return f;
+          }
+        } catch (Exception exp){ }
+        classvalue = classvalue.substring(val+1).trim();
+      }
+      return null;
+    }
+  }
+
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
     statsMap.put(Counter.DESERIALIZE_ERRORS, deserialize_error_count);
@@ -104,6 +176,20 @@ public class ScriptOperator extends Operator<scriptDesc> implements Serializable
       scriptInputSerializer.initialize(hconf, conf.getScriptInputInfo().getProperties());
 
       String [] cmdArgs = splitArgs(conf.getScriptCmd());
+
+      String prog = cmdArgs[0];
+      File currentDir = new File(".").getAbsoluteFile();
+
+      if (!new File(prog).isAbsolute()) {
+        PathFinder finder = new PathFinder("PATH");
+        finder.prependPathComponent(currentDir.toString());
+        File f = finder.getAbsolutePath(prog);
+        if (f != null) {
+          cmdArgs[0] = f.getAbsolutePath();
+        }
+        f = null;
+      }
+
       String [] wrappedCmdArgs = addWrapper(cmdArgs);
       LOG.info("Executing " + Arrays.asList(wrappedCmdArgs));
       LOG.info("tablename=" + hconf.get(HiveConf.ConfVars.HIVETABLENAME.varname));

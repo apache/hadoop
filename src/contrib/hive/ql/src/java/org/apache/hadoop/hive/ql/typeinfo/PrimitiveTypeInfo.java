@@ -43,7 +43,7 @@ public class PrimitiveTypeInfo extends TypeInfo implements Serializable {
   public PrimitiveTypeInfo() {}
 
   public String getTypeName() {
-    return ObjectInspectorUtils.getClassShortName(primitiveClass.getName());
+    return ObjectInspectorUtils.getClassShortName(primitiveClass);
   }
   
   

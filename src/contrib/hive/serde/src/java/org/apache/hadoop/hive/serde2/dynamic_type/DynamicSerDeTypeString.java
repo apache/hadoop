@@ -47,14 +47,14 @@ public class DynamicSerDeTypeString extends DynamicSerDeTypeBase {
   public String toString() { return "string"; }
 
   public String deserialize(TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return String.valueOf(iprot.readString());
+    return iprot.readString();
   }
 
   @Override
   public Object deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return String.valueOf(iprot.readString());
+    return iprot.readString();
   }
-
+  
   public void serialize(Object s, TProtocol oprot) throws TException, SerDeException, NoSuchFieldException,IllegalAccessException  {
     oprot.writeString((String)s);
   }

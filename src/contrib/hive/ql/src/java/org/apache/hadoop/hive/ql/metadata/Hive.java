@@ -38,13 +38,14 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
-import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
+import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.InputFormat;
@@ -170,6 +171,7 @@ public class Hive {
     }
     tbl.setSerializationLib(org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe.class.getName());
     tbl.setNumBuckets(bucketCount);
+    tbl.setBucketCols(bucketCols);
     createTable(tbl);
   }
 
@@ -196,6 +198,9 @@ public class Hive {
   public void createTable(Table tbl) throws HiveException {
     try {
       tbl.initSerDe();
+      if(tbl.getCols().size() == 0) {
+        tbl.setFields(MetaStoreUtils.getFieldsFromDeserializer(tbl.getName(), tbl.getDeserializer()));
+      }
       tbl.checkValidity();
       msc.createTable(tbl.getTTable());
     } catch (Exception e) {
@@ -652,5 +657,16 @@ public class Hive {
     }
     return new MetaStoreClient(this.conf);
   }
+
+  public static List<FieldSchema> getFieldsFromDeserializer(String name, Deserializer serde) throws HiveException {
+    try {
+      return MetaStoreUtils.getFieldsFromDeserializer(name, serde);
+    } catch (SerDeException e) {
+      throw new HiveException("Error in getting fields from serde.", e);
+    } catch (MetaException e) {
+      throw new HiveException("Error in getting fields from serde.", e);
+    }
+  }
+
   
 };

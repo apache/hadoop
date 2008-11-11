@@ -81,8 +81,8 @@ public class SetProcessor implements CommandProcessor {
       part[0] = nwcmd.substring(0, nwcmd.length()-1);
       part[1] = "";
     } else {
-      part[0] = nwcmd.substring(0, eqIndex);
-      part[1] = nwcmd.substring(eqIndex+1);
+      part[0] = nwcmd.substring(0, eqIndex).trim();
+      part[1] = nwcmd.substring(eqIndex+1).trim();
     }
 
     try {

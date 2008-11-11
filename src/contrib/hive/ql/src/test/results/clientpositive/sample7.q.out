@@ -1,5 +1,5 @@
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 4 key) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s))) (TOK_WHERE (> (TOK_COLREF s key) 100))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF srcbucket (TOK_TABLESAMPLE 1 4 (TOK_COLREF key)) s)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_ALLCOLREF s))) (TOK_WHERE (> (TOK_COLREF s key) 100))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -13,11 +13,11 @@ STAGE PLANS:
             Filter Operator
               predicate:
                   expr: (((default_sample_hashfn(key) & 2147483647) % 4) = 0)
-                  type: Boolean
+                  type: boolean
               Filter Operator
                 predicate:
                     expr: (key > 100)
-                    type: Boolean
+                    type: boolean
                 Select Operator
                   expressions:
                         expr: key
@@ -25,7 +25,7 @@ STAGE PLANS:
                         expr: value
                         type: string
                   File Output Operator
-                    directory: /tmp/hive-njain/1265167991/144531187.10000.insclause-0
+                    directory: /tmp/hive-njain/682589217/559576387.10000.insclause-0
                     table:
                         input format: org.apache.hadoop.mapred.TextInputFormat
                         output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -34,7 +34,6 @@ STAGE PLANS:
                           serialization.ddl struct dest1 { i32 key, string value}
                           serialization.format 1
                           columns key,value
-                          SORTBUCKETCOLSPREFIX TRUE
                           bucket_count -1
                           serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                           file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -44,18 +43,19 @@ STAGE PLANS:
                         name: dest1
       Needs Tagging:
       Path -> Alias:
-        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
       Path -> Partition:
-        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket 
+        file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/srcbucket/kv1.txt 
           Partition
           
               input format: org.apache.hadoop.mapred.TextInputFormat
               output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
               properties:
                 name srcbucket
+                bucket_field_name key
                 serialization.ddl struct srcbucket { string key, string value}
-                serialization.format 1
                 columns key,value
+                serialization.format 1
                 bucket_count 2
                 serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -68,7 +68,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/1265167991/144531187.10000.insclause-0
+            source: /tmp/hive-njain/682589217/559576387.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -77,7 +77,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value}
                   serialization.format 1
                   columns key,value
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -181,113 +180,3 @@ STAGE PLANS:
 477	val_477
 169	val_169
 400	val_400
-271	val_272
-217	val_218
-455	val_456
-231	val_232
-448	val_449
-246	val_247
-440	val_441
-147	val_148
-356	val_357
-217	val_218
-110	val_111
-275	val_276
-293	val_294
-286	val_287
-408	val_409
-477	val_478
-455	val_456
-367	val_368
-488	val_489
-349	val_350
-161	val_162
-224	val_225
-206	val_207
-114	val_115
-239	val_240
-389	val_390
-114	val_115
-235	val_236
-165	val_166
-264	val_265
-129	val_130
-257	val_258
-323	val_324
-411	val_412
-338	val_339
-147	val_148
-473	val_474
-213	val_214
-426	val_427
-132	val_133
-121	val_122
-129	val_130
-246	val_247
-491	val_492
-352	val_353
-349	val_350
-480	val_481
-480	val_481
-183	val_184
-392	val_393
-275	val_276
-114	val_115
-161	val_162
-264	val_265
-484	val_485
-305	val_306
-367	val_368
-260	val_261
-349	val_350
-363	val_364
-118	val_119
-121	val_122
-239	val_240
-143	val_144
-341	val_342
-363	val_364
-293	val_294
-206	val_207
-381	val_382
-404	val_405
-206	val_207
-385	val_386
-260	val_261
-404	val_405
-451	val_452
-132	val_133
-356	val_357
-352	val_353
-330	val_331
-257	val_258
-374	val_375
-437	val_438
-334	val_335
-404	val_405
-268	val_269
-491	val_492
-392	val_393
-341	val_342
-118	val_119
-172	val_173
-136	val_137
-349	val_350
-462	val_463
-408	val_409
-378	val_379
-495	val_496
-385	val_386
-389	val_390
-125	val_126
-415	val_416
-228	val_229
-363	val_364
-459	val_460
-341	val_342
-440	val_441
-309	val_310
-161	val_162
-161	val_162
-118	val_119
-242	val_243

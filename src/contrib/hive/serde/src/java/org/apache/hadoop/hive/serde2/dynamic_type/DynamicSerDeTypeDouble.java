@@ -46,7 +46,12 @@ public class DynamicSerDeTypeDouble extends DynamicSerDeTypeBase {
   public String toString() { return "double"; }
 
   public Object deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return Double.valueOf(iprot.readDouble());
+    double val = iprot.readDouble();
+    if (val == 0 && iprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol && 
+        ((org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)iprot).lastPrimitiveWasNull()) {
+      return null;
+    }
+    return Double.valueOf(val);
   }
 
   public void serialize(Object o, ObjectInspector oi, TProtocol oprot) throws TException, SerDeException, NoSuchFieldException,IllegalAccessException  {
@@ -58,4 +63,7 @@ public class DynamicSerDeTypeDouble extends DynamicSerDeTypeBase {
   public byte getType() {
     return TType.DOUBLE;
   }
+  
+  public Class getRealType() { return java.lang.Double.class; }
+  public Double getRealTypeInstance() { return Double.valueOf(0); }
 }

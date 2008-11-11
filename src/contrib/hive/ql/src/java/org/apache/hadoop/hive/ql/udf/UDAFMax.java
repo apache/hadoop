@@ -37,28 +37,28 @@ public class UDAFMax extends UDAF {
     mEmpty = true;
   }
 
-  public boolean aggregate(String o) {
-    if (o != null && !o.isEmpty()) {
+  public boolean aggregate(Double o) {
+    if (o != null) {
       if (mEmpty) {
-        mMax = Double.parseDouble(o);
+        mMax = o;
         mEmpty = false;
       } else {
-        mMax = Math.max(mMax, Double.parseDouble(o));
+        mMax = Math.max(mMax, o);
       }
     }
     return true;
   }
   
-  public String evaluatePartial() {
-    return mEmpty ? null : String.valueOf(mMax);
+  public Double evaluatePartial() {
+    return mEmpty ? null : Double.valueOf(mMax);
   }
 
-  public boolean aggregatePartial(String o) {
+  public boolean aggregatePartial(Double o) {
     return aggregate(o);
   }
 
-  public String evaluate() {
-    return mEmpty ? null : String.valueOf(mMax);
+  public Double evaluate() {
+    return mEmpty ? null : Double.valueOf(mMax);
   }
 
 }

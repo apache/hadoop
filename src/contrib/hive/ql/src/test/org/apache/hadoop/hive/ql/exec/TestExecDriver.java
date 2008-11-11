@@ -198,7 +198,7 @@ public class TestExecDriver extends TestCase {
   @SuppressWarnings("unchecked")
   private void populateMapRedPlan1(Table src) {
     mr.setNumReduceTasks(Integer.valueOf(1));
-
+    
     // map-side work
     Operator<reduceSinkDesc> op1 = OperatorFactory.get
       (PlanUtils.getReduceSinkDesc
@@ -206,6 +206,8 @@ public class TestExecDriver extends TestCase {
         Utilities.makeList(new exprNodeColumnDesc(String.class, "value")), -1, 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
+    mr.setKeyDesc(op1.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op1.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op3 = OperatorFactory.get(new fileSinkDesc
@@ -230,6 +232,8 @@ public class TestExecDriver extends TestCase {
                            new exprNodeColumnDesc(String.class, "value")), -1, 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
+    mr.setKeyDesc(op1.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op1.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op4 = OperatorFactory.get(new fileSinkDesc
@@ -261,6 +265,8 @@ public class TestExecDriver extends TestCase {
         (new exprNodeColumnDesc(String.class, "value")), Byte.valueOf((byte)0), 1, -1, false));
 
     Utilities.addMapWork(mr, src, "a", op1);
+    mr.setKeyDesc(op1.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op1.getConf().getValueSerializeInfo());
 
     Operator<reduceSinkDesc> op2 = OperatorFactory.get
       (PlanUtils.getReduceSinkDesc
@@ -270,10 +276,7 @@ public class TestExecDriver extends TestCase {
         Integer.MAX_VALUE, -1, false));
 
     Utilities.addMapWork(mr, src2, "b", op2);
-
-    // just to satisfy the constraint that each tag must define a schema
-    mr.getAliasToSchema().put("a", new schemaDesc(""));
-    mr.getAliasToSchema().put("b", new schemaDesc(""));
+    mr.getTagToValueDesc().add(op2.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op4 = OperatorFactory.get(new fileSinkDesc
@@ -318,6 +321,8 @@ public class TestExecDriver extends TestCase {
                                                         new exprNodeColumnDesc(String.class, "value"))), op0);
 
     Utilities.addMapWork(mr, src, "a", op4);
+    mr.setKeyDesc(op1.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op1.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op3 = OperatorFactory.get(new fileSinkDesc
@@ -348,6 +353,8 @@ public class TestExecDriver extends TestCase {
                                                         new exprNodeColumnDesc(String.class, "value"))), op0);
 
     Utilities.addMapWork(mr, src, "a", op4);
+    mr.setKeyDesc(op0.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op0.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op3 = OperatorFactory.get(new fileSinkDesc
@@ -384,6 +391,8 @@ public class TestExecDriver extends TestCase {
                                                         new exprNodeColumnDesc(String.class, "value"))), op0);
 
     Utilities.addMapWork(mr, src, "a", op4);
+    mr.setKeyDesc(op1.getConf().getKeySerializeInfo());
+    mr.getTagToValueDesc().add(op1.getConf().getValueSerializeInfo());
 
     // reduce side work
     Operator<fileSinkDesc> op3 = OperatorFactory.get(new fileSinkDesc

@@ -12,18 +12,26 @@ STAGE PLANS:
         src_thrift 
             Select Operator
               expressions:
-                    expr: lint[1]
-                    type: int
-                    expr: lintstring[0].mystring
-                    type: string
-                    expr: mstringstring['key_2']
-                    type: string
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                    name: dest1
+                    expr: lint
+                    type: array<int>
+                    expr: lintstring
+                    type: array<struct{myint:int,mystring:string}>
+                    expr: mstringstring
+                    type: map<string,string>
+              Select Operator
+                expressions:
+                      expr: 0[1]
+                      type: int
+                      expr: 1[0].mystring
+                      type: string
+                      expr: 2['key_2']
+                      type: string
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                      name: dest1
 
   Stage: Stage-0
     Move Operator

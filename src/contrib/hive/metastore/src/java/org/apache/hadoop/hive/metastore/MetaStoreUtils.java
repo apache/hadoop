@@ -231,8 +231,8 @@ public class MetaStoreUtils {
   /**
    * validateName
    *
-   * Checks the name conforms to our standars which are: "[a-zA-z-_0-9]+".
-   * checks this is just characters and numbers and _ and . and -
+   * Checks the name conforms to our standars which are: "[a-zA-z_0-9]+".
+   * checks this is just characters and numbers and _ 
    *
    * @param tableName the name to validate
    * @return none
@@ -245,6 +245,14 @@ public class MetaStoreUtils {
       return true;
     }
     return false;
+  }
+  
+  static public boolean validateColNames(List<FieldSchema> cols) {
+    for (FieldSchema fieldSchema : cols) {
+      if(!validateName(fieldSchema.getName()))
+        return false;
+    }
+    return true;
   }
 
   /**
@@ -395,7 +403,9 @@ public class MetaStoreUtils {
   static HashMap<String, String> typeToThriftTypeMap; 
   static {
     typeToThriftTypeMap = new HashMap<String, String>();
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.BOOLEAN_TYPE_NAME, "bool");
     typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.TINYINT_TYPE_NAME, "byte");
+    typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.SMALLINT_TYPE_NAME, "i16");
     typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME, "i32");
     typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.BIGINT_TYPE_NAME, "i64");
     typeToThriftTypeMap.put(org.apache.hadoop.hive.serde.Constants.DOUBLE_TYPE_NAME, "double");
@@ -446,7 +456,7 @@ public class MetaStoreUtils {
       ddl.append(col.getName());
     }
     ddl.append("}");
-    LOG.warn("DDL: " + ddl);
+    LOG.info("DDL: " + ddl);
     return ddl.toString();
   }
   public static Properties getSchema(org.apache.hadoop.hive.metastore.api.Table tbl) {
@@ -538,7 +548,7 @@ public class MetaStoreUtils {
    * @throws SerDeException
    * @throws MetaException
    */
-  static List<FieldSchema> getFieldsFromDeserializer(String tableName, Deserializer deserializer) throws SerDeException, MetaException {
+  public static List<FieldSchema> getFieldsFromDeserializer(String tableName, Deserializer deserializer) throws SerDeException, MetaException {
     ObjectInspector oi = deserializer.getObjectInspector();
     String [] names = tableName.split("\\.");
     String last_name = names[names.length-1];
@@ -572,4 +582,5 @@ public class MetaStoreUtils {
     }
     return str_fields;
   }
+
 }

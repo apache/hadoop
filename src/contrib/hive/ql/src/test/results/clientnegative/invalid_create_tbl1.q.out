@@ -1,0 +1,2 @@
+FAILED: Error in metadata: org.apache.hadoop.hive.ql.metadata.HiveException: Partition collumn name aint conflicts with table columns.
+FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask

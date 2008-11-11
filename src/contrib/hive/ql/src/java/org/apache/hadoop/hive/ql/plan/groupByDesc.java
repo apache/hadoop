@@ -23,11 +23,12 @@ public class groupByDesc implements java.io.Serializable {
   /** Group-by Mode:
    *  COMPLETE: complete 1-phase aggregation: aggregate, evaluate
    *  PARTIAL1: partial aggregation - first phase:  aggregate, evaluatePartial
-   *  PARTIAL2: partial aggregation - second phase: aggregatePartial, evaluate
+   *  PARTIAL2: partial aggregation - second phase: aggregatePartial, evaluatePartial
+   *  FINAL: partial aggregation - final phase: aggregatePartial, evaluate
    *  HASH: the same as PARTIAL1 but use hash-table-based aggregation  
    */
   private static final long serialVersionUID = 1L;
-  public static enum Mode { COMPLETE, PARTIAL1, PARTIAL2, HASH };
+  public static enum Mode { COMPLETE, PARTIAL1, PARTIAL2, FINAL, HASH };
   private Mode mode;
   private java.util.ArrayList<exprNodeDesc> keys;
   private java.util.ArrayList<org.apache.hadoop.hive.ql.plan.aggregationDesc> aggregators;

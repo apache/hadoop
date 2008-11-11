@@ -1,5 +1,5 @@
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_COLLIST (TOK_COLREF src_thrift lint) (TOK_COLREF src_thrift lintstring)) (TOK_ALIASLIST tkey tvalue) '/bin/cat'))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue)))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_EXPLIST (TOK_COLREF src_thrift lint) (TOK_COLREF src_thrift lintstring)) '/bin/cat' (TOK_ALIASLIST tkey tvalue)))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -16,22 +16,30 @@ STAGE PLANS:
                     type: array<int>
                     expr: lintstring
                     type: array<struct{myint:int,mystring:string}>
-              Transform Operator
-                command: /bin/cat
-                output info:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                Reduce Output Operator
-                  key expressions:
-                        expr: tkey
-                        type: string
-                  # partition fields: 1
-                  tag: -1
-                  value expressions:
-                        expr: tkey
-                        type: string
-                        expr: tvalue
-                        type: string
+              Select Operator
+                expressions:
+                      expr: 0
+                      type: array<int>
+                      expr: 1
+                      type: array<struct{myint:int,mystring:string}>
+                Transform Operator
+                  command: /bin/cat
+                  output info:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  Reduce Output Operator
+                    key expressions:
+                          expr: tkey
+                          type: string
+                    Map-reduce partition columns:
+                          expr: tkey
+                          type: string
+                    tag: -1
+                    value expressions:
+                          expr: tkey
+                          type: string
+                          expr: tvalue
+                          type: string
       Reduce Operator Tree:
         Extract
           Select Operator

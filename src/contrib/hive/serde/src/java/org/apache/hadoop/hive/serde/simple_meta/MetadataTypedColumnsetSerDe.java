@@ -18,17 +18,36 @@
 
 package org.apache.hadoop.hive.serde.simple_meta;
 
-import org.apache.hadoop.hive.serde.*;
-import org.apache.hadoop.hive.serde.thrift.*;
-import com.facebook.thrift.TException;
-import com.facebook.thrift.TBase;
-import com.facebook.thrift.TSerializer;
-import com.facebook.thrift.protocol.*;
-import com.facebook.thrift.transport.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
-import java.util.*;
-import java.io.*;
+import org.apache.hadoop.hive.serde.ByteStreamTypedSerDe;
+import org.apache.hadoop.hive.serde.ColumnSet;
+import org.apache.hadoop.hive.serde.ComplexSerDeField;
+import org.apache.hadoop.hive.serde.Constants;
+import org.apache.hadoop.hive.serde.ExpressionUtils;
+import org.apache.hadoop.hive.serde.ReflectionSerDeField;
+import org.apache.hadoop.hive.serde.SerDe;
+import org.apache.hadoop.hive.serde.SerDeException;
+import org.apache.hadoop.hive.serde.SerDeField;
+import org.apache.hadoop.hive.serde.SerDeUtils;
+import org.apache.hadoop.hive.serde2.dynamic_type.DynamicSerDe;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
+
+import com.facebook.thrift.TBase;
+import com.facebook.thrift.TException;
+import com.facebook.thrift.TSerializer;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import com.facebook.thrift.protocol.TProtocol;
+import com.facebook.thrift.protocol.TProtocolFactory;
+import com.facebook.thrift.protocol.TSimpleJSONProtocol;
+import com.facebook.thrift.transport.TIOStreamTransport;
 
 
 
@@ -51,6 +70,18 @@ public class MetadataTypedColumnsetSerDe  extends ByteStreamTypedSerDe implement
   // stores the columns in order
   private String _columns_list[];
 
+  static {
+    StackTraceElement[] sTrace = new Exception().getStackTrace();
+    String className = sTrace[0].getClassName();
+    try {
+      // For backward compatibility: this class replaces the columnsetSerDe class.
+      SerDeUtils.registerSerDe(DynamicSerDe.class.getName(), 
+          Class.forName(className));
+      } catch(Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
   public String toString() {
     return "MetaDataTypedColumnsetSerDe[" + separator + "," + _columns + "]";
   }
@@ -79,7 +110,12 @@ public class MetadataTypedColumnsetSerDe  extends ByteStreamTypedSerDe implement
   public void initialize(Configuration job, Properties tbl) throws SerDeException {
     inStreaming = job.get("hive.streaming.select") != null;
     separator = DefaultSeparator;
-    String alt_sep = tbl.getProperty(Constants.SERIALIZATION_FORMAT);
+    String alt_sep = null;
+    if(DynamicSerDe.class.getName().equals(tbl.getProperty(Constants.SERIALIZATION_LIB))) {
+      alt_sep = tbl.getProperty(Constants.FIELD_DELIM);
+    } else {
+      alt_sep = tbl.getProperty(Constants.SERIALIZATION_FORMAT);
+    }
     if(alt_sep != null && alt_sep.length() > 0) {
       try {
         byte b [] = new byte[1];
@@ -125,8 +161,13 @@ public class MetadataTypedColumnsetSerDe  extends ByteStreamTypedSerDe implement
     ColumnSet c = cachedObj;
     try {
       try {
-        Text tw = (Text)field;
-        String row = tw.toString();
+        String row = null;
+        if(field instanceof BytesWritable) {
+          row = new String(((BytesWritable) field).get(), 0, ((BytesWritable) field).getSize(), "UTF-8");
+        } else {
+          Text tw = (Text)field;
+          row = tw.toString();
+        }
         return(deserialize(c, row, separator, nullString));
       } catch (ClassCastException e) {
         throw new SerDeException("columnsetSerDe  expects Text", e);

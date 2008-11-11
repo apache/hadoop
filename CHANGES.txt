@@ -110,6 +110,9 @@ Trunk (unreleased changes)
     HADOOP-4621. Fix javadoc warnings caused by duplicate jars. (Kan Zhang via
     cdouglas)
 
+    HADOOP-4566. Deploy new hive code to support more types.
+    (Zheng Shao via dhruba)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

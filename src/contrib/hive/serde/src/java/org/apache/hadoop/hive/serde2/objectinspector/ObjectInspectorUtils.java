@@ -63,34 +63,32 @@ public class ObjectInspectorUtils {
     return primitiveClass;
   }
   
+  public static final Map<Class<?>, String> classToTypeName = new HashMap<Class<?>, String>();
+  static {
+    classToTypeName.put(Boolean.class, org.apache.hadoop.hive.serde.Constants.BOOLEAN_TYPE_NAME);
+    classToTypeName.put(Byte.class, org.apache.hadoop.hive.serde.Constants.TINYINT_TYPE_NAME);
+    classToTypeName.put(Short.class, org.apache.hadoop.hive.serde.Constants.SMALLINT_TYPE_NAME);
+    classToTypeName.put(Integer.class, org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME);
+    classToTypeName.put(Long.class, org.apache.hadoop.hive.serde.Constants.BIGINT_TYPE_NAME);
+    classToTypeName.put(Float.class, org.apache.hadoop.hive.serde.Constants.FLOAT_TYPE_NAME);
+    classToTypeName.put(Double.class, org.apache.hadoop.hive.serde.Constants.DOUBLE_TYPE_NAME);
+    classToTypeName.put(String.class, org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME);
+    classToTypeName.put(java.sql.Date.class, org.apache.hadoop.hive.serde.Constants.DATE_TYPE_NAME);
+  }
   /**
    * Get the short name for the types
    */
-  public static String getClassShortName(String className) {
-    String result = className;
-    
-    if (result.equals(String.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME;
-    } else if (result.equals(Integer.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.INT_TYPE_NAME;
-    } else if (result.equals(Float.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.FLOAT_TYPE_NAME;
-    } else if (result.equals(Double.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.DOUBLE_TYPE_NAME;
-    } else if (result.equals(Long.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.BIGINT_TYPE_NAME;
-    } else if (result.equals(java.sql.Date.class.getName())) {
-      result = org.apache.hadoop.hive.serde.Constants.DATE_TYPE_NAME;
-    } else {
-      LOG.warn("unsupported class: " + className);
+  public static String getClassShortName(Class<?> classObject) {
+    String result = classToTypeName.get(classObject);
+    if (result == null) {
+      result = classObject.getName();
+      LOG.warn("unsupported class: " + result);
+      // Remove prefix
+      String prefix = "java.lang.";
+      if (result.startsWith(prefix)) {
+        result = result.substring(prefix.length());
+      }
     }
-    
-    // Remove prefix
-    String prefix = "java.lang.";
-    if (result.startsWith(prefix)) {
-      result = result.substring(prefix.length());
-    }
-    
     return result;
   }
   
@@ -250,6 +248,15 @@ public class ObjectInspectorUtils {
       if (fields.get(i).getFieldName().equals(fieldName)) {
         return fields.get(i);
       }
+    }
+    // For backward compatibility: fieldNames can also be integer Strings.
+    try {
+      int i = Integer.parseInt(fieldName);
+      if (i>=0 && i<fields.size()) {
+        return fields.get(i);
+      }
+    } catch (NumberFormatException e) {
+      // ignore
     }
     throw new RuntimeException("cannot find field " + fieldName + " from " + fields); 
     // return null;

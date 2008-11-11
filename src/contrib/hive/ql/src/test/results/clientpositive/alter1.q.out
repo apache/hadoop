@@ -1,0 +1,28 @@
+a	int
+b	int
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:int,comment:null), FieldSchema(name:b,type:int,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{})
+a	int
+b	int
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:int,comment:null), FieldSchema(name:b,type:int,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{last_modified_by=njain,c=3,last_modified_time=1225994182,a=1})
+a	int
+b	int
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:int,comment:null), FieldSchema(name:b,type:int,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{d=3,last_modified_by=njain,c=4,last_modified_time=1225994182,a=1})
+a	int
+b	int
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:int,comment:null), FieldSchema(name:b,type:int,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{s1=9,serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{d=3,last_modified_by=njain,c=4,last_modified_time=1225994182,a=1})
+a	int
+b	int
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:int,comment:null), FieldSchema(name:b,type:int,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{s2=20,s1=10,serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{d=3,last_modified_by=njain,c=4,last_modified_time=1225994182,a=1})
+a	string	'from deserializer'
+b	string	'from deserializer'
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:string,comment:from deserializer), FieldSchema(name:b,type:string,comment:from deserializer)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.TestSerDe,parameters:{s2=20,s1=9,serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{d=3,last_modified_by=njain,c=4,last_modified_time=1225994182,a=1})
+a	string	'from deserializer'
+b	string	'from deserializer'
+Detailed Table Information:
+Table(tableName:alter1,dbName:default,owner:njain,createTime:1225994182,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:a,type:string,comment:from deserializer), FieldSchema(name:b,type:string,comment:from deserializer)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/alter1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{s2=20,s1=9,serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{d=3,last_modified_by=njain,c=4,last_modified_time=1225994182,a=1})

@@ -77,14 +77,49 @@ public class RowResolver {
     return rslvMap.get(tab_alias.toLowerCase()) != null;
   }
 
-  public ColumnInfo get(String tab_alias, String col_alias) {
-    tab_alias = tab_alias.toLowerCase();
+  /**
+   * Gets the column Info to tab_alias.col_alias type of a column reference. I the tab_alias is not
+   * provided as can be the case with an non aliased column, this function looks up the column in all
+   * the table aliases in  this row resolver and returns the match. It also throws an exception if 
+   * the column is found in multiple table aliases. If no match is found a null values is returned.
+   * 
+   * This allows us to interpret both select t.c1 type of references and select c1 kind of refereneces.
+   * The later kind are what we call non aliased column references in the query.
+   * 
+   * @param tab_alias The table alias to match (this is null if the column reference is non aliased)
+   * @param col_alias The column name that is being searched for
+   * @return ColumnInfo
+   * @throws SemanticException
+   */
+  public ColumnInfo get(String tab_alias, String col_alias) 
+    throws SemanticException {
     col_alias = col_alias.toLowerCase();
-    HashMap<String, ColumnInfo> f_map = rslvMap.get(tab_alias);
-    if (f_map == null) {
-      return null;
+    ColumnInfo ret = null;
+
+    if (tab_alias != null) {
+      tab_alias = tab_alias.toLowerCase();
+      HashMap<String, ColumnInfo> f_map = rslvMap.get(tab_alias);
+      if (f_map == null) {
+        return null;
+      }
+      ret = f_map.get(col_alias);
     }
-    return f_map.get(col_alias);
+    else {
+      boolean found = false;
+      for(LinkedHashMap<String, ColumnInfo> cmap: rslvMap.values()) {
+        for(Map.Entry<String, ColumnInfo> cmapEnt: cmap.entrySet()) {
+          if (col_alias.equalsIgnoreCase((String)cmapEnt.getKey())) {
+            if (found) {
+              throw new SemanticException("Column " + col_alias + " Found in more than One Tables/Subqueries");
+            }
+            found = true;
+            ret = (ColumnInfo)cmapEnt.getValue();
+          }
+        }
+      }
+    }
+
+    return ret; 
   }
 
   public Vector<ColumnInfo> getColumnInfos() {

@@ -1,4 +1,4 @@
-CREATE TABLE dest1(key INT, value STRING);
+CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 -- both input pruning and sample filter
 EXPLAIN EXTENDED

@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 public class QBParseInfo {
 
   private boolean isSubQ;
-  private boolean canOptTopQ;
   private String alias;
   private CommonTree joinExpr;
   private HashMap<String, CommonTree> aliasToSrc;
@@ -67,7 +66,6 @@ public class QBParseInfo {
     
     this.alias = alias;
     this.isSubQ = isSubQ;
-    this.canOptTopQ = false;
     this.outerQueryLimit = -1;
   }
 
@@ -127,6 +125,10 @@ public class QBParseInfo {
     return this.destToWhereExpr.get(clause);
   }
 
+  public HashMap<String, CommonTree> getDestToWhereExpr() {
+    return destToWhereExpr;
+  }
+
   public CommonTree getGroupByForClause(String clause) {
     return this.destToGroupby.get(clause);
   }
@@ -151,14 +153,6 @@ public class QBParseInfo {
     return this.isSubQ;
   }
 
-  public boolean getCanOptTopQ() {
-    return this.canOptTopQ;
-  }
-
-  public void setCanOptTopQ(boolean canOptTopQ) {
-    this.canOptTopQ = canOptTopQ;
-  }
-  
   public CommonTree getJoinExpr() {
     return this.joinExpr;
   }
@@ -201,7 +195,6 @@ public class QBParseInfo {
     if (isSubQ || 
        (joinExpr != null) ||
        (!nameToSample.isEmpty()) ||
-       (!destToWhereExpr.isEmpty()) ||
        (!destToGroupby.isEmpty()) ||
        (!destToClusterby.isEmpty()))
       return false;

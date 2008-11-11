@@ -26,14 +26,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.*;
 import java.net.URL;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.exec.Utilities;
 
 import org.apache.commons.lang.StringUtils;
 
 public class SessionState {
-  
+
+  public static Log LOG = LogFactory.getLog("SessionState");
+  public static LogHelper console = new LogHelper(LOG);
+
   /**
    * current configuration
    */ 
@@ -146,11 +151,13 @@ public class SessionState {
   public static SessionState start(HiveConf conf) {
     ss = new SessionState (conf);
     ss.getConf().setVar(HiveConf.ConfVars.HIVESESSIONID, makeSessionId());
+    console = new LogHelper(LOG);
     return (ss);
   }
 
   public static SessionState start(SessionState startSs) {
     ss = startSs;
+    console = new LogHelper(LOG);
     ss.getConf().setVar(HiveConf.ConfVars.HIVESESSIONID, makeSessionId());
     return ss;
   }
@@ -160,6 +167,10 @@ public class SessionState {
    */
   public static SessionState get() {
     return ss;
+  }
+
+  public static LogHelper getConsole() {
+    return console;
   }
 
   private static String makeSessionId() {
@@ -241,5 +252,108 @@ public class SessionState {
       getErrStream().println(error);
       LOG.error(error + StringUtils.defaultString(detail));
     }
+  }
+
+  public static String validateFile(Set<String> curFiles, String newFile) {
+    SessionState ss = SessionState.get();
+    LogHelper console = SessionState.getConsole();
+    Configuration conf = (ss == null) ? new Configuration() : ss.getConf();
+
+    try {
+      if(Utilities.realFile(newFile, conf) != null)
+        return newFile;
+      else {
+        console.printError(newFile + " does not exist");
+        return null;
+      }
+    } catch (IOException e) {
+      console.printError("Unable to validate " + newFile + "\nException: " + e.getMessage(),
+                         "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
+      return null;
+    }
+  }
+
+  public static interface ResourceHook {
+    public String preHook(Set<String> cur, String s);
+  }
+
+  public static enum ResourceType {
+    FILE(new ResourceHook () {
+        public String preHook(Set<String> cur, String s) { return validateFile(cur, s); }
+      });
+
+    public ResourceHook hook;
+
+    ResourceType(ResourceHook hook) {
+      this.hook = hook;
+    }
+  };
+
+  public static ResourceType find_resource_type(String s) {
+    
+    s = s.trim().toUpperCase();
+    
+    try {
+      return ResourceType.valueOf(s);
+    } catch (IllegalArgumentException e) {
+    }
+    
+    // try singular
+    if(s.endsWith("S")) {
+      s = s.substring(0, s.length()-1);
+    } else {
+      return null;
+    }
+
+    try {
+      return ResourceType.valueOf(s);
+    } catch (IllegalArgumentException e) {
+    }
+    return null;
+  }
+
+  private HashMap<ResourceType, HashSet<String>> resource_map = new HashMap<ResourceType, HashSet<String>> ();
+
+  public void add_resource(ResourceType t, String value) {
+    if(resource_map.get(t) == null) {
+      resource_map.put(t, new HashSet<String> ());
+    }
+
+    String fnlVal = value;
+    if(t.hook != null) {
+      fnlVal = t.hook.preHook(resource_map.get(t), value);
+      if(fnlVal == null)
+        return;
+    }
+    resource_map.get(t).add(fnlVal);
+  }
+
+  public boolean delete_resource(ResourceType t, String value) {
+    if(resource_map.get(t) == null) {
+      return false;
+    }
+    return (resource_map.get(t).remove(value));
+  }
+
+  public Set<String> list_resource(ResourceType t, List<String> filter) {
+    if(resource_map.get(t) == null) {
+      return null;
+    }
+    Set<String> orig = resource_map.get(t);
+    if(filter == null) {
+      return orig;
+    } else {
+      Set<String> fnl = new HashSet<String> ();
+      for(String one: orig) {
+        if(filter.contains(one)) {
+          fnl.add(one);
+        }
+      }
+      return fnl;
+    }
+  }
+
+  public void delete_resource(ResourceType t) {
+    resource_map.remove (t);
   }
 }

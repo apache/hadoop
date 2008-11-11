@@ -37,30 +37,30 @@ public class UDAFSum extends UDAF {
     mEmpty = true;
   }
 
-  public boolean aggregate(String o) {
-    if (o != null && !o.isEmpty()) {
-      mSum += Double.parseDouble(o);
+  public boolean aggregate(Double o) {
+    if (o != null) {
+      mSum += o;
       mEmpty = false;
     }
     return true;
   }
   
-  public String evaluatePartial() {
+  public Double evaluatePartial() {
     // This is SQL standard - sum of zero items should be null.
-    return mEmpty ? null : new Double(mSum).toString();
+    return mEmpty ? null : new Double(mSum);
   }
 
-  public boolean aggregatePartial(String o) {
-    if (o != null && !o.isEmpty()) {
-      mSum += Double.parseDouble(o);
+  public boolean aggregatePartial(Double o) {
+    if (o != null) {
+      mSum += o;
       mEmpty = false;
     }
     return true;
   }
 
-  public String evaluate() {
+  public Double evaluate() {
     // This is SQL standard - sum of zero items should be null.
-    return mEmpty ? null : new Double(mSum).toString();
+    return mEmpty ? null : new Double(mSum);
   }
 
 }

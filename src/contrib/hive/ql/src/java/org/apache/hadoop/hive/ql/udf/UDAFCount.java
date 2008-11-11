@@ -42,17 +42,17 @@ public class UDAFCount extends UDAF {
     return true;
   }
 
-  public String evaluatePartial() {
-    return Long.valueOf(mCount).toString();
+  public Long evaluatePartial() {
+    return Long.valueOf(mCount);
   }
 
-  public boolean aggregatePartial(String count) {
-    mCount += Long.parseLong(count);
+  public boolean aggregatePartial(Long count) {
+    mCount += count;
     return true;
   }
 
-  public String evaluate() {
-    return Long.valueOf(mCount).toString();
+  public Long evaluate() {
+    return Long.valueOf(mCount);
   }
 
   

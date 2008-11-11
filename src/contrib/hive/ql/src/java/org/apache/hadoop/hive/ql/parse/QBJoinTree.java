@@ -22,6 +22,10 @@ import java.util.Vector;
 
 import org.antlr.runtime.tree.CommonTree;
 
+/**
+ * Internal representation of the join tree
+ *
+ */
 public class QBJoinTree 
 {
   private String        leftAlias;
@@ -33,15 +37,29 @@ public class QBJoinTree
   private joinCond[]    joinCond;
   private boolean       noOuterJoin;
   
-  // conditions
+  // join conditions
   private Vector<Vector<CommonTree>> expressions;
 
+  // filters
+  private Vector<Vector<CommonTree>> filters;
+  
+  /**
+   * constructor 
+   */
   public QBJoinTree() { nextTag = 0;}
 
+  /**
+   * returns left alias if any - this is used for merging later on
+   * @return left alias if any
+   */
   public String getLeftAlias() {
     return leftAlias;
   }
 
+  /**
+   * set left alias for the join expression
+   * @param leftAlias String
+   */
   public void setLeftAlias(String leftAlias) {
     this.leftAlias = leftAlias;
   }
@@ -109,6 +127,21 @@ public class QBJoinTree
   public void setNoOuterJoin(boolean noOuterJoin) {
     this.noOuterJoin = noOuterJoin;
   }
+
+	/**
+	 * @return the filters
+	 */
+	public Vector<Vector<CommonTree>> getFilters() {
+		return filters;
+	}
+
+	/**
+	 * @param filters the filters to set
+	 */
+	public void setFilters(Vector<Vector<CommonTree>> filters) {
+		this.filters = filters;
+	}
+
 }
 
 

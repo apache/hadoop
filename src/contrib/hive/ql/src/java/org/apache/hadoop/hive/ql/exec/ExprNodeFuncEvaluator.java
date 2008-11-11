@@ -72,19 +72,8 @@ public class ExprNodeFuncEvaluator extends ExprNodeEvaluator {
       paramEvaluators[i].evaluate(row, rowInspector, paramInspectableObjects[i]);
       paramValues[i] = paramInspectableObjects[i].o;
     }
-    try {
-      result.o = udfMethod.invoke(udf, paramValues);
-      result.oi = outputObjectInspector;
-    } catch (Exception e) {
-      if (e instanceof HiveException) {
-        throw (HiveException)e;
-      } else if (e instanceof RuntimeException) {
-        throw (RuntimeException)e;
-      } else {
-        throw new HiveException("Unable to execute UDF function " + udf.getClass() + " " 
-          + udfMethod + " on inputs " + "(" + paramValues.length + ") " + Arrays.asList(paramValues) + ": " + e.getMessage(), e);
-      }
-    }
+    result.o = FunctionRegistry.invoke(udfMethod, udf, paramValues);
+    result.oi = outputObjectInspector;
   }
 
   public ObjectInspector evaluateInspector(ObjectInspector rowInspector)

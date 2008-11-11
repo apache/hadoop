@@ -15,7 +15,7 @@ FROM (
  ON (a.c1 = c.c5)
  SELECT a.c1 AS c1, a.c2 AS c2, b.c3 AS c3, b.c4 AS c4, c.c5 AS c5, c.c6 AS c6
 ) c
-INSERT OVERWRITE TABLE dest1 SELECT c.c1, c.c2, c.c3, c.c4, c.c5, c.c6
+SELECT c.c1, c.c2, c.c3, c.c4, c.c5, c.c6
 
 
 

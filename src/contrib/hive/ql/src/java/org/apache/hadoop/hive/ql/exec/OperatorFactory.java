@@ -109,7 +109,14 @@ public class OperatorFactory {
       children.add(ret);
       op.setChildOperators(children);
     }
+
+    // add parents for the newly created operator
+    List<Operator<? extends Serializable>> parent = new ArrayList<Operator<? extends Serializable>>();
+    for(Operator op: oplist)
+      parent.add(op);
     
+    ret.setParentOperators(parent);
+
     return (ret);
   }
 

@@ -118,6 +118,10 @@ hive> DESCRIBE invites;
 
 shows the list of columns
 
+hive> DESCRIBE EXTENDED invites;
+
+shows the list of columns plus any other meta information about the table
+
 Altering tables. Table name can be changed and additional columns can be dropped
 
 hive> ALTER TABLE pokes ADD COLUMNS (new_col INT);
@@ -258,28 +262,92 @@ INSERT OVERWRITE LOCAL DIRECTORY '/tmp/dest4.out' SELECT src.value WHERE src.key
 
 STREAMING
 ---------
-hive> FROM invites a INSERT OVERWRITE TABLE events SELECT TRANSFORM(a.foo, a.bar) AS (oof, rab) USING '/bin/cat' WHERE a.ds > '2008-08-09';
+hive> FROM invites a INSERT OVERWRITE TABLE events
+    > SELECT TRANSFORM(a.foo, a.bar) AS (oof, rab)
+    > USING '/bin/cat' WHERE a.ds > '2008-08-09';
 
-This streams the data in the map phase through the script /bin/cat (like hadoop streaming). 
+This streams the data in the map phase through the script /bin/cat (like hadoop streaming).
 Similarly - streaming can be used on the reduce side (please see the Hive Tutorial or examples)
 
 KNOWN BUGS/ISSUES
 -----------------
 * hive cli may hang for a couple of minutes because of a bug in getting metadata
   from the derby database. let it run and you'll be fine!
-* hive cli does not support multi-line queries.
 * hive cli creates derby.log in the directory from which it has been invoked.
-* DESCRIBE table currently only shows columns in a table. Other metadata like
-  partitions, buckets etc are not shown.
-* LOAD FILE or INSERT INTO TABLE do not validate schemas of the destination tables.
 * COUNT(*) does not work for now. Use COUNT(1) instead.
-* String literals are indicated by single quotes(double quotes are not supported). 
-  So 'is a valid string' while "is not a valid string" in the query language. Hive
-  does support escaping quotes and semi-colon similar to MySQL.
-* Multiple GROUP BYs are not supported in the multi-table table INSERT queries.
-* ORDER BY not supported.
+* ORDER BY not supported yet.
 * Only string and thrift types (http://developers.facebook.com/thrift) have been tested.
-
+* When doing Join, please put the table with big number of rows containing the same join key to
+the rightmost in the JOIN clause. Otherwise we may see OutOfMemory errors.
 
 FUTURE FEATURES
 ---------------
+* EXPLODE function to generate multiple rows from a column of list type.
+* Simpler syntax for running Map/Reduce scripts.
+* ORDER BY and SORT BY.
+* Table statistics for query optimization.
+
+Developing Hive using Eclipse
+------------------------
+1. Set up hadoop development environment with Eclipse:
+http://wiki.apache.org/hadoop/EclipseEnvironment
+
+2. Download Hive src code from:
+http://mirror.facebook.com/facebook/hive
+
+If hadoop version is 0.17.x or 0.18.x, use
+http://mirror.facebook.com/facebook/hive/hadoop-0.17/
+
+If hadoop version is 0.19.x or up or trunk, use
+http://mirror.facebook.com/facebook/hive/hadoop-0.19/
+
+3. Extract the Hive src code to src/contrib/hive, make sure this file (README)
+  is in src/contrib/hive.
+
+4. In src/contrib/hive, run "ant package"
+
+5. In src/contrib/hive, run "ant -logfile test.log test" to make sure
+   everything works.  This test may take 20 minutes.
+
+6. Add the following list to the Eclipse project's .classpath file:
+       <classpathentry kind="src" path="build/contrib/hive/ql/test/src"/>
+       <classpathentry kind="src" path="build/contrib/hive/ql/gen-java"/>
+       <classpathentry kind="src" path="src/contrib/hive/cli/src/java"/>
+       <classpathentry kind="src" path="src/contrib/hive/common/src/java"/>
+       <classpathentry kind="src" path="src/contrib/hive/metastore/src/model"/>
+       <classpathentry kind="src" path="src/contrib/hive/metastore/src/gen-javabean"/>
+       <classpathentry kind="src" path="src/contrib/hive/metastore/src/java"/>
+       <classpathentry kind="src" path="src/contrib/hive/metastore/src/test"/>
+       <classpathentry kind="src" path="src/contrib/hive/ql/src/java"/>
+       <classpathentry kind="src" path="src/contrib/hive/ql/src/test"/>
+       <classpathentry kind="src" path="src/contrib/hive/serde/src/gen-java"/>
+       <classpathentry kind="src" path="src/contrib/hive/serde/src/java"/>
+       <classpathentry kind="src" path="src/contrib/hive/serde/src/test"/>
+       <classpathentry kind="lib" path="src/contrib/hive/cli/lib/jline-0.9.94.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/asm-3.1.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/commons-lang-2.4.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/derby.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/jdo2-api-2.1.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/jpox-core-1.2.2.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/jpox-enhancer-1.2.2.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/jpox-rdbms-1.2.2.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/libfb303.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/lib/libthrift.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/ql/lib/antlr-3.0.1.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/ql/lib/antlr-runtime-3.0.1.jar"/>
+       <classpathentry kind="lib" path="src/contrib/hive/ql/lib/commons-jexl-1.1.jar"/>
+       <classpathentry kind="lib" path="build/contrib/hive/metastore/metastore_model.jar" sourcepath="src/contrib/hive/metastore/src/model"/>
+
+7. Develop using Eclipse.
+
+
+Development Tips
+------------------------
+* You may change the first line in conf/hive-log4j.properties to the following line to see error messages on the console.
+hive.root.logger=INFO,console
+Otherwise you will see error messages in /tmp/<username>
+* You may use the following line to test a specific testcase with a specific query file.
+ant -Dtestcase=TestParse -Dqfile=udf4.q test
+ant -Dtestcase=TestParseNegative -Dqfile=invalid_dot.q test
+ant -Dtestcase=TestCliDriver -Dqfile=udf1.q test
+ant -Dtestcase=TestNegativeCliDriver -Dqfile=invalid_tbl_name.q test

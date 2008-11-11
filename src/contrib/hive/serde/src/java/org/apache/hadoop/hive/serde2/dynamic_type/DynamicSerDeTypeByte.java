@@ -41,10 +41,15 @@ public class DynamicSerDeTypeByte extends DynamicSerDeTypeBase {
   public String toString() { return "byte"; }
 
   public Byte deserialize(TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return Byte.valueOf(iprot.readByte());
+    byte val = iprot.readByte();
+    if (val == 0 && iprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol && 
+        ((org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)iprot).lastPrimitiveWasNull()) {
+      return null;
+    }
+    return Byte.valueOf(val);
   }
   public Object deserialize(Object reuse, TProtocol iprot)  throws SerDeException, TException, IllegalAccessException {
-    return Byte.valueOf(iprot.readByte());
+    return deserialize(iprot);
   }
 
   public void serialize(Object s, TProtocol oprot) throws TException, SerDeException, NoSuchFieldException,IllegalAccessException  {

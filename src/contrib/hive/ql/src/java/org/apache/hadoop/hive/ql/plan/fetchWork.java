@@ -19,99 +19,91 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
-import java.util.Properties;
+import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.serde2.Deserializer;
-import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.hive.ql.plan.tableDesc;
 
 @explain(displayName="Fetch Operator")
 public class fetchWork implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  //  private loadFileDesc loadFileWork;
-  //  private tableDesc    tblDesc;
-  private Path srcDir;
-  private Properties schema;
-  private Class<? extends Deserializer> deserializerClass;
-  private Class<? extends InputFormat> inputFormatClass;
+  private Path tblDir;
+  private tableDesc tblDesc;
+
+  private List<Path> partDir;
+  private List<partitionDesc> partDesc;
+
   private int limit;
 
   public fetchWork() { }
 
-	/**
-	 * @param deserializer
-	 * @param deserializerClass
-	 * @param inputFormatClass
-	 * @param schema
-	 * @param srcDir
-	 */
-	public fetchWork(Path srcDir,
-			Class<? extends Deserializer> deserializerClass,
-			Class<? extends InputFormat> inputFormatClass, Properties schema,
-			int limit) {
-		this.srcDir = srcDir;
-		this.deserializerClass = deserializerClass;
-		this.inputFormatClass = inputFormatClass;
-		this.schema = schema;
+	public fetchWork(Path tblDir, tableDesc tblDesc, int limit) {
+		this.tblDir = tblDir;
+		this.tblDesc = tblDesc;
 		this.limit = limit;
 	}
 
+	public fetchWork(List<Path> partDir, List<partitionDesc> partDesc, int limit) {
+		this.partDir = partDir;
+		this.partDesc = partDesc;
+		this.limit = limit;
+	}
+	
 	/**
-	 * @return the srcDir
+	 * @return the tblDir
 	 */
-  @explain(displayName="source")
-	public Path getSrcDir() {
-		return srcDir;
+	public Path getTblDir() {
+		return tblDir;
 	}
 
 	/**
-	 * @param srcDir the srcDir to set
+	 * @param tblDir the tblDir to set
 	 */
-	public void setSrcDir(Path srcDir) {
-		this.srcDir = srcDir;
+	public void setTblDir(Path tblDir) {
+		this.tblDir = tblDir;
 	}
 
 	/**
-	 * @return the schema
+	 * @return the tblDesc
 	 */
-	public Properties getSchema() {
-		return schema;
+	public tableDesc getTblDesc() {
+		return tblDesc;
 	}
 
 	/**
-	 * @param schema the schema to set
+	 * @param tblDesc the tblDesc to set
 	 */
-	public void setSchema(Properties schema) {
-		this.schema = schema;
+	public void setTblDesc(tableDesc tblDesc) {
+		this.tblDesc = tblDesc;
 	}
 
 	/**
-	 * @return the deserializerClass
+	 * @return the partDir
 	 */
-	public Class<? extends Deserializer> getDeserializerClass() {
-		return deserializerClass;
+	public List<Path> getPartDir() {
+		return partDir;
 	}
 
 	/**
-	 * @param deserializerClass the deserializerClass to set
+	 * @param partDir the partDir to set
 	 */
-	public void setDeserializerClass(Class<? extends Deserializer> deserializerClass) {
-		this.deserializerClass = deserializerClass;
+	public void setPartDir(List<Path> partDir) {
+		this.partDir = partDir;
 	}
 
 	/**
-	 * @return the inputFormatClass
+	 * @return the partDesc
 	 */
-	public Class<? extends InputFormat> getInputFormatClass() {
-		return inputFormatClass;
+	public List<partitionDesc> getPartDesc() {
+		return partDesc;
 	}
 
 	/**
-	 * @param inputFormatClass the inputFormatClass to set
+	 * @param partDesc the partDesc to set
 	 */
-	public void setInputFormatClass(Class<? extends InputFormat> inputFormatClass) {
-		this.inputFormatClass = inputFormatClass;
+	public void setPartDesc(List<partitionDesc> partDesc) {
+		this.partDesc = partDesc;
 	}
 
 	/**

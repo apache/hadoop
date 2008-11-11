@@ -17,7 +17,7 @@ STAGE PLANS:
                     expr: value
                     type: string
               File Output Operator
-                directory: /tmp/hive-njain/1178661057/1120939755.10000.insclause-0
+                directory: /tmp/hive-njain/74225087/82847953.10000.insclause-0
                 table:
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -26,7 +26,6 @@ STAGE PLANS:
                       serialization.ddl struct dest1 { i32 key, string value}
                       serialization.format 1
                       columns key,value
-                      SORTBUCKETCOLSPREFIX TRUE
                       bucket_count -1
                       serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                       file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -45,9 +44,10 @@ STAGE PLANS:
               output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
               properties:
                 name srcbucket
+                bucket_field_name key
                 serialization.ddl struct srcbucket { string key, string value}
-                serialization.format 1
                 columns key,value
+                serialization.format 1
                 bucket_count 2
                 serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                 file.inputformat org.apache.hadoop.mapred.TextInputFormat
@@ -60,7 +60,7 @@ STAGE PLANS:
     Move Operator
       tables:
             replace:
-            source: /tmp/hive-njain/1178661057/1120939755.10000.insclause-0
+            source: /tmp/hive-njain/74225087/82847953.10000.insclause-0
             table:
                 input format: org.apache.hadoop.mapred.TextInputFormat
                 output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
@@ -69,7 +69,6 @@ STAGE PLANS:
                   serialization.ddl struct dest1 { i32 key, string value}
                   serialization.format 1
                   columns key,value
-                  SORTBUCKETCOLSPREFIX TRUE
                   bucket_count -1
                   serialization.lib org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
                   file.inputformat org.apache.hadoop.mapred.TextInputFormat

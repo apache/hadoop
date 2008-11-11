@@ -1,0 +1,154 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_EXPLIST (TOK_COLREF src key) (TOK_COLREF src value) (+ 1 2) (+ 3 4)) '/bin/cat'))) (TOK_CLUSTERBY key))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap key)) (TOK_SELEXPR (TOK_FUNCTION regexp_replace (TOK_COLREF tmap value) '\t' '+'))) (TOK_WHERE (< (TOK_COLREF tmap key) 100))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        tmap:src 
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+                    expr: (1 + 2)
+                    type: int
+                    expr: (3 + 4)
+                    type: int
+              Transform Operator
+                command: /bin/cat
+                output info:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                Reduce Output Operator
+                  key expressions:
+                        expr: key
+                        type: string
+                  Map-reduce partition columns:
+                        expr: key
+                        type: string
+                  tag: -1
+                  value expressions:
+                        expr: key
+                        type: string
+                        expr: value
+                        type: string
+      Reduce Operator Tree:
+        Extract
+          Filter Operator
+            predicate:
+                expr: (0 < 100)
+                type: boolean
+            Select Operator
+              expressions:
+                    expr: 0
+                    type: string
+                    expr: regexp_replace(1, '	', '+')
+                    type: string
+              File Output Operator
+                table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                    name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+0	val_0+3+7
+0	val_0+3+7
+0	val_0+3+7
+10	val_10+3+7
+11	val_11+3+7
+12	val_12+3+7
+12	val_12+3+7
+15	val_15+3+7
+15	val_15+3+7
+17	val_17+3+7
+18	val_18+3+7
+18	val_18+3+7
+19	val_19+3+7
+2	val_2+3+7
+20	val_20+3+7
+24	val_24+3+7
+24	val_24+3+7
+26	val_26+3+7
+26	val_26+3+7
+27	val_27+3+7
+28	val_28+3+7
+30	val_30+3+7
+33	val_33+3+7
+34	val_34+3+7
+35	val_35+3+7
+35	val_35+3+7
+35	val_35+3+7
+37	val_37+3+7
+37	val_37+3+7
+4	val_4+3+7
+41	val_41+3+7
+42	val_42+3+7
+42	val_42+3+7
+43	val_43+3+7
+44	val_44+3+7
+47	val_47+3+7
+5	val_5+3+7
+5	val_5+3+7
+5	val_5+3+7
+51	val_51+3+7
+51	val_51+3+7
+53	val_53+3+7
+54	val_54+3+7
+57	val_57+3+7
+58	val_58+3+7
+58	val_58+3+7
+64	val_64+3+7
+65	val_65+3+7
+66	val_66+3+7
+67	val_67+3+7
+67	val_67+3+7
+69	val_69+3+7
+70	val_70+3+7
+70	val_70+3+7
+70	val_70+3+7
+72	val_72+3+7
+72	val_72+3+7
+74	val_74+3+7
+76	val_76+3+7
+76	val_76+3+7
+77	val_77+3+7
+78	val_78+3+7
+8	val_8+3+7
+80	val_80+3+7
+82	val_82+3+7
+83	val_83+3+7
+83	val_83+3+7
+84	val_84+3+7
+84	val_84+3+7
+85	val_85+3+7
+86	val_86+3+7
+87	val_87+3+7
+9	val_9+3+7
+90	val_90+3+7
+90	val_90+3+7
+90	val_90+3+7
+92	val_92+3+7
+95	val_95+3+7
+95	val_95+3+7
+96	val_96+3+7
+97	val_97+3+7
+97	val_97+3+7
+98	val_98+3+7
+98	val_98+3+7

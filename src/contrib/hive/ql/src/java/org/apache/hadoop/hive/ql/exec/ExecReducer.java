@@ -27,20 +27,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 
-import org.apache.hadoop.hive.ql.plan.PlanUtils;
 import org.apache.hadoop.hive.ql.plan.mapredWork;
 import org.apache.hadoop.hive.ql.plan.tableDesc;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.exec.ExecMapper.reportStats;
-import org.apache.hadoop.hive.serde2.ColumnSet;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
-import org.apache.hadoop.hive.serde2.objectinspector.MetadataListStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 public class ExecReducer extends MapReduceBase implements Reducer {
 
@@ -74,15 +71,23 @@ public class ExecReducer extends MapReduceBase implements Reducer {
     reducer.setMapredWork(gWork);
     isTagged = gWork.getNeedsTagging();
     try {
-      // We should initialize the SerDe with the TypeInfo when available.
-      tableDesc keyTableDesc = PlanUtils.getReduceKeyDesc(gWork);
+      tableDesc keyTableDesc = gWork.getKeyDesc();
       inputKeyDeserializer = (SerDe)ReflectionUtils.newInstance(keyTableDesc.getDeserializerClass(), null);
       inputKeyDeserializer.initialize(null, keyTableDesc.getProperties());
-      for(int tag=0; tag<Byte.MAX_VALUE; tag++) {
+      keyObjectInspector = inputKeyDeserializer.getObjectInspector();
+      for(int tag=0; tag<gWork.getTagToValueDesc().size(); tag++) {
         // We should initialize the SerDe with the TypeInfo when available.
-        tableDesc valueTableDesc = PlanUtils.getReduceValueDesc(gWork, tag);
+        tableDesc valueTableDesc = gWork.getTagToValueDesc().get(tag);
         inputValueDeserializer[tag] = (SerDe)ReflectionUtils.newInstance(valueTableDesc.getDeserializerClass(), null);
         inputValueDeserializer[tag].initialize(null, valueTableDesc.getProperties());
+        valueObjectInspector[tag] = inputValueDeserializer[tag].getObjectInspector();
+        
+        ArrayList<ObjectInspector> ois = new ArrayList<ObjectInspector>();
+        ois.add(keyObjectInspector);
+        ois.add(valueObjectInspector[tag]);
+        ois.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(Byte.class));
+        rowObjectInspector[tag] = ObjectInspectorFactory.getStandardStructObjectInspector(
+            Arrays.asList(fieldNames), ois);
       }
     } catch (SerDeException e) {
       throw new RuntimeException(e);
@@ -143,18 +148,12 @@ public class ExecReducer extends MapReduceBase implements Reducer {
       } catch (SerDeException e) {
         throw new HiveException(e);
       }
-      // This is a hack for generating the correct ObjectInspector.
-      // In the future, we should use DynamicSerde and initialize it using the type info. 
-      if (keyObjectInspector == null) {
-        // Directly create ObjectInspector here because we didn't know the number of cols till now.
-        keyObjectInspector = MetadataListStructObjectInspector.getInstance(((ColumnSet)keyObject).col.size()); 
-      }
       // System.err.print(keyObject.toString());
       while (values.hasNext()) {
-        Text valueText = (Text)values.next();
+        Writable valueWritable = (Writable) values.next();
         //System.err.print(who.getHo().toString());
         try {
-          valueObject[tag] = inputValueDeserializer[tag].deserialize(valueText);
+          valueObject[tag] = inputValueDeserializer[tag].deserialize(valueWritable);
         } catch (SerDeException e) {
           throw new HiveException(e);
         }
@@ -162,23 +161,12 @@ public class ExecReducer extends MapReduceBase implements Reducer {
         row.add(keyObject);
         row.add(valueObject[tag]);
         row.add(tag);
-        if (valueObjectInspector[tag] == null) {
-          // Directly create ObjectInspector here because we didn't know the number of cols till now.
-          valueObjectInspector[tag] = MetadataListStructObjectInspector.getInstance(((ColumnSet)valueObject[tag]).col.size());
-          ArrayList<ObjectInspector> ois = new ArrayList<ObjectInspector>();
-          ois.add(keyObjectInspector);
-          ois.add(valueObjectInspector[tag]);
-          ois.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(Byte.class));
-          rowObjectInspector[tag] = ObjectInspectorFactory.getStandardStructObjectInspector(
-              Arrays.asList(fieldNames), ois);
-        }
         reducer.process(row, rowObjectInspector[tag]);
       }
 
-
     } catch (HiveException e) {
       abort = true;
-      throw new IOException (e.getMessage());
+      throw new IOException (e);
     }
   }
 

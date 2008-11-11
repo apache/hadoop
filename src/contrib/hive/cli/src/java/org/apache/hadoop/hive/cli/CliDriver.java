@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
 
 public class CliDriver {
@@ -41,7 +42,18 @@ public class CliDriver {
   public static SetProcessor sp;
   public static Driver qp;
   public static FsShell dfs;
+  public static Log LOG = LogFactory.getLog("CliDriver");
 
+  /**
+   * delay console initialization until session has been initialized
+   */
+  public static LogHelper console;
+  public static LogHelper getConsole() {
+    if(console == null)
+      console = new LogHelper(LOG);
+    return (console);
+  }
+  
   public CliDriver(CliSessionState ss) {
     SessionState.start(ss);
     sp = new SetProcessor();
@@ -49,23 +61,28 @@ public class CliDriver {
   }
   
   public static int processCmd(String cmd) {
+
+    SessionState ss = SessionState.get();
+    LogHelper console = getConsole();
+
     String[] tokens = cmd.split("\\s+");
     String cmd_1 = cmd.substring(tokens[0].length());
     int ret = 0;
     
-    if(tokens[0].equals("set")) {
+    if(tokens[0].toLowerCase().equals("set")) {
+
       ret = sp.run(cmd_1);
-    } else if (cmd.equals("quit") || cmd.equals("exit")) {
+
+    } else if (cmd.toLowerCase().equals("quit") || cmd.toLowerCase().equals("exit")) {
+
       // if we have come this far - either the previous commands
       // are all successful or this is command line. in either case
       // this counts as a successful run
       System.exit(0);
+
     } else if (cmd.startsWith("!")) {
-      SessionState ss = SessionState.get();
+
       String shell_cmd = cmd.substring(1);
-      if (shell_cmd.endsWith(";")) {
-        shell_cmd = shell_cmd.substring(0, shell_cmd.length()-1);
-      }
 
       //shell_cmd = "/bin/bash -c \'" + shell_cmd + "\'";
       try {
@@ -76,48 +93,102 @@ public class CliDriver {
         outPrinter.start();
         errPrinter.start();
       
-        int exitVal = executor.waitFor();
-        if (exitVal != 0) {
-          ss.err.write((new String("Command failed with exit code = " + exitVal)).getBytes());
+        ret = executor.waitFor();
+        if (ret != 0) {
+          console.printError("Command failed with exit code = " + ret);
         }
       }
       catch (Exception e) {
-        e.printStackTrace();
+        console.printError("Exception raised from Shell command " + e.getLocalizedMessage(),
+                           org.apache.hadoop.util.StringUtils.stringifyException(e));
+        ret = 1;
       }
-    } else if (cmd.startsWith("dfs")) {
+
+    } else if (tokens[0].toLowerCase().equals("dfs")) {
+
       // dfs shell commands
-      SessionState ss = SessionState.get();
       if(dfs == null)
         dfs = new FsShell(ss.getConf());
-      String hadoopCmd = cmd.replaceFirst("dfs\\s+", "");
-      hadoopCmd = hadoopCmd.trim();
-      if (hadoopCmd.endsWith(";")) {
-        hadoopCmd = hadoopCmd.substring(0, hadoopCmd.length()-1);
-      }
-      String[] args = hadoopCmd.split("\\s+");
+
+      String [] alt_tokens = new String [tokens.length-1];
+      System.arraycopy(tokens, 1, alt_tokens, 0, tokens.length-1);
+      tokens = alt_tokens;
+
       try {
         PrintStream oldOut = System.out;
         System.setOut(ss.out);
-        int val = dfs.run(args);
+        ret = dfs.run(tokens);
         System.setOut(oldOut);
-        if (val != 0) {
-          ss.err.write((new String("Command failed with exit code = " + val)).getBytes());
+        if (ret != 0) {
+          console.printError("Command failed with exit code = " + ret);
         }
       } catch (Exception e) {
-        ss.err.println("Exception raised from DFSShell.run " + e.getLocalizedMessage()); 
+        console.printError("Exception raised from DFSShell.run " + e.getLocalizedMessage(),
+                           org.apache.hadoop.util.StringUtils.stringifyException(e));
+        ret = 1;
       }
+
+    } else if (tokens[0].toLowerCase().equals("list")) {
+
+      SessionState.ResourceType t;
+      if(tokens.length < 2 || (t = SessionState.find_resource_type(tokens[1])) == null) {
+        console.printError("Usage: list [" +
+                           StringUtils.join(SessionState.ResourceType.values(),"|") +
+                           "] [<value> [<value>]*]" );
+        ret = 1;
+      } else {
+        List<String> filter = null;
+        if(tokens.length >=3) {
+          System.arraycopy(tokens, 2, tokens, 0, tokens.length-2);
+          filter = Arrays.asList(tokens);
+        }
+        Set<String> s = ss.list_resource(t, filter);
+        if(s != null && !s.isEmpty())
+          ss.out.println(StringUtils.join(s, "\n"));
+      }
+
+    } else if (tokens[0].toLowerCase().equals("add")) {
+
+      SessionState.ResourceType t;
+      if(tokens.length < 3 || (t = SessionState.find_resource_type(tokens[1])) == null) {
+        console.printError("Usage: add [" +
+                           StringUtils.join(SessionState.ResourceType.values(),"|") +
+                           "] <value> [<value>]*");
+        ret = 1;
+      } else {
+        for(int i = 2; i<tokens.length; i++) {
+          ss.add_resource(t, tokens[i]);
+        }
+      }
+
+    } else if (tokens[0].toLowerCase().equals("delete")) {
+
+      SessionState.ResourceType t;
+      if(tokens.length < 2 || (t = SessionState.find_resource_type(tokens[1])) == null) {
+        console.printError("Usage: delete [" +
+                           StringUtils.join(SessionState.ResourceType.values(),"|") +
+                           "] [<value>]");
+        ret = 1;
+      } else if (tokens.length >= 3) {
+        for(int i = 2; i<tokens.length; i++) {
+          ss.delete_resource(t, tokens[i]);
+        }
+      } else {
+        ss.delete_resource(t);
+      }
+
     } else {
+      PrintStream out = ss.out;
+
       ret = qp.run(cmd);
       Vector<String> res = new Vector<String>();
       while (qp.getResults(res)) {
       	for (String r:res) {
-          SessionState ss  = SessionState.get();
-          PrintStream out = ss.out;
           out.println(r);
       	}
         res.clear();
       }
-
+      
       int cret = qp.close();
       if (ret == 0) {
         ret = cret;
@@ -223,8 +294,7 @@ public class CliDriver {
     String historyFile = System.getProperty("user.home") + File.separator  + HISTORYFILE;
     reader.setHistory(new History(new File(historyFile)));
     int ret = 0;
-    Log LOG = LogFactory.getLog("CliDriver");
-    LogHelper console = new LogHelper(LOG);
+
     String prefix = "";
     String curPrompt = prompt;
     while ((line = reader.readLine(curPrompt+"> ")) != null) {
@@ -242,10 +312,11 @@ public class CliDriver {
       long end = System.currentTimeMillis();
       if (end > start) {
         double timeTaken = (double)(end-start)/1000.0;
-        console.printInfo("Time taken: " + timeTaken + " seconds", null);
+        getConsole().printInfo("Time taken: " + timeTaken + " seconds", null);
       }
     }
 
     System.exit(ret);
   }
+
 }

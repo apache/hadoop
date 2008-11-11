@@ -115,5 +115,4 @@ public class QBMetaData {
   public Table getSrcForAlias(String alias) {
     return this.aliasToTable.get(alias.toLowerCase());
   }
-  
 }

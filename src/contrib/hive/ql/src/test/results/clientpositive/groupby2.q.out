@@ -17,37 +17,44 @@ STAGE PLANS:
                     type: string
                     expr: substr(value, 4)
                     type: string
-              # partition fields: 2147483647
+              Map-reduce partition columns:
+                    expr: substr(key, 0, 1)
+                    type: string
+                    expr: substr(value, 4)
+                    type: string
               tag: -1
       Reduce Operator Tree:
         Group By Operator
         
               expr: count(DISTINCT KEY.1)
-              expr: sum(KEY.1)
+              expr: sum(UDFToDouble(KEY.1))
           keys:
                 expr: KEY.0
                 type: string
           mode: partial1
           File Output Operator
             table:
-                input format: org.apache.hadoop.mapred.TextInputFormat
-                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.mapred.SequenceFileOutputFormat
+                name: binary_table
 
   Stage: Stage-2
     Map Reduce
       Alias -> Map Operator Tree:
-        /tmp/hive-njain/307368091/808162418.10001 
+        /tmp/hive-njain/282197599/271187968.10001 
           Reduce Output Operator
             key expressions:
                   expr: 0
                   type: string
-            # partition fields: 1
+            Map-reduce partition columns:
+                  expr: 0
+                  type: string
             tag: -1
             value expressions:
                   expr: 1
-                  type: string
+                  type: bigint
                   expr: 2
-                  type: string
+                  type: double
       Reduce Operator Tree:
         Group By Operator
         
@@ -56,14 +63,14 @@ STAGE PLANS:
           keys:
                 expr: KEY.0
                 type: string
-          mode: partial2
+          mode: unknown
           Select Operator
             expressions:
                   expr: 0
                   type: string
                   expr: 1
-                  type: string
-                  expr: concat(0, 2)
+                  type: bigint
+                  expr: concat(0, UDFToString(2))
                   type: string
             File Output Operator
               table:

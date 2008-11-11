@@ -25,6 +25,10 @@ public class Constants {
 
   public static final String SERIALIZATION_NULL_FORMAT = "serialization.null.format";
 
+  public static final String SERIALIZATION_LAST_COLUMN_TAKES_REST = "serialization.last.column.takes.rest";
+
+  public static final String SERIALIZATION_SORT_ORDER = "serialization.sort.order";
+
   public static final String FIELD_DELIM = "field.delim";
 
   public static final String COLLECTION_DELIM = "colelction.delim";
@@ -33,7 +37,13 @@ public class Constants {
 
   public static final String MAPKEY_DELIM = "mapkey.delim";
 
+  public static final String QUOTE_CHAR = "quote.delim";
+
+  public static final String BOOLEAN_TYPE_NAME = "boolean";
+
   public static final String TINYINT_TYPE_NAME = "tinyint";
+
+  public static final String SMALLINT_TYPE_NAME = "smallint";
 
   public static final String INT_TYPE_NAME = "int";
 
@@ -57,7 +67,9 @@ public class Constants {
 
   public static final Set<String> PrimitiveTypes = new HashSet<String>();
   static {
+    PrimitiveTypes.add("boolean");
     PrimitiveTypes.add("tinyint");
+    PrimitiveTypes.add("smallint");
     PrimitiveTypes.add("int");
     PrimitiveTypes.add("bigint");
     PrimitiveTypes.add("float");

@@ -19,16 +19,18 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.*;
+import java.util.HashMap;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.plan.limitDesc;
-import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Limit operator implementation
- * Limits a subobject and passes that on.
+ * Limits the number of rows to be passed on.
  **/
 public class LimitOperator extends Operator<limitDesc> implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -50,4 +52,5 @@ public class LimitOperator extends Operator<limitDesc> implements Serializable {
     else
       setDone(true);
   }
+
 }

@@ -64,6 +64,9 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
   private List<String> columnNames;
   private ObjectInspector cachedObjectInspector;
 
+  private boolean lastColumnTakesRest = false;
+  private int splitLimit = -1;
+  
   public String toString() {
     return "MetaDataTypedColumnsetSerDe[" + separator + "," + columnNames + "]";
   }
@@ -103,23 +106,36 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
     if (columnProperty == null || columnProperty.length() == 0 
         || columnsetSerDe) {
       // Hack for tables with no columns
-      // Treat it as a table with a single column called "col" 
+      // Treat it as a table with a single column called "col"
       cachedObjectInspector = ObjectInspectorFactory.getReflectionObjectInspector(
           ColumnSet.class, ObjectInspectorFactory.ObjectInspectorOptions.JAVA);
     } else {
       columnNames = Arrays.asList(columnProperty.split(","));
       cachedObjectInspector = MetadataListStructObjectInspector.getInstance(columnNames);
     }
-    LOG.debug(getClass().getName() + ": initialized with columnNames: " + columnNames + " and separator code=" + (int)separator.charAt(0) );
+    
+    String lastColumnTakesRestString = tbl.getProperty(Constants.SERIALIZATION_LAST_COLUMN_TAKES_REST);
+    lastColumnTakesRest = (lastColumnTakesRestString != null && lastColumnTakesRestString.equalsIgnoreCase("true"));
+    splitLimit = (lastColumnTakesRest && columnNames != null) ? columnNames.size() : -1; 
+    
+    LOG.debug(getClass().getName() + ": initialized with columnNames: " + columnNames + " and separator code=" + (int)separator.charAt(0) 
+        + " lastColumnTakesRest=" + lastColumnTakesRest + " splitLimit=" + splitLimit);
   }
   
-  public static Object deserialize(ColumnSet c, String row, String sep, String nullString) throws Exception {
+  /**
+   * Split the row into columns.
+   * @param limit  up to limit columns will be produced (the last column takes all the rest), -1 for unlimited.
+   * @return
+   * @throws Exception
+   */
+  public static Object deserialize(ColumnSet c, String row, String sep,
+      String nullString, int limit) throws Exception {
     if (c.col == null) {
       c.col = new ArrayList<String>();
     } else {
       c.col.clear();
     }
-    String [] l1 = row.split(sep, -1);
+    String [] l1 = row.split(sep, limit);
 
     for(String s: l1) {
       if (s.equals(nullString)) {
@@ -145,7 +161,7 @@ public class MetadataTypedColumnsetSerDe implements SerDe {
       row = field.toString();
     }
     try {
-      deserialize(deserializeCache, row, separator, nullString);
+      deserialize(deserializeCache, row, separator, nullString, splitLimit);
       if (columnNames != null) {
         assert(columnNames.size() == deserializeCache.col.size());
       }

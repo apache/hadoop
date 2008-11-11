@@ -153,7 +153,8 @@ TOKEN:
 <tok_service: "service"> |
 <tok_enum: "enum"> |
 <tok_required: "required"> |
-<tok_optional: "optional">
+<tok_optional: "optional"> | 
+<tok_skip: "skip">
 }
 
 TOKEN: {
@@ -176,7 +177,7 @@ TOKEN: {
 
 SimpleNode Start() : {}
 {
-  HeaderList()  (Definition())+
+  HeaderList()  ([CommaOrSemicolon()] Definition())+
  {
     return jjtThis;
   }
@@ -641,14 +642,21 @@ DynamicSerDeField Field() : {
 
 
 
-SimpleNode FieldRequiredness() : {}
+DynamicSerDeFieldRequiredness FieldRequiredness() : {}
 {
   <tok_required>
     {
-        return jjtThis;
+      jjtThis.requiredness = DynamicSerDeFieldRequiredness.RequirednessTypes.Required;
+      return jjtThis;
     }
 | <tok_optional>
     {
+      jjtThis.requiredness = DynamicSerDeFieldRequiredness.RequirednessTypes.Optional;
+        return jjtThis;
+    }
+| <tok_skip>
+    {
+      jjtThis.requiredness = DynamicSerDeFieldRequiredness.RequirednessTypes.Skippable;
         return jjtThis;
     }
 |
@@ -724,7 +732,7 @@ DynamicSerDeFieldType FieldType() : {
 {
   TypeString()
     {
-    return jjtThis;
+     return jjtThis;
     }
 | TypeBool()
     {
@@ -764,6 +772,13 @@ DynamicSerDeFieldType FieldType() : {
 |
   jjtThis.name = <IDENTIFIER>.image
     {
+
+    if (this.types.get(jjtThis.name) == null) {
+      System.err.println("ERROR: DDL specifying type " + jjtThis.name + " which has not been defined");  
+      throw new RuntimeException("specifying type " + jjtThis.name + " which has not been defined");  
+    }
+     // lookup the specified type and set this nodes type to it. Precludes forward and self references for now.
+    jjtThis.jjtAddChild(this.types.get(jjtThis.name),0);
     return jjtThis;
     }
 }

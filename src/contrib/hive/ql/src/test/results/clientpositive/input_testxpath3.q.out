@@ -12,14 +12,20 @@ STAGE PLANS:
         src_thrift 
             Select Operator
               expressions:
-                    expr: mstringstring['key_9']
-                    type: string
-                    expr: lintstring.myint
-                    type: array<int>
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                    expr: mstringstring
+                    type: map<string,string>
+                    expr: lintstring
+                    type: array<struct{myint:int,mystring:string}>
+              Select Operator
+                expressions:
+                      expr: 0['key_9']
+                      type: string
+                      expr: 1.myint
+                      type: array<int>
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
 
   Stage: Stage-0
     Fetch Operator

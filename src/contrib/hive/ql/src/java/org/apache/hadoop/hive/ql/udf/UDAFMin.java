@@ -37,28 +37,28 @@ public class UDAFMin extends UDAF {
     mEmpty = true;
   }
 
-  public boolean aggregate(String o) {
-    if (o != null && !o.isEmpty()) {
+  public boolean aggregate(Double o) {
+    if (o != null) {
       if (mEmpty) {
-        mMin = Double.parseDouble(o);
+        mMin = o;
         mEmpty = false;
       } else {
-        mMin = Math.min(mMin, Double.parseDouble(o));
+        mMin = Math.min(mMin, o);
       }
     }
     return true;
   }
   
-  public String evaluatePartial() {
-    return mEmpty ? null : String.valueOf(mMin);
+  public Double evaluatePartial() {
+    return mEmpty ? null : Double.valueOf(mMin);
   }
 
-  public boolean aggregatePartial(String o) {
+  public boolean aggregatePartial(Double o) {
     return aggregate(o);
   }
 
-  public String evaluate() {
-    return mEmpty ? null : String.valueOf(mMin);
+  public Double evaluate() {
+    return mEmpty ? null : Double.valueOf(mMin);
   }
 
 }

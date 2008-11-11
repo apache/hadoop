@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -40,13 +41,13 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.serde.Constants;
+import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
-import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
-import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.InputFormat;
@@ -129,6 +130,14 @@ public class Table {
     sd.getSerdeInfo().setParameters(new HashMap<String, String>());
   }
   
+  public void reinitSerDe() throws HiveException {
+    try {
+      deserializer = MetaStoreUtils.getDeserializer(Hive.get().getConf(), this.getTTable());
+    } catch (MetaException e) {
+      throw new HiveException(e);
+    }
+  }
+  
   protected void initSerDe() throws HiveException {
     if (deserializer == null) {
       try {
@@ -138,12 +147,15 @@ public class Table {
       }
     }
   }
-
+  
   public void checkValidity() throws HiveException {
     // check for validity
     String name = getTTable().getTableName();
     if (null == name || name.length() == 0 || !MetaStoreUtils.validateName(name)) {
       throw new HiveException("[" + name + "]: is not a valid table name");
+    }
+    if (0 == getCols().size()) {
+      throw new HiveException("atleast one column must be specified for the table");
     }
     if (null == getDeserializer()) {
       throw new HiveException("must specify a non-null serDe");
@@ -153,6 +165,30 @@ public class Table {
     }
     if (null == getOutputFormatClass()) {
       throw new HiveException("must specify an OutputFormat class");
+    }
+    
+    Iterator<FieldSchema> iterCols = getCols().iterator();
+    List<String> colNames = new ArrayList<String>();
+    while (iterCols.hasNext()) {
+      String colName = iterCols.next().getName();
+      Iterator<String> iter = colNames.iterator();
+      while (iter.hasNext()) {
+        String oldColName = iter.next();
+        if (colName.equalsIgnoreCase(oldColName)) 
+          throw new HiveException("Duplicate column name " + colName + " in the table definition.");
+      }
+      colNames.add(colName.toLowerCase());
+    }
+
+    if (getPartCols() != null)
+    {
+      // there is no overlap between columns and partitioning columns
+      Iterator<FieldSchema> partColsIter = getPartCols().iterator();
+      while (partColsIter.hasNext()) {
+        String partCol = partColsIter.next().getName();
+        if(colNames.contains(partCol.toLowerCase()))
+            throw new HiveException("Partition collumn name " + partCol + " conflicts with table columns.");
+      }
     }
     return;
   }
@@ -190,6 +226,13 @@ public class Table {
   }
 
   final public Deserializer getDeserializer() {
+    if(deserializer == null) {
+      try {
+        initSerDe();
+      } catch (HiveException e) {
+        LOG.error("Error in initializing serde.", e);
+      }
+    }
     return deserializer;
   }
 
@@ -360,9 +403,30 @@ public class Table {
   }
 
   public List<FieldSchema> getCols() {
-    return getTTable().getSd().getCols();
+    boolean isNative = SerDeUtils.isNativeSerDe(getSerializationLib());
+    if (isNative)
+      return getTTable().getSd().getCols();
+    else {
+      try {
+        return Hive.getFieldsFromDeserializer(getName(), getDeserializer());
+      } catch (HiveException e) {
+        LOG.error("Unable to get field from serde: " + getSerializationLib(), e);
+      }
+      return new ArrayList<FieldSchema>();
+    }
   }
 
+  /**
+   * Returns a list of all the columns of the table (data columns + partition columns in that order.
+   * 
+   * @return List<FieldSchema>
+   */
+  public List<FieldSchema> getAllCols() {
+	  ArrayList<FieldSchema> f_list = new ArrayList<FieldSchema>();
+	  f_list.addAll(getPartCols());
+	  f_list.addAll(getCols());
+	  return f_list;
+  }
   public void setPartCols(List<FieldSchema> partCols) {
     getTTable().setPartitionKeys(partCols);
   }

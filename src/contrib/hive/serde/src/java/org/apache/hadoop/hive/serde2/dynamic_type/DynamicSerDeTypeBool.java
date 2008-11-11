@@ -45,7 +45,12 @@ public class DynamicSerDeTypeBool extends DynamicSerDeTypeBase {
   @Override
   public Object deserialize(Object reuse, TProtocol iprot)
       throws SerDeException, TException, IllegalAccessException {
-    return Boolean.valueOf(iprot.readBool());
+    boolean val = iprot.readBool();
+    if (val == false && iprot instanceof org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol && 
+        ((org.apache.hadoop.hive.serde2.thrift.WriteNullsProtocol)iprot).lastPrimitiveWasNull()) {
+      return null;
+    }
+    return Boolean.valueOf(val);
   }
 
   @Override
@@ -61,4 +66,8 @@ public class DynamicSerDeTypeBool extends DynamicSerDeTypeBase {
   public byte getType() {
     return TType.BOOL;
   }
+  
+  public Class getRealType() { return java.lang.Boolean.class; }
+  public Boolean getRealTypeInstance() { return Boolean.FALSE; }
+  
 }

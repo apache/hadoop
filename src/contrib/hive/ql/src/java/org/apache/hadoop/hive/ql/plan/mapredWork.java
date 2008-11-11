@@ -39,10 +39,10 @@ public class mapredWork implements Serializable {
 
   // map<->reduce interface
   // schema of the map-reduce 'key' object - this is homogeneous
-  private schemaDesc keySchema;
+  private tableDesc keyDesc;
 
   // schema of the map-reduce 'val' object - this is heterogeneous
-  private HashMap<String,schemaDesc> aliasToSchema;
+  private List<tableDesc> tagToValueDesc;
 
   private Operator<?> reducer;
   
@@ -57,16 +57,16 @@ public class mapredWork implements Serializable {
     final LinkedHashMap<String,ArrayList<String>> pathToAliases,
     final LinkedHashMap<String,partitionDesc> pathToPartitionInfo,
     final HashMap<String,Operator<? extends Serializable>> aliasToWork,
-    final schemaDesc keySchema,
-    HashMap<String,schemaDesc> aliasToSchema,
+    final tableDesc keyDesc,
+    List<tableDesc> tagToValueDesc,
     final Operator<?> reducer,
     final Integer numReduceTasks) {
     this.command = command;
     this.pathToAliases = pathToAliases;
     this.pathToPartitionInfo = pathToPartitionInfo;
     this.aliasToWork = aliasToWork;
-    this.keySchema = keySchema;
-    this.aliasToSchema = aliasToSchema;
+    this.keyDesc = keyDesc;
+    this.tagToValueDesc = tagToValueDesc;
     this.reducer = reducer;
     this.numReduceTasks = numReduceTasks;
   }
@@ -100,17 +100,17 @@ public class mapredWork implements Serializable {
   public void setAliasToWork(final HashMap<String,Operator<? extends Serializable>> aliasToWork) {
     this.aliasToWork=aliasToWork;
   }
-  public schemaDesc getKeySchema() {
-    return this.keySchema;
+  public tableDesc getKeyDesc() {
+    return this.keyDesc;
   }
-  public void setKeySchema(final schemaDesc keySchema) {
-    this.keySchema = keySchema;
+  public void setKeyDesc(final tableDesc keyDesc) {
+    this.keyDesc = keyDesc;
   }
-  public HashMap<String,schemaDesc> getAliasToSchema() {
-    return this.aliasToSchema;
+  public List<tableDesc> getTagToValueDesc() {
+    return tagToValueDesc;
   }
-  public void setAliasToSchema(final HashMap<String,schemaDesc> aliasToSchema) {
-    this.aliasToSchema = aliasToSchema;
+  public void setTagToValueDesc(final List<tableDesc> tagToValueDesc) {
+    this.tagToValueDesc = tagToValueDesc;
   }
 
   @explain(displayName="Reduce Operator Tree")

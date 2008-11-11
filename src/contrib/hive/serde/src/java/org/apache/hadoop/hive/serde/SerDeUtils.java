@@ -64,7 +64,7 @@ public class SerDeUtils {
     // Eagerly load SerDes so they will register their symbolic names even on Lazy Loading JVMs
     try {
       // loading these classes will automatically register the short names
-      Class.forName(org.apache.hadoop.hive.serde.dynamic_type.DynamicSerDe.class.getName());
+      Class.forName(org.apache.hadoop.hive.serde2.dynamic_type.DynamicSerDe.class.getName());
       Class.forName(org.apache.hadoop.hive.serde.jute.JuteSerDe.class.getName());
       Class.forName(org.apache.hadoop.hive.serde.simple_meta.MetadataTypedColumnsetSerDe.class.getName());
       Class.forName(org.apache.hadoop.hive.serde.thrift.columnsetSerDe.class.getName());

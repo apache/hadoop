@@ -16,6 +16,12 @@ $GLOBALS['serde_CONSTANTS']['SERIALIZATION_FORMAT'] = 'serialization.format';
 
 $GLOBALS['serde_CONSTANTS']['SERIALIZATION_DDL'] = 'serialization.ddl';
 
+$GLOBALS['serde_CONSTANTS']['SERIALIZATION_NULL_FORMAT'] = 'serialization.null.format';
+
+$GLOBALS['serde_CONSTANTS']['SERIALIZATION_LAST_COLUMN_TAKES_REST'] = 'serialization.last.column.takes.rest';
+
+$GLOBALS['serde_CONSTANTS']['SERIALIZATION_SORT_ORDER'] = 'serialization.sort.order';
+
 $GLOBALS['serde_CONSTANTS']['FIELD_DELIM'] = 'field.delim';
 
 $GLOBALS['serde_CONSTANTS']['COLLECTION_DELIM'] = 'colelction.delim';
@@ -24,7 +30,13 @@ $GLOBALS['serde_CONSTANTS']['LINE_DELIM'] = 'line.delim';
 
 $GLOBALS['serde_CONSTANTS']['MAPKEY_DELIM'] = 'mapkey.delim';
 
+$GLOBALS['serde_CONSTANTS']['QUOTE_CHAR'] = 'quote.delim';
+
+$GLOBALS['serde_CONSTANTS']['BOOLEAN_TYPE_NAME'] = 'boolean';
+
 $GLOBALS['serde_CONSTANTS']['TINYINT_TYPE_NAME'] = 'tinyint';
+
+$GLOBALS['serde_CONSTANTS']['SMALLINT_TYPE_NAME'] = 'smallint';
 
 $GLOBALS['serde_CONSTANTS']['INT_TYPE_NAME'] = 'int';
 
@@ -47,7 +59,9 @@ $GLOBALS['serde_CONSTANTS']['LIST_TYPE_NAME'] = 'array';
 $GLOBALS['serde_CONSTANTS']['MAP_TYPE_NAME'] = 'map';
 
 $GLOBALS['serde_CONSTANTS']['PrimitiveTypes'] = array(
+  'boolean' => true,
   'tinyint' => true,
+  'smallint' => true,
   'int' => true,
   'bigint' => true,
   'float' => true,

@@ -44,4 +44,6 @@ public class ExtractOperator extends Operator<extractDesc> implements Serializab
     eval.evaluate(row, rowInspector, result);
     forward(result.o, result.oi);
   }
+
+  
 }

@@ -74,6 +74,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
   transient HiveConf conf;
   static final private int separator  = Utilities.tabCode;
+  static final private int singleQuote  = '\'';
   static final private int terminator = Utilities.newLineCode;
   
   public void initialize(HiveConf conf) {
@@ -95,7 +96,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
         // create the table
         Table tbl = new Table(crtTbl.getTableName());
-        tbl.setFields(crtTbl.getCols());
         StorageDescriptor tblStorDesc = tbl.getTTable().getSd();
         if (crtTbl.getBucketCols() != null)
           tblStorDesc.setBucketCols(crtTbl.getBucketCols());
@@ -169,7 +169,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           List<String> bucketCols = tbl.getBucketCols();
           List<Order> sortCols = tbl.getSortCols();
 
-          if (sortCols.size() >= bucketCols.size())
+          if ( (sortCols.size() > 0) && (sortCols.size() >= bucketCols.size()))
           {
             boolean found = true;
 
@@ -200,6 +200,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         tbl.setOwner(System.getProperty("user.name"));
         // set create time
         tbl.getTTable().setCreateTime((int) (System.currentTimeMillis()/1000));
+
+        if(crtTbl.getCols() != null) {
+          tbl.setFields(crtTbl.getCols());
+        }
 
         // create the table
         db.createTable(tbl);
@@ -280,6 +284,20 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           }
           tbl.getTTable().getSd().setCols(alterTbl.getNewCols());
         }
+        else if (alterTbl.getOp() == alterTableDesc.alterTableTypes.ADDPROPS) {
+          tbl.getTTable().getParameters().putAll(alterTbl.getProps());
+        }
+        else if (alterTbl.getOp() == alterTableDesc.alterTableTypes.ADDSERDEPROPS) {
+          tbl.getTTable().getSd().getSerdeInfo().getParameters().putAll(alterTbl.getProps());
+        }
+        else if (alterTbl.getOp() == alterTableDesc.alterTableTypes.ADDSERDE) {
+          tbl.setSerializationLib(alterTbl.getSerdeName());
+          if ((alterTbl.getProps() != null) && (alterTbl.getProps().size() > 0))
+            tbl.getTTable().getSd().getSerdeInfo().getParameters().putAll(alterTbl.getProps());
+          // since serde is modified then do the appropriate things to reset columns etc
+          tbl.reinitSerDe();
+          tbl.setFields(Hive.getFieldsFromDeserializer(tbl.getName(), tbl.getDeserializer()));
+        }
         else {
           console.printError("Unsupported Alter commnad");
           return 1;
@@ -357,7 +375,9 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
             if (col.getComment() != null)
             {
               os.write(separator);
+              os.write(singleQuote);
               os.write(col.getComment().getBytes("UTF-8"));
+              os.write(singleQuote);
             }
             firstCol = false;
           }

@@ -1,0 +1,20 @@
+500
+500
+500
+500
+name	string
+Detailed Table Information:
+Table(tableName:t1,dbName:default,owner:njain,createTime:1225994187,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:name,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/t1,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{})
+name	string
+Detailed Table Information:
+Table(tableName:t2,dbName:default,owner:njain,createTime:1225994193,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:name,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/t2,inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat,outputFormat:org.apache.hadoop.mapred.SequenceFileOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[],parameters:{})
+name	string
+ds	string
+
+Detailed Partition Information:
+Partition(values:[2008-04-09],dbName:default,tableName:t3,createTime:0,lastAccessTime:0,sd:StorageDescriptor(cols:[FieldSchema(name:name,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/t3/ds=2008-04-09,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),parameters:{})
+name	string
+ds	string
+
+Detailed Partition Information:
+Partition(values:[2008-04-09],dbName:default,tableName:t4,createTime:0,lastAccessTime:0,sd:StorageDescriptor(cols:[FieldSchema(name:name,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/t4/ds=2008-04-09,inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat,outputFormat:org.apache.hadoop.mapred.SequenceFileOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),parameters:{})

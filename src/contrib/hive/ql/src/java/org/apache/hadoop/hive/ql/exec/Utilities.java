@@ -140,8 +140,7 @@ public class Utilities {
       // Set up distributed cache
       DistributedCache.createSymlink(job);
       String uriWithLink = planPath.toUri().toString() + "#HIVE_PLAN";
-      URI[] fileURIs = new URI[] {new URI(uriWithLink)};
-      DistributedCache.setCacheFiles(fileURIs, job);
+      DistributedCache.addCacheFile(new URI(uriWithLink), job);
       // Cache the object in this process too so lookups don't hit the file system
       synchronized (Utilities.class) {
         gWork = w;
@@ -198,15 +197,13 @@ public class Utilities {
   public static tableDesc defaultTd;
   static {
     // by default we expect ^A separated strings
+    // This tableDesc does not provide column names.  We should always use
+    // PlanUtils.getDefaultTableDesc(String separatorCode, String columns)
+    // or getBinarySortableTableDesc(List<FieldSchema> fieldSchemas) when 
+    // we know the column names.
     defaultTd = PlanUtils.getDefaultTableDesc("" + Utilities.ctrlaCode);
   }
 
-  public static tableDesc defaultTabTd;
-  static {
-    // Default tab-separated tableDesc
-    defaultTabTd = PlanUtils.getDefaultTableDesc("" + Utilities.tabCode);
-  }
-  
   public final static int newLineCode = 10;
   public final static int tabCode = 9;
   public final static int ctrlaCode = 1;
@@ -430,5 +427,44 @@ public class Utilities {
     return (SequenceFile.createWriter(fs, jc, file,
                                       keyClass, valClass, compressionType, codec));
 
+  }
+
+  /**
+   * Shamelessly cloned from GenericOptionsParser
+   */
+  public static String realFile(String newFile, Configuration conf) throws IOException {
+    Path path = new Path(newFile);
+    URI pathURI =  path.toUri();
+    FileSystem fs;
+
+    if (pathURI.getScheme() == null) {
+      fs = FileSystem.getLocal(conf);
+    } else {
+      fs = path.getFileSystem(conf);
+    }
+
+    if (!fs.exists(path)) {
+      return null;
+    }
+
+    try {
+      fs.close();
+    } catch(IOException e){};
+
+    return (path.makeQualified(fs).toString());
+  }
+
+  public static List<String> mergeUniqElems(List<String> src, List<String> dest) {
+    if (dest == null) return src;
+    if (src == null) return dest;
+    int pos = 0;
+
+    while (pos < dest.size()) {
+      if (!src.contains(dest.get(pos)))
+        src.add(dest.get(pos));
+      pos++;
+    }
+
+    return src;
   }
 }

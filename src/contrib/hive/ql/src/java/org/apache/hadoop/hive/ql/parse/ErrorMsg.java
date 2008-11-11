@@ -38,6 +38,7 @@ public enum ErrorMsg {
   INVALID_OPERATOR_SIGNATURE("Operator Argument Type Mismatch"),
   INVALID_JOIN_CONDITION_1("Both Left and Right Aliases Encountered in Join"),
   INVALID_JOIN_CONDITION_2("Neither Left nor Right Aliases Encountered in Join"),
+  INVALID_JOIN_CONDITION_3("OR not supported in Join currently"),
   INVALID_TRANSFORM("TRANSFORM with Other Select Columns not Supported"),
   DUPLICATE_GROUPBY_KEY("Repeated Key in Group By"),
   UNSUPPORTED_MULTIPLE_DISTINCTS("DISTINCT on Different Columns not Supported"),
@@ -52,14 +53,18 @@ public enum ErrorMsg {
   INVALID_MAPINDEX_TYPE("Map Key Type does not Match Index Expression Type"),
   NON_COLLECTION_TYPE("[] not Valid on Non Collection Types"),
   SELECT_DISTINCT_WITH_GROUPBY("SELECT DISTINCT and GROUP BY can not be in the same query"),
-  COLUMN_REPAEATED_IN_PARTITIONING_COLS("Column repeated in partitioning columns"),
+  COLUMN_REPEATED_IN_PARTITIONING_COLS("Column repeated in partitioning columns"),
   DUPLICATE_COLUMN_NAMES("Duplicate column names"),
   COLUMN_REPEATED_IN_CLUSTER_SORT("Same column cannot appear in cluster and sort by"),
   SAMPLE_RESTRICTION("Cannot Sample on More Than Two Columns"),
   SAMPLE_COLUMN_NOT_FOUND("Sample Column Not Found"),
   NO_PARTITION_PREDICATE("No Partition Predicate Found"),
-  INVALID_DOT(". operator is only supported on struct or list of struct types");
-  
+  INVALID_DOT(". operator is only supported on struct or list of struct types"),
+  INVALID_TBL_DDL_SERDE("Either list of columns or a custom serializer should be specified"),
+  TARGET_TABLE_COLUMN_MISMATCH("Cannot insert into target table because column number/types are different"),
+  TABLE_ALIAS_NOT_ALLOWED("Table Alias not Allowed in Sampling Clause"),
+  NON_BUCKETED_TABLE("Sampling Expression Needed for Non-Bucketed Table");
+
   private String mesg;
   ErrorMsg(String mesg) {
     this.mesg = mesg;

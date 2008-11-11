@@ -646,6 +646,10 @@ public class QTestUtil {
     // Do semantic analysis and plan generation
     Context ctx = new Context(conf);
     ctx.makeScratchDir();
+    while((ast.getToken() == null) && (ast.getChildCount() > 0)) {
+      ast = (CommonTree)ast.getChild(0);
+    }
+    
     sem.analyze(ast, ctx);
     ctx.removeScratchDir();
     return sem.getRootTasks();

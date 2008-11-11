@@ -1,0 +1,10 @@
+aint	int	'from deserializer'
+astring	string	'from deserializer'
+lint	array<int>	'from deserializer'
+lstring	array<string>	'from deserializer'
+lintstring	array<org.apache.hadoop.hive.serde2.thrift.test.IntString>	'from deserializer'
+mstringstring	map<string,string>	'from deserializer'
+ds	datetime
+country	string
+Detailed Table Information:
+Table(tableName:inputddl8,dbName:default,owner:njain,createTime:1225994139,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/inputddl8,inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat,outputFormat:org.apache.hadoop.mapred.SequenceFileOutputFormat,compressed:false,numBuckets:32,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.ThriftDeserializer,parameters:{serialization.class=org.apache.hadoop.hive.serde2.thrift.test.Complex,serialization.format=com.facebook.thrift.protocol.TBinaryProtocol}),bucketCols:[aint],sortCols:[Order(col:lint,order:1)],parameters:{}),partitionKeys:[FieldSchema(name:ds,type:datetime,comment:null), FieldSchema(name:country,type:string,comment:null)],parameters:{comment=This is a thrift based table})

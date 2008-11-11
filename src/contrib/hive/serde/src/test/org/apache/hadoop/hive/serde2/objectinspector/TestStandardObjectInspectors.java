@@ -34,7 +34,7 @@ public class TestStandardObjectInspectors extends TestCase {
       assertEquals(oi1, oi2);
       assertEquals(Category.PRIMITIVE, oi1.getCategory());
       assertEquals(c, oi1.getPrimitiveClass());
-      assertEquals(ObjectInspectorUtils.getClassShortName(c.getName()),
+      assertEquals(ObjectInspectorUtils.getClassShortName(c),
           oi1.getTypeName()); 
     } catch (Throwable e) {
       e.printStackTrace();

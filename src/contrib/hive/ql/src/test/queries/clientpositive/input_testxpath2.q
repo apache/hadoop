@@ -1,4 +1,4 @@
-CREATE TABLE dest1(lint_size INT, lintstring_size INT, mstringstring_size INT);
+CREATE TABLE dest1(lint_size INT, lintstring_size INT, mstringstring_size INT) STORED AS TEXTFILE;
 
 EXPLAIN
 FROM src_thrift

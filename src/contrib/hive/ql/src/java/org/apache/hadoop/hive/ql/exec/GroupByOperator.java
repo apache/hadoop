@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
@@ -32,6 +35,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 
 /**
  * GroupBy operator implementation.
@@ -61,98 +66,112 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
   transient protected HashMap<ArrayList<Object>, UDAF[]> hashAggregations;
   
   transient boolean firstRow;
-  
+  transient long    totalMemory;
+  transient boolean hashAggr;
+
   public void initialize(Configuration hconf) throws HiveException {
     super.initialize(hconf);
-    try {
-      // init keyFields
-      keyFields = new ExprNodeEvaluator[conf.getKeys().size()];
-      for (int i = 0; i < keyFields.length; i++) {
-        keyFields[i] = ExprNodeEvaluatorFactory.get(conf.getKeys().get(i));
-      }
-    
-      // init aggregationParameterFields
-      aggregationParameterFields = new ExprNodeEvaluator[conf.getAggregators().size()][];
-      for (int i = 0; i < aggregationParameterFields.length; i++) {
-        ArrayList<exprNodeDesc> parameters = conf.getAggregators().get(i).getParameters();
-        aggregationParameterFields[i] = new ExprNodeEvaluator[parameters.size()];
-        for (int j = 0; j < parameters.size(); j++) {
-          aggregationParameterFields[i][j] = ExprNodeEvaluatorFactory.get(parameters.get(j));
-        }
-      }
-      // init aggregationIsDistinct
-      aggregationIsDistinct = new boolean[conf.getAggregators().size()];
-      for(int i=0; i<aggregationIsDistinct.length; i++) {
-        aggregationIsDistinct[i] = conf.getAggregators().get(i).getDistinct();
-      }
+    totalMemory = Runtime.getRuntime().totalMemory();
 
-      // init aggregationClasses  
-      aggregationClasses = (Class<? extends UDAF>[]) new Class[conf.getAggregators().size()];
-      for (int i = 0; i < conf.getAggregators().size(); i++) {
-        aggregationDesc agg = conf.getAggregators().get(i);
-        aggregationClasses[i] = agg.getAggregationClass();
-      }
-
-      // init aggregations, aggregationsAggregateMethods,
-      // aggregationsEvaluateMethods
-      aggregationsAggregateMethods = new Method[aggregationClasses.length];
-      aggregationsEvaluateMethods = new Method[aggregationClasses.length];
-      String aggregateMethodName = (conf.getMode() == groupByDesc.Mode.PARTIAL2 
-         ? "aggregatePartial" : "aggregate");
-      String evaluateMethodName = ((conf.getMode() == groupByDesc.Mode.PARTIAL1 || conf.getMode() == groupByDesc.Mode.HASH)
-         ? "evaluatePartial" : "evaluate");
-      for(int i=0; i<aggregationClasses.length; i++) {
-        // aggregationsAggregateMethods
-        for( Method m : aggregationClasses[i].getMethods() ){
-          if( m.getName().equals( aggregateMethodName ) 
-              && m.getParameterTypes().length == aggregationParameterFields[i].length) {              
-            aggregationsAggregateMethods[i] = m;
-            break;
-          }
-        }
-        if (null == aggregationsAggregateMethods[i]) {
-          throw new RuntimeException("Cannot find " + aggregateMethodName + " method of UDAF class "
-                                   + aggregationClasses[i].getName() + " that accepts "
-                                   + aggregationParameterFields[i].length + " parameters!");
-        }
-        // aggregationsEvaluateMethods
-        aggregationsEvaluateMethods[i] = aggregationClasses[i].getMethod(evaluateMethodName);
-
-        if (null == aggregationsEvaluateMethods[i]) {
-          throw new RuntimeException("Cannot find " + evaluateMethodName + " method of UDAF class "
-                                   + aggregationClasses[i].getName() + "!");
-        }
-        assert(aggregationsEvaluateMethods[i] != null);
-      }
-
-      if (conf.getMode() != groupByDesc.Mode.HASH) {
-        aggregationsParametersLastInvoke = new Object[conf.getAggregators().size()][];
-        aggregations = newAggregations();
-      } else {
-        hashAggregations = new HashMap<ArrayList<Object>, UDAF[]>();
-      }
-      // init objectInspectors
-      int totalFields = keyFields.length + aggregationClasses.length;
-      objectInspectors = new ArrayList<ObjectInspector>(totalFields);
-      for(int i=0; i<keyFields.length; i++) {
-        objectInspectors.add(null);
-      }
-      for(int i=0; i<aggregationClasses.length; i++) {
-        objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(
-            aggregationsEvaluateMethods[i].getReturnType()));
-      }
-      
-      firstRow = true;
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw new RuntimeException(e);
+    // init keyFields
+    keyFields = new ExprNodeEvaluator[conf.getKeys().size()];
+    for (int i = 0; i < keyFields.length; i++) {
+      keyFields[i] = ExprNodeEvaluatorFactory.get(conf.getKeys().get(i));
     }
+  
+    // init aggregationParameterFields
+    aggregationParameterFields = new ExprNodeEvaluator[conf.getAggregators().size()][];
+    for (int i = 0; i < aggregationParameterFields.length; i++) {
+      ArrayList<exprNodeDesc> parameters = conf.getAggregators().get(i).getParameters();
+      aggregationParameterFields[i] = new ExprNodeEvaluator[parameters.size()];
+      for (int j = 0; j < parameters.size(); j++) {
+        aggregationParameterFields[i][j] = ExprNodeEvaluatorFactory.get(parameters.get(j));
+      }
+    }
+    // init aggregationIsDistinct
+    aggregationIsDistinct = new boolean[conf.getAggregators().size()];
+    for(int i=0; i<aggregationIsDistinct.length; i++) {
+      aggregationIsDistinct[i] = conf.getAggregators().get(i).getDistinct();
+    }
+
+    // init aggregationClasses  
+    aggregationClasses = (Class<? extends UDAF>[]) new Class[conf.getAggregators().size()];
+    for (int i = 0; i < conf.getAggregators().size(); i++) {
+      aggregationDesc agg = conf.getAggregators().get(i);
+      aggregationClasses[i] = agg.getAggregationClass();
+    }
+
+    // init aggregations, aggregationsAggregateMethods,
+    // aggregationsEvaluateMethods
+    aggregationsAggregateMethods = new Method[aggregationClasses.length];
+    aggregationsEvaluateMethods = new Method[aggregationClasses.length];
+    String evaluateMethodName = ((conf.getMode() == groupByDesc.Mode.PARTIAL1 || conf.getMode() == groupByDesc.Mode.HASH ||
+                                  conf.getMode() == groupByDesc.Mode.PARTIAL2)
+                                 ? "evaluatePartial" : "evaluate");
+
+    for(int i=0; i<aggregationClasses.length; i++) {
+      String aggregateMethodName = (((conf.getMode() == groupByDesc.Mode.PARTIAL1) || (conf.getMode() == groupByDesc.Mode.HASH)) ? "aggregate" : "aggregatePartial");
+
+      if (aggregationIsDistinct[i] && (conf.getMode() != groupByDesc.Mode.FINAL))
+        aggregateMethodName = "aggregate";
+      // aggregationsAggregateMethods
+      for( Method m : aggregationClasses[i].getMethods() ){
+        if( m.getName().equals( aggregateMethodName ) 
+            && m.getParameterTypes().length == aggregationParameterFields[i].length) {              
+          aggregationsAggregateMethods[i] = m;
+          break;
+        }
+      }
+      if (null == aggregationsAggregateMethods[i]) {
+        throw new HiveException("Cannot find " + aggregateMethodName + " method of UDAF class "
+                                 + aggregationClasses[i].getName() + " that accepts "
+                                 + aggregationParameterFields[i].length + " parameters!");
+      }
+      // aggregationsEvaluateMethods
+      try {
+        aggregationsEvaluateMethods[i] = aggregationClasses[i].getMethod(evaluateMethodName);
+      } catch (Exception e) {
+        throw new HiveException("Unable to get the method named " + evaluateMethodName + " from " 
+            + aggregationClasses[i] + ": " + e.getMessage());
+      }
+
+      if (null == aggregationsEvaluateMethods[i]) {
+        throw new HiveException("Cannot find " + evaluateMethodName + " method of UDAF class "
+                                 + aggregationClasses[i].getName() + "!");
+      }
+      assert(aggregationsEvaluateMethods[i] != null);
+    }
+
+    aggregationsParametersLastInvoke = new Object[conf.getAggregators().size()][];
+    if (conf.getMode() != groupByDesc.Mode.HASH) {
+      aggregations = newAggregations();
+      hashAggr = false;
+    } else {
+      hashAggregations = new HashMap<ArrayList<Object>, UDAF[]>();
+      hashAggr = true;
+    }
+    // init objectInspectors
+    int totalFields = keyFields.length + aggregationClasses.length;
+    objectInspectors = new ArrayList<ObjectInspector>(totalFields);
+    for(int i=0; i<keyFields.length; i++) {
+      objectInspectors.add(null);
+    }
+    for(int i=0; i<aggregationClasses.length; i++) {
+      objectInspectors.add(ObjectInspectorFactory.getStandardPrimitiveObjectInspector(
+          aggregationsEvaluateMethods[i].getReturnType()));
+    }
+    
+    firstRow = true;
   }
 
-  protected UDAF[] newAggregations() throws Exception {      
+  protected UDAF[] newAggregations() throws HiveException {      
     UDAF[] aggs = new UDAF[aggregationClasses.length];
     for(int i=0; i<aggregationClasses.length; i++) {
-      aggs[i] = aggregationClasses[i].newInstance();
+      try {
+        aggs[i] = aggregationClasses[i].newInstance();
+      } catch (Exception e) {
+        throw new HiveException("Unable to create an instance of class " + aggregationClasses[i] + ": " + e.getMessage());
+      }
       aggs[i].init();
     }
     return aggs;
@@ -160,7 +179,8 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
 
   InspectableObject tempInspectableObject = new InspectableObject();
   
-  protected void updateAggregations(UDAF[] aggs, Object row, ObjectInspector rowInspector, Object[][] lastInvoke) throws Exception {
+  protected void updateAggregations(UDAF[] aggs, Object row, ObjectInspector rowInspector, boolean hashAggr, boolean newEntry,
+                                    Object[][] lastInvoke) throws HiveException {
     for(int ai=0; ai<aggs.length; ai++) {
       // Calculate the parameters 
       Object[] o = new Object[aggregationParameterFields[ai].length];
@@ -168,24 +188,35 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
         aggregationParameterFields[ai][pi].evaluate(row, rowInspector, tempInspectableObject);
         o[pi] = tempInspectableObject.o; 
       }
+
       // Update the aggregations.
-      if (aggregationIsDistinct[ai] && lastInvoke != null) {
-        // different differentParameters?
-        boolean differentParameters = (lastInvoke[ai] == null);
-        if (!differentParameters) {
-          for(int pi=0; pi<o.length; pi++) {
-            if (!o[pi].equals(lastInvoke[ai][pi])) {
-              differentParameters = true;
-              break;
-            }
+      if (aggregationIsDistinct[ai]) {
+        if (hashAggr) {
+          if (newEntry) {
+            FunctionRegistry.invoke(aggregationsAggregateMethods[ai], aggs[ai], o);
           }
-        }  
-        if (differentParameters) {
-          aggregationsAggregateMethods[ai].invoke(aggs[ai], o);
-          lastInvoke[ai] = o;
         }
-      } else {
-        aggregationsAggregateMethods[ai].invoke(aggs[ai], o);
+        else {
+          boolean differentParameters = false;
+          if ((lastInvoke == null) || (lastInvoke[ai] == null))
+            differentParameters = true;
+          else {
+            for(int pi=0; pi<o.length; pi++) {
+              if (!o[pi].equals(lastInvoke[ai][pi])) {
+                differentParameters = true;
+                break;
+              }
+            }  
+          }
+
+          if (differentParameters) {
+            FunctionRegistry.invoke(aggregationsAggregateMethods[ai], aggs[ai], o);
+            lastInvoke[ai] = o;
+          }
+        }
+      }
+      else {
+        FunctionRegistry.invoke(aggregationsAggregateMethods[ai], aggs[ai], o);
       }
     }
   }
@@ -208,53 +239,98 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
         for(int i=0; i<objectInspectors.size(); i++) {
           fieldNames.add(Integer.valueOf(i).toString());
         }
-        outputObjectInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
-          fieldNames, objectInspectors);
-      }
-      // Prepare aggs for updating
-      UDAF[] aggs = null;
-      Object[][] lastInvoke = null;
-      if (aggregations != null) {
-        // sort-based aggregation
-        // Need to forward?
-        boolean keysAreEqual = newKeys.equals(currentKeys);
-        if (currentKeys != null && !keysAreEqual) {
-          forward(currentKeys, aggregations);
-        }
-        // Need to update the keys?
-        if (currentKeys == null || !keysAreEqual) {
-          currentKeys = newKeys;
-          // init aggregations
-          for(UDAF aggregation: aggregations) {
-            aggregation.init();
-          }
-          // clear parameters in last-invoke
-          for(int i=0; i<aggregationsParametersLastInvoke.length; i++) {
-            aggregationsParametersLastInvoke[i] = null;
-          }
-        }
-        aggs = aggregations;
-        lastInvoke = aggregationsParametersLastInvoke;
-      } else {
-        // hash-based aggregations
-        aggs = hashAggregations.get(newKeys);
-        if (aggs == null) {
-          aggs = newAggregations();
-          hashAggregations.put(newKeys, aggs);
-          // TODO: Hash aggregation does not support DISTINCT now
-          lastInvoke = null;
-        }
+        outputObjectInspector = 
+          ObjectInspectorFactory.getStandardStructObjectInspector(fieldNames, objectInspectors);
       }
 
-      // Update the aggs
-      updateAggregations(aggs, row, rowInspector, lastInvoke);
-
+      if (hashAggr)
+        processHashAggr(row, rowInspector, newKeys);
+      else
+        processAggr(row, rowInspector, newKeys);
+    } catch (HiveException e) {
+      throw e;
     } catch (Exception e) {
-      e.printStackTrace();
       throw new HiveException(e);
     }
   }
-  
+
+  private void processHashAggr(Object row, ObjectInspector rowInspector, ArrayList<Object> newKeys) throws HiveException {
+    // Prepare aggs for updating
+    UDAF[] aggs = null;
+    boolean newEntry = false;
+
+    // hash-based aggregations
+    aggs = hashAggregations.get(newKeys);
+    if (aggs == null) {
+      aggs = newAggregations();
+      hashAggregations.put(newKeys, aggs);
+      newEntry = true;
+    }
+    
+    // Update the aggs
+    updateAggregations(aggs, row, rowInspector, true, newEntry, null);
+    
+    // currently, we use a simple approximation - if 90% of memory is being
+    // used, flush 
+    long freeMemory = Runtime.getRuntime().freeMemory();
+    if (shouldBeFlushed(totalMemory, freeMemory)) {
+      flush();
+    }
+  }
+
+  private void processAggr(Object row, ObjectInspector rowInspector, ArrayList<Object> newKeys) throws HiveException {
+    // Prepare aggs for updating
+    UDAF[] aggs = null;
+    Object[][] lastInvoke = null;
+    boolean keysAreEqual = newKeys.equals(currentKeys);
+    
+    // forward the current keys if needed for sort-based aggregation
+    if (currentKeys != null && !keysAreEqual)
+      forward(currentKeys, aggregations);
+    
+    // Need to update the keys?
+    if (currentKeys == null || !keysAreEqual) {
+      currentKeys = newKeys;
+      
+      // init aggregations
+      for(UDAF aggregation: aggregations)
+        aggregation.init();
+      
+      // clear parameters in last-invoke
+      for(int i=0; i<aggregationsParametersLastInvoke.length; i++)
+        aggregationsParametersLastInvoke[i] = null;
+    }
+    
+    aggs = aggregations;
+    
+    lastInvoke = aggregationsParametersLastInvoke;
+    // Update the aggs
+    updateAggregations(aggs, row, rowInspector, false, false, lastInvoke);
+  }
+
+  private boolean shouldBeFlushed(long total, long free) {
+    if (10 * free >= total)
+      return true;
+    return false;
+  }
+
+  private void flush() throws HiveException {
+    // Currently, the algorithm flushes 10% of the entries - this can be
+    // changed in the future
+
+    int oldSize = hashAggregations.size();
+    Iterator iter = hashAggregations.entrySet().iterator();
+    int numDel = 0;
+    while (iter.hasNext()) {
+      Map.Entry<ArrayList<Object>, UDAF[]> m = (Map.Entry)iter.next();
+      forward(m.getKey(), m.getValue());
+      iter.remove();
+      numDel++;
+      if (numDel * 10 >= oldSize)
+        return;
+    }
+  }
+
   /**
    * Forward a record of keys and aggregation results.
    * 
@@ -262,14 +338,19 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
    *          The keys in the record
    * @throws HiveException
    */
-  protected void forward(ArrayList<Object> keys, UDAF[] aggs) throws Exception {
+  protected void forward(ArrayList<Object> keys, UDAF[] aggs) throws HiveException {
     int totalFields = keys.size() + aggs.length;
     List<Object> a = new ArrayList<Object>(totalFields);
     for(int i=0; i<keys.size(); i++) {
       a.add(keys.get(i));
     }
     for(int i=0; i<aggs.length; i++) {
-      a.add(aggregationsEvaluateMethods[i].invoke(aggs[i]));
+      try {
+        a.add(aggregationsEvaluateMethods[i].invoke(aggs[i]));
+      } catch (Exception e) {
+        throw new HiveException("Unable to execute UDAF function " + aggregationsEvaluateMethods[i] + " " 
+            + " on object " + "(" + aggs[i] + ") " + ": " + e.getMessage());
+      }
     }
     forward(a, outputObjectInspector);
   }
@@ -304,4 +385,20 @@ public class GroupByOperator extends Operator <groupByDesc> implements Serializa
     super.close(abort);
   }
 
+  // Group by contains the columns needed - no need to aggregate from children
+  public List<String> genColLists(HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) {
+    List<String> colLists = new ArrayList<String>();
+    ArrayList<exprNodeDesc> keys = conf.getKeys();
+    for (exprNodeDesc key : keys)
+      colLists = Utilities.mergeUniqElems(colLists, key.getCols());
+    
+    ArrayList<aggregationDesc> aggrs = conf.getAggregators();
+    for (aggregationDesc aggr : aggrs) { 
+      ArrayList<exprNodeDesc> params = aggr.getParameters();
+      for (exprNodeDesc param : params) 
+        colLists = Utilities.mergeUniqElems(colLists, param.getCols());
+    }
+
+    return colLists;
+  }
 }

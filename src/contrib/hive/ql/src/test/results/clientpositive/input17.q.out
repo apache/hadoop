@@ -1,0 +1,80 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TRANSFORM (TOK_EXPLIST (+ (TOK_COLREF src_thrift aint) ([ (TOK_COLREF src_thrift lint) 0)) ([ (TOK_COLREF src_thrift lintstring) 0)) '/bin/cat' (TOK_ALIASLIST tkey tvalue)))) (TOK_CLUSTERBY tkey))) tmap)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF tmap tkey)) (TOK_SELEXPR (TOK_COLREF tmap tvalue)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        tmap:src_thrift 
+            Select Operator
+              expressions:
+                    expr: aint
+                    type: int
+                    expr: lint
+                    type: array<int>
+                    expr: lintstring
+                    type: array<struct{myint:int,mystring:string}>
+              Select Operator
+                expressions:
+                      expr: (0 + 1[0])
+                      type: int
+                      expr: 2[0]
+                      type: struct{myint:int,mystring:string}
+                Transform Operator
+                  command: /bin/cat
+                  output info:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  Reduce Output Operator
+                    key expressions:
+                          expr: tkey
+                          type: string
+                    Map-reduce partition columns:
+                          expr: tkey
+                          type: string
+                    tag: -1
+                    value expressions:
+                          expr: tkey
+                          type: string
+                          expr: tvalue
+                          type: string
+      Reduce Operator Tree:
+        Extract
+          Select Operator
+            expressions:
+                  expr: 0
+                  type: string
+                  expr: 1
+                  type: string
+            File Output Operator
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+-1103622755	{"myint":64,"mystring":"512"}
+-1147582749	{"myint":1,"mystring":"1"}
+-1220068486	{"myint":0,"mystring":"0"}
+-1281615204	{"myint":36,"mystring":"216"}
+-1587372270	{"myint":9,"mystring":"27"}
+-1883609158	{"myint":81,"mystring":"729"}
+-2091002568	{"myint":4,"mystring":"8"}
+-240543261	{"myint":16,"mystring":"64"}
+1539139271	{"myint":49,"mystring":"343"}
+1914724542	{"myint":25,"mystring":"125"}

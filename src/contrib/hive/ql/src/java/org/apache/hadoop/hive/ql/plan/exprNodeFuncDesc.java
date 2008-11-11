@@ -21,12 +21,15 @@ package org.apache.hadoop.hive.ql.plan;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.ql.exec.FunctionInfo;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 
 /**
  * The reason that we have to store UDFClass as well as UDFMethod is because
@@ -132,5 +135,19 @@ public class exprNodeFuncDesc extends exprNodeDesc implements Serializable {
     }
     
     return sb.toString();
+  }
+
+  public List<String> getCols() {
+    List<String> colList = new ArrayList<String>();
+    if (children != null) {
+      int pos = 0;
+      while (pos < children.size()) {
+        List<String> colCh = children.get(pos).getCols();
+        colList = Utilities.mergeUniqElems(colList, colCh);
+        pos++;
+      }
+    }
+
+    return colList;
   }
 }

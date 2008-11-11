@@ -36,6 +36,11 @@ public abstract class DynamicSerDeTypeBase extends DynamicSerDeSimpleNode implem
     super(p,i);
   }
 
+  public void initialize() {
+    // for base type, do nothing. Other types, like structs may initialize internal data
+    // structures.
+  }
+
   public Class getRealType() throws SerDeException {
     throw new SerDeException("Not implemented in base");
   }

@@ -1,4 +1,4 @@
-CREATE TABLE dest1(key INT, value STRING, mapvalue STRING);
+CREATE TABLE dest1(key INT, value STRING, mapvalue STRING) STORED AS TEXTFILE;
 
 EXPLAIN
 FROM src_thrift

@@ -37,9 +37,9 @@ public class UDAFAvg extends UDAF {
     mCount = 0;
   }
 
-  public boolean aggregate(String o) {
-    if (o != null && !o.isEmpty()) {
-      mSum += Double.parseDouble(o);
+  public boolean aggregate(Double o) {
+    if (o != null) {
+      mSum += o;
       mCount ++;
     }
     return true;
@@ -60,9 +60,9 @@ public class UDAFAvg extends UDAF {
     return true;
   }
 
-  public String evaluate() {
+  public Double evaluate() {
     // This is SQL standard - average of zero items should be null.
-    return mCount == 0 ? null : String.valueOf(mSum / mCount);
+    return mCount == 0 ? null : Double.valueOf(mSum / mCount);
   }
 
 }

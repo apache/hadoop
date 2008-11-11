@@ -2,7 +2,7 @@ key	string
 value	string
 ds	datetime
 Detailed Table Information:
-Table(tableName:inputddl6,dbName:default,owner:njain,createTime:1224285279,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:key,type:string,comment:null), FieldSchema(name:value,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/inputddl6,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[FieldSchema(name:ds,type:datetime,comment:null)],parameters:{SORTBUCKETCOLSPREFIX=TRUE})
+Table(tableName:inputddl6,dbName:default,owner:njain,createTime:1225994083,lastAccessTime:0,retention:0,sd:StorageDescriptor(cols:[FieldSchema(name:key,type:string,comment:null), FieldSchema(name:value,type:string,comment:null)],location:file:/home/njain/workspace/hadoop-0.17/build/contrib/hive/ql/test/data/warehouse/inputddl6,inputFormat:org.apache.hadoop.mapred.TextInputFormat,outputFormat:org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat,compressed:false,numBuckets:-1,serdeInfo:SerDeInfo(name:null,serializationLib:org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe,parameters:{serialization.format=1}),bucketCols:[],sortCols:[],parameters:{}),partitionKeys:[FieldSchema(name:ds,type:datetime,comment:null)],parameters:{})
 key	string
 value	string
 ds	datetime

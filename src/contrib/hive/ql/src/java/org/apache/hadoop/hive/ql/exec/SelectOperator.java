@@ -20,14 +20,18 @@ package org.apache.hadoop.hive.ql.exec;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.selectDesc;
 import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * Select operator implementation
@@ -87,4 +91,61 @@ public class SelectOperator extends Operator <selectDesc> implements Serializabl
     }
     forward(output, outputObjectInspector);
   }
+
+  private List<String> getColsFromExpr(HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) {
+    List<String> cols = new ArrayList<String>();
+    ArrayList<exprNodeDesc> exprList = conf.getColList();
+    for (exprNodeDesc expr : exprList)
+      cols = Utilities.mergeUniqElems(cols, expr.getCols());
+    List<Integer> listExprs = new ArrayList<Integer>();
+    for (int pos = 0; pos < exprList.size(); pos++)
+      listExprs.add(new Integer(pos));
+    OpParseContext ctx = opParseCtx.get(this);
+    ctx.setColNames(cols);
+    opParseCtx.put(this, ctx);
+    return cols;
+  }
+
+  private List<String> getColsFromExpr(List<String> colList, 
+                                       HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) {
+  	if (colList.isEmpty())
+  		return getColsFromExpr(opParseCtx);
+  	
+    List<String> cols = new ArrayList<String>();
+    ArrayList<exprNodeDesc> selectExprs = conf.getColList();
+    List<Integer> listExprs = new ArrayList<Integer>();
+
+    for (String col : colList) {
+      // col is the internal name i.e. position within the expression list
+      Integer pos = new Integer(col);
+      exprNodeDesc expr = selectExprs.get(pos.intValue());
+      cols = Utilities.mergeUniqElems(cols, expr.getCols());
+      listExprs.add(pos);
+    }
+
+    OpParseContext ctx = opParseCtx.get(this);
+    ctx.setColNames(cols);
+    opParseCtx.put(this, ctx);
+    return cols;
+  }
+
+  public List<String> genColLists(HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) 
+    throws SemanticException {
+    List<String> cols = new ArrayList<String>();
+    
+    for(Operator<? extends Serializable> o: childOperators) {
+      // if one of my children is a fileSink, return everything
+      if ((o instanceof FileSinkOperator) || (o instanceof ScriptOperator))
+        return getColsFromExpr(opParseCtx);
+
+      cols = Utilities.mergeUniqElems(cols, o.genColLists(opParseCtx));
+    }
+
+    if (conf.isSelectStar())
+      // The input to the select does not matter. Go over the expressions and return the ones which have a marked column
+      return getColsFromExpr(cols, opParseCtx);
+    
+    return getColsFromExpr(opParseCtx);
+  }
+
 }

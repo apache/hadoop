@@ -10,23 +10,29 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         src2 
-            Reduce Output Operator
-              key expressions:
+            Select Operator
+              expressions:
                     expr: key
                     type: string
-              # partition fields: 1
-              tag: 1
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
+              Reduce Output Operator
+                key expressions:
+                      expr: 0
+                      type: string
+                Map-reduce partition columns:
+                      expr: 0
+                      type: string
+                tag: 1
+                value expressions:
+                      expr: 0
+                      type: string
         src3 
             Reduce Output Operator
               key expressions:
                     expr: key
                     type: string
-              # partition fields: 1
+              Map-reduce partition columns:
+                    expr: key
+                    type: string
               tag: 2
               value expressions:
                     expr: key
@@ -34,31 +40,35 @@ STAGE PLANS:
                     expr: value
                     type: string
         src1 
-            Reduce Output Operator
-              key expressions:
+            Select Operator
+              expressions:
                     expr: key
                     type: string
-              # partition fields: 1
-              tag: 0
-              value expressions:
-                    expr: key
-                    type: string
-                    expr: value
-                    type: string
+              Reduce Output Operator
+                key expressions:
+                      expr: 0
+                      type: string
+                Map-reduce partition columns:
+                      expr: 0
+                      type: string
+                tag: 0
+                value expressions:
+                      expr: 0
+                      type: string
       Reduce Operator Tree:
         Join Operator
           condition map:
                Inner Join 0 to 1
                Inner Join 0 to 1
           condition expressions:
-            0 {VALUE.0} {VALUE.1}
-            1 {VALUE.0} {VALUE.1}
+            0 {VALUE.0}
+            1 {VALUE.0}
             2 {VALUE.0} {VALUE.1}
           Select Operator
             expressions:
                   expr: 0
                   type: string
-                  expr: 5
+                  expr: 3
                   type: string
             File Output Operator
               table:

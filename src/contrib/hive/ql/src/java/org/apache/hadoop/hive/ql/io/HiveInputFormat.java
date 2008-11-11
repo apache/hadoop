@@ -219,7 +219,6 @@ public class HiveInputFormat<K extends WritableComparable,
     return result.toArray(new HiveInputSplit[result.size()]);
   }
 
-
   private tableDesc getTableDescFromPath(Path dir) throws IOException {
 
     partitionDesc partDesc = pathToPartitionInfo.get(dir.toString());

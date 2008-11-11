@@ -10,32 +10,36 @@ STAGE PLANS:
     Map Reduce
       Alias -> Map Operator Tree:
         src 
-            Filter Operator
-              predicate:
-                  expr: (key = 86)
-                  type: Boolean
-              Select Operator
-                expressions:
-                      expr: (3 + 2)
-                      type: int
-                      expr: (3.0 + UDFToDouble(2))
-                      type: double
-                      expr: (UDFToDouble(3) + 2.0)
-                      type: double
-                      expr: (3.0 + 2.0)
-                      type: double
-                      expr: (3 + UDFToInteger(2.0))
-                      type: int
-                      expr: UDFToBoolean(1)
-                      type: Boolean
-                      expr: UDFToInteger(true)
-                      type: int
-                File Output Operator
-                  table:
-                      input format: org.apache.hadoop.mapred.TextInputFormat
-                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-                      serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
-                      name: dest1
+            Select Operator
+              expressions:
+                    expr: key
+                    type: string
+              Filter Operator
+                predicate:
+                    expr: (0 = 86)
+                    type: boolean
+                Select Operator
+                  expressions:
+                        expr: (3 + 2)
+                        type: int
+                        expr: (3.0 + UDFToDouble(2))
+                        type: double
+                        expr: (UDFToDouble(3) + 2.0)
+                        type: double
+                        expr: (3.0 + 2.0)
+                        type: double
+                        expr: (3 + UDFToInteger(2.0))
+                        type: int
+                        expr: UDFToBoolean(1)
+                        type: boolean
+                        expr: UDFToInteger(true)
+                        type: int
+                  File Output Operator
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                        serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                        name: dest1
 
   Stage: Stage-0
     Move Operator

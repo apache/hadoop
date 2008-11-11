@@ -11,43 +11,44 @@ STAGE PLANS:
       Alias -> Map Operator Tree:
         dest1 
             Select Operator
-              expressions:
-                    expr: round(1.0)
-                    type: bigint
-                    expr: round(1.5)
-                    type: bigint
-                    expr: round(- 1.5)
-                    type: bigint
-                    expr: floor(1.0)
-                    type: bigint
-                    expr: floor(1.5)
-                    type: bigint
-                    expr: floor(- 1.5)
-                    type: bigint
-                    expr: ceiling(1.0)
-                    type: bigint
-                    expr: ceiling(1.5)
-                    type: bigint
-                    expr: ceiling(- 1.5)
-                    type: bigint
-                    expr: ceiling(1.0)
-                    type: bigint
-                    expr: rand(UDFToLong(3))
-                    type: double
-                    expr: 3
-                    type: int
-                    expr: - 3
-                    type: int
-                    expr: (1 + 2)
-                    type: int
-                    expr: (1 + - 2)
-                    type: int
-                    expr: ~ 1
-                    type: int
-              File Output Operator
-                table:
-                    input format: org.apache.hadoop.mapred.TextInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+              Select Operator
+                expressions:
+                      expr: round(1.0)
+                      type: bigint
+                      expr: round(1.5)
+                      type: bigint
+                      expr: round(- 1.5)
+                      type: bigint
+                      expr: floor(1.0)
+                      type: bigint
+                      expr: floor(1.5)
+                      type: bigint
+                      expr: floor(- 1.5)
+                      type: bigint
+                      expr: ceiling(1.0)
+                      type: bigint
+                      expr: ceiling(1.5)
+                      type: bigint
+                      expr: ceiling(- 1.5)
+                      type: bigint
+                      expr: ceiling(1.0)
+                      type: bigint
+                      expr: rand(UDFToLong(3))
+                      type: double
+                      expr: 3
+                      type: int
+                      expr: - 3
+                      type: int
+                      expr: (1 + 2)
+                      type: int
+                      expr: (1 + - 2)
+                      type: int
+                      expr: ~ 1
+                      type: int
+                File Output Operator
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
 
   Stage: Stage-0
     Fetch Operator

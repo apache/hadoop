@@ -104,9 +104,10 @@ public abstract class BaseSemanticAnalyzer {
   }
 
   public static String stripQuotes(String val) throws SemanticException {
-    if (val.charAt(0) == '\'' && val.charAt(val.length() - 1) == '\'') {
+    if ((val.charAt(0) == '\'' && val.charAt(val.length() - 1) == '\'')
+      || (val.charAt(0) == '\"' && val.charAt(val.length() - 1) == '\"')) {
       val = val.substring(1, val.length() - 1);
-    }
+    } 
     return val;
   }
 
@@ -142,19 +143,48 @@ public abstract class BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * Remove the encapsulating "`" pair from the identifier.
+   * We allow users to use "`" to escape identifier for table names,
+   * column names and aliases, in case that coincide with Hive language
+   * keywords.
+   */
+  public static String unescapeIdentifier(String val) {
+    if (val == null) {
+      return null;
+    }
+    if (val.charAt(0) == '`' && val.charAt(val.length() - 1) == '`') {
+      val = val.substring(1, val.length() - 1);
+    } 
+    return val;
+  }
+
   @SuppressWarnings("nls")
   public static String unescapeSQLString(String b) {
-    assert(b.charAt(0) == '\'');
-    assert(b.charAt(b.length()-1) == '\'');
+
+    Character enclosure = null;
 
     // Some of the strings can be passed in as unicode. For example, the
     // delimiter can be passed in as \002 - So, we first check if the 
     // string is a unicode number, else go back to the old behavior
     StringBuilder sb = new StringBuilder(b.length());
-    int i = 1;
-    while (i < (b.length()-1)) {
-
-      if (b.charAt(i) == '\\' && (i+4 < b.length())) {
+    for (int i=0; i < b.length(); i++) {
+      
+      char currentChar = b.charAt(i);
+      if (enclosure == null) {
+        if (currentChar == '\'' || b.charAt(i) == '\"') {
+          enclosure = currentChar;
+        }
+        // ignore all other chars outside the enclosure
+        continue;
+      }
+      
+      if (enclosure.equals(currentChar)) {
+        enclosure = null;
+        continue;
+      }
+      
+      if (currentChar == '\\' && (i+4 < b.length())) {
         char i1 = b.charAt(i+1);
         char i2 = b.charAt(i+2);
         char i3 = b.charAt(i+3);
@@ -167,12 +197,12 @@ public abstract class BaseSemanticAnalyzer {
           bValArr[0] = bVal;
           String tmp = new String(bValArr);
           sb.append(tmp);
-          i += 4;
+          i += 3;
           continue;
         }
       }
-        
-      if (b.charAt(i) == '\\' && (i+2 < b.length())) {
+
+      if (currentChar == '\\' && (i+2 < b.length())) {
         char n=b.charAt(i+1);
         switch(n) {
         case '0': sb.append("\0"); break;
@@ -191,9 +221,8 @@ public abstract class BaseSemanticAnalyzer {
         }
         i++;
       } else {
-        sb.append(b.charAt(i));
+        sb.append(currentChar);
       }
-      i++;
     }
     return sb.toString();
   }
@@ -219,7 +248,7 @@ public abstract class BaseSemanticAnalyzer {
 
       try {
         // get table metadata
-        tableName = ast.getChild(0).getText();
+        tableName = unescapeIdentifier(ast.getChild(0).getText());
         tableHandle = db.getTable(tableName);
 
         // get partition metadata if partition specified
@@ -230,7 +259,7 @@ public abstract class BaseSemanticAnalyzer {
           for (int i = 0; i < partspec.getChildCount(); ++i) {
             CommonTree partspec_val = (CommonTree) partspec.getChild(i);
             String val = stripQuotes(partspec_val.getChild(1).getText());
-            partSpec.put(partspec_val.getChild(0).getText(), val);
+            partSpec.put(unescapeIdentifier(partspec_val.getChild(0).getText()), val);
           }
           partHandle = Hive.get().getPartition(tableHandle, partSpec, forceCreatePartition);
           if(partHandle == null) {

@@ -19,13 +19,18 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import java.io.*;
+import java.util.HashMap;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
+import org.apache.hadoop.hive.ql.plan.exprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.filterDesc;
 import org.apache.hadoop.hive.serde2.objectinspector.InspectableObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 
 /**
  * Filter operator implementation
@@ -73,4 +78,15 @@ public class FilterOperator extends Operator <filterDesc> implements Serializabl
           conditionInspectableObject.o.getClass().getName());
     }
   }
+  
+  public List<String> mergeColListsFromChildren(List<String> colList,
+                                        HashMap<Operator<? extends Serializable>, OpParseContext> opParseCtx) {
+    exprNodeDesc condn = conf.getPredicate();
+
+    // get list of columns used in the filter
+    List<String> cl = condn.getCols();
+
+    return Utilities.mergeUniqElems(colList, cl);
+  }
+
 }

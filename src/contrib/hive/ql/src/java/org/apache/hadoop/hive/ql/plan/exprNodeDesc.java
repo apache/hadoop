@@ -19,9 +19,11 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 
 public class exprNodeDesc implements Serializable {  
   private static final long serialVersionUID = 1L;
@@ -51,4 +53,9 @@ public class exprNodeDesc implements Serializable {
   public String getTypeString() {
     return typeInfo.getTypeName();
   }
+
+  public List<String> getCols() {
+    return null;
+  }
+
 }
