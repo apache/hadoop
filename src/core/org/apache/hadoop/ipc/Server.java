@@ -40,6 +40,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -475,15 +476,26 @@ public abstract class Server {
           // long time, discard them.
           //
           LOG.debug("Checking for old call responses.");
+          ArrayList<Call> calls;
+          
+          // get the list of channels from list of keys.
           synchronized (writeSelector.keys()) {
+            calls = new ArrayList<Call>(writeSelector.keys().size());
             iter = writeSelector.keys().iterator();
             while (iter.hasNext()) {
               SelectionKey key = iter.next();
-              try {
-                doPurge(key, now);
-              } catch (IOException e) {
-                LOG.warn("Error in purging old calls " + e);
+              Call call = (Call)key.attachment();
+              if (call != null && key.channel() == call.connection.channel) { 
+                calls.add(call);
               }
+            }
+          }
+          
+          for(Call call : calls) {
+            try {
+              doPurge(call, now);
+            } catch (IOException e) {
+              LOG.warn("Error in purging old calls " + e);
             }
           }
         } catch (OutOfMemoryError e) {
@@ -531,15 +543,7 @@ public abstract class Server {
     // Remove calls that have been pending in the responseQueue 
     // for a long time.
     //
-    private void doPurge(SelectionKey key, long now) throws IOException {
-      Call call = (Call)key.attachment();
-      if (call == null) {
-        return;
-      }
-      if (key.channel() != call.connection.channel) {
-        LOG.info("doPurge: bad channel");
-        return;
-      }
+    private void doPurge(Call call, long now) throws IOException {
       LinkedList<Call> responseQueue = call.connection.responseQueue;
       synchronized (responseQueue) {
         Iterator<Call> iter = responseQueue.listIterator(0);
