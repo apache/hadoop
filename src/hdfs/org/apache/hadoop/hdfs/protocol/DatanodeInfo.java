@@ -22,7 +22,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Date;
 
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -31,6 +30,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * DatanodeInfo represents the status of a DataNode.
@@ -185,12 +185,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
     } else {
       buffer.append("Normal\n");
     }
-    buffer.append("Configured Capacity: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
-    buffer.append("DFS Used: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
-    buffer.append("Non DFS Used: "+nonDFSUsed+" ("+FsShell.byteDesc(nonDFSUsed)+")"+"\n");
-    buffer.append("DFS Remaining: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
-    buffer.append("DFS Used%: "+FsShell.limitDecimalTo2(usedPercent)+"%\n");
-    buffer.append("DFS Remaining%: "+FsShell.limitDecimalTo2(remainingPercent)+"%\n");
+    buffer.append("Configured Capacity: "+c+" ("+StringUtils.byteDesc(c)+")"+"\n");
+    buffer.append("DFS Used: "+u+" ("+StringUtils.byteDesc(u)+")"+"\n");
+    buffer.append("Non DFS Used: "+nonDFSUsed+" ("+StringUtils.byteDesc(nonDFSUsed)+")"+"\n");
+    buffer.append("DFS Remaining: " +r+ "("+StringUtils.byteDesc(r)+")"+"\n");
+    buffer.append("DFS Used%: "+StringUtils.limitDecimalTo2(usedPercent)+"%\n");
+    buffer.append("DFS Remaining%: "+StringUtils.limitDecimalTo2(remainingPercent)+"%\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -212,10 +212,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
     } else {
       buffer.append(" IN");
     }
-    buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
-    buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
-    buffer.append(" " + FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%");
-    buffer.append(" " + r + "(" + FsShell.byteDesc(r)+")");
+    buffer.append(" " + c + "(" + StringUtils.byteDesc(c)+")");
+    buffer.append(" " + u + "(" + StringUtils.byteDesc(u)+")");
+    buffer.append(" " + StringUtils.limitDecimalTo2(((1.0*u)/c)*100)+"%");
+    buffer.append(" " + r + "(" + StringUtils.byteDesc(r)+")");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();
   }

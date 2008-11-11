@@ -88,8 +88,8 @@
     long u = d.getDfsUsed();
     long nu = d.getNonDfsUsed();
     long r = d.getRemaining();
-    String percentUsed = FsShell.limitDecimalTo2(d.getDfsUsedPercent());    
-    String percentRemaining = FsShell.limitDecimalTo2(d.getRemainingPercent());    
+    String percentUsed = StringUtils.limitDecimalTo2(d.getDfsUsedPercent());    
+    String percentRemaining = StringUtils.limitDecimalTo2(d.getRemainingPercent());    
     
     String adminState = (d.isDecommissioned() ? "Decommissioned" :
                          (d.isDecommissionInProgress() ? "Decommission In Progress":
@@ -102,13 +102,13 @@
               "<td class=\"adminstate\">" +
               adminState +
               "<td align=\"right\" class=\"capacity\">" +
-              FsShell.limitDecimalTo2(c*1.0/diskBytes) +
+              StringUtils.limitDecimalTo2(c*1.0/diskBytes) +
               "<td align=\"right\" class=\"used\">" +
-              FsShell.limitDecimalTo2(u*1.0/diskBytes) +      
+              StringUtils.limitDecimalTo2(u*1.0/diskBytes) +      
               "<td align=\"right\" class=\"nondfsused\">" +
-              FsShell.limitDecimalTo2(nu*1.0/diskBytes) +      
+              StringUtils.limitDecimalTo2(nu*1.0/diskBytes) +      
               "<td align=\"right\" class=\"remaining\">" +
-              FsShell.limitDecimalTo2(r*1.0/diskBytes) +      
+              StringUtils.limitDecimalTo2(r*1.0/diskBytes) +      
               "<td align=\"right\" class=\"pcused\">" + percentUsed +
               "<td class=\"pcused\">" +
               ServletUtil.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
@@ -161,17 +161,17 @@
 
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Configured Capacity" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( total ) +
+	       StringUtils.byteDesc( total ) +
 	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( used ) +
+	       StringUtils.byteDesc( used ) +
 	       rowTxt() + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( nonDFS ) +
+	       StringUtils.byteDesc( nonDFS ) +
 	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( remaining ) +
+	       StringUtils.byteDesc( remaining ) +
 	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimalTo2(percentUsed) + " %" +
+	       StringUtils.limitDecimalTo2(percentUsed) + " %" +
 	       rowTxt() + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimalTo2(percentRemaining) + " %" +
+	       StringUtils.limitDecimalTo2(percentRemaining) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
                colTxt() + ":" + colTxt() + live.size() +

@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.*;
 
@@ -211,8 +211,8 @@ public class JspHelper {
       long pct = ((inodes + blocks) * 100)/maxobjects;
       str += " / " + maxobjects + " (" + pct + "%)";
     }
-    str += ".  Heap Size is " + FsShell.byteDesc(totalMemory) + " / " + 
-           FsShell.byteDesc(maxMemory) + 
+    str += ".  Heap Size is " + StringUtils.byteDesc(totalMemory) + " / " + 
+           StringUtils.byteDesc(maxMemory) + 
            " (" + used + "%) <br>";
     return str;
   }

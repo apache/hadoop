@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     HADOOP-4567. GetFileBlockLocations returns the NetworkTopology
     information of the machines where the blocks reside. (dhruba)
 
+    HADOOP-4435. The JobTracker WebUI displays the amount of heap memory 
+    in use. (dhruba)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

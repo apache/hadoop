@@ -26,6 +26,8 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -39,6 +41,13 @@ import org.apache.hadoop.fs.*;
  * General string utils
  */
 public class StringUtils {
+
+  private static final DecimalFormat decimalFormat;
+  static {
+          NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+          decimalFormat = (DecimalFormat) numberFormat;
+          decimalFormat.applyPattern("#.##");
+  }
 
   /**
    * Make a string representation of the exception.
@@ -647,4 +656,33 @@ public class StringUtils {
       
       return sb.toString();
     }
+
+  /**
+   * Return an abbreviated English-language desc of the byte length
+   */
+  public static String byteDesc(long len) {
+    double val = 0.0;
+    String ending = "";
+    if (len < 1024 * 1024) {
+      val = (1.0 * len) / 1024;
+      ending = " KB";
+    } else if (len < 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024 * 1024);
+      ending = " MB";
+    } else if (len < 1024L * 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024 * 1024 * 1024);
+      ending = " GB";
+    } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024);
+      ending = " TB";
+    } else {
+      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024 * 1024);
+      ending = " PB";
+    }
+    return limitDecimalTo2(val) + ending;
+  }
+
+  public static synchronized String limitDecimalTo2(double d) {
+    return decimalFormat.format(d);
+  }
 }

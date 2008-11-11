@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -268,7 +267,7 @@ public class Balancer implements Tool {
               addToMoved(block);
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Decided to move block "+ block.getBlockId()
-                    +" with a length of "+FsShell.byteDesc(block.getNumBytes())
+                    +" with a length of "+StringUtils.byteDesc(block.getNumBytes())
                     + " bytes from " + source.getName() 
                     + " to " + target.getName()
                     + " using proxy source " + proxySource.getName() );
@@ -1119,7 +1118,7 @@ public class Balancer implements Tool {
       if (!target.isMoveQuotaFull()) {
         targetCandidates.remove();
       }
-      LOG.info("Decided to move "+FsShell.byteDesc(size)+" bytes from "
+      LOG.info("Decided to move "+StringUtils.byteDesc(size)+" bytes from "
           +source.datanode.getName() + " to " + target.datanode.getName());
       return true;
     }
@@ -1167,7 +1166,7 @@ public class Balancer implements Tool {
       if ( !source.isMoveQuotaFull()) {
         sourceCandidates.remove();
       }
-      LOG.info("Decided to move "+FsShell.byteDesc(size)+" bytes from "
+      LOG.info("Decided to move "+StringUtils.byteDesc(size)+" bytes from "
           +source.datanode.getName() + " to " + target.datanode.getName());
       return true;
     }
@@ -1396,7 +1395,7 @@ public class Balancer implements Tool {
           System.out.println("The cluster is balanced. Exiting...");
           return SUCCESS;
         } else {
-          LOG.info( "Need to move "+ FsShell.byteDesc(bytesLeftToMove)
+          LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
               +" bytes to make the cluster balanced." );
         }
         
@@ -1410,16 +1409,16 @@ public class Balancer implements Tool {
           System.out.println("No block can be moved. Exiting...");
           return NO_MOVE_BLOCK;
         } else {
-          LOG.info( "Will move " + FsShell.byteDesc(bytesToMove) +
+          LOG.info( "Will move " + StringUtils.byteDesc(bytesToMove) +
               "bytes in this iteration");
         }
    
         formatter.format("%-24s %10d  %19s  %18s  %17s\n", 
             DateFormat.getDateTimeInstance().format(new Date()),
             iterations,
-            FsShell.byteDesc(bytesMoved.get()),
-            FsShell.byteDesc(bytesLeftToMove),
-            FsShell.byteDesc(bytesToMove)
+            StringUtils.byteDesc(bytesMoved.get()),
+            StringUtils.byteDesc(bytesLeftToMove),
+            StringUtils.byteDesc(bytesToMove)
             );
         
         /* For each pair of <source, target>, start a thread that repeatedly 

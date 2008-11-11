@@ -10,6 +10,7 @@
 %>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  ClusterStatus status = tracker.getClusterStatus();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   JobQueueInfo[] queues = tracker.getQueues();
@@ -20,9 +21,8 @@
 <%!
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
   
-  public void generateSummaryTable(JspWriter out,
+  public void generateSummaryTable(JspWriter out, ClusterStatus status,
                                    JobTracker tracker) throws IOException {
-    ClusterStatus status = tracker.getClusterStatus();
     String tasksPerNode = status.getTaskTrackers() > 0 ?
       percentFormat.format(((double)(status.getMaxMapTasks() +
                       status.getMaxReduceTasks())) / status.getTaskTrackers()):
@@ -79,7 +79,7 @@
   </ul>
 </div>
 
-<b>State:</b> <%= tracker.getClusterStatus().getJobTrackerState() %><br>
+<b>State:</b> <%= status.getJobTrackerState() %><br>
 <b>Started:</b> <%= new Date(tracker.getStartTime())%><br>
 <b>Version:</b> <%= VersionInfo.getVersion()%>,
                 r<%= VersionInfo.getRevision()%><br>
@@ -88,9 +88,9 @@
 <b>Identifier:</b> <%= tracker.getTrackerIdentifier()%><br>                 
                    
 <hr>
-<h2>Cluster Summary</h2>
+<h2>Cluster Summary (Heap Size is <%= StringUtils.byteDesc(status.getUsedMemory()) %>/<%= StringUtils.byteDesc(status.getMaxMemory()) %>)</h2>
 <% 
- generateSummaryTable(out, tracker); 
+ generateSummaryTable(out, status, tracker); 
 %>
 <hr>
 <h2 id="scheduling_info">Scheduling Information</h2>

@@ -43,6 +43,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /** Provide command line access to a FileSystem. */
@@ -63,12 +64,6 @@ public class FsShell extends Configured implements Tool {
   static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
       "-get", "-copyToLocal");
   static final String TAIL_USAGE="-tail [-f] <file>";
-  private static final DecimalFormat decimalFormat;
-  static {
-	  NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
-	  decimalFormat = (DecimalFormat) numberFormat;
-	  decimalFormat.applyPattern("#.##");
-  }
 
   /**
    */
@@ -1216,31 +1211,19 @@ public class FsShell extends Configured implements Tool {
   
   /**
    * Return an abbreviated English-language desc of the byte length
+   * @deprecated Consider using {@link org.apache.hadoop.util.StringUtils#byteDesc} instead.
    */
+  @Deprecated
   public static String byteDesc(long len) {
-    double val = 0.0;
-    String ending = "";
-    if (len < 1024 * 1024) {
-      val = (1.0 * len) / 1024;
-      ending = " KB";
-    } else if (len < 1024 * 1024 * 1024) {
-      val = (1.0 * len) / (1024 * 1024);
-      ending = " MB";
-    } else if (len < 1024L * 1024 * 1024 * 1024) {
-      val = (1.0 * len) / (1024 * 1024 * 1024);
-      ending = " GB";
-    } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
-      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024);
-      ending = " TB";
-    } else {
-      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024 * 1024);
-      ending = " PB";
-    }
-    return limitDecimalTo2(val) + ending;
+    return StringUtils.byteDesc(len);
   }
 
+  /**
+   * @deprecated Consider using {@link org.apache.hadoop.util.StringUtils#limitDecimalTo2} instead.
+   */
+  @Deprecated
   public static synchronized String limitDecimalTo2(double d) {
-    return decimalFormat.format(d);
+    return StringUtils.limitDecimalTo2(d);
   }
 
   private void printHelp(String cmd) {

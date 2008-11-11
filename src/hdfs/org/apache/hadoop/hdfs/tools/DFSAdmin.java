@@ -271,15 +271,15 @@ public class DFSAdmin extends FsShell {
         System.out.println(status.getStatusText(false));
       }
       System.out.println("Configured Capacity: " + capacity
-                         + " (" + byteDesc(capacity) + ")");
+                         + " (" + StringUtils.byteDesc(capacity) + ")");
       System.out.println("Present Capacity: " + presentCapacity
-          + " (" + byteDesc(presentCapacity) + ")");
+          + " (" + StringUtils.byteDesc(presentCapacity) + ")");
       System.out.println("DFS Remaining: " + remaining
-          + " (" + byteDesc(remaining) + ")");
+          + " (" + StringUtils.byteDesc(remaining) + ")");
       System.out.println("DFS Used: " + used
-                         + " (" + byteDesc(used) + ")");
+                         + " (" + StringUtils.byteDesc(used) + ")");
       System.out.println("DFS Used%: "
-                         + limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
+                         + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
                          + "%");
       System.out.println();
 

@@ -107,9 +107,9 @@
           if (files[i].getPath().toString().endsWith(".crc")) continue;
           if (!files[i].isDir()) {
             cols[1] = "file";
-            cols[2] = FsShell.byteDesc(files[i].getLen());
+            cols[2] = StringUtils.byteDesc(files[i].getLen());
             cols[3] = Short.toString(files[i].getReplication());
-            cols[4] = FsShell.byteDesc(files[i].getBlockSize());
+            cols[4] = StringUtils.byteDesc(files[i].getBlockSize());
           }
           else {
             cols[1] = "dir";

@@ -57,6 +57,8 @@ public class ClusterStatus implements Writable {
   private int max_map_tasks;
   private int max_reduce_tasks;
   private JobTracker.State state;
+  private long used_memory;
+  private long max_memory;
 
   ClusterStatus() {}
   
@@ -77,6 +79,8 @@ public class ClusterStatus implements Writable {
     max_map_tasks = maxMaps;
     max_reduce_tasks = maxReduces;
     this.state = state;
+    used_memory = Runtime.getRuntime().totalMemory();
+    max_memory = Runtime.getRuntime().maxMemory();
   }
   
 
@@ -135,12 +139,32 @@ public class ClusterStatus implements Writable {
     return state;
   }
 
+  /**
+   * Get the total heap memory used by the <code>JobTracker</code>
+   * 
+   * @return the size of heap memory used by the <code>JobTracker</code>
+   */
+  public long getUsedMemory() {
+    return used_memory;
+  }
+
+  /**
+   * Get the maximum configured heap memory that can be used by the <code>JobTracker</code>
+   * 
+   * @return the configured size of max heap memory that can be used by the <code>JobTracker</code>
+   */
+  public long getMaxMemory() {
+    return max_memory;
+  }
+
   public void write(DataOutput out) throws IOException {
     out.writeInt(task_trackers);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
     out.writeInt(max_map_tasks);
     out.writeInt(max_reduce_tasks);
+    out.writeLong(used_memory);
+    out.writeLong(max_memory);
     WritableUtils.writeEnum(out, state);
   }
 
@@ -150,7 +174,8 @@ public class ClusterStatus implements Writable {
     reduce_tasks = in.readInt();
     max_map_tasks = in.readInt();
     max_reduce_tasks = in.readInt();
+    used_memory = in.readLong();
+    max_memory = in.readLong();
     state = WritableUtils.readEnum(in, JobTracker.State.class);
   }
-
 }
