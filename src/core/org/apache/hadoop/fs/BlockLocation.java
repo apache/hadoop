@@ -38,6 +38,7 @@ public class BlockLocation implements Writable {
 
   private String[] hosts; //hostnames of datanodes
   private String[] names; //hostname:portNumber of datanodes
+  private String[] topologyPaths; // full path name in network topology
   private long offset;  //offset of the of the block in the file
   private long length;
 
@@ -65,6 +66,20 @@ public class BlockLocation implements Writable {
     }
     this.offset = offset;
     this.length = length;
+    this.topologyPaths = new String[0];
+  }
+
+  /**
+   * Constructor with host, name, network topology, offset and length
+   */
+  public BlockLocation(String[] names, String[] hosts, String[] topologyPaths,
+                       long offset, long length) {
+    this(names, hosts, offset, length);
+    if (topologyPaths == null) {
+      this.topologyPaths = new String[0];
+    } else {
+      this.topologyPaths = topologyPaths;
+    }
   }
 
   /**
@@ -86,6 +101,18 @@ public class BlockLocation implements Writable {
       return new String[0];
     } else {
       return this.names;
+    }
+  }
+
+  /**
+   * Get the list of network topology paths for each of the hosts.
+   * The last component of the path is the host.
+   */
+  public String[] getTopologyPaths() throws IOException {
+    if ((topologyPaths == null) || (topologyPaths.length == 0)) {
+      return new String[0];
+    } else {
+      return this.topologyPaths;
     }
   }
   
@@ -140,6 +167,17 @@ public class BlockLocation implements Writable {
   }
 
   /**
+   * Set the network topology paths of the hosts
+   */
+  public void setTopologyPaths(String[] topologyPaths) throws IOException {
+    if (topologyPaths == null) {
+      this.topologyPaths = new String[0];
+    } else {
+      this.topologyPaths = topologyPaths;
+    }
+  }
+
+  /**
    * Implement write of Writable
    */
   public void write(DataOutput out) throws IOException {
@@ -153,6 +191,11 @@ public class BlockLocation implements Writable {
     out.writeInt(hosts.length);
     for (int i=0; i < hosts.length; i++) {
       Text host = new Text(hosts[i]);
+      host.write(out);
+    }
+    out.writeInt(topologyPaths.length);
+    for (int i=0; i < topologyPaths.length; i++) {
+      Text host = new Text(topologyPaths[i]);
       host.write(out);
     }
   }
@@ -175,6 +218,12 @@ public class BlockLocation implements Writable {
       Text host = new Text();
       host.readFields(in);
       hosts[i] = host.toString();
+    }
+    int numTops = in.readInt();
+    Text path = new Text();
+    for (int i = 0; i < numTops; i++) {
+      path.readFields(in);
+      topologyPaths[i] = path.toString();
     }
   }
   

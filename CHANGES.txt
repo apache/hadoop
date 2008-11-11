@@ -22,6 +22,9 @@ Trunk (unreleased changes)
       NameNode(bindAddress, conf) is removed.
     (shv)
 
+    HADOOP-4567. GetFileBlockLocations returns the NetworkTopology
+    information of the machines where the blocks reside. (dhruba)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -309,11 +310,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       DatanodeInfo[] locations = blk.getLocations();
       String[] hosts = new String[locations.length];
       String[] names = new String[locations.length];
+      String[] racks = new String[locations.length];
       for (int hCnt = 0; hCnt < locations.length; hCnt++) {
         hosts[hCnt] = locations[hCnt].getHostName();
         names[hCnt] = locations[hCnt].getName();
+        NodeBase node = new NodeBase(names[hCnt], 
+                                     locations[hCnt].getNetworkLocation());
+        racks[hCnt] = node.toString();
       }
-      blkLocations[idx] = new BlockLocation(names, hosts, blk.getStartOffset(),
+      blkLocations[idx] = new BlockLocation(names, hosts, racks,
+                                            blk.getStartOffset(),
                                             blk.getBlockSize());
       idx++;
     }

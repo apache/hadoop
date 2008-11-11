@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests the replication of a DFS file.
@@ -74,6 +76,28 @@ public class TestReplication extends TestCase {
     
     LocatedBlocks locations = namenode.getBlockLocations(name.toString(),0,
                                                          Long.MAX_VALUE);
+    FileStatus stat = fileSys.getFileStatus(name);
+    BlockLocation[] blockLocations = fileSys.getFileBlockLocations(stat,0L,
+                                                         Long.MAX_VALUE);
+    // verify that rack locations match
+    assertTrue(blockLocations.length == locations.locatedBlockCount());
+    for (int i = 0; i < blockLocations.length; i++) {
+      LocatedBlock blk = locations.get(i);
+      DatanodeInfo[] datanodes = blk.getLocations();
+      String[] topologyPaths = blockLocations[i].getTopologyPaths();
+      assertTrue(topologyPaths.length == datanodes.length);
+      for (int j = 0; j < topologyPaths.length; j++) {
+        boolean found = false;
+        for (int k = 0; k < racks.length; k++) {
+          if (topologyPaths[j].startsWith(racks[k])) {
+            found = true;
+            break;
+          }
+        }
+        assertTrue(found);
+      }
+    }
+
     boolean isOnSameRack = true, isNotOnSameRack = true;
     for (LocatedBlock blk : locations.getLocatedBlocks()) {
       DatanodeInfo[] datanodes = blk.getLocations();
