@@ -1090,6 +1090,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4282. Some user facing URLs are not filtered by user filters.
     (szetszwo)
 
+    HADOOP-4595. Fixes two race conditions - one to do with updating free slot count,
+    and another to do with starting the MapEventsFetcher thread. (ddas)
+
 Release 0.18.3 - Unreleased
 
   BUG FIXES

@@ -459,11 +459,6 @@ abstract class TaskRunner extends Thread {
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
       tracker.reportTaskFinished(t.getTaskID(), false);
-      if (t.isMapTask()) {
-        tracker.addFreeMapSlot();
-      } else {
-        tracker.addFreeReduceSlot();
-      }
     }
   }
   
