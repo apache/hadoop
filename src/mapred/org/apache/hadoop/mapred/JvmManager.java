@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -177,7 +178,14 @@ class JvmManager {
     }
     
     synchronized public void stop() {
-      for (JvmRunner jvm : jvmIdToRunner.values()) {
+      //since the kill() method invoked later on would remove
+      //an entry from the jvmIdToRunner map, we create a
+      //copy of the values and iterate over it (if we don't
+      //make a copy, we will encounter concurrentModification
+      //exception
+      List <JvmRunner> list = new ArrayList<JvmRunner>();
+      list.addAll(jvmIdToRunner.values());
+      for (JvmRunner jvm : list) {
         jvm.kill();
       }
     }
