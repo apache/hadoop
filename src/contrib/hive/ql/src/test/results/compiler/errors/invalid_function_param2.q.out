@@ -1,2 +1,0 @@
-Semantic Exception: 
-line 2:36 Function Argument Type Mismatch substr: Looking for UDF "substr" with parameters [class java.lang.String, class java.lang.String]

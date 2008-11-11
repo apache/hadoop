@@ -1,2 +1,0 @@
-Semantic Exception: 
-line 2:85 SELECT DISTINCT and GROUP BY can not be in the same query key
