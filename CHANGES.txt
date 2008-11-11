@@ -109,6 +109,8 @@ Release 0.19.0 - Unreleased
                (Samuel Guo via Stack)
    HBASE-722   Shutdown and Compactions
    HBASE-983   Declare Perl namespace in Hbase.thrift
+   HBASE-987   We need a Hbase Partitioner for TableMapReduceUtil.initTableReduceJob
+               MR Jobs (Billy Pearson via Stack)
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
