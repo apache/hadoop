@@ -25,24 +25,17 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level
  * HBase functionality, like finding an HRegionServer and creating/destroying
  * tables.
+ * 
+ * <p>NOTE: if you change the interface, you must change the RPC version
+ * number in HBaseRPCProtocolVersion
+ * 
  */
-public interface HMasterInterface extends VersionedProtocol {
-  /**
-   * Interface version.
-   * Version was incremented to 2 when we brought the hadoop RPC local to hbase
-   * -- HADOOP-2495 and then to 3 when we changed the RPC to send codes instead
-   * of actual class names (HADOOP-2519).
-   * <p>Version 4 when we moved to all byte arrays (HBASE-42).
-   * <p>Version 5  HBASE-576.
-   * <p>Version 6  modifyTable.
-   */
-  public static final long versionID = 6L;
+public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /** @return true if master is available */
   public boolean isMasterRunning();

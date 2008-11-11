@@ -10,6 +10,7 @@ Release 0.19.0 - Unreleased
    HBASE-953   Enable BLOCKCACHE by default [WAS -> Reevaluate HBASE-288 block
                caching work....?] -- Update your hbad-default.xml file!
    HBASE-636   java6 as a requirement
+   HBASE-994   IPC interfaces with different versions can cause problems
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

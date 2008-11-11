@@ -27,12 +27,11 @@ import org.apache.hadoop.hbase.io.RowResult;
 /**
  * Interface for transactional region servers.
  * 
+ * <p>NOTE: if you change the interface, you must change the RPC version
+ * number in HBaseRPCProtocolVersion
+ * 
  */
 public interface TransactionalRegionInterface extends HRegionInterface {
-  /** Interface version number
-   *  Moved to 2 for hbase-576.
-   */
-  public static final long versionID = 2L;
 
   /**
    * Sent to initiate a transaction.

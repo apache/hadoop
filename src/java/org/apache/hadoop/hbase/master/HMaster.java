@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -90,16 +91,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  public long getProtocolVersion(String protocol,
-      @SuppressWarnings("unused") long clientVersion)
-  throws IOException {
-    if (protocol.equals(HMasterInterface.class.getName())) {
-      return HMasterInterface.versionID; 
-    } else if (protocol.equals(HMasterRegionInterface.class.getName())) {
-      return HMasterRegionInterface.versionID;
-    } else {
-      throw new IOException("Unknown protocol to name node: " + protocol);
-    }
+  public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
+      @SuppressWarnings("unused") long clientVersion) {
+    return HBaseRPCProtocolVersion.versionID;
   }
 
   // We start out with closed flag on.  Using AtomicBoolean rather than

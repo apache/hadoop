@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
@@ -192,7 +193,7 @@ public class HConnectionManager implements HConstants {
             DEFAULT_MASTER_ADDRESS));
           try {
             HMasterInterface tryMaster = (HMasterInterface)HbaseRPC.getProxy(
-                HMasterInterface.class, HMasterInterface.versionID, 
+                HMasterInterface.class, HBaseRPCProtocolVersion.versionID, 
                 masterLocation.getInetSocketAddress(), this.conf);
             
             if (tryMaster.isMasterRunning()) {
@@ -729,25 +730,10 @@ public class HConnectionManager implements HConstants {
         // See if we already have a connection
         server = this.servers.get(regionServer.toString());
         if (server == null) { // Get a connection
-          long versionId = 0;
           try {
-            versionId =
-              serverInterfaceClass.getDeclaredField("versionID").getLong(server);
-          } catch (IllegalAccessException e) {
-            // Should never happen unless visibility of versionID changes
-            throw new UnsupportedOperationException(
-                "Unable to open a connection to a " +
-                serverInterfaceClass.getName() + " server.", e);
-          } catch (NoSuchFieldException e) {
-            // Should never happen unless versionID field name changes in HRegionInterface
-            throw new UnsupportedOperationException(
-                "Unable to open a connection to a " +
-                serverInterfaceClass.getName() + " server.", e);
-          }
-
-          try {
-            server = (HRegionInterface)HbaseRPC.waitForProxy(serverInterfaceClass,
-                versionId, regionServer.getInetSocketAddress(), this.conf, 
+            server = (HRegionInterface)HbaseRPC.waitForProxy(
+                serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
+                regionServer.getInetSocketAddress(), this.conf, 
                 this.maxRPCAttempts);
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);

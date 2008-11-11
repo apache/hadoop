@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -32,17 +31,12 @@ import org.apache.hadoop.hbase.HServerAddress;
  * HRegionServers interact with the HMasterRegionInterface to report on local 
  * goings-on and to obtain data-handling instructions from the HMaster.
  * <p>Changes here need to be reflected in HbaseObjectWritable HbaseRPC#Invoker.
+ * 
+ * <p>NOTE: if you change the interface, you must change the RPC version
+ * number in HBaseRPCProtocolVersion
+ * 
  */
-public interface HMasterRegionInterface extends VersionedProtocol {
-  /**
-   * Interface version number.
-   * Version 2 was when the regionServerStartup was changed to return a
-   * MapWritable instead of a HbaseMapWritable as part of HBASE-82 changes.
-   * Version 3 was when HMsg was refactored so it could carry optional
-   * messages (HBASE-504).
-   * <p>HBASE-576 we moved this to 4.
-   */
-  public static final long versionID = 4L;
+public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Called when a region server first starts

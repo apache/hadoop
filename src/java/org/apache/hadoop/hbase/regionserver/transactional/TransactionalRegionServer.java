@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -86,7 +87,7 @@ public class TransactionalRegionServer extends HRegionServer implements
   public long getProtocolVersion(final String protocol, final long clientVersion)
       throws IOException {
     if (protocol.equals(TransactionalRegionInterface.class.getName())) {
-      return TransactionalRegionInterface.versionID;
+      return HBaseRPCProtocolVersion.versionID;
     }
     return super.getProtocolVersion(protocol, clientVersion);
   }

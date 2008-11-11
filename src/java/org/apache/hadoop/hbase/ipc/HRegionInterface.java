@@ -26,20 +26,17 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
+ * 
+ * <p>NOTE: if you change the interface, you must change the RPC version
+ * number in HBaseRPCProtocolVersion
+ * 
  */
-public interface HRegionInterface extends VersionedProtocol {
-  /**
-   * Protocol version.
-   * Upped to 5 when we added scanner caching
-   * <p>HBASE-576, we moved this to 6.
-   */
-  public static final long versionID = 6L;
+public interface HRegionInterface extends HBaseRPCProtocolVersion {
 
   /** 
    * Get metainfo about an HRegion
@@ -113,6 +110,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param regionName name of the region to update
    * @param b BatchUpdate[]
    * @throws IOException
+   * @return number of updates applied
    */
   public int batchUpdates(final byte[] regionName, final BatchUpdate[] b)
   throws IOException;

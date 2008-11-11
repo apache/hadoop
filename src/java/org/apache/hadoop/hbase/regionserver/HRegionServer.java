@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
@@ -783,7 +784,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // Do initial RPC setup.  The final argument indicates that the RPC
         // should retry indefinitely.
         master = (HMasterRegionInterface)HbaseRPC.waitForProxy(
-            HMasterRegionInterface.class, HMasterRegionInterface.versionID,
+            HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
             this.conf, -1);
       } catch (IOException e) {
@@ -1072,7 +1073,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private static class RegionCloserThread extends Thread {
     private final HRegion r;
 
-    public RegionCloserThread(final HRegion r) {
+    protected RegionCloserThread(final HRegion r) {
       super(Thread.currentThread().getName() + ".regionCloser." + r.toString());
       this.r = r;
     }
@@ -1790,7 +1791,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       @SuppressWarnings("unused") final long clientVersion)
   throws IOException {  
     if (protocol.equals(HRegionInterface.class.getName())) {
-      return HRegionInterface.versionID;
+      return HBaseRPCProtocolVersion.versionID;
     }
     throw new IOException("Unknown protocol to name node: " + protocol);
   }
