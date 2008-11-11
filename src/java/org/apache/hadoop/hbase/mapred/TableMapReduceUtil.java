@@ -69,7 +69,8 @@ public class TableMapReduceUtil {
    * @throws IOException 
    */
   public static void initTableReduceJob(String table,
-      Class<? extends TableReduce> reducer, JobConf job) {
+    Class<? extends TableReduce> reducer, JobConf job)
+  throws IOException {
     initTableReduceJob(table, reducer, job, null);
   }
 
