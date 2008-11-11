@@ -609,13 +609,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-          1, HColumnDescriptor.CompressionType.NONE, false, false,
+          10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+          HColumnDescriptor.CompressionType.NONE, false, false,
           Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY,
+              10, // Ten is arbitrary number.  Keep versions to help debuggging.
               HColumnDescriptor.CompressionType.NONE, false, false,
               Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,

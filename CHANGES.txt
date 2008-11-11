@@ -112,6 +112,7 @@ Release 0.19.0 - Unreleased
    HBASE-987   We need a Hbase Partitioner for TableMapReduceUtil.initTableReduceJob
                MR Jobs (Billy Pearson via Stack)
    HBASE-993   Turn of logging of every catalog table row entry on every scan
+   HBASE-992   Up the versions kept by catalog tables; currently 1. Make it 10?
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
