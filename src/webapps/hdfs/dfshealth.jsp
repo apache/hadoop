@@ -14,8 +14,7 @@
   import="java.lang.Math"
   import="java.net.URLEncoder"
 %>
-<%!FSNamesystem fsn = FSNamesystem.getFSNamesystem();
-  String namenodeLabel = fsn.getDFSNameNodeMachine() + ":" + fsn.getDFSNameNodePort();
+<%!
   JspHelper jspHelper = new JspHelper();
 
   int rowNum = 0;
@@ -49,7 +48,8 @@
   }
       
   public void generateNodeData( JspWriter out, DatanodeDescriptor d,
-                                    String suffix, boolean alive )
+                                    String suffix, boolean alive,
+                                    int nnHttpPort )
     throws IOException {
       
     /* Say the datanode is dn1.hadoop.apache.org with ip 192.168.0.5
@@ -67,7 +67,7 @@
     // from nn_browsedfscontent.jsp:
     String url = "http://" + d.getHostName() + ":" + d.getInfoPort() +
                  "/browseDirectory.jsp?namenodeInfoPort=" +
-                 fsn.getNameNodeInfoPort() + "&dir=" +
+                 nnHttpPort + "&dir=" +
                  URLEncoder.encode("/", "UTF-8");
      
     String name = d.getHostName() + ":" + d.getPort();
@@ -118,8 +118,10 @@
   }
 
   public void generateDFSHealthReport(JspWriter out,
+                                      NameNode nn,
                                       HttpServletRequest request)
                                       throws IOException {
+    FSNamesystem fsn = nn.getNamesystem();
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     jspHelper.DFSNodesStatus(live, dead);
@@ -190,6 +192,7 @@
 
         counterReset();
         
+  int nnHttpPort = nn.getHttpAddress().getPort();
 	if ( live.size() > 0 ) {
             
             if ( live.get(0).getCapacity() > 1024 * diskBytes ) {
@@ -216,7 +219,7 @@
             
       jspHelper.sortNodeList(live, sorterField, sorterOrder);
       for ( int i=0; i < live.size(); i++ ) {
-        generateNodeData( out, live.get(i), port_suffix, true );
+        generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort);
       }
     }
     out.print("</table>\n");
@@ -232,7 +235,7 @@
 	    
       jspHelper.sortNodeList(dead, "name", "ASC");
 	    for ( int i=0; i < dead.size() ; i++ ) {
-                generateNodeData( out, dead.get(i), port_suffix, false );
+        generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
 	    }
 	    
 	    out.print("</table>\n");
@@ -240,6 +243,12 @@
 	out.print("</div>");
     }
   }%>
+
+<%
+  NameNode nn = (NameNode)application.getAttribute("name.node");
+  FSNamesystem fsn = nn.getNamesystem();
+  String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
+%>
 
 <html>
 
@@ -264,8 +273,8 @@
 <h3>Cluster Summary</h3>
 <b> <%= jspHelper.getSafeModeText()%> </b>
 <b> <%= jspHelper.getInodeLimitText()%> </b>
-<% 
-    generateDFSHealthReport(out, request); 
+<%
+    generateDFSHealthReport(out, nn, request); 
 %>
 
 <%

@@ -33,11 +33,9 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
-import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -187,14 +185,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private Map<String, Collection<Block>> excessReplicateMap = 
     new TreeMap<String, Collection<Block>>();
 
-  //
-  // For the HTTP browsing interface
-  //
-  HttpServer infoServer;
-  int infoPort;
-  Date startTime;
-    
-  //
   Random r = new Random();
 
   /**
@@ -247,6 +237,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private long decommissionRecheckInterval;
   // default block size of a file
   private long defaultBlockSize = 0;
+  // allow appending to hdfs files
+  private boolean supportAppends = true;
 
   /**
    * Last block index used for replication work.
@@ -254,8 +246,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private int replIndex = 0;
 
   public static FSNamesystem fsNamesystemObject;
-  private String localMachine;
-  private int port;
+  /** NameNode RPC address */
+  private InetSocketAddress nameNodeAddress = null; // TODO: name-node has this field, it should be removed here
   private SafeModeInfo safeMode;  // safe mode information
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
@@ -300,11 +292,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   private void initialize(NameNode nn, Configuration conf) throws IOException {
     this.systemStart = now();
-    this.startTime = new Date(systemStart); 
     setConfigurationParameters(conf);
 
-    this.localMachine = nn.getNameNodeAddress().getHostName();
-    this.port = nn.getNameNodeAddress().getPort();
+    this.nameNodeAddress = nn.getNameNodeAddress();
     this.registerMBean(conf); // register the MBean for the FSNamesystemStutus
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
@@ -343,45 +333,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
-
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                "dfs.info.port", "dfs.http.address");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
-    String infoHost = infoSocAddr.getHostName();
-    int tmpInfoPort = infoSocAddr.getPort();
-    this.infoServer = new HttpServer("hdfs", infoHost, tmpInfoPort, 
-        tmpInfoPort == 0, conf);
-    if (conf.getBoolean("dfs.https.enable", false)) {
-      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
-      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          "dfs.https.address", infoHost + ":" + 0));
-      Configuration sslConf = new Configuration(false);
-      sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
-          "ssl-server.xml"));
-      this.infoServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
-      // assume same ssl port for all datanodes
-      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
-          "dfs.datanode.https.address", infoHost + ":" + 50475));
-      this.infoServer.setAttribute("datanode.https.port", datanodeSslPort
-          .getPort());
-    }
-    this.infoServer.setAttribute("name.node", nn);
-    this.infoServer.setAttribute("name.node.address", nn.getNameNodeAddress());
-    this.infoServer.setAttribute("name.system.image", getFSImage());
-    this.infoServer.setAttribute("name.conf", conf);
-    this.infoServer.addInternalServlet("fsck", "/fsck", FsckServlet.class);
-    this.infoServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
-    this.infoServer.addInternalServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
-    this.infoServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
-    this.infoServer.addInternalServlet("checksum", "/fileChecksum/*",
-        FileChecksumServlets.RedirectServlet.class);
-    this.infoServer.start();
-
-    // The web-server port can be ephemeral... ensure we have the correct info
-    this.infoPort = this.infoServer.getPort();
-    conf.set("dfs.http.address", infoHost + ":" + infoPort);
-    LOG.info("Web-server up at: " + infoHost + ":" + infoPort);
   }
 
   public static Collection<File> getNamespaceDirs(Configuration conf) {
@@ -475,6 +426,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
                                          20*(int)(heartbeatInterval/1000));
     this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
+    this.supportAppends = conf.getBoolean("dfs.support.append", true);
   }
 
   /**
@@ -507,12 +459,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     fsRunning = false;
     try {
       if (pendingReplications != null) pendingReplications.stop();
-      if (infoServer != null) infoServer.stop();
       if (hbthread != null) hbthread.interrupt();
       if (replthread != null) replthread.interrupt();
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
-    } catch (InterruptedException ie) {
     } finally {
       // using finally to ensure we also wait for lease daemon
       try {
@@ -1156,10 +1106,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   LocatedBlock appendFile(String src, String holder, String clientMachine
       ) throws IOException {
-
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
-          +src+" for "+holder+" at "+clientMachine);
+    if (supportAppends == false) {
+      throw new IOException("Append to hdfs not supported." +
+                            " Please refer to dfs.support.append configuration parameter.");
     }
     startFileInternal(src, null, holder, clientMachine, false, true, 
                       (short)maxReplication, (long)0);
@@ -3487,20 +3436,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public DatanodeInfo getDataNodeInfo(String name) {
     return datanodeMap.get(name);
   }
-  /** 
-   */
-  public String getDFSNameNodeMachine() {
-    return localMachine;
-  }
+
   /**
-   */ 
-  public int getDFSNameNodePort() {
-    return port;
+   * @deprecated use {@link NameNode#getNameNodeAddress()} instead.
+   */
+  @Deprecated
+  public InetSocketAddress getDFSNameNodeAddress() {
+    return nameNodeAddress;
   }
+
   /**
    */
   public Date getStartTime() {
-    return startTime;
+    return new Date(systemStart); 
   }
     
   short getMaxReplication()     { return (short)maxReplication; }
@@ -3822,10 +3770,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   public DatanodeDescriptor getRandomDatanode() {
     return replicator.chooseTarget(1, null, null, 0)[0];
-  }
-    
-  public int getNameNodeInfoPort() {
-    return infoPort;
   }
 
   /**

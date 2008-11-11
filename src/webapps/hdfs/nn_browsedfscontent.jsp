@@ -14,8 +14,10 @@
   import="java.net.URLEncoder"
 %>
 <%!
-  FSNamesystem fsn = FSNamesystem.getFSNamesystem();
-  public void redirectToRandomDataNode(HttpServletResponse resp) throws IOException {
+  public void redirectToRandomDataNode(
+                            NameNode nn, 
+                            HttpServletResponse resp) throws IOException {
+    FSNamesystem fsn = nn.getNamesystem();
     String datanode = fsn.randomDataNode();
     String redirectLocation;
     String nodeToRedirect;
@@ -25,13 +27,13 @@
       nodeToRedirect = datanode.substring(0, datanode.indexOf(':'));
     }
     else {
-      nodeToRedirect = fsn.getDFSNameNodeMachine();
-      redirectPort = fsn.getNameNodeInfoPort();
+      nodeToRedirect = nn.getHttpAddress().getHostName();
+      redirectPort = nn.getHttpAddress().getPort();
     }
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort + 
                        "/browseDirectory.jsp?namenodeInfoPort=" + 
-                       fsn.getNameNodeInfoPort() +
+                       nn.getHttpAddress().getPort() +
                        "&dir=" + URLEncoder.encode("/", "UTF-8");
     resp.sendRedirect(redirectLocation);
   }
@@ -43,7 +45,8 @@
 
 <body>
 <% 
-   redirectToRandomDataNode(response); 
+  NameNode nn = (NameNode)application.getAttribute("name.node");
+  redirectToRandomDataNode(nn, response); 
 %>
 <hr>
 

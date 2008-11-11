@@ -65,8 +65,7 @@ public class JspHelper {
     }
     else {
       fsn = FSNamesystem.getFSNamesystem();
-      nameNodeAddr = new InetSocketAddress(fsn.getDFSNameNodeMachine(),
-                                           fsn.getDFSNameNodePort()); 
+      nameNodeAddr = fsn.getDFSNameNodeAddress(); 
     }      
 
     UnixUserGroupInformation.saveToConf(conf,
