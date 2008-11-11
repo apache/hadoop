@@ -206,6 +206,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.remaining = 0;
     this.xceiverCount = 0;
     this.blockList = null;
+    this.invalidateBlocks.clear();
   }
 
   int numBlocks() {
