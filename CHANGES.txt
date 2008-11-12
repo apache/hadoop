@@ -91,7 +91,10 @@ Trunk (unreleased changes)
     HADOOP-3923. Remove org.apache.hadoop.mapred.StatusHttpServer.  (szetszwo)
     
     HADOOP-4622. Explicitly specify interpretor for non-native
-    pipes binaries. (Fredrik Hedberg via johan)    
+    pipes binaries. (Fredrik Hedberg via johan)
+    
+    HADOOP-4505. Add a unit test to test faulty setup task and cleanup
+    task killing the job. (Amareshwari Sriramadasu via johan)
 
   OPTIMIZATIONS
 
