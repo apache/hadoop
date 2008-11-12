@@ -83,6 +83,11 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     env.put("hadoop.pipes.command.port", 
             Integer.toString(serverSocket.getLocalPort()));
     List<String> cmd = new ArrayList<String>();
+    String interpretor = conf.get("hadoop.pipes.executable.interpretor");
+    if (interpretor != null) {
+      cmd.add(interpretor);
+    }
+
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
     FileUtil.chmod(executable, "a+x");
     cmd.add(executable);
