@@ -23,7 +23,7 @@
 
 # The java implementation to use.  Required.
 # export JAVA_HOME=/usr/lib/j2sdk1.5-sun
-export JAVA_HOME=/usr
+export JAVA_HOME=/Users/stack/bin/jdk
 
 # Extra Java CLASSPATH elements.  Optional.
 # export HBASE_CLASSPATH=

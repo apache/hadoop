@@ -44,9 +44,10 @@ public interface HConstants {
   
   /**
    * Current version of file system
-   * Version 4 supports only one kind of bloom filter
+   * Version 4 supports only one kind of bloom filter.
+   * Version 5 changes versions in catalog table regions.
    */
-  public static final String FILE_SYSTEM_VERSION = "4";
+  public static final String FILE_SYSTEM_VERSION = "5";
   
   // Configuration parameters
   
