@@ -90,9 +90,8 @@ public class MultiFileSplit implements InputSplit {
 
   public String[] getLocations() throws IOException {
     HashSet<String> hostSet = new HashSet<String>();
-    JobClient jClient = new JobClient(job);
-    FileSystem fs = jClient.getFs();
     for (Path file : paths) {
+      FileSystem fs = file.getFileSystem(job);
       FileStatus status = fs.getFileStatus(file);
       BlockLocation[] blkLocations = fs.getFileBlockLocations(status,
                                           0, status.getLen());

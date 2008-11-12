@@ -136,6 +136,9 @@ Trunk (unreleased changes)
     HADOOP-4566. Deploy new hive code to support more types.
     (Zheng Shao via dhruba)
 
+    HADOOP-4500. Fix MultiFileSplit to get the FileSystem from the relevant
+    path rather than the JobClient. (Joydeep Sen Sarma via cdouglas)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
