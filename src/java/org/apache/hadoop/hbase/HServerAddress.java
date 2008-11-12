@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
  * HServerAddress is a "label" for a HBase server that combines the host
  * name and port number.
  */
+@SuppressWarnings("unchecked")
 public class HServerAddress implements WritableComparable {
   private InetSocketAddress address;
   String stringValue;

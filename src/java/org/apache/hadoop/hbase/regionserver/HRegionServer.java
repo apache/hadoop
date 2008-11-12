@@ -585,10 +585,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
     
-    Path logdir = new Path(rootDir, "log" + "_" + 
-        serverInfo.getServerAddress().getBindAddress() + "_" +
-        this.serverInfo.getStartCode() + "_" + 
-        this.serverInfo.getServerAddress().getPort());
+    Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(serverInfo));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
     }

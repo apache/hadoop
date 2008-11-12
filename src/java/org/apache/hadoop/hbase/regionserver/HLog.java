@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -750,6 +753,28 @@ public class HLog implements HConstants, Syncable {
       throw io;
     }
     LOG.info("log file splitting completed for " + srcDir.toString());
+  }
+
+  /**
+   * Construct the HLog directory name
+   * 
+   * @param info HServerInfo for server
+   * @return the HLog directory name
+   */
+  public static String getHLogDirectoryName(HServerInfo info) {
+    StringBuilder dirName = new StringBuilder("log_");
+    try {
+      dirName.append(URLEncoder.encode(
+          info.getServerAddress().getBindAddress(), UTF8_ENCODING));
+    } catch (UnsupportedEncodingException e) {
+      LOG.error("Error encoding '" + info.getServerAddress().getBindAddress()
+          + "'", e);
+    }
+    dirName.append("_");
+    dirName.append(info.getStartCode());
+    dirName.append("_");
+    dirName.append(info.getServerAddress().getPort());
+    return dirName.toString();
   }
 
   private static void usage() {

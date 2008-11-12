@@ -77,13 +77,8 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.rootRegionServer = rootRegionServer;
     this.logSplit = false;
     this.rootRescanned = false;
-    StringBuilder dirName = new StringBuilder("log_");
-    dirName.append(deadServer.getBindAddress());
-    dirName.append("_");
-    dirName.append(serverInfo.getStartCode());
-    dirName.append("_");
-    dirName.append(deadServer.getPort());
-    this.oldLogDir = new Path(master.rootdir, dirName.toString());
+    this.oldLogDir =
+      new Path(master.rootdir, HLog.getHLogDirectoryName(serverInfo));
   }
 
   @Override
@@ -257,8 +252,11 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
 
     if (!rootAvailable()) {
-      // Get root region assigned now that log has been split
-      master.regionManager.reassignRootRegion();
+      if (rootRegionServer) {
+        // Get root region assigned now that log has been split and if the
+        // dead server was serving the root region
+        master.regionManager.reassignRootRegion();
+      }
       
       // Return true so that worker does not put this request back on the
       // toDoQueue.
