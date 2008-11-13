@@ -100,6 +100,9 @@ Trunk (unreleased changes)
     HADOOP-4608. Don't print a stack trace when the example driver gets an
     unknown program to run. (Edward Yoon via omalley)
 
+    HADOOP-4645. Package HdfsProxy contrib project without the extra level
+    of directories. (Kan Zhang via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
