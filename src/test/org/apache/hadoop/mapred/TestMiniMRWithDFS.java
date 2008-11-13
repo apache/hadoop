@@ -171,7 +171,8 @@ public class TestMiniMRWithDFS extends TestCase {
 
   static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
     LOG.info("runPI");
-    double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, jobconf);
+    double estimate = org.apache.hadoop.examples.PiEstimator.estimate(
+        NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
     assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
     checkTaskDirectories(mr, new String[]{}, new String[]{});

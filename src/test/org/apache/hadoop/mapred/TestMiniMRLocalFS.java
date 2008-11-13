@@ -41,9 +41,6 @@ import org.apache.hadoop.util.Progressable;
  * A JUnit test to test min map-reduce cluster with local file system.
  */
 public class TestMiniMRLocalFS extends TestCase {
-  
-  static final int NUM_MAPS = 10;
-  static final int NUM_SAMPLES = 100000;
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data","/tmp"))
     .toURI().toString().replace(' ', '+');
@@ -52,10 +49,8 @@ public class TestMiniMRLocalFS extends TestCase {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(2, "file:///", 3);
-      double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
-                                           mr.createJobConf());
-      double error = Math.abs(Math.PI - estimate);
-      assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
+      TestMiniMRWithDFS.runPI(mr, mr.createJobConf());
+
       // run the wordcount example with caching
       JobConf job = mr.createJobConf();
       TestResult ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",

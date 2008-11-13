@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.examples.PiEstimator;
 import org.apache.hadoop.fs.FileSystem;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -56,7 +57,7 @@ public class TestTaskLimits extends TestCase {
   
   static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
     LOG.info("runPI");
-    double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, jobconf);
+    double estimate = PiEstimator.estimate(NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
     System.out.println("PI estimation " + error);
   }
