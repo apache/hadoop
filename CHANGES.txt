@@ -139,6 +139,9 @@ Trunk (unreleased changes)
     HADOOP-4500. Fix MultiFileSplit to get the FileSystem from the relevant
     path rather than the JobClient. (Joydeep Sen Sarma via cdouglas)
 
+    HADOOP-4571. Add chukwa conf files to svn:ignore list. (Eric Yang via
+    szetszwo)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES
