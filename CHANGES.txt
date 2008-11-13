@@ -142,6 +142,10 @@ Trunk (unreleased changes)
     HADOOP-4589. Correct PiEstimator output messages and improve the code
     readability. (szetszwo)
 
+    HADOOP-4650. Correct a mismatch between the default value of
+    local.cache.size in the config and the source. (Jeff Hammerbacher via
+    cdouglas)
+
 Release 0.19.0 - Unreleased
 
   INCOMPATIBLE CHANGES

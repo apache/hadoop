@@ -117,7 +117,7 @@ public class DistributedCache {
   private static TreeMap<String, CacheStatus> cachedArchives = new TreeMap<String, CacheStatus>();
   
   // default total cache size
-  private static final long DEFAULT_CACHE_SIZE = 1048576L;
+  private static final long DEFAULT_CACHE_SIZE = 10737418240L;
 
   private static final Log LOG =
     LogFactory.getLog(DistributedCache.class);
@@ -208,7 +208,7 @@ public class DistributedCache {
 
     // try deleting stuff if you can
     long size = FileUtil.getDU(new File(baseDir.toString()));
-    // setting the cache size to a default of 1MB
+    // setting the cache size to a default of 10GB
     long allowedSize = conf.getLong("local.cache.size", DEFAULT_CACHE_SIZE);
     if (allowedSize < size) {
       // try some cache deletions
