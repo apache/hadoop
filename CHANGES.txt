@@ -976,6 +976,9 @@ Release 0.19.0 - Unreleased
     HADOOP-4471. Sort running jobs by priority in the capacity scheduler.
     (Amar Kamat via yhemanth) 
 
+    HADOOP-4500. Fix MultiFileSplit to get the FileSystem from the relevant
+    path rather than the JobClient. (Joydeep Sen Sarma via dhruba)
+
 Release 0.18.3 - Unreleased
 
   BUG FIXES
