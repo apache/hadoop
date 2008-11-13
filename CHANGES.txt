@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 0.18.3 - Unreleased
 
+  IMPROVEMENTS
+
+    HADOOP-4150. Include librecordio in hadoop releases. (Giridharan Kesavan
+    via acmurthy)
+
   BUG FIXES
 
     HADOOP-4499. DFSClient should invoke checksumOk only once. (Raghu Angadi)
