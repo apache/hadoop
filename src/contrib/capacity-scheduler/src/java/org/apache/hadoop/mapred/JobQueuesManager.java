@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -36,13 +35,11 @@ import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 class JobQueuesManager extends JobInProgressListener {
 
   /* 
-   * If a queue supports priorities, waiting jobs must be 
+   * If a queue supports priorities, jobs must be 
    * sorted on priorities, and then on their start times (technically, 
    * their insertion time.  
-   * If a queue doesn't support priorities, waiting jobs are
+   * If a queue doesn't support priorities, jobs are
    * sorted based on their start time.  
-   * Running jobs are not sorted. A job that started running earlier
-   * is ahead in the queue, so insertion should be at the tail.
    */
   
   // comparator for jobs in queues that don't support priorities
@@ -65,12 +62,8 @@ class JobQueuesManager extends JobInProgressListener {
 
     // whether the queue supports priorities
     boolean supportsPriorities;
-    // maintain separate structures for running & waiting jobs. This we do 
-    // mainly because when a new job is added, it cannot superceede a running 
-    // job, even though the latter may be a lower priority. If this is ever
-    // changed, we may get by with one collection. 
-    Map<JobSchedulingInfo, JobInProgress> waitingJobs;
-    Collection<JobInProgress> runningJobs;
+    Map<JobSchedulingInfo, JobInProgress> waitingJobs; // for waiting jobs
+    Map<JobSchedulingInfo, JobInProgress> runningJobs; // for running jobs
     
     QueueInfo(boolean prio) {
       this.supportsPriorities = prio;
@@ -79,12 +72,16 @@ class JobQueuesManager extends JobInProgressListener {
         this.waitingJobs = 
           new TreeMap<JobSchedulingInfo, JobInProgress>(
               JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR);
+        this.runningJobs = 
+          new TreeMap<JobSchedulingInfo, JobInProgress>(
+              JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR);
       }
       else {
         this.waitingJobs = 
           new TreeMap<JobSchedulingInfo, JobInProgress>(STARTTIME_JOB_COMPARATOR);
+        this.runningJobs = 
+          new TreeMap<JobSchedulingInfo, JobInProgress>(STARTTIME_JOB_COMPARATOR);
       }
-      this.runningJobs = new LinkedList<JobInProgress>();
     }
   }
   
@@ -112,7 +109,7 @@ class JobQueuesManager extends JobInProgressListener {
    * Returns the queue of running jobs associated with the name
    */
   public Collection<JobInProgress> getRunningJobQueue(String queueName) {
-    return jobQueues.get(queueName).runningJobs;
+    return jobQueues.get(queueName).runningJobs.values();
   }
   
   /**
@@ -146,7 +143,7 @@ class JobQueuesManager extends JobInProgressListener {
     LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
              + job.getProfile().getQueueName() + " has completed");
     // job could be in running or waiting queue
-    if (!qi.runningJobs.remove(job)) {
+    if (qi.runningJobs.remove(oldInfo) != null) {
       qi.waitingJobs.remove(oldInfo);
     }
     // let scheduler know
@@ -162,13 +159,14 @@ class JobQueuesManager extends JobInProgressListener {
   private void reorderJobs(JobInProgress job, JobSchedulingInfo oldInfo, 
                            QueueInfo qi) {
     
+    JobSchedulingInfo newInfo = new JobSchedulingInfo(job);
     if (qi.waitingJobs.remove(oldInfo) == null) {
-      qi.runningJobs.remove(job);
+      qi.runningJobs.remove(oldInfo);
       // Add back to the running queue
-      qi.runningJobs.add(job);
+      qi.runningJobs.put(newInfo, job);
     } else {
       // Add back to the waiting queue
-      qi.waitingJobs.put(new JobSchedulingInfo(job), job);
+      qi.waitingJobs.put(newInfo, job);
     }
   }
   
@@ -179,7 +177,7 @@ class JobQueuesManager extends JobInProgressListener {
     qi.waitingJobs.remove(oldInfo);
     
     // Add the job to the running queue
-    qi.runningJobs.add(job);
+    qi.runningJobs.put(new JobSchedulingInfo(job), job);
   }
   
   // Update the scheduler as job's state has changed
