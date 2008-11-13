@@ -120,8 +120,7 @@ public class ProgramDriver {
       System.out.println("An example program must be given as the" + 
                          " first argument.");
       printUsage(programs);
-      throw new IllegalArgumentException("An example program must be given " +
-      		                               "as the first argument.");
+      System.exit(-1);
     }
 	
     // And that it is good.
@@ -129,8 +128,7 @@ public class ProgramDriver {
     if (pgm == null) {
       System.out.println("Unknown program '" + args[0] + "' chosen.");
       printUsage(programs);
-      throw new IllegalArgumentException("Unknown program '" + args[0] + 
-                                         "' chosen.");
+      System.exit(-1);
     }
 	
     // Remove the leading argument and call main

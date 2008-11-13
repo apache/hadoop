@@ -16,10 +16,10 @@ Trunk (unreleased changes)
     (Suresh Srinivas via johan)
 
     HADOOP-4618. Move http server from FSNamesystem into NameNode.
-      FSNamesystem.getNameNodeInfoPort() is removed.
-      FSNamesystem.getDFSNameNodeMachine() and FSNamesystem.getDFSNameNodePort()
-        replaced by FSNamesystem.getDFSNameNodeAddress().
-      NameNode(bindAddress, conf) is removed.
+    FSNamesystem.getNameNodeInfoPort() is removed.
+    FSNamesystem.getDFSNameNodeMachine() and FSNamesystem.getDFSNameNodePort()
+      replaced by FSNamesystem.getDFSNameNodeAddress().
+    NameNode(bindAddress, conf) is removed.
     (shv)
 
     HADOOP-4567. GetFileBlockLocations returns the NetworkTopology
@@ -74,13 +74,14 @@ Trunk (unreleased changes)
 
     HADOOP-3461. Remove hdfs.StringBytesWritable. (szetszwo)
 
-    HADOOP-4437. Use Halton sequence instead of java.util.Random in PiEstimator.
+    HADOOP-4437. Use Halton sequence instead of java.util.Random in 
+    PiEstimator. (szetszwo)
+
+    HADOOP-4572. Change INode and its sub-classes to package private. 
     (szetszwo)
 
-    HADOOP-4572. Change INode and its sub-classes to package private. (szetszwo)
-
-    HADOOP-4187. Does a runtime lookup for JobConf/JobConfigurable, and if found,
-    invokes the appropriate configure method. (Sharad Agarwal via ddas)
+    HADOOP-4187. Does a runtime lookup for JobConf/JobConfigurable, and if 
+    found, invokes the appropriate configure method. (Sharad Agarwal via ddas)
 
     HADOOP-4453. Improve ssl configuration and handling in HsftpFileSystem,
     particularly when used with DistCp. (Kan Zhang via cdouglas)
@@ -95,6 +96,9 @@ Trunk (unreleased changes)
     
     HADOOP-4505. Add a unit test to test faulty setup task and cleanup
     task killing the job. (Amareshwari Sriramadasu via johan)
+
+    HADOOP-4608. Don't print a stack trace when the example driver gets an
+    unknown program to run. (Edward Yoon via omalley)
 
   OPTIMIZATIONS
 
