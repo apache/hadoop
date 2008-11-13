@@ -103,6 +103,8 @@ Trunk (unreleased changes)
     HADOOP-4645. Package HdfsProxy contrib project without the extra level
     of directories. (Kan Zhang via omalley)
 
+    HADOOP-4126. Allow access to HDFS web UI on EC2 (tomwhite via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES

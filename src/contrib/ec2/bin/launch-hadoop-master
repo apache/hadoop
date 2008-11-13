@@ -56,6 +56,8 @@ if [ ! $? -eq 0 ]; then
   if [ $ENABLE_WEB_PORTS == "true" ]; then
     ec2-authorize $CLUSTER_MASTER -p 50030 # JobTracker web interface
     ec2-authorize $CLUSTER_MASTER -p 50060 # TaskTracker web interface
+    ec2-authorize $CLUSTER_MASTER -p 50070 # NameNode web interface
+    ec2-authorize $CLUSTER_MASTER -p 50075 # DataNode web interface
   fi
 fi
 
@@ -69,6 +71,8 @@ if [ ! $? -eq 0 ]; then
   if [ $ENABLE_WEB_PORTS == "true" ]; then
     ec2-authorize $CLUSTER -p 50030 # JobTracker web interface
     ec2-authorize $CLUSTER -p 50060 # TaskTracker web interface
+    ec2-authorize $CLUSTER -p 50070 # NameNode web interface
+    ec2-authorize $CLUSTER -p 50075 # DataNode web interface
   fi
 
   ec2-authorize $CLUSTER_MASTER -o $CLUSTER -u $AWS_ACCOUNT_ID

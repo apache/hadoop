@@ -27,6 +27,7 @@ if [ $# = 0 ]; then
   echo "  launch-master  <group>               launch or find a cluster master"
   echo "  launch-slaves  <group> <num slaves>  launch the cluster slaves"
   echo "  terminate-cluster  <group>           terminate all Hadoop EC2 instances"
+  echo "  delete-cluster <group>               delete the group information for a terminated cluster"
   echo "  login  <group|instance id>           login to the master node of the Hadoop EC2 cluster"
   echo "  screen <group|instance id>           start or attach 'screen' on the master node of the Hadoop EC2 cluster"
   echo "  proxy  <group|instance id>           start a socks proxy on localhost:6666 (use w/foxyproxy)"
@@ -48,6 +49,8 @@ elif [ "$COMMAND" = "launch-master" ] ; then
   . "$bin"/launch-hadoop-master $*
 elif [ "$COMMAND" = "launch-slaves" ] ; then
   . "$bin"/launch-hadoop-slaves $*
+elif [ "$COMMAND" = "delete-cluster" ] ; then
+  . "$bin"/delete-hadoop-cluster $*
 elif [ "$COMMAND" = "terminate-cluster" ] ; then
   . "$bin"/terminate-hadoop-cluster $*
 elif [ "$COMMAND" = "list" ] ; then
