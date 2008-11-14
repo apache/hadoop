@@ -38,6 +38,14 @@ implements Configurable
     super(new RawScriptBasedMapping());
   }
   
+  // script must accept at least this many args
+  static final int MIN_ALLOWABLE_ARGS = 1;
+  
+  static final int DEFAULT_ARG_COUNT = 100;
+  
+  static final String SCRIPT_FILENAME_KEY = "topology.script.file.name";
+  static final String SCRIPT_ARG_COUNT_KEY = "topology.script.number.args";
+  
   public ScriptBasedMapping(Configuration conf) {
     this();
     setConf(conf);
@@ -59,8 +67,8 @@ implements Configurable
   private static Log LOG = 
     LogFactory.getLog(ScriptBasedMapping.class);
   public void setConf (Configuration conf) {
-    this.scriptName = conf.get("topology.script.file.name");
-    this.maxArgs = conf.getInt("topology.script.number.args", 100);
+    this.scriptName = conf.get(SCRIPT_FILENAME_KEY);
+    this.maxArgs = conf.getInt(SCRIPT_ARG_COUNT_KEY, DEFAULT_ARG_COUNT);
     this.conf = conf;
   }
   public Configuration getConf () {
@@ -90,7 +98,20 @@ implements Configurable
         String switchInfo = allSwitchInfo.nextToken();
         m.add(switchInfo);
       }
+      
+      if (m.size() != names.size()) {
+        // invalid number of entries returned by the script
+        LOG.warn("Script " + scriptName + " returned "
+            + Integer.toString(m.size()) + " values when "
+            + Integer.toString(names.size()) + " were expected.");
+        return null;
+      }
+    } else {
+      // an error occurred. return null to signify this.
+      // (exn was already logged in runResolveCommand)
+      return null;
     }
+    
     return m;
   }
   
@@ -101,6 +122,13 @@ implements Configurable
     }
     StringBuffer allOutput = new StringBuffer();
     int numProcessed = 0;
+    if (maxArgs < MIN_ALLOWABLE_ARGS) {
+      LOG.warn("Invalid value " + Integer.toString(maxArgs)
+          + " for " + SCRIPT_ARG_COUNT_KEY + "; must be >= "
+          + Integer.toString(MIN_ALLOWABLE_ARGS));
+      return null;
+    }
+    
     while (numProcessed != args.size()) {
       int start = maxArgs * loopCount;
       List <String> cmdList = new ArrayList<String>();

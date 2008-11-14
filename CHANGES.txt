@@ -158,6 +158,9 @@ Trunk (unreleased changes)
     HADOOP-4606. Fix cygpath error if the log directory does not exist.
     (szetszwo via omalley)
 
+    HADOOP-4141. Fix bug in ScriptBasedMapping causing potential infinite
+    loop on misconfigured hadoop-site. (Aaron Kimball via tomwhite)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
