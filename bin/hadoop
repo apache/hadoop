@@ -233,8 +233,8 @@ fi
 # cygwin path translation
 if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
-  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
+  HADOOP_HOME=`cygpath -w "$HADOOP_HOME"`
+  HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
 # setup 'java.library.path' for native-hadoop code if necessary
