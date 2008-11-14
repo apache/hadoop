@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.19.0_-_unreleased_' && list.id != 'release_0.18.2_-_unreleased_') {
+        if (list.id != 'release_0.19.0_-_2008-11-18_' && list.id != 'release_0.18.3_-_unreleased_') {
           list.style.display = "none";
         }
       }
@@ -52,12 +52,12 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
-<h2><a href="javascript:toggleList('release_0.19.0_-_unreleased_')">Release 0.19.0 - Unreleased
+<h2><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_')">Release 0.19.0 - 2008-11-18
 </a></h2>
-<ul id="release_0.19.0_-_unreleased_">
-  <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(21)
-    <ol id="release_0.19.0_-_unreleased_._incompatible_changes_">
+<ul id="release_0.19.0_-_2008-11-18_">
+  <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+</a>&nbsp;&nbsp;&nbsp;(22)
+    <ol id="release_0.19.0_-_2008-11-18_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3595">HADOOP-3595</a>. Remove deprecated methods for mapred.combine.once
 functionality, which was necessary to providing backwards
 compatible combiner semantics for 0.18.<br />(cdouglas via omalley)</li>
@@ -124,11 +124,12 @@ changed in <a href="http://issues.apache.org/jira/browse/HADOOP-2816">HADOOP-281
 DFS command line report reflects the same change. Config parameter
 dfs.datanode.du.pct is no longer used and is removed from the
 hadoop-default.xml.<br />(Suresh Srinivas via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(40)
-    <ol id="release_0.19.0_-_unreleased_._new_features_">
+  <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(39)
+    <ol id="release_0.19.0_-_2008-11-18_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3341">HADOOP-3341</a>. Allow streaming jobs to specify the field separator for map
 and reduce input and output. The new configuration values are:
   stream.map.input.field.separator
@@ -209,13 +210,11 @@ Enis Soztutar via acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3019">HADOOP-3019</a>. A new library to support total order partitions.<br />(cdouglas via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3924">HADOOP-3924</a>. Added a 'KILLED' job status.<br />(Subramaniam Krishnan via
 acmurthy)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2421">HADOOP-2421</a>.  Add jdiff output to documentation, listing all API
-changes from the prior release.<br />(cutting)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._improvements_')">  IMPROVEMENTS
+  <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._improvements_')">  IMPROVEMENTS
 </a>&nbsp;&nbsp;&nbsp;(78)
-    <ol id="release_0.19.0_-_unreleased_._improvements_">
+    <ol id="release_0.19.0_-_2008-11-18_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4205">HADOOP-4205</a>. hive: metastore and ql to use the refactored SerDe library.<br />(zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4106">HADOOP-4106</a>. libhdfs: add time, permission and user attribute support
 (part 2).<br />(Pete Wyckoff through zshao)</li>
@@ -345,8 +344,6 @@ incrementing the task attempt numbers by 1000 when the job restarts.<br />(Amar 
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4301">HADOOP-4301</a>. Adds forrest doc for the skip bad records feature.<br />(Sharad Agarwal via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4354">HADOOP-4354</a>. Separate TestDatanodeDeath.testDatanodeDeath() into 4 tests.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3790">HADOOP-3790</a>. Add more unit tests for testing HDFS file append.<br />(szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4150">HADOOP-4150</a>. Include librecordio in hadoop releases.<br />(Giridharan Kesavan
-via acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4321">HADOOP-4321</a>. Include documentation for the capacity scheduler.<br />(Hemanth
 Yamijala via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4424">HADOOP-4424</a>. Change menu layout for Hadoop documentation (Boris Shkolnik
@@ -355,11 +352,12 @@ via cdouglas).
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4438">HADOOP-4438</a>. Update forrest documentation to include missing FsShell
 commands.<br />(Suresh Srinivas via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4105">HADOOP-4105</a>.  Add forrest documentation for libhdfs.<br />(Pete Wyckoff via cutting)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4510">HADOOP-4510</a>. Make getTaskOutputPath public.<br />(Chris Wensel via omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
+  <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._optimizations_')">  OPTIMIZATIONS
 </a>&nbsp;&nbsp;&nbsp;(11)
-    <ol id="release_0.19.0_-_unreleased_._optimizations_">
+    <ol id="release_0.19.0_-_2008-11-18_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3556">HADOOP-3556</a>. Removed lock contention in MD5Hash by changing the
 singleton MessageDigester by an instance per Thread using
 ThreadLocal.<br />(Iv?n de Prado via omalley)</li>
@@ -386,9 +384,9 @@ TaskTrackerInstrumentation, and TaskTrackerMetricsInst) in
 org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.19.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(146)
-    <ol id="release_0.19.0_-_unreleased_._bug_fixes_">
+  <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(153)
+    <ol id="release_0.19.0_-_2008-11-18_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3640">HADOOP-3640</a>. Fix the read method in the NativeS3InputStream.<br />(tomwhite via
@@ -608,8 +606,6 @@ but not rethrown.<br />(enis)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4018">HADOOP-4018</a>. The number of tasks for a single job cannot exceed a
 pre-configured maximum value.<br />(dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4288">HADOOP-4288</a>. Fixes a NPE problem in CapacityScheduler.<br />(Amar Kamat via ddas)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3883">HADOOP-3883</a>. Limit namenode to assign at most one generation stamp for
-a particular block within a short period.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4014">HADOOP-4014</a>. Create hard links with 'fsutil hardlink' on Windows.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4393">HADOOP-4393</a>. Merged org.apache.hadoop.fs.permission.AccessControlException
 and org.apache.hadoop.security.AccessControlIOException into a single
@@ -619,7 +615,6 @@ maps/reduces.<br />(Sreekanth Ramakrishnan via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4361">HADOOP-4361</a>. Makes sure that jobs killed from command line are killed
 fast (i.e., there is a slot to run the cleanup task soon).<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4400">HADOOP-4400</a>. Add "hdfs://" to fs.default.name on quickstart.html.<br />(Jeff Hammerbacher via omalley)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4403">HADOOP-4403</a>. Make TestLeaseRecovery and TestFileCreation more robust.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4378">HADOOP-4378</a>. Fix TestJobQueueInformation to use SleepJob rather than
 WordCount via TestMiniMRWithDFS.<br />(Sreekanth Ramakrishnan via acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4376">HADOOP-4376</a>. Fix formatting in hadoop-default.xml for
@@ -665,36 +660,95 @@ UDF trim functions and sampling.<br />(Ashish Thusoo via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4358">HADOOP-4358</a>. No need to truncate access time in INode. Also fixes NPE
 in CreateEditsLog.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4387">HADOOP-4387</a>. TestHDFSFileSystemContract fails on windows nightly builds.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4466">HADOOP-4466</a>. Ensure that SequenceFileOutputFormat isn't tied to Writables
+and can be used with other Serialization frameworks.<br />(Chris Wensel via
+acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4525">HADOOP-4525</a>. Fix ipc.server.ipcnodelay originally missed in in <a href="http://issues.apache.org/jira/browse/HADOOP-2232">HADOOP-2232</a>.<br />(cdouglas via Clint Morgan)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4498">HADOOP-4498</a>. Ensure that JobHistory correctly escapes the job name so that
+regex patterns work.<br />(Chris Wensel via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4446">HADOOP-4446</a>. Modify guaranteed capacity labels in capacity scheduler's UI
+to reflect the information being displayed.<br />(Sreekanth Ramakrishnan via
+yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4282">HADOOP-4282</a>. Some user facing URLs are not filtered by user filters.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4595">HADOOP-4595</a>. Fixes two race conditions - one to do with updating free slot count,
+and another to do with starting the MapEventsFetcher thread.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4552">HADOOP-4552</a>. Fix a deadlock in RPC server.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4471">HADOOP-4471</a>. Sort running jobs by priority in the capacity scheduler.<br />(Amar Kamat via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4500">HADOOP-4500</a>. Fix MultiFileSplit to get the FileSystem from the relevant
+path rather than the JobClient.<br />(Joydeep Sen Sarma via dhruba)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.18.2_-_unreleased_')">Release 0.18.2 - Unreleased
+<h2><a href="javascript:toggleList('release_0.18.3_-_unreleased_')">Release 0.18.3 - Unreleased
 </a></h2>
-<ul id="release_0.18.2_-_unreleased_">
-  <li><a href="javascript:toggleList('release_0.18.2_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(11)
-    <ol id="release_0.18.2_-_unreleased_._bug_fixes_">
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4116">HADOOP-4116</a>. Balancer should provide better resource management.<br />(hairong)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
-meta file.<br />(szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4314">HADOOP-4314</a>. Simulated datanodes should not include blocks that are still
-being written in their block report.<br />(Raghu Angadi)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4228">HADOOP-4228</a>. dfs datanoe metrics, bytes_read and bytes_written, overflow
-due to incorrect type used.<br />(hairong)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4395">HADOOP-4395</a>. The FSEditLog loading is incorrect for the case OP_SET_OWNER.<br />(szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
-ArrayIndexOutOfBoundsException.<br />(hairong)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4369">HADOOP-4369</a>. Use setMetric(...) instead of incrMetric(...) for metrics
-averages.<br />(Brian Bockelman via szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4469">HADOOP-4469</a>. Rename and add the ant task jar file to the tar file.<br />(nigel)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3914">HADOOP-3914</a>. DFSClient sends Checksum Ok only once for a block.<br />(Christain Kunz via hairong)</li>
+<ul id="release_0.18.3_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.18.3_-_unreleased_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4150">HADOOP-4150</a>. Include librecordio in hadoop releases.<br />(Giridharan Kesavan
+via acmurthy)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(7)
+    <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
+off manually.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3121">HADOOP-3121</a>. lsr should keep listing the remaining items but not
+terminate if there is any IOException.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4610">HADOOP-4610</a>. Always calculate mis-replicated blocks when safe-mode is
+turned off.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3883">HADOOP-3883</a>. Limit namenode to assign at most one generation stamp for
+a particular block within a short period.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4556">HADOOP-4556</a>. Block went missing.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4643">HADOOP-4643</a>. NameNode should exclude excessive replicas when counting
+live replicas for a block.<br />(hairong)</li>
     </ol>
   </li>
 </ul>
 <h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
 <ul id="older">
+<h3><a href="javascript:toggleList('release_0.18.2_-_2008-11-03_')">Release 0.18.2 - 2008-11-03
+</a></h3>
+<ul id="release_0.18.2_-_2008-11-03_">
+  <li><a href="javascript:toggleList('release_0.18.2_-_2008-11-03_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(16)
+    <ol id="release_0.18.2_-_2008-11-03_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>. Fix a bug that Datanode may use an old GenerationStamp to get
+meta file.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4314">HADOOP-4314</a>. Simulated datanodes should not include blocks that are still
+being written in their block report.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4228">HADOOP-4228</a>. dfs datanode metrics, bytes_read and bytes_written, overflow
+due to incorrect type used.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4395">HADOOP-4395</a>. The FSEditLog loading is incorrect for the case OP_SET_OWNER.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4351">HADOOP-4351</a>. FSNamesystem.getBlockLocationsInternal throws
+ArrayIndexOutOfBoundsException.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4403">HADOOP-4403</a>. Make TestLeaseRecovery and TestFileCreation more robust.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4292">HADOOP-4292</a>. Do not support append() for LocalFileSystem.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4399">HADOOP-4399</a>. Make fuse-dfs multi-thread access safe.<br />(Pete Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4369">HADOOP-4369</a>. Use setMetric(...) instead of incrMetric(...) for metrics
+averages.<br />(Brian Bockelman via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4469">HADOOP-4469</a>. Rename and add the ant task jar file to the tar file.<br />(nigel)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3914">HADOOP-3914</a>. DFSClient sends Checksum Ok only once for a block.<br />(Christian Kunz via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4467">HADOOP-4467</a>. SerializationFactory now uses the current context ClassLoader
+allowing for user supplied Serialization instances.<br />(Chris Wensel via
+acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4517">HADOOP-4517</a>. Release FSDataset lock before joining ongoing create threads.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4526">HADOOP-4526</a>. fsck failing with NullPointerException.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4483">HADOOP-4483</a> Honor the max parameter in DatanodeDescriptor.getBlockArray(..)<br />(Ahad Rana and Hairong Kuang via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4340">HADOOP-4340</a>. Correctly set the exit code from JobShell.main so that the
+'hadoop jar' command returns the right code to the user.<br />(acmurthy)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.18.2_-_2008-11-03_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.18.2_-_2008-11-03_._new_features_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2421">HADOOP-2421</a>.  Add jdiff output to documentation, listing all API
+changes from the prior release.<br />(cutting)</li>
+    </ol>
+  </li>
+</ul>
 <h3><a href="javascript:toggleList('release_0.18.1_-_2008-09-17_')">Release 0.18.1 - 2008-09-17
 </a></h3>
 <ul id="release_0.18.1_-_2008-09-17_">
