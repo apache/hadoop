@@ -1037,7 +1037,7 @@ public class HRegion implements HConstants {
    * <i>ts</i>.
    * 
    * @param row row key
-   * @param columnFamily
+   * @param columnFamily Must include the column family delimiter character.
    * @return map of values
    * @throws IOException
    */
@@ -1068,6 +1068,7 @@ public class HRegion implements HConstants {
       // Now that we've found our key, get the values
       HbaseMapWritable<byte [], Cell> cells =
         new HbaseMapWritable<byte [], Cell>();
+      // This will get all results for this store.
       store.getFull(key, null, cells);
       return new RowResult(key.getRow(), cells);
     } finally {
@@ -1537,7 +1538,8 @@ public class HRegion implements HConstants {
    * @param updatesByColumn Cell updates by column
    * @throws IOException
    */
-  private void update(final TreeMap<HStoreKey, byte []> updatesByColumn, boolean writeToWAL)
+  private void update(final TreeMap<HStoreKey, byte []> updatesByColumn,
+    boolean writeToWAL)
   throws IOException {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;

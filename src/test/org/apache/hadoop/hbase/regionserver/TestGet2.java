@@ -155,69 +155,68 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.batchUpdate(batchUpdate, null);
       
       Map<byte [], Cell> results =
-        region.getClosestRowBefore(Bytes.toBytes(T20));
+        region.getClosestRowBefore(Bytes.toBytes(T20), COLUMNS[0]);
       assertEquals(T20, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.delete(COLUMNS[0]);
       region.batchUpdate(batchUpdate, null);
       
-      results = region.getClosestRowBefore(Bytes.toBytes(T20));
+      results = region.getClosestRowBefore(Bytes.toBytes(T20), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T30);
       batchUpdate.put(COLUMNS[0], T30.getBytes());
       region.batchUpdate(batchUpdate, null);
       
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
       assertEquals(T30, new String(results.get(COLUMNS[0]).getValue()));
       
       batchUpdate = new BatchUpdate(T30);
       batchUpdate.delete(COLUMNS[0]);
       region.batchUpdate(batchUpdate, null);
 
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
 
       region.flushcache();
 
       // try finding "010" after flush
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
-      // Put into a different column family.  Should make it so I get 
-      // and answer of t20.
+      // Put into a different column family.  Should make it so I still get t10
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.put(COLUMNS[1], T20.getBytes());
       region.batchUpdate(batchUpdate, null);
       
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
-      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
-      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       region.flushcache();
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
-      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
-      assertEquals(T20, new String(results.get(COLUMNS[1]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
+      assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       // Now try combo of memcache and mapfiles.  Delete the t20 COLUMS[1]
       // in memory; make sure we get back t10 again.
       batchUpdate = new BatchUpdate(T20);
       batchUpdate.delete(COLUMNS[1]);
       region.batchUpdate(batchUpdate, null);
-      results = region.getClosestRowBefore(Bytes.toBytes(T30));
+      results = region.getClosestRowBefore(Bytes.toBytes(T30), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       // Ask for a value off the end of the file.  Should return t10.
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       region.flushcache();
-      results = region.getClosestRowBefore(Bytes.toBytes(T31));
+      results = region.getClosestRowBefore(Bytes.toBytes(T31), COLUMNS[0]);
       assertEquals(T10, new String(results.get(COLUMNS[0]).getValue()));
       
       // Ok.  Let the candidate come out of mapfiles but have delete of
@@ -228,7 +227,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       batchUpdate = new BatchUpdate(T10);
       batchUpdate.delete(COLUMNS[0]);
       region.batchUpdate(batchUpdate, null);
-      results = region.getClosestRowBefore(Bytes.toBytes(T12));
+      results = region.getClosestRowBefore(Bytes.toBytes(T12), COLUMNS[0]);
       assertEquals(T11, new String(results.get(COLUMNS[0]).getValue()));
     } finally {
       if (region != null) {
@@ -392,40 +391,40 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // try finding "015"
       String t15 = "015";
       Map<byte [], Cell> results = 
-        region.getClosestRowBefore(Bytes.toBytes(t15));
+        region.getClosestRowBefore(Bytes.toBytes(t15), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t10 bytes");
 
       // try "020", we should get that row exactly
-      results = region.getClosestRowBefore(Bytes.toBytes(t20));
+      results = region.getClosestRowBefore(Bytes.toBytes(t20), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t20 bytes");
       
       // try "038", should skip deleted "035" and get "030"
       String t38 = "038";
-      results = region.getClosestRowBefore(Bytes.toBytes(t38));
+      results = region.getClosestRowBefore(Bytes.toBytes(t38), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
       
       // try "050", should get stuff from "040"
       String t50 = "050";
-      results = region.getClosestRowBefore(Bytes.toBytes(t50));
+      results = region.getClosestRowBefore(Bytes.toBytes(t50), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t40 bytes");
 
       // force a flush
       region.flushcache();
 
       // try finding "015"
-      results = region.getClosestRowBefore(Bytes.toBytes(t15));
+      results = region.getClosestRowBefore(Bytes.toBytes(t15), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t10 bytes");
 
       // try "020", we should get that row exactly
-      results = region.getClosestRowBefore(Bytes.toBytes(t20));
+      results = region.getClosestRowBefore(Bytes.toBytes(t20), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t20 bytes");
 
       // try "038", should skip deleted "035" and get "030"
-      results = region.getClosestRowBefore(Bytes.toBytes(t38));
+      results = region.getClosestRowBefore(Bytes.toBytes(t38), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
 
       // try "050", should get stuff from "040"
-      results = region.getClosestRowBefore(Bytes.toBytes(t50));
+      results = region.getClosestRowBefore(Bytes.toBytes(t50), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t40 bytes");
     } finally {
       if (region != null) {
@@ -470,13 +469,13 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       // try finding "035"
       String t35 = "035";
       Map<byte [], Cell> results = 
-        region.getClosestRowBefore(Bytes.toBytes(t35));
+        region.getClosestRowBefore(Bytes.toBytes(t35), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
 
       region.flushcache();
 
       // try finding "035"
-      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      results = region.getClosestRowBefore(Bytes.toBytes(t35), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
 
       batchUpdate = new BatchUpdate(t20);
@@ -484,13 +483,13 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.batchUpdate(batchUpdate, null);
       
       // try finding "035"
-      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      results = region.getClosestRowBefore(Bytes.toBytes(t35), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
       
       region.flushcache();
 
       // try finding "035"
-      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      results = region.getClosestRowBefore(Bytes.toBytes(t35), COLUMNS[0]);
       assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
     } finally {
       if (region != null) {
