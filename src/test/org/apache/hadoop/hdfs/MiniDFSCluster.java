@@ -51,7 +51,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
-  private class DataNodeProperties {
+  public class DataNodeProperties {
     DataNode datanode;
     Configuration conf;
     String[] dnArgs;
@@ -602,50 +602,55 @@ public class MiniDFSCluster {
   /*
    * Shutdown a particular datanode
    */
-  boolean stopDataNode(int i) {
+  DataNodeProperties stopDataNode(int i) {
     if (i < 0 || i >= dataNodes.size()) {
-      return false;
+      return null;
     }
-    DataNode dn = dataNodes.remove(i).datanode;
+    DataNodeProperties dnprop = dataNodes.remove(i);
+    DataNode dn = dnprop.datanode;
     System.out.println("MiniDFSCluster Stopping DataNode " + 
                        dn.dnRegistration.getName() +
                        " from a total of " + (dataNodes.size() + 1) + 
                        " datanodes.");
     dn.shutdown();
     numDataNodes--;
-    return true;
+    return dnprop;
   }
 
-  /*
-   * Restart a particular datanode
+  /**
+   * Restart a datanode
+   * @param dnprop datanode's property
+   * @return true if restarting is successful
+   * @throws IOException
    */
-  synchronized boolean restartDataNode(int i) throws IOException {
-    if (i < 0 || i >= dataNodes.size()) {
-      return false;
-    }
-    DataNodeProperties dnprop = dataNodes.remove(i);
-    DataNode dn = dnprop.datanode;
+  public synchronized boolean restartDataNode(DataNodeProperties dnprop)
+  throws IOException {
     Configuration conf = dnprop.conf;
     String[] args = dnprop.dnArgs;
-    System.out.println("MiniDFSCluster Restart DataNode " + 
-                       dn.dnRegistration.getName() +
-                       " from a total of " + (dataNodes.size() + 1) + 
-                       " datanodes.");
-    dn.shutdown();
-
-    // recreate new datanode with the same configuration as the one
-    // that was stopped.
     Configuration newconf = new Configuration(conf); // save cloned config
     dataNodes.add(new DataNodeProperties(
                      DataNode.createDataNode(args, conf), 
                      newconf, args));
+    numDataNodes++;
     return true;
+
+  }
+  /*
+   * Restart a particular datanode
+   */
+  synchronized boolean restartDataNode(int i) throws IOException {
+    DataNodeProperties dnprop = stopDataNode(i);
+    if (dnprop == null) {
+      return false;
+    } else {
+      return restartDataNode(dnprop);
+    }
   }
 
   /*
    * Shutdown a datanode by name.
    */
-  synchronized boolean stopDataNode(String name) {
+  public synchronized DataNodeProperties stopDataNode(String name) {
     int i;
     for (i = 0; i < dataNodes.size(); i++) {
       DataNode dn = dataNodes.get(i).datanode;

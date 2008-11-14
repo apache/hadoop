@@ -1161,6 +1161,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4556. Block went missing. (hairong)
 
+    HADOOP-4643. NameNode should exclude excessive replicas when counting
+    live replicas for a block. (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

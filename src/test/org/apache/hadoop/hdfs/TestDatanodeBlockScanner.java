@@ -367,7 +367,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     // corruptReplicasMap
     corruptReplicaSize = cluster.getNameNode().namesystem.
                           corruptReplicas.numCorruptReplicas(blk);
-    while (corruptReplicaSize != 0) {
+    while (corruptReplicaSize != 0 || replicaCount != numReplicas) {
       try {
         LOG.info("Looping until corrupt replica is invalidated");
         Thread.sleep(1000);
