@@ -1335,8 +1335,9 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       for (HStore store : stores.values()) {
-        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts, this.regionInfo),
-          ALL_VERSIONS, now, null);
+        List<HStoreKey> keys =
+          store.getKeys(new HStoreKey(row, ts, this.regionInfo), ALL_VERSIONS,
+            now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
           new HStoreKey.HStoreKeyWritableComparator(regionInfo));
         for (HStoreKey key: keys) {
@@ -2104,7 +2105,8 @@ public class HRegion implements HConstants {
 
   /**
    * Delete a region's meta information from the passed
-   * <code>meta</code> region.
+   * <code>meta</code> region.  Removes content in the 'info' column family.
+   * Does not remove region historian info.
    * 
    * @param srvr META server to be updated
    * @param metaRegionName Meta region name
@@ -2115,7 +2117,8 @@ public class HRegion implements HConstants {
   public static void removeRegionFromMETA(final HRegionInterface srvr,
     final byte [] metaRegionName, final byte [] regionName)
   throws IOException {
-    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP, -1L);
+    srvr.deleteFamily(metaRegionName, regionName, HConstants.COLUMN_FAMILY,
+      HConstants.LATEST_TIMESTAMP, -1L);
   }
 
   /**

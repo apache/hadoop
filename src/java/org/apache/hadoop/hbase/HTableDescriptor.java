@@ -617,10 +617,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY,
-              10, // Ten is arbitrary number.  Keep versions to help debuggging.
-              HColumnDescriptor.CompressionType.NONE, false, false,
-              Integer.MAX_VALUE, HConstants.FOREVER, false),
+            10, // Ten is arbitrary number.  Keep versions to help debuggging.
+            HColumnDescriptor.CompressionType.NONE, false, false,
+            Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
-              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-              false, false, Integer.MAX_VALUE, HConstants.FOREVER, false) });
+            HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
+            false, false, Integer.MAX_VALUE, HConstants.WEEK_IN_SECONDS, false)});
 }

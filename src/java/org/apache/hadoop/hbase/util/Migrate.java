@@ -257,14 +257,22 @@ public class Migrate extends Configured implements Tool {
    * @param true if we changed value
    */
   private boolean updateVersions(final HRegionInfo hri) {
+    boolean result = false;
     HColumnDescriptor hcd =
-      hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY);
+      hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY_HISTORIAN);
+    // Set historian records so they timeout after a week.
+    if (hcd.getTimeToLive() == HConstants.FOREVER) {
+      hcd.setTimeToLive(HConstants.WEEK_IN_SECONDS);
+      result = true;
+    }
+    // Set the versions up to 10 from old default of 1.
+    hcd = hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY);
     if (hcd.getMaxVersions() == 1) {
       // Set it to 10, an arbitrary high number
       hcd.setMaxVersions(10);
-      return true;
+      result = true;
     }
-    return false;
+    return result;
   }
 
   private int parseArgs(String[] args) {

@@ -73,6 +73,8 @@ public class RegionHistorian implements HConstants {
     }
   } 
 
+  public static final String SPLIT_PREFIX = "Region split from: ";
+
   /**
    * Default constructor. Initializes reference to .META. table.  Inaccessible.
    * Use {@link #getInstance(HBaseConfiguration)} to obtain the Singleton
@@ -170,8 +172,8 @@ public class RegionHistorian implements HConstants {
      HRegionInfo newInfo2) {
     HRegionInfo[] infos = new HRegionInfo[] { newInfo1, newInfo2 };
     for (HRegionInfo info : infos) {
-      add(HistorianColumnKey.REGION_SPLIT.key, "Region split from  : "
-          + oldInfo.getRegionNameAsString(), info);
+      add(HistorianColumnKey.REGION_SPLIT.key, SPLIT_PREFIX +
+        oldInfo.getRegionNameAsString(), info);
     }
   }
 

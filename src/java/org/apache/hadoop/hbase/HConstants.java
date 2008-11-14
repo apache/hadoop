@@ -234,6 +234,8 @@ public interface HConstants {
    * Unlimited time-to-live.
    */
   static final int FOREVER = -1;
+  
+  public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
 
   //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
   //      there.

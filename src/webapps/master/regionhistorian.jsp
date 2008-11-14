@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.List"
+  import="java.util.regex.*"
   import="org.apache.hadoop.hbase.RegionHistorian"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.RegionHistorian.RegionHistoryInformation"
@@ -7,6 +8,8 @@
   String regionName = request.getParameter("regionname");
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   List<RegionHistoryInformation> informations = RegionHistorian.getInstance().getRegionHistory(regionName);
+  // Pattern used so we can wrap a regionname in an href.
+  Pattern pattern = Pattern.compile(RegionHistorian.SPLIT_PREFIX + "(.*)$");
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -24,8 +27,18 @@
 <hr id="head_rule" />
 <%if(informations != null && informations.size() > 0) { %>
 <table><tr><th>Timestamp</th><th>Event</th><th>Description</th></tr>
-<%  for( RegionHistoryInformation information : informations) {%>
-<tr><td><%= information.getTimestampAsString() %></td><td><%= information.getEvent() %></td><td><%= information.getDescription()%></td></tr>
+<%  for( RegionHistoryInformation information : informations) {
+    String description = information.getDescription();
+    Matcher m = pattern.matcher(description);
+    if (m.matches()) {
+      // Wrap the region name in an href so user can click on it.
+      description = RegionHistorian.SPLIT_PREFIX +
+      "<a href=\"regionhistorian.jsp?regionname=" + m.group(1) + "\">" +
+        m.group(1) + "</a>";
+    }
+    
+    %>
+<tr><td><%= information.getTimestampAsString() %></td><td><%= information.getEvent() %></td><td><%= description %></td></tr>
 <%  } %>
 </table>
 <p>
