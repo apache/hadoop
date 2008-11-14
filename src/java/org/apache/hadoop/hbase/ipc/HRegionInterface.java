@@ -70,11 +70,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * 
    * @param regionName region name
    * @param row row key
+   * @param columnFamily Column family to look for row in.
    * @return map of values
    * @throws IOException
    */
   public RowResult getClosestRowBefore(final byte [] regionName,
-    final byte [] row)
+    final byte [] row, final byte [] columnFamily)
   throws IOException;
 
   /**

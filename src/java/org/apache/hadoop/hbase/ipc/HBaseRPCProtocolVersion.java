@@ -60,8 +60,9 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <p>Unified RPC version number history:
    * <ul>
    * <li>Version 10: initial version (had to be &gt all other RPC versions</li>
+   * <li>Version 11: Changed getClosestRowBefore signature.
    * </ul>
    */
-  public static final long versionID = 10L;
+  public static final long versionID = 11L;
 
 }

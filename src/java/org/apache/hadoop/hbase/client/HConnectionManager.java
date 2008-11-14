@@ -493,9 +493,10 @@ public class HConnectionManager implements HConstants {
           HRegionInterface server = 
             getHRegionConnection(metaLocation.getServerAddress());
 
-          // query the root region for the location of the meta region
+          // Query the root region for the location of the meta region
           RowResult regionInfoRow = server.getClosestRowBefore(
-            metaLocation.getRegionInfo().getRegionName(), metaKey);
+            metaLocation.getRegionInfo().getRegionName(), metaKey,
+            HConstants.COLUMN_FAMILY);
 
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));

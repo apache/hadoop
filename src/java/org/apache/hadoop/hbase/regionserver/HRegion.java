@@ -121,7 +121,8 @@ public class HRegion implements HConstants {
   private final Map<Integer, TreeMap<HStoreKey, byte []>> targetColumns =
       new ConcurrentHashMap<Integer, TreeMap<HStoreKey, byte []>>();
   // Default access because read by tests.
-  protected final Map<Integer, HStore> stores = new ConcurrentHashMap<Integer, HStore>();
+  protected final Map<Integer, HStore> stores =
+    new ConcurrentHashMap<Integer, HStore>();
   final AtomicLong memcacheSize = new AtomicLong(0);
 
   final Path basedir;
@@ -1025,7 +1026,23 @@ public class HRegion implements HConstants {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getClosestRowBefore(final byte [] row)
+  RowResult getClosestRowBefore(final byte [] row)
+  throws IOException{
+    return getClosestRowBefore(row, HConstants.COLUMN_FAMILY);
+  }
+
+  /**
+   * Return all the data for the row that matches <i>row</i> exactly, 
+   * or the one that immediately preceeds it, at or immediately before 
+   * <i>ts</i>.
+   * 
+   * @param row row key
+   * @param columnFamily
+   * @return map of values
+   * @throws IOException
+   */
+  public RowResult getClosestRowBefore(final byte [] row,
+    final byte [] columnFamily)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1033,32 +1050,25 @@ public class HRegion implements HConstants {
     checkRow(row);
     splitsAndClosesLock.readLock().lock();
     try {
-      // examine each column family for the preceeding or matching key
-      for (HStore store : stores.values()) {
-        // get the closest key
-        byte [] closestKey = store.getRowKeyAtOrBefore(row);
-        // if it happens to be an exact match, we can stop looping
-        if (HStoreKey.equalsTwoRowKeys(regionInfo,row, closestKey)) {
-          key = new HStoreKey(closestKey, this.regionInfo);
-          break;
-        }
-        // otherwise, we need to check if it's the max and move to the next
-        if (closestKey != null 
-          && (key == null || HStoreKey.compareTwoRowKeys(
+      HStore store = getStore(columnFamily);
+      // get the closest key
+      byte [] closestKey = store.getRowKeyAtOrBefore(row);
+      // If it happens to be an exact match, we can stop looping.
+      // Otherwise, we need to check if it's the max and move to the next
+      if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
+        key = new HStoreKey(closestKey, this.regionInfo);
+      } else if (closestKey != null &&
+          (key == null || HStoreKey.compareTwoRowKeys(
               regionInfo,closestKey, key.getRow()) > 0) ) {
-          key = new HStoreKey(closestKey, this.regionInfo);
-        }
-      }
-      if (key == null) {
+        key = new HStoreKey(closestKey, this.regionInfo);
+      } else {
         return null;
       }
       
-      // now that we've found our key, get the values
+      // Now that we've found our key, get the values
       HbaseMapWritable<byte [], Cell> cells =
         new HbaseMapWritable<byte [], Cell>();
-      for (HStore s: stores.values()) {
-        s.getFull(key, null, cells);
-      }
+      store.getFull(key, null, cells);
       return new RowResult(key.getRow(), cells);
     } finally {
       splitsAndClosesLock.readLock().unlock();
