@@ -21,9 +21,8 @@
 
 # Set environment variables here.
 
-# The java implementation to use.  Required.
-# export JAVA_HOME=/usr/lib/j2sdk1.5-sun
-export JAVA_HOME=/Users/stack/bin/jdk
+# The java implementation to use.  Java 1.6 required.
+# export JAVA_HOME=/usr/java/jdk1.6.0/
 
 # Extra Java CLASSPATH elements.  Optional.
 # export HBASE_CLASSPATH=
