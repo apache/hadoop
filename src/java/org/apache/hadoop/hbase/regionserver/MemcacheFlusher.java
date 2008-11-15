@@ -177,7 +177,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       // compact if removeFromQueue is true. Note that region.flushCache()
       // only returns true if a flush is done and if a compaction is needed.
       if (region.flushcache() && !removeFromQueue) {
-        server.compactSplitThread.compactionRequested(region);
+        server.compactSplitThread.compactionRequested(region, getName());
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical

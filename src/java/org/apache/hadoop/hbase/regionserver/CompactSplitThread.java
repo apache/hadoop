@@ -117,13 +117,16 @@ class CompactSplitThread extends Thread implements HConstants {
   
   /**
    * @param r HRegion store belongs to
+   * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void compactionRequested(HRegion r) {
+  public synchronized void compactionRequested(final HRegion r,
+      final String why) {
     if (this.server.stopRequested.get()) {
       return;
     }
-    LOG.debug("Compaction requested for region: " +
-      Bytes.toString(r.getRegionName()));
+    LOG.debug("Compaction requested for region " +
+      Bytes.toString(r.getRegionName()) +
+      (why != null && !why.isEmpty()? " because: " + why: ""));
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
         compactionQueue.add(r);

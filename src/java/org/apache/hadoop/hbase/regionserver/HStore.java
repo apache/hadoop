@@ -435,6 +435,7 @@ public class HStore implements HConstants {
       curfile = new HStoreFile(conf, fs, basedir, this.info,
         family.getName(), fid, reference);
       long storeSeqId = -1;
+      boolean majorCompaction = false;
       try {
         storeSeqId = curfile.loadInfo(fs);
         if (storeSeqId > this.maxSeqId) {
@@ -488,7 +489,9 @@ public class HStore implements HConstants {
       // Found map and sympathetic info file.  Add this hstorefile to result.
       if (LOG.isDebugEnabled()) {
         LOG.debug("loaded " + FSUtils.getPath(p) + ", isReference=" +
-          isReference + ", sequence id=" + storeSeqId + ", length=" + length);
+          isReference + ", sequence id=" + storeSeqId +
+          ", length=" + length + ", majorCompaction=" +
+          curfile.isMajorCompaction());
       }
       results.put(Long.valueOf(storeSeqId), curfile);
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
@@ -691,7 +694,8 @@ public class HStore implements HConstants {
           " with " + entries +
           " entries, sequence id " + logCacheFlushId + ", data size " +
           StringUtils.humanReadableInt(flushed) + ", file size " +
-          StringUtils.humanReadableInt(newStoreSize));
+          StringUtils.humanReadableInt(newStoreSize) + " to " +
+          this.info.getRegionNameAsString());
       }
     }
     return storefiles.size() >= compactionThreshold;
@@ -832,11 +836,11 @@ public class HStore implements HConstants {
       // Check to see if we need to do a major compaction on this region.
       // If so, change doMajorCompaction to true to skip the incremental
       // compacting below. Only check if doMajorCompaction is not true.
-      long lastMajorCompaction = 0L;
       if (!doMajorCompaction) {
-        doMajorCompaction = isMajorCompaction();
+        doMajorCompaction = isMajorCompaction(filesToCompact);
       }
-      if (!doMajorCompaction && !hasReferences(filesToCompact) &&
+      boolean references = hasReferences(filesToCompact);
+      if (!doMajorCompaction && !references &&
           filesToCompact.size() < compactionThreshold) {
         return checkSplit(forceSplit);
       }
@@ -862,7 +866,7 @@ public class HStore implements HConstants {
         fileSizes[i] = len;
         totalSize += len;
       }
-      if (!doMajorCompaction && !hasReferences(filesToCompact)) {
+      if (!doMajorCompaction && !references) {
         // Here we select files for incremental compaction.  
         // The rule is: if the largest(oldest) one is more than twice the 
         // size of the second, skip the largest, and continue to next...,
@@ -888,7 +892,7 @@ public class HStore implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Compaction size of " + this.storeNameStr + ": " +
             StringUtils.humanReadableInt(totalSize) + "; Skipped " + point +
-            " files , size: " + skipped);
+            " file(s), size: " + skipped);
         }
       }
 
@@ -904,7 +908,8 @@ public class HStore implements HConstants {
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
           this.compactionDir,  this.info, family.getName(), -1L, null);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + rdrs.size() + " files into " +
+        LOG.debug("Started compaction of " + rdrs.size() + " file(s)" +
+          (references? "(hasReferences=true)": " ") + " into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,
@@ -917,15 +922,14 @@ public class HStore implements HConstants {
       }
 
       // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
-      compactedOutputFile.writeInfo(fs, maxId);
+      compactedOutputFile.writeInfo(fs, maxId, doMajorCompaction);
 
       // Move the compaction into place.
       completeCompaction(filesToCompact, compactedOutputFile);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed compaction of " + this.storeNameStr +
-          " store size is " + StringUtils.humanReadableInt(storeSize) +
-          (doMajorCompaction? "": "; time since last major compaction: " +
-          (lastMajorCompaction/1000) + " seconds"));
+        LOG.debug("Completed " + (doMajorCompaction? "major": "") +
+          " compaction of " + this.storeNameStr +
+          " store size is " + StringUtils.humanReadableInt(storeSize));
       }
     }
     return checkSplit(forceSplit);
@@ -955,19 +959,40 @@ public class HStore implements HConstants {
   /*
    * @return True if we should run a major compaction.
    */
-  private boolean isMajorCompaction() throws IOException {
+  boolean isMajorCompaction() throws IOException {
+    return isMajorCompaction(null);
+  }
+
+  /*
+   * @param filesToCompact Files to compact. Can be null.
+   * @return True if we should run a major compaction.
+   */
+  private boolean isMajorCompaction(final List<HStoreFile> filesToCompact)
+  throws IOException {
     boolean result = false;
     Path mapdir = HStoreFile.getMapDir(this.basedir, this.info.getEncodedName(),
         this.family.getName());
     long lowTimestamp = getLowestTimestamp(fs, mapdir);
     if (lowTimestamp < (System.currentTimeMillis() - this.majorCompactionTime) &&
         lowTimestamp > 0l) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Major compaction triggered on store: " +
-          this.storeNameStr + ". Time since last major compaction: " +
-          ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+      // Major compaction time has elapsed.
+      long elapsedTime = System.currentTimeMillis() - lowTimestamp;
+      if (filesToCompact != null && filesToCompact.size() == 1 &&
+          filesToCompact.get(0).isMajorCompaction() &&
+          (this.ttl == HConstants.FOREVER || elapsedTime < this.ttl)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping major compaction because only one (major) " +
+            "compacted file only and elapsedTime " + elapsedTime +
+            " is < ttl=" + this.ttl);
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Major compaction triggered on store: " +
+              this.storeNameStr + ". Time since last major compaction: " +
+              ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+        }
+        result = true;
       }
-      result = true;
     }
     return result;
   }
@@ -1160,7 +1185,8 @@ public class HStore implements HConstants {
     try {
       // 1. Moving the new MapFile into place.
       HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
-        this.info, family.getName(), -1, null);
+        this.info, family.getName(), -1, null,
+        compactedFile.isMajorCompaction());
       if (LOG.isDebugEnabled()) {
         LOG.debug("moving " + FSUtils.getPath(compactedFile.getMapFilePath()) +
           " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));

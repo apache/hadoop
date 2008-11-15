@@ -57,4 +57,18 @@ public class Threads {
     t.start();
     return t;
   }
+
+  /**
+   * Shutdown passed thread using isAlive and join.
+   * @param t Thread to shutdown
+   */
+  public static void shutdown(final Thread t) {
+    while (t.isAlive()) {
+      try {
+        t.join();
+      } catch (InterruptedException e) {
+        LOG.warn(t.getName(), e);
+      }
+    }
+  }
 }

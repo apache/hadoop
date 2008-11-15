@@ -52,6 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -174,32 +175,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
   
   private RegionServerMetrics metrics;
-  
-  /**
-   * Thread to shutdown the region server in an orderly manner.  This thread
-   * is registered as a shutdown hook in the HRegionServer constructor and is
-   * only called when the HRegionServer receives a kill signal.
-   */
-  class ShutdownThread extends Thread {
-    private final HRegionServer instance;
-    
-    /**
-     * @param instance
-     */
-    public ShutdownThread(HRegionServer instance) {
-      this.instance = instance;
-    }
-
-    @Override
-    public void run() {
-      LOG.info("Starting shutdown thread.");
-      
-      // tell the region server to stop and wait for it to complete
-      instance.stop();
-      instance.join();
-      LOG.info("Shutdown thread complete");
-    }    
-  }
 
   // Compactions
   final CompactSplitThread compactSplitThread;
@@ -207,6 +182,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // Cache flushing  
   final MemcacheFlusher cacheFlusher;
   
+  /* Check for major compactions.
+   */
+  final Chore majorCompactionChecker;
+
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
   protected volatile HLog log;
@@ -260,6 +239,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Log flushing thread
     this.logFlusher =
       new LogFlusher(this.threadWakeFrequency, this.stopRequested);
+    
+    // Background thread to check for major compactions; needed if region
+    // has not gotten updates in a while.  Make it run at a lesser frequency.
+    int multiplier = this.conf.getInt(THREAD_WAKE_FREQUENCY +
+        ".multiplier", 1000);
+    this.majorCompactionChecker = new MajorCompactionChecker(this,
+      this.threadWakeFrequency * multiplier,  this.stopRequested);
 
     // Task thread to process requests from Master
     this.worker = new Worker();
@@ -474,6 +460,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     logFlusher.interrupt();
     compactSplitThread.interruptIfNecessary();
     logRoller.interruptIfNecessary();
+    this.majorCompactionChecker.interrupt();
 
     if (abortRequested) {
       if (this.fsOk) {
@@ -571,6 +558,66 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw ex;
     }
   }
+
+  /*
+   * Thread to shutdown the region server in an orderly manner.  This thread
+   * is registered as a shutdown hook in the HRegionServer constructor and is
+   * only called when the HRegionServer receives a kill signal.
+   */
+  private static class ShutdownThread extends Thread {
+    private final Log LOG = LogFactory.getLog(this.getClass());
+    private final HRegionServer instance;
+    
+    /**
+     * @param instance
+     */
+    public ShutdownThread(HRegionServer instance) {
+      this.instance = instance;
+    }
+
+    @Override
+    public void run() {
+      LOG.info("Starting shutdown thread.");
+      
+      // tell the region server to stop and wait for it to complete
+      instance.stop();
+      instance.join();
+      LOG.info("Shutdown thread complete");
+    }    
+  }
+
+  /*
+   * Inner class that runs on a long period checking if regions need major
+   * compaction.
+   */
+  private static class MajorCompactionChecker extends Chore {
+    private final Log LOG = LogFactory.getLog(this.getClass());
+    private final HRegionServer instance;
+    
+    MajorCompactionChecker(final HRegionServer h,
+        final int sleepTime, final AtomicBoolean stopper) {
+      super(sleepTime, stopper);
+      this.instance = h;
+      LOG.info("Runs every " + sleepTime + "ms");
+    }
+
+    @Override
+    protected void chore() {
+      Set<Integer> keys = this.instance.onlineRegions.keySet();
+      for (Integer i: keys) {
+        HRegion r = this.instance.onlineRegions.get(i);
+        try {
+          if (r != null && r.isMajorCompaction()) {
+            // Queue a compaction.  Will recognize if major is needed.
+            this.instance.compactSplitThread.
+              compactionRequested(r, getName() + " requests major compaction");
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed major compaction check on " + r, e);
+        }
+      }
+    }
+  };
   
   /**
    * Report the status of the server. A server is online once all the startup 
@@ -660,6 +707,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     Threads.setDaemonThreadRunning(this.compactSplitThread, n + ".compactor",
         handler);
     Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
+    Threads.setDaemonThreadRunning(this.majorCompactionChecker,
+        n + ".majorCompactionChecker", handler);
+    
     // Leases is not a Thread. Internally it runs a daemon thread.  If it gets
     // an unhandled exception, it will just exit.
     this.leases.setName(n + ".leaseChecker");
@@ -690,7 +740,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Verify that all threads are alive
     if (!(leases.isAlive() && compactSplitThread.isAlive() &&
         cacheFlusher.isAlive() && logRoller.isAlive() &&
-        workerThread.isAlive())) {
+        workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
       // One or more threads are no longer alive - shut down
       stop();
       return false;
@@ -750,20 +800,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Presumption is that all closes and stops have already been called.
    */
   void join() {
-    join(this.workerThread);
-    join(this.cacheFlusher);
-    join(this.compactSplitThread);
-    join(this.logRoller);
-  }
-
-  private void join(final Thread t) {
-    while (t.isAlive()) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        // continue
-      }
-    }
+    Threads.shutdown(this.majorCompactionChecker);
+    Threads.shutdown(this.workerThread);
+    Threads.shutdown(this.cacheFlusher);
+    Threads.shutdown(this.compactSplitThread);
+    Threads.shutdown(this.logRoller);
   }
   
   /*
@@ -925,13 +966,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               // Force split a region
               HRegion region = getRegion(info.getRegionName());
               region.regionInfo.shouldSplit(true);
-              compactSplitThread.compactionRequested(region);
+              compactSplitThread.compactionRequested(region,
+                "MSG_REGION_SPLIT");
             } break;
 
             case MSG_REGION_COMPACT: {
               // Compact a region
               HRegion region = getRegion(info.getRegionName());
-              compactSplitThread.compactionRequested(region);
+              compactSplitThread.compactionRequested(region,
+                "MSG_REGION_COMPACT");
             } break;
 
             default:
@@ -983,7 +1026,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         region = instantiateRegion(regionInfo);
         // Startup a compaction early if one is needed.
-        this.compactSplitThread.compactionRequested(region);
+        this.compactSplitThread.
+          compactionRequested(region, "Region open check");
       } catch (IOException e) {
         LOG.error("error opening region " + regionInfo.getRegionNameAsString(), e);
 

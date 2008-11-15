@@ -83,6 +83,7 @@ import org.apache.hadoop.io.SequenceFile;
 public class HStoreFile implements HConstants {
   static final Log LOG = LogFactory.getLog(HStoreFile.class.getName());
   static final byte INFO_SEQ_NUM = 0;
+  static final byte MAJOR_COMPACTION = INFO_SEQ_NUM + 1;
   static final String HSTORE_DATFILE_DIR = "mapfiles";
   static final String HSTORE_INFO_DIR = "info";
   static final String HSTORE_FILTER_DIR = "filter";
@@ -97,6 +98,9 @@ public class HStoreFile implements HConstants {
   private final FileSystem fs;
   private final Reference reference;
   private final HRegionInfo hri;
+  /* If true, this file was product of a major compaction.
+   */
+  private boolean majorCompaction = false;
 
   /**
    * Constructor that fully initializes the object
@@ -111,6 +115,24 @@ public class HStoreFile implements HConstants {
   HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
       final HRegionInfo hri, byte [] colFamily, long fileId,
       final Reference ref)
+  throws IOException {
+    this(conf, fs, basedir, hri, colFamily, fileId, ref, false);
+  }
+  
+  /**
+   * Constructor that fully initializes the object
+   * @param conf Configuration object
+   * @param basedir qualified path that is parent of region directory
+   * @param colFamily name of the column family
+   * @param fileId file identifier
+   * @param ref Reference to another HStoreFile.
+   * @param hri The region info for this file (HACK HBASE-868). TODO: Fix.
+   * @param mc Try if this file was result of a major compression.
+   * @throws IOException
+   */
+  HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
+      final HRegionInfo hri, byte [] colFamily, long fileId,
+      final Reference ref, final boolean mc)
   throws IOException {
     this.conf = conf;
     this.fs = fs;
@@ -133,6 +155,7 @@ public class HStoreFile implements HConstants {
     // If a reference, construction does not write the pointer files.  Thats
     // done by invocations of writeReferenceFiles(hsf, fs). Happens at split.
     this.reference = ref;
+    this.majorCompaction = mc;
   }
 
   /** @return the region name */
@@ -288,11 +311,11 @@ public class HStoreFile implements HConstants {
   /** 
    * Reads in an info file
    *
-   * @param fs file system
+   * @param filesystem file system
    * @return The sequence id contained in the info file
    * @throws IOException
    */
-  long loadInfo(FileSystem fs) throws IOException {
+  long loadInfo(final FileSystem filesystem) throws IOException {
     Path p = null;
     if (isReference()) {
       p = getInfoFilePath(reference.getEncodedRegionName(),
@@ -300,10 +323,18 @@ public class HStoreFile implements HConstants {
     } else {
       p = getInfoFilePath();
     }
-    DataInputStream in = new DataInputStream(fs.open(p));
+    long length = filesystem.getFileStatus(p).getLen();
+    boolean hasMoreThanSeqNum = length > (Byte.SIZE + Bytes.SIZEOF_LONG);
+    DataInputStream in = new DataInputStream(filesystem.open(p));
     try {
       byte flag = in.readByte();
-      if(flag == INFO_SEQ_NUM) {
+      if (flag == INFO_SEQ_NUM) {
+        if (hasMoreThanSeqNum) {
+          flag = in.readByte();
+          if (flag == MAJOR_COMPACTION) {
+            this.majorCompaction = in.readBoolean();
+          }
+        }
         return in.readLong();
       }
       throw new IOException("Cannot process log file: " + p);
@@ -315,16 +346,37 @@ public class HStoreFile implements HConstants {
   /**
    * Writes the file-identifier to disk
    * 
-   * @param fs file system
+   * @param filesystem file system
    * @param infonum file id
    * @throws IOException
    */
-  void writeInfo(FileSystem fs, long infonum) throws IOException {
+  void writeInfo(final FileSystem filesystem, final long infonum)
+  throws IOException {
+    writeInfo(filesystem, infonum, false);
+  }
+  
+  /**
+   * Writes the file-identifier to disk
+   * 
+   * @param filesystem file system
+   * @param infonum file id
+   * @param mc True if this file is product of a major compaction
+   * @throws IOException
+   */
+  void writeInfo(final FileSystem filesystem, final long infonum,
+    final boolean mc)
+  throws IOException {
     Path p = getInfoFilePath();
-    FSDataOutputStream out = fs.create(p);
+    FSDataOutputStream out = filesystem.create(p);
     try {
       out.writeByte(INFO_SEQ_NUM);
       out.writeLong(infonum);
+      if (mc) {
+        // Set whether major compaction flag on this file.
+        this.majorCompaction = mc;
+        out.writeByte(MAJOR_COMPACTION);
+        out.writeBoolean(mc);
+      }
     } finally {
       out.close();
     }
@@ -429,6 +481,13 @@ public class HStoreFile implements HConstants {
   public String toString() {
     return encodedRegionName + "/" + Bytes.toString(colFamily) + "/" + fileId +
       (isReference()? "-" + reference.toString(): "");
+  }
+  
+  /**
+   * @return True if this file was made by a major compaction.
+   */
+  public boolean isMajorCompaction() {
+    return this.majorCompaction;
   }
 
   private static String createHStoreFilename(final long fid,

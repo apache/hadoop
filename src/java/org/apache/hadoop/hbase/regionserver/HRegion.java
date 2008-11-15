@@ -1336,8 +1336,8 @@ public class HRegion implements HConstants {
     try {
       for (HStore store : stores.values()) {
         List<HStoreKey> keys =
-          store.getKeys(new HStoreKey(row, ts, this.regionInfo), ALL_VERSIONS,
-            now, null);
+          store.getKeys(new HStoreKey(row, ts, this.regionInfo),
+            ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
           new HStoreKey.HStoreKeyWritableComparator(regionInfo));
         for (HStoreKey key: keys) {
@@ -1369,7 +1369,8 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       for (HStore store : stores.values()) {
-        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp, this.regionInfo),
+        List<HStoreKey> keys =
+          store.getKeys(new HStoreKey(row, timestamp, this.regionInfo),
             ALL_VERSIONS, now, columnPattern);
           TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
             new HStoreKey.HStoreKeyWritableComparator(regionInfo));
@@ -2399,6 +2400,19 @@ public class HRegion implements HConstants {
    */
   static void listFiles(FileSystem fs, HRegion r) throws IOException {
     listPaths(fs, r.getRegionDir());
+  }
+
+  /**
+   * @return True if needs a mojor compaction.
+   * @throws IOException 
+   */
+  boolean isMajorCompaction() throws IOException {
+    for (HStore store: this.stores.values()) {
+      if (store.isMajorCompaction()) {
+        return true;
+      }
+    }
+    return false;
   }
   
   /*
