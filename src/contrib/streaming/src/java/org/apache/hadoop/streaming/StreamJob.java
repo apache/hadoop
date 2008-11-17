@@ -705,7 +705,7 @@ public class StreamJob implements Tool {
           || inputFormatSpec_.equals(SequenceFileAsTextInputFormat.class.getSimpleName())) {
         fmt = SequenceFileAsTextInputFormat.class;
       } else {
-        c = StreamUtil.goodClassOrNull(inputFormatSpec_, defaultPackage);
+        c = StreamUtil.goodClassOrNull(jobConf_, inputFormatSpec_, defaultPackage);
         if (c != null) {
           fmt = c;
         } else {
@@ -725,7 +725,7 @@ public class StreamJob implements Tool {
     jobConf_.set("stream.addenvironment", addTaskEnvironment_);
 
     if (mapCmd_ != null) {
-      c = StreamUtil.goodClassOrNull(mapCmd_, defaultPackage);
+      c = StreamUtil.goodClassOrNull(jobConf_, mapCmd_, defaultPackage);
       if (c != null) {
         jobConf_.setMapperClass(c);
       } else {
@@ -736,7 +736,7 @@ public class StreamJob implements Tool {
     }
 
     if (comCmd_ != null) {
-      c = StreamUtil.goodClassOrNull(comCmd_, defaultPackage);
+      c = StreamUtil.goodClassOrNull(jobConf_, comCmd_, defaultPackage);
       if (c != null) {
         jobConf_.setCombinerClass(c);
       } else {
@@ -752,7 +752,7 @@ public class StreamJob implements Tool {
         jobConf_.setCombinerClass(ValueAggregatorCombiner.class);
       } else {
 
-        c = StreamUtil.goodClassOrNull(redCmd_, defaultPackage);
+        c = StreamUtil.goodClassOrNull(jobConf_, redCmd_, defaultPackage);
         if (c != null) {
           jobConf_.setReducerClass(c);
         } else {
@@ -767,7 +767,7 @@ public class StreamJob implements Tool {
       String[] args = inReaderSpec_.split(",");
       String readerClass = args[0];
       // this argument can only be a Java class
-      c = StreamUtil.goodClassOrNull(readerClass, defaultPackage);
+      c = StreamUtil.goodClassOrNull(jobConf_, readerClass, defaultPackage);
       if (c != null) {
         jobConf_.set("stream.recordreader.class", c.getName());
       } else {
@@ -784,7 +784,7 @@ public class StreamJob implements Tool {
     FileOutputFormat.setOutputPath(jobConf_, new Path(output_));
     fmt = null;
     if (outputFormatSpec_!= null) {
-      c = StreamUtil.goodClassOrNull(outputFormatSpec_, defaultPackage);
+      c = StreamUtil.goodClassOrNull(jobConf_, outputFormatSpec_, defaultPackage);
       if (c != null) {
         fmt = c;
       } else {
@@ -797,7 +797,7 @@ public class StreamJob implements Tool {
     jobConf_.setOutputFormat(fmt);
 
     if (partitionerSpec_!= null) {
-      c = StreamUtil.goodClassOrNull(partitionerSpec_, defaultPackage);
+      c = StreamUtil.goodClassOrNull(jobConf_, partitionerSpec_, defaultPackage);
       if (c != null) {
         jobConf_.setPartitionerClass(c);
       } else {

@@ -108,6 +108,9 @@ Trunk (unreleased changes)
 
     HADOOP-4126. Allow access to HDFS web UI on EC2 (tomwhite via omalley)
 
+    HADOOP-4612. Removes RunJar's dependency on JobClient.
+    (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES

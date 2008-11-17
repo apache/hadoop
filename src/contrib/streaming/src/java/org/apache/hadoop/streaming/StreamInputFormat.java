@@ -55,7 +55,7 @@ public class StreamInputFormat extends KeyValueTextInputFormat {
     Class readerClass;
 
     {
-      readerClass = StreamUtil.goodClassOrNull(c, null);
+      readerClass = StreamUtil.goodClassOrNull(job, c, null);
       if (readerClass == null) {
         throw new RuntimeException("Class not found: " + c);
       }

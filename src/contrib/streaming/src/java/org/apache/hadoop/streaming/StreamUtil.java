@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.jar.*;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -46,15 +47,14 @@ public class StreamUtil {
    * [-mapper program | -javamapper classname], -mapper and -javamapper are mutually exclusive.
    * (repeat for -reducer, -combiner) </pre>
    */
-  public static Class goodClassOrNull(String className, String defaultPackage) {
+  public static Class goodClassOrNull(Configuration conf, String className, String defaultPackage) {
     if (className.indexOf('.') == -1 && defaultPackage != null) {
       className = defaultPackage + "." + className;
     }
     Class clazz = null;
     try {
-      clazz = Class.forName(className);
+      clazz = conf.getClassByName(className);
     } catch (ClassNotFoundException cnf) {
-    } catch (LinkageError cnf) {
     }
     return clazz;
   }

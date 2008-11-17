@@ -234,10 +234,13 @@ public class GenericOptionsParser {
         conf.set("tmpjars", 
                  validateFiles(line.getOptionValue("libjars"), conf));
         //setting libjars in client classpath
-        ClassLoader loader = new URLClassLoader(getLibJars(conf), 
-            conf.getClassLoader());
-        Thread.currentThread().setContextClassLoader(loader);
-        conf.setClassLoader(loader);
+        URL[] libjars = getLibJars(conf);
+        if(libjars!=null && libjars.length>0) {
+          conf.setClassLoader(new URLClassLoader(libjars, conf.getClassLoader()));
+          Thread.currentThread().setContextClassLoader(
+              new URLClassLoader(libjars, 
+                  Thread.currentThread().getContextClassLoader()));
+        }
       }
       if (line.hasOption("files")) {
         conf.set("tmpfiles", 
