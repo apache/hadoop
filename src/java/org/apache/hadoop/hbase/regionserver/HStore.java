@@ -435,7 +435,6 @@ public class HStore implements HConstants {
       curfile = new HStoreFile(conf, fs, basedir, this.info,
         family.getName(), fid, reference);
       long storeSeqId = -1;
-      boolean majorCompaction = false;
       try {
         storeSeqId = curfile.loadInfo(fs);
         if (storeSeqId > this.maxSeqId) {
@@ -1044,11 +1043,45 @@ public class HStore implements HConstants {
   }
   
   /*
+   * @param r List to reverse
+   * @return A reversed array of content of <code>readers</code>
+   */
+  private MapFile.Reader [] reverse(final List<MapFile.Reader> r) {
+    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(r);
+    Collections.reverse(copy);
+    return copy.toArray(new MapFile.Reader[0]);
+  }
+
+  /*
+   * @param rdrs List of readers
+   * @param keys Current keys
+   * @param done Which readers are done
+   * @return The lowest current key in passed <code>rdrs</code>
+   */
+  private int getLowestKey(final MapFile.Reader [] rdrs,
+      final HStoreKey [] keys, final boolean [] done) {
+    int lowestKey = -1;
+    for (int i = 0; i < rdrs.length; i++) {
+      if (done[i]) {
+        continue;
+      }
+      if (lowestKey < 0) {
+        lowestKey = i;
+      } else {
+        if (keys[i].compareTo(keys[lowestKey]) < 0) {
+          lowestKey = i;
+        }
+      }
+    }
+    return lowestKey;
+  }
+
+  /*
    * Compact a list of MapFile.Readers into MapFile.Writer.
    * 
-   * We work by iterating through the readers in parallel. We always increment
-   * the lowest-ranked one. Updates to a single row/column will appear ranked
-   * by timestamp.
+   * We work by iterating through the readers in parallel looking at newest
+   * store file first. We always increment the lowest-ranked one. Updates to a
+   * single row/column will appear ranked by timestamp.
    * @param compactedOut Where to write compaction.
    * @param pReaders List of readers sorted oldest to newest.
    * @param majorCompaction True to force a major compaction regardless of
@@ -1058,14 +1091,12 @@ public class HStore implements HConstants {
   private void compact(final MapFile.Writer compactedOut,
       final List<MapFile.Reader> pReaders, final boolean majorCompaction)
   throws IOException {
-    // Reverse order so newest is first.
-    List<MapFile.Reader> copy = new ArrayList<MapFile.Reader>(pReaders);
-    Collections.reverse(copy);
-    MapFile.Reader[] rdrs = copy.toArray(new MapFile.Reader[0]);
+    // Reverse order so newest store file is first.
+    MapFile.Reader[] rdrs = reverse(pReaders);
     try {
-      HStoreKey[] keys = new HStoreKey[rdrs.length];
-      ImmutableBytesWritable[] vals = new ImmutableBytesWritable[rdrs.length];
-      boolean[] done = new boolean[rdrs.length];
+      HStoreKey [] keys = new HStoreKey[rdrs.length];
+      ImmutableBytesWritable [] vals = new ImmutableBytesWritable[rdrs.length];
+      boolean [] done = new boolean[rdrs.length];
       for(int i = 0; i < rdrs.length; i++) {
         keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.info);
         vals[i] = new ImmutableBytesWritable();
@@ -1085,56 +1116,67 @@ public class HStore implements HConstants {
 
       long now = System.currentTimeMillis();
       int timesSeen = 0;
-      byte [] lastRow = null;
-      byte [] lastColumn = null;
+      HStoreKey lastSeen = new HStoreKey();
+      HStoreKey lastDelete = null;
       while (numDone < done.length) {
-        int smallestKey = -1;
-        for (int i = 0; i < rdrs.length; i++) {
-          if (done[i]) {
-            continue;
-          }
-          if (smallestKey < 0) {
-            smallestKey = i;
-          } else {
-            if (keys[i].compareTo(keys[smallestKey]) < 0) {
-              smallestKey = i;
-            }
-          }
-        }
-        HStoreKey sk = keys[smallestKey];
-        if (HStoreKey.equalsTwoRowKeys(info,lastRow, sk.getRow())
-            && Bytes.equals(lastColumn, sk.getColumn())) {
+        // Get lowest key in all store files.
+        int lowestKey = getLowestKey(rdrs, keys, done);
+        HStoreKey sk = keys[lowestKey];
+        // If its same row and column as last key, increment times seen.
+        if (HStoreKey.equalsTwoRowKeys(info, lastSeen.getRow(), sk.getRow())
+            && Bytes.equals(lastSeen.getColumn(), sk.getColumn())) {
           timesSeen++;
+          // Reset last delete if not exact timestamp -- lastDelete only stops
+          // exactly the same key making it out to the compacted store file.
+          if (lastDelete != null &&
+              lastDelete.getTimestamp() != sk.getTimestamp()) {
+            lastDelete = null;
+          }
         } else {
           timesSeen = 1;
+          lastDelete = null;
         }
 
         // Don't write empty rows or columns.  Only remove cells on major
         // compaction.  Remove if expired of > VERSIONS
         if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
-          boolean expired = false;
-          if (!majorCompaction ||
-              (timesSeen <= family.getMaxVersions() &&
-                !(expired = isExpired(sk, ttl, now)))) {
-              compactedOut.append(sk, vals[smallestKey]);
-          }
-          if (expired) {
-            // HBASE-855 remove one from timesSeen because it did not make it
-            // past expired check -- don't count against max versions.
-            timesSeen--;
+          ImmutableBytesWritable value = vals[lowestKey];
+          if (!majorCompaction) {
+            // Write out all values if not a major compaction.
+            compactedOut.append(sk, value);
+          } else {
+            boolean expired = false;
+            boolean deleted = false;
+            if (timesSeen <= family.getMaxVersions() &&
+                !(expired = isExpired(sk, ttl, now))) {
+              // If this value key is same as a deleted key, skip
+              if (lastDelete != null && sk.equals(lastDelete)) {
+                deleted = true;
+              } else if (HLogEdit.isDeleted(value.get())) {
+                // If a deleted value, skip
+                deleted = true;
+                lastDelete = new HStoreKey(sk);
+              } else {
+                compactedOut.append(sk, vals[lowestKey]);
+              }
+            }
+            if (expired || deleted) {
+              // HBASE-855 remove one from timesSeen because it did not make it
+              // past expired check -- don't count against max versions.
+              timesSeen--;
+            }
           }
         }
 
         // Update last-seen items
-        lastRow = sk.getRow();
-        lastColumn = sk.getColumn();
+        lastSeen = new HStoreKey(sk);
 
         // Advance the smallest key.  If that reader's all finished, then 
         // mark it as done.
-        if (!rdrs[smallestKey].next(keys[smallestKey], vals[smallestKey])) {
-          done[smallestKey] = true;
-          rdrs[smallestKey].close();
-          rdrs[smallestKey] = null;
+        if (!rdrs[lowestKey].next(keys[lowestKey], vals[lowestKey])) {
+          done[lowestKey] = true;
+          rdrs[lowestKey].close();
+          rdrs[lowestKey] = null;
           numDone++;
         }
       }

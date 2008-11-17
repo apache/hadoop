@@ -103,34 +103,39 @@ public class TestCompaction extends HBaseTestCase {
     assertTrue(cellValues.length == 3);
     r.flushcache();
     r.compactStores();
-    // Always 3 version if that is what max versions is.
+    // Always 3 versions if that is what max versions is.
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100/*Too many*/);
-    LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " + cellValues.length);
+    LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " +
+      cellValues.length);
     assertTrue(cellValues.length == 3);
 
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis(), null);
+    r.deleteAll(secondRowBytes, COLUMN_FAMILY_TEXT, System.currentTimeMillis(),
+      null);
     // Assert deleted.
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     r.flushcache();
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flushcache();
-    // Assert that the first row is still deleted.
-    cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    // Assert that the second row is still deleted.
+    cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/);
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Force major compaction.
     r.compactStores(true);
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
-    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
-    // Make sure the store files do have some 'aaa' keys in them.
+    assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
+    // Also, that compacted store files do not have any secondRowBytes because
+    // they were deleted.
+    int count = 0;
     boolean containsStartRow = false;
     for (MapFile.Reader reader: this.r.stores.
         get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
@@ -140,14 +145,16 @@ public class TestCompaction extends HBaseTestCase {
       while(reader.next(key, val)) {
         if (Bytes.equals(key.getRow(), STARTROW)) {
           containsStartRow = true;
-          break;
+          count++;
+        } else {
+          // After major compaction, should be none of these rows in compacted
+          // file.
+          assertFalse(Bytes.equals(key.getRow(), secondRowBytes));
         }
-      }
-      if (containsStartRow) {
-        break;
       }
     }
     assertTrue(containsStartRow);
+    assertTrue(count == 3);
     // Do a simple TTL test.
     final int ttlInSeconds = 1;
     for (HStore store: this.r.stores.values()) {
@@ -155,6 +162,11 @@ public class TestCompaction extends HBaseTestCase {
     }
     Thread.sleep(ttlInSeconds * 1000);
     r.compactStores(true);
+    count = count();
+    assertTrue(count == 0);
+  }
+  
+  private int count() throws IOException {
     int count = 0;
     for (MapFile.Reader reader: this.r.stores.
         get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
@@ -165,7 +177,7 @@ public class TestCompaction extends HBaseTestCase {
         count++;
       }
     }
-    assertTrue(count == 0);
+    return count;
   }
 
   private void createStoreFile(final HRegion region) throws IOException {

@@ -124,6 +124,8 @@ Release 0.19.0 - Unreleased
    HBASE-999   Up versions on historian and keep history of deleted regions for a
                while rather than delete immediately
    HBASE-938   Major compaction period is not checked periodically
+   HBASE-947   [Optimization] Major compaction should remove deletes as well as
+               the deleted cell
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
