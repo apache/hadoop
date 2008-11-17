@@ -74,6 +74,8 @@ Release 0.19.0 - Unreleased
    HBASE-996   Migration script to up the versions in catalog tables
    HBASE-991   Update the mapred package document examples so they work with
                TRUNK/0.19.0.
+   HBASE-1003  If cell exceeds TTL but not VERSIONs, will not be removed during
+               major compaction
       
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

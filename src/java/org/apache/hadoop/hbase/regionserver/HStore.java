@@ -1109,21 +1109,19 @@ public class HStore implements HConstants {
           timesSeen = 1;
         }
 
-        // Added majorCompaction here to make sure all versions make it to 
-        // the major compaction so we do not remove the wrong last versions
-        // this effected HBASE-826
-        if (timesSeen <= family.getMaxVersions() || !majorCompaction) {
-          // Keep old versions until we have maxVersions worth.
-          // Then just skip them.
-          if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
-            // Only write out objects with non-zero length key and value
-            if (!isExpired(sk, ttl, now)) {
+        // Don't write empty rows or columns.  Only remove cells on major
+        // compaction.  Remove if expired of > VERSIONS
+        if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
+          boolean expired = false;
+          if (!majorCompaction ||
+              (timesSeen <= family.getMaxVersions() &&
+                !(expired = isExpired(sk, ttl, now)))) {
               compactedOut.append(sk, vals[smallestKey]);
-            } else {
-              // HBASE-855 remove one from timesSeen because it did not make it
-              // past expired check -- don't count against max versions.
-              timesSeen--;
-            }
+          }
+          if (expired) {
+            // HBASE-855 remove one from timesSeen because it did not make it
+            // past expired check -- don't count against max versions.
+            timesSeen--;
           }
         }
 
@@ -1144,7 +1142,7 @@ public class HStore implements HConstants {
       closeCompactionReaders(Arrays.asList(rdrs));
     }
   }
-  
+
   private void closeCompactionReaders(final List<MapFile.Reader> rdrs) {
     for (MapFile.Reader r: rdrs) {
       try {
@@ -1712,12 +1710,7 @@ public class HStore implements HConstants {
   
   static boolean isExpired(final HStoreKey hsk, final long ttl,
       final long now) {
-    boolean result = ttl != HConstants.FOREVER && now > hsk.getTimestamp() + ttl;
-    if (result && LOG.isDebugEnabled()) {
-      LOG.debug("rowAtOrBeforeCandidate 1:" + hsk +
-        ": expired, skipped");
-    }
-    return result;
+    return ttl != HConstants.FOREVER && now > hsk.getTimestamp() + ttl;
   }
 
   /* Find a candidate for row that is at or before passed key, sk, in mapfile.

@@ -50,8 +50,6 @@
 package org.onelab.filter;
 
 import org.apache.hadoop.hbase.util.Hash;
-import org.apache.hadoop.hbase.util.JenkinsHash;
-import org.apache.hadoop.hbase.util.MurmurHash;
 
 /**
  * Implements a hash object that returns a certain number of hashed values.
@@ -102,15 +100,14 @@ public final class HashFunction {
   }//end constructor
 
   /** Clears <i>this</i> hash function. A NOOP */
-  public void clear(){
-  }//end clear()
+  public void clear() {
+  }
 
   /**
    * Hashes a specified key into several integers.
    * @param k The specified key.
    * @return The array of hashed values.
    */
-  @SuppressWarnings("unchecked")
   public int[] hash(Key k){
       byte[] b = k.getBytes();
       if(b == null) {

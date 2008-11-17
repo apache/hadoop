@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.io.MapFile;
 
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -147,6 +148,24 @@ public class TestCompaction extends HBaseTestCase {
       }
     }
     assertTrue(containsStartRow);
+    // Do a simple TTL test.
+    final int ttlInSeconds = 1;
+    for (HStore store: this.r.stores.values()) {
+      store.ttl = ttlInSeconds * 1000;
+    }
+    Thread.sleep(ttlInSeconds * 1000);
+    r.compactStores(true);
+    int count = 0;
+    for (MapFile.Reader reader: this.r.stores.
+        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
+      reader.reset();
+      HStoreKey key = new HStoreKey();
+      ImmutableBytesWritable val = new ImmutableBytesWritable();
+      while(reader.next(key, val)) {
+        count++;
+      }
+    }
+    assertTrue(count == 0);
   }
 
   private void createStoreFile(final HRegion region) throws IOException {
