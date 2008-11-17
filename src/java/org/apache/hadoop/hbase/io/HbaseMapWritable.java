@@ -42,12 +42,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * A Writable Map.
  * Like {@link org.apache.hadoop.io.MapWritable} but dumb. It will fail
- * if passed a Writable it has not already been told about. Its also been
- * primed with hbase Writables.  Keys are always byte arrays.  Thats other
- * difference from MapWritable.
+ * if passed a value type that it has not already been told about. Its  been
+ * primed with hbase Writables and byte [].  Keys are always byte arrays.
  *
- * @param <K> key
- * @param <V> value
+ * @param <byte []> key
+ * @param <V> value Expects a Writable or byte [].
  */
 public class HbaseMapWritable <K, V>
 implements SortedMap<byte [], V>, Writable, Configurable {
@@ -192,8 +191,14 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     // Then write out each key/value pair
     for (Map.Entry<byte [], V> e: instance.entrySet()) {
       Bytes.writeByteArray(out, e.getKey());
-      out.writeByte(getId(e.getValue().getClass()));
-      ((Writable)e.getValue()).write(out);
+      Byte id =getId(e.getValue().getClass());
+      out.writeByte(id);
+      Object value = e.getValue();
+      if (value instanceof byte []) {
+        Bytes.writeByteArray(out, (byte [])value);
+      } else {
+        ((Writable)value).write(out);
+      }
     }
   }
 
@@ -209,11 +214,18 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     // Then read each key/value pair
     for (int i = 0; i < entries; i++) {
       byte [] key = Bytes.readByteArray(in);
-      Writable value = (Writable)ReflectionUtils.
-        newInstance(getClass(in.readByte()), getConf());
-      value.readFields(in);
-      V v = (V)value;
-      this.instance.put(key, v);
+      Class clazz = getClass(in.readByte());
+      V value = null;
+      if (clazz.equals(byte [].class)) {
+        byte [] bytes = Bytes.readByteArray(in);
+        value = (V)bytes;
+      } else {
+        Writable w = (Writable)ReflectionUtils.
+          newInstance(clazz, getConf());
+        w.readFields(in);
+        value = (V)w;
+      }
+      this.instance.put(key, value);
     }
   }
 }
