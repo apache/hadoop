@@ -203,9 +203,11 @@ public class TestMiniMRWithDFS extends TestCase {
     assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
     Counters counters = result.job.getCounters();
     long hdfsRead = 
-      counters.findCounter(Task.FileSystemCounter.HDFS_READ).getCounter();
+      counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+          Task.getFileSystemCounterNames("hdfs")[0]).getCounter();
     long hdfsWrite = 
-      counters.findCounter(Task.FileSystemCounter.HDFS_WRITE).getCounter();
+      counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+          Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
     assertEquals(result.output.length(), hdfsWrite);
     assertEquals(input.length(), hdfsRead);
 

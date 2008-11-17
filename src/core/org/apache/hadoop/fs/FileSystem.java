@@ -68,11 +68,15 @@ public abstract class FileSystem extends Configured implements Closeable {
   private static final Map<Class<? extends FileSystem>, Statistics> 
     statisticsTable =
       new IdentityHashMap<Class<? extends FileSystem>, Statistics>();
+  
+  /** Recording statistics per FileSystem URI scheme */
+  private static final Map<String, Statistics> statsByUriScheme = 
+    new HashMap<String, Statistics>();
 
   /**
    * The statistics for this file system.
    */
-  protected final Statistics statistics;
+  protected Statistics statistics;
 
   /**
    * A cache of files that should be deleted when filsystem is closed
@@ -1365,6 +1369,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
     fs.initialize(uri, conf);
+    statsByUriScheme.put(uri.getScheme(), fs.statistics);
     return fs;
   }
 
@@ -1516,7 +1521,16 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   /**
+   * Get the Map of Statistics object indexed by URI Scheme.
+   * @return a Map having a key as URI scheme and value as Statistics object
+   */
+  public static synchronized Map<String, Statistics> getStatistics() {
+    return statsByUriScheme;
+  }
+  
+  /**
    * Get the statistics for a particular file system
+   * @deprecated Consider using {@link #getStatistics()} instead.
    * @param cls the class to lookup
    * @return a statistics object
    */

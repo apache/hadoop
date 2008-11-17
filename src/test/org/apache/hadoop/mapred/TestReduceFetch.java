@@ -35,8 +35,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.TestMapCollection.FakeIF;
 import org.apache.hadoop.mapred.TestMapCollection.FakeSplit;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import static org.apache.hadoop.mapred.Task.FileSystemCounter.HDFS_WRITE;
-import static org.apache.hadoop.mapred.Task.FileSystemCounter.LOCAL_READ;
 
 public class TestReduceFetch extends TestCase {
 
@@ -107,8 +105,10 @@ public class TestReduceFetch extends TestCase {
     job.set("mapred.job.reduce.input.buffer.percent", "0.0");
     job.setNumMapTasks(3);
     Counters c = runJob(job);
-    final long hdfsWritten = c.findCounter(HDFS_WRITE).getCounter();
-    final long localRead = c.findCounter(LOCAL_READ).getCounter();
+    final long hdfsWritten = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
     assertTrue("Expected more bytes read from local (" +
         localRead + ") than written to HDFS (" + hdfsWritten + ")",
         hdfsWritten <= localRead);
@@ -126,8 +126,10 @@ public class TestReduceFetch extends TestCase {
     job.setNumTasksToExecutePerJvm(1);
     job.set("mapred.job.shuffle.merge.percent", "1.0");
     Counters c = runJob(job);
-    final long hdfsWritten = c.findCounter(HDFS_WRITE).getCounter();
-    final long localRead = c.findCounter(LOCAL_READ).getCounter();
+    final long hdfsWritten = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
     assertTrue("Expected at least 1MB fewer bytes read from local (" +
         localRead + ") than written to HDFS (" + hdfsWritten + ")",
         hdfsWritten >= localRead + 1024 * 1024);
@@ -138,7 +140,8 @@ public class TestReduceFetch extends TestCase {
     job.set("mapred.job.reduce.input.buffer.percent", "1.0");
     job.setNumMapTasks(3);
     Counters c = runJob(job);
-    final long localRead = c.findCounter(LOCAL_READ).getCounter();
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
     assertTrue("Non-zero read from local: " + localRead, localRead == 0);
   }
 

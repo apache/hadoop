@@ -30,6 +30,9 @@ Trunk (unreleased changes)
 
     HADOOP-4628. Move Hive into a standalone subproject. (omalley)
 
+    HADOOP-4188. Removes task's dependency on concrete filesystems.
+    (Sharad Agarwal via ddas)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

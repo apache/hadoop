@@ -52,6 +52,7 @@ public class FilterFileSystem extends FileSystem {
   
   public FilterFileSystem(FileSystem fs) {
     this.fs = fs;
+    this.statistics = fs.statistics;
   }
 
   /** Called after a new FileSystem instance is constructed.

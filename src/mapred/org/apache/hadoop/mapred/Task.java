@@ -23,8 +23,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,13 +34,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.fs.kfs.KosmosFileSystem;
-import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
@@ -75,13 +73,18 @@ abstract class Task implements Writable, Configurable {
   
   /**
    * Counters to measure the usage of the different file systems.
+   * Always return the String array with two elements. First one is the name of  
+   * BYTES_READ counter and second one is of the BYTES_WRITTEN counter.
    */
-  protected static enum FileSystemCounter {
-    LOCAL_READ, LOCAL_WRITE, 
-    HDFS_READ, HDFS_WRITE, 
-    S3_READ, S3_WRITE,
-    KFS_READ, KFSWRITE
+  protected static String[] getFileSystemCounterNames(String uriScheme) {
+    String scheme = uriScheme.toUpperCase();
+    return new String[]{scheme+"_BYTES_READ", scheme+"_BYTES_WRITTEN"};
   }
+  
+  /**
+   * Name of the FileSystem counters' group
+   */
+  protected static final String FILESYSTEM_COUNTER_GROUP = "FileSystemCounters";
 
   ///////////////////////////////////////////////////////////
   // Helper methods to construct task-output paths
@@ -513,15 +516,11 @@ abstract class Task implements Writable, Configurable {
     private FileSystem.Statistics stats;
     private Counters.Counter readCounter = null;
     private Counters.Counter writeCounter = null;
-    private FileSystemCounter read;
-    private FileSystemCounter write;
-
-    FileSystemStatisticUpdater(FileSystemCounter read,
-                               FileSystemCounter write,
-                               Class<? extends FileSystem> cls) {
-      stats = FileSystem.getStatistics(cls);
-      this.read = read;
-      this.write = write;
+    private String[] counterNames;
+    
+    FileSystemStatisticUpdater(String uriScheme, FileSystem.Statistics stats) {
+      this.stats = stats;
+      this.counterNames = getFileSystemCounterNames(uriScheme);
     }
 
     void updateCounters() {
@@ -529,14 +528,16 @@ abstract class Task implements Writable, Configurable {
       long newWriteBytes = stats.getBytesWritten();
       if (prevReadBytes != newReadBytes) {
         if (readCounter == null) {
-          readCounter = counters.findCounter(read);
+          readCounter = counters.findCounter(FILESYSTEM_COUNTER_GROUP, 
+              counterNames[0]);
         }
         readCounter.increment(newReadBytes - prevReadBytes);
         prevReadBytes = newReadBytes;
       }
       if (prevWriteBytes != newWriteBytes) {
         if (writeCounter == null) {
-          writeCounter = counters.findCounter(write);
+          writeCounter = counters.findCounter(FILESYSTEM_COUNTER_GROUP, 
+              counterNames[1]);
         }
         writeCounter.increment(newWriteBytes - prevWriteBytes);
         prevWriteBytes = newWriteBytes;
@@ -545,31 +546,20 @@ abstract class Task implements Writable, Configurable {
   }
   
   /**
-   * A list of all of the file systems that we want to report on.
+   * A Map where Key-> URIScheme and value->FileSystemStatisticUpdater
    */
-  private List<FileSystemStatisticUpdater> statisticUpdaters =
-     new ArrayList<FileSystemStatisticUpdater>();
-  {
-    statisticUpdaters.add
-      (new FileSystemStatisticUpdater(FileSystemCounter.LOCAL_READ,
-                                      FileSystemCounter.LOCAL_WRITE,
-                                      RawLocalFileSystem.class));
-    statisticUpdaters.add
-      (new FileSystemStatisticUpdater(FileSystemCounter.HDFS_READ,
-                                      FileSystemCounter.HDFS_WRITE,
-                                      DistributedFileSystem.class));
-    statisticUpdaters.add
-    (new FileSystemStatisticUpdater(FileSystemCounter.KFS_READ,
-                                    FileSystemCounter.KFSWRITE,
-                                    KosmosFileSystem.class));
-    statisticUpdaters.add
-    (new FileSystemStatisticUpdater(FileSystemCounter.S3_READ,
-                                    FileSystemCounter.S3_WRITE,
-                                    S3FileSystem.class));
-  }
-
+  private Map<String, FileSystemStatisticUpdater> statisticUpdaters =
+     new HashMap<String, FileSystemStatisticUpdater>();
+  
   private synchronized void updateCounters() {
-    for(FileSystemStatisticUpdater updater: statisticUpdaters) {
+    for(Map.Entry<String, FileSystem.Statistics> entry : 
+      FileSystem.getStatistics().entrySet()) {
+      String uriScheme = entry.getKey();
+      FileSystemStatisticUpdater updater = statisticUpdaters.get(uriScheme);
+      if(updater==null) {//new FileSystem has been found in the cache
+        updater = new FileSystemStatisticUpdater(uriScheme, entry.getValue());
+        statisticUpdaters.put(uriScheme, updater);
+      }
       updater.updateCounters();
     }
   }

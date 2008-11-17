@@ -67,8 +67,7 @@ public class TestCounters extends TestCase {
   }
   
   public void testCounters() throws IOException {
-    Enum[] keysWithResource = {Task.FileSystemCounter.HDFS_READ, 
-                               Task.Counter.MAP_INPUT_BYTES, 
+    Enum[] keysWithResource = {Task.Counter.MAP_INPUT_BYTES, 
                                Task.Counter.MAP_OUTPUT_BYTES};
     
     Enum[] keysWithoutResource = {myCounters.TEST1, myCounters.TEST2};
