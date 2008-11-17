@@ -73,7 +73,7 @@ import org.apache.hadoop.util.Progressable;
  * will have to consult the transaction log to determine the final decision of
  * the transaction. This is not yet implemented.
  */
-class TransactionalRegion extends HRegion {
+public class TransactionalRegion extends HRegion {
 
   private static final String LEASE_TIME = "hbase.transaction.leaseTime";
   private static final int DEFAULT_LEASE_TIME = 60 * 1000;
@@ -501,7 +501,7 @@ class TransactionalRegion extends HRegion {
     }
 
     for (BatchUpdate update : state.getWriteSet()) {
-      super.batchUpdate(update, false); // Don't need to WAL these
+      this.batchUpdate(update, false); // Don't need to WAL these
       // FIME, maybe should be walled so we don't need to look so far back.
     }
 

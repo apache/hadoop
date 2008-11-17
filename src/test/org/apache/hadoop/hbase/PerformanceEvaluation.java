@@ -527,7 +527,7 @@ public class PerformanceEvaluation implements HConstants {
    * @return Returns zero-prefixed 10-byte wide decimal version of passed
    * number (Does absolute in case number is negative).
    */
-  static byte [] format(final int number) {
+  public static byte [] format(final int number) {
     byte [] b = new byte[10];
     int d = Math.abs(number);
     for (int i = b.length - 1; i >= 0; i--) {

@@ -19,8 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,8 +33,10 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -41,7 +47,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
-  public static final byte TABLE_DESCRIPTOR_VERSION = 3;
+  // Version 4 adds indexes
+  public static final byte TABLE_DESCRIPTOR_VERSION = 4;
 
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
   private String nameAsString = "";
@@ -66,8 +73,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final ImmutableBytesWritable IS_ROOT_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
   public static final String IS_META = "IS_META";
+
+  public static final String ROW_KEY_COMPARATOR = "ROW_KEY_COMPARATOR";
+
   public static final ImmutableBytesWritable IS_META_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_META));
+
 
   // The below are ugly but better than creating them each time till we
   // replace booleans being saved as Strings with plain booleans.  Need a
@@ -90,6 +101,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private final Map<Integer, HColumnDescriptor> families =
     new HashMap<Integer, HColumnDescriptor>();
 
+  // Key is indexId
+  private final Map<String, IndexSpecification> indexes =
+    new HashMap<String, IndexSpecification>();
+  
   /**
    * Private constructor used internally creating table descriptors for 
    * catalog tables: e.g. .META. and -ROOT-.
@@ -108,12 +123,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * catalog tables: e.g. .META. and -ROOT-.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
+      Collection<IndexSpecification> indexes,
        Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
     this.name = name.clone();
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
+    }
+    for(IndexSpecification index : indexes) {
+      this.indexes.put(index.getIndexId(), index);
     }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
         values.entrySet()) {
@@ -404,13 +423,65 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       return Integer.valueOf(Bytes.toString(value)).intValue();
     return DEFAULT_MEMCACHE_FLUSH_SIZE;
   }
-
+  
   /**
    * @param memcacheFlushSize memory cache flush size for each hregion
    */
   public void setMemcacheFlushSize(int memcacheFlushSize) {
     setValue(MEMCACHE_FLUSHSIZE_KEY,
       Bytes.toBytes(Integer.toString(memcacheFlushSize)));
+  }
+  
+  
+  public void setRowKeyComparator(WritableComparator<byte[]> newComparator) {
+    if (newComparator == null) {
+      return;
+    }
+    
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(bos);
+    HBaseConfiguration conf = new HBaseConfiguration();
+    try {
+      ObjectWritable.writeObject(dos, newComparator, WritableComparator.class, conf);
+      dos.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    setValue(ROW_KEY_COMPARATOR.getBytes(), bos.toByteArray());
+    this.comparator = newComparator;
+  }
+  
+  private WritableComparator<byte[]> comparator = null;
+  public WritableComparator<byte[]> getRowKeyComparator() {
+    if (comparator != null) {
+      return comparator;
+    }
+    byte[] bytes = getValue(ROW_KEY_COMPARATOR.getBytes());
+    if (bytes == null) {
+      return null;
+    }
+    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+    DataInputStream in = new DataInputStream(bis);
+    HBaseConfiguration conf = new HBaseConfiguration();
+    try {
+      comparator = (WritableComparator<byte[]>) ObjectWritable.readObject(in, conf);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return comparator;
+  }
+  
+  
+  public Collection<IndexSpecification> getIndexes() {
+    return indexes.values();
+  }
+  
+  public IndexSpecification getIndex(String indexId) {
+    return indexes.get(indexId);
+  }
+  
+  public void addIndex(IndexSpecification index) {
+    indexes.put(index.getIndexId(), index);
   }
 
   /**
@@ -519,6 +590,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       c.readFields(in);
       families.put(Bytes.mapKey(c.getName()), c);
     }
+    indexes.clear();
+    if (version < 4) {
+      return;
+    }
+    int numIndexes = in.readInt();
+    for (int i = 0; i < numIndexes; i++) {
+      IndexSpecification index = new IndexSpecification();
+      index.readFields(in);
+      addIndex(index);
+    }
   }
 
   public void write(DataOutput out) throws IOException {
@@ -537,6 +618,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         it.hasNext(); ) {
       HColumnDescriptor family = it.next();
       family.write(out);
+    }
+    out.writeInt(indexes.size());
+    for(IndexSpecification index : indexes.values()) {
+      index.write(out);
     }
   }
 
