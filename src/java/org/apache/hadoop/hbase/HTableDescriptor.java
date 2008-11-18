@@ -19,12 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -431,47 +426,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     setValue(MEMCACHE_FLUSHSIZE_KEY,
       Bytes.toBytes(Integer.toString(memcacheFlushSize)));
   }
-  
-  
-  public void setRowKeyComparator(WritableComparator<byte[]> newComparator) {
-    if (newComparator == null) {
-      return;
-    }
     
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    DataOutputStream dos = new DataOutputStream(bos);
-    HBaseConfiguration conf = new HBaseConfiguration();
-    try {
-      ObjectWritable.writeObject(dos, newComparator, WritableComparator.class, conf);
-      dos.close();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    setValue(ROW_KEY_COMPARATOR.getBytes(), bos.toByteArray());
-    this.comparator = newComparator;
-  }
-  
-  private WritableComparator<byte[]> comparator = null;
-  public WritableComparator<byte[]> getRowKeyComparator() {
-    if (comparator != null) {
-      return comparator;
-    }
-    byte[] bytes = getValue(ROW_KEY_COMPARATOR.getBytes());
-    if (bytes == null) {
-      return null;
-    }
-    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-    DataInputStream in = new DataInputStream(bis);
-    HBaseConfiguration conf = new HBaseConfiguration();
-    try {
-      comparator = (WritableComparator<byte[]>) ObjectWritable.readObject(in, conf);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return comparator;
-  }
-  
-  
   public Collection<IndexSpecification> getIndexes() {
     return indexes.values();
   }

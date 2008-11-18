@@ -529,9 +529,6 @@ public class HStoreKey implements WritableComparable<HStoreKey> {
       if(rowCompare == 0)
         rowCompare = Bytes.compareTo(keysA[1], KeysB[1]);
       return rowCompare;
-    } 
-    if (regionInfo != null && regionInfo.getTableDesc().getRowKeyComparator() != null) {
-      return regionInfo.getTableDesc().getRowKeyComparator().compare(rowA, rowB);
     }
     return Bytes.compareTo(rowA, rowB);
   }
