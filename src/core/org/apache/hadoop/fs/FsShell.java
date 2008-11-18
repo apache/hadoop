@@ -44,7 +44,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /** Provide command line access to a FileSystem. */
 public class FsShell extends Configured implements Tool {
@@ -204,9 +203,7 @@ public class FsShell extends Configured implements Tool {
   private FileSystem getSrcFileSystem(Path src, boolean verifyChecksum
       ) throws IOException { 
     FileSystem srcFs = src.getFileSystem(getConf());
-    if (srcFs instanceof DistributedFileSystem) {
-      ((DistributedFileSystem)srcFs).setVerifyChecksum(verifyChecksum);
-    }
+    srcFs.setVerifyChecksum(verifyChecksum);
     return srcFs;
   }
 

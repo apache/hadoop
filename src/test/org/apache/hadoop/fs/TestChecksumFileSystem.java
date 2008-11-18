@@ -66,4 +66,43 @@ public class TestChecksumFileSystem extends TestCase {
     inMemFs.delete(testPath, true);
     assertTrue("nothing in the namespace", inMemFs.listStatus(new Path("/")).length == 0);
   }
+  
+  public void testVerifyChecksum() throws Exception {
+    String TEST_ROOT_DIR
+    = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
+    
+    Configuration conf = new Configuration();
+    LocalFileSystem localFs = FileSystem.getLocal(conf);
+    Path testPath = new Path(TEST_ROOT_DIR, "testPath");
+    Path testPath11 = new Path(TEST_ROOT_DIR, "testPath11");
+    FSDataOutputStream fout = localFs.create(testPath);
+    fout.write("testing".getBytes());
+    fout.close();
+    
+    fout = localFs.create(testPath11);
+    fout.write("testing you".getBytes());
+    fout.close();
+    
+    localFs.delete(localFs.getChecksumFile(testPath), true);
+    assertTrue("checksum deleted", !localFs.exists(localFs.getChecksumFile(testPath)));
+    
+    //copying the wrong checksum file
+    FileUtil.copy(localFs, localFs.getChecksumFile(testPath11), localFs, 
+        localFs.getChecksumFile(testPath),false,true,conf);
+    assertTrue("checksum exists", localFs.exists(localFs.getChecksumFile(testPath)));
+    
+    boolean errorRead = false;
+    try {
+      TestLocalFileSystem.readFile(localFs, testPath);
+    }catch(ChecksumException ie) {
+      errorRead = true;
+    }
+    assertTrue("error reading", errorRead);
+    
+    //now setting verify false, the read should succeed
+    localFs.setVerifyChecksum(false);
+    String str = TestLocalFileSystem.readFile(localFs, testPath);
+    assertTrue("read", "testing".equals(str));
+    
+  }
 }

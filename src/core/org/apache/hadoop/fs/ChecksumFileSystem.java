@@ -39,6 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
   private int bytesPerChecksum = 512;
+  private boolean verifyChecksum = true;
 
   public static double getApproxChkSumLength(long size) {
     return ChecksumFSOutputSummer.CHKSUM_AS_FRACTION * size;
@@ -53,6 +54,13 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     if (conf != null) {
       bytesPerChecksum = conf.getInt("io.bytes.per.checksum", 512);
     }
+  }
+  
+  /**
+   * Set whether to verify checksum.
+   */
+  public void setVerifyChecksum(boolean verifyChecksum) {
+    this.verifyChecksum = verifyChecksum;
   }
 
   /** get the raw file system */
@@ -127,14 +135,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         if (!Arrays.equals(version, CHECKSUM_VERSION))
           throw new IOException("Not a checksum file: "+sumFile);
         this.bytesPerSum = sums.readInt();
-        set(new CRC32(), bytesPerSum, 4);
+        set(fs.verifyChecksum, new CRC32(), bytesPerSum, 4);
       } catch (FileNotFoundException e) {         // quietly ignore
-        set(null, 1, 0);
+        set(fs.verifyChecksum, null, 1, 0);
       } catch (IOException e) {                   // loudly ignore
         LOG.warn("Problem opening checksum file: "+ file + 
                  ".  Ignoring exception: " + 
                  StringUtils.stringifyException(e));
-        set(null, 1, 0);
+        set(fs.verifyChecksum, null, 1, 0);
       }
     }
     
@@ -175,7 +183,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       if( sums != null ) {
         sums.close();
       }
-      set(null, 1, 0);
+      set(fs.verifyChecksum, null, 1, 0);
     }
     
 

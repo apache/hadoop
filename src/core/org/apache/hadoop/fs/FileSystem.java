@@ -1302,6 +1302,15 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FileChecksum getFileChecksum(Path f) throws IOException {
     return null;
   }
+  
+  /**
+   * Set the verify checksum flag. This is only applicable if the 
+   * corresponding FileSystem supports checksum. By default doesn't do anything.
+   * @param verifyChecksum
+   */
+  public void setVerifyChecksum(boolean verifyChecksum) {
+    //doesn't do anything
+  }
 
   /**
    * Return a list of file status objects that corresponds to the list of paths

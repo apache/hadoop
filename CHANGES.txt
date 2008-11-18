@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     the map task and a counter for counting the number of spilled records in both
     map and reduce tasks.
 
+    HADOOP-4185. Adds setVerifyChecksum() method to FileSystem.
+    (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

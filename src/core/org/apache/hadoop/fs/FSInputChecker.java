@@ -69,8 +69,7 @@ abstract public class FSInputChecker extends FSInputStream {
   protected FSInputChecker( Path file, int numOfRetries, 
       boolean verifyChecksum, Checksum sum, int chunkSize, int checksumSize ) {
     this(file, numOfRetries);
-    this.verifyChecksum = verifyChecksum;
-    set(sum, chunkSize, checksumSize);
+    set(verifyChecksum, sum, chunkSize, checksumSize);
   }
   
   /** Reads in next checksum chunk data into <code>buf</code> at <code>offset</code>
@@ -393,12 +392,14 @@ abstract public class FSInputChecker extends FSInputStream {
   
   /**
    * Set the checksum related parameters
+   * @param verifyChecksum whether to verify checksum
    * @param sum which type of checksum to use
    * @param maxChunkSize maximun chunk size
    * @param checksumSize checksum size
    */
-  final protected synchronized void set(
+  final protected synchronized void set(boolean verifyChecksum,
       Checksum sum, int maxChunkSize, int checksumSize ) {
+    this.verifyChecksum = verifyChecksum;
     this.sum = sum;
     this.buf = new byte[maxChunkSize];
     this.checksum = new byte[checksumSize];

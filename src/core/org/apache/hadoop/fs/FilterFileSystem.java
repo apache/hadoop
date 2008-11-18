@@ -249,6 +249,11 @@ public class FilterFileSystem extends FileSystem {
   public FileChecksum getFileChecksum(Path f) throws IOException {
     return fs.getFileChecksum(f);
   }
+  
+  /** {@inheritDoc} */
+  public void setVerifyChecksum(boolean verifyChecksum) {
+    fs.setVerifyChecksum(verifyChecksum);
+  }
 
   @Override
   public Configuration getConf() {
