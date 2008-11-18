@@ -117,6 +117,10 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
+    based on the rack/host that has the most number of bytes.
+    (Jothi Padmanabhan via ddas)
+
   BUG FIXES
 
     HADOOP-4204. Fix findbugs warnings related to unused variables, naive
