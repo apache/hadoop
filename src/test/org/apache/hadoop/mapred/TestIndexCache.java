@@ -43,7 +43,7 @@ public class TestIndexCache extends TestCase {
     fs.delete(p, true);
     conf.setInt("mapred.tasktracker.indexcache.mb", 1);
     final int partsPerMap = 1000;
-    final int bytesPerFile = partsPerMap * 24;
+    final int bytesPerFile = partsPerMap * 32;
     IndexCache cache = new IndexCache(conf);
 
     // fill cache
@@ -105,6 +105,7 @@ public class TestIndexCache extends TestCase {
     assertEquals(fill, rec.startOffset);
     assertEquals(fill, rec.rawLength);
     assertEquals(fill, rec.partLength);
+    assertEquals(fill, rec.numRecords);
   }
 
   private static void writeFile(FileSystem fs, Path f, long fill, int parts)
@@ -113,6 +114,7 @@ public class TestIndexCache extends TestCase {
     IFileOutputStream iout = new IFileOutputStream(out);
     DataOutputStream dout = new DataOutputStream(iout);
     for (int i = 0; i < parts; ++i) {
+      dout.writeLong(fill);
       dout.writeLong(fill);
       dout.writeLong(fill);
       dout.writeLong(fill);

@@ -65,7 +65,10 @@ class IFile {
     
     long decompressedBytesWritten = 0;
     long compressedBytesWritten = 0;
-    
+
+    // Count records when written to disk.
+    private static long numRecordsWritten = 0;
+
     IFileOutputStream checksumOut;
 
     Class<K> keyClass;
@@ -178,6 +181,7 @@ class IFile {
       decompressedBytesWritten += keyLength + valueLength + 
                                   WritableUtils.getVIntSize(keyLength) + 
                                   WritableUtils.getVIntSize(valueLength);
+      numRecordsWritten++;
     }
     
     public void append(DataInputBuffer key, DataInputBuffer value)
@@ -203,8 +207,13 @@ class IFile {
       decompressedBytesWritten += keyLength + valueLength + 
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
-}
+      numRecordsWritten++;
+    }
     
+    public static long getNumRecordsWritten() {
+      return numRecordsWritten;
+    }
+
     public long getRawLength() {
       return decompressedBytesWritten;
     }
