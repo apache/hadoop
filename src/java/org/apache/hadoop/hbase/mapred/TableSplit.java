@@ -30,15 +30,16 @@ import org.apache.hadoop.mapred.InputSplit;
 /**
  * A table split corresponds to a key range [low, high)
  */
-public class TableSplit implements InputSplit {
+public class TableSplit implements InputSplit, Comparable {
   private byte [] m_tableName;
   private byte [] m_startRow;
   private byte [] m_endRow;
+  private String m_regionLocation;
 
   /** default constructor */
   public TableSplit() {
     this(HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.EMPTY_BYTE_ARRAY);
+      HConstants.EMPTY_BYTE_ARRAY, "");
   }
 
   /**
@@ -46,26 +47,38 @@ public class TableSplit implements InputSplit {
    * @param tableName
    * @param startRow
    * @param endRow
+   * @param location
    */
-  public TableSplit(byte [] tableName, byte [] startRow, byte [] endRow) {
-    m_tableName = tableName;
-    m_startRow = startRow;
-    m_endRow = endRow;
+  public TableSplit(byte [] tableName, byte [] startRow, byte [] endRow,
+      final String location) {
+    this.m_tableName = tableName;
+    this.m_startRow = startRow;
+    this.m_endRow = endRow;
+    this.m_regionLocation = location;
   }
 
   /** @return table name */
   public byte [] getTableName() {
-    return m_tableName;
+    return this.m_tableName;
   }
 
   /** @return starting row key */
   public byte [] getStartRow() {
-    return m_startRow;
+    return this.m_startRow;
   }
 
   /** @return end row key */
   public byte [] getEndRow() {
-    return m_endRow;
+    return this.m_endRow;
+  }
+
+  /** @return the region's hostname */
+  public String getRegionLocation() {
+    return this.m_regionLocation;
+  }
+
+  public String[] getLocations() {
+    return new String[] {this.m_regionLocation};
   }
 
   public long getLength() {
@@ -73,26 +86,28 @@ public class TableSplit implements InputSplit {
     return 0;
   }
 
-  public String[] getLocations() {
-    // Return a random node from the cluster for now
-    return new String[] { };
-  }
-
   public void readFields(DataInput in) throws IOException {
     this.m_tableName = Bytes.readByteArray(in);
     this.m_startRow = Bytes.readByteArray(in);
     this.m_endRow = Bytes.readByteArray(in);
+    this.m_regionLocation = Bytes.toString(Bytes.readByteArray(in));
   }
 
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.m_tableName);
     Bytes.writeByteArray(out, this.m_startRow);
     Bytes.writeByteArray(out, this.m_endRow);
+    Bytes.writeByteArray(out, Bytes.toBytes(this.m_regionLocation));
   }
 
   @Override
   public String toString() {
-    return Bytes.toString(m_tableName) +"," + Bytes.toString(m_startRow) +
-      "," + Bytes.toString(m_endRow);
+    return m_regionLocation + ":" +
+      Bytes.toString(m_startRow) + "," + Bytes.toString(m_endRow);
+  }
+
+  public int compareTo(Object arg) {
+    TableSplit other = (TableSplit)arg;
+    return Bytes.compareTo(getStartRow(), other.getStartRow());
   }
 }

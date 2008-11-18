@@ -85,7 +85,10 @@ or review the <code>org.apache.hadoop.hbase.mapred.TestTableMapReduce</code> uni
 specify source/sink table and column names in your configuration.</p>
 
 <p>Reading from hbase, the TableInputFormat asks hbase for the list of
-regions and makes a map-per-region.  
+regions and makes a map-per-region or <code>mapred.map.tasks maps</code>,
+whichever is smaller (If your job only has two maps, up mapred.map.tasks
+to a number > number of regions). Maps will run on the adjacent TaskTracker
+if you are running a TaskTracer and RegionServer per node.
 Writing, it may make sense to avoid the reduce step and write yourself back into
 hbase from inside your map. You'd do this when your job does not need the sort
 and collation that mapreduce does on the map emitted data; on insert,

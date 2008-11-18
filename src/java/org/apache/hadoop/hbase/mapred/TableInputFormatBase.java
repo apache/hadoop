@@ -263,7 +263,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
    * {@link InputSplit} array.
    *
    * @param job the map task {@link JobConf}
-   * @param numSplits a hint to calculate the number of splits
+   * @param numSplits a hint to calculate the number of splits (mapred.map.tasks).
    *
    * @return the input splits
    *
@@ -280,24 +280,23 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
     if (this.inputColumns == null || this.inputColumns.length == 0) {
       throw new IOException("Expecting at least one column");
     }
-    int realNumSplits = numSplits > startKeys.length ? startKeys.length
-        : numSplits;
+    int realNumSplits = numSplits > startKeys.length? startKeys.length:
+      numSplits;
     InputSplit[] splits = new InputSplit[realNumSplits];
     int middle = startKeys.length / realNumSplits;
     int startPos = 0;
     for (int i = 0; i < realNumSplits; i++) {
       int lastPos = startPos + middle;
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
+      String regionLocation = table.getRegionLocation(startKeys[startPos]).
+        getServerAddress().getHostname(); 
       splits[i] = new TableSplit(this.table.getTableName(),
-          startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]
-              : HConstants.EMPTY_START_ROW);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("split: " + i + "->" + splits[i]);
-      }
+        startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
+          HConstants.EMPTY_START_ROW, regionLocation);
+      LOG.info("split: " + i + "->" + splits[i]);
       startPos = lastPos;
     }
     return splits;
-
   }
 
   /**
