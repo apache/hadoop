@@ -30,14 +30,11 @@ class IndexRecord {
   final long startOffset;
   final long rawLength;
   final long partLength;
-  final long numRecords;
   
-  public IndexRecord(long startOffset, long rawLength, long partLength,
-                     long numRecords) {
+  public IndexRecord(long startOffset, long rawLength, long partLength) {
     this.startOffset = startOffset;
     this.rawLength = rawLength;
     this.partLength = partLength;
-    this.numRecords = numRecords;
   }
 
   public static IndexRecord[] readIndexFile(Path indexFileName, 
@@ -63,9 +60,8 @@ class IndexRecord {
         long startOffset = wrapper.readLong();
         long rawLength = wrapper.readLong();
         long partLength = wrapper.readLong();
-        long numRecords = wrapper.readLong();
         indexRecordArray[i] = 
-          new IndexRecord(startOffset, rawLength, partLength, numRecords);
+          new IndexRecord(startOffset, rawLength, partLength);
       }
     }
     finally {

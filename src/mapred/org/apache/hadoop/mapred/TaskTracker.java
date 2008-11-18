@@ -2760,7 +2760,6 @@ public class TaskTracker
         final long startOffset = info.startOffset;
         final long rawPartLength = info.rawLength;
         final long partLength = info.partLength;
-        final long numRecords = info.numRecords;
 
         //set the custom "Raw-Map-Output-Length" http header to 
         //the raw (decompressed) length
@@ -2770,11 +2769,6 @@ public class TaskTracker
         //the actual number of bytes being transferred
         response.setHeader(MAP_OUTPUT_LENGTH, 
                            Long.toString(partLength));
-
-        //set the custom "Map-Output-Num-Records" http header to 
-        //the actual number of records being transferred
-        response.setHeader(MAP_OUTPUT_NUM_RECORDS, 
-                           Long.toString(numRecords));
 
         //use the same buffersize as used for reading the data from disk
         response.setBufferSize(MAX_BYTES_TO_READ);

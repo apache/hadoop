@@ -436,17 +436,6 @@ class ReduceTask extends Task {
         values.informReduceProgress();
       }
 
-      // In Reduce Phase, Spills to disk are
-      // (1) mapoutput directly written to reduceNode's disk in shuffleToDisk()
-      //       spilledRecordsCounter is updated after shuffleToDisk()
-      // (2) All other spills to disk are either through
-      //        (a) Merger.writeFile()
-      //     or (b) combineAndSpill()
-      //     In cases 2(a) & 2(b), IFile.Writer.append() takes care of
-      //     counting the records written to disk
-
-      spilledRecordsCounter.increment(Writer.getNumRecordsWritten());
-
       //Clean up: repeated in catch block below
       reducer.close();
       out.close(reporter);
@@ -1245,8 +1234,6 @@ class ReduceTask extends Task {
           Long.parseLong(connection.getHeaderField(RAW_MAP_OUTPUT_LENGTH));  
         long compressedLength = 
           Long.parseLong(connection.getHeaderField(MAP_OUTPUT_LENGTH));
-        long numRecords = 
-          Long.parseLong(connection.getHeaderField(MAP_OUTPUT_NUM_RECORDS));
 
         // Check if this map-output can be saved in-memory
         boolean shuffleInMemory = ramManager.canFitInMemory(decompressedLength); 
@@ -1268,7 +1255,6 @@ class ReduceTask extends Task {
 
           mapOutput = shuffleToDisk(mapOutputLoc, input, filename, 
               compressedLength);
-          spilledRecordsCounter.increment(numRecords);
         }
             
         return mapOutput;

@@ -47,10 +47,5 @@ interface MRConstants {
    */
   public static final String RAW_MAP_OUTPUT_LENGTH = "Raw-Map-Output-Length";
 
-  /**
-   * The custom http header used for the number of map output records.
-   */
-  public static final String MAP_OUTPUT_NUM_RECORDS = "Map-Output-Num-Records";
-  
   public static final String WORKDIR = "work";
 }

@@ -111,10 +111,6 @@ Trunk (unreleased changes)
     HADOOP-4612. Removes RunJar's dependency on JobClient.
     (Sharad Agarwal via ddas)
 
-    HADOOP-2774. Provide a counter for the number of first level spill files in
-    the map task and a counter for counting the number of spilled records in both
-    map and reduce tasks.
-
     HADOOP-4185. Adds setVerifyChecksum() method to FileSystem.
     (Sharad Agarwal via ddas)
 
