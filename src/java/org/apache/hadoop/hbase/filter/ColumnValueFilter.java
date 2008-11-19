@@ -53,11 +53,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     /** greater than or equal to */
     GREATER_OR_EQUAL,
     /** greater than */
-    GREATER,
-    // Below are more specific operators.
-    /** sub-string. Case insensitive. */
-    SUB_STRING;
-    
+    GREATER;
   }
 
   private byte[] columnName;
@@ -143,12 +139,6 @@ public class ColumnValueFilter implements RowFilterInterface {
   }
 
   private boolean filterColumnValue(final byte [] data) {
-    // Special case for Substring operator
-    if (compareOp == CompareOp.SUB_STRING) {
-      return !Bytes.toString(data).toLowerCase().contains(
-          (Bytes.toString(value)).toLowerCase());
-    }
-
     int compareResult;
     if (comparator != null) {
       compareResult = comparator.compareTo(data);
@@ -179,10 +169,11 @@ public class ColumnValueFilter implements RowFilterInterface {
   }
 
   public boolean filterRow(final SortedMap<byte[], Cell> columns) {
+    if (columns == null)
+      return false;
     if (filterIfColumnMissing) {
       return !columns.containsKey(columnName);
     } 
-
     // Otherwise we must do the filter here
     Cell colCell = columns.get(columnName);
       if (colCell == null) {
