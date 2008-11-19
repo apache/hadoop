@@ -22,25 +22,30 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HRegionInfo;
-
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * Test of a long-lived scanner validating as we go.
  */
 public class TestScanner extends HBaseTestCase {
-  private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
+  private final Log LOG = LogFactory.getLog(this.getClass());
+  
+  private static final byte [] FIRST_ROW =
+    HConstants.EMPTY_START_ROW;
   private static final byte [][] COLS = {
       HConstants.COLUMN_FAMILY
   };
@@ -52,7 +57,8 @@ public class TestScanner extends HBaseTestCase {
   
   private static final byte [] ROW_KEY =
     HRegionInfo.ROOT_REGIONINFO.getRegionName();
-  private static final HRegionInfo REGION_INFO = HRegionInfo.ROOT_REGIONINFO;
+  private static final HRegionInfo REGION_INFO =
+    HRegionInfo.ROOT_REGIONINFO;
   
   private static final long START_CODE = Long.MAX_VALUE;
 
@@ -84,8 +90,7 @@ public class TestScanner extends HBaseTestCase {
   
   /** Use a scanner to get the region info and then validate the results */
   private void scan(boolean validateStartcode, String serverName)
-      throws IOException {
-    
+  throws IOException {  
     InternalScanner scanner = null;
     TreeMap<byte [], Cell> results =
       new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
@@ -140,7 +145,55 @@ public class TestScanner extends HBaseTestCase {
     byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO).getValue();
     validateRegionInfo(bytes);  
   }
+  
+  /**
+   * HBase-910.
+   * @throws Exception
+   */
+  public void testScanAndConcurrentFlush() throws Exception {
+    this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+    HRegionIncommon hri = new HRegionIncommon(r);
+    try {
+      addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO));
+      int count = count(hri, -1);
+      assertEquals(count, count(hri, 100));
+      assertEquals(count, count(hri, 0));
+      assertEquals(count, count(hri, count - 1));
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+      shutdownDfs(cluster);
+    }
+  }
  
+  /*
+   * @param hri Region
+   * @param flushIndex At what row we start the flush.
+   * @return Count of rows found.
+   * @throws IOException
+   */
+  private int count(final HRegionIncommon hri, final int flushIndex)
+  throws IOException {
+    LOG.info("Taking out counting scan");
+    ScannerIncommon s = hri.getScanner(EXPLICIT_COLS,
+        HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP);
+    HStoreKey key = new HStoreKey();
+    SortedMap<byte [], Cell> values =
+      new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+    int count = 0;
+    while (s.next(key, values)) {
+      count++;
+      if (flushIndex == count) {
+        LOG.info("Starting flush at flush index " + flushIndex);
+        hri.flushcache();
+        LOG.info("Finishing flush");
+      }
+    }
+    s.close();
+    LOG.info("Found " + count + " items");
+    return count;
+  }
+
   /** The test!
    * @throws IOException
    */

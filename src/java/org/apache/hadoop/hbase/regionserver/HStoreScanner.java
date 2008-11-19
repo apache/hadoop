@@ -21,13 +21,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,11 +35,12 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.MapFile;
 
 /**
  * Scanner scans both the memcache and the HStore
  */
-class HStoreScanner implements InternalScanner {
+class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(HStoreScanner.class);
 
   private InternalScanner[] scanners;
@@ -50,6 +50,15 @@ class HStoreScanner implements InternalScanner {
   private boolean multipleMatchers = false;
   private RowFilterInterface dataFilter;
   private HStore store;
+  private final long timestamp;
+  private final byte [][] targetCols;
+  
+  // Indices for memcache scanner and hstorefile scanner.
+  private static final int MEMS_INDEX = 0;
+  private static final int HSFS_INDEX = MEMS_INDEX + 1;
+  
+  // Used around transition from no storefile to the first.
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   
   /** Create an Scanner with a handle on the memcache and HStore files. */
   @SuppressWarnings("unchecked")
@@ -64,51 +73,72 @@ class HStoreScanner implements InternalScanner {
     this.scanners = new InternalScanner[2];
     this.resultSets = new TreeMap[scanners.length];
     this.keys = new HStoreKey[scanners.length];
+    // Save these args in case we need them later handling change in readers
+    // See updateReaders below.
+    this.timestamp = timestamp;
+    this.targetCols = targetCols;
 
     try {
-      scanners[0] = store.memcache.getScanner(timestamp, targetCols, firstRow);
-      scanners[1] = new StoreFileScanner(store, timestamp, targetCols, firstRow);
-      for (int i = 0; i < scanners.length; i++) {
-        if (scanners[i].isWildcardScanner()) {
-          this.wildcardMatch = true;
-        }
-        if (scanners[i].isMultipleMatchScanner()) {
-          this.multipleMatchers = true;
-        }
+      scanners[MEMS_INDEX] =
+        store.memcache.getScanner(timestamp, targetCols, firstRow);
+      scanners[HSFS_INDEX] =
+        new StoreFileScanner(store, timestamp, targetCols, firstRow);
+      for (int i = MEMS_INDEX; i < scanners.length; i++) {
+        checkScannerFlags(i);
       }
-    } catch(IOException e) {
-      for (int i = 0; i < this.scanners.length; i++) {
-        if(scanners[i] != null) {
-          closeScanner(i);
-        }
-      }
+    } catch (IOException e) {
+      doClose();
       throw e;
     }
     
     // Advance to the first key in each scanner.
     // All results will match the required column-set and scanTime.
-    for (int i = 0; i < scanners.length; i++) {
-      keys[i] = new HStoreKey();
-      resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
-        closeScanner(i);
-      }
+    for (int i = MEMS_INDEX; i < scanners.length; i++) {
+      setupScanner(i);
+    }
+    
+    this.store.addChangedReaderObserver(this);
+  }
+  
+  /*
+   * @param i Index.
+   */
+  private void checkScannerFlags(final int i) {
+    if (this.scanners[i].isWildcardScanner()) {
+      this.wildcardMatch = true;
+    }
+    if (this.scanners[i].isMultipleMatchScanner()) {
+      this.multipleMatchers = true;
+    }
+  }
+  
+  /*
+   * Do scanner setup.
+   * @param i
+   * @throws IOException
+   */
+  private void setupScanner(final int i) throws IOException {
+    this.keys[i] = new HStoreKey();
+    this.resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+    if (this.scanners[i] != null && !this.scanners[i].next(this.keys[i], this.resultSets[i])) {
+      closeScanner(i);
     }
   }
 
   /** @return true if the scanner is a wild card scanner */
   public boolean isWildcardScanner() {
-    return wildcardMatch;
+    return this.wildcardMatch;
   }
 
   /** @return true if the scanner is a multiple match scanner */
   public boolean isMultipleMatchScanner() {
-    return multipleMatchers;
+    return this.multipleMatchers;
   }
 
   public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
-    throws IOException {
-
+  throws IOException {
+    this.lock.readLock().lock();
+    try {
     // Filtered flag is set by filters.  If a cell has been 'filtered out'
     // -- i.e. it is not to be returned to the caller -- the flag is 'true'.
     boolean filtered = true;
@@ -243,6 +273,9 @@ class HStoreScanner implements InternalScanner {
     }
     
     return moreToFollow;
+    } finally {
+      this.lock.readLock().unlock();
+    }
   }
   
   /** Shut down a single scanner */
@@ -261,10 +294,43 @@ class HStoreScanner implements InternalScanner {
   }
 
   public void close() {
-    for(int i = 0; i < scanners.length; i++) {
-      if(scanners[i] != null) {
+    this.store.deleteChangedReaderObserver(this);
+    doClose();
+  }
+  
+  private void doClose() {
+    for (int i = MEMS_INDEX; i < scanners.length; i++) {
+      if (scanners[i] != null) {
         closeScanner(i);
       }
+    }
+  }
+  
+  // Implementation of ChangedReadersObserver
+  
+  public void updateReaders() throws IOException {
+    this.lock.writeLock().lock();
+    try {
+      MapFile.Reader [] readers = this.store.getReaders();
+      if (this.scanners[HSFS_INDEX] == null && readers != null &&
+          readers.length > 0) {
+        // Presume that we went from no readers to at least one -- need to put
+        // a HStoreScanner in place.
+        try {
+          // I think its safe getting key from mem at this stage -- it shouldn't have
+          // been flushed yet
+          this.scanners[HSFS_INDEX] = new StoreFileScanner(this.store,
+              this.timestamp, this. targetCols, this.keys[MEMS_INDEX].getRow());
+          checkScannerFlags(HSFS_INDEX);
+          setupScanner(HSFS_INDEX);
+          LOG.debug("Added a StoreFileScanner to outstanding HStoreScanner");
+        } catch (IOException e) {
+          doClose();
+          throw e;
+        }
+      }
+    } finally {
+      this.lock.writeLock().unlock();
     }
   }
 }
