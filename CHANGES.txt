@@ -114,6 +114,10 @@ Trunk (unreleased changes)
     HADOOP-4185. Adds setVerifyChecksum() method to FileSystem.
     (Sharad Agarwal via ddas)
 
+    HADOOP-4523. Prevent too many tasks scheduled on a node from bringing
+    it down by monitoring for cumulative memory usage across tasks.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

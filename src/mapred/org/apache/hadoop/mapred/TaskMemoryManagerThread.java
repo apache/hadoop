@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker;
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 
 /**
@@ -45,6 +46,8 @@ class TaskMemoryManagerThread extends Thread {
   private long monitoringInterval;
   private long sleepTimeBeforeSigKill;
 
+  private long maxMemoryAllowedForAllTasks;
+
   private Map<TaskAttemptID, ProcessTreeInfo> processTreeInfoMap;
   private Map<TaskAttemptID, ProcessTreeInfo> tasksToBeAdded;
   private List<TaskAttemptID> tasksToBeRemoved;
@@ -56,6 +59,8 @@ class TaskMemoryManagerThread extends Thread {
     processTreeInfoMap = new HashMap<TaskAttemptID, ProcessTreeInfo>();
     tasksToBeAdded = new HashMap<TaskAttemptID, ProcessTreeInfo>();
     tasksToBeRemoved = new ArrayList<TaskAttemptID>();
+
+    maxMemoryAllowedForAllTasks = taskTracker.getMaxVirtualMemoryForTasks();
 
     monitoringInterval = taskTracker.getJobConf().getLong(
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
@@ -155,6 +160,7 @@ class TaskMemoryManagerThread extends Thread {
         tasksToBeRemoved.clear();
       }
 
+      long memoryStillInUsage = 0;
       // Now, check memory usage and kill any overflowing tasks
       for (Iterator<Map.Entry<TaskAttemptID, ProcessTreeInfo>> it = processTreeInfoMap
           .entrySet().iterator(); it.hasNext();) {
@@ -207,15 +213,28 @@ class TaskMemoryManagerThread extends Thread {
               + "] is running beyond memory-limits. Current usage : "
               + currentMemUsage + "kB. Limit : " + limit + "kB. Killing task.";
           LOG.warn(msg);
-          taskTracker.cleanUpOverMemoryTask(tid, msg);
+          taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
           // Now destroy the ProcessTree, remove it from monitoring map.
           pTree.destroy();
           it.remove();
           LOG.info("Removed ProcessTree with root " + pId);
+        } else {
+          // Accounting the total memory in usage for all tasks that are still
+          // alive and within limits.
+          memoryStillInUsage += currentMemUsage;
         }
       }
 
+      LOG.debug("Memory still in usage across all tasks : " + memoryStillInUsage
+          + "kB. Total limit : " + maxMemoryAllowedForAllTasks);
+
+      if (memoryStillInUsage > maxMemoryAllowedForAllTasks) {
+        LOG.warn("The total memory usage is still overflowing TTs limits."
+            + " Trying to kill a few tasks with the least progress.");
+        killTasksWithLeastProgress(memoryStillInUsage);
+      }
+    
       // Sleep for some time before beginning next cycle
       try {
         LOG.debug(this.getClass() + " : Sleeping for " + monitoringInterval
@@ -226,6 +245,55 @@ class TaskMemoryManagerThread extends Thread {
             + " interrupted. Finishing the thread and returning.");
         return;
       }
+    }
+  }
+
+  private void killTasksWithLeastProgress(long memoryStillInUsage) {
+
+    List<TaskAttemptID> tasksToKill = new ArrayList<TaskAttemptID>();
+    List<TaskAttemptID> tasksToExclude = new ArrayList<TaskAttemptID>();
+    // Find tasks to kill so as to get memory usage under limits.
+    while (memoryStillInUsage > maxMemoryAllowedForAllTasks) {
+      // Exclude tasks that are already marked for
+      // killing.
+      TaskInProgress task = taskTracker.findTaskToKill(tasksToExclude);
+      if (task == null) {
+        break; // couldn't find any more tasks to kill.
+      }
+
+      TaskAttemptID tid = task.getTask().getTaskID();
+      if (processTreeInfoMap.containsKey(tid)) {
+        ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
+        ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
+        memoryStillInUsage -= pTree.getCumulativeVmem();
+        tasksToKill.add(tid);
+      }
+      // Exclude this task from next search because it is already
+      // considered.
+      tasksToExclude.add(tid);
+    }
+
+    // Now kill the tasks.
+    if (!tasksToKill.isEmpty()) {
+      for (TaskAttemptID tid : tasksToKill) {
+        String msg =
+            "Killing one of the least progress tasks - " + tid
+                + ", as the cumulative memory usage of all the tasks on "
+                + "the TaskTracker exceeds virtual memory limit "
+                + maxMemoryAllowedForAllTasks + ".";
+        LOG.warn(msg);
+        // Kill the task and mark it as killed.
+        taskTracker.cleanUpOverMemoryTask(tid, false, msg);
+        // Now destroy the ProcessTree, remove it from monitoring map.
+        ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
+        ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
+        pTree.destroy();
+        processTreeInfoMap.remove(tid);
+        LOG.info("Removed ProcessTree with root " + ptInfo.getPID());
+      }
+    } else {
+      LOG.info("The total memory usage is overflowing TTs limits. "
+          + "But found no alive task to kill for freeing memory.");
     }
   }
 

@@ -1386,7 +1386,7 @@ public class TaskTracker
       //we give up! do not accept new tasks until
       //all the ones running have finished and they're all cleared up
       synchronized (this) {
-        TaskInProgress killMe = findTaskToKill();
+        TaskInProgress killMe = findTaskToKill(null);
 
         if (killMe!=null) {
           String msg = "Tasktracker running out of space." +
@@ -1398,15 +1398,24 @@ public class TaskTracker
       }
     }
   }
-    
+
   /**
-   * Pick a task to kill to free up space
+   * Pick a task to kill to free up memory/disk-space 
+   * @param tasksToExclude tasks that are to be excluded while trying to find a
+   *          task to kill. If null, all runningTasks will be searched.
    * @return the task to kill or null, if one wasn't found
    */
-  private TaskInProgress findTaskToKill() {
+  synchronized TaskInProgress findTaskToKill(List<TaskAttemptID> tasksToExclude) {
     TaskInProgress killMe = null;
     for (Iterator it = runningTasks.values().iterator(); it.hasNext();) {
       TaskInProgress tip = (TaskInProgress) it.next();
+
+      if (tasksToExclude != null
+          && tasksToExclude.contains(tip.getTask().getTaskID())) {
+        // exclude this task
+        continue;
+      }
+
       if ((tip.getRunState() == TaskStatus.State.RUNNING ||
            tip.getRunState() == TaskStatus.State.COMMIT_PENDING) &&
           !tip.wasKilled) {
@@ -1434,7 +1443,7 @@ public class TaskTracker
     }
     return killMe;
   }
-    
+
   /**
    * Check if any of the local directories has enough
    * free space  (more than minSpace)
@@ -2944,15 +2953,17 @@ public class TaskTracker
   /**
    * Clean-up the task that TaskMemoryMangerThread requests to do so.
    * @param tid
+   * @param wasFailure mark the task as failed or killed. 'failed' if true,
+   *          'killed' otherwise
    * @param diagnosticMsg
    */
-  synchronized void cleanUpOverMemoryTask(TaskAttemptID tid,
+  synchronized void cleanUpOverMemoryTask(TaskAttemptID tid, boolean wasFailure,
       String diagnosticMsg) {
     TaskInProgress tip = runningTasks.get(tid);
     if (tip != null) {
       tip.reportDiagnosticInfo(diagnosticMsg);
       try {
-        purgeTask(tip, true); // Marking it as failure.
+        purgeTask(tip, wasFailure); // Marking it as failed/killed.
       } catch (IOException ioe) {
         LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe);
       }
