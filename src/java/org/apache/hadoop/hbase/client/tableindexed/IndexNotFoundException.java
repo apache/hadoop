@@ -26,6 +26,8 @@ import java.io.IOException;
  */
 public class IndexNotFoundException extends IOException {
 
+  private static final long serialVersionUID = 6533971528557000965L;
+
   public IndexNotFoundException() {
     super();
   }

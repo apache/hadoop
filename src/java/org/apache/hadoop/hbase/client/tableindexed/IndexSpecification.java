@@ -24,11 +24,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.WritableComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /** Holds the specification for a single secondary index. */
 public class IndexSpecification implements Writable {
@@ -38,8 +36,6 @@ public class IndexSpecification implements Writable {
 
   // Constructs the
   private IndexKeyGenerator keyGenerator;
-
-  private WritableComparator<byte[]> keyComparator;
 
   // Additional columns mapped into the indexed row. These will be available for
   // filters when scanning the index.
@@ -51,11 +47,9 @@ public class IndexSpecification implements Writable {
   private String indexId;
 
   /** Construct an "simple" index spec for a single column. */
-  public IndexSpecification(String indexId, byte[] indexedColumn,
-      boolean acending) {
+  public IndexSpecification(String indexId, byte[] indexedColumn) {
     this(indexId, new byte[][] { indexedColumn }, null,
-        new SimpleIndexKeyGenerator(indexedColumn), acending == true ? null
-            : new ReverseByteArrayComparator());
+        new SimpleIndexKeyGenerator(indexedColumn));
   }
 
   /**
@@ -68,13 +62,11 @@ public class IndexSpecification implements Writable {
    * @param keyComparator
    */
   public IndexSpecification(String indexId, byte[][] indexedColumns,
-      byte[][] additionalColumns, IndexKeyGenerator keyGenerator,
-      WritableComparator<byte[]> keyComparator) {
+      byte[][] additionalColumns, IndexKeyGenerator keyGenerator) {
     this.indexId = indexId;
     this.indexedColumns = indexedColumns;
     this.additionalColumns = additionalColumns;
     this.keyGenerator = keyGenerator;
-    this.keyComparator = keyComparator;
     this.makeAllColumns();
   }
 
@@ -108,15 +100,6 @@ public class IndexSpecification implements Writable {
    */
   public IndexKeyGenerator getKeyGenerator() {
     return keyGenerator;
-  }
-
-  /**
-   * Get the keyComparator.
-   * 
-   * @return Return the keyComparator.
-   */
-  public WritableComparator<byte[]> getKeyComparator() {
-    return keyComparator;
   }
 
   /**
@@ -171,8 +154,6 @@ public class IndexSpecification implements Writable {
     makeAllColumns();
     HBaseConfiguration conf = new HBaseConfiguration();
     keyGenerator = (IndexKeyGenerator) ObjectWritable.readObject(in, conf);
-    keyComparator = (WritableComparator<byte[]>) ObjectWritable.readObject(in,
-        conf);
   }
 
   /** {@inheritDoc} */
@@ -193,8 +174,6 @@ public class IndexSpecification implements Writable {
     HBaseConfiguration conf = new HBaseConfiguration();
     ObjectWritable
         .writeObject(out, keyGenerator, IndexKeyGenerator.class, conf);
-    ObjectWritable.writeObject(out, keyComparator, WritableComparable.class,
-        conf);
   }
 
 }

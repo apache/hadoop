@@ -45,7 +45,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
 
   private static final byte[] FAMILY = Bytes.toBytes("family:");
   private static final byte[] COL_A = Bytes.toBytes("family:a");
-  private static final String INDEX_COL_A_ASC = "A-Acending";
+  private static final String INDEX_COL_A = "A";
 
   private static final int NUM_ROWS = 10;
   private static final int MAX_VAL = 10000;
@@ -70,8 +70,8 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     desc.addFamily(new HColumnDescriptor(FAMILY));
 
     // Create a new index that does lexicographic ordering on COL_A
-    IndexSpecification colAIndex = new IndexSpecification(INDEX_COL_A_ASC,
-        COL_A, true);
+    IndexSpecification colAIndex = new IndexSpecification(INDEX_COL_A,
+        COL_A);
     desc.addIndex(colAIndex);
 
     admin = new IndexedTableAdmin(conf);
@@ -97,7 +97,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
   }
   
   private void assertRowsInOrder(int numRowsExpected) throws IndexNotFoundException, IOException {
-    Scanner scanner = table.getIndexedScanner(INDEX_COL_A_ASC,
+    Scanner scanner = table.getIndexedScanner(INDEX_COL_A,
         HConstants.EMPTY_START_ROW, null, null, null);
     int numRows = 0;
     byte[] lastColA = null;

@@ -92,8 +92,6 @@ public class IndexedTableAdmin extends HBaseAdmin {
       indexTableDesc.addFamily(new HColumnDescriptor(colFamily));
     }
 
-    indexTableDesc.setRowKeyComparator(indexSpec.getKeyComparator());
-
     return indexTableDesc;
   }
 }

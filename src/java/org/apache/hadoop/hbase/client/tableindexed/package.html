@@ -26,9 +26,8 @@ This package provides support for secondary indexing by maintaining a separate, 
 The IndexSpecification class provides the metadata for the index. This includes:
 <li> the columns that contribute to the index key,
 <li> additional columns to put in the index table (and are thus made available to filters on the index table),
-<li> an IndexKeyGenerator which constructs the index-row-key from the indexed column(s) and the original row, 
 <br> and 
-<li> (optionally) a custom key comparator for the indexed table. This can allow an index on a deserialized column value.
+<li> an IndexKeyGenerator which constructs the index-row-key from the indexed column(s) and the original row.
 
 IndexesSpecifications can be added to a table's metadata (HTableDescriptor) before the table is constructed. 
 Afterwards, updates and deletes to the original table will trigger the updates in the index, and 

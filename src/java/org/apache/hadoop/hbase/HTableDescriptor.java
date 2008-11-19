@@ -69,8 +69,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
   public static final String IS_META = "IS_META";
 
-  public static final String ROW_KEY_COMPARATOR = "ROW_KEY_COMPARATOR";
-
   public static final ImmutableBytesWritable IS_META_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_META));
 
