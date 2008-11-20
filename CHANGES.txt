@@ -39,6 +39,9 @@ Trunk (unreleased changes)
     Includes client authentication via user certificates and config-based
     access control. (Kan Zhang via cdouglas)
 
+    HADOOP-4661. Add DistCh, a new tool for distributed ch{mod,own,grp}.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
