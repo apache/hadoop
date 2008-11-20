@@ -1762,6 +1762,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     synchronized (onlineRegions) {
       for (HRegion r : onlineRegions.values()) {
+        if (r.isClosed() || r.isClosing()) {
+          continue;
+        }
         if (regions.size() < numRegionsToReport) {
           regions.add(r.getRegionInfo());
         } else {

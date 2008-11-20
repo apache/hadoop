@@ -110,6 +110,11 @@ public class HRegion implements HConstants {
   static final Random rand = new Random();
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
+  /* Closing can take some time; use the closing flag if there is stuff we don't want
+   * to do while in closing state; e.g. like offer this region up to the master as a region
+   * to close if the carrying regionserver is overloaded.  Once set, it is never cleared.
+   */
+  private final AtomicBoolean closing = new AtomicBoolean(false);
   private final RegionHistorian historian;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -330,6 +335,13 @@ public class HRegion implements HConstants {
   }
   
   /**
+   * @return True if closing process has started.
+   */
+  public boolean isClosing() {
+    return this.closing.get();
+  }
+  
+  /**
    * Close down this HRegion.  Flush the cache, shut down each HStore, don't 
    * service any more calls.
    *
@@ -365,6 +377,7 @@ public class HRegion implements HConstants {
       LOG.warn("region " + this + " already closed");
       return null;
     }
+    this.closing.set(true);
     synchronized (splitLock) {
       synchronized (writestate) {
         // Disable compacting and flushing by background threads for this
@@ -419,7 +432,6 @@ public class HRegion implements HConstants {
             result.addAll(store.close());
           }
           this.closed.set(true);
-          
           LOG.info("Closed " + this);
           return result;
         } finally {
