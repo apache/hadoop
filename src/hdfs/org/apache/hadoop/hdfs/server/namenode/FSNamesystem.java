@@ -887,8 +887,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return true;
 
     // update needReplication priority queues
-    LOG.info("Increasing replication for file " + src 
-             + ". New replication is " + replication);
     for(int idx = 0; idx < fileBlocks.length; idx++)
       updateNeededReplications(fileBlocks[idx], 0, replication-oldRepl);
       
@@ -898,6 +896,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                + ". New replication is " + replication);
       for(int idx = 0; idx < fileBlocks.length; idx++)
         processOverReplicatedBlock(fileBlocks[idx], replication, null, null);
+    } else { // replication factor is increased
+      LOG.info("Increasing replication for file " + src 
+          + ". New replication is " + replication);
     }
     return true;
   }
@@ -1436,7 +1437,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @param b block
    * @param n datanode
    */
-  private void addToInvalidates(Block b, DatanodeInfo n) {
+  void addToInvalidates(Block b, DatanodeInfo n) {
     addToInvalidatesNoLog(b, n);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
         + b.getBlockName() + " is added to invalidSet of " + n.getName());

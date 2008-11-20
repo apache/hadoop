@@ -171,8 +171,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     if(oldPri != LEVEL && oldPri != curPri) {
       remove(block, oldPri);
     }
-    if(curPri != LEVEL && oldPri != curPri 
-        && priorityQueues.get(curPri).add(block)) {
+    if(curPri != LEVEL && priorityQueues.get(curPri).add(block)) {
       NameNode.stateChangeLog.debug(
                                     "BLOCK* NameSystem.UnderReplicationBlock.update:"
                                     + block
