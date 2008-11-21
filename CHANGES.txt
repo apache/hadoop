@@ -134,6 +134,7 @@ Release 0.19.0 - Unreleased
                for MR Jobs
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down
    HBASE-1013  Add debugging around commit log cleanup
+   HBASE-972   Update hbase trunk to use released hadoop 0.19.0
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
