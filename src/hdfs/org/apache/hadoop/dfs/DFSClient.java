@@ -136,8 +136,7 @@ class DFSClient implements FSConstants {
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
       ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
     }
-    return (ClientDatanodeProtocol)RPC.waitForProxy(ClientDatanodeProtocol.class
-,
+    return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr, conf);
   }
         
