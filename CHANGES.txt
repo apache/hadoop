@@ -121,9 +121,6 @@ Trunk (unreleased changes)
     it down by monitoring for cumulative memory usage across tasks.
     (Vinod Kumar Vavilapalli via yhemanth)
 
-    HADOOP-4668. Improve documentation for setCombinerClass to clarify the
-    restrictions on combiners. (omalley)
-
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
@@ -1172,6 +1169,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4150. Include librecordio in hadoop releases. (Giridharan Kesavan
     via acmurthy)
+
+    HADOOP-4668. Improve documentation for setCombinerClass to clarify the
+    restrictions on combiners. (omalley)
 
   BUG FIXES
 
