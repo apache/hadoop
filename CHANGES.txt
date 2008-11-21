@@ -121,6 +121,9 @@ Trunk (unreleased changes)
     it down by monitoring for cumulative memory usage across tasks.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-4668. Improve documentation for setCombinerClass to clarify the
+    restrictions on combiners. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

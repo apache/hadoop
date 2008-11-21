@@ -775,11 +775,20 @@ public class JobConf extends Configuration {
    * Set the user-defined <i>combiner</i> class used to combine map-outputs 
    * before being sent to the reducers. 
    * 
-   * <p>The combiner is a task-level aggregation operation which, in some cases,
-   * helps to cut down the amount of data transferred from the {@link Mapper} to
-   * the {@link Reducer}, leading to better performance.</p>
-   *  
-   * <p>Typically the combiner is same as the the <code>Reducer</code> for the  
+   * <p>The combiner is an application-specified aggregation operation, which
+   * can help cut down the amount of data transferred between the 
+   * {@link Mapper} and the {@link Reducer}, leading to better performance.</p>
+   * 
+   * <p>The framework may invoke the combiner 0, 1, or multiple times, in both
+   * the mapper and reducer tasks. In general, the combiner is called as the
+   * sort/merge result is written to disk. The combiner must:
+   * <ul>
+   *   <li> be side-effect free</li>
+   *   <li> have the same input and output key types and the same input and 
+   *        output value types</li>
+   * </ul></p>
+   * 
+   * <p>Typically the combiner is same as the <code>Reducer</code> for the  
    * job i.e. {@link #setReducerClass(Class)}.</p>
    * 
    * @param theClass the user-defined combiner class used to combine 
@@ -1155,7 +1164,7 @@ public class JobConf extends Configuration {
 
   /**
    * Set whether the system should collect profiler information for some of 
-   * the tasks in this job? The information is stored in the the user log 
+   * the tasks in this job? The information is stored in the user log 
    * directory.
    * @param newValue true means it should be gathered
    */
