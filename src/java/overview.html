@@ -195,6 +195,7 @@ import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class MyClient {
 
@@ -209,17 +210,20 @@ public class MyClient {
 
     // To do any sort of update on a row, you use an instance of the BatchUpdate
     // class. A BatchUpdate takes a row and optionally a timestamp which your
-    // updates will affect. 
+    // updates will affect.  If no timestamp, the server applies current time
+    // to the edits.
     BatchUpdate batchUpdate = new BatchUpdate("myRow");
 
-    // The BatchUpdate#put method takes a Text that describes what cell you want
-    // to put a value into, and a byte array that is the value you want to 
-    // store. Note that if you want to store strings, you have to getBytes() 
-    // from the string for HBase to understand how to store it. (The same goes
-    // for primitives like ints and longs and user-defined classes - you must 
-    // find a way to reduce it to bytes.)
+    // The BatchUpdate#put method takes a byte [] (or String) that designates
+    // what cell you want to put a value into, and a byte array that is the
+    // value you want to store. Note that if you want to store Strings, you
+    // have to getBytes() from the String for HBase to store it since HBase is
+    // all about byte arrays. The same goes for primitives like ints and longs
+    // and user-defined classes - you must find a way to reduce it to bytes.
+    // The Bytes class from the hbase util package has utility for going from
+    // String to utf-8 bytes and back again and help for other base types.
     batchUpdate.put("myColumnFamily:columnQualifier1", 
-      "columnQualifier1 value!".getBytes());
+      Bytes.toBytes("columnQualifier1 value!"));
 
     // Deletes are batch operations in HBase as well. 
     batchUpdate.delete("myColumnFamily:cellIWantDeleted");
@@ -235,7 +239,9 @@ public class MyClient {
     // value contained is a string and want an actual string, then you must 
     // convert it yourself.
     Cell cell = table.get("myRow", "myColumnFamily:columnQualifier1");
-    String valueStr = new String(cell.getValue());
+    // This could throw a NullPointerException if there was no value at the cell
+    // location.
+    String valueStr = Bytes.toString(cell.getValue());
     
     // Sometimes, you won't know the row you're looking for. In this case, you
     // use a Scanner. This will give you cursor-like interface to the contents
@@ -245,30 +251,31 @@ public class MyClient {
       table.getScanner(new String[]{"myColumnFamily:columnQualifier1"});
     
     
-    // Scanners in HBase 0.2 return RowResult instances. A RowResult is like the
-    // row key and the columns all wrapped up in a single interface. 
+    // Scanners return RowResult instances. A RowResult is like the
+    // row key and the columns all wrapped up in a single Object. 
     // RowResult#getRow gives you the row key. RowResult also implements 
     // Map, so you can get to your column results easily. 
     
     // Now, for the actual iteration. One way is to use a while loop like so:
     RowResult rowResult = scanner.next();
     
-    while(rowResult != null) {
+    while (rowResult != null) {
       // print out the row we found and the columns we were looking for
-      System.out.println("Found row: " + new String(rowResult.getRow()) + " with value: " +
-       rowResult.get("myColumnFamily:columnQualifier1".getBytes()));
-      
+      System.out.println("Found row: " + Bytes.toString(rowResult.getRow()) +
+        " with value: " + rowResult.get(Bytes.toBytes("myColumnFamily:columnQualifier1")));
       rowResult = scanner.next();
     }
     
     // The other approach is to use a foreach loop. Scanners are iterable!
     for (RowResult result : scanner) {
       // print out the row we found and the columns we were looking for
-      System.out.println("Found row: " + new String(result.getRow()) + " with value: " +
-       result.get("myColumnFamily:columnQualifier1".getBytes()));
+      System.out.println("Found row: " + Bytes.toString(rowResult.getRow()) +
+        " with value: " + rowResult.get(Bytes.toBytes("myColumnFamily:columnQualifier1")));
     }
     
     // Make sure you close your scanners when you are done!
+    // Its probably best to put the iteration into a try/finally with the below
+    // inside the finally clause.
     scanner.close();
   }
 }

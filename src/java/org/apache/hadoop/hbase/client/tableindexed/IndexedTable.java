@@ -52,7 +52,6 @@ public class IndexedTable extends TransactionalTable {
 
   private Map<String, HTable> indexIdToTable = new HashMap<String, HTable>();
 
-  /** {@inheritDoc} */
   public IndexedTable(final HBaseConfiguration conf, final byte[] tableName)
       throws IOException {
     super(conf, tableName);
