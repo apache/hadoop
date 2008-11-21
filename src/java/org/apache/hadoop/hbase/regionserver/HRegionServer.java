@@ -297,6 +297,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
         // Try to get the root region location from the master.
+        if (!haveRootRegion.get()) {
           HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed on
@@ -305,6 +306,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
             haveRootRegion.set(true);
           }
+        }
           long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
