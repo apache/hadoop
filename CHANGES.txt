@@ -132,6 +132,7 @@ Release 0.19.0 - Unreleased
                the deleted cell
    HBASE-675   Report correct server hosting a table split for assignment to
                for MR Jobs
+   HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down
         
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

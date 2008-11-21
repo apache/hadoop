@@ -296,8 +296,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
-        // Try to get the root region location from the master. 
-        if (!haveRootRegion.get()) {
+        // Try to get the root region location from the master.
           HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed on
@@ -306,8 +305,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
             haveRootRegion.set(true);
           }
-        }
-        long now = System.currentTimeMillis();
+          long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
           LOG.warn("unable to report to master for " + (now - lastMsg) +
@@ -565,7 +563,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * only called when the HRegionServer receives a kill signal.
    */
   private static class ShutdownThread extends Thread {
-    private final Log LOG = LogFactory.getLog(this.getClass());
     private final HRegionServer instance;
     
     /**
@@ -591,7 +588,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * compaction.
    */
   private static class MajorCompactionChecker extends Chore {
-    private final Log LOG = LogFactory.getLog(this.getClass());
     private final HRegionServer instance;
     
     MajorCompactionChecker(final HRegionServer h,
@@ -617,7 +613,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
       }
     }
-  };
+  }
   
   /**
    * Report the status of the server. A server is online once all the startup 
