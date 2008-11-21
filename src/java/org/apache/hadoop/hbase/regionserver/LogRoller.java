@@ -61,8 +61,6 @@ class LogRoller extends Thread implements LogRollListener {
       }
       rollLock.lock();          // Don't interrupt us. We're working
       try {
-        LOG.info("Rolling hlog. Number of entries: " +
-            server.getLog().getNumEntries());
         server.getLog().rollWriter();
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);

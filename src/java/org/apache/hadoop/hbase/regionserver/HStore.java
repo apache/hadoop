@@ -908,7 +908,7 @@ public class HStore implements HConstants {
           this.compactionDir,  this.info, family.getName(), -1L, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started compaction of " + rdrs.size() + " file(s)" +
-          (references? "(hasReferences=true)": " ") + " into " +
+          (references? ", hasReferences=true,": " ") + " into " +
           FSUtils.getPath(compactedOutputFile.getMapFilePath()));
       }
       MapFile.Writer writer = compactedOutputFile.getWriter(this.fs,

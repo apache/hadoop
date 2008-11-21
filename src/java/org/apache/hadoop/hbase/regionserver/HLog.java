@@ -244,35 +244,17 @@ public class HLog implements HConstants, Syncable {
         return;
       }
       synchronized (updateLock) {
-        if (this.writer != null) {
-          // Close the current writer, get a new one.
-          try {
-            this.writer.close();
-          } catch (IOException e) {
-            // Failed close of log file.  Means we're losing edits.  For now,
-            // shut ourselves down to minimize loss.  Alternative is to try and
-            // keep going.  See HBASE-930.
-            FailedLogCloseException flce =
-              new FailedLogCloseException("#" + this.filenum);
-            flce.initCause(e);
-            throw e; 
-          }
-          Path p = computeFilename(old_filenum);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Closing current log writer " + FSUtils.getPath(p));
-          }
-          if (filenum > 0) {
-            synchronized (this.sequenceLock) {
-              this.outputfiles.put(Long.valueOf(this.logSeqNum - 1), p);
-            }
-          }
-        }
-        old_filenum = filenum;
-        filenum = System.currentTimeMillis();
-        Path newPath = computeFilename(filenum);
+        // Clean up current writer.
+        Path oldFile = cleanupCurrentWriter();
+        // Create a new one.
+        this.old_filenum = this.filenum;
+        this.filenum = System.currentTimeMillis();
+        Path newPath = computeFilename(this.filenum);
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-            HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
-        LOG.info("New log writer created at " + FSUtils.getPath(newPath));
+          HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
+        LOG.info((oldFile != null?
+          "Closed " + oldFile + ", entries=" + this.numEntries + ". ": "") +
+          "New log writer: " + FSUtils.getPath(newPath));
 
         // Can we delete any of the old log files?
         if (this.outputfiles.size() > 0) {
@@ -286,38 +268,7 @@ public class HLog implements HConstants, Syncable {
             }
             this.outputfiles.clear();
           } else {
-            // Get oldest edit/sequence id.  If logs are older than this id,
-            // then safe to remove.
-            Long oldestOutstandingSeqNum =
-              Collections.min(this.lastSeqWritten.values());
-            // Get the set of all log files whose final ID is older than or
-            // equal to the oldest pending region operation
-            TreeSet<Long> sequenceNumbers =
-              new TreeSet<Long>(this.outputfiles.headMap(
-                (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
-            // Now remove old log files (if any)
-            if (LOG.isDebugEnabled()) {
-              // Find region associated with oldest key -- helps debugging.
-              byte [] oldestRegion = null;
-              for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
-                if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
-                  oldestRegion = e.getKey();
-                  break;
-                }
-              }
-              if (LOG.isDebugEnabled() && sequenceNumbers.size() > 0) {
-                LOG.debug("Found " + sequenceNumbers.size() +
-                  " logs to remove " +
-                  "using oldest outstanding seqnum of " +
-                  oldestOutstandingSeqNum + " from region " +
-                  Bytes.toString(oldestRegion));
-              }
-            }
-            if (sequenceNumbers.size() > 0) {
-              for (Long seq : sequenceNumbers) {
-                deleteLogFile(this.outputfiles.remove(seq), seq);
-              }
-            }
+            cleanOldLogs();
           }
         }
         this.numEntries = 0;
@@ -328,6 +279,73 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
+  /*
+   * Clean up old commit logs.
+   * @throws IOException
+   */
+  private void cleanOldLogs() throws IOException {
+    // Get oldest edit/sequence id.  If logs are older than this id,
+    // then safe to remove.
+    Long oldestOutstandingSeqNum =
+      Collections.min(this.lastSeqWritten.values());
+    // Get the set of all log files whose final ID is older than or
+    // equal to the oldest pending region operation
+    TreeSet<Long> sequenceNumbers =
+      new TreeSet<Long>(this.outputfiles.headMap(
+        (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
+    // Now remove old log files (if any)
+    if (LOG.isDebugEnabled()) {
+      // Find region associated with oldest key -- helps debugging.
+      byte [] oldestRegion = null;
+      for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
+        if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
+          oldestRegion = e.getKey();
+          break;
+        }
+      }
+      LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
+        " out of total " + this.outputfiles.size() + "; " +
+        "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
+        " from region " + Bytes.toString(oldestRegion));
+    }
+    if (sequenceNumbers.size() > 0) {
+      for (Long seq : sequenceNumbers) {
+        deleteLogFile(this.outputfiles.remove(seq), seq);
+      }
+    }
+  }
+
+  /*
+   * Cleans up current writer closing and adding to outputfiles.
+   * Presumes we're operating inside an updateLock scope.
+   * @return Path to current writer or null if none.
+   * @throws IOException
+   */
+  private Path cleanupCurrentWriter() throws IOException {
+    Path oldFile = null;
+    if (this.writer != null) {
+      // Close the current writer, get a new one.
+      try {
+        this.writer.close();
+      } catch (IOException e) {
+        // Failed close of log file.  Means we're losing edits.  For now,
+        // shut ourselves down to minimize loss.  Alternative is to try and
+        // keep going.  See HBASE-930.
+        FailedLogCloseException flce =
+          new FailedLogCloseException("#" + this.filenum);
+        flce.initCause(e);
+        throw e; 
+      }
+      oldFile = computeFilename(old_filenum);
+      if (filenum > 0) {
+        synchronized (this.sequenceLock) {
+          this.outputfiles.put(Long.valueOf(this.logSeqNum - 1), oldFile);
+        }
+      }
+    }
+    return oldFile;
+  }
+
   private void deleteLogFile(final Path p, final Long seqno) throws IOException {
     LOG.info("removing old log file " + FSUtils.getPath(p) +
       " whose highest sequence/edit id is " + seqno);
@@ -626,8 +644,9 @@ public class HLog implements HConstants, Syncable {
   }
   
   /**
-   * Split up a bunch of log files, that are no longer being written to, into
-   * new files, one per region. Delete the old log files when finished.
+   * Split up a bunch of regionserver commit log files that are no longer
+   * being written to, into new files, one per region for region to replay on
+   * startup. Delete the old log files when finished.
    *
    * @param rootDir qualified root directory of the HBase instance
    * @param srcDir Directory of log files to split: e.g.
@@ -636,19 +655,42 @@ public class HLog implements HConstants, Syncable {
    * @param conf HBaseConfiguration
    * @throws IOException
    */
-  public static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
-    Configuration conf) throws IOException {
+  public static void splitLog(final Path rootDir, final Path srcDir,
+      final FileSystem fs, final Configuration conf)
+  throws IOException {
     if (!fs.exists(srcDir)) {
       // Nothing to do
       return;
     }
-    FileStatus logfiles[] = fs.listStatus(srcDir);
+    FileStatus [] logfiles = fs.listStatus(srcDir);
     if (logfiles == null || logfiles.length == 0) {
       // Nothing to do
       return;
     }
-    LOG.info("splitting " + logfiles.length + " log(s) in " +
+    LOG.info("Splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
+    splitLog(rootDir, logfiles, fs, conf);
+    try {
+      fs.delete(srcDir, true);
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      IOException io = new IOException("Cannot delete: " + srcDir);
+      io.initCause(e);
+      throw io;
+    }
+    LOG.info("log file splitting completed for " + srcDir.toString());
+  }
+  
+  /*
+   * @param rootDir
+   * @param logfiles
+   * @param fs
+   * @param conf
+   * @throws IOException
+   */
+  private static void splitLog(final Path rootDir, final FileStatus [] logfiles,
+    final FileSystem fs, final Configuration conf)
+  throws IOException {
     Map<byte [], SequenceFile.Writer> logWriters =
       new TreeMap<byte [], SequenceFile.Writer>(Bytes.BYTES_COMPARATOR);
     try {
@@ -743,16 +785,6 @@ public class HLog implements HConstants, Syncable {
         w.close();
       }
     }
-
-    try {
-      fs.delete(srcDir, true);
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      IOException io = new IOException("Cannot delete: " + srcDir);
-      io.initCause(e);
-      throw io;
-    }
-    LOG.info("log file splitting completed for " + srcDir.toString());
   }
 
   /**
