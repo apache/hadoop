@@ -433,7 +433,7 @@ public class DataNode extends Configured
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
       InterDatanodeProtocol.LOG.info("InterDatanodeProtocol addr=" + addr);
     }
-    return (InterDatanodeProtocol)RPC.waitForProxy(InterDatanodeProtocol.class,
+    return (InterDatanodeProtocol)RPC.getProxy(InterDatanodeProtocol.class,
         InterDatanodeProtocol.versionID, addr, conf);
   }
 

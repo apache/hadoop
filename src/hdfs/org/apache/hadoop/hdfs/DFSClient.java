@@ -138,8 +138,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
       ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
     }
-    return (ClientDatanodeProtocol)RPC.waitForProxy(ClientDatanodeProtocol.class
-,
+    return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr, conf);
   }
         
