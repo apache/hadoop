@@ -1200,6 +1200,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4647. NamenodeFsck should close the DFSClient it has created.
     (szetszwo)
 
+    HADOOP-4616. Fuse-dfs can handle bad values from FileSystem.read call.
+    (Pete Wyckoff via dhruba)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

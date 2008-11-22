@@ -58,7 +58,7 @@ public class TestFuseDFS extends TestCase {
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
                        mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks",
-                       "-ordbuffer=5000"};
+                       "-ordbuffer=32768"};
     final String [] envp = {
       "CLASSPATH="+  cp,
       "LD_LIBRARY_PATH=" + lp,
@@ -432,10 +432,15 @@ public class TestFuseDFS extends TestCase {
       FileStatus foo = fileSys.getFileStatus(myPath);
       assertTrue(foo.getLen() >= 9 * 1024);
 
+
       {
         // cat the file
         DataInputStream is = new DataInputStream(new FileInputStream(mpoint + "/test/hello.reads"));
         byte buf [] = new byte[4096];
+        // test reading 0 length
+        assertTrue(is.read(buf, 0, 0) == 0);
+
+        // test real reads
         assertTrue(is.read(buf, 0, 1024) == 1024);
         assertTrue(is.read(buf, 0, 4096) == 4096);
         assertTrue(is.read(buf, 0, 4096) == 4096);
@@ -458,6 +463,21 @@ public class TestFuseDFS extends TestCase {
           assertTrue(read >= 9 * 1024);
         }
       }
+
+      // check reading an empty file for EOF
+      {
+        // create the file
+        myPath = new Path("/test/hello.reads2");
+        s = fileSys.create(myPath);
+        s.close();
+
+        FSDataInputStream fs = fileSys.open(myPath);
+        assertEquals(-1,  fs.read());
+
+        FileInputStream f = new FileInputStream(mpoint + "/test/hello.reads2");
+        assertEquals(-1, f.read());
+      }
+
     } catch(Exception e) {
       e.printStackTrace();
     } finally {
@@ -469,7 +489,6 @@ public class TestFuseDFS extends TestCase {
    * Use filesys to create the hello world! file and then cat it and see its contents are correct.
    */
   public void testCat() throws IOException,InterruptedException  {
-    if(true) return;
     try {
       // First create a new directory with mkdirs
       Runtime r = Runtime.getRuntime();
