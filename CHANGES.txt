@@ -1007,6 +1007,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4703. Should not wait for proxy forever in lease recovering.
     (szetszwo)
 
+    HADOOP-4647. NamenodeFsck should close the DFSClient it has created.
+    (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
