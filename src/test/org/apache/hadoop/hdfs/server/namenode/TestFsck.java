@@ -71,6 +71,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
+      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -106,6 +107,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
+      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -126,7 +128,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
-      conf.set("dfs.blockreport.intervalMsec", Integer.toString(30));
+      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       String topDir = "/srcdat";
       fs = cluster.getFileSystem();
@@ -183,6 +185,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
+      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       String topDir = "/srcdat";
       String randomString = "HADOOP  ";
