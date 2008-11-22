@@ -78,19 +78,18 @@
 			<fileset dir="${hadoop.root}/lib">
         <include name="commons-logging-1.0.4.jar"/>
         <include name="commons-logging-api-1.0.4.jar"/>
-        <include name="jetty-5.1.4.jar"/>
         <include name="junit-3.8.1.jar"/>
         <include name="log4j-1.2.15.jar"/>
-        <include name="servlet-api.jar"/>
         <include name="slf4j-api-1.4.3.jar"/>
         <include name="slf4j-log4j12-1.4.3.jar"/>
         <include name="xmlenc-0.52.jar"/>
+        <include name="jetty-6.1.14.jar"/>
+        <include name="servlet-api-2.5-6.1.14.jar"/>
 			</fileset>
-			<fileset dir="${hadoop.root}/lib/jetty-ext">
-        <include name="commons-el.jar"/>
-        <include name="jasper-compiler.jar"/>
-        <include name="jasper-runtime.jar"/>
-        <include name="jsp-api.jar"/>
+			<fileset dir="${hadoop.root}/lib/jsp-2.1">
+        <include name="core-3.1.1.jar"/>
+        <include name="jsp-2.1.jar"/>
+        <include name="jsp-api-2.1.jar"/>
 			</fileset>
 		</copy>
 

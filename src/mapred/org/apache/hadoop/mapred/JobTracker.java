@@ -1317,8 +1317,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
+      } catch (Exception ex) {
+        LOG.warn("Exception shutting down JobTracker", ex);
       }
     }
     if (this.interTrackerServer != null) {

@@ -463,6 +463,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (replthread != null) replthread.interrupt();
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
+    } catch (Exception e) {
+      LOG.warn("Exception shutting down FSNamesystem", e);
     } finally {
       // using finally to ensure we also wait for lease daemon
       try {

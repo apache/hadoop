@@ -544,6 +544,7 @@ public class DataNode extends Configured
       try {
         infoServer.stop();
       } catch (Exception e) {
+        LOG.warn("Exception shutting down DataNode", e);
       }
     }
     if (ipcServer != null) {

@@ -182,8 +182,8 @@ public class SecondaryNameNode implements Runnable {
     shouldRun = false;
     try {
       if (infoServer != null) infoServer.stop();
-    } catch(InterruptedException ie) {
-      LOG.warn(StringUtils.stringifyException(ie));
+    } catch (Exception e) {
+      LOG.warn("Exception shutting down SecondaryNameNode", e);
     }
     try {
       if (checkpointImage != null) checkpointImage.close();

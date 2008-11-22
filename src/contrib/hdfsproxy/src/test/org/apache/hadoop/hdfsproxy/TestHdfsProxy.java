@@ -228,7 +228,7 @@ public class TestHdfsProxy extends TestCase {
 
         proxy = new HdfsProxy(proxyConf);
         InetSocketAddress proxyAddr = NetUtils.createSocketAddr("127.0.0.1:0");
-        proxy.addListener(proxyAddr, true);
+        proxy.setListener(proxyAddr);
         proxy.start();
         final String realProxyAddr = proxyAddr.getHostName() + ":"
             + proxy.getPort();

@@ -147,7 +147,8 @@ public class TestGlobalFilter extends junit.framework.TestCase {
       if (counts[i] == 0) {
         assertFalse(COUNTS.containsKey(urls[i]));
       } else {
-        assertEquals(counts[i], COUNTS.remove(urls[i]).intValue());
+        assertEquals("url[" + i + "]=" + urls[i],
+            Integer.valueOf(counts[i]), COUNTS.remove(urls[i]));
       }
     }
     assertTrue(COUNTS.isEmpty());

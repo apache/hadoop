@@ -271,8 +271,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     stopRequested = true;
     try {
       if (httpServer != null) httpServer.stop();
-    } catch (InterruptedException ie) {
-      LOG.error(StringUtils.stringifyException(ie));
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
     }
     if(namesystem != null) namesystem.close();
     if(emptier != null) emptier.interrupt();

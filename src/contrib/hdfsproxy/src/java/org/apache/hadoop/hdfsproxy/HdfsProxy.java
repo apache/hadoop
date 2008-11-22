@@ -64,7 +64,10 @@ public class HdfsProxy {
     InetSocketAddress nnAddr = NetUtils.createSocketAddr(nn);
     LOG.info("HDFS NameNode is at: " + nnAddr.getHostName() + ":" + nnAddr.getPort());
 
-    this.server = new ProxyHttpServer();
+    Configuration sslConf = new Configuration(false);
+    sslConf.addResource(conf.get("hdfsproxy.https.server.keystore.resource",
+        "ssl-server.xml"));
+    this.server = new ProxyHttpServer(sslAddr, sslConf);
     this.server.setAttribute("proxy.https.port", sslAddr.getPort());
     this.server.setAttribute("name.node.address", nnAddr);
     this.server.setAttribute("name.conf", new Configuration());
@@ -74,18 +77,9 @@ public class HdfsProxy {
     this.server.addServlet("streamFile", "/streamFile/*", ProxyStreamFile.class);
   }
   
-  /** add an SSL listener */
-  private void addSslListener(Configuration conf) throws IOException {
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource(conf.get("hdfsproxy.https.server.keystore.resource",
-        "ssl-server.xml"));
-    server.addSslListener(sslAddr, sslConf);
-  }
-  
   /** add an http listener, only for testing purposes */
-  void addListener(InetSocketAddress addr, boolean findPort)
-      throws IOException {
-    this.server.addListener(addr, findPort);
+  void setListener(InetSocketAddress addr) throws IOException {
+    this.server.setListener(addr);
     LOG.warn("An HTTP listener is attached to the proxy server. " +
     		"It should only be used for testing purposes.");
   }
@@ -113,7 +107,8 @@ public class HdfsProxy {
         server.stop();
         server.join();
       }
-    } catch (InterruptedException ie) {
+    } catch (Exception e) {
+      LOG.warn("Got exception shutting down proxy", e);
     }
   }
   
@@ -209,7 +204,7 @@ public class HdfsProxy {
         "ssl.server.keystore.type", "jks"));
   }
 
-  private static InetSocketAddress getSslAddr(Configuration conf) throws IOException {
+  static InetSocketAddress getSslAddr(Configuration conf) throws IOException {
     String addr = conf.get("hdfsproxy.https.address");
     if (addr == null)
       throw new IOException("HdfsProxy address is not specified");
@@ -275,7 +270,7 @@ public class HdfsProxy {
 
     StringUtils.startupShutdownMessage(HdfsProxy.class, argv, LOG);
     HdfsProxy proxy = new HdfsProxy(conf);
-    proxy.addSslListener(conf);
+    //proxy.addSslListener(conf);
     proxy.start();
     return proxy;
   }

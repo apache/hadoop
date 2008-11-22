@@ -21,16 +21,16 @@
 	<classpathentry kind="lib" path="lib/commons-net-1.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/jets3t-0.6.1.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-5.1.4.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-ext/commons-el.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-ext/jasper-compiler.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-ext/jasper-runtime.jar"/>
-	<classpathentry kind="lib" path="lib/jetty-ext/jsp-api.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.1.jar"/>
 	<classpathentry kind="lib" path="lib/kfs-0.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/oro-2.0.8.jar"/>
-	<classpathentry kind="lib" path="lib/servlet-api.jar"/>
+  <classpathentry kind="lib" path="lib/jetty-6.1.14.jar"/>
+  <classpathentry kind="lib" path="lib/jetty-util-6.1.14.jar"/>
+  <classpathentry kind="lib" path="lib/servlet-api-2.5-6.1.14.jar"/>
+  <classpathentry kind="lib" path="lib/jsp-2.1/core-3.1.1.jar"/>
+  <classpathentry kind="lib" path="lib/jsp-2.1/jsp-2.1.jar"/>
+  <classpathentry kind="lib" path="lib/jsp-2.1/jsp-api-2.1.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.4.3.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.4.3.jar"/>
 	<classpathentry kind="lib" path="lib/xmlenc-0.52.jar"/>

@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
-import org.mortbay.http.HttpServer;
-import org.mortbay.http.SocketListener;
-import org.mortbay.http.HttpContext;
-import org.mortbay.jetty.servlet.ServletHandler;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
@@ -65,48 +64,34 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   private String contextPath = "/notification";
   private Class servletClass = NotificationServlet.class;
   private String servletPath = "/mapred";
-  private HttpServer server;
+  private Server webServer;
 
   private void startHttpServer() throws Exception {
 
-    // Create the server
-    if (server != null) {
-      server.stop();
-      server = null;
+    // Create the webServer
+    if (webServer != null) {
+      webServer.stop();
+      webServer = null;
     }
-    server = new HttpServer();
+    webServer = new Server(0);
 
-    // Create a port listener
-    SocketListener listener = new SocketListener();
-    listener.setPort(0); // letting OS to pickup the PORT
-    server.addListener(listener);
-
-    // create context
-    HttpContext context = new HttpContext();
-    context.setContextPath(contextPath + "/*");
+    Context context = new Context(webServer, contextPath);
 
     // create servlet handler
-    ServletHandler handler = new ServletHandler();
-    handler.addServlet(servletClass.getName(), servletPath,
-                       servletClass.getName());
+    context.addServlet(new ServletHolder(new NotificationServlet()),
+                       servletPath);
 
-    // bind servlet handler to context
-    context.addHandler(handler);
-
-    // bind context to servlet engine
-    server.addContext(context);
-
-    // Start server
-    server.start();
-    port = listener.getPort();
+    // Start webServer
+    webServer.start();
+    port = webServer.getConnectors()[0].getLocalPort();
 
   }
 
   private void stopHttpServer() throws Exception {
-    if (server != null) {
-      server.stop();
-      server.destroy();
-      server = null;
+    if (webServer != null) {
+      webServer.stop();
+      webServer.destroy();
+      webServer = null;
     }
   }
 

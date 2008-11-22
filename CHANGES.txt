@@ -33,6 +33,8 @@ Trunk (unreleased changes)
     HADOOP-4188. Removes task's dependency on concrete filesystems.
     (Sharad Agarwal via ddas)
 
+    HADOOP-1650. Upgrade to Jetty 6. (cdouglas)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

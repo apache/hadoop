@@ -781,8 +781,8 @@ public class TaskTracker
       try {
         LOG.info("Shutting down StatusHttpServer");
         this.server.stop();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down TaskTracker", e);
       }
     }
   }
