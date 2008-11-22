@@ -484,6 +484,9 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
         if (noReadBytes > 0) {
             (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
         }  else {
+            if (noReadBytes == 0 || noReadBytes < -1) {
+              fprintf(stderr, "WARN: FSDataInputStream.read returned invalid return code - libhdfs returning EOF, i.e., 0: %d\n", noReadBytes);
+            }
             //This is a valid case: there aren't any bytes left to read!
             noReadBytes = 0;
         }
@@ -541,6 +544,9 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
         if (noReadBytes > 0) {
             (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
         }  else {
+            if (noReadBytes == 0 || noReadBytes < -1) {
+              fprintf(stderr, "WARN: FSDataInputStream.read returned invalid return code - libhdfs returning EOF, i.e., 0: %d\n", noReadBytes);
+            }
             //This is a valid case: there aren't any bytes left to read!
             noReadBytes = 0;
         }
