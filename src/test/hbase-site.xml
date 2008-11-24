@@ -109,6 +109,6 @@
   </property>
   <property>
     <name>hadoop.log.dir</name>
-    <value>${user.dir}/logs</value>
+    <value>${user.dir}/../logs</value>
   </property>
 </configuration>
