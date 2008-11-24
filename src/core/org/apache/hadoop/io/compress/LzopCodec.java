@@ -408,18 +408,21 @@ public class LzopCodec extends LzoCodec {
     }
 
     public void close() throws IOException {
+      byte[] b = new byte[4096];
+      while (!decompressor.finished()) {
+        decompressor.decompress(b, 0, b.length);
+      }
       super.close();
       verifyChecksums();
     }
   }
 
-  protected static class LzopDecompressor extends LzoDecompressor {
+  public static class LzopDecompressor extends LzoDecompressor {
 
     private EnumMap<DChecksum,Checksum> chkDMap =
       new EnumMap<DChecksum,Checksum>(DChecksum.class);
     private EnumMap<CChecksum,Checksum> chkCMap =
       new EnumMap<CChecksum,Checksum>(CChecksum.class);
-    private final int bufferSize;
 
     /**
      * Create an LzoDecompressor with LZO1X strategy (the only lzo algorithm
@@ -427,9 +430,17 @@ public class LzopCodec extends LzoCodec {
      */
     public LzopDecompressor(int bufferSize) {
       super(LzoDecompressor.CompressionStrategy.LZO1X_SAFE, bufferSize);
-      this.bufferSize = bufferSize;
     }
 
+    /**
+     * Get the number of checksum implementations
+     * the current lzo file uses.
+     * @return Number of checksum implementations in use.
+     */
+    public int getChecksumsCount() {
+      return this.chkCMap.size() + this.chkDMap.size();
+    }
+    
     /**
      * Given a set of decompressed and compressed checksums, 
      */

@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     it down by monitoring for cumulative memory usage across tasks.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-4640. Adds an input format that can split lzo compressed
+    text files. (johan)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
