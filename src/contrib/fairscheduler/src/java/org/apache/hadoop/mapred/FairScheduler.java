@@ -48,7 +48,6 @@ public class FairScheduler extends TaskScheduler {
       "org.apache.hadoop.mapred.FairScheduler");
   
   protected PoolManager poolMgr;
-  
   protected LoadManager loadMgr;
   protected TaskSelector taskSelector;
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
@@ -60,6 +59,7 @@ public class FairScheduler extends TaskScheduler {
   protected boolean useFifo;      // Set if we want to revert to FIFO behavior
   protected boolean assignMultiple; // Simultaneously assign map and reduce?
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
+  protected boolean waitForMapsBeforeLaunchingReduces = true;
   private Clock clock;
   private boolean runBackgroundUpdates; // Can be set to false for testing
   private EagerTaskInitializationListener eagerInitListener;
@@ -421,8 +421,12 @@ public class FairScheduler extends TaskScheduler {
         }
       }
       info.runningReduces = runningReduces;
-      info.neededReduces = (totalReduces - runningReduces - finishedReduces 
-                            + taskSelector.neededSpeculativeReduces(job));
+      if (enoughMapsFinishedToRunReduces(finishedMaps, totalMaps)) {
+        info.neededReduces = (totalReduces - runningReduces - finishedReduces 
+            + taskSelector.neededSpeculativeReduces(job));
+      } else {
+        info.neededReduces = 0;
+      }
       // If the job was marked as not runnable due to its user or pool having
       // too many active jobs, set the neededMaps/neededReduces to 0. We still
       // count runningMaps/runningReduces however so we can give it a deficit.
@@ -430,6 +434,18 @@ public class FairScheduler extends TaskScheduler {
         info.neededMaps = 0;
         info.neededReduces = 0;
       }
+    }
+  }
+
+  /**
+   * Has a job finished enough maps to allow launching its reduces?
+   */
+  protected boolean enoughMapsFinishedToRunReduces(
+      int finishedMaps, int totalMaps) {
+    if (waitForMapsBeforeLaunchingReduces) {
+      return finishedMaps >= Math.max(1, totalMaps * 0.05);
+    } else {
+      return true;
     }
   }
 

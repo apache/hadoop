@@ -125,6 +125,9 @@ Trunk (unreleased changes)
 
     HADOOP-4640. Adds an input format that can split lzo compressed
     text files. (johan)
+    
+    HADOOP-4666. Launch reduces only after a few maps have run in the 
+    Fair Scheduler. (Matei Zaharia via johan)    
 
   OPTIMIZATIONS
 

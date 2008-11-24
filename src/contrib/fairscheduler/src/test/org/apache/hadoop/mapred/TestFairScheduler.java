@@ -36,9 +36,9 @@ import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 
 public class TestFairScheduler extends TestCase {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
-  		"build/contrib/streaming/test/data")).getAbsolutePath();
+      "build/contrib/streaming/test/data")).getAbsolutePath();
   final static String ALLOC_FILE = new File(TEST_DIR, 
-  		"test-pools").getAbsolutePath();
+      "test-pools").getAbsolutePath();
   
   private static final String POOL_PROPERTY = "pool";
   
@@ -236,6 +236,7 @@ public class TestFairScheduler extends TestCase {
     taskTrackerManager = new FakeTaskTrackerManager();
     clock = new FakeClock();
     scheduler = new FairScheduler(clock, false);
+    scheduler.waitForMapsBeforeLaunchingReduces = false;
     scheduler.setConf(conf);
     scheduler.setTaskTrackerManager(taskTrackerManager);
     scheduler.start();
@@ -1057,6 +1058,30 @@ public class TestFairScheduler extends TestCase {
                scheduler.infos.get(job1).mapFairShare);
     assertTrue(scheduler.infos.get(job1).reduceFairShare >
                scheduler.infos.get(job2).reduceFairShare);
+  }
+  
+  public void testWaitForMapsBeforeLaunchingReduces() {
+    // We have set waitForMapsBeforeLaunchingReduces to false by default in
+    // this class, so this should return true
+    assertTrue(scheduler.enoughMapsFinishedToRunReduces(0, 100));
+    
+    // However, if we set waitForMapsBeforeLaunchingReduces to true, we should
+    // now no longer be able to assign reduces until 5 have finished
+    scheduler.waitForMapsBeforeLaunchingReduces = true;
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(0, 100));
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(1, 100));
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(2, 100));
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(3, 100));
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(4, 100));
+    assertTrue(scheduler.enoughMapsFinishedToRunReduces(5, 100));
+    assertTrue(scheduler.enoughMapsFinishedToRunReduces(6, 100));
+    
+    // Also test some jobs that have very few maps, in which case we will
+    // wait for at least 1 map to finish
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(0, 5));
+    assertTrue(scheduler.enoughMapsFinishedToRunReduces(1, 5));
+    assertFalse(scheduler.enoughMapsFinishedToRunReduces(0, 1));
+    assertTrue(scheduler.enoughMapsFinishedToRunReduces(1, 1));
   }
   
   private void advanceTime(long time) {
