@@ -52,7 +52,7 @@ import org.apache.hadoop.io.SequenceFile;
  * <p>An HStoreFile usually tracks 4 things: its parent dir, the region
  * identifier, the column family, and the file identifier.  If you know those
  * four things, you know how to obtain the right HStoreFile.  HStoreFiles may
- * also refernce store files in another region serving either from
+ * also reference store files in another region serving either from
  * the top-half of the remote file or from the bottom-half.  Such references
  * are made fast splitting regions.
  * 
@@ -101,6 +101,7 @@ public class HStoreFile implements HConstants {
   /* If true, this file was product of a major compaction.
    */
   private boolean majorCompaction = false;
+  private long indexLength;
 
   /**
    * Constructor that fully initializes the object
@@ -381,7 +382,7 @@ public class HStoreFile implements HConstants {
       out.close();
     }
   }
-  
+
   /**
    * Delete store map files.
    * @throws IOException 
@@ -475,6 +476,18 @@ public class HStoreFile implements HConstants {
     Path p = new Path(getMapFilePath(reference), MapFile.DATA_FILE_NAME);
     long l = p.getFileSystem(conf).getFileStatus(p).getLen();
     return (isReference())? l / 2: l;
+  }
+
+  /**
+   * @return Length of the store map file index.
+   * @throws IOException
+   */
+  public synchronized long indexLength() throws IOException {
+    if (indexLength == 0) {
+      Path p = new Path(getMapFilePath(reference), MapFile.INDEX_FILE_NAME);
+      indexLength = p.getFileSystem(conf).getFileStatus(p).getLen();
+    }
+    return indexLength;
   }
 
   @Override

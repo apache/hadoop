@@ -53,7 +53,13 @@ public class RegionServerMetrics implements Updater {
    * Count of storefiles open on the regionserver.
    */
   public final MetricsIntValue storefiles = new MetricsIntValue("storefiles");
-  
+
+  /**
+   * Sum of all the storefile index sizes in this regionserver in MB
+   */
+  public final MetricsIntValue storefileIndexSizeMB =
+    new MetricsIntValue("storefileIndexSizeMB");
+
   /**
    * Sum of all the memcache sizes in this regionserver in MB
    */
@@ -81,6 +87,7 @@ public class RegionServerMetrics implements Updater {
   public void doUpdates(@SuppressWarnings("unused") MetricsContext unused) {
     synchronized (this) {
       this.storefiles.pushMetric(this.metricsRecord);
+      this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
       this.memcacheSizeMB.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       synchronized(this.requests) {
@@ -126,6 +133,9 @@ public class RegionServerMetrics implements Updater {
     sb.append(this.regions.get());
     sb.append(", storefiles=");
     sb.append(this.storefiles.get());
+    sb.append(", storefileIndexSize=");
+    sb.append(this.storefileIndexSizeMB.get());
+    sb.append("MB");
     sb.append(", memcacheSize=");
     sb.append(this.memcacheSizeMB.get());
     sb.append("MB");

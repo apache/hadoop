@@ -2137,7 +2137,19 @@ public class HStore implements HConstants {
   int getStorefilesCount() {
     return this.storefiles.size();
   }
-  
+
+  /**
+   * @return The size of the store file indexes, in bytes.
+   * @throws IOException if there was a problem getting file sizes from the
+   * filesystem
+   */
+  long getStorefilesIndexSize() throws IOException {
+    long size = 0;
+    for (HStoreFile s: storefiles.values())
+      size += s.indexLength();
+    return size;
+  }
+
   /*
    * Datastructure that holds size and key.
    */
