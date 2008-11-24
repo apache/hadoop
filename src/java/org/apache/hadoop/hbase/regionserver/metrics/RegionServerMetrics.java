@@ -48,7 +48,12 @@ public class RegionServerMetrics implements Updater {
    * Count of requests to the regionservers since last call to metrics update
    */
   private final MetricsIntValue requests = new MetricsIntValue("requests");
-  
+
+  /**
+   * Count of stores open on the regionserver.
+   */
+  public final MetricsIntValue stores = new MetricsIntValue("stores");
+
   /**
    * Count of storefiles open on the regionserver.
    */
@@ -86,6 +91,7 @@ public class RegionServerMetrics implements Updater {
    */
   public void doUpdates(@SuppressWarnings("unused") MetricsContext unused) {
     synchronized (this) {
+      this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
       this.memcacheSizeMB.pushMetric(this.metricsRecord);
@@ -131,6 +137,8 @@ public class RegionServerMetrics implements Updater {
     sb.append(this.requests.get()/seconds);
     sb.append(", regions=");
     sb.append(this.regions.get());
+    sb.append(", stores=");
+    sb.append(this.stores.get());
     sb.append(", storefiles=");
     sb.append(this.storefiles.get());
     sb.append(", storefileIndexSize=");
