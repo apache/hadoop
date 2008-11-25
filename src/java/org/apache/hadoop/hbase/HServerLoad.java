@@ -22,25 +22,171 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
 public class HServerLoad implements WritableComparable {
-  private int numberOfRequests;         // number of requests since last report
-  private int numberOfRegions;          // number of regions being served
-  /*
-   * Number of storefiles on the regionserver
+  /** number of regions */
+    // could just use regionLoad.size() but master.RegionManager likes to play
+    // around with this value while passing HServerLoad objects around during
+    // balancer calculations
+  private int numberOfRegions;
+  /** number of requests since last report */
+  private int numberOfRequests;
+  /** the amount of used heap, in MB */
+  private int usedHeapMB;
+  /** the maximum allowable size of the heap, in MB */
+  private int maxHeapMB;
+  /** per-region load metrics */
+  private ArrayList<RegionLoad> regionLoad = new ArrayList<RegionLoad>();
+
+  /** 
+   * Encapsulates per-region loading metrics.
    */
-  private int storefiles;
-  
-  /*
-   * Size of the memcaches on this machine in MB.
-   */
-  private int memcacheSizeMB;
-  
+  class RegionLoad implements Writable {
+    /** the region name */
+    private byte[] name;
+    /** the number of stores for the region */
+    private int stores;
+    /** the number of storefiles for the region */
+    private int storefiles;
+    /** the current size of the memcache for the region, in MB */
+    private int memcacheSizeMB;
+    /** the current total size of storefile indexes for the region, in MB */
+    private int storefileIndexSizeMB;
+
+    /**
+     * Constructor, for Writable
+     */
+    public RegionLoad() {
+        super();
+    }
+
+    /**
+     * @param name
+     * @param stores
+     * @param storefiles
+     * @param memcacheSizeMB
+     * @param storefileIndexSizeMB
+     */
+    public RegionLoad(final byte[] name, final int stores,
+        final int storefiles, final int memcacheSizeMB,
+        final int storefileIndexSizeMB) {
+      this.name = name;
+      this.stores = stores;
+      this.storefiles = storefiles;
+      this.memcacheSizeMB = memcacheSizeMB;
+      this.storefileIndexSizeMB = storefileIndexSizeMB;
+    }
+
+    // Getters
+
+    /**
+     * @return the region name
+     */
+    public byte[] getName() {
+      return name;
+    }
+
+    /**
+     * @return the number of stores
+     */
+    public int getStores() {
+      return stores;
+    }
+
+    /**
+     * @return the number of storefiles
+     */
+    public int getStorefiles() {
+      return storefiles;
+    }
+
+    /**
+     * @return the memcache size, in MB
+     */
+    public int getMemcacheSizeMB() {
+      return memcacheSizeMB;
+    }
+
+    /**
+     * @return the approximate size of storefile indexes on the heap, in MB
+     */
+    public int getStorefileIndexSizeMB() {
+      return storefileIndexSizeMB;
+    }
+
+    // Setters
+
+    /**
+     * @param name the region name
+     */
+    public void setName(byte[] name) {
+      this.name = name;
+    }
+
+    /**
+     * @param storefiles the number of stores
+     */
+    public void setStores(int stores) {
+      this.stores = stores;
+    }
+
+    /**
+     * @param storefiles the number of storefiles
+     */
+    public void setStorefiles(int storefiles) {
+      this.storefiles = storefiles;
+    }
+
+    /**
+     * @param memcacheSizeMB the memcache size, in MB
+     */
+    public void setMemcacheSizeMB(int memcacheSizeMB) {
+      this.memcacheSizeMB = memcacheSizeMB;
+    }
+
+    /**
+     * @param storefileIndexSizeMB the approximate size of storefile indexes
+     *  on the heap, in MB
+     */
+    public void setStorefileIndexSizeMB(int storefileIndexSizeMB) {
+      this.storefileIndexSizeMB = storefileIndexSizeMB;
+    }
+
+    // Writable
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      int namelen = in.readInt();
+      this.name = new byte[namelen];
+      in.readFully(this.name);
+      this.stores = in.readInt();
+      this.storefiles = in.readInt();
+      this.memcacheSizeMB = in.readInt();
+      this.storefileIndexSizeMB = in.readInt();
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(name.length);
+      out.write(name);
+      out.writeInt(stores);
+      out.writeInt(storefiles);
+      out.writeInt(memcacheSizeMB);
+      out.writeInt(storefileIndexSizeMB);
+    }
+  }
+
   /*
    * TODO: Other metrics that might be considered when the master is actually
    * doing load balancing instead of merely trying to decide where to assign
@@ -54,7 +200,7 @@ public class HServerLoad implements WritableComparable {
    * </ul>
    */
 
-  /** default constructior (used by Writable) */
+  /** default constructor (used by Writable) */
   public HServerLoad() {
     super();
   }
@@ -62,21 +208,25 @@ public class HServerLoad implements WritableComparable {
   /**
    * Constructor
    * @param numberOfRequests
-   * @param numberOfRegions
+   * @param usedHeapMB
+   * @param maxHeapMB
    */
-  public HServerLoad(final int numberOfRequests, final int numberOfRegions,
-      final int storefiles, final int memcacheSizeMB) {
+  public HServerLoad(final int numberOfRequests, final int usedHeapMB,
+      final int maxHeapMB) {
     this.numberOfRequests = numberOfRequests;
-    this.numberOfRegions = numberOfRegions;
-    this.storefiles = storefiles;
-    this.memcacheSizeMB = memcacheSizeMB;
+    this.usedHeapMB = usedHeapMB;
+    this.maxHeapMB = maxHeapMB;
   }
-  
+
+  /**
+   * Constructor
+   * @param hsl the template HServerLoad
+   */
   public HServerLoad(final HServerLoad hsl) {
-    this(hsl.numberOfRequests, hsl.numberOfRegions, hsl.storefiles,
-      hsl.memcacheSizeMB);
+    this(hsl.numberOfRequests, hsl.usedHeapMB, hsl.maxHeapMB);
+    this.regionLoad.addAll(hsl.regionLoad);
   }
-  
+
   /**
    * Originally, this method factored in the effect of requests going to the
    * server as well. However, this does not interact very well with the current
@@ -99,15 +249,43 @@ public class HServerLoad implements WritableComparable {
   }
   
   /**
-   * Returns toString() with the number of requests divided by the message interval in seconds
+   * Returns toString() with the number of requests divided by the message
+   * interval in seconds
    * @param msgInterval
    * @return The load as a String
    */
   public String toString(int msgInterval) {
-    return "requests: " + numberOfRequests/msgInterval +
-      " regions: " + numberOfRegions;
+    StringBuilder sb = new StringBuilder();
+    sb.append("requests: ");
+    sb.append(numberOfRequests/msgInterval);
+    sb.append(" usedHeapMB: ");
+    sb.append(usedHeapMB);
+    sb.append(" maxHeapMB: ");
+    sb.append(maxHeapMB);
+    sb.append(" regions: ");
+    sb.append(numberOfRegions);
+    Iterator<RegionLoad> i = regionLoad.iterator();
+    sb.append(" {");
+    while (i.hasNext()) {
+        RegionLoad rl = i.next();
+        sb.append(" { name: '");
+        sb.append(Bytes.toString(rl.name));
+        sb.append("' stores: ");
+        sb.append(rl.stores);
+        sb.append(" storefiles: ");
+        sb.append(rl.storefiles);
+        sb.append(" memcacheSizeMB: ");
+        sb.append(rl.memcacheSizeMB);
+        sb.append(" storefileIndexSizeMB: ");
+        sb.append(rl.storefileIndexSizeMB);
+        sb.append(" }");
+        if (i.hasNext())
+            sb.append(',');
+    }
+    sb.append(" }");
+    return sb.toString();
   }
-  
+
   @Override
   public boolean equals(Object o) {
     return compareTo(o) == 0;
@@ -129,6 +307,10 @@ public class HServerLoad implements WritableComparable {
     return numberOfRegions;
   }
 
+  public Collection<RegionLoad> getRegionLoad() {
+    return Collections.unmodifiableCollection(regionLoad);
+  }
+
   /**
    * @return the numberOfRequests
    */
@@ -140,56 +322,101 @@ public class HServerLoad implements WritableComparable {
    * @return Count of storefiles on this regionserver
    */
   public int getStorefiles() {
-    return this.storefiles;
+    int count = 0;
+    for (RegionLoad info: regionLoad)
+      count += info.storefiles;
+    return count;
   }
 
   /**
-   * @return Size of memcaches in kb.
+   * @return Size of memcaches in MB
    */
-  public int getMemcacheSizeInKB() {
-    return this.memcacheSizeMB;
+  public int getMemcacheSizeInMB() {
+    int count = 0;
+    for (RegionLoad info: regionLoad)
+      count += info.memcacheSizeMB;
+    return count;
   }
 
   /**
-   * @param storefiles Count of storefiles on this server.
+   * @return Size of store file indexes in MB
    */
-  public void setStorefiles(int storefiles) {
-    this.storefiles = storefiles;
+  public int getStorefileIndexSizeInMB() {
+    int count = 0;
+    for (RegionLoad info: regionLoad)
+      count += info.storefileIndexSizeMB;
+    return count;
   }
 
-  /**
-   * @param memcacheSizeInKB Size of memcache in kb.
-   */
-  public void setMemcacheSizeInKB(int memcacheSizeInKB) {
-    this.memcacheSizeMB = memcacheSizeInKB;
-  }
+  // Setters
 
   /**
-   * @param numberOfRegions the numberOfRegions to set
+   * @param numberOfRegions the number of regions
    */
   public void setNumberOfRegions(int numberOfRegions) {
     this.numberOfRegions = numberOfRegions;
   }
 
   /**
-   * @param numberOfRequests the numberOfRequests to set
+   * @param numberOfRequests the number of requests to set
    */
   public void setNumberOfRequests(int numberOfRequests) {
     this.numberOfRequests = numberOfRequests;
+  }
+
+  /**
+   * @param usedHeapMB the amount of heap in use, in MB
+   */
+  public void setUsedHeapMB(int usedHeapMB) {
+    this.usedHeapMB = usedHeapMB;
+  }
+
+  /**
+   * @param maxHeapMB the maximum allowable heap size, in MB
+   */
+  public void setMaxHeapMB(int maxHeapMB) {
+    this.maxHeapMB = maxHeapMB;
+  }
+
+  /**
+   * @param name
+   * @param stores
+   * @param storefiles
+   * @param memcacheSizeMB
+   * @param storefileIndexSizeMB
+   */
+  public void addRegionInfo(final byte[] name, final int stores,
+      final int storefiles, final int memcacheSizeMB,
+      final int storefileIndexSizeMB) {
+    this.numberOfRegions++;
+    this.regionLoad.add(
+      new RegionLoad(name, stores, storefiles, memcacheSizeMB,
+        storefileIndexSizeMB));
   }
 
   // Writable
 
   public void readFields(DataInput in) throws IOException {
     numberOfRequests = in.readInt();
+    usedHeapMB = in.readInt();
+    maxHeapMB = in.readInt();
     numberOfRegions = in.readInt();
+    for (int i = 0; i < numberOfRegions; i++) {
+      RegionLoad rl = new RegionLoad();
+      rl.readFields(in);
+      regionLoad.add(rl);
+    }
   }
 
   public void write(DataOutput out) throws IOException {
     out.writeInt(numberOfRequests);
+    out.writeInt(usedHeapMB);
+    out.writeInt(maxHeapMB);
     out.writeInt(numberOfRegions);
+    for (int i = 0; i < numberOfRegions; i++)
+      regionLoad.get(i).write(out);
   }
-  
+
   // Comparable
 
   public int compareTo(Object o) {

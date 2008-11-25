@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -194,7 +196,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
-    
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -322,9 +324,31 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
           try {
             doMetrics();
-            this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
-                onlineRegions.size(), this.metrics.storefiles.get(),
-                this.metrics.memcacheSizeMB.get()));
+            MemoryUsage memory =
+                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            HServerLoad hsl = new HServerLoad(requestCount.get(), 
+              (int)(memory.getUsed()/1024/1024),
+              (int)(memory.getMax()/1024/1024));
+            for (HRegion r: onlineRegions.values()) {
+              byte[] name = r.getRegionName();
+              int stores = 0;
+              int storefiles = 0;
+              int memcacheSizeMB = (int)(r.memcacheSize.get()/1024/1024);
+              int storefileIndexSizeMB = 0;
+              synchronized (r.stores) {
+                stores += r.stores.size();
+                for (HStore store: r.stores.values()) {
+                  storefiles += store.getStorefilesCount();
+                  storefileIndexSizeMB += 
+                    (int)(store.getStorefilesIndexSize()/1024/1024);
+                }
+              }
+              hsl.addRegionInfo(name, stores, storefiles, memcacheSizeMB,
+                storefileIndexSizeMB);
+            }
+            this.serverInfo.setLoad(hsl);
+            if (LOG.isDebugEnabled())
+              LOG.debug("sending server load: " + hsl);
             this.requestCount.set(0);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
@@ -862,7 +886,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     while(!stopRequested.get()) {
       try {
         this.requestCount.set(0);
-        this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size(), 0, 0));
+        MemoryUsage memory =
+          ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        HServerLoad hsl = new HServerLoad(0, (int)memory.getUsed()/1024/1024,
+          (int)memory.getMax()/1024/1024);
+        this.serverInfo.setLoad(hsl);
+        if (LOG.isDebugEnabled())
+          LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
         result = this.hbaseMaster.regionServerStartup(serverInfo);
         break;
