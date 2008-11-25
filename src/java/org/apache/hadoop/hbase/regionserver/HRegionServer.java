@@ -434,10 +434,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         housekeeping();
         sleeper.sleep(lastMsg);
       } // for
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch (Throwable t) {
+      checkOOME(t);
       LOG.fatal("Unhandled exception. Aborting...", t);
       abort();
     }
@@ -550,6 +548,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       isOnline = true;
     } catch (IOException e) {
       this.stopRequested.set(true);
+      checkOOME(e);
       isOnline = false;
       e = RemoteExceptionHandler.checkIOException(e); 
       LOG.fatal("Failed init", e);
@@ -557,6 +556,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       ex.initCause(e);
       throw ex;
     }
+  }
+  
+  /*
+   * Check if an OOME and if so, call abort.
+   * @param e
+   * @return True if we OOME'd and are aborting.
+   */
+  private boolean checkOOME(final Throwable e) {
+    boolean aborting = false;
+    if (e instanceof OutOfMemoryError ||
+        (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError)) {
+      LOG.fatal("OOME, aborting.", e);
+      abort();
+      aborting = true;
+    }
+    return aborting;
   }
 
   /*
@@ -591,7 +606,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   private static class MajorCompactionChecker extends Chore {
     private final HRegionServer instance;
-    
+
     MajorCompactionChecker(final HRegionServer h,
         final int sleepTime, final AtomicBoolean stopper) {
       super(sleepTime, stopper);
@@ -800,8 +815,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * from under hbase or we OOME.
    */
   public void abort() {
-    reservedSpace.clear();
     this.abortRequested = true;
+    this.reservedSpace.clear();
+    LOG.info("Dump of metrics: " + this.metrics.toString());
     stop();
   }
 
@@ -892,7 +908,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
-
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
       (oldRegion.getRegionNameAsString() + " split; daughters: " +
         newRegionA.getRegionNameAsString() + ", " +
@@ -1017,6 +1032,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
         }
       } catch(Throwable t) {
+        checkOOME(t);
         LOG.fatal("Unhandled exception", t);
       } finally {
         LOG.info("worker thread exiting");
@@ -1039,8 +1055,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         this.compactSplitThread.
           compactionRequested(region, "Region open check");
       } catch (IOException e) {
-        LOG.error("error opening region " + regionInfo.getRegionNameAsString(), e);
-
+        checkOOME(e);
+        LOG.error("error opening region " + regionInfo.getRegionNameAsString(),
+          e);
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
@@ -1113,6 +1130,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.error("error closing region " +
             Bytes.toString(region.getRegionName()),
           RemoteExceptionHandler.checkIOException(e));
+        checkOOME(e);
       }
     }
     return regionsToClose;
@@ -1233,6 +1251,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       result.putAll(map);
       return new RowResult(row, result);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1250,6 +1269,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       RowResult rr = region.getClosestRowBefore(row, columnFamily);
       return rr;
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1286,6 +1306,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       return resultSets.toArray(new RowResult[resultSets.size()]);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1304,10 +1325,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b, getLockFromId(b.getRowLock()));
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1327,14 +1346,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         locks[i] = getLockFromId(b[i].getRowLock());
         region.batchUpdate(b[i], locks[i]);
       }
-    } catch (OutOfMemoryError error) {
-      abort();
-      LOG.fatal("Ran out of memory", error);
     } catch(WrongRegionException ex) {
       return i;
     } catch (NotServingRegionException ex) {
       return i;
     } catch (IOException e) {
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1397,7 +1414,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       return scannerId;
     } catch (IOException e) {
       LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
-          RemoteExceptionHandler.checkIOException(e));
+        RemoteExceptionHandler.checkIOException(e));
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1430,6 +1448,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       s.close();
       this.leases.cancelLease(scannerName);
     } catch (IOException e) {
+      // TODO: Should we even be returning an exception out of a close?
+      // What can the client do with an exception in close?
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1527,7 +1548,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       return lockId;
     } catch (IOException e) {
       LOG.error("Error obtaining row lock (fsOk: " + this.fsOk + ")",
-          RemoteExceptionHandler.checkIOException(e));
+        RemoteExceptionHandler.checkIOException(e));
+      checkOOME(e);
       checkFileSystem();
       throw e;
     }
@@ -1842,7 +1864,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public long getProtocolVersion(final String protocol, 
-      @SuppressWarnings("unused") final long clientVersion)
+      final long clientVersion)
   throws IOException {  
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HBaseRPCProtocolVersion.versionID;
