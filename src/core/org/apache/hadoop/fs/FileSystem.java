@@ -693,7 +693,8 @@ public abstract class FileSystem extends Configured implements Closeable {
     // f is a directory
     long[] summary = {0, 0, 1};
     for(FileStatus s : listStatus(f)) {
-      ContentSummary c = getContentSummary(s.getPath());
+      ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
+                                     new ContentSummary(s.getLen(), 1, 0);
       summary[0] += c.getLength();
       summary[1] += c.getFileCount();
       summary[2] += c.getDirectoryCount();

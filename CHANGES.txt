@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     HADOOP-4666. Launch reduces only after a few maps have run in the 
     Fair Scheduler. (Matei Zaharia via johan)    
 
+    HADOOP-4339. Remove redundant calls from FileSystem/FsShell when
+    generating/processing ContentSummary. (David Phillips via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

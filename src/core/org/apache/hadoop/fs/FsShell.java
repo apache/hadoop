@@ -654,14 +654,16 @@ public class FsShell extends Configured implements Tool {
       System.out.println("Found " + items.length + " items");
       int maxLength = 10;
       
+      long length[] = new long[items.length];
       for (int i = 0; i < items.length; i++) {
-        String size = String.valueOf(srcFs.getContentSummary(items[i]
-                                                                   .getPath()).getLength());
-        if (size.length() > maxLength) maxLength = size.length();
+        length[i] = items[i].isDir() ?
+          srcFs.getContentSummary(items[i].getPath()).getLength() :
+          items[i].getLen();
+        int len = String.valueOf(length[i]).length();
+        if (len > maxLength) maxLength = len;
       }
       for(int i = 0; i < items.length; i++) {
-        System.out.printf("%-"+ (maxLength + BORDER) +"d", 
-            srcFs.getContentSummary(items[i].getPath()).getLength());
+        System.out.printf("%-"+ (maxLength + BORDER) +"d", length[i]);
         System.out.println(items[i].getPath());
       }
     }
