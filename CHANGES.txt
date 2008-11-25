@@ -1237,6 +1237,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4616. Fuse-dfs can handle bad values from FileSystem.read call.
     (Pete Wyckoff via dhruba)
 
+    HADOOP-4061. Throttle Datanode decommission monitoring in Namenode.
+    (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

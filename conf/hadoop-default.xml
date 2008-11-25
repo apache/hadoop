@@ -575,9 +575,16 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.namenode.decommission.interval</name>
-  <value>300</value>
+  <value>30</value>
   <description>Namenode periodicity in seconds to check if decommission is 
   complete.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.nodes.per.interval</name>
+  <value>5</value>
+  <description>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</description>
 </property>
 
 <property>
