@@ -93,22 +93,9 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
     bucket = new S3Bucket(uri.getHost());
 
-    createBucket(bucket.getName());
-    
     this.bufferSize = conf.getInt("io.file.buffer.size", 4096);
   }
 
-  private void createBucket(String bucketName) throws IOException {
-    try {
-      s3Service.createBucket(bucketName);
-    } catch (S3ServiceException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      }
-      throw new S3Exception(e);
-    }
-  }
-  
   public String getVersion() throws IOException {
     return FILE_SYSTEM_VERSION_VALUE;
   }

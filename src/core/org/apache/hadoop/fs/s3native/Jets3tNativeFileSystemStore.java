@@ -59,20 +59,6 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       throw new S3Exception(e);
     }
     bucket = new S3Bucket(uri.getHost());
-
-    createBucket(bucket.getName());
-
-  }
-  
-  private void createBucket(String bucketName) throws IOException {
-    try {
-      s3Service.createBucket(bucketName);
-    } catch (S3ServiceException e) {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      }
-      throw new S3Exception(e);
-    }
   }
   
   public void storeFile(String key, File file, byte[] md5Hash)

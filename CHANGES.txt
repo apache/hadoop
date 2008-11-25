@@ -41,6 +41,9 @@ Trunk (unreleased changes)
       JobClient::getCommandLineConfig is removed
       JobShell, TestJobShell classes are removed
 
+    HADOOP-4422. S3 file systems should not create bucket.
+    (David Phillips via tomwhite)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
