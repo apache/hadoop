@@ -300,9 +300,11 @@ public class KosmosFileSystem extends FileSystem {
       BlockLocation[] result = new BlockLocation[hints.length];
       long blockSize = getDefaultBlockSize();
       long length = len;
+      long blockStart = start;
       for(int i=0; i < result.length; ++i) {
-        result[i] = new BlockLocation(null, hints[i], start, 
+        result[i] = new BlockLocation(null, hints[i], blockStart, 
                                       length < blockSize ? length : blockSize);
+        blockStart += blockSize;
         length -= blockSize;
       }
       return result;

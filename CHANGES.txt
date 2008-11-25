@@ -209,6 +209,13 @@ Trunk (unreleased changes)
     HADOOP-4676. Fix broken URL in blacklisted tasktrackers page. (Amareshwari
     Sriramadasu via cdouglas)
 
+Release 0.19.1 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-4697. Fix getBlockLocations in KosmosFileSystem to handle multiple
+    blocks correctly. (Sriram Rao via cdouglas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
