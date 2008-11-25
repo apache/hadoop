@@ -55,7 +55,7 @@ Black-listed task-trackers</h1>
 %>
 
 <hr>
-<a href="jobdetails.jsp?jobid=><%=jobId%>">Go back to <%=jobId%></a><br>
+<a href="jobdetails.jsp?jobid=<%=jobId%>">Go back to <%=jobId%></a><br>
 <%
 out.println(ServletUtil.htmlFooter());
 %>

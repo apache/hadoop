@@ -200,6 +200,9 @@ Trunk (unreleased changes)
     login fails more predictably when misconfigured. (Alex Loddengaard via
     cdouglas)
 
+    HADOOP-4676. Fix broken URL in blacklisted tasktrackers page. (Amareshwari
+    Sriramadasu via cdouglas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
