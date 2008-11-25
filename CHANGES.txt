@@ -144,10 +144,6 @@ Trunk (unreleased changes)
     HADOOP-2774. Add counters tracking records spilled to disk in MapTask and
     ReduceTask. (Ravi Gummadi via cdouglas)
 
-    HADOOP-3422  Ganglia counter metrics are all reported with the metric
-    name "value", so the counter values can not be seen. (Jason Attributor
-    and Brian Bockelman via stack)
-
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
@@ -218,6 +214,10 @@ Trunk (unreleased changes)
 
     HADOOP-4676. Fix broken URL in blacklisted tasktrackers page. (Amareshwari
     Sriramadasu via cdouglas)
+
+    HADOOP-3422  Ganglia counter metrics are all reported with the metric
+    name "value", so the counter values can not be seen. (Jason Attributor
+    and Brian Bockelman via stack)
 
 Release 0.19.1 - Unreleased
 
