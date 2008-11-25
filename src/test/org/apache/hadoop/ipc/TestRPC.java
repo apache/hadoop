@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.lang.reflect.Method;
 
@@ -32,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
 
 /** Unit tests for RPC. */
@@ -117,7 +117,6 @@ public class TestRPC extends TestCase {
     }
 
     public int[] exchange(int[] values) {
-      int sum = 0;
       for (int i = 0; i < values.length; i++) {
         values[i] = i;
       }
@@ -309,6 +308,17 @@ public class TestRPC extends TestCase {
       if(proxy!=null) RPC.stopProxy(proxy);
     }
   }
+  
+  public void testStandaloneClient() throws IOException {
+    try {
+      RPC.waitForProxy(TestProtocol.class,
+        TestProtocol.versionID, new InetSocketAddress(ADDRESS, 20), conf, 15000L);
+      fail("We should not have reached here");
+    } catch (ConnectException ioe) {
+      //this is what we expected
+    }
+  }
+  
   public static void main(String[] args) throws Exception {
 
     new TestRPC("test").testCalls();
