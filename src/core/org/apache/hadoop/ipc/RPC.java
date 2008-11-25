@@ -279,18 +279,47 @@ public class RPC {
   }
   
   public static VersionedProtocol waitForProxy(Class protocol,
+      long clientVersion,
+      InetSocketAddress addr,
+      Configuration conf
+      ) throws IOException {
+    return waitForProxy(protocol, clientVersion, addr, conf, Long.MAX_VALUE);
+  }
+
+  /**
+   * Get a proxy connection to a remote server
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @param timeout time in milliseconds before giving up
+   * @return the proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  static VersionedProtocol waitForProxy(Class protocol,
                                                long clientVersion,
                                                InetSocketAddress addr,
-                                               Configuration conf
-                                               ) throws IOException {
+                                               Configuration conf,
+                                               long timeout
+                                               ) throws IOException { 
+    long startTime = System.currentTimeMillis();
+    IOException ioe;
     while (true) {
       try {
         return getProxy(protocol, clientVersion, addr, conf);
       } catch(ConnectException se) {  // namenode has not been started
         LOG.info("Server at " + addr + " not available yet, Zzzzz...");
+        ioe = se;
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
+        ioe = te;
       }
+      // check if timed out
+      if (System.currentTimeMillis()-timeout >= startTime) {
+        throw ioe;
+      }
+
+      // wait for retry
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
