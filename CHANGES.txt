@@ -193,6 +193,10 @@ Trunk (unreleased changes)
 
     HADOOP-4598. '-setrep' command skips under-replicated blocks. (hairong)
 
+    HADOOP-4429. Set defaults for user, group in UnixUserGroupInformation so
+    login fails more predictably when misconfigured. (Alex Loddengaard via
+    cdouglas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

@@ -35,6 +35,9 @@ import org.apache.hadoop.io.WritableUtils;
 
 /** An implementation of UserGroupInformation in the Unix system */
 public class UnixUserGroupInformation extends UserGroupInformation {
+  public static final String DEFAULT_USERNAME = "DrWho";
+  public static final String DEFAULT_GROUP = "Tardis";
+
   final static public String UGI_PROPERTY_NAME = "hadoop.job.ugi";
   final static private HashMap<String, UnixUserGroupInformation> user2UGIMap =
     new HashMap<String, UnixUserGroupInformation>();
@@ -226,10 +229,23 @@ public class UnixUserGroupInformation extends UserGroupInformation {
    * has a UGI in the ugi map, return the ugi in the map.
    * Otherwise get the current user's information from Unix, store it
    * in the map, and return it.
+   *
+   * If the current user's UNIX username or groups are configured in such a way
+   * to throw an Exception, for example if the user uses LDAP, then this method
+   * will use a the {@link #DEFAULT_USERNAME} and {@link #DEFAULT_GROUP}
+   * constants.
    */
   public static UnixUserGroupInformation login() throws LoginException {
     try {
-      String userName =  getUnixUserName();
+      String userName;
+
+      // if an exception occurs, then uses the
+      // default user
+      try {
+        userName =  getUnixUserName();
+      } catch (Exception e) {
+        userName = DEFAULT_USERNAME;
+      }
 
       // check if this user already has a UGI object in the ugi map
       UnixUserGroupInformation ugi = user2UGIMap.get(userName);
@@ -240,7 +256,16 @@ public class UnixUserGroupInformation extends UserGroupInformation {
       /* get groups list from UNIX. 
        * It's assumed that the first group is the default group.
        */
-      String[]  groupNames = getUnixGroups();
+      String[]  groupNames;
+
+      // if an exception occurs, then uses the
+      // default group
+      try {
+        groupNames = getUnixGroups();
+      } catch (Exception e) {
+        groupNames = new String[1];
+        groupNames[0] = DEFAULT_GROUP;
+      }
 
       // construct a Unix UGI
       ugi = new UnixUserGroupInformation(userName, groupNames);
