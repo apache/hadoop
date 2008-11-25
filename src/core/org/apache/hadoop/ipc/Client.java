@@ -22,6 +22,7 @@ import java.net.Socket;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.net.ConnectException;
 
 import java.io.IOException;
 import java.io.DataInputStream;
@@ -352,7 +353,7 @@ public class Client {
       socket = null;
 
       // throw the exception if the maximum number of retries is reached
-      if (curRetries == maxRetries) {
+      if (curRetries >= maxRetries) {
         throw ioe;
       }
 
@@ -696,13 +697,42 @@ public class Client {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
-          throw (IOException)new IOException(
-              "Call to "+ addr + " failed on local exception: " + call.error)
-                  .initCause(call.error);
+          throw wrapException(addr, call.error);
         }
       } else {
         return call.value;
       }
+    }
+  }
+
+  /**
+   * Take an IOException and the address we were trying to connect to
+   * and return an IOException with the input exception as the cause.
+   * The new exception provides the stack trace of the place where 
+   * the exception is thrown and some extra diagnostics information.
+   * If the exception is ConnectException or SocketTimeoutException, 
+   * return a new one of the same type; Otherwise return an IOException.
+   * 
+   * @param addr target address
+   * @param exception the relevant exception
+   * @return an exception to throw
+   */
+  private IOException wrapException(InetSocketAddress addr,
+                                         IOException exception) {
+    if (exception instanceof ConnectException) {
+      //connection refused; include the host:port in the error
+      return (ConnectException)new ConnectException(
+           "Call to " + addr + " failed on connection exception: " + exception)
+                    .initCause(exception);
+    } else if (exception instanceof SocketTimeoutException) {
+      return (SocketTimeoutException)new SocketTimeoutException(
+           "Call to " + addr + " failed on socket timeout exception: "
+                      + exception).initCause(exception);
+    } else {
+      return (IOException)new IOException(
+           "Call to " + addr + " failed on local exception: " + exception)
+                                 .initCause(exception);
+
     }
   }
 
