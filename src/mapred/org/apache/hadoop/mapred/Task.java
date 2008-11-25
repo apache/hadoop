@@ -68,7 +68,8 @@ abstract class Task implements Writable, Configurable {
     REDUCE_INPUT_RECORDS,
     REDUCE_OUTPUT_RECORDS,
     REDUCE_SKIPPED_GROUPS,
-    REDUCE_SKIPPED_RECORDS
+    REDUCE_SKIPPED_RECORDS,
+    SPILLED_RECORDS
   }
   
   /**
@@ -131,6 +132,7 @@ abstract class Task implements Writable, Configurable {
   protected JobContext jobContext;
   protected TaskAttemptContext taskContext;
   private volatile boolean commitPending = false;
+  protected final Counters.Counter spilledRecordsCounter;
 
   ////////////////////////////////////////////
   // Constructors
@@ -139,6 +141,7 @@ abstract class Task implements Writable, Configurable {
   public Task() {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
     taskId = new TaskAttemptID();
+    spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition) {
@@ -155,6 +158,7 @@ abstract class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
     this.mapOutputFile.setJobId(taskId.getJobID());
+    spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
   }
 
   ////////////////////////////////////////////

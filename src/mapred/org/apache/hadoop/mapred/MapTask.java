@@ -948,7 +948,8 @@ class MapTask extends Task {
           IFile.Writer<K, V> writer = null;
           try {
             long segmentStart = out.getPos();
-            writer = new Writer<K, V>(job, out, keyClass, valClass, codec);
+            writer = new Writer<K, V>(job, out, keyClass, valClass, codec,
+                                      spilledRecordsCounter);
             if (null == combinerClass) {
               // spill directly
               DataInputBuffer key = new DataInputBuffer();
@@ -1047,7 +1048,8 @@ class MapTask extends Task {
           try {
             long segmentStart = out.getPos();
             // Create a new codec, don't care!
-            writer = new IFile.Writer<K, V>(job, out, keyClass, valClass, codec);
+            writer = new IFile.Writer<K, V>(job, out, keyClass, valClass, codec,
+                                            spilledRecordsCounter);
 
             if (i == partition) {
               final long recordStart = out.getPos();
@@ -1188,7 +1190,7 @@ class MapTask extends Task {
           writeSingleSpillIndexToFile(getTaskID(),
               new Path(filename[0].getParent(),"file.out.index"));
         }
-    	  return;
+        return;
       }
       //make correction in the length to include the sequence file header
       //lengths for each partition
@@ -1217,8 +1219,8 @@ class MapTask extends Task {
         //create dummy files
         for (int i = 0; i < partitions; i++) {
           long segmentStart = finalOut.getPos();
-          Writer<K, V> writer = new Writer<K, V>(job, finalOut, 
-                                                 keyClass, valClass, codec);
+          Writer<K, V> writer = new Writer<K, V>(job, finalOut, keyClass,
+                                                 valClass, codec, null);
           writer.close();
           writeIndexRecord(finalIndexChecksumOut, segmentStart, writer);
         }
@@ -1245,8 +1247,8 @@ class MapTask extends Task {
             in.seek(segmentOffset);
 
             Segment<K, V> s = 
-              new Segment<K, V>(new Reader<K, V>(job, in, segmentLength, codec),
-                                true);
+              new Segment<K, V>(new Reader<K, V>(job, in, segmentLength,
+                                                 codec, null), true);
             segmentList.add(i, s);
             
             if (LOG.isDebugEnabled()) {
@@ -1264,12 +1266,14 @@ class MapTask extends Task {
                          keyClass, valClass,
                          segmentList, job.getInt("io.sort.factor", 100), 
                          new Path(getTaskID().toString()), 
-                         job.getOutputKeyComparator(), reporter);
+                         job.getOutputKeyComparator(), reporter,
+                         null, spilledRecordsCounter);
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();
           Writer<K, V> writer = 
-              new Writer<K, V>(job, finalOut, keyClass, valClass, codec);
+              new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
+                               spilledRecordsCounter);
           if (null == combinerClass || numSpills < minSpillsForCombine) {
             Merger.writeFile(kvIter, writer, reporter);
           } else {

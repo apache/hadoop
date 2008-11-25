@@ -65,7 +65,11 @@ class IFile {
     
     long decompressedBytesWritten = 0;
     long compressedBytesWritten = 0;
-    
+
+    // Count records written to disk
+    private long numRecordsWritten = 0;
+    private final Counters.Counter writtenRecordsCounter;
+
     IFileOutputStream checksumOut;
 
     Class<K> keyClass;
@@ -77,14 +81,18 @@ class IFile {
 
     public Writer(Configuration conf, FileSystem fs, Path file, 
                   Class<K> keyClass, Class<V> valueClass,
-                  CompressionCodec codec) throws IOException {
-      this(conf, fs.create(file), keyClass, valueClass, codec);
+                  CompressionCodec codec,
+                  Counters.Counter writesCounter) throws IOException {
+      this(conf, fs.create(file), keyClass, valueClass, codec,
+           writesCounter);
       ownOutputStream = true;
     }
     
     public Writer(Configuration conf, FSDataOutputStream out, 
         Class<K> keyClass, Class<V> valueClass,
-        CompressionCodec codec) throws IOException {
+        CompressionCodec codec, Counters.Counter writesCounter)
+        throws IOException {
+      this.writtenRecordsCounter = writesCounter;
       this.checksumOut = new IFileOutputStream(out);
       this.rawOut = out;
       this.start = this.rawOut.getPos();
@@ -107,7 +115,7 @@ class IFile {
       this.valueSerializer = serializationFactory.getSerializer(valueClass);
       this.valueSerializer.open(buffer);
     }
-    
+
     public void close() throws IOException {
 
       // Close the serializers
@@ -140,6 +148,9 @@ class IFile {
         rawOut.close();
       }
       out = null;
+      if(writtenRecordsCounter != null) {
+        writtenRecordsCounter.increment(numRecordsWritten);
+      }
     }
 
     public void append(K key, V value) throws IOException {
@@ -178,6 +189,7 @@ class IFile {
       decompressedBytesWritten += keyLength + valueLength + 
                                   WritableUtils.getVIntSize(keyLength) + 
                                   WritableUtils.getVIntSize(valueLength);
+      ++numRecordsWritten;
     }
     
     public void append(DataInputBuffer key, DataInputBuffer value)
@@ -203,7 +215,8 @@ class IFile {
       decompressedBytesWritten += keyLength + valueLength + 
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
-}
+      ++numRecordsWritten;
+    }
     
     public long getRawLength() {
       return decompressedBytesWritten;
@@ -220,6 +233,10 @@ class IFile {
   public static class Reader<K extends Object, V extends Object> {
     private static final int DEFAULT_BUFFER_SIZE = 128*1024;
     private static final int MAX_VINT_SIZE = 9;
+
+    // Count records read from disk
+    private long numRecordsRead = 0;
+    private final Counters.Counter readRecordsCounter;
 
     final InputStream in;        // Possibly decompressed stream that we read
     Decompressor decompressor;
@@ -242,14 +259,15 @@ class IFile {
      * @param file Path of the file to be opened. This file should have
      *             checksum bytes for the data at the end of the file.
      * @param codec codec
+     * @param readsCounter Counter for records read from disk
      * @throws IOException
      */
-    
     public Reader(Configuration conf, FileSystem fs, Path file,
-                  CompressionCodec codec) throws IOException {
+                  CompressionCodec codec,
+                  Counters.Counter readsCounter) throws IOException {
       this(conf, fs.open(file), 
            fs.getFileStatus(file).getLen(),
-           codec);
+           codec, readsCounter);
     }
 
     /**
@@ -260,10 +278,13 @@ class IFile {
      * @param length Length of the data in the stream, including the checksum
      *               bytes.
      * @param codec codec
+     * @param readsCounter Counter for records read from disk
      * @throws IOException
      */
     public Reader(Configuration conf, FSDataInputStream in, long length, 
-                  CompressionCodec codec) throws IOException {
+                  CompressionCodec codec,
+                  Counters.Counter readsCounter) throws IOException {
+      readRecordsCounter = readsCounter;
       checksumIn = new IFileInputStream(in,length);
       if (codec != null) {
         decompressor = CodecPool.getDecompressor(codec);
@@ -400,7 +421,8 @@ class IFile {
       bytesRead += recordLength;
 
       ++recNo;
-      
+      ++numRecordsRead;
+
       return true;
     }
 
@@ -418,6 +440,9 @@ class IFile {
       // Release the buffer
       dataIn = null;
       buffer = null;
+      if(readRecordsCounter != null) {
+        readRecordsCounter.increment(numRecordsRead);
+      }
     }
   }    
   
@@ -431,7 +456,7 @@ class IFile {
     public InMemoryReader(RamManager ramManager, TaskAttemptID taskAttemptId,
                           byte[] data, int start, int length)
                           throws IOException {
-      super(null, null, length - start, null);
+      super(null, null, length - start, null, null);
       this.ramManager = ramManager;
       this.taskAttemptId = taskAttemptId;
       

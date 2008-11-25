@@ -80,7 +80,8 @@ public class TestReduceTask extends TestCase {
     FileSystem rfs = ((LocalFileSystem)localFs).getRaw();
     Path path = new Path(tmpDir, "data.in");
     IFile.Writer<Text, Text> writer = 
-      new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class, codec);
+      new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class,
+                                   codec, null);
     for(Pair p: vals) {
       writer.append(new Text(p.key), new Text(p.value));
     }
@@ -90,7 +91,7 @@ public class TestReduceTask extends TestCase {
     RawKeyValueIterator rawItr = 
       Merger.merge(conf, rfs, Text.class, Text.class, codec, new Path[]{path}, 
                    false, conf.getInt("io.sort.factor", 100), tmpDir, 
-                   new Text.Comparator(), new NullProgress());
+                   new Text.Comparator(), new NullProgress(),null,null);
     @SuppressWarnings("unchecked") // WritableComparators are not generic
     ReduceTask.ValuesIterator valItr = 
       new ReduceTask.ValuesIterator<Text,Text>(rawItr,

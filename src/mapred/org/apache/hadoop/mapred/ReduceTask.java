@@ -382,7 +382,7 @@ class ReduceTask extends Task {
           job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
           !conf.getKeepFailedTaskFiles(), job.getInt("io.sort.factor", 100),
           new Path(getTaskID().toString()), job.getOutputKeyComparator(),
-          reporter)
+          reporter, spilledRecordsCounter, null)
       : reduceCopier.createKVIterator(job, rfs, reporter);
         
     // free up the data structures
@@ -2080,9 +2080,9 @@ class ReduceTask extends Task {
                             reduceTask.getTaskID(), inMemToDiskBytes);
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
-              tmpDir, comparator, reporter);
+              tmpDir, comparator, reporter, spilledRecordsCounter, null);
           final Writer writer = new Writer(job, fs, outputPath,
-              keyClass, valueClass, codec);
+              keyClass, valueClass, codec, null);
           try {
             Merger.writeFile(rIter, writer, reporter);
             addToMapOutputFilesOnDisk(fs.getFileStatus(outputPath));
@@ -2139,7 +2139,7 @@ class ReduceTask extends Task {
         RawKeyValueIterator diskMerge = Merger.merge(
             job, fs, keyClass, valueClass, diskSegments,
             ioSortFactor, numInMemSegments, tmpDir, comparator,
-            reporter, false);
+            reporter, false, spilledRecordsCounter, null);
         diskSegments.clear();
         if (0 == finalSegments.size()) {
           return diskMerge;
@@ -2149,7 +2149,7 @@ class ReduceTask extends Task {
       }
       return Merger.merge(job, fs, keyClass, valueClass,
                    finalSegments, finalSegments.size(), tmpDir,
-                   comparator, reporter);
+                   comparator, reporter, spilledRecordsCounter, null);
     }
 
     class RawKVIteratorReader extends IFile.Reader<K,V> {
@@ -2158,7 +2158,7 @@ class ReduceTask extends Task {
 
       public RawKVIteratorReader(RawKeyValueIterator kvIter, long size)
           throws IOException {
-        super(null, null, size, null);
+        super(null, null, size, null, spilledRecordsCounter);
         this.kvIter = kvIter;
       }
 
@@ -2383,7 +2383,7 @@ class ReduceTask extends Task {
               new Writer(conf,rfs, outputPath, 
                          conf.getMapOutputKeyClass(), 
                          conf.getMapOutputValueClass(),
-                         codec);
+                         codec, null);
             RawKeyValueIterator iter  = null;
             Path tmpDir = new Path(reduceTask.getTaskID().toString());
             final Reporter reporter = getReporter(umbilical);
@@ -2393,7 +2393,8 @@ class ReduceTask extends Task {
                                   conf.getMapOutputValueClass(),
                                   codec, mapFiles.toArray(new Path[mapFiles.size()]), 
                                   true, ioSortFactor, tmpDir, 
-                                  conf.getOutputKeyComparator(), reporter);
+                                  conf.getOutputKeyComparator(), reporter,
+                                  spilledRecordsCounter, null);
               
               Merger.writeFile(iter, writer, reporter);
               writer.close();
@@ -2477,7 +2478,7 @@ class ReduceTask extends Task {
           new Writer(conf, rfs, outputPath,
                      conf.getMapOutputKeyClass(),
                      conf.getMapOutputValueClass(),
-                     codec);
+                     codec, null);
 
         RawKeyValueIterator rIter = null;
         final Reporter reporter = getReporter(umbilical);
@@ -2490,7 +2491,8 @@ class ReduceTask extends Task {
                                (Class<V>)conf.getMapOutputValueClass(),
                                inMemorySegments, inMemorySegments.size(),
                                new Path(reduceTask.getTaskID().toString()),
-                               conf.getOutputKeyComparator(), reporter);
+                               conf.getOutputKeyComparator(), reporter,
+                               spilledRecordsCounter, null);
           
           if (null == combinerClass) {
             Merger.writeFile(rIter, writer, reporter);
