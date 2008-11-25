@@ -343,7 +343,7 @@ public class LeaseManager {
   class Monitor implements Runnable {
     public void run() {
       try {
-        while (fsnamesystem.fsRunning) {
+        while (fsnamesystem.isRunning()) {
           synchronized (fsnamesystem) {
             synchronized (LeaseManager.this) {
               Lease top;
