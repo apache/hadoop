@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.dfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.Collection;
-import java.util.Random;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
-import java.net.*;
-import java.lang.InterruptedException;
+import java.util.Random;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -198,18 +199,6 @@ public class TestDecommission extends TestCase {
   }
 
   /*
-   * put node back in action
-   */
-  private void commissionNode(FileSystem filesys, FileSystem localFileSys,
-                              String node) throws IOException {
-    DistributedFileSystem dfs = (DistributedFileSystem) filesys;
-
-    System.out.println("Commissioning nodes.");
-    writeConfigFile(localFileSys, excludeFile, null);
-    dfs.refreshNodes();
-  }
-
-  /*
    * Check if node is in the requested state.
    */
   private boolean checkNodeState(FileSystem filesys, 
@@ -245,7 +234,6 @@ public class TestDecommission extends TestCase {
   private void waitNodeState(FileSystem filesys,
                              String node,
                              NodeState state) throws IOException {
-    DistributedFileSystem dfs = (DistributedFileSystem) filesys;
     boolean done = checkNodeState(filesys, node, state);
     while (!done) {
       System.out.println("Waiting for node " + node +
@@ -287,7 +275,6 @@ public class TestDecommission extends TestCase {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
     FileSystem fileSys = cluster.getFileSystem();
-    DistributedFileSystem dfs = (DistributedFileSystem) fileSys;
 
     try {
       for (int iteration = 0; iteration < numDatanodes - 1; iteration++) {
