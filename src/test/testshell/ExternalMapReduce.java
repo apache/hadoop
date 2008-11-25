@@ -125,13 +125,8 @@ public class ExternalMapReduce extends Configured implements Tool {
   }
   
   public static void main(String[] args) throws Exception {
-    Configuration commandConf = JobClient.getCommandLineConfig();
-    if (commandConf != null) {
-      ToolRunner.run(new Configuration(commandConf),
+    int res = ToolRunner.run(new Configuration(),
                      new ExternalMapReduce(), args);
-    } else {
-      ToolRunner.run(new Configuration(),
-                     new ExternalMapReduce(), args);
-    }
+    System.exit(res);
   }
 }

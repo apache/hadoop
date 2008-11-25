@@ -35,6 +35,12 @@ Trunk (unreleased changes)
 
     HADOOP-1650. Upgrade to Jetty 6. (cdouglas)
 
+    HADOOP-3986. Remove static Configuration from JobClient. (Amareshwari
+    Sriramadasu via cdouglas)
+      JobClient::setCommandLineConfig is removed
+      JobClient::getCommandLineConfig is removed
+      JobShell, TestJobShell classes are removed
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
