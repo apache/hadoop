@@ -29,6 +29,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
@@ -54,7 +57,9 @@ public class GangliaContext extends AbstractMetricsContext {
   private static final int DEFAULT_DMAX = 0;
   private static final int DEFAULT_PORT = 8649;
   private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
-    
+
+  private final Log LOG = LogFactory.getLog(this.getClass());    
+
   private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
     
   static {
@@ -62,6 +67,7 @@ public class GangliaContext extends AbstractMetricsContext {
     typeTable.put(Byte.class, "int8");
     typeTable.put(Short.class, "int16");
     typeTable.put(Integer.class, "int32");
+    typeTable.put(Long.class, "float");
     typeTable.put(Float.class, "float");
   }
     
@@ -80,8 +86,7 @@ public class GangliaContext extends AbstractMetricsContext {
   public GangliaContext() {
   }
     
-  public void init(String contextName, ContextFactory factory) 
-  {
+  public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
         
     String periodStr = getAttribute(PERIOD_PROPERTY);
@@ -112,22 +117,35 @@ public class GangliaContext extends AbstractMetricsContext {
       se.printStackTrace();
     }
   }
-        
-  public void emitRecord(String contextName, String recordName, OutputRecord outRec) 
-    throws IOException
-  {
+
+  public void emitRecord(String contextName, String recordName,
+    OutputRecord outRec) 
+  throws IOException {
+    // Setup so that the records have the proper leader names so they are
+    // unambiguous at the ganglia level, and this prevents a lot of rework
+    StringBuilder sb = new StringBuilder();
+    sb.append(contextName);
+    sb.append('.');
+    sb.append(recordName);
+    sb.append('.');
+    int sbBaseLen = sb.length();
+
     // emit each metric in turn
     for (String metricName : outRec.getMetricNames()) {
       Object metric = outRec.getMetric(metricName);
       String type = typeTable.get(metric.getClass());
-      emitMetric(metricName, type, metric.toString());
+      if (type != null) {
+        sb.append(metricName);
+        emitMetric(sb.toString(), type, metric.toString());
+        sb.setLength(sbBaseLen);
+      } else {
+        LOG.warn("Unknown metrics type: " + metric.getClass());
+      }
     }
-        
   }
     
   private void emitMetric(String name, String type,  String value) 
-    throws IOException
-  {
+  throws IOException {
     String units = getUnits(name);
     int slope = getSlope(name);
     int tmax = getTmax(name);
@@ -167,6 +185,9 @@ public class GangliaContext extends AbstractMetricsContext {
   }
     
   private int getTmax(String metricName) {
+    if (tmaxTable == null) {
+      return DEFAULT_TMAX;
+    }
     String tmaxString = tmaxTable.get(metricName);
     if (tmaxString == null) {
       return DEFAULT_TMAX;
@@ -219,5 +240,4 @@ public class GangliaContext extends AbstractMetricsContext {
     buffer[offset++] = (byte)((i >> 8) & 0xff);
     buffer[offset++] = (byte)(i & 0xff);
   }
-    
 }

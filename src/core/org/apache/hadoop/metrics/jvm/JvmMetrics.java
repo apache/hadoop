@@ -32,10 +32,9 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.metrics.MetricsException;
 
 /**
- * Singleton class which eports Java Virtual Machine metrics to the metrics API.  
+ * Singleton class which reports Java Virtual Machine metrics to the metrics API.  
  * Any application can create an instance of this class in order to emit
  * Java VM metrics.  
  */
@@ -58,6 +57,11 @@ public class JvmMetrics implements Updater {
     private long infoCount  = 0;
     
     public synchronized static JvmMetrics init(String processName, String sessionId) {
+      return init(processName, sessionId, "metrics");
+    }
+    
+    public synchronized static JvmMetrics init(String processName, String sessionId,
+      String recordName) {
         if (theInstance != null) {
             log.info("Cannot initialize JVM Metrics with processName=" + 
                      processName + ", sessionId=" + sessionId + 
@@ -66,15 +70,16 @@ public class JvmMetrics implements Updater {
         else {
             log.info("Initializing JVM Metrics with processName=" 
                     + processName + ", sessionId=" + sessionId);
-            theInstance = new JvmMetrics(processName, sessionId);
+            theInstance = new JvmMetrics(processName, sessionId, recordName);
         }
         return theInstance;
     }
     
     /** Creates a new instance of JvmMetrics */
-    private JvmMetrics(String processName, String sessionId) {
+    private JvmMetrics(String processName, String sessionId,
+      String recordName) {
         MetricsContext context = MetricsUtil.getContext("jvm");
-        metrics = MetricsUtil.createRecord(context, "metrics");
+        metrics = MetricsUtil.createRecord(context, recordName);
         metrics.setTag("processName", processName);
         metrics.setTag("sessionId", sessionId);
         context.registerUpdater(this);
