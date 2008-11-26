@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -135,17 +136,25 @@ class Merger {
     Path file = null;
     boolean preserve = false;
     CompressionCodec codec = null;
+    long segmentOffset = 0;
     long segmentLength = -1;
     
     public Segment(Configuration conf, FileSystem fs, Path file,
                    CompressionCodec codec, boolean preserve) throws IOException {
+      this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve);
+    }
+
+    public Segment(Configuration conf, FileSystem fs, Path file,
+        long segmentOffset, long segmentLength, CompressionCodec codec,
+        boolean preserve) throws IOException {
       this.conf = conf;
       this.fs = fs;
       this.file = file;
       this.codec = codec;
       this.preserve = preserve;
-      
-      this.segmentLength = fs.getFileStatus(file).getLen();
+
+      this.segmentOffset = segmentOffset;
+      this.segmentLength = segmentLength;
     }
     
     public Segment(Reader<K, V> reader, boolean preserve) {
@@ -157,7 +166,9 @@ class Merger {
 
     private void init(Counters.Counter readsCounter) throws IOException {
       if (reader == null) {
-        reader = new Reader<K, V>(conf, fs, file, codec, readsCounter);
+        FSDataInputStream in = fs.open(file);
+        in.seek(segmentOffset);
+        reader = new Reader<K, V>(conf, in, segmentLength, codec, readsCounter);
       }
     }
     

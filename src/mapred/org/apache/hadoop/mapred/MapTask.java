@@ -1236,27 +1236,23 @@ class MapTask extends Task {
             new ArrayList<Segment<K, V>>(numSpills);
           TaskAttemptID mapId = getTaskID();
           for(int i = 0; i < numSpills; i++) {
-            IndexRecord indexRecord = 
+            final IndexRecord indexRecord =
               getIndexInformation(mapId, i, parts);
 
             long segmentOffset = indexRecord.startOffset;
-            long rawSegmentLength = indexRecord.rawLength;
             long segmentLength = indexRecord.partLength;
 
-            FSDataInputStream in = rfs.open(filename[i]);
-            in.seek(segmentOffset);
-
-            Segment<K, V> s = 
-              new Segment<K, V>(new Reader<K, V>(job, in, segmentLength,
-                                                 codec, null), true);
+            Segment<K, V> s =
+              new Segment<K, V>(job, rfs, filename[i], segmentOffset,
+                                segmentLength, codec, true);
             segmentList.add(i, s);
             
             if (LOG.isDebugEnabled()) {
+              long rawSegmentLength = indexRecord.rawLength;
               LOG.debug("MapId=" + mapId + " Reducer=" + parts +
                   "Spill =" + i + "(" + segmentOffset + ","+ 
                         rawSegmentLength + ", " + segmentLength + ")");
             }
-            indexRecord = null;
           }
           
           //merge
