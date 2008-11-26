@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * A helper to load the native hadoop code i.e. libhadoop.so.
  * This handles the fallback to either the bundled libhadoop-Linux-i386-32.so
- * or the the default java implementations where appropriate.
+ * or the default java implementations where appropriate.
  *  
  */
 public class NativeCodeLoader {

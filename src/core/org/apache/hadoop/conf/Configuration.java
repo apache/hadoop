@@ -1153,9 +1153,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /** 
-   * Set the quiteness-mode. 
+   * Set the quietness-mode. 
    * 
-   * In the the quite-mode error and informational messages might not be logged.
+   * In the quiet-mode, error and informational messages might not be logged.
    * 
    * @param quietmode <code>true</code> to set quiet-mode on, <code>false</code>
    *              to turn it off.

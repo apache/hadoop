@@ -518,7 +518,7 @@ public class HarFileSystem extends FilterFileSystem {
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     FileStatus archiveStatus = fs.getFileStatus(archiveIndex);
-    // get the fs DataInputStream for the the underlying file
+    // get the fs DataInputStream for the underlying file
     // look up the index.
     Path p = makeQualified(f);
     Path harPath = getPathInHar(p);
@@ -547,7 +547,7 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    // get the fs DataInputStream for the the underlying file
+    // get the fs DataInputStream for the underlying file
     // look up the index.
     Path p = makeQualified(f);
     Path harPath = getPathInHar(p);

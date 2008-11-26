@@ -483,7 +483,7 @@ class ReplicationTargetChooser {
 
   /**
    * Verify that the block is replicated on at least 2 different racks
-   * if there is more than one rack in the the system.
+   * if there is more than one rack in the system.
    * 
    * @param lBlk block with locations
    * @param cluster 
@@ -499,7 +499,7 @@ class ReplicationTargetChooser {
 
   /**
    * Verify that the block is replicated on at least minRacks different racks
-   * if there is more than minRacks rack in the the system.
+   * if there is more than minRacks rack in the system.
    * 
    * @param lBlk block with locations
    * @param minRacks number of racks the block should be replicated to

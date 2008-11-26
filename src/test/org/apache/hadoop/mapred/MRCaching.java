@@ -205,7 +205,7 @@ public class MRCaching {
     DistributedCache.addCacheArchive(uri6, conf);
     RunningJob job = JobClient.runJob(conf);
     int count = 0;
-    // after the job ran check to see if the the input from the localized cache
+    // after the job ran check to see if the input from the localized cache
     // match the real string. check if there are 3 instances or not.
     Path result = new Path(TEST_ROOT_DIR + "/test.txt");
     {

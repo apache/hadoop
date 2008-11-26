@@ -219,6 +219,8 @@ Trunk (unreleased changes)
     name "value", so the counter values can not be seen. (Jason Attributor
     and Brian Bockelman via stack)
 
+    HADOOP-4704. Fix javadoc typos "the the". (szetszwo)
+
 Release 0.19.1 - Unreleased
 
   BUG FIXES

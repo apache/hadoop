@@ -91,7 +91,7 @@ class JobQueueJobInProgressListener extends JobInProgressListener {
   }
 
   /**
-   * Returns a synchronized view of the the job queue.
+   * Returns a synchronized view of the job queue.
    */
   public Collection<JobInProgress> getJobQueue() {
     return jobQueue.values();

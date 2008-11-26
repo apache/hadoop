@@ -22,12 +22,9 @@ import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * This interface defines an iterator interface that will help the reducer class
- * for re-grouping the values in the values iterator of the reduce method
- * according the their source tags. Once the value re-grouped, the reducer can
- * perform the cross product over the values in different groups.
- * 
- * 
+ * This defines an iterator interface that will help the reducer class
+ * re-group its input by source tags. Once the values are re-grouped,
+ * the reducer will receive the cross product of values from different groups.
  */
 public interface ResetableIterator extends Iterator {
   public void reset();

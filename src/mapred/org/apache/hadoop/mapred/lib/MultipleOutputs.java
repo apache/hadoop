@@ -127,7 +127,7 @@ public class MultipleOutputs {
   private static final String COUNTERS_ENABLED = "mo.counters";
 
   /**
-   * Counters group used by the the counters of MultipleOutputs.
+   * Counters group used by the counters of MultipleOutputs.
    */
   private static final String COUNTERS_GROUP = MultipleOutputs.class.getName();
 

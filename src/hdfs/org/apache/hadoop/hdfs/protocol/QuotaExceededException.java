@@ -26,7 +26,7 @@ import java.io.IOException;
  * on number of files and directories) or a diskspace quota (limit on space 
  * taken by all the file under the directory tree). <br> <br>
  * 
- * The message for the exception specifies the the directory where the quota
+ * The message for the exception specifies the directory where the quota
  * was violated and actual quotas.
  */
 public final class QuotaExceededException extends IOException {

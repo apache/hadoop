@@ -496,7 +496,7 @@ public class TestDFSPermission extends TestCase {
       }
     }
 
-    /* Log the the permissions and required permissions */
+    /** Log the permissions and required permissions */
     protected void logPermissions() {
       LOG.info("required ancestor permission:"
           + Integer.toOctalString(requiredAncestorPermission));

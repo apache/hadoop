@@ -2575,7 +2575,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                  getReplication(timedOutItems[i]));
         }
       }
-      /* If we know the the target datanodes where the replication timedout,
+      /* If we know the target datanodes where the replication timedout,
        * we could invoke decBlocksScheduled() on it. Its ok for now.
        */
     }

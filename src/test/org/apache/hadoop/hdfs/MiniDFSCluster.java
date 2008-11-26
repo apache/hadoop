@@ -771,7 +771,7 @@ public class MiniDFSCluster {
   
   
   /**
-   * This method is valid only if the the data nodes have simulated data
+   * This method is valid only if the data nodes have simulated data
    * @param dataNodeIndex - data node i which to inject - the index is same as for getDataNodes()
    * @param blocksToInject - the blocks
    * @throws IOException
@@ -793,7 +793,7 @@ public class MiniDFSCluster {
   }
   
   /**
-   * This method is valid only if the the data nodes have simulated data
+   * This method is valid only if the data nodes have simulated data
    * @param blocksToInject - blocksToInject[] is indexed in the same order as the list 
    *             of datanodes returned by getDataNodes()
    * @throws IOException

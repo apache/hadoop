@@ -275,7 +275,7 @@ public class DancingLinks<ColumnName> {
   }
   
   /**
-   * Find a solution the the problem.
+   * Find a solution to the problem.
    * @param partial a temporary datastructure to keep the current partial 
    *                answer in
    * @param output the acceptor for the results that are found

@@ -38,7 +38,7 @@ import org.apache.hadoop.util.ToolRunner;
  * different client loads.
  * It allows the user to generate different mixes of read, write,
  * and list requests by specifying the probabilities of read and
- * write. The user controls the the intensity of the load by
+ * write. The user controls the intensity of the load by
  * adjusting parameters for the number of worker threads and the delay
  * between operations. While load generators are running, the user
  * can profile and monitor the running of the NameNode. When a load

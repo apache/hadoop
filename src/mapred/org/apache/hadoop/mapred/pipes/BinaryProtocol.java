@@ -205,7 +205,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
 
   /**
    * Create a proxy object that will speak the binary protocol on a socket.
-   * Upward messages are passed on the the specified handler and downward
+   * Upward messages are passed on the specified handler and downward
    * downward messages are public methods on this object.
    * @param sock The socket to communicate on.
    * @param handler The handler for the received messages.

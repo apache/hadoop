@@ -148,7 +148,7 @@ public class JobControl implements Runnable{
 
   /**
    * Add a new job.
-   * @param aJob the the new job
+   * @param aJob the new job
    */
   synchronized public String addJob(Job aJob) {
     String id = this.getNextJobID();
