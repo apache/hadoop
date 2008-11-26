@@ -46,6 +46,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4614. Lazily open segments when merging map spills to avoid using
     too many file descriptors. (Yuri Pradkin via cdouglas)
 
+    HADOOP-4542. TestDistributedUpgrade used succeed for wrong reasons.
+    (Raghu Angadi)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

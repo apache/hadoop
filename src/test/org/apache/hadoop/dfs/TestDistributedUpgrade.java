@@ -51,7 +51,11 @@ public class TestDistributedUpgrade extends TestCase {
    */
   void startNameNodeShouldFail(StartupOption operation) {
     try {
-      cluster = new MiniDFSCluster(conf, 0, operation); // should fail
+      //cluster = new MiniDFSCluster(conf, 0, operation); // should fail
+      // we set manage dirs to true as NN has to start from untar'ed image with 
+      // nn dirs set to name1 and name2
+      cluster = new MiniDFSCluster(0, conf, 0, false, true,
+          operation, null); // Should fail
       throw new AssertionError("NameNode should have failed to start");
     } catch (Exception expected) {
       expected = null;
