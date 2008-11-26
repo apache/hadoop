@@ -1028,11 +1028,9 @@ class MapTask extends Task {
             long rawSegmentLength = indexIn.readLong();
             long segmentLength = indexIn.readLong();
             indexIn.close();
-            FSDataInputStream in = localFs.open(filename[i]);
-            in.seek(segmentOffset);
             Segment<K, V> s = 
-              new Segment<K, V>(new Reader<K, V>(job, in, segmentLength, codec),
-                                true);
+              new Segment<K, V>(job, localFs, filename[i], segmentOffset, 
+                                segmentLength, codec, true);
             segmentList.add(i, s);
             
             if (LOG.isDebugEnabled()) {
