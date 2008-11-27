@@ -347,8 +347,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 storefileIndexSizeMB);
             }
             this.serverInfo.setLoad(hsl);
-            if (LOG.isDebugEnabled())
-              LOG.debug("sending server load: " + hsl);
             this.requestCount.set(0);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
