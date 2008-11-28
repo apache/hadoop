@@ -8,11 +8,14 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4705. Grant read permissions for files/directories
+    created by HOD. (Peeyush Bishnoi via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
-Release 0.19.0 - Unreleased
+Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
 
