@@ -996,6 +996,10 @@ class RegionManager implements HConstants {
     while (i.hasNext()) {
       Pair<HRegionInfo,HServerAddress> pair = i.next();
       if (addr.equals(pair.getSecond())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sending MSG_REGION_COMPACT " + pair.getFirst() + " to " +
+              addr);
+        }
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_COMPACT, pair.getFirst()));
         i.remove();
       }
@@ -1004,6 +1008,10 @@ class RegionManager implements HConstants {
     while (i.hasNext()) {
       Pair<HRegionInfo,HServerAddress> pair = i.next();
       if (addr.equals(pair.getSecond())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sending MSG_REGION_SPLIT " + pair.getFirst() + " to " +
+              addr);
+        }
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_SPLIT, pair.getFirst()));
         i.remove();
       }

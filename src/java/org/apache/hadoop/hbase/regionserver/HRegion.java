@@ -534,8 +534,7 @@ public class HRegion implements HConstants {
       byte [] startKey = this.regionInfo.getStartKey();
       byte [] endKey = this.regionInfo.getEndKey();
       if (HStoreKey.equalsTwoRowKeys(this.regionInfo,startKey, midKey)) {
-        LOG.debug("Startkey (" + startKey + ") and midkey + (" + 
-          midKey + ") are same, not splitting");
+        LOG.debug("Startkey and midkey are same, not splitting");
         return null;
       }
       if (HStoreKey.equalsTwoRowKeys(this.regionInfo,midKey, endKey)) {

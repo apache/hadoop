@@ -529,6 +529,7 @@ public class HBaseAdmin {
         arr[0] = (HTableDescriptor)args[0];
         this.master.modifyTable(tableName, op, arr);
       } break;
+      case HConstants.MODIFY_TABLE_COMPACT:
       case HConstants.MODIFY_TABLE_SPLIT: {
         Writable[] arr = null;
         if (args != null && args.length > 0) {
@@ -538,8 +539,7 @@ public class HBaseAdmin {
           } else if (args[0] instanceof ImmutableBytesWritable) {
             arr[0] = (ImmutableBytesWritable)args[0];
           } else {
-            throw new IOException(
-              "SPLIT with arg requires byte[] or ImmutableBytesWritable");
+            throw new IOException("SPLIT or COMPACT with arg requires byte[] or ImmutableBytesWritable");
           }
         }
         this.master.modifyTable(tableName, op, arr);

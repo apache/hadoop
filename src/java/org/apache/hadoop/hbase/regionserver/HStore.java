@@ -823,6 +823,7 @@ public class HStore implements HConstants {
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         if (this.storefiles.size() <= 0) {
+          LOG.debug("no store files to compact");
           return null;
         }
         // filesToCompact are sorted oldest to newest.
@@ -839,8 +840,8 @@ public class HStore implements HConstants {
         doMajorCompaction = isMajorCompaction(filesToCompact);
       }
       boolean references = hasReferences(filesToCompact);
-      if (!doMajorCompaction && !references &&
-          filesToCompact.size() < compactionThreshold) {
+      if (!doMajorCompaction && !references && 
+          (forceSplit || (filesToCompact.size() < compactionThreshold))) {
         return checkSplit(forceSplit);
       }
       if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
@@ -2036,6 +2037,9 @@ public class HStore implements HConstants {
             splitable = !curHSF.isReference();
             if (!splitable) {
               // RETURN IN MIDDLE OF FUNCTION!!! If not splitable, just return.
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(curHSF +  " is not splittable");
+              }
               return null;
             }
           }
@@ -2063,6 +2067,9 @@ public class HStore implements HConstants {
         // (ever) split this region. 
         if (HStoreKey.equalsTwoRowKeys(info, mk.getRow(), firstKey.getRow()) && 
             HStoreKey.equalsTwoRowKeys(info, mk.getRow(), lastKey.getRow())) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("cannot split because midkey is the same as first or last row");
+          }
           return null;
         }
         return new StoreSize(maxSize, mk.getRow());

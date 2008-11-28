@@ -1018,7 +1018,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             case MSG_REGION_SPLIT: {
               // Force split a region
               HRegion region = getRegion(info.getRegionName());
+              // flush the memcache for the region
+              region.flushcache();
+              // flag that the region should be split
               region.regionInfo.shouldSplit(true);
+              // force a compaction
               compactSplitThread.compactionRequested(region,
                 "MSG_REGION_SPLIT");
             } break;
@@ -1026,6 +1030,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             case MSG_REGION_COMPACT: {
               // Compact a region
               HRegion region = getRegion(info.getRegionName());
+              // flush the memcache for the region
+              region.flushcache();
+              // force a compaction
               compactSplitThread.compactionRequested(region,
                 "MSG_REGION_COMPACT");
             } break;
