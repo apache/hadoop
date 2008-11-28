@@ -11,6 +11,8 @@ Release 0.19.0 - Unreleased
                caching work....?] -- Update your hbad-default.xml file!
    HBASE-636   java6 as a requirement
    HBASE-994   IPC interfaces with different versions can cause problems
+   HBASE-1028  If key does not exist, return null in getRow rather than an
+               empty RowResult
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

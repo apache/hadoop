@@ -1274,6 +1274,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegion region = getRegion(regionName);
       Map<byte [], Cell> map = region.getFull(row, columnSet, ts,
           getLockFromId(lockId));
+      if (map == null || map.isEmpty())
+        return null;
       HbaseMapWritable<byte [], Cell> result =
         new HbaseMapWritable<byte [], Cell>();
       result.putAll(map);
