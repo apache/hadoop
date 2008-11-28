@@ -144,6 +144,7 @@ Release 0.19.0 - Unreleased
    HBASE-1026  Tests in mapred are failing
    HBASE-1020  Regionserver OOME handler should dump vital stats
    HBASE-1018  Regionservers should report detailed health to master
+   HBASE-1034  Remove useless TestToString unit test
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
