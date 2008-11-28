@@ -166,7 +166,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
       failed2 = true;
     }
     assertTrue(failed2);
-    assertEquals(handler.getRow(tableAname, rowBname).columns.size(), 0);
+    assertNull(handler.getRow(tableAname, rowBname));
 
     // Teardown
     handler.disableTable(tableAname);
@@ -231,7 +231,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     }
     assertTrue(failed);
     assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).value, valueCname));
-    assertEquals(handler.getRow(tableAname, rowBname).columns.size(), 0);
+    assertNull(handler.getRow(tableAname, rowBname));
 
     // Teardown
     handler.disableTable(tableAname);

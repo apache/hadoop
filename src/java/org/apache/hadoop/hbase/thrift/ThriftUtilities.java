@@ -104,6 +104,9 @@ public class ThriftUtilities {
    */
   static public TRowResult rowResultFromHBase(RowResult in) {
     TRowResult result = new TRowResult();
+    if(in == null) {
+    	return null;
+    }
     result.row = in.getRow();
     result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], Cell> entry : in.entrySet()){
