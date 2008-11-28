@@ -46,6 +46,13 @@
     value of 100 implies no user limits are imposed. 
     </description>
   </property>
+  <property>
+    <name>mapred.capacity-scheduler.queue.default.maximum-initialized-jobs-per-user</name>
+    <value>2</value>
+    <description>The maximum number of jobs to be pre-initialized for a user
+    of the job queue.
+    </description>
+  </property>
   
   <!-- The default configuration settings for the capacity task scheduler -->
   <!-- The default values would be applied to all the queues which don't have -->
@@ -74,4 +81,35 @@
       for the job queue at any given point of time by default.
     </description>
   </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user</name>
+    <value>2</value>
+    <description>The maximum number of jobs to be pre-initialized for a user
+    of the job queue.
+    </description>
+  </property>
+
+
+  <!-- Capacity scheduler Job Initialization configuration parameters -->
+  <property>
+    <name>mapred.capacity-scheduler.init-poll-interval</name>
+    <value>5000</value>
+    <description>The amount of time in miliseconds which is used to poll 
+    the job queues for jobs to initialize.
+    </description>
+  </property>
+  <property>
+    <name>mapred.capacity-scheduler.init-worker-threads</name>
+    <value>5</value>
+    <description>Number of worker threads which would be used by
+    Initialization poller to initialize jobs in a set of queue.
+    If number mentioned in property is equal to number of job queues
+    then a single thread would initialize jobs in a queue. If lesser
+    then a thread would get a set of queues assigned. If the number
+    is greater then number of threads would be equal to number of 
+    job queues.
+    </description>
+  </property>
+
 </configuration>

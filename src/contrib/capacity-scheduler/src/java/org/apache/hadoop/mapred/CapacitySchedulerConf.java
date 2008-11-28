@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -46,6 +44,8 @@ class CapacitySchedulerConf {
     "mapred.capacity-scheduler.queue.";
 
   private Configuration rmConf;
+
+  private int defaultMaxJobsPerUsersToInitialize;
   
   /**
    * Create a new ResourceManagerConf.
@@ -83,6 +83,9 @@ class CapacitySchedulerConf {
         "mapred.capacity-scheduler.default-minimum-user-limit-percent", 100);
     defaultSupportPriority = rmConf.getBoolean(
         "mapred.capacity-scheduler.default-supports-priority", false);
+    defaultMaxJobsPerUsersToInitialize = rmConf.getInt(
+        "mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user",
+        2);
   }
   
   /**
@@ -247,5 +250,102 @@ class CapacitySchedulerConf {
                                                   String property) {
       return QUEUE_CONF_PROPERTY_NAME_PREFIX + queue + "." + property;
   }
+
+  /**
+   * Gets the maximum number of jobs which are allowed to initialize in the
+   * job queue.
+   * 
+   * @param queue queue name.
+   * @return maximum number of jobs allowed to be initialized per user.
+   * @throws IllegalArgumentException if maximum number of users is negative
+   * or zero.
+   */
+  public int getMaxJobsPerUserToInitialize(String queue) {
+    int maxJobsPerUser = rmConf.getInt(toFullPropertyName(queue,
+        "maximum-initialized-jobs-per-user"), 
+        defaultMaxJobsPerUsersToInitialize);
+    if(maxJobsPerUser <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid maximum jobs per user configuration " + maxJobsPerUser);
+    }
+    return maxJobsPerUser;
+  }
   
+  /**
+   * Sets the maximum number of jobs which are allowed to be initialized 
+   * for a user in the queue.
+   * 
+   * @param queue queue name.
+   * @param value maximum number of jobs allowed to be initialized per user.
+   */
+  public void setMaxJobsPerUserToInitialize(String queue, int value) {
+    rmConf.setInt(toFullPropertyName(queue, 
+        "maximum-initialized-jobs-per-user"), value);
+  }
+
+  /**
+   * Amount of time in miliseconds which poller thread and initialization
+   * thread would sleep before looking at the queued jobs.
+   *  
+   * @return time in miliseconds.
+   * @throws IllegalArgumentException if time is negative or zero.
+   */
+  public long getSleepInterval() {
+    long sleepInterval = rmConf.getLong(
+        "mapred.capacity-scheduler.init-poll-interval", -1);
+    
+    if(sleepInterval <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid initializater poller interval " + sleepInterval);
+    }
+    
+    return sleepInterval;
+  }
+
+  /**
+   * Gets maximum number of threads which are spawned to initialize jobs
+   * in job queue in  parallel. The number of threads should be always less than
+   * or equal to number of job queues present.
+   * 
+   * If number of threads is configured to be more than job queues present,
+   * then number of job queues is used as number of threads used for initializing
+   * jobs.
+   * 
+   * So a given thread can have responsibility of initializing jobs from more 
+   * than one queue.
+   * 
+   * @return maximum number of threads spawned to initialize jobs in job queue
+   * in parallel.
+   */
+  public int getMaxWorkerThreads() {
+    int maxWorkerThreads = rmConf.getInt(
+        "mapred.capacity-scheduler.init-worker-threads", 0);
+    if(maxWorkerThreads <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid initializater worker thread number " + maxWorkerThreads);
+    }
+    return maxWorkerThreads;
+  }
+  /**
+   * Set the sleep interval which initialization poller would sleep before 
+   * it looks at the jobs in the job queue.
+   * 
+   * @param interval sleep interval
+   */
+  public void setSleepInterval(long interval) {
+    rmConf.setLong(
+        "mapred.capacity-scheduler.init-poll-interval", interval);
+  }
+  
+  /**
+   * Sets number of threads which can be spawned to initialize jobs in
+   * parallel.
+   * 
+   * @param poolSize number of threads to be spawned to initialize jobs
+   * in parallel.
+   */
+  public void setMaxWorkerThreads(int poolSize) {
+    rmConf.setInt(
+        "mapred.capacity-scheduler.init-worker-threads", poolSize);
+  }
 }

@@ -18,8 +18,10 @@
 package org.apache.hadoop.mapred;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -62,27 +64,62 @@ class JobQueuesManager extends JobInProgressListener {
 
     // whether the queue supports priorities
     boolean supportsPriorities;
-    Map<JobSchedulingInfo, JobInProgress> waitingJobs; // for waiting jobs
+    Map<JobSchedulingInfo, JobInProgress> jobList; // for waiting jobs
     Map<JobSchedulingInfo, JobInProgress> runningJobs; // for running jobs
+    
+    public Comparator<JobSchedulingInfo> comparator;
     
     QueueInfo(boolean prio) {
       this.supportsPriorities = prio;
       if (supportsPriorities) {
         // use the default priority-aware comparator
-        this.waitingJobs = 
-          new TreeMap<JobSchedulingInfo, JobInProgress>(
-              JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR);
-        this.runningJobs = 
-          new TreeMap<JobSchedulingInfo, JobInProgress>(
-              JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR);
+        comparator = JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR;
       }
       else {
-        this.waitingJobs = 
-          new TreeMap<JobSchedulingInfo, JobInProgress>(STARTTIME_JOB_COMPARATOR);
-        this.runningJobs = 
-          new TreeMap<JobSchedulingInfo, JobInProgress>(STARTTIME_JOB_COMPARATOR);
+        comparator = STARTTIME_JOB_COMPARATOR;
+      }
+      jobList = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+      runningJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+    }
+    
+    Collection<JobInProgress> getJobs() {
+      synchronized (jobList) {
+        return Collections.unmodifiableCollection(
+            new LinkedList<JobInProgress>(jobList.values()));
       }
     }
+    
+    Collection<JobInProgress> getRunningJobs() {
+      synchronized (runningJobs) {
+       return Collections.unmodifiableCollection(
+           new LinkedList<JobInProgress>(runningJobs.values())); 
+      }
+    }
+    
+    void addRunningJob(JobInProgress job) {
+      synchronized (runningJobs) {
+       runningJobs.put(new JobSchedulingInfo(job),job); 
+      }
+    }
+    
+    JobInProgress removeRunningJob(JobSchedulingInfo jobInfo) {
+      synchronized (runningJobs) {
+        return runningJobs.remove(jobInfo); 
+      }
+    }
+    
+    JobInProgress removeJob(JobSchedulingInfo schedInfo) {
+      synchronized (jobList) {
+        return jobList.remove(schedInfo);
+      }
+    }
+    
+    void addJob(JobInProgress job) {
+      synchronized (jobList) {
+        jobList.put(new JobSchedulingInfo(job), job);
+      }
+    }
+    
   }
   
   // we maintain a hashmap of queue-names to queue info
@@ -109,14 +146,15 @@ class JobQueuesManager extends JobInProgressListener {
    * Returns the queue of running jobs associated with the name
    */
   public Collection<JobInProgress> getRunningJobQueue(String queueName) {
-    return jobQueues.get(queueName).runningJobs.values();
+    return jobQueues.get(queueName).getRunningJobs();
   }
   
   /**
-   * Returns the queue of waiting jobs associated with the name
+   * Returns the queue of Uninitialised jobs associated with queue name.
+   * 
    */
-  public Collection<JobInProgress> getWaitingJobQueue(String queueName) {
-    return jobQueues.get(queueName).waitingJobs.values();
+  public Collection<JobInProgress> getJobs(String queueName) {
+    return jobQueues.get(queueName).getJobs();
   }
   
   @Override
@@ -133,19 +171,21 @@ class JobQueuesManager extends JobInProgressListener {
     }
     // add job to waiting queue. It will end up in the right place, 
     // based on priority. 
-    qi.waitingJobs.put(new JobSchedulingInfo(job), job);
+    qi.addJob(job);
     // let scheduler know. 
     scheduler.jobAdded(job);
   }
 
+  /*
+   * The removal of the running jobs alone is done by the JobQueueManager.
+   * The removal of the jobs in the job queue is taken care by the
+   * JobInitializationPoller.
+   */
   private void jobCompleted(JobInProgress job, JobSchedulingInfo oldInfo, 
                             QueueInfo qi) {
     LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
-             + job.getProfile().getQueueName() + " has completed");
-    // job could be in running or waiting queue
-    if (qi.runningJobs.remove(oldInfo) != null) {
-      qi.waitingJobs.remove(oldInfo);
-    }
+        + job.getProfile().getQueueName() + " has completed");
+    qi.removeRunningJob(oldInfo);
     // let scheduler know
     scheduler.jobCompleted(job);
   }
@@ -159,25 +199,21 @@ class JobQueuesManager extends JobInProgressListener {
   private void reorderJobs(JobInProgress job, JobSchedulingInfo oldInfo, 
                            QueueInfo qi) {
     
-    JobSchedulingInfo newInfo = new JobSchedulingInfo(job);
-    if (qi.waitingJobs.remove(oldInfo) == null) {
-      qi.runningJobs.remove(oldInfo);
-      // Add back to the running queue
-      qi.runningJobs.put(newInfo, job);
-    } else {
-      // Add back to the waiting queue
-      qi.waitingJobs.put(newInfo, job);
+    if(qi.removeJob(oldInfo) != null) {
+      qi.addJob(job);
+    }
+    if(qi.removeRunningJob(oldInfo) != null) {
+      qi.addRunningJob(job);
     }
   }
   
   // This is used to move a job from the waiting queue to the running queue.
   private void makeJobRunning(JobInProgress job, JobSchedulingInfo oldInfo, 
                               QueueInfo qi) {
-    // Remove from the waiting queue
-    qi.waitingJobs.remove(oldInfo);
-    
+    // Removing of the job from job list is responsibility of the
+    //initialization poller.
     // Add the job to the running queue
-    qi.runningJobs.put(new JobSchedulingInfo(job), job);
+    qi.addRunningJob(job);
   }
   
   // Update the scheduler as job's state has changed
@@ -221,4 +257,13 @@ class JobQueuesManager extends JobInProgressListener {
     }
   }
   
+  public void removeJobFromQueue(JobInProgress job) {
+    String queue = job.getProfile().getQueueName();
+    QueueInfo qi = jobQueues.get(queue);
+    qi.removeJob(new JobSchedulingInfo(job));
+  }
+  
+  Comparator<JobSchedulingInfo> getComparator(String queue) {
+    return jobQueues.get(queue).comparator;
+  }
 }

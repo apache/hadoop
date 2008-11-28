@@ -534,16 +534,7 @@ class CapacityTaskScheduler extends TaskScheduler {
            * consider the first few jobs per user.
            */ 
         }
-        // update stats on waiting jobs
-        for (JobInProgress j: 
-          scheduler.jobQueuesManager.getWaitingJobQueue(qsi.queueName)) {
-          // pending tasks
-          if (qsi.numPendingTasks > getClusterCapacity()) {
-            // that's plenty. no need for more computation
-            break;
-          }
-          qsi.numPendingTasks += getPendingTasks(j);
-        }
+        //TODO do we need to update stats on waiting jobs
       }
     }
 
@@ -665,26 +656,7 @@ class CapacityTaskScheduler extends TaskScheduler {
         }
       }
       
-      // if we're here, we found nothing in the running jobs. Time to 
-      // look at waiting jobs. Get first job of a user that is not over limit
-      for (JobInProgress j: 
-        scheduler.jobQueuesManager.getWaitingJobQueue(qsi.queueName)) {
-        // is this job's user over limit?
-        if (usersOverLimit.contains(j.getProfile().getUser())) {
-          // user over limit. 
-          continue;
-        }
-        // this job is a candidate for running. Initialize it, move it
-        // to run queue
-        j.initTasks();
-        // We found a suitable job. Get task from it.
-        t = obtainNewTask(taskTracker, j);
-        if (t != null) {
-          LOG.debug("Getting task from job " + 
-                    j.getJobID() + " in queue " + qsi.queueName);
-          return t;
-        }
-      }
+
       
       // if we're here, we haven't found anything. This could be because 
       // there is nothing to run, or that the user limit for some user is 
@@ -697,19 +669,6 @@ class CapacityTaskScheduler extends TaskScheduler {
           scheduler.jobQueuesManager.getRunningJobQueue(qsi.queueName)) {
           if ((j.getStatus().getRunState() == JobStatus.RUNNING) && 
               (usersOverLimit.contains(j.getProfile().getUser()))) {
-            t = obtainNewTask(taskTracker, j);
-            if (t != null) {
-              LOG.debug("Getting task from job " + 
-                        j.getJobID() + " in queue " + qsi.queueName);
-              return t;
-            }
-          }
-        }
-        // look at waiting jobs the same way
-        for (JobInProgress j: 
-          scheduler.jobQueuesManager.getWaitingJobQueue(qsi.queueName)) {
-          if (usersOverLimit.contains(j.getProfile().getUser())) {
-            j.initTasks();
             t = obtainNewTask(taskTracker, j);
             if (t != null) {
               LOG.debug("Getting task from job " + 
@@ -766,12 +725,10 @@ class CapacityTaskScheduler extends TaskScheduler {
       for (QueueSchedulingInfo qsi: qsiForAssigningTasks) {
         Collection<JobInProgress> runJobs = 
           scheduler.jobQueuesManager.getRunningJobQueue(qsi.queueName);
-        Collection<JobInProgress> waitJobs = 
-          scheduler.jobQueuesManager.getWaitingJobQueue(qsi.queueName);
         s.append(" Queue '" + qsi.queueName + "'(" + this.type + "): run=" + 
             qsi.numRunningTasks + ", gc=" + qsi.guaranteedCapacity + 
             ", wait=" + qsi.numPendingTasks + ", run jobs="+ runJobs.size() + 
-            ", wait jobs=" + waitJobs.size() + "*** ");
+            "*** ");
       }
       LOG.debug(s);
     }
@@ -965,8 +922,9 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
   }
   private Clock clock;
+  private JobInitializationPoller initializationPoller;
 
-  
+
   public CapacityTaskScheduler() {
     this(new Clock());
   }
@@ -1053,12 +1011,25 @@ class CapacityTaskScheduler extends TaskScheduler {
     // listen to job changes
     taskTrackerManager.addJobInProgressListener(jobQueuesManager);
 
+    //Start thread for initialization
+    if (initializationPoller == null) {
+      this.initializationPoller = new JobInitializationPoller(
+          jobQueuesManager,rmConf,queues);
+    }
+    initializationPoller.init(queueManager.getQueues(), rmConf);
+    initializationPoller.setDaemon(true);
+    initializationPoller.start();
     // start thread for redistributing capacity
     this.reclaimCapacityThread = 
       new Thread(new ReclaimCapacity(),"reclaimCapacity");
     this.reclaimCapacityThread.start();
     started = true;
     LOG.info("Capacity scheduler initialized " + queues.size() + " queues");
+  }
+  
+  /** mostly for testing purposes */
+  void setInitializationPoller(JobInitializationPoller p) {
+    this.initializationPoller = p;
   }
   
   @Override
@@ -1071,6 +1042,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     // tell the reclaim thread to stop
     stopReclaim = true;
     started = false;
+    initializationPoller.terminate();
     super.terminate();
   }
   
@@ -1172,13 +1144,20 @@ class CapacityTaskScheduler extends TaskScheduler {
       jobCollection.addAll(runningJobs);
     }
     Collection<JobInProgress> waitingJobs = 
-      jobQueuesManager.getWaitingJobQueue(queueName);
+      jobQueuesManager.getJobs(queueName);
+    Collection<JobInProgress> tempCollection = new ArrayList<JobInProgress>();
     if(waitingJobs != null) {
-      jobCollection.addAll(waitingJobs);
+      tempCollection.addAll(waitingJobs);
+    }
+    tempCollection.removeAll(runningJobs);
+    if(!tempCollection.isEmpty()) {
+      jobCollection.addAll(tempCollection);
     }
     return jobCollection;
   }
-
   
+  JobInitializationPoller getInitializationPoller() {
+    return initializationPoller;
+  }
 }
 

@@ -52,11 +52,13 @@ public class TestCapacitySchedulerConf extends TestCase {
         new String[] { "guaranteed-capacity", 
                        "reclaim-time-limit",
                        "supports-priority",
-                       "minimum-user-limit-percent" }, 
+                       "minimum-user-limit-percent",
+                       "maximum-initialized-jobs-per-user"}, 
         new String[] { "100", 
                         "300",
                         "false", 
-                        "100" }
+                        "100",
+                        "2" }
                       );
   }
 
@@ -86,22 +88,26 @@ public class TestCapacitySchedulerConf extends TestCase {
         new String[] { "guaranteed-capacity", 
                        "reclaim-time-limit",
                        "supports-priority",
-                       "minimum-user-limit-percent" }, 
+                       "minimum-user-limit-percent",
+                       "maximum-initialized-jobs-per-user"}, 
         new String[] { "10", 
                         "600",
                         "true",
-                        "25" }
+                        "25",
+                        "4"}
                       );
 
     Map<String, String> q2Props = setupQueueProperties(
         new String[] { "guaranteed-capacity", 
                        "reclaim-time-limit",
                        "supports-priority",
-                       "minimum-user-limit-percent" }, 
+                       "minimum-user-limit-percent",
+                       "maximum-initialized-jobs-per-user"}, 
         new String[] { "100", 
                         "6000",
                         "false", 
-                        "50" }
+                        "50",
+                        "1"}
                       );
 
     startConfig();
@@ -139,6 +145,7 @@ public class TestCapacitySchedulerConf extends TestCase {
     }
     expProperties.put("reclaim-time-limit", "300");
     expProperties.put("supports-priority", "false");
+    expProperties.put("maximum-initialized-jobs-per-user", "2");
     queueDetails.put("default", expProperties);
     checkQueueProperties(testConf, queueDetails);
   }
