@@ -753,7 +753,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if(inode == null) {
       return null;
     }
-    if (doAccessTime & isAccessTimeSupported()) {
+    if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
     Block[] blocks = inode.getBlocks();

@@ -227,6 +227,9 @@ Trunk (unreleased changes)
     HADOOP-4677. Fix semantics of FileSystem::getBlockLocations to return
     meaningful values. (Hong Tang via cdouglas)
 
+    HADOOP-4669. Use correct operator when evaluating whether access time is
+    enabled (Dhruba Borthakur via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   BUG FIXES
