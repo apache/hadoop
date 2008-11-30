@@ -224,6 +224,9 @@ Trunk (unreleased changes)
 
     HADOOP-4704. Fix javadoc typos "the the". (szetszwo)
 
+    HADOOP-4677. Fix semantics of FileSystem::getBlockLocations to return
+    meaningful values. (Hong Tang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   BUG FIXES

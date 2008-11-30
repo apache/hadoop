@@ -342,9 +342,18 @@ public abstract class FileSystem extends Configured implements Closeable {
     if (file == null) {
       return null;
     }
+
+    if ( (start<0) || (len < 0) ) {
+      throw new IllegalArgumentException("Invalid start or len parameter");
+    }
+
+    if (file.getLen() < start) {
+      return new BlockLocation[0];
+
+    }
     String[] name = { "localhost:50010" };
     String[] host = { "localhost" };
-    return new BlockLocation[] { new BlockLocation(name, host, 0, len) };
+    return new BlockLocation[] { new BlockLocation(name, host, 0, file.getLen()) };
   }
   
   /**
