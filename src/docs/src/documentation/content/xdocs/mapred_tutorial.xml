@@ -1679,21 +1679,26 @@
         <title>Other Useful Features</title>
  
         <section>
-          <title>Submitting Jobs to a Queue</title>
-          <p>Some job schedulers supported in Hadoop, like the 
-            <a href="capacity_scheduler.html">Capacity
-            Scheduler</a>, support multiple queues. If such a scheduler is
-            being used, users can submit jobs to one of the queues
-            administrators would have defined in the
-            <em>mapred.queue.names</em> property of the Hadoop site
-            configuration. The queue name can be specified through the
-            <em>mapred.job.queue.name</em> property, or through the
-            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setqueuename">setQueueName(String)</a>
-            API. Note that administrators may choose to define ACLs
-            that control which queues a job can be submitted to by a
-            given user. In that case, if the job is not submitted
-            to one of the queues where the user has access,
-            the job would be rejected.</p>
+          <title>Submitting Jobs to Queues</title>
+          <p>Users submit jobs to Queues. Queues, as collection of jobs, 
+          allow the system to provide specific functionality. For example, 
+          queues use ACLs to control which users 
+          who can submit jobs to them. Queues are expected to be primarily 
+          used by Hadoop Schedulers. </p> 
+
+          <p>Hadoop comes configured with a single mandatory queue, called 
+          'default'. Queue names are defined in the 
+          <code>mapred.queue.names</code> property of the Hadoop site
+          configuration. Some job schedulers, such as the 
+          <a href="capacity_scheduler.html">Capacity Scheduler</a>, 
+          support multiple queues.</p>
+          
+          <p>A job defines the queue it needs to be submitted to through the
+          <code>mapred.job.queue.name</code> property, or through the
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setqueuename">setQueueName(String)</a>
+          API. Setting the queue name is optional. If a job is submitted 
+          without an associated queue name, it is submitted to the 'default' 
+          queue.</p> 
         </section>
         <section>
           <title>Counters</title>
@@ -1893,40 +1898,41 @@
         
         <section>
           <title>Debugging</title>
-          <p>Map/Reduce framework provides a facility to run user-provided 
-          scripts for debugging. When map/reduce task fails, user can run 
-          script for doing post-processing on task logs i.e task's stdout,
-          stderr, syslog and jobconf. The stdout and stderr of the
-          user-provided debug script are printed on the diagnostics. 
-          These outputs are also displayed on job UI on demand. </p>
+          <p>The Map/Reduce framework provides a facility to run user-provided 
+          scripts for debugging. When a map/reduce task fails, a user can run 
+          a debug script, to process task logs for example. The script is 
+          given access to the task's stdout and stderr outputs, syslog and 
+          jobconf. The output from the debug script's stdout and stderr is 
+          displayed on the console diagnostics and also as part of the 
+          job UI. </p>
 
-          <p> In the following sections we discuss how to submit debug script
-          along with the job. For submitting debug script, first it has to
-          distributed. Then the script has to supplied in Configuration. </p>
+          <p> In the following sections we discuss how to submit a debug script
+          with a job. The script file needs to be distributed and submitted to 
+          the framework.</p>
           <section>
-          <title> How to distribute script file: </title>
+          <title> How to distribute the script file: </title>
           <p>
-          The user has to use 
+          The user needs to use  
           <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
-          mechanism to <em>distribute</em> and <em>symlink</em> the
-          debug script file.</p>
+          to <em>distribute</em> and <em>symlink</em> the script file.</p>
           </section>
           <section>
-          <title> How to submit script: </title>
-          <p> A quick way to submit debug script is to set values for the 
-          properties "mapred.map.task.debug.script" and 
-          "mapred.reduce.task.debug.script" for debugging map task and reduce
-          task respectively. These properties can also be set by using APIs 
+          <title> How to submit the script: </title>
+          <p> A quick way to submit the debug script is to set values for the 
+          properties <code>mapred.map.task.debug.script</code> and 
+          <code>mapred.reduce.task.debug.script</code>, for debugging map and 
+          reduce tasks respectively. These properties can also be set by using APIs 
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapdebugscript">
           JobConf.setMapDebugScript(String) </a> and
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setreducedebugscript">
-          JobConf.setReduceDebugScript(String) </a>. For streaming, debug 
-          script can be submitted with command-line options -mapdebug,
-          -reducedebug for debugging mapper and reducer respectively.</p>
+          JobConf.setReduceDebugScript(String) </a>. In streaming mode, a debug 
+          script can be submitted with the command-line options 
+          <code>-mapdebug</code> and <code>-reducedebug</code>, for debugging 
+          map and reduce tasks respectively.</p>
             
-          <p>The arguments of the script are task's stdout, stderr, 
+          <p>The arguments to the script are the task's stdout, stderr, 
           syslog and jobconf files. The debug command, run on the node where
-          the map/reduce failed, is: <br/>
+          the map/reduce task failed, is: <br/>
           <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
 
           <p> Pipes programs have the c++ program name as a fifth argument
@@ -2003,67 +2009,62 @@
         
         <section>
           <title>Skipping Bad Records</title>
-          <p>Hadoop provides an optional mode of execution in which the bad 
-          records are detected and skipped in further attempts. 
-          Applications can control various settings via 
+          <p>Hadoop provides an option where a certain set of bad input 
+          records can be skipped when processing map inputs. Applications 
+          can control this feature through the  
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords">
-          SkipBadRecords</a>.</p>
+          SkipBadRecords</a> class.</p>
           
-          <p>This feature can be used when map/reduce tasks crashes 
-          deterministically on certain input. This happens due to bugs in the 
-          map/reduce function. The usual course would be to fix these bugs. 
-          But sometimes this is not possible; perhaps the bug is in third party 
-          libraries for which the source code is not available. Due to this, 
-          the task never reaches to completion even with multiple attempts and 
-          complete data for that task is lost.</p>
+          <p>This feature can be used when map tasks crash deterministically 
+          on certain input. This usually happens due to bugs in the 
+          map function. Usually, the user would have to fix these bugs. 
+          This is, however, not possible sometimes. The bug may be in third 
+          party libraries, for example, for which the source code is not 
+          available. In such cases, the task never completes successfully even
+          after multiple attempts, and the job fails. With this feature, only 
+          a small portion of data surrounding the 
+          bad records is lost, which may be acceptable for some applications 
+          (those performing statistical analysis on very large data, for 
+          example). </p>
 
-          <p>With this feature, only a small portion of data is lost surrounding 
-          the bad record. This may be acceptable for some user applications; 
-          for example applications which are doing statistical analysis on 
-          very large data. By default this feature is disabled. For turning it 
-          on refer <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
+          <p>By default this feature is disabled. For enabling it, 
+          refer to <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
           SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
           SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>.
           </p>
  
-          <p>The skipping mode gets kicked off after certain no of failures
+          <p>With this feature enabled, the framework gets into 'skipping 
+          mode' after a certain number of map failures. For more details, 
           see <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setattemptsTostartskipping">
-          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>.
-          </p>
- 
-          <p>In the skipping mode, the map/reduce task maintains the record 
-          range which is getting processed at all times. For maintaining this 
-          range, the framework relies on the processed record 
-          counter. see <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_map_processed_records">
+          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>. 
+          In 'skipping mode', map tasks maintain the range of records being 
+          processed. To do this, the framework relies on the processed record 
+          counter. See <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_map_processed_records">
           SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS</a> and 
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_reduce_processed_groups">
           SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS</a>. 
-          Based on this counter, the framework knows that how 
-          many records have been processed successfully by mapper/reducer.
-          Before giving the 
-          input to the map/reduce function, it sends this record range to the 
-          Task tracker. If task crashes, the Task tracker knows which one was 
-          the last reported range. On further attempts that range get skipped.
-          </p>
+          This counter enables the framework to know how many records have 
+          been processed successfully, and hence, what record range caused 
+          a task to crash. On further attempts, this range of records is 
+          skipped.</p>
      
-          <p>The number of records skipped for a single bad record depends on 
-          how frequent, the processed counters are incremented by the application. 
-          It is recommended to increment the counter after processing every 
-          single record. However in some applications this might be difficult as 
-          they may be batching up their processing. In that case, the framework 
-          might skip more records surrounding the bad record. If users want to 
-          reduce the number of records skipped, then they can specify the 
-          acceptable value using 
+          <p>The number of records skipped depends on how frequently the 
+          processed record counter is incremented by the application. 
+          It is recommended that this counter be incremented after every 
+          record is processed. This may not be possible in some applications 
+          that typically batch their processing. In such cases, the framework 
+          may skip additional records surrounding the bad record. Users can 
+          control the number of skipped records through 
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
           SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
           SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>. 
-          The framework tries to narrow down the skipped range by employing the 
-          binary search kind of algorithm during task re-executions. The skipped
-          range is divided into two halves and only one half get executed. 
-          Based on the subsequent failure, it figures out which half contains 
-          the bad record. This task re-execution will keep happening till 
+          The framework tries to narrow the range of skipped records using a 
+          binary search-like approach. The skipped range is divided into two 
+          halves and only one half gets executed. On subsequent 
+          failures, the framework figures out which half contains 
+          bad records. A task will be re-executed till the
           acceptable skipped value is met or all task attempts are exhausted.
           To increase the number of task attempts, use
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmaxmapattempts">
@@ -2072,9 +2073,8 @@
           JobConf.setMaxReduceAttempts(int)</a>.
           </p>
           
-          <p>The skipped records are written to the hdfs in the sequence file 
-          format, which could be used for later analysis. The location of 
-          skipped records output path can be changed by 
+          <p>Skipped records are written to HDFS in the sequence file 
+          format, for later analysis. The location can be changed through 
           <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setskipoutputpath">
           SkipBadRecords.setSkipOutputPath(JobConf, Path)</a>.
           </p> 
