@@ -230,6 +230,9 @@ Trunk (unreleased changes)
     HADOOP-4669. Use correct operator when evaluating whether access time is
     enabled (Dhruba Borthakur via cdouglas)
 
+    HADOOP-4732. Pass connection and read timeouts in the correct order when
+    setting up fetch in reduce. (Amareshwari Sriramadasu via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   BUG FIXES

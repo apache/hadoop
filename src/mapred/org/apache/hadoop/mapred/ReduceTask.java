@@ -1222,8 +1222,8 @@ class ReduceTask extends Task {
         // Connect
         URLConnection connection = 
           mapOutputLoc.getOutputLocation().openConnection();
-        InputStream input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
-                                           STALLED_COPY_TIMEOUT);
+        InputStream input = getInputStream(connection, STALLED_COPY_TIMEOUT,
+                                           DEFAULT_READ_TIMEOUT); 
 
         //We will put a file in memory if it meets certain criteria:
         //1. The size of the (decompressed) file should be less than 25% of 
@@ -1319,8 +1319,8 @@ class ReduceTask extends Task {
           // Reconnect
           try {
             connection = mapOutputLoc.getOutputLocation().openConnection();
-            input = getInputStream(connection, DEFAULT_READ_TIMEOUT, 
-                STALLED_COPY_TIMEOUT);
+            input = getInputStream(connection, STALLED_COPY_TIMEOUT, 
+                                   DEFAULT_READ_TIMEOUT);
           } catch (IOException ioe) {
             LOG.info("Failed reopen connection to fetch map-output from " + 
                      mapOutputLoc.getHost());
