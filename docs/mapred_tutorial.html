@@ -150,6 +150,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="SLG_user_guide.html">HDFS Utilities</a>
 </div>
 <div class="menuitem">
+<a href="libhdfs.html">HDFS C API</a>
+</div>
+<div class="menuitem">
 <a href="hod_user_guide.html">HOD User Guide</a>
 </div>
 <div class="menuitem">
@@ -311,7 +314,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Other+Useful+Features">Other Useful Features</a>
 <ul class="minitoc">
 <li>
-<a href="#Submitting+Jobs+to+a+Queue">Submitting Jobs to a Queue</a>
+<a href="#Submitting+Jobs+to+Queues">Submitting Jobs to Queues</a>
 </li>
 <li>
 <a href="#Counters">Counters</a>
@@ -348,7 +351,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10F95">Source Code</a>
+<a href="#Source+Code-N10FA4">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -2280,23 +2283,26 @@ document.write("Last Published: " + document.lastModified);
           <span class="codefrag">FileSystem</span>.</p>
 <a name="N10D0C"></a><a name="Other+Useful+Features"></a>
 <h3 class="h4">Other Useful Features</h3>
-<a name="N10D12"></a><a name="Submitting+Jobs+to+a+Queue"></a>
-<h4>Submitting Jobs to a Queue</h4>
-<p>Some job schedulers supported in Hadoop, like the 
-            <a href="capacity_scheduler.html">Capacity
-            Scheduler</a>, support multiple queues. If such a scheduler is
-            being used, users can submit jobs to one of the queues
-            administrators would have defined in the
-            <em>mapred.queue.names</em> property of the Hadoop site
-            configuration. The queue name can be specified through the
-            <em>mapred.job.queue.name</em> property, or through the
-            <a href="api/org/apache/hadoop/mapred/JobConf.html#setQueueName(java.lang.String)">setQueueName(String)</a>
-            API. Note that administrators may choose to define ACLs
-            that control which queues a job can be submitted to by a
-            given user. In that case, if the job is not submitted
-            to one of the queues where the user has access,
-            the job would be rejected.</p>
-<a name="N10D2A"></a><a name="Counters"></a>
+<a name="N10D12"></a><a name="Submitting+Jobs+to+Queues"></a>
+<h4>Submitting Jobs to Queues</h4>
+<p>Users submit jobs to Queues. Queues, as collection of jobs, 
+          allow the system to provide specific functionality. For example, 
+          queues use ACLs to control which users 
+          who can submit jobs to them. Queues are expected to be primarily 
+          used by Hadoop Schedulers. </p>
+<p>Hadoop comes configured with a single mandatory queue, called 
+          'default'. Queue names are defined in the 
+          <span class="codefrag">mapred.queue.names</span> property of the Hadoop site
+          configuration. Some job schedulers, such as the 
+          <a href="capacity_scheduler.html">Capacity Scheduler</a>, 
+          support multiple queues.</p>
+<p>A job defines the queue it needs to be submitted to through the
+          <span class="codefrag">mapred.job.queue.name</span> property, or through the
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setQueueName(java.lang.String)">setQueueName(String)</a>
+          API. Setting the queue name is optional. If a job is submitted 
+          without an associated queue name, it is submitted to the 'default' 
+          queue.</p>
+<a name="N10D30"></a><a name="Counters"></a>
 <h4>Counters</h4>
 <p>
 <span class="codefrag">Counters</span> represent global counters, defined either by 
@@ -2313,7 +2319,7 @@ document.write("Last Published: " + document.lastModified);
           in the <span class="codefrag">map</span> and/or 
           <span class="codefrag">reduce</span> methods. These counters are then globally 
           aggregated by the framework.</p>
-<a name="N10D59"></a><a name="DistributedCache"></a>
+<a name="N10D5F"></a><a name="DistributedCache"></a>
 <h4>DistributedCache</h4>
 <p>
 <a href="api/org/apache/hadoop/filecache/DistributedCache.html">
@@ -2384,7 +2390,7 @@ document.write("Last Published: " + document.lastModified);
           <span class="codefrag">mapred.job.classpath.{files|archives}</span>. Similarly the
           cached files that are symlinked into the working directory of the
           task can be used to distribute native libraries and load them.</p>
-<a name="N10DDC"></a><a name="Tool"></a>
+<a name="N10DE2"></a><a name="Tool"></a>
 <h4>Tool</h4>
 <p>The <a href="api/org/apache/hadoop/util/Tool.html">Tool</a> 
           interface supports the handling of generic Hadoop command-line options.
@@ -2424,7 +2430,7 @@ document.write("Last Published: " + document.lastModified);
             </span>
           
 </p>
-<a name="N10E0E"></a><a name="IsolationRunner"></a>
+<a name="N10E14"></a><a name="IsolationRunner"></a>
 <h4>IsolationRunner</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/IsolationRunner.html">
@@ -2448,7 +2454,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">IsolationRunner</span> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
-<a name="N10E41"></a><a name="Profiling"></a>
+<a name="N10E47"></a><a name="Profiling"></a>
 <h4>Profiling</h4>
 <p>Profiling is a utility to get a representative (2 or 3) sample
           of built-in java profiler for a sample of maps and reduces. </p>
@@ -2481,39 +2487,40 @@ document.write("Last Published: " + document.lastModified);
           <span class="codefrag">-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</span>
           
 </p>
-<a name="N10E75"></a><a name="Debugging"></a>
+<a name="N10E7B"></a><a name="Debugging"></a>
 <h4>Debugging</h4>
-<p>Map/Reduce framework provides a facility to run user-provided 
-          scripts for debugging. When map/reduce task fails, user can run 
-          script for doing post-processing on task logs i.e task's stdout,
-          stderr, syslog and jobconf. The stdout and stderr of the
-          user-provided debug script are printed on the diagnostics. 
-          These outputs are also displayed on job UI on demand. </p>
-<p> In the following sections we discuss how to submit debug script
-          along with the job. For submitting debug script, first it has to
-          distributed. Then the script has to supplied in Configuration. </p>
-<a name="N10E81"></a><a name="How+to+distribute+script+file%3A"></a>
-<h5> How to distribute script file: </h5>
+<p>The Map/Reduce framework provides a facility to run user-provided 
+          scripts for debugging. When a map/reduce task fails, a user can run 
+          a debug script, to process task logs for example. The script is 
+          given access to the task's stdout and stderr outputs, syslog and 
+          jobconf. The output from the debug script's stdout and stderr is 
+          displayed on the console diagnostics and also as part of the 
+          job UI. </p>
+<p> In the following sections we discuss how to submit a debug script
+          with a job. The script file needs to be distributed and submitted to 
+          the framework.</p>
+<a name="N10E87"></a><a name="How+to+distribute+the+script+file%3A"></a>
+<h5> How to distribute the script file: </h5>
 <p>
-          The user has to use 
+          The user needs to use  
           <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
-          mechanism to <em>distribute</em> and <em>symlink</em> the
-          debug script file.</p>
-<a name="N10E95"></a><a name="How+to+submit+script%3A"></a>
-<h5> How to submit script: </h5>
-<p> A quick way to submit debug script is to set values for the 
-          properties "mapred.map.task.debug.script" and 
-          "mapred.reduce.task.debug.script" for debugging map task and reduce
-          task respectively. These properties can also be set by using APIs 
+          to <em>distribute</em> and <em>symlink</em> the script file.</p>
+<a name="N10E9B"></a><a name="How+to+submit+the+script%3A"></a>
+<h5> How to submit the script: </h5>
+<p> A quick way to submit the debug script is to set values for the 
+          properties <span class="codefrag">mapred.map.task.debug.script</span> and 
+          <span class="codefrag">mapred.reduce.task.debug.script</span>, for debugging map and 
+          reduce tasks respectively. These properties can also be set by using APIs 
           <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapDebugScript(java.lang.String)">
           JobConf.setMapDebugScript(String) </a> and
           <a href="api/org/apache/hadoop/mapred/JobConf.html#setReduceDebugScript(java.lang.String)">
-          JobConf.setReduceDebugScript(String) </a>. For streaming, debug 
-          script can be submitted with command-line options -mapdebug,
-          -reducedebug for debugging mapper and reducer respectively.</p>
-<p>The arguments of the script are task's stdout, stderr, 
+          JobConf.setReduceDebugScript(String) </a>. In streaming mode, a debug 
+          script can be submitted with the command-line options 
+          <span class="codefrag">-mapdebug</span> and <span class="codefrag">-reducedebug</span>, for debugging 
+          map and reduce tasks respectively.</p>
+<p>The arguments to the script are the task's stdout, stderr, 
           syslog and jobconf files. The debug command, run on the node where
-          the map/reduce failed, is: <br>
+          the map/reduce task failed, is: <br>
           
 <span class="codefrag"> $script $stdout $stderr $syslog $jobconf </span> 
 </p>
@@ -2523,17 +2530,17 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">$script $stdout $stderr $syslog $jobconf $program </span>  
           
 </p>
-<a name="N10EB7"></a><a name="Default+Behavior%3A"></a>
+<a name="N10EC9"></a><a name="Default+Behavior%3A"></a>
 <h5> Default Behavior: </h5>
 <p> For pipes, a default script is run to process core dumps under
           gdb, prints stack trace and gives info about running threads. </p>
-<a name="N10EC2"></a><a name="JobControl"></a>
+<a name="N10ED4"></a><a name="JobControl"></a>
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
           JobControl</a> is a utility which encapsulates a set of Map/Reduce jobs
           and their dependencies.</p>
-<a name="N10ECF"></a><a name="Data+Compression"></a>
+<a name="N10EE1"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
 <p>Hadoop Map/Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
@@ -2547,7 +2554,7 @@ document.write("Last Published: " + document.lastModified);
           codecs for reasons of both performance (zlib) and non-availability of
           Java libraries (lzo). More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
-<a name="N10EEF"></a><a name="Intermediate+Outputs"></a>
+<a name="N10F01"></a><a name="Intermediate+Outputs"></a>
 <h5>Intermediate Outputs</h5>
 <p>Applications can control compression of intermediate map-outputs
             via the 
@@ -2556,7 +2563,7 @@ document.write("Last Published: " + document.lastModified);
             <span class="codefrag">CompressionCodec</span> to be used via the
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressorClass(java.lang.Class)">
             JobConf.setMapOutputCompressorClass(Class)</a> api.</p>
-<a name="N10F04"></a><a name="Job+Outputs"></a>
+<a name="N10F16"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/FileOutputFormat.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -2573,64 +2580,60 @@ document.write("Last Published: " + document.lastModified);
             <a href="api/org/apache/hadoop/mapred/SequenceFileOutputFormat.html#setOutputCompressionType(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.io.SequenceFile.CompressionType)">
             SequenceFileOutputFormat.setOutputCompressionType(JobConf, 
             SequenceFile.CompressionType)</a> api.</p>
-<a name="N10F31"></a><a name="Skipping+Bad+Records"></a>
+<a name="N10F43"></a><a name="Skipping+Bad+Records"></a>
 <h4>Skipping Bad Records</h4>
-<p>Hadoop provides an optional mode of execution in which the bad 
-          records are detected and skipped in further attempts. 
-          Applications can control various settings via 
+<p>Hadoop provides an option where a certain set of bad input 
+          records can be skipped when processing map inputs. Applications 
+          can control this feature through the  
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html">
-          SkipBadRecords</a>.</p>
-<p>This feature can be used when map/reduce tasks crashes 
-          deterministically on certain input. This happens due to bugs in the 
-          map/reduce function. The usual course would be to fix these bugs. 
-          But sometimes this is not possible; perhaps the bug is in third party 
-          libraries for which the source code is not available. Due to this, 
-          the task never reaches to completion even with multiple attempts and 
-          complete data for that task is lost.</p>
-<p>With this feature, only a small portion of data is lost surrounding 
-          the bad record. This may be acceptable for some user applications; 
-          for example applications which are doing statistical analysis on 
-          very large data. By default this feature is disabled. For turning it 
-          on refer <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setMapperMaxSkipRecords(org.apache.hadoop.conf.Configuration, long)">
+          SkipBadRecords</a> class.</p>
+<p>This feature can be used when map tasks crash deterministically 
+          on certain input. This usually happens due to bugs in the 
+          map function. Usually, the user would have to fix these bugs. 
+          This is, however, not possible sometimes. The bug may be in third 
+          party libraries, for example, for which the source code is not 
+          available. In such cases, the task never completes successfully even
+          after multiple attempts, and the job fails. With this feature, only 
+          a small portion of data surrounding the 
+          bad records is lost, which may be acceptable for some applications 
+          (those performing statistical analysis on very large data, for 
+          example). </p>
+<p>By default this feature is disabled. For enabling it, 
+          refer to <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setMapperMaxSkipRecords(org.apache.hadoop.conf.Configuration, long)">
           SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setReducerMaxSkipGroups(org.apache.hadoop.conf.Configuration, long)">
           SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>.
           </p>
-<p>The skipping mode gets kicked off after certain no of failures
+<p>With this feature enabled, the framework gets into 'skipping 
+          mode' after a certain number of map failures. For more details, 
           see <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setAttemptsToStartSkipping(org.apache.hadoop.conf.Configuration, int)">
-          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>.
-          </p>
-<p>In the skipping mode, the map/reduce task maintains the record 
-          range which is getting processed at all times. For maintaining this 
-          range, the framework relies on the processed record 
-          counter. see <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#COUNTER_MAP_PROCESSED_RECORDS">
+          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>. 
+          In 'skipping mode', map tasks maintain the range of records being 
+          processed. To do this, the framework relies on the processed record 
+          counter. See <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#COUNTER_MAP_PROCESSED_RECORDS">
           SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS</a> and 
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#COUNTER_REDUCE_PROCESSED_GROUPS">
           SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS</a>. 
-          Based on this counter, the framework knows that how 
-          many records have been processed successfully by mapper/reducer.
-          Before giving the 
-          input to the map/reduce function, it sends this record range to the 
-          Task tracker. If task crashes, the Task tracker knows which one was 
-          the last reported range. On further attempts that range get skipped.
-          </p>
-<p>The number of records skipped for a single bad record depends on 
-          how frequent, the processed counters are incremented by the application. 
-          It is recommended to increment the counter after processing every 
-          single record. However in some applications this might be difficult as 
-          they may be batching up their processing. In that case, the framework 
-          might skip more records surrounding the bad record. If users want to 
-          reduce the number of records skipped, then they can specify the 
-          acceptable value using 
+          This counter enables the framework to know how many records have 
+          been processed successfully, and hence, what record range caused 
+          a task to crash. On further attempts, this range of records is 
+          skipped.</p>
+<p>The number of records skipped depends on how frequently the 
+          processed record counter is incremented by the application. 
+          It is recommended that this counter be incremented after every 
+          record is processed. This may not be possible in some applications 
+          that typically batch their processing. In such cases, the framework 
+          may skip additional records surrounding the bad record. Users can 
+          control the number of skipped records through 
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setMapperMaxSkipRecords(org.apache.hadoop.conf.Configuration, long)">
           SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setReducerMaxSkipGroups(org.apache.hadoop.conf.Configuration, long)">
           SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>. 
-          The framework tries to narrow down the skipped range by employing the 
-          binary search kind of algorithm during task re-executions. The skipped
-          range is divided into two halves and only one half get executed. 
-          Based on the subsequent failure, it figures out which half contains 
-          the bad record. This task re-execution will keep happening till 
+          The framework tries to narrow the range of skipped records using a 
+          binary search-like approach. The skipped range is divided into two 
+          halves and only one half gets executed. On subsequent 
+          failures, the framework figures out which half contains 
+          bad records. A task will be re-executed till the
           acceptable skipped value is met or all task attempts are exhausted.
           To increase the number of task attempts, use
           <a href="api/org/apache/hadoop/mapred/JobConf.html#setMaxMapAttempts(int)">
@@ -2638,16 +2641,15 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/mapred/JobConf.html#setMaxReduceAttempts(int)">
           JobConf.setMaxReduceAttempts(int)</a>.
           </p>
-<p>The skipped records are written to the hdfs in the sequence file 
-          format, which could be used for later analysis. The location of 
-          skipped records output path can be changed by 
+<p>Skipped records are written to HDFS in the sequence file 
+          format, for later analysis. The location can be changed through 
           <a href="api/org/apache/hadoop/mapred/SkipBadRecords.html#setSkipOutputPath(org.apache.hadoop.mapred.JobConf, org.apache.hadoop.fs.Path)">
           SkipBadRecords.setSkipOutputPath(JobConf, Path)</a>.
           </p>
 </div>
 
     
-<a name="N10F7B"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10F8A"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -2657,7 +2659,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10F95"></a><a name="Source+Code-N10F95"></a>
+<a name="N10FA4"></a><a name="Source+Code-N10FA4"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3867,7 +3869,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N116F7"></a><a name="Sample+Runs"></a>
+<a name="N11706"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -4035,7 +4037,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N117CB"></a><a name="Highlights"></a>
+<a name="N117DA"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map/Reduce framework:

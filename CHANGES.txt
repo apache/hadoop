@@ -235,6 +235,11 @@ Trunk (unreleased changes)
 
 Release 0.19.1 - Unreleased
 
+  IMPROVEMENTS
+
+    HADOOP-4739. Fix spelling and grammar, improve phrasing of some sections in
+    mapred tutorial. (Vivek Ratan via cdouglas)
+
   BUG FIXES
 
     HADOOP-4697. Fix getBlockLocations in KosmosFileSystem to handle multiple
