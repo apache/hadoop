@@ -827,7 +827,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     
     //rename meta file to a tmp file
     File tmpMetaFile = new File(oldMetaFile.getParent(),
-        oldMetaFile.getName()+"_tmp");
+        oldMetaFile.getName()+"_tmp" + newblock.getGenerationStamp());
     if (!oldMetaFile.renameTo(tmpMetaFile)){
       throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
     }

@@ -1870,8 +1870,10 @@ public class DataNode extends Configured
           IOUtils.closeStream(checksumIn);
           checksumIn = null;
           if (corruptChecksumOk) {
-            // Just fill the array with zeros.
-            Arrays.fill(buf, checksumOff, checksumLen, (byte) 0);
+            if (checksumOff < checksumLen) {
+              // Just fill the array with zeros.
+              Arrays.fill(buf, checksumOff, checksumLen, (byte) 0);
+            }
           } else {
             throw e;
           }
@@ -3146,7 +3148,8 @@ public class DataNode extends Configured
 
   /** {@inheritDoc} */
   public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
-    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock);
+    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock
+        + ", datanode=" + dnRegistration.getName());
     data.updateBlock(oldblock, newblock);
     if (finalize) {
       data.finalizeBlock(newblock);

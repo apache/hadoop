@@ -1061,7 +1061,8 @@ class INodeFileUnderConstruction extends INodeFile {
         DatanodeDescriptor primary = targets[primaryNodeIndex = j]; 
         primary.addBlockToBeRecovered(blocks[blocks.length - 1], targets);
         NameNode.stateChangeLog.info("BLOCK* " + blocks[blocks.length - 1]
-          + " recovery started.");
+          + " recovery started, primary=" + primary);
+        return;
       }
     }
   }

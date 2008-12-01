@@ -65,8 +65,8 @@ class DFSClient implements FSConstants {
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
-  String clientName;
-  Daemon leaseChecker;
+  final String clientName;
+  final Daemon leaseChecker;
   private Configuration conf;
   private long defaultBlockSize;
   private short defaultReplication;
