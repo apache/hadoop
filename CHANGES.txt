@@ -1071,9 +1071,6 @@ Release 0.19.0 - 2008-11-18
     HADOOP-3942. Update distcp documentation to include features introduced in
     HADOOP-3873, HADOOP-3939. (Tsz Wo (Nicholas), SZE via cdouglas)
 
-    HADOOP-4257. The DFS client should pick only one datanode as the candidate
-    to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via dhruba)
-
     HADOOP-4319. fuse-dfs dfs_read function returns as many bytes as it is
     told to read unlesss end-of-file is reached.  (Pete Wyckoff via dhruba)
 
@@ -1271,6 +1268,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4614. Lazily open segments when merging map spills to avoid using
     too many file descriptors. (Yuri Pradkin via cdouglas)
+
+    HADOOP-4257. The DFS client should pick only one datanode as the candidate
+    to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via dhruba)
 
 Release 0.18.2 - 2008-11-03
 
