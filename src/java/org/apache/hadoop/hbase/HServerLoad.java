@@ -27,13 +27,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
+@SuppressWarnings("unused")
 public class HServerLoad implements WritableComparable {
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
@@ -52,7 +55,7 @@ public class HServerLoad implements WritableComparable {
   /** 
    * Encapsulates per-region loading metrics.
    */
-  class RegionLoad implements Writable {
+  public static class RegionLoad implements Writable {
     /** the region name */
     private byte[] name;
     /** the number of stores for the region */
@@ -185,6 +188,19 @@ public class HServerLoad implements WritableComparable {
       out.writeInt(memcacheSizeMB);
       out.writeInt(storefileIndexSizeMB);
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "stores",
+        Integer.valueOf(this.stores));
+      sb = Strings.appendKeyValue(sb, "storefiles",
+        Integer.valueOf(this.storefiles));
+      sb = Strings.appendKeyValue(sb, "memcacheSize",
+        Integer.valueOf(this.memcacheSizeMB));
+      sb = Strings.appendKeyValue(sb, "storefileIndexSize",
+        Integer.valueOf(this.storefileIndexSizeMB));
+      return sb.toString();
+    }
   }
 
   /*
@@ -256,33 +272,13 @@ public class HServerLoad implements WritableComparable {
    */
   public String toString(int msgInterval) {
     StringBuilder sb = new StringBuilder();
-    sb.append("requests: ");
-    sb.append(numberOfRequests/msgInterval);
-    sb.append(" usedHeapMB: ");
-    sb.append(usedHeapMB);
-    sb.append(" maxHeapMB: ");
-    sb.append(maxHeapMB);
-    sb.append(" regions: ");
-    sb.append(numberOfRegions);
-    Iterator<RegionLoad> i = regionLoad.iterator();
-    sb.append(" {");
-    while (i.hasNext()) {
-        RegionLoad rl = i.next();
-        sb.append(" { name: '");
-        sb.append(Bytes.toString(rl.name));
-        sb.append("' stores: ");
-        sb.append(rl.stores);
-        sb.append(" storefiles: ");
-        sb.append(rl.storefiles);
-        sb.append(" memcacheSizeMB: ");
-        sb.append(rl.memcacheSizeMB);
-        sb.append(" storefileIndexSizeMB: ");
-        sb.append(rl.storefileIndexSizeMB);
-        sb.append(" }");
-        if (i.hasNext())
-            sb.append(',');
-    }
-    sb.append(" }");
+    sb = Strings.appendKeyValue(sb, "requests",
+      Integer.valueOf(numberOfRequests/msgInterval));
+    sb = Strings.appendKeyValue(sb, "regions",
+      Integer.valueOf(numberOfRegions));
+    sb = Strings.appendKeyValue(sb, "usedHeap",
+      Integer.valueOf(this.usedHeapMB));
+    sb = Strings.appendKeyValue(sb, "maxHeap", Integer.valueOf(maxHeapMB));
     return sb.toString();
   }
 
@@ -379,19 +375,26 @@ public class HServerLoad implements WritableComparable {
   }
 
   /**
-   * @param name
-   * @param stores
-   * @param storefiles
-   * @param memcacheSizeMB
-   * @param storefileIndexSizeMB
+   * @param load Instance of HServerLoad
+   */
+  public void addRegionInfo(final HServerLoad.RegionLoad load) {
+    this.numberOfRegions++;
+    this.regionLoad.add(load);
+  }
+
+  /**
+  -* @param name
+  -* @param stores
+  -* @param storefiles
+  -* @param memcacheSizeMB
+  -* @param storefileIndexSizeMB
+   * @deprecated Use {@link #addRegionInfo(RegionLoad)}
    */
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int memcacheSizeMB,
       final int storefileIndexSizeMB) {
-    this.numberOfRegions++;
-    this.regionLoad.add(
-      new RegionLoad(name, stores, storefiles, memcacheSizeMB,
-        storefileIndexSizeMB));
+    this.regionLoad.add(new HServerLoad.RegionLoad(name, stores, storefiles,
+      memcacheSizeMB, storefileIndexSizeMB));
   }
 
   // Writable

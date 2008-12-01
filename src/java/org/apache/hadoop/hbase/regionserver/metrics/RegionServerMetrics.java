@@ -17,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -38,6 +43,7 @@ public class RegionServerMetrics implements Updater {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
+  private static final int MB = 1024*1024;
   
   /**
    * Count of regions carried by this regionserver
@@ -77,6 +83,7 @@ public class RegionServerMetrics implements Updater {
     String name = Thread.currentThread().getName();
     metricsRecord.setTag("RegionServer", name);
     context.registerUpdater(this);
+    // Add jvmmetrics.
     JvmMetrics.init("RegionServer", name);
     LOG.info("Initialized");
   }
@@ -129,24 +136,30 @@ public class RegionServerMetrics implements Updater {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("requests=");
     int seconds = (int)((System.currentTimeMillis() - this.lastUpdate)/1000);
     if (seconds == 0) {
       seconds = 1;
     }
-    sb.append(this.requests.get()/seconds);
-    sb.append(", regions=");
-    sb.append(this.regions.get());
-    sb.append(", stores=");
-    sb.append(this.stores.get());
-    sb.append(", storefiles=");
-    sb.append(this.storefiles.get());
-    sb.append(", storefileIndexSize=");
-    sb.append(this.storefileIndexSizeMB.get());
-    sb.append("MB");
-    sb.append(", memcacheSize=");
-    sb.append(this.memcacheSizeMB.get());
-    sb.append("MB");
+    sb = Strings.appendKeyValue(sb, "request",
+      Integer.valueOf(this.requests.get()/seconds));
+    sb = Strings.appendKeyValue(sb, "regions",
+      Integer.valueOf(this.regions.get()));
+    sb = Strings.appendKeyValue(sb, "stores",
+      Integer.valueOf(this.stores.get()));
+    sb = Strings.appendKeyValue(sb, "storefiles",
+      Integer.valueOf(this.storefiles.get()));
+    sb = Strings.appendKeyValue(sb, "storefileIndexSize",
+      Integer.valueOf(this.storefileIndexSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "memcacheSize",
+      Integer.valueOf(this.memcacheSizeMB.get()));
+    // Duplicate from jvmmetrics because metrics are private there so
+    // inaccessible.
+    MemoryUsage memory =
+      ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    sb = Strings.appendKeyValue(sb, "usedHeap",
+      Long.valueOf(memory.getUsed()/MB));
+    sb = Strings.appendKeyValue(sb, "maxHeap",
+      Long.valueOf(memory.getMax()/MB));
     return sb.toString();
   }
 }

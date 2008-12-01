@@ -326,25 +326,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             doMetrics();
             MemoryUsage memory =
                 ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-            HServerLoad hsl = new HServerLoad(requestCount.get(), 
+            HServerLoad hsl = new HServerLoad(requestCount.get(),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
             for (HRegion r: onlineRegions.values()) {
-              byte[] name = r.getRegionName();
-              int stores = 0;
-              int storefiles = 0;
-              int memcacheSizeMB = (int)(r.memcacheSize.get()/1024/1024);
-              int storefileIndexSizeMB = 0;
-              synchronized (r.stores) {
-                stores += r.stores.size();
-                for (HStore store: r.stores.values()) {
-                  storefiles += store.getStorefilesCount();
-                  storefileIndexSizeMB += 
-                    (int)(store.getStorefilesIndexSize()/1024/1024);
-                }
-              }
-              hsl.addRegionInfo(name, stores, storefiles, memcacheSizeMB,
-                storefileIndexSizeMB);
+              hsl.addRegionInfo(createRegionLoad(r));
             }
             this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
@@ -579,7 +565,41 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw ex;
     }
   }
-  
+
+  /*
+   * @param r Region to get RegionLoad for.
+   * @return RegionLoad instance.
+   * @throws IOException
+   */
+  private HServerLoad.RegionLoad createRegionLoad(final HRegion r)
+  throws IOException {
+    byte[] name = r.getRegionName();
+    int stores = 0;
+    int storefiles = 0;
+    int memcacheSizeMB = (int)(r.memcacheSize.get()/1024/1024);
+    int storefileIndexSizeMB = 0;
+    synchronized (r.stores) {
+      stores += r.stores.size();
+      for (HStore store: r.stores.values()) {
+        storefiles += store.getStorefilesCount();
+        storefileIndexSizeMB += 
+          (int)(store.getStorefilesIndexSize()/1024/1024);
+      }
+    }
+    return new HServerLoad.RegionLoad(name, stores, storefiles, memcacheSizeMB,
+      storefileIndexSizeMB);
+  }
+ 
+  /**
+   * @param regionName
+   * @return An instance of RegionLoad.
+   * @throws IOException
+   */
+  public HServerLoad.RegionLoad createRegionLoad(final byte [] regionName)
+  throws IOException {
+    return createRegionLoad(this.onlineRegions.get(Bytes.mapKey(regionName)));
+  }
+
   /*
    * Check if an OOME and if so, call abort.
    * @param e

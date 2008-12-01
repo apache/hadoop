@@ -7,12 +7,14 @@
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HServerInfo"
+  import="org.apache.hadoop.hbase.HServerLoad"
   import="org.apache.hadoop.hbase.HRegionInfo" %><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   HServerInfo serverInfo = regionServer.getServerInfo();
   RegionServerMetrics metrics = regionServer.getMetrics();
   Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
+
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -34,16 +36,20 @@
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
 <tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
-<tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics</td></tr>
+<tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
 </table>
 
 <h2>Online Regions</h2>
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
-<tr><th>Region Name</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>
-<%   for (HRegionInfo r: onlineRegions) { %>
+<tr><th>Region Name</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
+<%   for (HRegionInfo r: onlineRegions) { 
+        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
+ %>
 <tr><td><%= r.getRegionNameAsString() %></td><td><%= r.getEncodedName() %></td>
-    <td><%= Bytes.toString(r.getStartKey()) %></td><td><%= Bytes.toString(r.getEndKey()) %></td></tr>
+    <td><%= Bytes.toString(r.getStartKey()) %></td><td><%= Bytes.toString(r.getEndKey()) %></td>
+    <td><%= load.toString() %></td>
+    </tr>
 <%   } %>
 </table>
 <p>Region names are made of the containing table's name, a comma,

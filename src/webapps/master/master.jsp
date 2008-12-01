@@ -96,7 +96,7 @@
 %>
 <tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %></td><td><%= hsi.getLoad().toString(interval) %></td></tr>
 <%   } %>
-<tr><th>Total: </th><td>servers: <%= serverToServerInfos.size() %></td><td>&nbsp;</td><td>requests: <%= totalRequests %> regions: <%= totalRegions %></td></tr>
+<tr><th>Total: </th><td>servers: <%= serverToServerInfos.size() %></td><td>&nbsp;</td><td>requests=<%= totalRequests %>, regions=<%= totalRegions %></td></tr>
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>
