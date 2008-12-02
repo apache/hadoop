@@ -149,6 +149,9 @@ Trunk (unreleased changes)
 
     HADOOP-4649. Improve abstraction for spill indices. (cdouglas)
 
+    HADOOP-3770. Add gridmix2, an iteration on the gridmix benchmark. (Runping
+    Qi via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

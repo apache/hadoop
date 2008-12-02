@@ -106,6 +106,7 @@ public class StreamJob implements Tool {
   
   public StreamJob() {
     setupOptions();
+    this.config_ = new Configuration();
   }
   
   @Override
@@ -136,6 +137,25 @@ public class StreamJob implements Tool {
     }
   }
   
+  /**
+   * This method creates a streaming job from the given argument list.
+   * The created object can be used and/or submitted to a jobtracker for 
+   * execution by a job agent such as JobControl
+   * @param argv the list args for creating a streaming job
+   * @return the created JobConf object 
+   * @throws IOException
+   */
+  static public JobConf createJob(String[] argv) throws IOException {
+    StreamJob job = new StreamJob();
+    job.argv_ = argv;
+    job.init();
+    job.preProcessArgs();
+    job.parseArgv();
+    job.postProcessArgs();
+    job.setJobConf();
+    return job.jobConf_;
+  }
+
   /**
    * This is the method that actually 
    * intializes the job conf and submits the job
