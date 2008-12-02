@@ -99,7 +99,7 @@
       <section>
         <title>Site Configuration</title>
         
-        <p>To configure the the Hadoop cluster you will need to configure the
+        <p>To configure the Hadoop cluster you will need to configure the
         <em>environment</em> in which the Hadoop daemons execute as well as
         the <em>configuration parameters</em> for the Hadoop daemons.</p>
         

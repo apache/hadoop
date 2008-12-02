@@ -644,7 +644,7 @@
       <doc>
       <![CDATA[Set the quiteness-mode. 
  
- In the the quite-mode error and informational messages might not be logged.
+ In the quite-mode error and informational messages might not be logged.
  
  @param quietmode <code>true</code> to set quiet-mode on, <code>false</code>
               to turn it off.]]>
@@ -21200,7 +21200,7 @@
  helps to cut down the amount of data transferred from the {@link Mapper} to
  the {@link Reducer}, leading to better performance.</p>
   
- <p>Typically the combiner is same as the the <code>Reducer</code> for the  
+ <p>Typically the combiner is same as the <code>Reducer</code> for the  
  job i.e. {@link #setReducerClass(Class)}.</p>
  
  @param theClass the user-defined combiner class used to combine 
@@ -21620,7 +21620,7 @@
       <param name="newValue" type="boolean"/>
       <doc>
       <![CDATA[Set whether the system should collect profiler information for some of 
- the tasks in this job? The information is stored in the the user log 
+ the tasks in this job? The information is stored in the user log 
  directory.
  @param newValue true means it should be gathered]]>
       </doc>
@@ -28444,7 +28444,7 @@
       <param name="aJob" type="org.apache.hadoop.mapred.jobcontrol.Job"/>
       <doc>
       <![CDATA[Add a new job.
- @param aJob the the new job]]>
+ @param aJob the new job]]>
       </doc>
     </method>
     <method name="addJobs"
@@ -42249,7 +42249,7 @@
     <doc>
     <![CDATA[A helper to load the native hadoop code i.e. libhadoop.so.
  This handles the fallback to either the bundled libhadoop-Linux-i386-32.so
- or the the default java implementations where appropriate.]]>
+ or the default java implementations where appropriate.]]>
     </doc>
   </class>
   <!-- end class org.apache.hadoop.util.NativeCodeLoader -->

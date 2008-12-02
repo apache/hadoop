@@ -190,15 +190,28 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
+<td><a name="dfs.https.enable">dfs.https.enable</a></td><td>false</td><td>Decide if HTTPS(SSL) is supported on HDFS
+  </td>
+</tr>
+<tr>
+<td><a name="dfs.https.need.client.auth">dfs.https.need.client.auth</a></td><td>false</td><td>Whether SSL client certificate authentication is required
+  </td>
+</tr>
+<tr>
+<td><a name="dfs.https.server.keystore.resource">dfs.https.server.keystore.resource</a></td><td>ssl-server.xml</td><td>Resource file from which ssl server keystore
+  information will be extracted
+  </td>
+</tr>
+<tr>
+<td><a name="dfs.https.client.keystore.resource">dfs.https.client.keystore.resource</a></td><td>ssl-client.xml</td><td>Resource file from which ssl client keystore
+  information will be extracted
+  </td>
+</tr>
+<tr>
 <td><a name="dfs.datanode.https.address">dfs.datanode.https.address</a></td><td>0.0.0.0:50475</td><td></td>
 </tr>
 <tr>
 <td><a name="dfs.https.address">dfs.https.address</a></td><td>0.0.0.0:50470</td><td></td>
-</tr>
-<tr>
-<td><a name="https.keystore.info.rsrc">https.keystore.info.rsrc</a></td><td>sslinfo.xml</td><td>The name of the resource from which ssl keystore information
-  will be extracted
-  </td>
 </tr>
 <tr>
 <td><a name="dfs.datanode.dns.interface">dfs.datanode.dns.interface</a></td><td>default</td><td>The name of the Network Interface from which a data node should 
@@ -338,8 +351,12 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>300</td><td>Namenode periodicity in seconds to check if decommission is 
+<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>30</td><td>Namenode periodicity in seconds to check if decommission is 
   complete.</td>
+</tr>
+<tr>
+<td><a name="dfs.namenode.decommission.nodes.per.interval">dfs.namenode.decommission.nodes.per.interval</a></td><td>5</td><td>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</td>
 </tr>
 <tr>
 <td><a name="dfs.replication.interval">dfs.replication.interval</a></td><td>3</td><td>The periodicity in seconds with which the namenode computes 
@@ -735,7 +752,7 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="mapred.task.profile">mapred.task.profile</a></td><td>false</td><td>To set whether the system should collect profiler
      information for some of the tasks in this job? The information is stored
-     in the the user log directory. The value is "true" if task profiling
+     in the user log directory. The value is "true" if task profiling
      is enabled.</td>
 </tr>
 <tr>
@@ -955,6 +972,11 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="mapred.tasktracker.indexcache.mb">mapred.tasktracker.indexcache.mb</a></td><td>10</td><td> The maximum memory that a task tracker allows for the 
     index cache that is used when serving map outputs to reducers.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.merge.recordsBeforeProgress">mapred.merge.recordsBeforeProgress</a></td><td>10000</td><td> The number of records to process during merge before
+   sending a progress notification to the TaskTracker.
   </td>
 </tr>
 </table>

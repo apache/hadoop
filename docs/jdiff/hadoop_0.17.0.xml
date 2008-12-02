@@ -551,7 +551,7 @@
       <doc>
       <![CDATA[Set the quiteness-mode. 
  
- In the the quite-mode error and informational messages might not be logged.
+ In the quite-mode error and informational messages might not be logged.
  
  @param quietmode <code>true</code> to set quiet-mode on, <code>false</code>
               to turn it off.]]>
@@ -23538,7 +23538,7 @@ To add a new serialization framework write an implementation of
  helps to cut down the amount of data transferred from the {@link Mapper} to
  the {@link Reducer}, leading to better performance.</p>
   
- <p>Typically the combiner is same as the the <code>Reducer</code> for the  
+ <p>Typically the combiner is same as the <code>Reducer</code> for the  
  job i.e. {@link #setReducerClass(Class)}.</p>
  
  @param theClass the user-defined combiner class used to combine 
@@ -23958,7 +23958,7 @@ To add a new serialization framework write an implementation of
       <param name="newValue" type="boolean"/>
       <doc>
       <![CDATA[Set whether the system should collect profiler information for some of 
- the tasks in this job? The information is stored in the the user log 
+ the tasks in this job? The information is stored in the user log 
  directory.
  @param newValue true means it should be gathered]]>
       </doc>
@@ -29523,7 +29523,7 @@ Sun Microsystems, Inc. in the United States and other countries.</i></p>]]>
       <param name="aJob" type="org.apache.hadoop.mapred.jobcontrol.Job"/>
       <doc>
       <![CDATA[Add a new job.
- @param aJob the the new job]]>
+ @param aJob the new job]]>
       </doc>
     </method>
     <method name="addJobs"
@@ -33101,7 +33101,7 @@ public class WordCountAggregatorDescriptor extends ValueAggregatorBaseDescriptor
 </pre>
 </blockquote>
 In the above code, LONG_VALUE_SUM is a string denoting the aggregation type LongValueSum, which sums over long values.
-ONE denotes a string "1". Function generateEntry(LONG_VALUE_SUM, words[i], ONE) will inperpret the first argument as an aggregation type, the second as an aggregation ID, and the the third argumnent as the value to be aggregated. The output will look like: "LongValueSum:xxxx", where XXXX is the string value of words[i]. The value will be "1". The mapper will call generateKeyValPairs(Object key, Object val)  for each input key/value pair to generate the desired aggregation id/value pairs. 
+ONE denotes a string "1". Function generateEntry(LONG_VALUE_SUM, words[i], ONE) will inperpret the first argument as an aggregation type, the second as an aggregation ID, and the third argumnent as the value to be aggregated. The output will look like: "LongValueSum:xxxx", where XXXX is the string value of words[i]. The value will be "1". The mapper will call generateKeyValPairs(Object key, Object val)  for each input key/value pair to generate the desired aggregation id/value pairs. 
 The down stream combiner/reducer will interpret these pairs as adding one to the aggregator XXXX.
 <p />
 Class ValueAggregatorBaseDescriptor is a base class that user plugin classes can extend. Here is the XML fragment specifying the user plugin class:
@@ -41954,7 +41954,7 @@ is serialized as
     <doc>
     <![CDATA[A helper to load the native hadoop code i.e. libhadoop.so.
  This handles the fallback to either the bundled libhadoop-Linux-i386-32.so
- or the the default java implementations where appropriate.]]>
+ or the default java implementations where appropriate.]]>
     </doc>
   </class>
   <!-- end class org.apache.hadoop.util.NativeCodeLoader -->

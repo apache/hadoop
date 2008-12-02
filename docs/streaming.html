@@ -153,6 +153,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="SLG_user_guide.html">HDFS Utilities</a>
 </div>
 <div class="menuitem">
+<a href="libhdfs.html">HDFS C API</a>
+</div>
+<div class="menuitem">
 <a href="hod_user_guide.html">HOD User Guide</a>
 </div>
 <div class="menuitem">
@@ -322,11 +325,11 @@ In the above example, both the mapper and the reducer are executables that read 
 </p>
 <p>
   When an executable is specified for mappers, each mapper task will launch the executable as a separate process when the mapper is initialized. As the mapper task runs, it converts its inputs into lines and feed the lines to the stdin of the process. In the meantime, the mapper collects the line oriented outputs from the stdout of the process and converts each line into a key/value pair, which is collected as the output of the mapper. By default, the 
-  <em>prefix of a line up to the first tab character</em> is the <strong>key</strong> and the the rest of the line (excluding the tab character) will be the <strong>value</strong>. 
+  <em>prefix of a line up to the first tab character</em> is the <strong>key</strong> and the rest of the line (excluding the tab character) will be the <strong>value</strong>. 
   If there is no tab character in the line, then entire line is considered as key and the value is null. However, this can be customized, as discussed later.
 </p>
 <p>
-When an executable is specified for reducers, each reducer task will launch the executable as a separate process then the reducer is initialized. As the reducer task runs, it converts its input key/values pairs into lines and feeds the lines to the stdin of the process. In the meantime, the reducer collects the line oriented outputs from the stdout of the process, converts each line into a key/value pair, which is collected as the output of the reducer. By default, the prefix of a line up to the first tab character is the key and the the rest of the line (excluding the tab character) is the value. However, this can be customized, as discussed later.
+When an executable is specified for reducers, each reducer task will launch the executable as a separate process then the reducer is initialized. As the reducer task runs, it converts its input key/values pairs into lines and feeds the lines to the stdin of the process. In the meantime, the reducer collects the line oriented outputs from the stdout of the process, converts each line into a key/value pair, which is collected as the output of the reducer. By default, the prefix of a line up to the first tab character is the key and the rest of the line (excluding the tab character) is the value. However, this can be customized, as discussed later.
 </p>
 <p>
 This is the basis for the communication protocol between the Map/Reduce framework and the streaming mapper/reducer.
@@ -604,7 +607,7 @@ To set an environment variable in a streaming command use:
 <a name="N101C3"></a><a name="Customizing+the+Way+to+Split+Lines+into+Key%2FValue+Pairs"></a>
 <h3 class="h4">Customizing the Way to Split Lines into Key/Value Pairs </h3>
 <p>
-As noted earlier, when the Map/Reduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. By default, the prefix of the line up to the first tab character is the key and the the rest of the line (excluding the tab character) is the value.
+As noted earlier, when the Map/Reduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. By default, the prefix of the line up to the first tab character is the key and the rest of the line (excluding the tab character) is the value.
 </p>
 <p>
 However, you can customize this default. You can specify a field separator other than the tab character (the default), and you can specify the nth (n &gt;= 1) character rather than the first character in a line (the default) as the separator between the key and value. For example:
