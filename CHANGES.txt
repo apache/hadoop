@@ -1280,6 +1280,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4713. Fix librecordio to handle records larger than 64k. (Christian
     Kunz via cdouglas)
 
+    HADOOP-4635. Fix a memory leak in fuse dfs. (pete wyckoff via mahadev)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
