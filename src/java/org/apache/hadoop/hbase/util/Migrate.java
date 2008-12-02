@@ -260,6 +260,10 @@ public class Migrate extends Configured implements Tool {
     boolean result = false;
     HColumnDescriptor hcd =
       hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY_HISTORIAN);
+    if (hcd == null) {
+      LOG.info("No region historian family in: " + hri.getRegionNameAsString());
+      return result;
+    }
     // Set historian records so they timeout after a week.
     if (hcd.getTimeToLive() == HConstants.FOREVER) {
       hcd.setTimeToLive(HConstants.WEEK_IN_SECONDS);
