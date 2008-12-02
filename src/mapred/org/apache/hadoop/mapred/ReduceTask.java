@@ -2032,7 +2032,7 @@ class ReduceTask extends Task {
                                   true, ioSortFactor, tmpDir, 
                                   conf.getOutputKeyComparator(), reporter);
               
-              Merger.writeFile(iter, writer, reporter);
+              Merger.writeFile(iter, writer, reporter, conf);
               writer.close();
             } catch (Exception e) {
               localFileSys.delete(outputPath, true);
@@ -2128,7 +2128,7 @@ class ReduceTask extends Task {
                                conf.getOutputKeyComparator(), reporter);
           
           if (null == combinerClass) {
-            Merger.writeFile(rIter, writer, reporter);
+            Merger.writeFile(rIter, writer, reporter, conf);
           } else {
             combineCollector.setWriter(writer);
             combineAndSpill(rIter, reduceCombineInputCounter);

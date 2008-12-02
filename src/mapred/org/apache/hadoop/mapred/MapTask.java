@@ -1054,7 +1054,7 @@ class MapTask extends Task {
               new Writer<K, V>(job, finalOut, keyClass, valClass, codec);
           if (null == combinerClass || job.getCombineOnceOnly() ||
               numSpills < minSpillsForCombine) {
-            Merger.writeFile(kvIter, writer, reporter);
+            Merger.writeFile(kvIter, writer, reporter, job);
           } else {
             combineCollector.setWriter(writer);
             combineAndSpill(kvIter, combineInputCounter);
