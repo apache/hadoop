@@ -1248,7 +1248,7 @@ class MapTask extends Task {
               new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
                                spilledRecordsCounter);
           if (null == combinerClass || numSpills < minSpillsForCombine) {
-            Merger.writeFile(kvIter, writer, reporter);
+            Merger.writeFile(kvIter, writer, reporter, job);
           } else {
             combineCollector.setWriter(writer);
             combineAndSpill(kvIter, combineInputCounter);

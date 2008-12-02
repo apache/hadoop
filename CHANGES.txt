@@ -1282,6 +1282,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4635. Fix a memory leak in fuse dfs. (pete wyckoff via mahadev)
 
+    HADOOP-4714. Report status between merges and make the number of records
+    between progress reports configurable. (Jothi Padmanabhan via cdouglas)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
