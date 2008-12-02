@@ -40,7 +40,7 @@ import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 
 /**
- * <code>IFile</code> is the simple <key-len, key, value-len, value> format
+ * <code>IFile</code> is the simple <key-len, value-len, key, value> format
  * for the intermediate map-outputs in Map-Reduce.
  * 
  * There is a <code>Writer</code> to write out map-outputs in this format and 

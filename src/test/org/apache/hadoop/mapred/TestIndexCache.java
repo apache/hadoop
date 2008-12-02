@@ -21,7 +21,10 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedOutputStream;
 
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -101,6 +104,41 @@ public class TestIndexCache extends TestCase {
     checkRecord(rec, totalsize);
   }
 
+  public void testBadIndex() throws Exception {
+    final int parts = 30;
+    JobConf conf = new JobConf();
+    FileSystem fs = FileSystem.getLocal(conf).getRaw();
+    Path p = new Path(System.getProperty("test.build.data", "/tmp"),
+        "cache").makeQualified(fs);
+    fs.delete(p, true);
+    conf.setInt("mapred.tasktracker.indexcache.mb", 1);
+    IndexCache cache = new IndexCache(conf);
+
+    Path f = new Path(p, "badindex");
+    FSDataOutputStream out = fs.create(f, false);
+    CheckedOutputStream iout = new CheckedOutputStream(out, new CRC32());
+    DataOutputStream dout = new DataOutputStream(iout);
+    for (int i = 0; i < parts; ++i) {
+      for (int j = 0; j < MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH / 8; ++j) {
+        if (0 == (i % 3)) {
+          dout.writeLong(i);
+        } else {
+          out.writeLong(i);
+        }
+      }
+    }
+    out.writeLong(iout.getChecksum().getValue());
+    dout.close();
+    try {
+      cache.getIndexInformation("badindex", 7, f);
+      fail("Did not detect bad checksum");
+    } catch (IOException e) {
+      if (!(e.getCause() instanceof ChecksumException)) {
+        throw e;
+      }
+    }
+  }
+
   private static void checkRecord(IndexRecord rec, long fill) {
     assertEquals(fill, rec.startOffset);
     assertEquals(fill, rec.rawLength);
@@ -110,13 +148,14 @@ public class TestIndexCache extends TestCase {
   private static void writeFile(FileSystem fs, Path f, long fill, int parts)
       throws IOException {
     FSDataOutputStream out = fs.create(f, false);
-    IFileOutputStream iout = new IFileOutputStream(out);
+    CheckedOutputStream iout = new CheckedOutputStream(out, new CRC32());
     DataOutputStream dout = new DataOutputStream(iout);
     for (int i = 0; i < parts; ++i) {
-      dout.writeLong(fill);
-      dout.writeLong(fill);
-      dout.writeLong(fill);
+      for (int j = 0; j < MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH / 8; ++j) {
+        dout.writeLong(fill);
+      }
     }
+    out.writeLong(iout.getChecksum().getValue());
     dout.close();
   }
 }

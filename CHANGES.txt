@@ -147,6 +147,8 @@ Trunk (unreleased changes)
     HADOOP-4513. Initialize jobs asynchronously in the capacity scheduler.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4649. Improve abstraction for spill indices. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -66,7 +65,7 @@ class IndexCache {
       info = readIndexFileToCache(fileName, mapId);
     } else {
       synchronized (info) {
-        while (null == info.indexRecordArray) {
+        while (null == info.mapSpillRecord) {
           try {
             info.wait();
           } catch (InterruptedException e) {
@@ -77,14 +76,13 @@ class IndexCache {
       LOG.debug("IndexCache HIT: MapId " + mapId + " found");
     }
 
-    if (info.indexRecordArray.length == 0 ||
-        info.indexRecordArray.length < reduce) {
-      System.out.println("I am failing here");
+    if (info.mapSpillRecord.size() == 0 ||
+        info.mapSpillRecord.size() < reduce) {
       throw new IOException("Invalid request " +
         " Map Id = " + mapId + " Reducer = " + reduce +
-        " Index Info Length = " + info.indexRecordArray.length);
+        " Index Info Length = " + info.mapSpillRecord.size());
     }
-    return info.indexRecordArray[reduce];
+    return info.mapSpillRecord.getIndex(reduce);
   }
 
   private IndexInformation readIndexFileToCache(Path indexFileName,
@@ -93,7 +91,7 @@ class IndexCache {
     IndexInformation newInd = new IndexInformation();
     if ((info = cache.putIfAbsent(mapId, newInd)) != null) {
       synchronized (info) {
-        while (null == info.indexRecordArray) {
+        while (null == info.mapSpillRecord) {
           try {
             info.wait();
           } catch (InterruptedException e) {
@@ -105,16 +103,16 @@ class IndexCache {
       return info;
     }
     LOG.debug("IndexCache MISS: MapId " + mapId + " not found") ;
-    IndexRecord[] tmp = null;
+    SpillRecord tmp = null;
     try { 
-      tmp = IndexRecord.readIndexFile(indexFileName, conf);
+      tmp = new SpillRecord(indexFileName, conf);
     } catch (Throwable e) { 
-      tmp = new IndexRecord[0];
+      tmp = new SpillRecord(0);
       cache.remove(mapId);
-      throw new IOException("Error Reading IndexFile",e);
+      throw new IOException("Error Reading IndexFile", e);
     } finally { 
       synchronized (newInd) { 
-        newInd.indexRecordArray = tmp;
+        newInd.mapSpillRecord = tmp;
         newInd.notifyAll();
       } 
     } 
@@ -157,11 +155,12 @@ class IndexCache {
   }
 
   private static class IndexInformation {
-    IndexRecord[] indexRecordArray = null;
+    SpillRecord mapSpillRecord;
 
     int getSize() {
-      return ((indexRecordArray == null) ? 
-          0 : indexRecordArray.length * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH);
+      return mapSpillRecord == null
+        ? 0
+        : mapSpillRecord.size() * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH;
     }
   }
 }
