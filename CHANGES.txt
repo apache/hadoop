@@ -86,6 +86,7 @@ Release 0.19.0 - Unreleased
    HBASE-1021  hbase metrics FileContext not working
    HBASE-1023  Check global flusher
    HBASE-1036  HBASE-1028 broke Thrift
+   HBASE-1037  Some test cases failing on Windows/Cygwin but not UNIX/Linux
       
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

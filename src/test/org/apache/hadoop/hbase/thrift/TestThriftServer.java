@@ -189,6 +189,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     long time1 = System.currentTimeMillis();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
 
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
+
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
@@ -252,6 +256,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+
+    // Sleep to assure that 'time1' and 'time2' will be different even with a
+    // coarse grained system timer.
+    Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
