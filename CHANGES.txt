@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     HADOOP-3770. Add gridmix2, an iteration on the gridmix benchmark. (Runping
     Qi via cdouglas)
 
+    HADOOP-4708. Add support for dfsadmin commands in TestCLI. (Boris Shkolnik
+    via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

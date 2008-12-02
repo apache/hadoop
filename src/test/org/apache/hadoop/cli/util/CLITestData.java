@@ -26,8 +26,8 @@ import java.util.ArrayList;
  */
 public class CLITestData {
   private String testDesc = null;
-  private ArrayList<String> testCommands = null;
-  private ArrayList<String> cleanupCommands = null;
+  private ArrayList<TestCmd> testCommands = null;
+  private ArrayList<TestCmd> cleanupCommands = null;
   private ArrayList<ComparatorData> comparatorData = null;
   private boolean testResult = false;
   
@@ -35,6 +35,34 @@ public class CLITestData {
 
   }
 
+  /**
+   * Class to define Test Command. includes type of the command and command itself
+   * Valid types FS and Admin (for dfsadmin commands)
+   *
+   */
+  static public class TestCmd {
+    public enum CommandType {
+        FS,
+        ADMIN
+    }
+    private final CommandType type;
+    private final String cmd;
+
+    public TestCmd(String str, CommandType type) {
+      cmd = str;
+      this.type = type;
+    }
+    public CommandType getType() {
+      return type;
+    }
+    public String getCmd() {
+      return cmd;
+    }
+    public String toString() {
+      return cmd;
+    }
+  }
+  
   /**
    * @return the testDesc
    */
@@ -52,14 +80,14 @@ public class CLITestData {
   /**
    * @return the testCommands
    */
-  public ArrayList<String> getTestCommands() {
+  public ArrayList<TestCmd> getTestCommands() {
     return testCommands;
   }
 
   /**
    * @param testCommands the testCommands to set
    */
-  public void setTestCommands(ArrayList<String> testCommands) {
+  public void setTestCommands(ArrayList<TestCmd> testCommands) {
     this.testCommands = testCommands;
   }
 
@@ -94,14 +122,14 @@ public class CLITestData {
   /**
    * @return the cleanupCommands
    */
-  public ArrayList<String> getCleanupCommands() {
+  public ArrayList<TestCmd> getCleanupCommands() {
     return cleanupCommands;
   }
 
   /**
    * @param cleanupCommands the cleanupCommands to set
    */
-  public void setCleanupCommands(ArrayList<String> cleanupCommands) {
+  public void setCleanupCommands(ArrayList<TestCmd> cleanupCommands) {
     this.cleanupCommands = cleanupCommands;
   }
 }

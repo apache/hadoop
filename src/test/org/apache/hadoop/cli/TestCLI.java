@@ -23,21 +23,25 @@ import java.util.ArrayList;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.cli.util.CLITestData;
+import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.ComparatorBase;
 import org.apache.hadoop.cli.util.ComparatorData;
-import org.apache.hadoop.cli.util.CLITestData;
+import org.apache.hadoop.cli.util.CLITestData.TestCmd;
+import org.apache.hadoop.cli.util.CLITestData.TestCmd.CommandType;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
-import org.apache.hadoop.cli.util.CommandExecutor;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 
 /**
  * Tests for the Command Line Interface (CLI)
@@ -168,17 +172,17 @@ public class TestCLI extends TestCase {
         LOG.info("           Test Description: [" + td.getTestDesc() + "]");
         LOG.info("");
 
-        ArrayList<String> testCommands = td.getTestCommands();
+        ArrayList<TestCmd> testCommands = td.getTestCommands();
         for (int j = 0; j < testCommands.size(); j++) {
           LOG.info("              Test Commands: [" + 
-              expandCommand((String) testCommands.get(j)) + "]");
+              expandCommand(testCommands.get(j).getCmd()) + "]");
         }
 
         LOG.info("");
-        ArrayList<String> cleanupCommands = td.getCleanupCommands();
+        ArrayList<TestCmd> cleanupCommands = td.getCleanupCommands();
         for (int j = 0; j < cleanupCommands.size(); j++) {
           LOG.info("           Cleanup Commands: [" +
-              expandCommand((String) cleanupCommands.get(j)) + "]");
+              expandCommand(cleanupCommands.get(j).getCmd()) + "]");
         }
 
         LOG.info("");
@@ -314,10 +318,13 @@ public class TestCLI extends TestCase {
       CLITestData testdata = (CLITestData) testsFromConfigFile.get(index);
    
       // Execute the test commands
-      ArrayList<String> testCommands = testdata.getTestCommands();
+      ArrayList<TestCmd> testCommands = testdata.getTestCommands();
       for (int i = 0; i < testCommands.size(); i++) {
-        CommandExecutor.executeFSCommand(testCommands.get(i), 
-        		namenode);
+      try {
+        CommandExecutor.executeCommand(testCommands.get(i), namenode);
+      } catch (Exception e) {
+        fail(StringUtils.stringifyException(e));
+      }
       }
       
       boolean overallTCResult = true;
@@ -341,10 +348,13 @@ public class TestCLI extends TestCase {
       testdata.setTestResult(overallTCResult);
       
       // Execute the cleanup commands
-      ArrayList<String> cleanupCommands = testdata.getCleanupCommands();
+      ArrayList<TestCmd> cleanupCommands = testdata.getCleanupCommands();
       for (int i = 0; i < cleanupCommands.size(); i++) {
-        CommandExecutor.executeFSCommand(cleanupCommands.get(i), 
-        		namenode);
+      try { 
+        CommandExecutor.executeCommand(cleanupCommands.get(i), namenode);
+      } catch (Exception e) {
+        fail(StringUtils.stringifyException(e));
+      }
       }
     }
   }
@@ -355,8 +365,8 @@ public class TestCLI extends TestCase {
   static class TestConfigFileParser extends DefaultHandler {
     String charString = null;
     CLITestData td = null;
-    ArrayList<String> testCommands = null;
-    ArrayList<String> cleanupCommands = null;
+    ArrayList<TestCmd> testCommands = null;
+    ArrayList<TestCmd> cleanupCommands = null;
     
     @Override
     public void startDocument() throws SAXException {
@@ -371,9 +381,9 @@ public class TestCLI extends TestCase {
       if (qName.equals("test")) {
         td = new CLITestData();
       } else if (qName.equals("test-commands")) {
-        testCommands = new ArrayList<String>();
+        testCommands = new ArrayList<TestCmd>();
       } else if (qName.equals("cleanup-commands")) {
-        cleanupCommands = new ArrayList<String>();
+        cleanupCommands = new ArrayList<TestCmd>();
       } else if (qName.equals("comparators")) {
         testComparators = new ArrayList<ComparatorData>();
       } else if (qName.equals("comparator")) {
@@ -396,10 +406,16 @@ public class TestCLI extends TestCase {
         cleanupCommands = null;
       } else if (qName.equals("command")) {
         if (testCommands != null) {
-          testCommands.add(charString);
+          testCommands.add(new TestCmd(charString, CommandType.FS));
         } else if (cleanupCommands != null) {
-          cleanupCommands.add(charString);
+          cleanupCommands.add(new TestCmd(charString, CommandType.FS));
         }
+      } else if (qName.equals("admin-command")) {
+          if (testCommands != null) {
+              testCommands.add(new TestCmd(charString,CommandType.ADMIN));
+            } else if (cleanupCommands != null) {
+              cleanupCommands.add(new TestCmd(charString, CommandType.ADMIN));
+            } 
       } else if (qName.equals("comparators")) {
         td.setComparatorData(testComparators);
       } else if (qName.equals("comparator")) {
