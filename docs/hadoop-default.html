@@ -328,7 +328,11 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>300</td><td>Namenode periodicity in seconds to check if decommission is complete.</td>
+<td><a name="dfs.namenode.decommission.interval">dfs.namenode.decommission.interval</a></td><td>30</td><td>Namenode periodicity in seconds to check if decommission is complete.</td>
+</tr>
+<tr>
+<td><a name="dfs.namenode.decommission.nodes.per.interval">dfs.namenode.decommission.nodes.per.interval</a></td><td>5</td><td>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</td>
 </tr>
 <tr>
 <td><a name="dfs.replication.interval">dfs.replication.interval</a></td><td>3</td><td>The periodicity in seconds with which the namenode computes repliaction work for datanodes. </td>
@@ -649,7 +653,7 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="mapred.task.profile">mapred.task.profile</a></td><td>false</td><td>To set whether the system should collect profiler
      information for some of the tasks in this job? The information is stored
-     in the the user log directory. The value is "true" if task profiling
+     in the user log directory. The value is "true" if task profiling
      is enabled.</td>
 </tr>
 <tr>
@@ -761,6 +765,11 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.task.cache.levels">mapred.task.cache.levels</a></td><td>2</td><td> This is the max level of the task cache. For example, if
     the level is 2, the tasks cached are at the host level and at the rack
     level.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.merge.recordsBeforeProgress">mapred.merge.recordsBeforeProgress</a></td><td>10000</td><td> The number of records to process during merge before
+   sending a progress notification to the TaskTracker.
   </td>
 </tr>
 </table>

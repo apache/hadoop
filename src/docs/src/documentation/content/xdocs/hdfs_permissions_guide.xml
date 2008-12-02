@@ -43,12 +43,12 @@
 		   Else if the group of <code>foo</code> matches any of member of the groups list, then the group permissions are tested;
 		</li>
 		<li>
-		   Otherwise the the other permissions of <code>foo</code> are tested.
+		   Otherwise the other permissions of <code>foo</code> are tested.
 		</li>
 	</ul>
 
 <p>
-		If a permissions check fails, the the client operation fails.	
+		If a permissions check fails, the client operation fails.	
 </p>
      </section>
 

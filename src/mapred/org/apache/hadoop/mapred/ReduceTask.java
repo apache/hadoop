@@ -2145,7 +2145,7 @@ class ReduceTask extends Task {
           //earlier when we invoked cloneFileAttributes
           localFileSys.delete(outputPath, true);
           throw (IOException)new IOException
-                  ("Intermedate merge failed").initCause(e);
+                  ("Intermediate merge failed").initCause(e);
         }
 
         // Note the output of the merge
