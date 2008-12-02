@@ -618,6 +618,8 @@ static char ** getGroups(uid_t uid, int *num_groups)
   assert(user != NULL);
   groupnames[i] = user;
 
+  // increment num_groups to include the user being added to the group list
+  *num_groups = *num_groups + 1;
 #else
 
   int i = 0;
@@ -1000,7 +1002,7 @@ static int dfs_statfs(const char *path, struct statvfs *st)
   st->f_blocks  =  cap/bsize;
 
   st->f_bfree   =  (cap-used)/bsize;
-  st->f_bavail  =  cap/bsize;
+  st->f_bavail  =  (cap-used)/bsize;
 
   st->f_files   =  1000;
   st->f_ffree   =  500;
