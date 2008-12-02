@@ -1871,7 +1871,7 @@
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofileenabled">
           JobConf.setProfileEnabled(boolean)</a>. If the value is set 
           <code>true</code>, the task profiling is enabled. The profiler
-          information is stored in the the user log directory. By default, 
+          information is stored in the user log directory. By default, 
           profiling is not enabled for the job.  </p>
           
           <p>Once user configures that profiling is needed, she/he can use

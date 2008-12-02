@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.19.0_-_2008-11-18_' && list.id != 'release_0.18.3_-_unreleased_') {
+        if (list.id != 'release_0.19.1_-_unreleased_' && list.id != 'release_0.19.0_-_2008-11-18_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,24 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('release_0.19.1_-_unreleased_')">Release 0.19.1 - Unreleased
+</a></h2>
+<ul id="release_0.19.1_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.19.1_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.19.1_-_unreleased_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4739">HADOOP-4739</a>. Fix spelling and grammar, improve phrasing of some sections in
+mapred tutorial.<br />(Vivek Ratan via cdouglas)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.19.1_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.19.1_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4697">HADOOP-4697</a>. Fix getBlockLocations in KosmosFileSystem to handle multiple
+blocks correctly.<br />(Sriram Rao via cdouglas)</li>
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_')">Release 0.19.0 - 2008-11-18
 </a></h2>
 <ul id="release_0.19.0_-_2008-11-18_">
@@ -679,8 +697,10 @@ path rather than the JobClient.<br />(Joydeep Sen Sarma via dhruba)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.18.3_-_unreleased_')">Release 0.18.3 - Unreleased
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.18.3_-_unreleased_')">Release 0.18.3 - Unreleased
+</a></h3>
 <ul id="release_0.18.3_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._improvements_')">  IMPROVEMENTS
 </a>&nbsp;&nbsp;&nbsp;(1)
@@ -690,7 +710,7 @@ via acmurthy)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(7)
+</a>&nbsp;&nbsp;&nbsp;(18)
     <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
@@ -704,11 +724,27 @@ a particular block within a short period.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4556">HADOOP-4556</a>. Block went missing.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4643">HADOOP-4643</a>. NameNode should exclude excessive replicas when counting
 live replicas for a block.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4703">HADOOP-4703</a>. Should not wait for proxy forever in lease recovering.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4647">HADOOP-4647</a>. NamenodeFsck should close the DFSClient it has created.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4616">HADOOP-4616</a>. Fuse-dfs can handle bad values from FileSystem.read call.<br />(Pete Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4061">HADOOP-4061</a>. Throttle Datanode decommission monitoring in Namenode.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4659">HADOOP-4659</a>. Root cause of connection failure is being ost to code that
+uses it for delaying startup.<br />(Steve Loughran and Hairong via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4614">HADOOP-4614</a>. Lazily open segments when merging map spills to avoid using
+too many file descriptors.<br />(Yuri Pradkin via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4257">HADOOP-4257</a>. The DFS client should pick only one datanode as the candidate
+to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via dhruba)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4713">HADOOP-4713</a>. Fix librecordio to handle records larger than 64k.<br />(Christian
+Kunz via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4635">HADOOP-4635</a>. Fix a memory leak in fuse dfs.<br />(pete wyckoff via mahadev)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4714">HADOOP-4714</a>. Report status between merges and make the number of records
+between progress reports configurable.<br />(Jothi Padmanabhan via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4726">HADOOP-4726</a>. Fix documentation typos "the the".<br />(Edward J. Yoon via
+szetszwo)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.18.2_-_2008-11-03_')">Release 0.18.2 - 2008-11-03
 </a></h3>
 <ul id="release_0.18.2_-_2008-11-03_">
