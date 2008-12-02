@@ -161,10 +161,19 @@ static void deserializeString(std::string& t, InStream& stream)
   int32_t len = 0;
   ::deserializeInt(len, stream);
   if (len > 0) {
-    char buf[len];
-    stream.read((void*) buf, len);
-    std::string s(buf, len);
-    t = s;
+    // resize the string to the right length
+    t.resize(len);
+    // read into the string in 64k chunks
+    const int bufSize = 65536;
+    int offset = 0;
+    char buf[bufSize];
+    while (len > 0) {
+      int chunkLength = len > bufSize ? bufSize : len;
+      stream.read((void *)buf, chunkLength);
+      t.replace(offset, chunkLength, buf, chunkLength);
+      offset += chunkLength;
+      len -= chunkLength;
+    }
   }
 }
 
