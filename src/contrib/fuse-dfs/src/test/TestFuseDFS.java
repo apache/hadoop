@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import org.apache.hadoop.dfs.*;
+import org.apache.hadoop.hdfs.*;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +58,7 @@ public class TestFuseDFS extends TestCase {
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
                        mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks",
-                       "-ordbuffer=5000"};
+                       "-ordbuffer=32768"};
     final String [] envp = {
       "CLASSPATH="+  cp,
       "LD_LIBRARY_PATH=" + lp,
@@ -271,23 +271,9 @@ public class TestFuseDFS extends TestCase {
 
       DistributedFileSystem.DiskStatus d = fileSys.getDiskStatus();
 
-      System.err.println("DEBUG:f.total=" + f.getTotalSpace());
-      System.err.println("DEBUG:d.capacity=" + d.getCapacity());
-
-      System.err.println("DEBUG:f.usable=" + f.getUsableSpace());
-
-      System.err.println("DEBUG:f.free=" + f.getFreeSpace());
-      System.err.println("DEBUG:d.remaining = " + d.getRemaining());
-
-      System.err.println("DEBUG:d.used = " + d.getDfsUsed());
-      System.err.println("DEBUG:f.total - f.free = " + (f.getTotalSpace() - f.getFreeSpace()));
-
       long fileUsedBlocks =  (f.getTotalSpace() - f.getFreeSpace())/(64 * 1024 * 1024);
       long dfsUsedBlocks = (long)Math.ceil((double)d.getDfsUsed()/(64 * 1024 * 1024));
-      System.err.println("DEBUG: fileUsedBlocks = " + fileUsedBlocks);
-      System.err.println("DEBUG: dfsUsedBlocks =  " + dfsUsedBlocks);
 
-      assertTrue(f.getTotalSpace() == f.getUsableSpace());
       assertTrue(fileUsedBlocks == dfsUsedBlocks);
       assertTrue(d.getCapacity() == f.getTotalSpace());
 
