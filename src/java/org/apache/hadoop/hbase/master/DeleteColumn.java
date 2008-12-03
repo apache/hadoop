@@ -22,9 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.fs.FileSystem;                 //TODO: remove
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.HStoreFile; //TODO: remove
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 

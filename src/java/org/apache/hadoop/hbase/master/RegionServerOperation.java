@@ -69,12 +69,6 @@ abstract class RegionServerOperation implements Delayed, HConstants {
 
   protected boolean metaTableAvailable() {
     boolean available = true;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("numberOfMetaRegions: " + 
-        master.regionManager.numMetaRegions() +
-        ", onlineMetaRegions.size(): " + 
-        master.regionManager.numOnlineMetaRegions());
-    }
     if (master.regionManager.numMetaRegions() != 
       master.regionManager.numOnlineMetaRegions()) {
       // We can't proceed because not all of the meta regions are online.
@@ -83,6 +77,10 @@ abstract class RegionServerOperation implements Delayed, HConstants {
       // in the run queue, put this request on the delay queue to give
       // other threads the opportunity to get the meta regions on-line.
       if (LOG.isDebugEnabled()) {
+        LOG.debug("numberOfMetaRegions: " + 
+            master.regionManager.numMetaRegions() +
+            ", onlineMetaRegions.size(): " + 
+            master.regionManager.numOnlineMetaRegions());
         LOG.debug("Requeuing because not all meta regions are online");
       }
       available = false;

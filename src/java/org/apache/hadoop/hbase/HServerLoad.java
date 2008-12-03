@@ -23,12 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
 
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -36,7 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
-@SuppressWarnings("unused")
+@SuppressWarnings("unchecked")
 public class HServerLoad implements WritableComparable {
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
@@ -138,7 +133,7 @@ public class HServerLoad implements WritableComparable {
     }
 
     /**
-     * @param storefiles the number of stores
+     * @param stores the number of stores
      */
     public void setStores(int stores) {
       this.stores = stores;
@@ -303,10 +298,6 @@ public class HServerLoad implements WritableComparable {
     return numberOfRegions;
   }
 
-  public Collection<RegionLoad> getRegionLoad() {
-    return Collections.unmodifiableCollection(regionLoad);
-  }
-
   /**
    * @return the numberOfRequests
    */
@@ -383,13 +374,14 @@ public class HServerLoad implements WritableComparable {
   }
 
   /**
-  -* @param name
-  -* @param stores
-  -* @param storefiles
-  -* @param memcacheSizeMB
-  -* @param storefileIndexSizeMB
+   * @param name
+   * @param stores
+   * @param storefiles
+   * @param memcacheSizeMB
+   * @param storefileIndexSizeMB
    * @deprecated Use {@link #addRegionInfo(RegionLoad)}
    */
+  @Deprecated
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int memcacheSizeMB,
       final int storefileIndexSizeMB) {

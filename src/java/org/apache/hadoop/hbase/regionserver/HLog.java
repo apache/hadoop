@@ -699,85 +699,90 @@ public class HLog implements HConstants, Syncable {
           LOG.debug("Splitting " + (i + 1) + " of " + logfiles.length + ": " +
             logfiles[i].getPath());
         }
-        // Check for empty file.
-        if (logfiles[i].getLen() <= 0) {
-          LOG.info("Skipping " + logfiles[i].toString() +
-              " because zero length");
-          continue;
-        }
+        // Check for possibly empty file. With appends, currently Hadoop reports
+        // a zero length even if the file has been sync'd. Revisit if 
+        // HADOOP-4751 is committed.
+        boolean possiblyEmpty = logfiles[i].getLen() <= 0;
         HLogKey key = new HLogKey();
         HLogEdit val = new HLogEdit();
-        SequenceFile.Reader in =
-          new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
         try {
-          int count = 0;
-          for (; in.next(key, val); count++) {
-            byte [] tableName = key.getTablename();
-            byte [] regionName = key.getRegionName();
-            SequenceFile.Writer w = logWriters.get(regionName);
-            if (w == null) {
-              Path logfile = new Path(
-                HRegion.getRegionDir(
-                  HTableDescriptor.getTableDir(rootDir, tableName),
-                  HRegionInfo.encodeRegionName(regionName)),
-                HREGION_OLDLOGFILE_NAME);
-              Path oldlogfile = null;
-              SequenceFile.Reader old = null;
-              if (fs.exists(logfile)) {
-                LOG.warn("Old log file " + logfile +
-                    " already exists. Copying existing file to new file");
-                oldlogfile = new Path(logfile.toString() + ".old");
-                fs.rename(logfile, oldlogfile);
-                old = new SequenceFile.Reader(fs, oldlogfile, conf);
-              }
-              w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
-                HLogEdit.class, getCompressionType(conf));
-              // Use copy of regionName; regionName object is reused inside in
-              // HStoreKey.getRegionName so its content changes as we iterate.
-              logWriters.put(regionName, w);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Creating new log file writer for path " + logfile +
-                  " and region " + Bytes.toString(regionName));
-              }
-              
-              if (old != null) {
-                // Copy from existing log file
-                HLogKey oldkey = new HLogKey();
-                HLogEdit oldval = new HLogEdit();
-                for (; old.next(oldkey, oldval); count++) {
-                  if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
-                    LOG.debug("Copied " + count + " edits");
-                  }
-                  w.append(oldkey, oldval);
+          SequenceFile.Reader in =
+            new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
+          try {
+            int count = 0;
+            for (; in.next(key, val); count++) {
+              byte [] tableName = key.getTablename();
+              byte [] regionName = key.getRegionName();
+              SequenceFile.Writer w = logWriters.get(regionName);
+              if (w == null) {
+                Path logfile = new Path(
+                    HRegion.getRegionDir(
+                        HTableDescriptor.getTableDir(rootDir, tableName),
+                        HRegionInfo.encodeRegionName(regionName)),
+                        HREGION_OLDLOGFILE_NAME);
+                Path oldlogfile = null;
+                SequenceFile.Reader old = null;
+                if (fs.exists(logfile)) {
+                  LOG.warn("Old log file " + logfile +
+                  " already exists. Copying existing file to new file");
+                  oldlogfile = new Path(logfile.toString() + ".old");
+                  fs.rename(logfile, oldlogfile);
+                  old = new SequenceFile.Reader(fs, oldlogfile, conf);
                 }
-                old.close();
-                fs.delete(oldlogfile, true);
+                w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
+                    HLogEdit.class, getCompressionType(conf));
+                // Use copy of regionName; regionName object is reused inside in
+                // HStoreKey.getRegionName so its content changes as we iterate.
+                logWriters.put(regionName, w);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Creating new log file writer for path " + logfile +
+                      " and region " + Bytes.toString(regionName));
+                }
+
+                if (old != null) {
+                  // Copy from existing log file
+                  HLogKey oldkey = new HLogKey();
+                  HLogEdit oldval = new HLogEdit();
+                  for (; old.next(oldkey, oldval); count++) {
+                    if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
+                      LOG.debug("Copied " + count + " edits");
+                    }
+                    w.append(oldkey, oldval);
+                  }
+                  old.close();
+                  fs.delete(oldlogfile, true);
+                }
               }
+              w.append(key, val);
             }
-            w.append(key, val);
-          }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Applied " + count + " total edits from " +
-              logfiles[i].getPath().toString());
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Applied " + count + " total edits from " +
+                  logfiles[i].getPath().toString());
+            }
+          } catch (IOException e) {
+            e = RemoteExceptionHandler.checkIOException(e);
+            if (!(e instanceof EOFException)) {
+              LOG.warn("Exception processing " + logfiles[i].getPath() +
+                  " -- continuing. Possible DATA LOSS!", e);
+            }
+          } finally {
+            try {
+              in.close();
+            } catch (IOException e) {
+              LOG.warn("Close in finally threw exception -- continuing", e);
+            }
+            // Delete the input file now so we do not replay edits.  We could
+            // have gotten here because of an exception.  If so, probably
+            // nothing we can do about it. Replaying it, it could work but we
+            // could be stuck replaying for ever. Just continue though we
+            // could have lost some edits.
+            fs.delete(logfiles[i].getPath(), true);
           }
         } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          if (!(e instanceof EOFException)) {
-            LOG.warn("Exception processing " + logfiles[i].getPath() +
-                " -- continuing. Possible DATA LOSS!", e);
+          if (possiblyEmpty) {
+            continue;
           }
-        } finally {
-          try {
-            in.close();
-          } catch (IOException e) {
-            LOG.warn("Close in finally threw exception -- continuing", e);
-          }
-          // Delete the input file now so we do not replay edits.  We could
-          // have gotten here because of an exception.  If so, probably
-          // nothing we can do about it. Replaying it, it could work but we
-          // could be stuck replaying for ever. Just continue though we
-          // could have lost some edits.
-          fs.delete(logfiles[i].getPath(), true);
+          throw e;
         }
       }
     } finally {

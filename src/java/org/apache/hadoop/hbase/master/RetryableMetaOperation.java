@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Sleeper;
 
 /**
  * Uses Callable pattern so that operations against meta regions do not need
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
  */
 abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected final Log LOG = LogFactory.getLog(this.getClass());
+  protected final Sleeper sleeper;
   protected final MetaRegion m;
   protected final HMaster master;
   
@@ -47,6 +49,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected RetryableMetaOperation(MetaRegion m, HMaster master) {
     this.m = m;
     this.master = master;
+    this.sleeper = new Sleeper(master.threadWakeFrequency, master.closed);
   }
   
   protected T doWithRetries()
@@ -89,7 +92,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
-      master.sleeper.sleep();
+      sleeper.sleep();
     }
     return null;    
   }

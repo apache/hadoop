@@ -47,6 +47,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private final HServerAddress deadServer;
   private final String deadServerName;
   private final boolean rootRegionServer;
+  private boolean rootRegionReassigned = false;
   private Path oldLogDir;
   private boolean logSplit;
   private boolean rootRescanned;
@@ -250,14 +251,19 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       logSplit = true;
     }
+    
+    if (this.rootRegionServer && !this.rootRegionReassigned) {
+      // The server that died was serving the root region. Now that the log
+      // has been split, get it reassigned.
+      master.regionManager.reassignRootRegion();
+      // avoid multiple root region reassignment 
+      this.rootRegionReassigned = true;
+      // When we call rootAvailable below, it will put us on the delayed
+      // to do queue to allow some time to pass during which the root 
+      // region will hopefully get reassigned.
+    }
 
     if (!rootAvailable()) {
-      if (rootRegionServer) {
-        // Get root region assigned now that log has been split and if the
-        // dead server was serving the root region
-        master.regionManager.reassignRootRegion();
-      }
-      
       // Return true so that worker does not put this request back on the
       // toDoQueue.
       // rootAvailable() has already put it on the delayedToDoQueue

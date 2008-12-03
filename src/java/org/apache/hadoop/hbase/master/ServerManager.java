@@ -127,7 +127,7 @@ class ServerManager implements HConstants {
       HServerAddress root = master.getRootRegionLocation();
       boolean rootServer = false;
       if (root != null && root.equals(storedInfo.getServerAddress())) {
-        master.regionManager.setRootRegionLocation(null);
+        master.regionManager.unsetRootRegion();
         rootServer = true;
       }
       try {
@@ -293,17 +293,19 @@ class ServerManager implements HConstants {
     serversToServerInfo.put(serverName, serverInfo);
 
     HServerLoad load = serversToLoad.get(serverName);
-    this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
-    if (load != null && !load.equals(serverInfo.getLoad())) {
-      // We have previous information about the load on this server
-      // and the load on this server has changed
-      synchronized (loadToServers) {
-        Set<String> servers = loadToServers.get(load);
+    if (load != null) {
+      this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
+      if (!load.equals(serverInfo.getLoad())) {
+        // We have previous information about the load on this server
+        // and the load on this server has changed
+        synchronized (loadToServers) {
+          Set<String> servers = loadToServers.get(load);
 
-        // Note that servers should never be null because loadToServers
-        // and serversToLoad are manipulated in pairs
-        servers.remove(serverName);
-        loadToServers.put(load, servers);
+          // Note that servers should never be null because loadToServers
+          // and serversToLoad are manipulated in pairs
+          servers.remove(serverName);
+          loadToServers.put(load, servers);
+        }
       }
     }
 
@@ -715,18 +717,15 @@ class ServerManager implements HConstants {
           }
         }
         deadServers.add(server);
-      }
-      synchronized (serversToServerInfo) {
-        serversToServerInfo.notifyAll();
-      }
-
-      if (info != null) {
         try {
           master.toDoQueue.put(
               new ProcessServerShutdown(master, info, rootServer));
         } catch (InterruptedException e) {
-          LOG.error("Insertion into toDoQueue was interrupted", e);
+          LOG.error("insert into toDoQueue was interrupted", e);
         }
+      }
+      synchronized (serversToServerInfo) {
+        serversToServerInfo.notifyAll();
       }
     }
   }
