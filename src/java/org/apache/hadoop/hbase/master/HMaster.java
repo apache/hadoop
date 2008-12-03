@@ -590,14 +590,27 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    // We can not create a table unless meta regions have already been
-    // assigned and scanned.
-    if (!regionManager.areAllMetaRegionsOnline()) {
-      throw new NotAllMetaRegionsOnlineException();
-    }
     HRegionInfo newRegion = new HRegionInfo(desc, null, null);
-    createTable(newRegion);
-    LOG.info("created table " + desc.getNameAsString());
+
+    for (int tries = 0; tries < numRetries; tries++) {
+      try {
+        // We can not create a table unless meta regions have already been
+        // assigned and scanned.
+        if (!regionManager.areAllMetaRegionsOnline()) {
+          throw new NotAllMetaRegionsOnlineException();
+        }
+        createTable(newRegion);
+        LOG.info("created table " + desc.getNameAsString());
+        break;
+      } catch (TableExistsException e) {
+        throw e;
+      } catch (IOException e) {
+        if (tries == numRetries - 1) {
+          throw RemoteExceptionHandler.checkIOException(e);
+        }
+        sleeper.sleep();
+      }
+    }
   }
 
   private synchronized void createTable(final HRegionInfo newRegion) 
