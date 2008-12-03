@@ -22,7 +22,12 @@ package org.apache.hadoop.hbase.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -33,14 +38,15 @@ import org.apache.hadoop.io.Writable;
  * the timestamp of a cell to a first-class value, making it easy to take 
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
-public class Cell implements Writable, Iterable<Cell> {
-  protected byte[][] values;
-  protected long[] timestamps;
+public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>> {
+  protected final SortedMap<Long, byte[]> valueMap =
+    new TreeMap<Long, byte[]>(new Comparator<Long>() {
+      public int compare(Long l1, Long l2) {
+        return l2.compareTo(l1);
+    }});
   
   /** For Writable compatibility */
   public Cell() {
-    values = null;
-    timestamps = null;
   }
 
   /**
@@ -58,10 +64,7 @@ public class Cell implements Writable, Iterable<Cell> {
    * @param timestamp
    */
   public Cell(byte[] value, long timestamp) {
-    this.values = new byte[1][];
-    this.values[0] = value;
-    this.timestamps = new long[1];
-    this.timestamps[0] = timestamp;
+    valueMap.put(timestamp, value);
   }
   
   /**
@@ -69,16 +72,7 @@ public class Cell implements Writable, Iterable<Cell> {
    * @param ts array of timestamps
    */
   public Cell(String[] vals, long[] ts) {
-    if (vals.length != ts.length) {
-      throw new IllegalArgumentException(
-          "number of values must be the same as the number of timestamps");
-    }
-    this.values = new byte[vals.length][];
-    this.timestamps = new long[ts.length];
-    for (int i = 0; i < values.length; i++) {
-      this.values[i] = Bytes.toBytes(vals[i]);
-      this.timestamps[i] = ts[i];
-    }
+    this(Bytes.toByteArrays(vals), ts);
   }
   
   /**
@@ -90,38 +84,59 @@ public class Cell implements Writable, Iterable<Cell> {
       throw new IllegalArgumentException(
           "number of values must be the same as the number of timestamps");
     }
-    this.values = new byte[vals.length][];
-    this.timestamps = new long[ts.length];
-    System.arraycopy(vals, 0, this.values, 0, vals.length);
-    System.arraycopy(ts, 0, this.timestamps, 0, ts.length);
+    for (int i = 0; i < vals.length; i++) {
+      valueMap.put(ts[i], vals[i]);
+    }
   }
   
   /** @return the current cell's value */
   public byte[] getValue() {
-    return values[0];
+    return valueMap.get(valueMap.firstKey());
   }
   
   /** @return the current cell's timestamp */
   public long getTimestamp() {
-    return timestamps[0];
+    return valueMap.firstKey();
+  }
+  
+  /** @return the number of values this cell holds */
+  public int getNumValues() {
+    return valueMap.size();
+  }
+  
+  /** Add values and timestamps of another cell into this cell 
+   * @param c Cell
+   */
+  public void mergeCell(Cell c) {
+    valueMap.putAll(c.valueMap);
+  }
+  
+  /** Add a new timestamp and value to this cell
+   * @param val value
+   * @param ts timestamp
+   */
+  public void add(byte[] val, long ts) {
+    valueMap.put(ts, val);
   }
   
   @Override
   public String toString() {
-    if (this.values.length == 1) {
-      return "timestamp=" + this.timestamps[0] + ", value=" +
-        Bytes.toString(this.values[0]);
+    if (valueMap.size() == 1) {
+      return "timestamp=" + getTimestamp() + ", value=" +
+        Bytes.toString(getValue());
     }
     StringBuilder s = new StringBuilder("{ ");
-    for (int i = 0; i < this.values.length; i++) {
+    int i = 0;
+    for (Map.Entry<Long, byte[]> entry : valueMap.entrySet()) {
       if (i > 0) {
         s.append(", ");
       }
       s.append("[timestamp=");
-      s.append(timestamps[i]);
+      s.append(entry.getKey());
       s.append(", value=");
-      s.append(Bytes.toString(values[i]));
+      s.append(Bytes.toString(entry.getValue()));
       s.append("]");
+      i++;
     }
     s.append(" }");
     return s.toString();
@@ -133,23 +148,18 @@ public class Cell implements Writable, Iterable<Cell> {
 
   public void readFields(final DataInput in) throws IOException {
     int nvalues = in.readInt();
-    this.timestamps = new long[nvalues];
-    this.values = new byte[nvalues][];
     for (int i = 0; i < nvalues; i++) {
-      this.timestamps[i] = in.readLong();
-    }
-    for (int i = 0; i < nvalues; i++) {
-      this.values[i] = Bytes.readByteArray(in);
+      long timestamp = in.readLong();
+      byte[] value = Bytes.readByteArray(in);
+      valueMap.put(timestamp, value);
     }
   }
 
   public void write(final DataOutput out) throws IOException {
-    out.writeInt(this.values.length);
-    for (int i = 0; i < this.timestamps.length; i++) {
-      out.writeLong(this.timestamps[i]);
-    }
-    for (int i = 0; i < this.values.length; i++) {
-      Bytes.writeByteArray(out, this.values[i]);
+    out.writeInt(valueMap.size());
+    for (Map.Entry<Long, byte[]> entry : valueMap.entrySet()) {
+      out.writeLong(entry.getKey());
+      Bytes.writeByteArray(out, entry.getValue());
     }
   }
   
@@ -157,22 +167,22 @@ public class Cell implements Writable, Iterable<Cell> {
   // Iterable
   //
 
-  public Iterator<Cell> iterator() {
+  public Iterator<Entry<Long, byte[]>> iterator() {
     return new CellIterator();
   }
-  private class CellIterator implements Iterator<Cell> {
-    private int currentValue = 0;
+  
+  private class CellIterator implements Iterator<Entry<Long, byte[]>> {
+    private Iterator<Entry<Long, byte[]>> it;
     CellIterator() {
+      it = valueMap.entrySet().iterator();
     }
     
     public boolean hasNext() {
-      return currentValue < values.length;
+      return it.hasNext();
     }
     
-    public Cell next() {
-      Cell c = new Cell(values[currentValue], timestamps[currentValue]);
-      currentValue++;
-      return c;
+    public Entry<Long, byte[]> next() {
+      return it.next();
     }
     
     public void remove() throws UnsupportedOperationException {

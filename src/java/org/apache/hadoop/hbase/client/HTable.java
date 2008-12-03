@@ -423,6 +423,33 @@ public class HTable {
   public RowResult getRow(final byte [] row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
   }
+ 
+  /** 
+   * Get more than one version of all columns for the specified row
+   * 
+   * @param row row key
+   * @param numVersions number of versions to return
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final String row, final int numVersions)
+  throws IOException {
+    return getRow(Bytes.toBytes(row), null, 
+                  HConstants.LATEST_TIMESTAMP, numVersions, null);
+  }
+
+  /** 
+   * Get more than one version of all columns for the specified row
+   * 
+   * @param row row key
+   * @param numVersions number of versions to return
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte[] row, final int numVersions)
+  throws IOException {
+    return getRow(row, null, HConstants.LATEST_TIMESTAMP, numVersions, null);
+  }
 
   /** 
    * Get all the data for the specified row at a specified timestamp
@@ -449,6 +476,26 @@ public class HTable {
   throws IOException {
     return getRow(row,null,ts);
   }
+  
+  public RowResult getRow(final String row, final long ts,
+      final int numVersions) throws IOException {
+    return getRow(Bytes.toBytes(row), null, ts, numVersions, null);
+  }
+  
+  /** 
+   * Get more than one version of all columns for the specified row
+   * at a specified timestamp
+   * 
+   * @param row row key
+   * @param ts timestamp
+   * @param numVersions number of versions to return
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte[] row, final long timestamp,
+      final int numVersions) throws IOException {
+    return getRow(row, null, timestamp, numVersions, null);
+  }
 
   /** 
    * Get selected columns for the specified row at the latest timestamp
@@ -474,6 +521,35 @@ public class HTable {
   public RowResult getRow(final byte [] row, final byte [][] columns) 
   throws IOException {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
+  }
+  
+  /** 
+   * Get more than one version of selected columns for the specified row
+   * 
+   * @param row row key
+   * @param columns Array of column names and families you want to retrieve.
+   * @param numVersions number of versions to return
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final String row, final String[] columns,
+      final int numVersions) throws IOException {
+    return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns),
+                  HConstants.LATEST_TIMESTAMP, numVersions, null);
+  }
+  
+  /** 
+   * Get more than one version of selected columns for the specified row
+   * 
+   * @param row row key
+   * @param columns Array of column names and families you want to retrieve.
+   * @param numVersions number of versions to return
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte[] row, final byte[][] columns,
+      final int numVersions) throws IOException {
+    return getRow(row, columns, HConstants.LATEST_TIMESTAMP, numVersions, null);
   }
 
   /** 
@@ -503,8 +579,16 @@ public class HTable {
   public RowResult getRow(final byte [] row, final byte [][] columns, 
     final long ts) 
   throws IOException {       
-    return getRow(row,columns,ts,null);
+    return getRow(row,columns,ts,1,null);
   }
+  
+  public RowResult getRow(final String row, final String[] columns,
+      final long timestamp, final int numVersions, final RowLock rowLock)
+  throws IOException {
+    return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns), timestamp,
+                  numVersions, rowLock);
+  }
+  
 
   /** 
    * Get selected columns for the specified row at a specified timestamp
@@ -518,7 +602,7 @@ public class HTable {
    * @throws IOException
    */
   public RowResult getRow(final byte [] row, final byte [][] columns, 
-    final long ts, final RowLock rl) 
+    final long ts, final int numVersions, final RowLock rl) 
   throws IOException {       
     return connection.getRegionServerWithRetries(
         new ServerCallable<RowResult>(connection, tableName, row) {
@@ -528,7 +612,7 @@ public class HTable {
               lockId = rl.getLockId();
             }
             return server.getRow(location.getRegionInfo().getRegionName(), row, 
-                columns, ts, lockId);
+                columns, ts, numVersions, lockId);
           }
         }
     );

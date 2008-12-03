@@ -285,19 +285,20 @@ class Memcache {
    * row and timestamp, but not a column name.
    * @param key
    * @param columns Pass null for all columns else the wanted subset.
+   * @param numVersions number of versions to retrieve
    * @param deletes Map to accumulate deletes found.
    * @param results Where to stick row results found.
    */
-  void getFull(HStoreKey key, Set<byte []> columns, Map<byte [], Long> deletes, 
-    Map<byte [], Cell> results) {
+  void getFull(HStoreKey key, Set<byte []> columns, int numVersions,
+    Map<byte [], Long> deletes, Map<byte [], Cell> results) {
     this.lock.readLock().lock();
     try {
       // The synchronizations here are because internalGet iterates
       synchronized (this.memcache) {
-        internalGetFull(this.memcache, key, columns, deletes, results);
+        internalGetFull(this.memcache, key, columns, numVersions, deletes, results);
       }
       synchronized (this.snapshot) {
-        internalGetFull(this.snapshot, key, columns, deletes, results);
+        internalGetFull(this.snapshot, key, columns, numVersions, deletes, results);
       }
     } finally {
       this.lock.readLock().unlock();
@@ -305,7 +306,7 @@ class Memcache {
   }
 
   private void internalGetFull(SortedMap<HStoreKey, byte[]> map, HStoreKey key, 
-      Set<byte []> columns, Map<byte [], Long> deletes,
+      Set<byte []> columns, int numVersions, Map<byte [], Long> deletes,
       Map<byte [], Cell> results) {
     if (map.isEmpty() || key == null) {
       return;
@@ -316,7 +317,8 @@ class Memcache {
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       byte [] itCol = itKey.getColumn();
-      if (results.get(itCol) == null && key.matchesWithoutColumn(itKey)) {
+      Cell cell = results.get(itCol);
+      if ((cell == null || cell.getNumValues() < numVersions) && key.matchesWithoutColumn(itKey)) {
         if (columns == null || columns.contains(itKey.getColumn())) {
           byte [] val = tailMap.get(itKey);
           if (HLogEdit.isDeleted(val)) {
@@ -329,7 +331,11 @@ class Memcache {
             // Skip expired cells
             if (ttl == HConstants.FOREVER ||
                   now < itKey.getTimestamp() + ttl) {
-              results.put(itCol, new Cell(val, itKey.getTimestamp()));
+              if (cell == null) {
+                results.put(itCol, new Cell(val, itKey.getTimestamp()));
+              } else {
+                cell.add(val, itKey.getTimestamp());
+              }
             } else {
               addVictim(victims, itKey);
             }
@@ -787,7 +793,7 @@ class Memcache {
         }
         key.setRow(this.currentRow);
         key.setVersion(this.timestamp);
-        getFull(key, isWildcardScanner() ? null : this.columns, deletes,
+        getFull(key, isWildcardScanner() ? null : this.columns, 1, deletes,
             rowResults);
         for (Map.Entry<byte [], Long> e: deletes.entrySet()) {
           rowResults.put(e.getKey(),

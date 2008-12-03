@@ -151,6 +151,8 @@ Release 0.19.0 - Unreleased
    HBASE-1018  Regionservers should report detailed health to master
    HBASE-1034  Remove useless TestToString unit test
    HBASE-1030  Bit of polish on HBASE-1018
+   HBASE-847   new API: HTable.getRow with numVersion specified
+               (Doğacan Güney via Stack)
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

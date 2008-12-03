@@ -309,12 +309,12 @@ public class TransactionalRegion extends HRegion {
         LOG.trace("cell: " + Bytes.toString(entry.getValue().getValue()));
       }
 
-      Map<byte[], Cell> internalResults = getFull(row, columns, ts, null);
+      Map<byte[], Cell> internalResults = getFull(row, columns, ts, 1, null);
       internalResults.putAll(localCells);
       return internalResults;
     }
 
-    return getFull(row, columns, ts, null);
+    return getFull(row, columns, ts, 1, null);
   }
 
   /**

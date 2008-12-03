@@ -1,4 +1,4 @@
-  /**
+ /**
  * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -963,7 +963,7 @@ public class HRegion implements HConstants {
 
   /**
    * Fetch all the columns for the indicated row at a specified timestamp.
-   * Returns a TreeMap that maps column names to values.
+   * Returns a HbaseMapWritable that maps column names to values.
    *
    * We should eventually use Bloom filters here, to reduce running time.  If 
    * the database has many column families and is very sparse, then we could be 
@@ -974,12 +974,14 @@ public class HRegion implements HConstants {
    * @param row
    * @param columns Array of columns you'd like to retrieve. When null, get all.
    * @param ts
+   * @param numVersions number of versions to retrieve
    * @param lockid
-   * @return Map<columnName, Cell> values
+   * @return HbaseMapWritable<columnName, Cell> values
    * @throws IOException
    */
-  public Map<byte [], Cell> getFull(final byte [] row,
-      final Set<byte []> columns, final long ts, final Integer lockid) 
+  public HbaseMapWritable<byte [], Cell> getFull(final byte [] row,
+      final Set<byte []> columns, final long ts,
+      final int numVersions, final Integer lockid) 
   throws IOException {
     // Check columns passed
     if (columns != null) {
@@ -991,8 +993,8 @@ public class HRegion implements HConstants {
     Integer lid = getLock(lockid,row);
     HashSet<HStore> storeSet = new HashSet<HStore>();
     try {
-      TreeMap<byte [], Cell> result =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      HbaseMapWritable<byte [], Cell> result =
+        new HbaseMapWritable<byte [], Cell>();
       // Get the concerned columns or all of them
       if (columns != null) {
         for (byte[] bs : columns) {
@@ -1012,14 +1014,14 @@ public class HRegion implements HConstants {
         for (byte[] bs : columns) {
           if (HStoreKey.getFamilyDelimiterIndex(bs) == (bs.length - 1)) {
             HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
-            store.getFull(key, null, result);
+            store.getFull(key, null, numVersions, result);
             storeSet.remove(store);
           }
         }
       }
       
       for (HStore targetStore: storeSet) {
-        targetStore.getFull(key, columns, result);
+        targetStore.getFull(key, columns, numVersions, result);
       }
       
       return result;
@@ -1080,7 +1082,7 @@ public class HRegion implements HConstants {
       HbaseMapWritable<byte [], Cell> cells =
         new HbaseMapWritable<byte [], Cell>();
       // This will get all results for this store.
-      store.getFull(key, null, cells);
+      store.getFull(key, null, 1, cells);
       return new RowResult(key.getRow(), cells);
     } finally {
       splitsAndClosesLock.readLock().unlock();

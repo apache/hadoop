@@ -110,7 +110,7 @@ class IndexedRegion extends TransactionalRegion {
 
     SortedMap<byte[], byte[]> newColumnValues = getColumnsFromBatchUpdate(batchUpdate);
     Map<byte[], Cell> oldColumnCells = super.getFull(batchUpdate.getRow(),
-        neededColumns, HConstants.LATEST_TIMESTAMP, null);
+        neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
     
     // Handle delete batch updates. Go back and get the next older values
     for (BatchOperation op : batchUpdate) {
@@ -270,7 +270,7 @@ class IndexedRegion extends TransactionalRegion {
       Set<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
 
       Map<byte[], Cell> oldColumnCells = super.getFull(row,
-          neededColumns, HConstants.LATEST_TIMESTAMP, null);
+          neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
       SortedMap<byte[], byte[]> oldColumnValues = convertToValueMap(oldColumnCells);
       
       
@@ -281,7 +281,7 @@ class IndexedRegion extends TransactionalRegion {
       // Handle if there is still a version visible.
       if (ts != HConstants.LATEST_TIMESTAMP) {
         Map<byte[], Cell> currentColumnCells = super.getFull(row,
-            neededColumns, ts, null);
+            neededColumns, ts, 1, null);
         SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentColumnCells);
         
         for (IndexSpecification indexSpec : getIndexes()) {
@@ -316,7 +316,7 @@ class IndexedRegion extends TransactionalRegion {
     
     Set<byte[]> neededColumns = getColumnsForIndexes(indexesToUpdate);
     Map<byte[], Cell> oldColumnCells = super.getFull(row,
-        neededColumns, HConstants.LATEST_TIMESTAMP, null);
+        neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
     SortedMap<byte [], byte[]> oldColumnValues = convertToValueMap(oldColumnCells);
     
     for (IndexSpecification indexSpec : indexesToUpdate) {
@@ -326,7 +326,7 @@ class IndexedRegion extends TransactionalRegion {
     // Handle if there is still a version visible.
     if (ts != HConstants.LATEST_TIMESTAMP) {
       Map<byte[], Cell> currentColumnCells = super.getFull(row,
-          neededColumns, ts, null);
+          neededColumns, ts, 1, null);
       SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentColumnCells);
       
       for (IndexSpecification indexSpec : getIndexes()) {

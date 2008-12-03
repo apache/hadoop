@@ -188,7 +188,7 @@ public class TestHMemcache extends TestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       TreeMap<byte [], Long> deletes =
         new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-      this.hmemcache.getFull(hsk, null, deletes, all);
+      this.hmemcache.getFull(hsk, null, 1, deletes, all);
       isExpectedRow(i, all);
     }
   }

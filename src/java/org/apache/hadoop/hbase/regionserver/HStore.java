@@ -1308,8 +1308,10 @@ public class HStore implements HConstants {
    * The returned object should map column names to Cells.
    */
   void getFull(HStoreKey key, final Set<byte []> columns,
-      Map<byte [], Cell> results)
+      final int numVersions, Map<byte [], Cell> results)
   throws IOException {
+    int versions = versionsToReturn(numVersions);
+
     Map<byte [], Long> deletes =
       new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
@@ -1321,7 +1323,7 @@ public class HStore implements HConstants {
     this.lock.readLock().lock();
     
     // get from the memcache first.
-    memcache.getFull(key, columns, deletes, results);
+    memcache.getFull(key, columns, versions, deletes, results);
     
     try {
       MapFile.Reader[] maparray = getReaders();
@@ -1332,7 +1334,7 @@ public class HStore implements HConstants {
         
         // synchronize on the map so that no one else iterates it at the same 
         // time
-        getFullFromMapFile(map, key, columns, deletes, results);
+        getFullFromMapFile(map, key, columns, versions, deletes, results);
       }
     } finally {
       this.lock.readLock().unlock();
@@ -1340,7 +1342,8 @@ public class HStore implements HConstants {
   }
   
   private void getFullFromMapFile(MapFile.Reader map, HStoreKey key, 
-    Set<byte []> columns, Map<byte [], Long> deletes, Map<byte [], Cell> results) 
+    Set<byte []> columns, int numVersions, Map<byte [], Long> deletes,
+    Map<byte [], Cell> results) 
   throws IOException {
     synchronized(map) {
       long now = System.currentTimeMillis();
@@ -1354,14 +1357,17 @@ public class HStore implements HConstants {
       if (readkey == null) {
         return;
       }
+      
       do {
         byte [] readcol = readkey.getColumn();
         
         // if we're looking for this column (or all of them), and there isn't 
-        // already a value for this column in the results map, and the key we 
+        // already a value for this column in the results map or there is a value
+        // but we haven't collected enough versions yet, and the key we 
         // just read matches, then we'll consider it
         if ((columns == null || columns.contains(readcol)) 
-          && !results.containsKey(readcol)
+          && (!results.containsKey(readcol) 
+              || results.get(readcol).getNumValues() < numVersions)
           && key.matchesWithoutColumn(readkey)) {
           // if the value of the cell we're looking at right now is a delete, 
           // we need to treat it differently
@@ -1380,8 +1386,13 @@ public class HStore implements HConstants {
             if (!(deletes.containsKey(readcol) &&
                 deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
               if (!isExpired(readkey, ttl, now)) {
-                results.put(readcol, 
-                  new Cell(readval.get(), readkey.getTimestamp()));
+                if (!results.containsKey(readcol)) {
+                  results.put(readcol,
+                              new Cell(readval.get(), readkey.getTimestamp()));
+                } else {
+                  results.get(readcol).add(readval.get(),
+                                           readkey.getTimestamp());
+                }
                 // need to reinstantiate the readval so we can reuse it, 
                 // otherwise next iteration will destroy our result
                 readval = new ImmutableBytesWritable();

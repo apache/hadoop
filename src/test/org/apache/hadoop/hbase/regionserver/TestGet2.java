@@ -553,25 +553,25 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
 
     // make sure we get all of them with standard getFull
     Map<byte [], Cell> result = region.getFull(row, null, 
-      HConstants.LATEST_TIMESTAMP, null);
+      HConstants.LATEST_TIMESTAMP, 1, null);
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
     assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
           
     // try to get just one
-    result = region.getFull(row, one, HConstants.LATEST_TIMESTAMP, null);
+    result = region.getFull(row, one, HConstants.LATEST_TIMESTAMP, 1, null);
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertNull(result.get(COLUMNS[1]));                                   
     assertNull(result.get(COLUMNS[2]));                                   
                                                                           
     // try to get all of them (specified)                                 
-    result = region.getFull(row, all, HConstants.LATEST_TIMESTAMP, null);       
+    result = region.getFull(row, all, HConstants.LATEST_TIMESTAMP, 1, null);       
     assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
     assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
     assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
     
     // try to get none with empty column set
-    result = region.getFull(row, none, HConstants.LATEST_TIMESTAMP, null);
+    result = region.getFull(row, none, HConstants.LATEST_TIMESTAMP, 1, null);
     assertNull(result.get(COLUMNS[0]));
     assertNull(result.get(COLUMNS[1]));
     assertNull(result.get(COLUMNS[2]));    
@@ -602,7 +602,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
       
       // assert that getFull gives us the older value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, null);
+      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("olderValue", new String(results.get(COLUMNS[0]).getValue()));
       
       // write a new value for the cell
@@ -614,7 +614,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
       
       // assert that getFull gives us the later value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, null);
+      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
      
       //
@@ -635,7 +635,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
       
       // assert i get both columns
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("Should have two columns in the results map", 2, results.size());
       assertEquals("column0 value", new String(results.get(cell1).getValue()));
       assertEquals("column1 value", new String(results.get(cell2).getValue()));
@@ -650,7 +650,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache(); 
       
       // assert i get the second column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
       assertEquals("column1 new value", new String(results.get(cell2).getValue()));
@@ -664,7 +664,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.batchUpdate(batchUpdate, null);
       
       // assert i get the third column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, null);
+      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
       assertNull("column1 value", results.get(cell2));
@@ -685,7 +685,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
   private void assertColumnsPresent(final HRegion r, final byte [] row)
   throws IOException {
     Map<byte [], Cell> result = 
-      r.getFull(row, null, HConstants.LATEST_TIMESTAMP, null);
+      r.getFull(row, null, HConstants.LATEST_TIMESTAMP, 1, null);
     int columnCount = 0;
     for (Map.Entry<byte [], Cell> e: result.entrySet()) {
       columnCount++;

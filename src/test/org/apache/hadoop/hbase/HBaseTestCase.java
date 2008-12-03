@@ -434,7 +434,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @throws IOException
      */
     public Map<byte [], Cell> getFull(byte [] row) throws IOException {
-      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP, null);
+      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP, 1, null);
     }
 
     public void flushcache() throws IOException {
@@ -555,7 +555,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected void assertCellEquals(final HRegion region, final byte [] row,
     final byte [] column, final long timestamp, final String value)
   throws IOException {
-    Map<byte [], Cell> result = region.getFull(row, null, timestamp, null);
+    Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
     Cell cell_value = result.get(column);
     if(value == null){
       assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);

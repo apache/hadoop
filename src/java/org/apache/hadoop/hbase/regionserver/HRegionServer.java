@@ -1287,7 +1287,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public RowResult getRow(final byte [] regionName, final byte [] row, 
-    final byte [][] columns, final long ts, final long lockId)
+    final byte [][] columns, final long ts,
+    final int numVersions, final long lockId)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1300,13 +1301,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       
       HRegion region = getRegion(regionName);
-      Map<byte [], Cell> map = region.getFull(row, columnSet, ts,
-          getLockFromId(lockId));
-      if (map == null || map.isEmpty())
-        return null;
       HbaseMapWritable<byte [], Cell> result =
-        new HbaseMapWritable<byte [], Cell>();
-      result.putAll(map);
+        region.getFull(row, columnSet, 
+          ts, numVersions, getLockFromId(lockId));
+      if (result == null || result.isEmpty())
+        return null;
       return new RowResult(row, result);
     } catch (IOException e) {
       checkOOME(e);

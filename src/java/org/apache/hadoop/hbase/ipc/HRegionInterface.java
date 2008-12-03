@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
  * 
  */
 public interface HRegionInterface extends HBaseRPCProtocolVersion {
-
   /** 
    * Get metainfo about an HRegion
    * 
@@ -85,12 +84,14 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @param row row key
    * @param columns columns to get
    * @param ts time stamp
+   * @param numVersions number of versions
    * @param lockId lock id
    * @return map of values
    * @throws IOException
    */
   public RowResult getRow(final byte [] regionName, final byte [] row, 
-    final byte[][] columns, final long ts, final long lockId)
+    final byte[][] columns, final long ts,
+    final int numVersions, final long lockId)
   throws IOException;
 
   /**
