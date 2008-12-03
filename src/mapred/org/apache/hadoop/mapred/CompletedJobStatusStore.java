@@ -219,6 +219,12 @@ class CompletedJobStatusStore implements Runnable {
    */
   public JobStatus readJobStatus(JobID jobId) {
     JobStatus jobStatus = null;
+    
+    if (null == jobId) {
+      LOG.warn("Could not read job status for null jobId");
+      return null;
+    }
+    
     if (active) {
       try {
         FSDataInputStream dataIn = getJobInfoFile(jobId);
