@@ -65,19 +65,16 @@ public class RegexStringComparator implements WritableByteArrayComparable {
     this.pattern = Pattern.compile(expr);
   }
 
-  @Override
   public int compareTo(byte[] value) {
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
     return pattern.matcher(Bytes.toString(value)).find() ? 1 : 0;
   }
 
-  @Override
   public void readFields(DataInput in) throws IOException {
     this.pattern = Pattern.compile(in.readUTF());
   }
 
-  @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(pattern.toString());
   }

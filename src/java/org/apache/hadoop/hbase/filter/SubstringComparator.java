@@ -56,17 +56,14 @@ public class SubstringComparator implements WritableByteArrayComparable {
     this.substr = substr.toLowerCase();
   }
 
-  @Override
   public int compareTo(byte[] value) {
     return Bytes.toString(value).toLowerCase().contains(substr) ? 1 : 0;
   }
 
-  @Override
   public void readFields(DataInput in) throws IOException {
     substr = in.readUTF();
   }
 
-  @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(substr);
   }

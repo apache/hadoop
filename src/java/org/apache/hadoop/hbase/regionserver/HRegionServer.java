@@ -1561,7 +1561,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, timestamp, getLockFromId(lockId));
   }
 
-  @Override
   public void deleteAllByRegex(byte[] regionName, byte[] row, String colRegex,
       long timestamp, long lockId) throws IOException {
     getRegion(regionName).deleteAllByRegex(row, colRegex, timestamp, 
@@ -1575,7 +1574,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         getLockFromId(lockId));
   }
 
-  @Override
   public void deleteFamilyByRegex(byte[] regionName, byte[] row, String familyRegex,
       long timestamp, long lockId) throws IOException {
     getRegion(regionName).deleteFamilyByRegex(row, familyRegex, timestamp, 
@@ -1922,7 +1920,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public long getProtocolVersion(final String protocol, 
-      final long clientVersion)
+      @SuppressWarnings("unused") final long clientVersion)
   throws IOException {  
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HBaseRPCProtocolVersion.versionID;
