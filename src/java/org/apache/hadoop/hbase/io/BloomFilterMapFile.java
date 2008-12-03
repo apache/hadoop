@@ -75,8 +75,8 @@ public class BloomFilterMapFile extends HBaseMapFile {
     throws IOException {
       Path filterFile = new Path(dirName, BLOOMFILTER_FILE_NAME);
       if(!fs.exists(filterFile)) {
-        throw new FileNotFoundException("Could not find bloom filter: " +
-            filterFile);
+        LOG.warn("FileNotFound: " + filterFile + "; proceeding without");
+        return null;
       }
       BloomFilter filter = new BloomFilter();
       FSDataInputStream in = fs.open(filterFile);
@@ -180,13 +180,19 @@ public class BloomFilterMapFile extends HBaseMapFile {
          * If we fix the number of hash functions and know the number of
          * entries, then the optimal vector size m = (k * n) / ln(2)
          */
-        this.bloomFilter = new BloomFilter(
+        BloomFilter f = null;
+        try {
+          f  = new BloomFilter(
             (int) Math.ceil(
                 (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * nrows)) /
                 Math.log(2.0)),
             (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS,
             Hash.getHashType(conf)
-        );
+          );
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Failed creating bloomfilter; proceeding without", e);
+        }
+        this.bloomFilter = f;
       } else {
         this.bloomFilter = null;
       }

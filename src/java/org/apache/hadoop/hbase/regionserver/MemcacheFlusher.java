@@ -62,7 +62,8 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    * @param conf
    * @param server
    */
-  public MemcacheFlusher(final HBaseConfiguration conf, final HRegionServer server) {
+  public MemcacheFlusher(final HBaseConfiguration conf,
+      final HRegionServer server) {
     super();
     this.server = server;
     threadWakeFrequency = conf.getLong(
@@ -235,10 +236,10 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       HRegion biggestMemcacheRegion = m.remove(m.firstKey());
       LOG.info("Forced flushing of " +  biggestMemcacheRegion.toString() +
         " because global memcache limit of " + this.globalMemcacheLimit +
-        " exceeded; currenly " + globalMemcacheSize + " and flushing till " +
+        " exceeded; currently " + globalMemcacheSize + " and flushing till " +
         this.globalMemcacheLimitLowMark);
       if (!flushRegion(biggestMemcacheRegion, true)) {
-        // Something bad happened - give up.
+        LOG.warn("Flush failed");
         break;
       }
     }

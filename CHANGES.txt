@@ -94,6 +94,7 @@ Release 0.19.0 - Unreleased
                (Ryan Smith via Jim Kellerman)
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down -
                (fix bug in createTable which caused tests to fail)
+   HBASE-1039  Compaction fails if bloomfilters are enabled
 
       
   IMPROVEMENTS

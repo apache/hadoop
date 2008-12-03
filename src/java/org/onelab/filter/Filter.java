@@ -98,7 +98,7 @@ public abstract class Filter implements Writable {
    * @param nbHash The number of hash functions to consider.
    * @param hashType type of the hashing function (see {@link Hash}).
    */
-  protected Filter(int vectorSize, int nbHash, int hashType){
+  protected Filter(int vectorSize, int nbHash, int hashType) {
     this.vectorSize = vectorSize;
     this.nbHash = nbHash;
     this.hashType = hashType;
