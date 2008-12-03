@@ -229,8 +229,40 @@ class CapacityTaskScheduler extends TaskScheduler {
       return sb.toString();
     }
   }
-  
-  
+
+  private static enum TaskLookUpStatus {
+    TASK_FOUND,
+    NO_TASK_IN_JOB,
+    NO_TASK_IN_QUEUE,
+    NO_TASK_MATCHING_MEMORY_REQUIREMENTS,
+  }
+
+  private static class TaskLookupResult {
+
+    private Task task;
+    private String lookupStatusInfo;
+
+    private TaskLookUpStatus lookUpStatus;
+
+    TaskLookupResult(Task t, TaskLookUpStatus lUStatus, String statusInfo) {
+      this.task = t;
+      this.lookUpStatus = lUStatus;
+      this.lookupStatusInfo = statusInfo;
+    }
+
+    Task getTask() {
+      return task;
+    }
+
+    TaskLookUpStatus getLookUpStatus() {
+      return lookUpStatus;
+    }
+
+    String getLookupStatusInfo() {
+      return lookupStatusInfo;
+    }
+  }
+
   /** 
    * This class handles the scheduling algorithms. 
    * The algos are the same for both Map and Reduce tasks. 
@@ -247,7 +279,11 @@ class CapacityTaskScheduler extends TaskScheduler {
     /** our enclosing TaskScheduler object */
     protected CapacityTaskScheduler scheduler;
     // for debugging
-    protected String type = null;
+    protected static enum TYPE {
+      MAP, REDUCE
+    }
+
+    protected TYPE type = null;
 
     abstract Task obtainNewTask(TaskTrackerStatus taskTracker, 
         JobInProgress job) throws IOException; 
@@ -538,7 +574,6 @@ class CapacityTaskScheduler extends TaskScheduler {
       }
     }
 
-    
     void jobAdded(JobInProgress job) {
       // update qsi 
       QueueSchedulingInfo qsi = 
@@ -558,6 +593,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
                 + job.getProfile().getUser() + ", user now has " + i + " jobs");
     }
+
     void jobRemoved(JobInProgress job) {
       // update qsi 
       QueueSchedulingInfo qsi = 
@@ -627,61 +663,133 @@ class CapacityTaskScheduler extends TaskScheduler {
         return false;
       }
     }
-    
-    private Task getTaskFromQueue(TaskTrackerStatus taskTracker, 
-        QueueSchedulingInfo qsi) throws IOException {
-      Task t = null;
+
+    private TaskLookupResult getTaskFromQueue(TaskTrackerStatus taskTracker,
+        QueueSchedulingInfo qsi)
+        throws IOException {
+
       // keep track of users over limit
       Set<String> usersOverLimit = new HashSet<String>();
-      // look at running jobs first
-      for (JobInProgress j:
-        scheduler.jobQueuesManager.getRunningJobQueue(qsi.queueName)) {
-        // some jobs may be in the running queue but may have completed 
+
+      // Look at running jobs first, skipping jobs of those users who are over
+      // their limits
+      TaskLookupResult result =
+          getTaskFromRunningJobQueue(taskTracker, qsi, usersOverLimit, true);
+      TaskLookUpStatus lookUpStatus = result.getLookUpStatus();
+      if (lookUpStatus == TaskLookUpStatus.TASK_FOUND
+          || lookUpStatus == TaskLookUpStatus.NO_TASK_MATCHING_MEMORY_REQUIREMENTS) {
+        // No need for looking elsewhere
+        return result;
+      }
+
+      // if we're here, we haven't found anything. This could be because
+      // there is nothing to run, or that the user limit for some user is
+      // too strict, i.e., there's at least one user who doesn't have
+      // enough tasks to satisfy his limit. If it's the later case, look at
+      // jobs without considering user limits, and get task from first
+      // eligible job
+      if (usersOverLimit.size() > 0) {
+        // look at running jobs, considering users over limit
+        result =
+            getTaskFromRunningJobQueue(taskTracker, qsi, usersOverLimit, false);
+        lookUpStatus = result.getLookUpStatus();
+        if (lookUpStatus == TaskLookUpStatus.TASK_FOUND
+            || lookUpStatus == TaskLookUpStatus.NO_TASK_MATCHING_MEMORY_REQUIREMENTS) {
+          // No need for looking elsewhere
+          return result;
+        }
+      }
+
+      // found nothing for this queue, look at the next one.
+      String msg = "Found no task from the queue" + qsi.queueName;
+      LOG.info(msg);
+      return new TaskLookupResult(null, TaskLookUpStatus.NO_TASK_IN_QUEUE,
+          msg);
+    }
+
+    // get a task from the running queue
+    private TaskLookupResult getTaskFromRunningJobQueue(
+        TaskTrackerStatus taskTracker, QueueSchedulingInfo qsi,
+        Set<String> usersOverLimit, boolean skipUsersOverLimit)
+        throws IOException {
+
+      for (JobInProgress j : scheduler.jobQueuesManager
+          .getRunningJobQueue(qsi.queueName)) {
+        // some jobs may be in the running queue but may have completed
         // and not yet have been removed from the running queue
         if (j.getStatus().getRunState() != JobStatus.RUNNING) {
           continue;
         }
-        // is this job's user over limit?
-        if (isUserOverLimit(j, qsi)) {
-          // user over limit. 
-          usersOverLimit.add(j.getProfile().getUser());
-          continue;
-        }
-        // We found a suitable job. Get task from it.
-        t = obtainNewTask(taskTracker, j);
-        if (t != null) {
-          LOG.debug("Got task from job " + 
-                    j.getJobID() + " in queue " + qsi.queueName);
-          return t;
-        }
-      }
-      
 
-      
-      // if we're here, we haven't found anything. This could be because 
-      // there is nothing to run, or that the user limit for some user is 
-      // too strict, i.e., there's at least one user who doesn't have
-      // enough tasks to satisfy his limit. If it's the later case, look at 
-      // jobs without considering user limits, and get task from first 
-      // eligible job
-      if (usersOverLimit.size() > 0) {
-        for (JobInProgress j:
-          scheduler.jobQueuesManager.getRunningJobQueue(qsi.queueName)) {
-          if ((j.getStatus().getRunState() == JobStatus.RUNNING) && 
-              (usersOverLimit.contains(j.getProfile().getUser()))) {
-            t = obtainNewTask(taskTracker, j);
-            if (t != null) {
-              LOG.debug("Getting task from job " + 
-                        j.getJobID() + " in queue " + qsi.queueName);
-              return t;
-            }
+        if (skipUsersOverLimit) {
+          // consider jobs of only those users who are under limits
+          if (isUserOverLimit(j, qsi)) {
+            usersOverLimit.add(j.getProfile().getUser());
+            continue;
+          }
+        } else {
+          // consider jobs of only those users who are over limit
+          if (!usersOverLimit.contains(j.getProfile().getUser())) {
+            continue;
           }
         }
+
+        // We found a suitable job. Try getting a task from it.
+        TaskLookupResult tlr = getTaskFromJob(j, taskTracker, qsi);
+        TaskLookUpStatus lookUpStatus = tlr.getLookUpStatus();
+        if (lookUpStatus == TaskLookUpStatus.NO_TASK_IN_JOB) {
+          // Go to the next job in the same queue.
+          continue;
+        } else if (lookUpStatus == TaskLookUpStatus.NO_TASK_MATCHING_MEMORY_REQUIREMENTS
+            || lookUpStatus == TaskLookUpStatus.TASK_FOUND) {
+          // No need for considering the next jobs in this queue.
+          return tlr;
+        }
       }
-      
-      return null;
+
+      String msg =
+          qsi.queueName + " queue's running jobs queue don't have "
+              + "any more tasks to run.";
+      LOG.info(msg);
+      return new TaskLookupResult(null,
+          TaskLookUpStatus.NO_TASK_IN_QUEUE, msg);
     }
-    
+
+    private TaskLookupResult getTaskFromJob(JobInProgress j,
+        TaskTrackerStatus taskTracker, QueueSchedulingInfo qsi)
+        throws IOException {
+      String msg;
+
+      if (getPendingTasks(j) != 0) {
+        // Not accurate TODO:
+        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
+          // We found a suitable job. Get task from it.
+          Task t = obtainNewTask(taskTracker, j);
+          if (t != null) {
+            msg =
+                "Got task from job " + j.getJobID() + " in queue "
+                    + qsi.queueName;
+            LOG.debug(msg);
+            return new TaskLookupResult(t, TaskLookUpStatus.TASK_FOUND, msg);
+          }
+        } else {
+          // block the cluster, till this job's tasks can be scheduled.
+          msg =
+              j.getJobID() + "'s tasks don't fit on the TaskTracker "
+                  + taskTracker.trackerName
+                  + ". Returning no task to the taskTracker";
+          LOG.info(msg);
+          return new TaskLookupResult(null,
+              TaskLookUpStatus.NO_TASK_MATCHING_MEMORY_REQUIREMENTS, msg);
+        }
+      }
+
+      msg = j.getJobID() + " doesn't have any more tasks to run.";
+      LOG.debug(msg);
+      return new TaskLookupResult(null,
+          TaskLookUpStatus.NO_TASK_IN_JOB, msg);
+    }
+
     private List<Task> assignTasks(TaskTrackerStatus taskTracker) throws IOException {
       Task t = null;
 
@@ -692,7 +800,7 @@ class CapacityTaskScheduler extends TaskScheduler {
        * becomes expensive, do it once every few hearbeats only.
        */ 
       updateQSIObjects();
-      LOG.debug("After updating QSI objects:");
+      LOG.debug("After updating QSI objects in " + this.type + " scheduler :");
       printQSIs();
       /*
        * sort list of qeues first, as we want queues that need the most to
@@ -700,7 +808,7 @@ class CapacityTaskScheduler extends TaskScheduler {
        * We're only sorting a collection of queues - there shouldn't be many.
        */
       updateCollectionOfQSIs();
-      for (QueueSchedulingInfo qsi: qsiForAssigningTasks) {
+      for (QueueSchedulingInfo qsi : qsiForAssigningTasks) {
         if (qsi.guaranteedCapacity <= 0.0f) {
           // No capacity is guaranteed yet for this queue.
           // Queues are sorted so that ones without capacities
@@ -708,13 +816,32 @@ class CapacityTaskScheduler extends TaskScheduler {
           // from here without considering any further queues.
           return null;
         }
-        t = getTaskFromQueue(taskTracker, qsi);
-        if (t!= null) {
+
+        TaskLookupResult tlr = getTaskFromQueue(taskTracker, qsi);
+        TaskLookUpStatus lookUpStatus = tlr.getLookUpStatus();
+
+        if (lookUpStatus == TaskLookUpStatus.NO_TASK_IN_QUEUE) {
+          continue; // Look in other queues.
+        }
+
+        if (lookUpStatus == TaskLookUpStatus.TASK_FOUND) {
+          t = tlr.getTask();
           // we have a task. Update reclaimed resource info
           updateReclaimedResources(qsi);
           return Collections.singletonList(t);
         }
-      }        
+        
+        if (lookUpStatus == TaskLookUpStatus.NO_TASK_MATCHING_MEMORY_REQUIREMENTS) {
+          // blocking the cluster.
+          String msg = tlr.getLookupStatusInfo();
+          if (msg != null) {
+            LOG.warn(msg);
+            LOG.warn("Returning nothing to the Tasktracker "
+                + taskTracker.trackerName);
+            return null;
+          }
+        }
+      }
 
       // nothing to give
       return null;
@@ -745,7 +872,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private static class MapSchedulingMgr extends TaskSchedulingMgr {
     MapSchedulingMgr(CapacityTaskScheduler dad) {
       super(dad);
-      type = new String("map");
+      type = TaskSchedulingMgr.TYPE.MAP;
     }
     Task obtainNewTask(TaskTrackerStatus taskTracker, JobInProgress job) 
     throws IOException {
@@ -822,7 +949,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private static class ReduceSchedulingMgr extends TaskSchedulingMgr {
     ReduceSchedulingMgr(CapacityTaskScheduler dad) {
       super(dad);
-      type = new String("reduce");
+      type = TaskSchedulingMgr.TYPE.REDUCE;
     }
     Task obtainNewTask(TaskTrackerStatus taskTracker, JobInProgress job) 
     throws IOException {
@@ -870,7 +997,9 @@ class CapacityTaskScheduler extends TaskScheduler {
   /** the scheduling mgrs for Map and Reduce tasks */ 
   protected TaskSchedulingMgr mapScheduler = new MapSchedulingMgr(this);
   protected TaskSchedulingMgr reduceScheduler = new ReduceSchedulingMgr(this);
-  
+
+  MemoryMatcher memoryMatcher = new MemoryMatcher(this);
+
   /** name of the default queue. */ 
   static final String DEFAULT_QUEUE_NAME = "default";
   
@@ -880,7 +1009,7 @@ class CapacityTaskScheduler extends TaskScheduler {
    * heartbeats left. */
   private static final int HEARTBEATS_LEFT_BEFORE_KILLING = 3;
 
-  private static final Log LOG = LogFactory.getLog(CapacityTaskScheduler.class);
+  static final Log LOG = LogFactory.getLog(CapacityTaskScheduler.class);
   protected JobQueuesManager jobQueuesManager;
   protected CapacitySchedulerConf rmConf;
   /** whether scheduler has started or not */
@@ -924,6 +1053,10 @@ class CapacityTaskScheduler extends TaskScheduler {
   private Clock clock;
   private JobInitializationPoller initializationPoller;
 
+  long limitMaxVmemForTasks;
+  long limitMaxPmemForTasks;
+  long defaultMaxVmPerTask;
+  float defaultPercentOfPmemInVmem;
 
   public CapacityTaskScheduler() {
     this(new Clock());
@@ -939,7 +1072,40 @@ class CapacityTaskScheduler extends TaskScheduler {
   public void setResourceManagerConf(CapacitySchedulerConf conf) {
     this.rmConf = conf;
   }
-  
+
+  /**
+   * Normalize the negative values in configuration
+   * 
+   * @param val
+   * @return normalized value
+   */
+  private long normalizeMemoryConfigValue(long val) {
+    if (val < 0) {
+      val = JobConf.DISABLED_MEMORY_LIMIT;
+    }
+    return val;
+  }
+
+  private void initializeMemoryRelatedConf() {
+    limitMaxVmemForTasks =
+        normalizeMemoryConfigValue(conf.getLong(
+            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+
+    limitMaxPmemForTasks =
+        normalizeMemoryConfigValue(rmConf.getLimitMaxPmemForTasks());
+
+    defaultMaxVmPerTask =
+        normalizeMemoryConfigValue(conf.getLong(
+            JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+
+    defaultPercentOfPmemInVmem = rmConf.getDefaultPercentOfPmemInVmem();
+    if (defaultPercentOfPmemInVmem < 0) {
+      defaultPercentOfPmemInVmem = JobConf.DISABLED_MEMORY_LIMIT;
+    }
+  }
+
   @Override
   public synchronized void start() throws IOException {
     if (started) return;
@@ -947,10 +1113,14 @@ class CapacityTaskScheduler extends TaskScheduler {
     RECLAIM_CAPACITY_INTERVAL = 
       conf.getLong("mapred.capacity-scheduler.reclaimCapacity.interval", 5);
     RECLAIM_CAPACITY_INTERVAL *= 1000;
+
     // initialize our queues from the config settings
     if (null == rmConf) {
       rmConf = new CapacitySchedulerConf();
     }
+
+    initializeMemoryRelatedConf();
+
     // read queue info from config file
     QueueManager queueManager = taskTrackerManager.getQueueManager();
     Set<String> queues = queueManager.getQueues();
@@ -1118,13 +1288,52 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
     return tasks;
   }
-  
+
+  /**
+   * Kill the job if it has invalid requirements and return why it is killed
+   * 
+   * @param job
+   * @return string mentioning why the job is killed. Null if the job has valid
+   *         requirements.
+   */
+  private String killJobIfInvalidRequirements(JobInProgress job) {
+    if (!memoryMatcher.isSchedulingBasedOnVmemEnabled()) {
+      return null;
+    }
+    if ((job.getMaxVirtualMemoryForTask() > limitMaxVmemForTasks)
+        || (memoryMatcher.isSchedulingBasedOnPmemEnabled() && (job
+            .getMaxPhysicalMemoryForTask() > limitMaxPmemForTasks))) {
+      String msg =
+          job.getJobID() + " (" + job.getMaxVirtualMemoryForTask() + "vmem, "
+              + job.getMaxPhysicalMemoryForTask()
+              + "pmem) exceeds the cluster's max-memory-limits ("
+              + limitMaxVmemForTasks + "vmem, " + limitMaxPmemForTasks
+              + "pmem). Cannot run in this cluster, so killing it.";
+      LOG.warn(msg);
+      try {
+        taskTrackerManager.killJob(job.getJobID());
+        return msg;
+      } catch (IOException ioe) {
+        LOG.warn("Failed to kill the job " + job.getJobID() + ". Reason : "
+            + StringUtils.stringifyException(ioe));
+      }
+    }
+    return null;
+  }
+
   // called when a job is added
-  synchronized void jobAdded(JobInProgress job) {
+  synchronized void jobAdded(JobInProgress job) throws IOException {
     // let our map and reduce schedulers know this, so they can update 
     // user-specific info
     mapScheduler.jobAdded(job);
     reduceScheduler.jobAdded(job);
+
+    // Kill the job if it cannot run in the cluster because of invalid
+    // resource requirements.
+    String statusMsg = killJobIfInvalidRequirements(job);
+    if (statusMsg != null) {
+      throw new IOException(statusMsg);
+    }
   }
 
   // called when a job completes

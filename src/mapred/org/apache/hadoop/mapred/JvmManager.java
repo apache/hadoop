@@ -291,7 +291,7 @@ class JvmManager {
       if (tracker.isTaskMemoryManagerEnabled()) {
         tracker.getTaskMemoryManager().addTask(
             TaskAttemptID.forName(env.conf.get("mapred.task.id")),
-            tracker.getMemoryForTask(env.conf));
+            tracker.getVirtualMemoryForTask(env.conf));
       }
       setRunningTaskForJvm(jvmRunner.jvmId, t);
       LOG.info(jvmRunner.getName());

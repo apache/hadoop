@@ -152,10 +152,20 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public int getNextHeartbeatInterval() {
       return MRConstants.HEARTBEAT_INTERVAL_MIN;
     }
-    
+
+    @Override
+    public void killJob(JobID jobid) {
+      return;
+    }
+
+    @Override
+    public JobInProgress getJob(JobID jobid) {
+      return null;
+    }
+
     // Test methods
     
-    public void submitJob(JobInProgress job) {
+    public void submitJob(JobInProgress job) throws IOException {
       for (JobInProgressListener listener : listeners) {
         listener.jobAdded(job);
       }

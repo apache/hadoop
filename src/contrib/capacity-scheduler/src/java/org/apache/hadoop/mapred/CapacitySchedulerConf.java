@@ -43,6 +43,34 @@ class CapacitySchedulerConf {
   private static final String QUEUE_CONF_PROPERTY_NAME_PREFIX = 
     "mapred.capacity-scheduler.queue.";
 
+  /**
+   * If {@link JobConf#MAPRED_TASK_MAXPMEM_PROPERTY} is set to
+   * {@link JobConf#DISABLED_MEMORY_LIMIT}, this configuration will be used to
+   * calculate job's physical memory requirements as a percentage of the job's
+   * virtual memory requirements set via
+   * {@link JobConf#setMaxVirtualMemoryForTask()}. This property thus provides
+   * default value of physical memory for job's that don't explicitly specify
+   * physical memory requirements.
+   * 
+   * It defaults to {@link JobConf#DISABLED_MEMORY_LIMIT} and if not explicitly
+   * set to a valid value, scheduler will not consider physical memory for
+   * scheduling even if virtual memory based scheduling is enabled.
+   */
+  static String DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY =
+      "mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem";
+
+  /**
+   * Configuration that provides an upper limit on the maximum physical memory
+   * that can be specified by a job. The job configuration
+   * {@link JobConf#MAPRED_TASK_MAXPMEM_PROPERTY} should,
+   * by definition, be less than this value. If not, the job will be rejected
+   * by the scheduler. If it is set to {@link JobConf#DISABLED_MEMORY_LIMIT},
+   * scheduler will not consider physical memory for scheduling even if virtual
+   * memory based scheduling is enabled.
+   */
+  static final String UPPER_LIMIT_ON_TASK_PMEM_PROPERTY =
+      "mapred.capacity-scheduler.task.limit.maxpmem";
+
   private Configuration rmConf;
 
   private int defaultMaxJobsPerUsersToInitialize;
@@ -347,5 +375,45 @@ class CapacitySchedulerConf {
   public void setMaxWorkerThreads(int poolSize) {
     rmConf.setInt(
         "mapred.capacity-scheduler.init-worker-threads", poolSize);
+  }
+
+  /**
+   * Get the upper limit on the maximum physical memory that can be specified by
+   * a job.
+   * 
+   * @return upper limit for max pmem for tasks.
+   */
+  public long getLimitMaxPmemForTasks() {
+    return rmConf.getLong(UPPER_LIMIT_ON_TASK_PMEM_PROPERTY,
+        JobConf.DISABLED_MEMORY_LIMIT);
+  }
+
+  /**
+   * Get the upper limit on the maximum physical memory that can be specified by
+   * a job.
+   * 
+   * @param value
+   */
+  public void setLimitMaxPmemForTasks(long value) {
+    rmConf.setLong(UPPER_LIMIT_ON_TASK_PMEM_PROPERTY, value);
+  }
+
+  /**
+   * Get cluster-wide default percentage of pmem in vmem.
+   * 
+   * @return cluster-wide default percentage of pmem in vmem.
+   */
+  public float getDefaultPercentOfPmemInVmem() {
+    return rmConf.getFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY,
+        JobConf.DISABLED_MEMORY_LIMIT);
+  }
+
+  /**
+   * Set cluster-wide default percentage of pmem in vmem.
+   * 
+   * @param value
+   */
+  public void setDefaultPercentOfPmemInVmem(float value) {
+    rmConf.setFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY, value);
   }
 }

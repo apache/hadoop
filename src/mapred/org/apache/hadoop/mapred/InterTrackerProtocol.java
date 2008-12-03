@@ -52,8 +52,11 @@ interface InterTrackerProtocol extends VersionedProtocol {
                  so that the TaskTracker can synchronize itself.
    * Version 20: Changed status message due to changes in TaskStatus
    *             (HADOOP-4232)
+   * Version 21: Changed information reported in TaskTrackerStatus'
+   *             ResourceStatus and the corresponding accessor methods
+   *             (HADOOP-4035)
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

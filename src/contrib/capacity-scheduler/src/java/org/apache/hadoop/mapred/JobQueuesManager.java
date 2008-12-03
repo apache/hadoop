@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -158,7 +159,7 @@ class JobQueuesManager extends JobInProgressListener {
   }
   
   @Override
-  public void jobAdded(JobInProgress job) {
+  public void jobAdded(JobInProgress job) throws IOException {
     LOG.info("Job submitted to queue " + job.getProfile().getQueueName());
     // add job to the right queue
     QueueInfo qi = jobQueues.get(job.getProfile().getQueueName());

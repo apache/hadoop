@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -70,5 +71,21 @@ interface TaskTrackerManager {
    * @return the heartbeat interval used by {@link TaskTracker}s
    */
   public int getNextHeartbeatInterval();
-  
+
+  /**
+   * Kill the job identified by jobid
+   * 
+   * @param jobid
+   * @throws IOException
+   */
+  public void killJob(JobID jobid)
+      throws IOException;
+
+  /**
+   * Obtain the job object identified by jobid
+   * 
+   * @param jobid
+   * @return jobInProgress object
+   */
+  public JobInProgress getJob(JobID jobid);
 }

@@ -54,59 +54,99 @@ class TaskTrackerStatus implements Writable {
    */
   static class ResourceStatus implements Writable {
     
-    private long freeVirtualMemory;
-    private long totalMemory;
+    private long totalVirtualMemory;
+    private long reservedVirtualMemory;
+    private long totalPhysicalMemory;
+    private long reservedPhysicalMemory;
     private long availableSpace;
     
     ResourceStatus() {
-      freeVirtualMemory = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
-      totalMemory = JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT;
+      totalVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
+      reservedVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
+      totalPhysicalMemory = JobConf.DISABLED_MEMORY_LIMIT;
+      reservedPhysicalMemory = JobConf.DISABLED_MEMORY_LIMIT;
       availableSpace = Long.MAX_VALUE;
-    }
-    
-    /**
-     * Set the amount of free virtual memory that is available for running
-     * a new task
-     * @param freeVMem amount of free virtual memory in kilobytes
-     */
-    void setFreeVirtualMemory(long freeVmem) {
-      freeVirtualMemory = freeVmem;
-    }
-
-    /**
-     * Get the amount of free virtual memory that will be available for
-     * running a new task. 
-     * 
-     * If this is {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should 
-     * be ignored and not used in computation.
-     * 
-     *@return amount of free virtual memory in kilobytes.
-     */
-    long getFreeVirtualMemory() {
-      return freeVirtualMemory;
     }
 
     /**
      * Set the maximum amount of virtual memory on the tasktracker.
-     * @param vmem maximum amount of virtual memory on the tasktracker in kilobytes.
+     * 
+     * @param vmem maximum amount of virtual memory on the tasktracker in bytes.
      */
-    void setTotalMemory(long totalMem) {
-      totalMemory = totalMem;
+    void setTotalVirtualMemory(long totalMem) {
+      totalVirtualMemory = totalMem;
     }
-    
+
     /**
      * Get the maximum amount of virtual memory on the tasktracker.
      * 
-     * If this is
-     * {@link JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT}, it should be ignored 
+     * If this is {@link JobConf#DISABLED_MEMORY_LIMIT}, it should be ignored
      * and not used in any computation.
      * 
-     * @return maximum amount of virtual memory on the tasktracker in kilobytes. 
-     */    
-    long getTotalMemory() {
-      return totalMemory;
+     * @return the maximum amount of virtual memory on the tasktracker in bytes.
+     */
+    long getTotalVirtualMemory() {
+      return totalVirtualMemory;
     }
-    
+
+    /**
+     * Set the amount of virtual memory reserved on the TaskTracker for system
+     * usage (OS, TT etc).
+     * 
+     * @param reservedVmem amount of virtual memory reserved in bytes.
+     */
+    void setReservedVirtualMemory(long reservedVmem) {
+      reservedVirtualMemory = reservedVmem;
+    }
+
+    /**
+     * Get the amount of virtual memory reserved on the TaskTracker for system
+     * usage (OS, TT etc).
+     */
+    long getReservedTotalMemory() {
+      return reservedVirtualMemory;
+    }
+
+    /**
+     * Set the maximum amount of physical memory on the tasktracker.
+     * 
+     * @param totalRAM maximum amount of physical memory on the tasktracker in
+     *          bytes.
+     */
+    void setTotalPhysicalMemory(long totalRAM) {
+      totalPhysicalMemory = totalRAM;
+    }
+
+    /**
+     * Get the maximum amount of physical memory on the tasktracker.
+     * 
+     * If this is {@link JobConf#DISABLED_MEMORY_LIMIT}, it should be ignored
+     * and not used in any computation.
+     * 
+     * @return maximum amount of physical memory on the tasktracker in bytes.
+     */
+    long getTotalPhysicalMemory() {
+      return totalPhysicalMemory;
+    }
+
+    /**
+     * Set the amount of physical memory reserved on the TaskTracker for system
+     * usage (OS, TT etc).
+     * 
+     * @param reservedPmem amount of physical memory reserved in bytes.
+     */
+    void setReservedPhysicalMemory(long reservedPmem) {
+      reservedPhysicalMemory = reservedPmem;
+    }
+
+    /**
+     * Get the amount of physical memory reserved on the TaskTracker for system
+     * usage (OS, TT etc).
+     */
+    long getReservedPhysicalMemory() {
+      return reservedPhysicalMemory;
+    }
+
     void setAvailableSpace(long availSpace) {
       availableSpace = availSpace;
     }
@@ -120,15 +160,19 @@ class TaskTrackerStatus implements Writable {
     }
     
     public void write(DataOutput out) throws IOException {
-      WritableUtils.writeVLong(out, freeVirtualMemory);
-      WritableUtils.writeVLong(out, totalMemory);
+      WritableUtils.writeVLong(out, totalVirtualMemory);
+      WritableUtils.writeVLong(out, reservedVirtualMemory);
+      WritableUtils.writeVLong(out, totalPhysicalMemory);
+      WritableUtils.writeVLong(out, reservedPhysicalMemory);
       WritableUtils.writeVLong(out, availableSpace);
     }
     
     public void readFields(DataInput in) throws IOException {
-      freeVirtualMemory = WritableUtils.readVLong(in);;
-      totalMemory = WritableUtils.readVLong(in);;
-      availableSpace = WritableUtils.readVLong(in);;
+      totalVirtualMemory = WritableUtils.readVLong(in);
+      reservedVirtualMemory = WritableUtils.readVLong(in);
+      totalPhysicalMemory = WritableUtils.readVLong(in);
+      reservedPhysicalMemory = WritableUtils.readVLong(in);
+      availableSpace = WritableUtils.readVLong(in);
     }
   }
   

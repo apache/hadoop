@@ -2247,7 +2247,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (taskScheduler) {
         jobs.put(job.getProfile().getJobID(), job);
         for (JobInProgressListener listener : jobInProgressListeners) {
-          listener.jobAdded(job);
+          try {
+            listener.jobAdded(job);
+          } catch (IOException ioe) {
+            LOG.warn("Failed to add and so skipping the job : "
+                + job.getJobID() + ". Exception : " + ioe);
+          }
         }
       }
     }

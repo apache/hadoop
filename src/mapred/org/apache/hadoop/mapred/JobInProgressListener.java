@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
 /**
  * A listener for changes in a {@link JobInProgress job}'s lifecycle in the
  * {@link JobTracker}.
@@ -26,8 +28,9 @@ abstract class JobInProgressListener {
   /**
    * Invoked when a new job has been added to the {@link JobTracker}.
    * @param job The added job.
+   * @throws IOException 
    */
-  public abstract void jobAdded(JobInProgress job);
+  public abstract void jobAdded(JobInProgress job) throws IOException;
 
   /**
    * Invoked when a job has been removed from the {@link JobTracker}.

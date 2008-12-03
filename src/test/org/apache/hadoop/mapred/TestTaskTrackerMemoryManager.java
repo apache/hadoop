@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -46,7 +47,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
   private String taskOverLimitPatternString =
       "TaskTree \\[pid=[0-9]*,tipID=.*\\] is running beyond memory-limits. "
-          + "Current usage : [0-9]*kB. Limit : %skB. Killing task.";
+          + "Current usage : [0-9]*bytes. Limit : %sbytes. Killing task.";
 
   private void startCluster(JobConf conf) throws Exception {
     miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
@@ -168,14 +169,21 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       return;
     }
 
+    // Fairly large value for sleepJob to succeed
+    long ttLimit = 4 * 1024 * 1024 * 1024L;
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
 
-    // Fairly large value for sleepJob to succeed
-    fConf.setLong("mapred.tasktracker.tasks.maxmemory", 10000000000L);
+    fConf.setClass(
+        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
+    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
+        ttLimit);
+    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY, ttLimit);
+    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, ttLimit);
+    fConf.setLong(
+        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
     startCluster(fConf);
-
-    // Set up job.
     JobConf conf = new JobConf();
     runAndCheckSuccessfulJob(conf);
   }
@@ -193,19 +201,29 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       return;
     }
 
-    long PER_TASK_LIMIT = 10000000000L; // Large so sleepjob goes through.
-    long TASK_TRACKER_LIMIT = 10000000000L; // Large so as to fit total usage
+    // Large so that sleepjob goes through and fits total TT usage
+    long PER_TASK_LIMIT = 2 * 1024 * 1024 * 1024L;
+    long TASK_TRACKER_LIMIT = 4 * 1024 * 1024 * 1024L;
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
 
-    // Fairly large value for sleepjob to succeed
-    fConf.setLong("mapred.tasktracker.tasks.maxmemory", TASK_TRACKER_LIMIT);
+    fConf.setClass(
+        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
+    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(
+        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
     startCluster(fConf);
-
     JobConf conf = new JobConf();
     conf.setMaxVirtualMemoryForTask(PER_TASK_LIMIT);
     runAndCheckSuccessfulJob(conf);
+
   }
 
   /**
@@ -223,7 +241,8 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     }
 
     long PER_TASK_LIMIT = 444; // Low enough to kill off sleepJob tasks.
-    long TASK_TRACKER_LIMIT = 10000000000L; // Large so as to fit total usage
+    long TASK_TRACKER_LIMIT = 4 * 1024 * 1024 * 1024L; // Large so as to fit
+    // total usage
     Pattern taskOverLimitPattern =
         Pattern.compile(String.format(taskOverLimitPatternString, String
             .valueOf(PER_TASK_LIMIT)));
@@ -231,7 +250,17 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setLong("mapred.tasktracker.tasks.maxmemory", TASK_TRACKER_LIMIT);
+    fConf.setClass(
+        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
+    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(
+        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
 
     // very small value, so that no task escapes to successful completion.
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
@@ -313,14 +342,25 @@ public class TestTaskTrackerMemoryManager extends TestCase {
         Pattern.compile(String.format(taskOverLimitPatternString, String
             .valueOf(PER_TASK_LIMIT)));
     Pattern trackerOverLimitPattern =
-        Pattern.compile("Killing one of the least progress tasks - .*, as "
-            + "the cumulative memory usage of all the tasks on the TaskTracker"
-            + " exceeds virtual memory limit " + TASK_TRACKER_LIMIT + ".");
+        Pattern
+            .compile("Killing one of the least progress tasks - .*, as "
+                + "the cumulative memory usage of all the tasks on the TaskTracker"
+                + " exceeds virtual memory limit " + TASK_TRACKER_LIMIT + ".");
     Matcher mat = null;
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setLong("mapred.tasktracker.tasks.maxmemory", TASK_TRACKER_LIMIT);
+    fConf.setClass(
+        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
+    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        TASK_TRACKER_LIMIT);
+    fConf.setLong(
+        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
     // very small value, so that no task escapes to successful completion.
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
         String.valueOf(300));

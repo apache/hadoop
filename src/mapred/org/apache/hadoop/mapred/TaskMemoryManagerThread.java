@@ -60,7 +60,9 @@ class TaskMemoryManagerThread extends Thread {
     tasksToBeAdded = new HashMap<TaskAttemptID, ProcessTreeInfo>();
     tasksToBeRemoved = new ArrayList<TaskAttemptID>();
 
-    maxMemoryAllowedForAllTasks = taskTracker.getMaxVirtualMemoryForTasks();
+    maxMemoryAllowedForAllTasks =
+        taskTracker.getTotalVirtualMemoryOnTT()
+            - taskTracker.getReservedVirtualMemory();
 
     monitoringInterval = taskTracker.getJobConf().getLong(
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
@@ -72,9 +74,6 @@ class TaskMemoryManagerThread extends Thread {
   public void addTask(TaskAttemptID tid, long memLimit) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");
-      // TODO: Negative values must have been checked in JobConf.
-      memLimit = (memLimit < 0 ? JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT
-          : memLimit);
       ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit,
           sleepTimeBeforeSigKill);
       tasksToBeAdded.put(tid, ptInfo);
@@ -203,15 +202,25 @@ class TaskMemoryManagerThread extends Thread {
         long currentMemUsage = pTree.getCumulativeVmem();
         long limit = ptInfo.getMemLimit();
         LOG.info("Memory usage of ProcessTree " + pId + " :" + currentMemUsage
-            + "kB. Limit : " + limit + "kB");
+            + "bytes. Limit : " + limit + "bytes");
 
-        if (limit != JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT
+        if (limit > taskTracker.getLimitMaxVMemPerTask()) {
+          // TODO: With monitoring enabled and no scheduling based on
+          // memory,users can seriously hijack the system by specifying memory
+          // requirements well above the cluster wide limit. Ideally these jobs
+          // should have been rejected by JT/scheduler. Because we can't do
+          // that, in the minimum we should fail the tasks and hence the job.
+          LOG.warn("Task " + tid
+              + " 's maxVmemPerTask is greater than TT's limitMaxVmPerTask");
+        }
+
+        if (limit != JobConf.DISABLED_MEMORY_LIMIT
             && currentMemUsage > limit) {
           // Task (the root process) is still alive and overflowing memory.
           // Clean up.
           String msg = "TaskTree [pid=" + pId + ",tipID=" + tid
               + "] is running beyond memory-limits. Current usage : "
-              + currentMemUsage + "kB. Limit : " + limit + "kB. Killing task.";
+              + currentMemUsage + "bytes. Limit : " + limit + "bytes. Killing task.";
           LOG.warn(msg);
           taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
@@ -227,7 +236,7 @@ class TaskMemoryManagerThread extends Thread {
       }
 
       LOG.debug("Memory still in usage across all tasks : " + memoryStillInUsage
-          + "kB. Total limit : " + maxMemoryAllowedForAllTasks);
+          + "bytes. Total limit : " + maxMemoryAllowedForAllTasks);
 
       if (memoryStillInUsage > maxMemoryAllowedForAllTasks) {
         LOG.warn("The total memory usage is still overflowing TTs limits."

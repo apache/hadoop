@@ -31,13 +31,19 @@ import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.conf.Configuration;
 
 
 public class TestCapacityScheduler extends TestCase {
-  
+
+  static final Log LOG =
+      LogFactory.getLog(org.apache.hadoop.mapred.TestCapacityScheduler.class);
+
   private static int jobCounter;
   
   /**
@@ -147,8 +153,7 @@ public class TestCapacityScheduler extends TestCase {
       new HashSet<TaskInProgress>();
     
     public FakeJobInProgress(JobID jId, JobConf jobConf,
-        FakeTaskTrackerManager taskTrackerManager, String user) 
-    throws IOException {
+        FakeTaskTrackerManager taskTrackerManager, String user) {
       super(jId, jobConf);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
@@ -165,6 +170,8 @@ public class TestCapacityScheduler extends TestCase {
       }
       mapTaskCtr = 0;
       redTaskCtr = 0;
+      super.setMaxVirtualMemoryForTask(jobConf.getMaxVirtualMemoryForTask());
+      super.setMaxPhysicalMemoryForTask(jobConf.getMaxPhysicalMemoryForTask());
     }
     
     @Override
@@ -301,20 +308,23 @@ public class TestCapacityScheduler extends TestCase {
       new HashMap<String, TaskTrackerStatus>();
     private Map<String, TaskStatus> taskStatuses = 
       new HashMap<String, TaskStatus>();
+    private Map<JobID, JobInProgress> jobs =
+        new HashMap<JobID, JobInProgress>();
 
     public FakeTaskTrackerManager() {
-      this(2, 1);
+      this(2, 2, 1);
     }
-    
-    public FakeTaskTrackerManager(int maxMapSlots, int maxReduceSlots) {
-      trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapSlots, maxReduceSlots));
-      maxMapTasksPerTracker = maxMapSlots;
-      trackers.put("tt2", new TaskTrackerStatus("tt2", "tt2.host", 2,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapSlots, maxReduceSlots));
-      maxReduceTasksPerTracker = maxReduceSlots;
+
+    public FakeTaskTrackerManager(int numTaskTrackers,
+        int maxMapTasksPerTracker, int maxReduceTasksPerTracker) {
+      this.maxMapTasksPerTracker = maxMapTasksPerTracker;
+      this.maxReduceTasksPerTracker = maxReduceTasksPerTracker;
+      for (int i = 1; i < numTaskTrackers + 1; i++) {
+        String ttName = "tt" + i;
+        trackers.put(ttName, new TaskTrackerStatus(ttName, ttName + ".host", i,
+            new ArrayList<TaskStatus>(), 0, maxMapTasksPerTracker,
+            maxReduceTasksPerTracker));
+      }
     }
     
     public void addTaskTracker(String ttName) {
@@ -338,7 +348,23 @@ public class TestCapacityScheduler extends TestCase {
     public int getNextHeartbeatInterval() {
       return MRConstants.HEARTBEAT_INTERVAL_MIN;
     }
-    
+
+    @Override
+    public void killJob(JobID jobid) throws IOException {
+      JobInProgress job = jobs.get(jobid);
+      finalizeJob(job, JobStatus.KILLED);
+      job.kill();
+    }
+
+    @Override
+    public JobInProgress getJob(JobID jobid) {
+      return jobs.get(jobid);
+    }
+
+    Collection<JobInProgress> getJobs() {
+      return jobs.values();
+    }
+
     public Collection<TaskTrackerStatus> taskTrackers() {
       return trackers.values();
     }
@@ -352,7 +378,8 @@ public class TestCapacityScheduler extends TestCase {
       listeners.remove(listener);
     }
     
-    public void submitJob(JobInProgress job) {
+    public void submitJob(JobInProgress job) throws IOException {
+      jobs.put(job.getJobID(), job);
       for (JobInProgressListener listener : listeners) {
         listener.jobAdded(job);
       }
@@ -369,6 +396,11 @@ public class TestCapacityScheduler extends TestCase {
         reduces++;
       }
       TaskStatus status = new TaskStatus() {
+        @Override
+        public TaskAttemptID getTaskID() {
+          return t.getTaskID();
+        }
+
         @Override
         public boolean getIsMap() {
           return t.isMapTask();
@@ -393,9 +425,13 @@ public class TestCapacityScheduler extends TestCase {
     }
     
     void finalizeJob(FakeJobInProgress fjob) {
+      finalizeJob(fjob, JobStatus.SUCCEEDED);
+    }
+
+    void finalizeJob(JobInProgress fjob, int state) {
       // take a snapshot of the status before changing it
       JobStatus oldStatus = (JobStatus)fjob.getStatus().clone();
-      fjob.getStatus().setRunState(JobStatus.SUCCEEDED);
+      fjob.getStatus().setRunState(state);
       JobStatus newStatus = (JobStatus)fjob.getStatus().clone();
       JobStatusChangeEvent event = 
         new JobStatusChangeEvent (fjob, EventType.RUN_STATE_CHANGED, oldStatus, 
@@ -539,9 +575,16 @@ public class TestCapacityScheduler extends TestCase {
   private FakeClock clock;
 
   @Override
-  protected void setUp() throws Exception {
+  protected void setUp() {
+    setUp(2, 2, 1);
+  }
+
+  private void setUp(int numTaskTrackers, int numMapTasksPerTracker,
+      int numReduceTasksPerTracker) {
     jobCounter = 0;
-    taskTrackerManager = new FakeTaskTrackerManager();
+    taskTrackerManager =
+        new FakeTaskTrackerManager(numTaskTrackers, numMapTasksPerTracker,
+            numReduceTasksPerTracker);
     clock = new FakeClock();
     scheduler = new CapacityTaskScheduler(clock);
     scheduler.setTaskTrackerManager(taskTrackerManager);
@@ -559,7 +602,24 @@ public class TestCapacityScheduler extends TestCase {
       scheduler.terminate();
     }
   }
-  
+
+  private FakeJobInProgress submitJob(int state, JobConf jobConf) throws IOException {
+    FakeJobInProgress job =
+        new FakeJobInProgress(new JobID("test", ++jobCounter),
+            (jobConf == null ? new JobConf() : jobConf), taskTrackerManager,
+            jobConf.getUser());
+    job.getStatus().setRunState(state);
+    taskTrackerManager.submitJob(job);
+    return job;
+  }
+
+  private FakeJobInProgress submitJobAndInit(int state, JobConf jobConf)
+      throws IOException {
+    FakeJobInProgress j = submitJob(state, jobConf);
+    scheduler.jobQueuesManager.jobUpdated(initTasksAndReportEvent(j));
+    return j;
+  }
+
   private FakeJobInProgress submitJob(int state, int maps, int reduces, 
       String queue, String user) throws IOException {
     JobConf jobConf = new JobConf(conf);
@@ -567,11 +627,8 @@ public class TestCapacityScheduler extends TestCase {
     jobConf.setNumReduceTasks(reduces);
     if (queue != null)
       jobConf.setQueueName(queue);
-    FakeJobInProgress job = new FakeJobInProgress(
-        new JobID("test", ++jobCounter), jobConf, taskTrackerManager, user);
-    job.getStatus().setRunState(state);
-    taskTrackerManager.submitJob(job);
-    return job;
+    jobConf.setUser(user);
+    return submitJob(state, jobConf);
   }
   
   // Submit a job and update the listeners
@@ -1285,6 +1342,344 @@ public class TestCapacityScheduler extends TestCase {
     assertEquals(schedulingInfo, schedulingInfo2);   
   }
 
+  /**
+   * Test to verify that highMemoryJobs are scheduled like all other jobs when
+   * memory-based scheduling is not enabled.
+   * @throws IOException
+   */
+  public void testDisabledMemoryBasedScheduling()
+      throws IOException {
+
+    LOG.debug("Starting the scheduler.");
+    taskTrackerManager = new FakeTaskTrackerManager(1, 1, 1);
+
+    // Limited TT - 1GB vmem and 512MB pmem
+    taskTrackerManager.getTaskTracker("tt1").getResourceStatus()
+        .setTotalVirtualMemory(1 * 1024 * 1024 * 1024L);
+    taskTrackerManager.getTaskTracker("tt1").getResourceStatus()
+        .setTotalPhysicalMemory(512 * 1024 * 1024L);
+
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // memory-based scheduling disabled by default.
+    scheduler.start();
+
+    LOG.debug("Submit one high memory(3GB vmem, 1GBpmem) job of 1 map task "
+        + "and 1 reduce task.");
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(3 * 1024 * 1024 * 1024L); // 3GB vmem
+    jConf.setMaxPhysicalMemoryForTask(1 * 1024 * 1024 * 1024L); // 1 GB pmem
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(1);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    submitJobAndInit(JobStatus.RUNNING, jConf);
+
+    // assert that all tasks are launched even though they transgress the
+    // scheduling limits.
+
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+  }
+
+  /**
+   * Test to verify that highPmemJobs are scheduled like all other jobs when
+   * physical-memory based scheduling is not enabled.
+   * @throws IOException
+   */
+  public void testDisabledPmemBasedScheduling()
+      throws IOException {
+
+    LOG.debug("Starting the scheduler.");
+    taskTrackerManager = new FakeTaskTrackerManager(1, 1, 1);
+
+    // Limited TT - 100GB vmem and 500MB pmem
+    TaskTrackerStatus.ResourceStatus ttStatus =
+        taskTrackerManager.getTaskTracker("tt1").getResourceStatus();
+    ttStatus.setTotalVirtualMemory(100 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedVirtualMemory(0);
+    ttStatus.setTotalPhysicalMemory(500 * 1024 * 1024L);
+    ttStatus.setReservedPhysicalMemory(0);
+
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // enable vmem-based scheduling. pmem based scheduling disabled by default.
+    scheduler.getConf().setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        1536 * 1024 * 1024L);
+    scheduler.getConf().setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        3 * 1024 * 1024 * 1024L);
+    scheduler.start();
+
+    LOG.debug("Submit one high pmem(3GB vmem, 1GBpmem) job of 1 map task "
+        + "and 1 reduce task.");
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(3 * 1024 * 1024 * 1024L); // 3GB vmem
+    jConf.setMaxPhysicalMemoryForTask(1 * 1024 * 1024 * 1024L); // 1 GB pmem
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(1);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    submitJobAndInit(JobStatus.RUNNING, jConf);
+
+    // assert that all tasks are launched even though they transgress the
+    // scheduling limits.
+
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+  }
+
+  /**
+   * Test HighMemoryJobs.
+   * @throws IOException
+   */
+  public void testHighMemoryJobs()
+      throws IOException {
+
+    LOG.debug("Starting the scheduler.");
+    taskTrackerManager = new FakeTaskTrackerManager(1, 1, 1);
+
+    TaskTrackerStatus.ResourceStatus ttStatus =
+        taskTrackerManager.getTaskTracker("tt1").getResourceStatus();
+    ttStatus.setTotalVirtualMemory(3 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedVirtualMemory(0);
+    ttStatus.setTotalPhysicalMemory(1 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedPhysicalMemory(0);
+    // Normal job on this TT would be 1.5GB vmem, 0.5GB pmem
+
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // enabled memory-based scheduling
+    scheduler.getConf().setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        1536 * 1024 * 1024L);
+    scheduler.getConf().setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        3 * 1024 * 1024 * 1024L);
+    resConf.setDefaultPercentOfPmemInVmem(33.3f);
+    resConf.setLimitMaxPmemForTasks(1 * 1024 * 1024 * 1024L);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    LOG.debug("Submit one high memory(1600MB vmem, 400MB pmem) job of "
+        + "1 map task and 1 reduce task.");
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(1600 * 1024 * 1024L); // 1.6GB vmem
+    jConf.setMaxPhysicalMemoryForTask(400 * 1024 * 1024L); // 400MB pmem
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(1);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    FakeJobInProgress job1 = submitJobAndInit(JobStatus.PREP, jConf);
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+
+    // No more tasks of this job can run on the TT because of lack of vmem
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+
+    // Let attempt_test_0001_m_000001_0 finish, task assignment should succeed.
+    taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000001_0", job1);
+    checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+
+    LOG.debug("Submit another high memory(1200MB vmem, 800MB pmem) job of "
+        + "1 map task and 0 reduces.");
+    jConf.setMaxVirtualMemoryForTask(1200 * 1024 * 1024L);
+    jConf.setMaxPhysicalMemoryForTask(800 * 1024 * 1024L);
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(0);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    submitJobAndInit(JobStatus.PREP, jConf); // job2
+
+    // This job shouldn't run the TT now because of lack of pmem
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+
+    // Let attempt_test_0001_m_000002_0 finish, task assignment should succeed.
+    taskTrackerManager.finishTask("tt1", "attempt_test_0001_r_000001_0", job1);
+    checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+
+    LOG.debug("Submit a normal memory(200MB vmem, 100MB pmem) job of "
+        + "0 maps and 1 reduce task.");
+    jConf.setMaxVirtualMemoryForTask(200 * 1024 * 1024L);
+    jConf.setMaxPhysicalMemoryForTask(100 * 1024 * 1024L);
+    jConf.setNumMapTasks(0);
+    jConf.setNumReduceTasks(1);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    submitJobAndInit(JobStatus.PREP, jConf); // job3
+
+    checkAssignment("tt1", "attempt_test_0003_r_000001_0 on tt1");
+  }
+
+  /**
+   * test invalid highMemoryJobs
+   * @throws IOException
+   */
+  public void testHighMemoryJobWithInvalidRequirements()
+      throws IOException {
+    LOG.debug("Starting the scheduler.");
+    taskTrackerManager = new FakeTaskTrackerManager(1, 1, 1);
+    TaskTrackerStatus.ResourceStatus ttStatus =
+        taskTrackerManager.getTaskTracker("tt1").getResourceStatus();
+    ttStatus.setTotalVirtualMemory(3 * 1024 * 1024 * 1024);
+    ttStatus.setReservedVirtualMemory(0);
+    ttStatus.setTotalPhysicalMemory(1 * 1024 * 1024 * 1024);
+    ttStatus.setReservedPhysicalMemory(0);
+
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf.setFakeQueues(queues);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // enabled memory-based scheduling
+    long vmemUpperLimit = 1 * 1024 * 1024 * 1024L;
+    long vmemDefault = 1536 * 1024 * 1024L;
+    long pmemUpperLimit = vmemUpperLimit;
+    scheduler.getConf().setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        vmemDefault);
+    scheduler.getConf().setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        vmemUpperLimit);
+    resConf.setDefaultPercentOfPmemInVmem(33.3f);
+    resConf.setLimitMaxPmemForTasks(pmemUpperLimit);
+    scheduler.setResourceManagerConf(resConf);
+    ControlledInitializationPoller p = new ControlledInitializationPoller(
+        scheduler.jobQueuesManager,
+        resConf,
+        resConf.getQueues());
+    scheduler.setInitializationPoller(p);
+    scheduler.start();
+
+    LOG.debug("Submit one invalid high ram(5GB vmem, 3GB pmem) job of "
+        + "1 map, 0 reduce tasks.");
+    long jobMaxVmem = 5 * 1024 * 1024 * 1024L;
+    long jobMaxPmem = 3 * 1024 * 1024 * 1024L;
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(jobMaxVmem);
+    jConf.setMaxPhysicalMemoryForTask(jobMaxPmem);
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(0);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+
+    boolean throwsException = false;
+    String msg = null;
+    FakeJobInProgress job;
+    try {
+      job = submitJob(JobStatus.PREP, jConf);
+    } catch (IOException ioe) {
+      // job has to fail
+      throwsException = true;
+      msg = ioe.getMessage();
+    }
+
+    assertTrue(throwsException);
+    job = (FakeJobInProgress) taskTrackerManager.getJobs().toArray()[0];
+    assertTrue(msg.matches(job.getJobID() + " \\(" + jobMaxVmem + "vmem, "
+        + jobMaxPmem + "pmem\\) exceeds the cluster's max-memory-limits \\("
+        + vmemUpperLimit + "vmem, " + pmemUpperLimit
+        + "pmem\\). Cannot run in this cluster, so killing it."));
+    // For job, no cleanup task needed so gets killed immediately.
+    assertTrue(job.getStatus().getRunState() == JobStatus.KILLED);
+  }
+
+  /**
+   * Test blocking of cluster for lack of memory.
+   * @throws IOException
+   */
+  public void testClusterBlockingForLackOfMemory()
+      throws IOException {
+
+    LOG.debug("Starting the scheduler.");
+    taskTrackerManager = new FakeTaskTrackerManager(1, 1, 1);
+    TaskTrackerStatus.ResourceStatus ttStatus =
+        taskTrackerManager.getTaskTracker("tt1").getResourceStatus();
+    ttStatus.setTotalVirtualMemory(3 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedVirtualMemory(0);
+    ttStatus.setTotalPhysicalMemory(1 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedPhysicalMemory(0);
+
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf.setFakeQueues(queues);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // enabled memory-based scheduling
+    scheduler.getConf().setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        1536 * 1024 * 1024L);
+    scheduler.getConf().setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        4 * 1024 * 1024 * 1024L);
+    resConf.setDefaultPercentOfPmemInVmem(33.3f);
+    resConf.setLimitMaxPmemForTasks(2 * 1024 * 1024 * 1024L);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    LOG.debug("Submit one high memory(4GB vmem, 512MB pmem) job of "
+        + "1 map, 0 reduce tasks.");
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(4 * 1024 * 1024 * 1024L);
+    jConf.setMaxPhysicalMemoryForTask(512 * 1024 * 1024L);
+    jConf.setNumMapTasks(1);
+    jConf.setNumReduceTasks(0);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    FakeJobInProgress job1 = submitJobAndInit(JobStatus.PREP, jConf);
+    // TTs should not run these jobs i.e. cluster blocked because of lack of
+    // vmem
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+
+    // Job should still be alive
+    assertTrue(job1.getStatus().getRunState() == JobStatus.RUNNING);
+
+    LOG.debug("Submit a normal job of 1 map, 0 reduce tasks.");
+    // Use cluster-wide defaults
+    jConf.setMaxVirtualMemoryForTask(JobConf.DISABLED_MEMORY_LIMIT);
+    jConf.setMaxPhysicalMemoryForTask(JobConf.DISABLED_MEMORY_LIMIT);
+    FakeJobInProgress job2 = submitJobAndInit(JobStatus.PREP, jConf);
+
+    // cluster should still be blocked for job1 and so even job2 should not run
+    // even though it is a normal job
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+
+    scheduler.taskTrackerManager.killJob(job2.getJobID());
+    scheduler.taskTrackerManager.killJob(job1.getJobID());
+
+    LOG.debug("Submit one high memory(2GB vmem, 2GB pmem) job of "
+        + "1 map, 0 reduce tasks.");
+    jConf.setMaxVirtualMemoryForTask(2 * 1024 * 1024 * 1024L);
+    jConf.setMaxPhysicalMemoryForTask(2 * 1024 * 1024 * 1024L);
+    FakeJobInProgress job3 = submitJobAndInit(JobStatus.PREP, jConf);
+    // TTs should not run these jobs i.e. cluster blocked because of lack of
+    // pmem now.
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+    
+    // Job should still be alive
+    assertTrue(job3.getStatus().getRunState() == JobStatus.RUNNING);
+
+    LOG.debug("Submit a normal job of 1 map, 0 reduce tasks.");
+    // Use cluster-wide defaults
+    jConf.setMaxVirtualMemoryForTask(JobConf.DISABLED_MEMORY_LIMIT);
+    jConf.setMaxPhysicalMemoryForTask(JobConf.DISABLED_MEMORY_LIMIT);
+    submitJobAndInit(JobStatus.PREP, jConf); // job4
+
+    // cluster should still be blocked for job3 and so even job4 should not run
+    // even though it is a normal job
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+  }
+
   protected TaskTrackerStatus tracker(String taskTrackerName) {
     return taskTrackerManager.getTaskTracker(taskTrackerName);
   }
@@ -1311,7 +1706,7 @@ public class TestCapacityScheduler extends TestCase {
   public void testJobInitialization() throws Exception {
     // set up the scheduler
     String[] qs = { "default" };
-    taskTrackerManager = new FakeTaskTrackerManager(1, 1);
+    taskTrackerManager = new FakeTaskTrackerManager(2, 1, 1);
     scheduler.setTaskTrackerManager(taskTrackerManager);
     taskTrackerManager.addQueues(qs);
     resConf = new FakeResourceManagerConf();
@@ -1580,5 +1975,4 @@ public class TestCapacityScheduler extends TestCase {
     return userJobs;
 
   }
-  
 }
