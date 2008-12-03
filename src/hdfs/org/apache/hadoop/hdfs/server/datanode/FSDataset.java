@@ -395,7 +395,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
       // Create the zero-length temp file
       //
-      if (!f.createNewFile()) {
+      boolean fileCreated = false;
+      try {
+        fileCreated = f.createNewFile();
+      } catch (IOException ioe) {
+        throw (IOException)new IOException(DISK_ERROR +f).initCause(ioe);
+      }
+      if (!fileCreated) {
         throw new IOException("Unexpected problem in creating temporary file for "+
                               b + ".  File " + f + " should be creatable, but is already present.");
       }
@@ -939,6 +945,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       metaRAF.write(b, 0, checksumsize);
     } finally {
       metaRAF.close();
+    }
+  }
+
+  private final static String DISK_ERROR = "Possible disk error on file creation: ";
+  /** Get the cause of an I/O exception if caused by a possible disk error
+   * @param ioe an I/O exception
+   * @return cause if the I/O exception is caused by a possible disk error;
+   *         null otherwise.
+   */ 
+  static IOException getCauseIfDiskError(IOException ioe) {
+    if (ioe.getMessage()!=null && ioe.getMessage().startsWith(DISK_ERROR)) {
+      return (IOException)ioe.getCause();
+    } else {
+      return null;
     }
   }
 

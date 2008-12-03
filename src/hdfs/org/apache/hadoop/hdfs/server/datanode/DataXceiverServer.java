@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -130,6 +131,8 @@ class DataXceiverServer implements Runnable, FSConstants {
         s.setTcpNoDelay(true);
         new Daemon(datanode.threadGroup, 
             new DataXceiver(s, datanode, this)).start();
+      } catch (SocketTimeoutException ignored) {
+        // wake up to see if should continue to run
       } catch (IOException ie) {
         LOG.warn(datanode.dnRegistration + ":DataXceiveServer: " 
                                 + StringUtils.stringifyException(ie));

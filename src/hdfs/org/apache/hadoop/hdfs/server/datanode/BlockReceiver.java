@@ -23,7 +23,6 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.zip.CRC32;
@@ -110,6 +109,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
     } catch(IOException ioe) {
       IOUtils.closeStream(this);
+      IOException cause = FSDataset.getCauseIfDiskError(ioe);
+      if (cause != null) { // possible disk error
+        ioe = cause;
+        datanode.checkDiskError(ioe);
+      }
       throw ioe;
     }
   }
