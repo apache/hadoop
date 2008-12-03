@@ -244,6 +244,9 @@ Trunk (unreleased changes)
     HADOOP-4732. Pass connection and read timeouts in the correct order when
     setting up fetch in reduce. (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-4420. Add null checks for job, caused by invalid job IDs.
+    (Aaron Kimball via tomwhite)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

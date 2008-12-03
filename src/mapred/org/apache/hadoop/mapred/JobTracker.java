@@ -2292,7 +2292,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
     
   public synchronized void killJob(JobID jobid) throws IOException {
+    if (null == jobid) {
+      LOG.info("Null jobid object sent to JobTracker.killJob()");
+      return;
+    }
+    
     JobInProgress job = jobs.get(jobid);
+    
+    if (null == job) {
+      LOG.info("killJob(): JobId " + jobid.toString() + " is not a valid job");
+      return;
+    }
+        
     JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
     job.kill();
@@ -2322,6 +2333,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                               String priority)
                                                 throws IOException {
     JobInProgress job = jobs.get(jobid);
+    if (null == job) {
+        LOG.info("setJobPriority(): JobId " + jobid.toString()
+            + " is not a valid job");
+        return;
+    }
     checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
     JobPriority newPriority = JobPriority.valueOf(priority);
     setJobPriority(jobid, newPriority);
@@ -2336,6 +2352,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   public synchronized JobStatus getJobStatus(JobID jobid) {
+    if (null == jobid) {
+      LOG.warn("JobTracker.getJobStatus() cannot get status for null jobid");
+      return null;
+    }
+    
     JobInProgress job = jobs.get(jobid);
     if (job != null) {
       return job.getStatus();
