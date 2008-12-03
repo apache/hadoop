@@ -170,9 +170,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
   
-  /**
+  /*
    * Space is reserved in HRS constructor and then released when aborting
-   * to recover from an OOME. See HBASE-706.
+   * to recover from an OOME. See HBASE-706.  TODO: Make this percentage of the
+   * heap or a minimum.
    */
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte []>();
   
@@ -196,6 +197,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
+
+  final Map<String, InternalScanner> scanners =
+    new ConcurrentHashMap<String, InternalScanner>();
 
   /**
    * Starts a HRegionServer at the default location
@@ -443,9 +447,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         sleeper.sleep(lastMsg);
       } // for
     } catch (Throwable t) {
-      checkOOME(t);
-      LOG.fatal("Unhandled exception. Aborting...", t);
-      abort();
+      if (!checkOOME(t)) {
+        LOG.fatal("Unhandled exception. Aborting...", t);
+        abort();
+      }
     }
     RegionHistorian.getInstance().offline();
     this.leases.closeAfterLeasesExpire();
@@ -476,9 +481,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             this.log.close();
             LOG.info("On abort, closed hlog");
           }
-        } catch (IOException e) {
+        } catch (Throwable e) {
           LOG.error("Unable to close log in abort",
-              RemoteExceptionHandler.checkIOException(e));
+            RemoteExceptionHandler.checkThrowable(e));
         }
         closeAllRegions(); // Don't leave any open file handles
       }
@@ -488,9 +493,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
         log.closeAndDelete();
-      } catch (IOException e) {
+      } catch (Throwable e) {
         LOG.error("Close and delete failed",
-            RemoteExceptionHandler.checkIOException(e));
+          RemoteExceptionHandler.checkThrowable(e));
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
@@ -505,9 +510,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.info("telling master that region server is shutting down at: " +
             serverInfo.getServerAddress().toString());
         hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
-      } catch (IOException e) {
+      } catch (Throwable e) {
         LOG.warn("Failed to send exiting message to master: ",
-            RemoteExceptionHandler.checkIOException(e));
+          RemoteExceptionHandler.checkThrowable(e));
       }
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
@@ -554,15 +559,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
       isOnline = true;
-    } catch (IOException e) {
+    } catch (Throwable e) {
+      this.isOnline = false;
       this.stopRequested.set(true);
-      checkOOME(e);
-      isOnline = false;
-      e = RemoteExceptionHandler.checkIOException(e); 
-      LOG.fatal("Failed init", e);
-      IOException ex = new IOException("region server startup failed");
-      ex.initCause(e);
-      throw ex;
+      throw convertThrowableToIOE(cleanup(e, "Failed init"),
+        "Region server startup failed");
     }
   }
 
@@ -601,20 +602,88 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /*
+   * Cleanup after Throwable caught invoking method.  Converts <code>t</code>
+   * to IOE if it isn't already.
+   * @param t Throwable
+   * @return Throwable converted to an IOE; methods can only let out IOEs.
+   */
+  private Throwable cleanup(final Throwable t) {
+    return cleanup(t, null);
+  }
+
+  /*
+   * Cleanup after Throwable caught invoking method.  Converts <code>t</code>
+   * to IOE if it isn't already.
+   * @param t Throwable
+   * @param msg Message to log in error.  Can be null.
+   * @return Throwable converted to an IOE; methods can only let out IOEs.
+   */
+  private Throwable cleanup(final Throwable t, final String msg) {
+    if (msg == null) {
+      LOG.error(RemoteExceptionHandler.checkThrowable(t));
+    } else {
+      LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
+    }
+    if (!checkOOME(t)) {
+      checkFileSystem();
+    }
+    return t;
+  }
+
+  /*
+   * @param t
+   * @return Make <code>t</code> an IOE if it isn't already.
+   */
+  private IOException convertThrowableToIOE(final Throwable t) {
+    return convertThrowableToIOE(t, null);
+  }
+
+  /*
+   * @param t
+   * @param msg Message to put in new IOE if passed <code>t</code> is not an IOE
+   * @return Make <code>t</code> an IOE if it isn't already.
+   */
+  private IOException convertThrowableToIOE(final Throwable t,
+      final String msg) {
+    return (t instanceof IOException? (IOException)t:
+      msg == null || msg.length() == 0?
+        new IOException(t): new IOException(msg, t));
+  }
+  /*
    * Check if an OOME and if so, call abort.
    * @param e
    * @return True if we OOME'd and are aborting.
    */
   private boolean checkOOME(final Throwable e) {
-    boolean aborting = false;
+    boolean stop = false;
     if (e instanceof OutOfMemoryError ||
         (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError) ||
         e.getMessage().contains("java.lang.OutOfMemoryError")) {
       LOG.fatal("OutOfMemoryError, aborting.", e);
       abort();
-      aborting = true;
+      stop = true;
     }
-    return aborting;
+    return stop;
+  }
+  
+  
+  /**
+   * Checks to see if the file system is still accessible.
+   * If not, sets abortRequested and stopRequested
+   * 
+   * @return false if file system is not available
+   */
+  protected boolean checkFileSystem() {
+    if (this.fsOk && this.fs != null) {
+      try {
+        FSUtils.checkFileSystemAvailable(this.fs);
+      } catch (IOException e) {
+        LOG.fatal("Shutting down HRegionServer: file system not available", e);
+        abort();
+        this.fsOk = false;
+      }
+    }
+    return this.fsOk;
   }
 
   /*
@@ -1088,8 +1157,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
         }
       } catch(Throwable t) {
-        checkOOME(t);
-        LOG.fatal("Unhandled exception", t);
+        if (!checkOOME(t)) {
+          LOG.fatal("Unhandled exception", t);
+        }
       } finally {
         LOG.info("worker thread exiting");
       }
@@ -1110,14 +1180,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // Startup a compaction early if one is needed.
         this.compactSplitThread.
           compactionRequested(region, "Region open check");
-      } catch (IOException e) {
-        checkOOME(e);
-        LOG.error("error opening region " + regionInfo.getRegionNameAsString(),
-          e);
+      } catch (Throwable e) {
+        Throwable t = cleanup(e,
+          "Error opening " + regionInfo.getRegionNameAsString());
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
-        reportClose(regionInfo, StringUtils.stringifyException(e).getBytes());
+        reportClose(regionInfo, StringUtils.stringifyException(t).getBytes());
         return;
       }
       this.lock.writeLock().lock();
@@ -1182,11 +1251,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       try {
         region.close(abortRequested);
-      } catch (IOException e) {
-        LOG.error("error closing region " +
-            Bytes.toString(region.getRegionName()),
-          RemoteExceptionHandler.checkIOException(e));
-        checkOOME(e);
+      } catch (Throwable e) {
+        cleanup(e, "Error closing " + Bytes.toString(region.getRegionName()));
       }
     }
     return regionsToClose;
@@ -1210,9 +1276,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           LOG.debug("Closing region " + r.toString());
         }
         r.close();
-      } catch (IOException e) {
+      } catch (Throwable e) {
         LOG.error("Error closing region " + r.toString(),
-          RemoteExceptionHandler.checkIOException(e));
+          RemoteExceptionHandler.checkThrowable(e));
       }
     }
   }
@@ -1280,9 +1346,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column, timestamp, numVersions);
-    } catch (IOException e) {
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
 
@@ -1307,10 +1372,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (result == null || result.isEmpty())
         return null;
       return new RowResult(row, result);
-    } catch (IOException e) {
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
 
@@ -1325,10 +1388,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // ask the region for all the data 
       RowResult rr = region.getClosestRowBefore(row, columnFamily);
       return rr;
-    } catch (IOException e) {
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
   
@@ -1362,10 +1423,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
       }
       return resultSets.toArray(new RowResult[resultSets.size()]);
-    } catch (IOException e) {
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
 
@@ -1382,10 +1441,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b, getLockFromId(b.getRowLock()));
-    } catch (IOException e) {
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
   
@@ -1407,10 +1464,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       return i;
     } catch (NotServingRegionException ex) {
       return i;
-    } catch (IOException e) {
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
     return -1;
   }
@@ -1458,9 +1513,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       npe = new NullPointerException("firstRow for scanner is null");
     }
     if (npe != null) {
-      IOException io = new IOException("Invalid arguments to openScanner");
-      io.initCause(npe);
-      throw io;
+      throw new IOException("Invalid arguments to openScanner", npe);
     }
     requestCount.incrementAndGet();
     try {
@@ -1469,12 +1522,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         r.getScanner(cols, firstRow, timestamp, filter);
       long scannerId = addScanner(s);
       return scannerId;
-    } catch (IOException e) {
-      LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
-        RemoteExceptionHandler.checkIOException(e));
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }
   }
   
@@ -1491,9 +1540,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   public void close(final long scannerId) throws IOException {
-    checkOpen();
-    requestCount.incrementAndGet();
     try {
+      checkOpen();
+      requestCount.incrementAndGet();
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = null;
       synchronized(scanners) {
@@ -1504,17 +1553,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       s.close();
       this.leases.cancelLease(scannerName);
-    } catch (IOException e) {
-      // TODO: Should we even be returning an exception out of a close?
-      // What can the client do with an exception in close?
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
-
-  Map<String, InternalScanner> scanners =
-    new ConcurrentHashMap<String, InternalScanner>();
 
   /** 
    * Instantiated as a scanner lease.
@@ -1601,12 +1643,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       long lockId = addRowLock(r,region);
       LOG.debug("Row lock " + lockId + " explicitly acquired by client");
       return lockId;
-    } catch (IOException e) {
-      LOG.error("Error obtaining row lock (fsOk: " + this.fsOk + ")",
-        RemoteExceptionHandler.checkIOException(e));
-      checkOOME(e);
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t,
+        "Error obtaining row lock (fsOk: " + this.fsOk + ")"));
     }
   }
 
@@ -1674,9 +1713,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       region.releaseRowLock(r);
       this.leases.cancelLease(lockName);
       LOG.debug("Row lock " + lockId + " has been explicitly released by client");
-    } catch (IOException e) {
-      checkFileSystem();
-      throw e;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
     }
   }
 
@@ -1875,25 +1913,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     if (!fsOk) {
       throw new IOException("File system not available");
     }
-  }
-  
-  /**
-   * Checks to see if the file system is still accessible.
-   * If not, sets abortRequested and stopRequested
-   * 
-   * @return false if file system is not available
-   */
-  protected boolean checkFileSystem() {
-    if (this.fsOk && fs != null) {
-      try {
-        FSUtils.checkFileSystemAvailable(fs);
-      } catch (IOException e) {
-        LOG.fatal("Shutting down HRegionServer: file system not available", e);
-        abort();
-        fsOk = false;
-      }
-    }
-    return this.fsOk;
   }
  
   /**
