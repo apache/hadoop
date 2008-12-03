@@ -608,8 +608,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private boolean checkOOME(final Throwable e) {
     boolean aborting = false;
     if (e instanceof OutOfMemoryError ||
-        (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError)) {
-      LOG.fatal("OOME, aborting.", e);
+        (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError) ||
+        e.getMessage().contains("java.lang.OutOfMemoryError")) {
+      LOG.fatal("OutOfMemoryError, aborting.", e);
       abort();
       aborting = true;
     }
@@ -1871,7 +1872,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected void checkOpen() throws IOException {
     if (this.stopRequested.get() || this.abortRequested) {
-      throw new IOException("Server not running");
+      throw new IOException("Server not running" +
+        (this.abortRequested? ", aborting": ""));
     }
     if (!fsOk) {
       throw new IOException("File system not available");

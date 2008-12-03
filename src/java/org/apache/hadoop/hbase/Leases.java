@@ -77,12 +77,13 @@ public class Leases extends Thread {
       Lease lease = null;
       try {
         lease = leaseQueue.poll(leaseCheckFrequency, TimeUnit.MILLISECONDS);
-        
       } catch (InterruptedException e) {
         continue;
-        
       } catch (ConcurrentModificationException e) {
         continue;
+      } catch (Throwable e) {
+        LOG.fatal("Unexpected exception killed leases thread", e);
+        break;
       }
       if (lease == null) {
         continue;
