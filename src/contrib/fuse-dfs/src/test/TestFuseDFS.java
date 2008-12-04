@@ -57,7 +57,7 @@ public class TestFuseDFS extends TestCase {
     String lp = System.getProperty("LD_LIBRARY_PATH") + ":" + "/usr/local/lib:" + libhdfs + ":" + jvm;
     System.err.println("LD_LIBRARY_PATH=" + lp);
     String cmd[] =  {  fuse_cmd, "dfs://" + dfs.getHost() + ":" + String.valueOf(dfs.getPort()), 
-                       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=1",  "-oattribute_timeout=1", "-ousetrash", "rw", "-oinitchecks",
+                       mountpoint, "-obig_writes", "-odebug", "-oentry_timeout=0.1",  "-oattribute_timeout=0.1", "-ousetrash", "rw", "-oinitchecks",
                        "-ordbuffer=32768"};
     final String [] envp = {
       "CLASSPATH="+  cp,
@@ -169,6 +169,12 @@ public class TestFuseDFS extends TestCase {
       f.flush();
       f.close();
 
+
+      try {
+        Thread.sleep(1000);
+      } catch(Exception e) {
+      }
+
       // check the file exists.
       Path myPath = new Path("/hello.txt");
       assertTrue(fileSys.exists(myPath));
@@ -177,14 +183,14 @@ public class TestFuseDFS extends TestCase {
       FileInputStream fi = new FileInputStream(new File(mpoint, "hello.txt"));
       byte b[] = new byte[12];
       int length = fi.read(b,0,12);
-      String s2 = new String( b);
+      assertTrue(length > 0);
+      String s2 = new String( b, 0, length);
+      assertEquals("hello world", s2);
     } catch(Exception e) {
       e.printStackTrace();
     } finally {
     }
   }
-
-
 
   /**
    * Test ls for dir already created in testMkdDir also tests bad ls
@@ -256,6 +262,7 @@ public class TestFuseDFS extends TestCase {
       e.printStackTrace();
     }
   }
+
   /**
    * use shell to create a dir and then use filesys to see it exists.
    */
@@ -505,8 +512,65 @@ public class TestFuseDFS extends TestCase {
     }
   }
 
+
+
+  /**
+   * Use filesys to create the hello world! file and then cat it and see its contents are correct.
+   */
+  public void testAppends() throws IOException,InterruptedException  {
+    try {
+      // First create a new directory with mkdirs
+      Runtime r = Runtime.getRuntime();
+
+      {
+        FileOutputStream os = new FileOutputStream(mpoint + "/appends");
+        String hello = "hello";
+        os.write(hello.getBytes());
+        os.flush();
+        os.close();
+      }
+
+      // check it exists
+      Path myPath = new Path("/appends");
+      assertTrue(fileSys.exists(myPath));
+
+      try {
+        Thread.sleep(1000);
+      } catch(Exception e) {
+      }
+
+      FileStatus foo = fileSys.getFileStatus(myPath);
+
+      File f = new File(mpoint + "/appends");
+      assertTrue(f.length() > 0);
+
+      {
+        FileOutputStream os = new FileOutputStream(mpoint + "/appends", true);
+        String hello = " world!";
+        os.write(hello.getBytes());
+        os.flush();
+        os.close();
+      }
+
+      // cat the file
+      FileInputStream is = new FileInputStream(mpoint + "/appends");
+      byte b[] = new byte[1024];
+      int len = is.read(b);
+      assertTrue(len > 0);
+      String s2 = new String(b,0,len);
+      assertTrue(s2.equals("hello world!"));
+
+    } catch(Exception e) {
+      e.printStackTrace();
+    } finally {
+    }
+  }
+
+
+
+
   public void testDone() throws IOException {
-    close();
+      close();
   }
 
   /**
@@ -524,17 +588,19 @@ public class TestFuseDFS extends TestCase {
 
   public void close() {
     try {
+      int length;
 
       // print out the fuse debug output
       {
+      do {
       InputStream i = fuse_process.getInputStream();
       byte b[] = new byte[i.available()];
-      int length = i.read(b);
+      length = i.read(b);
       System.err.println("read x bytes: " + length);
       System.err.write(b,0,b.length);
+      } while(length > 0) ;
       }
 
-      int length;
       do {
       InputStream i = fuse_process.getErrorStream();
       byte b[] = new byte[i.available()];
