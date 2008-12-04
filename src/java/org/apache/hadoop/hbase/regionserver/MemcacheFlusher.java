@@ -249,15 +249,14 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    * to the lower limit. This method blocks callers until we're down to a safe
    * amount of memcache consumption.
    */
-  public void reclaimMemcacheMemory() {
+  public synchronized void reclaimMemcacheMemory() {
     if (server.getGlobalMemcacheSize() >= globalMemcacheLimit) {
       flushSomeRegions();
     }
   }
 
   /*
-   * Emergency!  Need to flush memory.  While running this method all updates
-   * to this regionserver are blocked.
+   * Emergency!  Need to flush memory.
    */
   private synchronized void flushSomeRegions() {
     // keep flushing until we hit the low water mark
@@ -277,7 +276,8 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       }
       HRegion biggestMemcacheRegion = m.remove(m.firstKey());
       LOG.info("Forced flushing of " +  biggestMemcacheRegion.toString() +
-        " because global memcache limit of " + this.globalMemcacheLimit +
+        " because global memcache limit of " +
+        StringUtils.humanReadableInt(this.globalMemcacheLimit) +
         " exceeded; currently " +
         StringUtils.humanReadableInt(globalMemcacheSize) + " and flushing till " +
         StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark));
