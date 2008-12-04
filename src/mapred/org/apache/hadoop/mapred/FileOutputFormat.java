@@ -101,9 +101,16 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
     if (outDir == null && job.getNumReduceTasks() != 0) {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
-    if (outDir != null && outDir.getFileSystem(job).exists(outDir)) {
-      throw new FileAlreadyExistsException("Output directory " + outDir + 
-                                           " already exists");
+    if (outDir != null) {
+      FileSystem fs = outDir.getFileSystem(job);
+      // normalize the output directory
+      outDir = fs.makeQualified(outDir);
+      setOutputPath(job, outDir);
+      // check its existence
+      if (fs.exists(outDir)) {
+        throw new FileAlreadyExistsException("Output directory " + outDir + 
+                                             " already exists");
+      }
     }
   }
 

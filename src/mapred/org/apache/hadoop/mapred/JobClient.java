@@ -748,7 +748,21 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   // job submission directory is world readable/writable/executable
   final static FsPermission JOB_DIR_PERMISSION =
     FsPermission.createImmutable((short) 0777); // rwx-rwx-rwx
-   
+
+  /** Normalize the output path defined in job configuration.
+   * Store the normalized path back into job configuration.
+   * 
+   * @param job job configuration
+   * @throws IOException if any error occurs during normalization
+   */
+  private static void normalizeOutputPath(JobConf job) throws IOException {
+    Path out = FileOutputFormat.getOutputPath(job);
+    if (out!=null) {
+      FileOutputFormat.setOutputPath(job, 
+          out.getFileSystem(job).makeQualified(out));
+    }
+  }
+  
   /**
    * Submit a job to the MR system.
    * This returns a handle to the {@link RunningJob} which can be used to track
@@ -774,7 +788,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     configureCommandLineOptions(job, submitJobDir, submitJarFile);
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     
-    // Check the output specification
+    // Normalize and check the output specification
+    normalizeOutputPath(job);
     job.getOutputFormat().checkOutputSpecs(fs, job);
 
     // Create the splits for the job
