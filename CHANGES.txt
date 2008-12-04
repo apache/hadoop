@@ -262,6 +262,8 @@ main source files. (pete wyckoff via mahadev)
     HADOOP-4558. Fix capacity reclamation in capacity scheduler.
     (Amar Kamat via yhemanth)
 
+    HADOOP-4770. Fix rungridmix_2 script to work with RunJar. (cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
