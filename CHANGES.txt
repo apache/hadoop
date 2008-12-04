@@ -69,6 +69,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4734. Block and meta data validation codes in HADOOP-1700 should be
     committed to 0.18. (szetszwo)
 
+    HADOOP-4746. Job output directory should be normalized. (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
