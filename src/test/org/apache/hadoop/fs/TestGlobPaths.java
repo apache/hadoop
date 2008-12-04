@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -25,6 +26,19 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import junit.framework.TestCase;
 
 public class TestGlobPaths extends TestCase {
+  
+  static class RegexPathFilter implements PathFilter {
+    
+    private final String regex;
+    public RegexPathFilter(String regex) {
+      this.regex = regex;
+    }
+
+    public boolean accept(Path path) {
+      return path.toString().matches(regex);
+    }
+
+  }
   
   static private MiniDFSCluster dfsCluster;
   static private FileSystem fs;
@@ -45,6 +59,31 @@ public class TestGlobPaths extends TestCase {
   protected void tearDown() throws Exception {
     if(dfsCluster!=null) {
       dfsCluster.shutdown();
+    }
+  }
+  
+  public void testPathFilter() throws IOException {
+    try {
+      String[] files = new String[] { USER_DIR + "/a", USER_DIR + "/a/b" };
+      Path[] matchedPath = prepareTesting(USER_DIR + "/*/*", files,
+          new RegexPathFilter("^.*" + Pattern.quote(USER_DIR) + "/a/b"));
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[1]);
+    } finally {
+      cleanupDFS();
+    }
+  }
+  
+  public void testPathFilterWithFixedLastComponent() throws IOException {
+    try {
+      String[] files = new String[] { USER_DIR + "/a", USER_DIR + "/a/b",
+                                      USER_DIR + "/c", USER_DIR + "/c/b", };
+      Path[] matchedPath = prepareTesting(USER_DIR + "/*/b", files,
+          new RegexPathFilter("^.*" + Pattern.quote(USER_DIR) + "/a/b"));
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[1]);
+    } finally {
+      cleanupDFS();
     }
   }
   
@@ -361,6 +400,23 @@ public class TestGlobPaths extends TestCase {
     }
     Path patternPath = new Path(pattern);
     Path[] globResults = FileUtil.stat2Paths(fs.globStatus(patternPath),
+                                             patternPath);
+    for(int i=0; i<globResults.length; i++) {
+      globResults[i] = globResults[i].makeQualified(fs);
+    }
+    return globResults;
+  }
+  
+  private Path[] prepareTesting(String pattern, String[] files,
+      PathFilter filter) throws IOException {
+    for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
+      path[i] = new Path(files[i]).makeQualified(fs);
+      if (!fs.mkdirs(path[i])) {
+        throw new IOException("Mkdirs failed to create " + path[i].toString());
+      }
+    }
+    Path patternPath = new Path(pattern);
+    Path[] globResults = FileUtil.stat2Paths(fs.globStatus(patternPath, filter),
                                              patternPath);
     for(int i=0; i<globResults.length; i++) {
       globResults[i] = globResults[i].makeQualified(fs);

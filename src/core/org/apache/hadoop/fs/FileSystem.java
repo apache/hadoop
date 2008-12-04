@@ -879,26 +879,16 @@ public abstract class FileSystem extends Configured implements Closeable {
 
     // glob the paths that match the parent path, i.e., [0, components.length-1]
     boolean[] hasGlob = new boolean[]{false};
-    Path[] parentPaths =
-      globPathsLevel(parents, components, level, filter, hasGlob);
+    Path[] parentPaths = globPathsLevel(parents, components, level, hasGlob);
     FileStatus[] results;
     if (parentPaths == null || parentPaths.length == 0) {
       results = null;
     } else {
       // Now work on the last component of the path
       GlobFilter fp = new GlobFilter(components[components.length - 1], filter);
+      results = listStatus(parentPaths, fp);
       if (fp.hasPattern()) { // last component has a pattern
-        // list parent directories and then glob the results
-        results = listStatus(parentPaths, fp);
         hasGlob[0] = true;
-      } else { // last component does not have a pattern
-        // get all the path names
-        for (int i = 0; i < parentPaths.length; i++) {
-          parentPaths[i] = new Path(parentPaths[i],
-              components[components.length - 1]);
-        }
-        // get all their statuses
-        results = getFileStatus(parentPaths);
       }
     }
 
@@ -924,13 +914,13 @@ public abstract class FileSystem extends Configured implements Closeable {
    * components [<code>level</code>, <code>N-1</code>].
    */
   private Path[] globPathsLevel(Path[] parents, String[] filePattern,
-      int level, PathFilter filter, boolean[] hasGlob) throws IOException {
+      int level, boolean[] hasGlob) throws IOException {
     if (level == filePattern.length - 1)
       return parents;
     if (parents == null || parents.length == 0) {
       return null;
     }
-    GlobFilter fp = new GlobFilter(filePattern[level], filter);
+    GlobFilter fp = new GlobFilter(filePattern[level]);
     if (fp.hasPattern()) {
       parents = FileUtil.stat2Paths(listStatus(parents, fp));
       hasGlob[0] = true;
@@ -939,7 +929,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         parents[i] = new Path(parents[i], filePattern[level]);
       }
     }
-    return globPathsLevel(parents, filePattern, level + 1, filter, hasGlob);
+    return globPathsLevel(parents, filePattern, level + 1, hasGlob);
   }
 
   /* A class that could decide if a string matches the glob or not */

@@ -90,7 +90,8 @@ public class TestFileInputFormatPathFilter extends TestCase {
   public static class TestPathFilter implements PathFilter {
 
     public boolean accept(Path path) {
-      return path.getName().length() == 1;
+      String name = path.getName();
+      return name.equals("TestFileInputFormatPathFilter") || name.length() == 1;
     }
   }
 
