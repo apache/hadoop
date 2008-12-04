@@ -378,6 +378,11 @@ class CapacityTaskScheduler extends TaskScheduler {
       if (queueInfoMap.size() < 2) {
         return;
       }
+      
+      // make sure we always get the latest values
+      updateQSIObjects();
+      updateCollectionOfQSIs();
+      
       QueueSchedulingInfo lastQsi = 
         qsiForAssigningTasks.get(qsiForAssigningTasks.size()-1);
       long currentTime = scheduler.clock.getTime();
@@ -554,7 +559,7 @@ class CapacityTaskScheduler extends TaskScheduler {
           qsi.numRunningTasksByUser.put(j.getProfile().getUser(), 
               i+getRunningTasks(j));
           qsi.numPendingTasks += getPendingTasks(j);
-          LOG.debug("updateQSI: job " + j.toString() + ": run(m) = " + 
+          LOG.debug("updateQSI: job " + j.getJobID().toString() + ": run(m) = " +
               j.runningMaps() + ", run(r) = " + j.runningReduces() + 
               ", finished(m) = " + j.finishedMaps() + ", finished(r)= " + 
               j.finishedReduces() + ", failed(m) = " + j.failedMapTasks + 
@@ -1134,7 +1139,7 @@ class CapacityTaskScheduler extends TaskScheduler {
         totalCapacity += gc;
       }
       int ulMin = rmConf.getMinimumUserLimitPercent(queueName); 
-      long reclaimTimeLimit = rmConf.getReclaimTimeLimit(queueName);
+      long reclaimTimeLimit = rmConf.getReclaimTimeLimit(queueName) * 1000;
       // reclaimTimeLimit is the time(in millisec) within which we need to
       // reclaim capacity. 
       // create queue scheduling objects for Map and Reduce

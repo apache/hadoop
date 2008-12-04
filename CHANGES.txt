@@ -256,6 +256,9 @@ main source files. (pete wyckoff via mahadev)
     HADOOP-4732. Pass connection and read timeouts in the correct order when
     setting up fetch in reduce. (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-4558. Fix capacity reclamation in capacity scheduler.
+    (Amar Kamat via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
