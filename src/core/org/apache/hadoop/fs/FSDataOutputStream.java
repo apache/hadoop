@@ -30,9 +30,11 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
     long position;
 
     public PositionCache(OutputStream out, 
-                         FileSystem.Statistics stats) throws IOException {
+                         FileSystem.Statistics stats,
+                         long pos) throws IOException {
       super(out);
       statistics = stats;
+      position = pos;
     }
 
     public void write(int b) throws IOException {
@@ -67,7 +69,12 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
 
   public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats)
     throws IOException {
-    super(new PositionCache(out, stats));
+    this(out, stats, 0);
+  }
+
+  public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats,
+                            long startPosition) throws IOException {
+    super(new PositionCache(out, stats, startPosition));
     wrappedStream = out;
   }
   

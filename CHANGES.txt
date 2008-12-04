@@ -280,6 +280,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4632. Fix TestJobHistoryVersion to use test.build.dir instead of the
     current workding directory for scratch space. (Amar Kamat via cdouglas)
 
+    HADOOP-4508. Fix FSDataOutputStream.getPos() for append. (dhruba via
+    szetszwo)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
