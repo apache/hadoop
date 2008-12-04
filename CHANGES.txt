@@ -55,7 +55,7 @@ Release 0.18.3 - Unreleased
     HADOOP-4713. Fix librecordio to handle records larger than 64k. (Christian
     Kunz via cdouglas)
    
-   HADOOP-4635. Fix a memory leak in fuse dfs. (pete wyckoff via mahadev)
+    HADOOP-4635. Fix a memory leak in fuse dfs. (pete wyckoff via mahadev)
 
     HADOOP-4714. Report status between merges and make the number of records
     between progress reports configurable. (Jothi Padmanabhan via cdouglas)
@@ -65,6 +65,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4679. Datanode prints tons of log messages: waiting for threadgroup
     to exit, active threads is XX. (hairong)
+
+    HADOOP-4734. Block and meta data validation codes in HADOOP-1700 should be
+    committed to 0.18. (szetszwo)
 
 Release 0.18.2 - 2008-11-03
 

@@ -3150,8 +3150,22 @@ public class DataNode extends Configured
       LOG.debug("block=" + block);
     }
     Block stored = data.getStoredBlock(block.blkid);
-    return stored == null?
-        null: new BlockMetaDataInfo(stored, blockScanner.getLastScanTime(stored));
+
+    if (stored == null) {
+      return null;
+    }
+    BlockMetaDataInfo info = new BlockMetaDataInfo(stored,
+                                 blockScanner.getLastScanTime(stored));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getBlockMetaDataInfo successful block=" + stored +
+                " length " + stored.getNumBytes() +
+                " genstamp " + stored.getGenerationStamp());
+    }
+
+    // paranoia! verify that the contents of the stored block
+    // matches the block file on disk.
+    data.validateBlockMetadata(stored);
+    return info;
   }
 
   Daemon recoverBlocks(final Block[] blocks, final DatanodeInfo[][] targets) {

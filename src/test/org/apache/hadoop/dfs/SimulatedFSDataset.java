@@ -399,6 +399,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return result;
   }
 
+  /** No-op */
+  public void validateBlockMetadata(Block b) {
+  }
+
   /**
    * Returns metaData of block b as an input stream
    * @param b - the block for which the metadata is desired

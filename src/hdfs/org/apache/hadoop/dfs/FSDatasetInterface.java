@@ -221,4 +221,11 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void setChannelPosition(Block b, BlockWriteStreams stream, long dataOffset,
                                  long ckOffset) throws IOException;
 
+  /**
+   * Validate that the contents in the Block matches
+   * the file on disk. Returns true if everything is fine.
+   * @param b The block to be verified.
+   * @throws IOException
+   */
+  public void validateBlockMetadata(Block b) throws IOException;
 }

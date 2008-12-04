@@ -862,6 +862,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
 
     updateBlockMap(ongoingCreates, oldblock, newblock);
     updateBlockMap(volumeMap, oldblock, newblock);
+
+    // paranoia! verify that the contents of the stored block 
+    // matches the block file on disk.
+    validateBlockMetadata(newblock);
     return null;
   }
 
@@ -1123,6 +1127,51 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       InterDatanodeProtocol.LOG.debug("b=" + b + ", f=" + f);
     }
     return null;
+  }
+
+  /** {@inheritDoc} */
+  public void validateBlockMetadata(Block b) throws IOException {
+    DatanodeBlockInfo info = volumeMap.get(b);
+    if (info == null) {
+      throw new IOException("Block " + b + " does not exist in volumeMap.");
+    }
+    FSVolume v = info.getVolume();
+    File tmp = v.getTmpFile(b);
+    File f = getFile(b);
+    if (f == null) {
+      f = tmp;
+    }
+    if (f == null) {
+      throw new IOException("Block " + b + " does not exist on disk.");
+    }
+    if (!f.exists()) {
+      throw new IOException("Block " + b + 
+                            " block file " + f +
+                            " does not exist on disk.");
+    }
+    if (b.getNumBytes() != f.length()) {
+      throw new IOException("Block " + b + 
+                            " length is " + b.getNumBytes()  +
+                            " does not match block file length " +
+                            f.length());
+    }
+    File meta = getMetaFile(f, b);
+    if (meta == null) {
+      throw new IOException("Block " + b + 
+                            " metafile does not exist.");
+    }
+    if (!meta.exists()) {
+      throw new IOException("Block " + b + 
+                            " metafile " + meta +
+                            " does not exist on disk.");
+    }
+    long stamp = parseGenerationStamp(f, meta);
+    if (stamp != b.getGenerationStamp()) {
+      throw new IOException("Block " + b + 
+                            " genstamp is " + b.getGenerationStamp()  +
+                            " does not match meta file stamp " +
+                            stamp);
+    }
   }
 
   /**
