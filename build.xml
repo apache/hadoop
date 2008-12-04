@@ -289,6 +289,28 @@
   
   <target name="compile-core-classes" depends="init, compile-rcc-compiler">
 
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${core.src.dir}"	
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
+      <classpath refid="classpath"/>
+    </javac>
+
+    <copy todir="${build.classes}">
+      <fileset dir="${core.src.dir}" includes="**/*.properties"/>
+    </copy>
+     
+  </target>
+
+  <target name="compile-mapred-classes" depends="compile-core-classes">
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
@@ -303,6 +325,27 @@
      webxml="${build.webapps}/job/WEB-INF/web.xml">
     </jsp-compile>
 
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${mapred.src.dir};${build.src}" 
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
+      <classpath refid="classpath"/>
+    </javac>   
+    
+    <copy todir="${build.classes}">
+      <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
+    </copy>
+  </target>
+
+  <target name="compile-hdfs-classes" depends="compile-core-classes">
     <jsp-compile
      uriroot="${src.webapps}/hdfs"
      outputdir="${build.src}"
@@ -320,7 +363,7 @@
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
-     srcdir="${core.src.dir};${mapred.src.dir};${hdfs.src.dir};${build.src}"
+     srcdir="${hdfs.src.dir};${build.src}" 
      includes="org/apache/hadoop/**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
@@ -331,15 +374,11 @@
       <compilerarg line="${javac.args} ${javac.args.warnings}" />
       <classpath refid="classpath"/>
     </javac>   
-  	
-    <copy todir="${build.classes}">
-      <fileset dir="${core.src.dir}" includes="**/*.properties"/>
-      <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
-      <fileset dir="${hdfs.src.dir}" includes="**/*.properties"/>  		
-    </copy>
-     
 
-    </target>
+    <copy todir="${build.classes}">
+     <fileset dir="${hdfs.src.dir}" includes="**/*.properties"/>
+    </copy>
+  </target>
 
   <target name="compile-tools" depends="init">
     <javac 
@@ -419,7 +458,9 @@
   </target>
 
   <target name="compile-core"
-          depends="clover,compile-core-classes,compile-core-native,compile-c++" description="Compile core only">
+          depends="clover,compile-core-classes,compile-mapred-classes,
+  	compile-hdfs-classes,compile-core-native,compile-c++" 
+  	description="Compile core only">
   </target>
 
   <target name="compile-contrib" depends="compile-core,compile-libhdfs">

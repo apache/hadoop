@@ -167,6 +167,9 @@ Trunk (unreleased changes)
     HADOOP-4690.  fuse-dfs - create source file/function + utils + config +
 main source files. (pete wyckoff via mahadev)
 
+    HADOOP-3750. Fix and enforce module dependencies. (Sharad Agarwal via
+    tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

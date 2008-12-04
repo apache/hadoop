@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -83,41 +82,6 @@ public abstract class FileSystem extends Configured implements Closeable {
    * or the JVM is exited.
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
-  
-  /**
-   * Parse the cmd-line args, starting at i.  Remove consumed args
-   * from array.  We expect param in the form:
-   * '-local | -dfs <namenode:port>'
-   * @deprecated Consider using {@link GenericOptionsParser} instead.
-   */
-  @Deprecated
-  public static FileSystem parseArgs(String argv[], int i, Configuration conf) throws IOException {
-    /**
-       if (argv.length - i < 1) {
-       throw new IOException("Must indicate filesystem type for DFS");
-       }
-    */
-    int orig = i;
-    FileSystem fs = null;
-    String cmd = argv[i];
-    if ("-dfs".equals(cmd)) {
-      i++;
-      InetSocketAddress addr = NetUtils.createSocketAddr(argv[i++]);
-      fs = new DistributedFileSystem(addr, conf);
-    } else if ("-local".equals(cmd)) {
-      i++;
-      fs = FileSystem.getLocal(conf);
-    } else {
-      fs = get(conf);                          // using default
-      LOG.info("No FS indicated, using default:"+fs.getName());
-
-    }
-    System.arraycopy(argv, i, argv, orig, argv.length - i);
-    for (int j = argv.length - i; j < argv.length; j++) {
-      argv[j] = null;
-    }
-    return fs;
-  }
 
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {
