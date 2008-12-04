@@ -76,7 +76,7 @@ int fill_stat_structure(hdfsFileInfo *info, struct stat *st)
 #endif
   gid_t group_id = default_id;
 #if PERMS
-  if (info->mGroup == NULL) {
+  if (info->mGroup != NULL) {
     //
     // Critical section - protect from concurrent calls in different threads since
     // the struct below is static.
