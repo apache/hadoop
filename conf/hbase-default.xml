@@ -191,19 +191,19 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.globalMemcacheLimit</name>
-    <value>536870912</value>
+    <name>hbase.regionserver.globalMemcache.upperLimit</name>
+    <value>0.4</value>
     <description>Maximum size of all memcaches in a region server before new 
-      updates are blocked and flushes are forced. Defaults to 512MB.
+      updates are blocked and flushes are forced. Defaults to 40% of heap.
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.globalMemcacheLimitlowMark</name>
-    <value>256435456</value>
+    <name>hbase.regionserver.globalMemcache.lowerLimit</name>
+    <value>0.25</value>
     <description>When memcaches are being forced to flush to make room in
-      memory, keep flushing until we hit this mark. Defaults to 256MB. Setting
-      this value equal to hbase.regionserver.globalmemcachelimit causes the 
-      minimum possible flushing to occur when updates are blocked due to 
+      memory, keep flushing until we hit this mark. Defaults to 30% of heap. 
+      This value equal to hbase.regionserver.globalmemcache.upperLimit causes
+      the minimum possible flushing to occur when updates are blocked due to 
       memcache limiting.
     </description>
   </property>  

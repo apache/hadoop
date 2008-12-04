@@ -20,20 +20,22 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.TimeUnit;
+import java.lang.management.ManagementFactory;
+import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.SortedMap;
-import java.util.ConcurrentModificationException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Thread that flushes cache on request
@@ -58,6 +60,13 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   protected final long globalMemcacheLimit;
   protected final long globalMemcacheLimitLowMark;
   
+  public static final float DEFAULT_UPPER = 0.4f;
+  public static final float DEFAULT_LOWER = 0.25f;
+  public static final String UPPER_KEY =
+    "hbase.regionserver.globalMemcache.upperLimit";
+  public static final String LOWER_KEY =
+    "hbase.regionserver.globalMemcache.lowerLimit";
+  
   /**
    * @param conf
    * @param server
@@ -66,16 +75,47 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       final HRegionServer server) {
     super();
     this.server = server;
-    threadWakeFrequency = conf.getLong(
-        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-        
-    // default memcache limit of 512MB
-    globalMemcacheLimit = 
-      conf.getLong("hbase.regionserver.globalMemcacheLimit", 512 * 1024 * 1024);
-    // default memcache low mark limit of 256MB, which is half the upper limit
-    globalMemcacheLimitLowMark = 
-      conf.getLong("hbase.regionserver.globalMemcacheLimitLowMark", 
-        globalMemcacheLimit / 2);        
+    this.threadWakeFrequency =
+      conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+    this.globalMemcacheLimit = globalMemcacheLimit(max, DEFAULT_UPPER,
+      UPPER_KEY, conf);
+    long lower = globalMemcacheLimit(max, DEFAULT_LOWER, LOWER_KEY, conf);
+    if (lower > this.globalMemcacheLimit) {
+      lower = this.globalMemcacheLimit;
+      LOG.info("Setting globalMemcacheLimitLowMark == globalMemcacheLimit " +
+        "because supplied " + LOWER_KEY + " was > " + UPPER_KEY);
+    }
+    this.globalMemcacheLimitLowMark = lower;
+    LOG.info("globalMemcacheLimit=" +
+      StringUtils.humanReadableInt(this.globalMemcacheLimit) +
+      ", globalMemcacheLimitLowMark=" +
+      StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark) +
+      ", maxHeap=" + StringUtils.humanReadableInt(max));
+  }
+
+  /**
+   * Calculate size using passed <code>key</code> for configured
+   * percentage of <code>max</code>.
+   * @param max
+   * @param defaultLimit
+   * @param key
+   * @param c
+   * @return Limit.
+   */
+  static long globalMemcacheLimit(final long max,
+     final float defaultLimit, final String key, final HBaseConfiguration c) {
+    float limit = c.getFloat(key, defaultLimit);
+    return getMemcacheLimit(max, limit, defaultLimit);
+  }
+  
+  static long getMemcacheLimit(final long max, final float limit,
+      final float defaultLimit) {
+    if (limit >= 0.9f || limit < 0.1f) {
+      LOG.warn("Setting global memcache limit to default of " + defaultLimit +
+        " because supplied value outside allowed range of 0.1 -> 0.9");
+    }
+    return (long)(max * limit);
   }
   
   @Override
@@ -229,15 +269,18 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       // flush the region with the biggest memcache
       if (m.size() <= 0) {
         LOG.info("No online regions to flush though we've been asked flush " +
-            "some; globalMemcacheSize=" + globalMemcacheSize +
-            ", globalMemcacheLimitLowMark=" + this.globalMemcacheLimitLowMark);
+          "some; globalMemcacheSize=" +
+          StringUtils.humanReadableInt(globalMemcacheSize) +
+          ", globalMemcacheLimitLowMark=" +
+          StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark));
         break;
       }
       HRegion biggestMemcacheRegion = m.remove(m.firstKey());
       LOG.info("Forced flushing of " +  biggestMemcacheRegion.toString() +
         " because global memcache limit of " + this.globalMemcacheLimit +
-        " exceeded; currently " + globalMemcacheSize + " and flushing till " +
-        this.globalMemcacheLimitLowMark);
+        " exceeded; currently " +
+        StringUtils.humanReadableInt(globalMemcacheSize) + " and flushing till " +
+        StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark));
       if (!flushRegion(biggestMemcacheRegion, true)) {
         LOG.warn("Flush failed");
         break;
