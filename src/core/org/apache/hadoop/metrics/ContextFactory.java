@@ -45,8 +45,8 @@ public class ContextFactory {
   private static ContextFactory theFactory = null;
     
   private Map<String,Object> attributeMap = new HashMap<String,Object>();
-  private Map<String,AbstractMetricsContext> contextMap = 
-    new HashMap<String,AbstractMetricsContext>();
+  private Map<String,MetricsContext> contextMap = 
+    new HashMap<String,MetricsContext>();
     
   // Used only when contexts, or the ContextFactory itself, cannot be
   // created.
@@ -119,22 +119,28 @@ public class ContextFactory {
    * @param contextName the name of the context
    * @return the named MetricsContext
    */
-  public synchronized MetricsContext getContext(String contextName) 
-    throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
-  {
-    AbstractMetricsContext metricsContext = contextMap.get(contextName);
+  public synchronized MetricsContext getContext(String refName, String contextName)
+      throws IOException, ClassNotFoundException,
+             InstantiationException, IllegalAccessException {
+    MetricsContext metricsContext = contextMap.get(refName);
     if (metricsContext == null) {
-      String classNameAttribute = contextName + CONTEXT_CLASS_SUFFIX;
+      String classNameAttribute = refName + CONTEXT_CLASS_SUFFIX;
       String className = (String) getAttribute(classNameAttribute);
       if (className == null) {
         className = DEFAULT_CONTEXT_CLASSNAME;
       }
       Class contextClass = Class.forName(className);
-      metricsContext = (AbstractMetricsContext) contextClass.newInstance();
+      metricsContext = (MetricsContext) contextClass.newInstance();
       metricsContext.init(contextName, this);
       contextMap.put(contextName, metricsContext);
     }
     return metricsContext;
+  }
+
+  public synchronized MetricsContext getContext(String contextName)
+    throws IOException, ClassNotFoundException, InstantiationException,
+           IllegalAccessException {
+    return getContext(contextName, contextName);
   }
     
   /**

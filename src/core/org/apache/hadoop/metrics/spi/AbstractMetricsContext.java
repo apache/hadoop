@@ -208,7 +208,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    * @param recordName the name of the record
    * @return newly created instance of MetricsRecordImpl or subclass
    */
-  protected MetricsRecordImpl newRecord(String recordName) {
+  protected MetricsRecord newRecord(String recordName) {
     return new MetricsRecordImpl(recordName, this);
   }
     

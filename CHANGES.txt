@@ -158,6 +158,9 @@ Trunk (unreleased changes)
     HADOOP-4708. Add support for dfsadmin commands in TestCLI. (Boris Shkolnik
     via cdouglas)
 
+    HADOOP-4758. Add a splitter for metrics contexts to support more than one
+    type of collector. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

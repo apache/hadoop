@@ -31,7 +31,14 @@ public interface MetricsContext {
    * Default period in seconds at which data is sent to the metrics system.
    */
   public static final int DEFAULT_PERIOD = 5;
-    
+
+  /**
+   * Initialize this context.
+   * @param contextName The given name for this context
+   * @param factory The creator of this context
+   */
+  public void init(String contextName, ContextFactory factory);
+
   /**
    * Returns the context name.
    *

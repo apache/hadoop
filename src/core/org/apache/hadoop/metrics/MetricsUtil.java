@@ -41,15 +41,20 @@ public class MetricsUtil {
    */
   private MetricsUtil() {}
     
+  public static MetricsContext getContext(String contextName) {
+    return getContext(contextName, contextName);
+  }
+
   /**
    * Utility method to return the named context.
    * If the desired context cannot be created for any reason, the exception
    * is logged, and a null context is returned.
    */
-  public static MetricsContext getContext(String contextName) {
+  public static MetricsContext getContext(String refName, String contextName) {
     MetricsContext metricsContext;
     try {
-      metricsContext = ContextFactory.getFactory().getContext(contextName);
+      metricsContext =
+        ContextFactory.getFactory().getContext(refName, contextName);
       if (!metricsContext.isMonitoring()) {
         metricsContext.startMonitoring();
       }
