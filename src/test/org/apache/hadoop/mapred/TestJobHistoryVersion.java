@@ -43,7 +43,9 @@ public class TestJobHistoryVersion extends TestCase {
     + "Map-Reduce Framework.Map input records:0,"
     + "Map-Reduce Framework.Map input bytes:0,"
     + "File Systems.HDFS bytes written:0,";
-  private static final String TEST_DIR = "test-history-version";
+  private static final Path TEST_DIR = 
+    new Path(System.getProperty("test.build.data", "/tmp"), 
+             "test-history-version");
   private static final String DELIM = ".";
   
   
@@ -115,6 +117,9 @@ public class TestJobHistoryVersion extends TestCase {
     JobConf conf = new JobConf();
     FileSystem fs = FileSystem.getLocal(conf);
     
+    // cleanup
+    fs.delete(TEST_DIR, true);
+    
     Path historyPath = new Path(TEST_DIR + "/_logs/history/" + FILENAME);
     
     fs.delete(historyPath, false);
@@ -128,6 +133,9 @@ public class TestJobHistoryVersion extends TestCase {
     
     assertTrue("Failed to parse old jobhistory files", 
                job.getAllTasks().size() > 0);
+    
+    // cleanup
+    fs.delete(TEST_DIR, true);
   }
   
   /**
@@ -136,6 +144,9 @@ public class TestJobHistoryVersion extends TestCase {
   public void testJobHistoryWithVersion() throws IOException {
     JobConf conf = new JobConf();
     FileSystem fs = FileSystem.getLocal(conf);
+    
+    // cleanup
+    fs.delete(TEST_DIR, true);
     
     Path historyPath = new Path(TEST_DIR + "/_logs/history/" + FILENAME);
     
@@ -150,5 +161,8 @@ public class TestJobHistoryVersion extends TestCase {
     
     assertTrue("Failed to parse old jobhistory files", 
                job.getAllTasks().size() > 0);
+    
+    // cleanup
+    fs.delete(TEST_DIR, true);
   }
 }

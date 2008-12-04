@@ -253,9 +253,6 @@ main source files. (pete wyckoff via mahadev)
     HADOOP-4732. Pass connection and read timeouts in the correct order when
     setting up fetch in reduce. (Amareshwari Sriramadasu via cdouglas)
 
-    HADOOP-4420. Add null checks for job, caused by invalid job IDs.
-    (Aaron Kimball via tomwhite)
-
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
@@ -267,6 +264,12 @@ Release 0.19.1 - Unreleased
 
     HADOOP-4697. Fix getBlockLocations in KosmosFileSystem to handle multiple
     blocks correctly. (Sriram Rao via cdouglas)
+
+    HADOOP-4420. Add null checks for job, caused by invalid job IDs.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-4632. Fix TestJobHistoryVersion to use test.build.dir instead of the
+    current workding directory for scratch space. (Amar Kamat via cdouglas)
 
 Release 0.19.0 - 2008-11-18
 
