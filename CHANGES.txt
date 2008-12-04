@@ -90,13 +90,13 @@ Release 0.19.0 - Unreleased
    HBASE-1041  Migration throwing NPE
    HBASE-1042  OOME but we don't abort; two part commit.
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down
+   HBASE-1029  REST wiki documentation incorrect
    HBASE-1043  Removing @Override attributes where they are no longer needed.
                (Ryan Smith via Jim Kellerman)
    HBASE-927   We don't recover if HRS hosting -ROOT-/.META. goes down -
                (fix bug in createTable which caused tests to fail)
    HBASE-1039  Compaction fails if bloomfilters are enabled
 
-      
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
    HBASE-890   Alter table operation and also related changes in REST interface

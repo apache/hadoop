@@ -487,7 +487,7 @@ public class HTable {
    * at a specified timestamp
    * 
    * @param row row key
-   * @param ts timestamp
+   * @param timestamp timestamp
    * @param numVersions number of versions to return
    * @return RowResult is empty if row does not exist.
    * @throws IOException
