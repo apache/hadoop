@@ -2024,6 +2024,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int recoveryErrorCount = 0; // number of times block recovery failed
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
     private volatile boolean appendChunk = false;   // appending to existing partial block
+    private long initialFileSize = 0; // at time of file open
 
     private void setLastException(IOException e) {
       if (lastException == null) {
@@ -2600,6 +2601,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         LocatedBlock lastBlock, FileStatus stat,
         int bytesPerChecksum) throws IOException {
       this(src, stat.getBlockSize(), progress, bytesPerChecksum);
+      initialFileSize = stat.getLen(); // length of file when opened
 
       //
       // The last partial block of the file has to be filled.
@@ -3154,6 +3156,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     synchronized void setTestFilename(String newname) {
       src = newname;
+    }
+
+    /**
+     * Returns the size of a file as it was when this stream was opened
+     */
+    long getInitialLen() {
+      return initialFileSize;
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.util.*;
 
 
@@ -157,8 +158,8 @@ public class DistributedFileSystem extends FileSystem {
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
 
-    return new FSDataOutputStream(
-        dfs.append(getPathName(f), bufferSize, progress), statistics);
+    DFSOutputStream op = (DFSOutputStream)dfs.append(getPathName(f), bufferSize, progress);
+    return new FSDataOutputStream(op, statistics, op.getInitialLen());
   }
 
   public FSDataOutputStream create(Path f, FsPermission permission,

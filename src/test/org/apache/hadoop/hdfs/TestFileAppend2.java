@@ -156,6 +156,10 @@ public class TestFileAppend2 extends TestCase {
   
         // write the remainder of the file
         stm = fs.append(file1);
+
+        // ensure getPos is set to reflect existing size of the file
+        assertTrue(stm.getPos() > 0);
+
         System.out.println("Writing " + (fileSize - mid2) + " bytes to file " + file1);
         stm.write(fileContents, mid2, fileSize - mid2);
         System.out.println("Written second part of file");
