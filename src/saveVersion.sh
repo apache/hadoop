@@ -24,7 +24,7 @@ version=$1
 user=`whoami`
 date=`date`
 if [ -d .git ]; then
-  revision=`git log -1 --pretty=oneline`
+  revision=`git log -1 --pretty=format:"%H"`
   hostname=`hostname`
   branch=`git branch | sed -n -e 's/^* //p'`
   url="git://$hostname/$cwd on branch $branch"

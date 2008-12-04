@@ -264,6 +264,10 @@ main source files. (pete wyckoff via mahadev)
 
     HADOOP-4770. Fix rungridmix_2 script to work with RunJar. (cdouglas)
 
+    HADOOP-4738. When using git, the saveVersion script will use only the
+    commit hash for the version and not the message, which requires escaping.
+    (cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
