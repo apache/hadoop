@@ -3165,5 +3165,106 @@
         </comparator>
       </comparators>
     </test>
+    
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - setting quota on a file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <command>-fs NAMENODE -touchz /test/file1 </command>
+        <admin-command>-fs NAMENODE -setQuota 1 /test/file1 </admin-command>
+      </test-commands>
+      <cleanup-commands>
+      	<admin-command>-fs NAMENODE -setQuota 5 /test </admin-command>
+        <!-- Same directory will be used in the next test -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Cannot set quota on a file: /test/file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - setting quota on non-existing file</description>
+      <test-commands>
+        <admin-command>-fs NAMENODE -setSpaceQuota 1g /test1 </admin-command>
+      </test-commands>
+      <cleanup-commands>
+             <!-- Same directory will be used in the next test -->   
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Can not find listing for /test1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - exceeding quota</description>
+      <test-commands>
+        <admin-command>-fs NAMENODE -setQuota 3 /test </admin-command>
+        <command>-fs NAMENODE -touchz /test/file0 </command>
+        <command>-fs NAMENODE -mkdir /test/test1 </command>
+      </test-commands>
+      <cleanup-commands>
+             <!-- Same directory(/test) will be used in the next test -->   
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>The quota of /test is exceeded</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - setting not valid quota</description>
+      <test-commands>
+        <admin-command>-fs NAMENODE -setQuota 0 /test </admin-command>
+      </test-commands>
+      <cleanup-commands>
+             <!-- Same directory will be used in the next test -->   
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Invalid values for quota : 0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - setting not valid space quota</description>
+      <test-commands>
+        <admin-command>-fs NAMENODE -setSpaceQuota a5 /test </admin-command>
+      </test-commands>
+      <cleanup-commands>
+             <!-- Same directory will be used in the next test -->   
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>For input string: "a5"</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>verifying error messages for quota commands - clearQuota on non existing file</description>
+      <test-commands>
+        <admin-command>-fs NAMENODE -clrQuota /test1 </admin-command>
+      </test-commands>
+      <cleanup-commands>
+      	<command>-fs NAMENODE -rmr /test </command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Can not find listing for /test1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
