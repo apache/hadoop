@@ -75,6 +75,9 @@ Release 0.18.3 - Unreleased
     tasks in the JobTracker's task commit thread. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4717. Removal of default port# in NameNode.getUri() causes a
+    map/reduce job failed to prompt temporary output. (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

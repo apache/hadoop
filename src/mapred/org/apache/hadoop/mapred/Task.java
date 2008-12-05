@@ -579,8 +579,13 @@ abstract class Task implements Writable, Configurable {
     }
   }
   
-  private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
-    URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
+  private Path getFinalPath(Path jobOutputDir, Path taskOutput) throws IOException {
+    URI taskOutputUri = taskOutput.toUri();
+    URI relativePath = taskOutputPath.toUri().relativize(taskOutputUri);
+    if (taskOutputUri == relativePath) {//taskOutputPath is not a parent of taskOutput
+      throw new IOException("Can not get the relative path: base = " +
+          taskOutputPath + " child = " + taskOutput);
+    }
     if (relativePath.getPath().length() > 0) {
       return new Path(jobOutputDir, relativePath.getPath());
     } else {
