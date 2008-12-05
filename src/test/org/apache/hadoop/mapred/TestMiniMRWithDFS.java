@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -252,4 +253,37 @@ public class TestMiniMRWithDFS extends TestCase {
     }
   }
   
+  public void testWithDFSWithDefaultPort() throws IOException {
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+    try {
+      final int taskTrackers = 4;
+
+      Configuration conf = new Configuration();
+      // start a dfs with the default port number
+      dfs = new MiniDFSCluster(
+          NameNode.DEFAULT_PORT, conf, 4, true, true, null, null);
+      fileSys = dfs.getFileSystem();
+      mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1);
+
+      JobConf jobConf = mr.createJobConf();
+      TestResult result;
+      final Path inDir = new Path("./wc/input");
+      final Path outDir = new Path("hdfs://" +
+          dfs.getNameNode().getNameNodeAddress().getHostName() +
+          ":" + NameNode.DEFAULT_PORT +"/./wc/output");
+      String input = "The quick brown fox\nhas many silly\nred fox sox\n";
+      result = launchWordCount(jobConf, inDir, outDir, input, 3, 1);
+      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
+                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
+    } catch (java.net.BindException be) {
+      LOG.info("Skip the test this time because can not start namenode on port "
+          + NameNode.DEFAULT_PORT, be);
+    } finally {
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();
+      }
+    }
+  }
 }

@@ -1365,6 +1365,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4746. Job output directory should be normalized. (hairong)
 
+    HADOOP-4717. Removal of default port# in NameNode.getUri() causes a
+    map/reduce job failed to prompt temporary output. (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
