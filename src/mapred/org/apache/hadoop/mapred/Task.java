@@ -571,6 +571,14 @@ abstract class Task implements Writable, Configurable {
     }
   }
   
+  void removeTaskOutput() throws IOException {
+    if (taskOutputPath != null) {
+      FileSystem fs = taskOutputPath.getFileSystem(conf);
+      // Delete the temporary task-specific output directory
+      fs.delete(taskOutputPath, true);
+    }
+  }
+  
   private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
     URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
     if (relativePath.getPath().length() > 0) {

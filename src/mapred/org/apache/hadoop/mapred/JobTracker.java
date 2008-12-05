@@ -2318,6 +2318,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     isTipComplete[index] = true;
                   }
                 }
+              } else if (states[index] == TaskStatus.State.FAILED || 
+                         states[index] == TaskStatus.State.KILLED) {
+                try {
+                  tasks[index].removeTaskOutput();
+                } catch (IOException e) {
+                  LOG.info("Failed to remove temporary directory of "
+                           + status[index].getTaskID() + " with " 
+                           + StringUtils.stringifyException(e));
+                }
               }
             } catch (IOException ioe) {
               // Oops! Failed to copy the task's output to its final place;

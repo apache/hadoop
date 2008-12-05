@@ -71,6 +71,10 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4746. Job output directory should be normalized. (hairong)
 
+    HADOOP-4654. Removes temporary output directory for failed and killed
+    tasks in the JobTracker's task commit thread. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

@@ -524,6 +524,10 @@ class JobInProgress {
         return;
       } else if (state == TaskStatus.State.FAILED ||
                  state == TaskStatus.State.KILLED) {
+        // To remove the temporary output of failed/killed tasks
+        JobWithTaskContext j = new JobWithTaskContext(this, tip, 
+                                     status.getTaskID(), metrics);
+        jobtracker.addToCommitQueue(j);
         // Get the event number for the (possibly) previously successful
         // task. If there exists one, then set that status to OBSOLETE 
         int eventNumber;
