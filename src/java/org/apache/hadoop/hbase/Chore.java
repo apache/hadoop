@@ -59,19 +59,21 @@ public abstract class Chore extends Thread {
         this.sleeper.sleep();
       }
       this.sleeper.sleep();
-      while(!this.stop.get()) {
+      while (!this.stop.get()) {
+        long startTime = System.currentTimeMillis();
         try {
-          long startTime = System.currentTimeMillis();
           chore();
-          this.sleeper.sleep(startTime);
         } catch (Exception e) {
           LOG.error("Caught exception", e);
+          if (this.stop.get()) {
+            continue;
+          }
         }
+        this.sleeper.sleep(startTime);
       }
     } catch (Throwable t) {
       LOG.fatal("Caught error. Starting shutdown.", t);
       this.stop.set(true);
-      
     } finally {
       LOG.info(getName() + " exiting");
     }

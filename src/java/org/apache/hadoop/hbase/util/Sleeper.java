@@ -66,11 +66,14 @@ public class Sleeper {
       LOG.warn("Calculated wait time > " + this.period +
         "; setting to this.period: " + System.currentTimeMillis() + ", " +
         startTime);
+      waitTime = this.period;
     }
-    if (waitTime > 0) {
+    while (waitTime > 0) {
+      long woke = -1;
       try {
         Thread.sleep(waitTime);
-        long slept = System.currentTimeMillis() - now;
+        woke = System.currentTimeMillis();
+        long slept = woke - now;
         if (slept > (10 * this.period)) {
           LOG.warn("We slept " + slept + "ms, ten times longer than scheduled: " +
             this.period);
@@ -82,6 +85,9 @@ public class Sleeper {
           return;
         }
       }
+      // Recalculate waitTime.
+      woke = (woke == -1)? System.currentTimeMillis(): woke;
+      waitTime = this.period - (woke - startTime);
     }
   }
 }
