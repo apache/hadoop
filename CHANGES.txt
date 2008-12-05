@@ -1384,6 +1384,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4778. Check for zero size block meta file when updating a block.
     (szetszwo)
 
+    HADOOP-4742. Replica gets deleted by mistake. (Wang Xu via hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
