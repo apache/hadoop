@@ -285,6 +285,9 @@ Trunk (unreleased changes)
     HADOOP-4576. Show pending job count instead of task count in the UI per
     queue in capacity scheduler. (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4623. Maintain running tasks even if speculative execution is off.
+    (Amar Kamat via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

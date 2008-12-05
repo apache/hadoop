@@ -43,9 +43,8 @@ public class TestJobInProgressListener extends TestCase {
                                Path inDir, Path outputDir,
                                String mapSignalFile, String redSignalFile) 
   throws IOException {
-    TestJobTrackerRestart.configureWaitingJobConf(conf, inDir, outputDir, 
-                                                  m, r, "job-listener-test", 
-                                                  mapSignalFile, redSignalFile);
+    UtilsForTests.configureWaitingJobConf(conf, inDir, outputDir,  m, r, 
+        "job-listener-test", mapSignalFile, redSignalFile);
     return conf; 
   }
   
@@ -84,11 +83,10 @@ public class TestJobInProgressListener extends TestCase {
     // Write the input file
     Path inDir = new Path(testDir, "input");
     Path shareDir = new Path(testDir, "share");
-    String mapSignalFile = TestJobTrackerRestart.getMapSignalFile(shareDir);
-    String redSignalFile = TestJobTrackerRestart.getReduceSignalFile(shareDir);
-    TestRackAwareTaskPlacement.writeFile(dfs.getNameNode(), conf, 
-                                         new Path(inDir + "/file"), 
-                                         (short)1);
+    String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
+    String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
+    UtilsForTests.writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file"), 
+                            (short)1);
     
     JobQueueJobInProgressListener myListener = 
       new JobQueueJobInProgressListener();
@@ -187,16 +185,15 @@ public class TestJobInProgressListener extends TestCase {
                  2, queue.length);
     
     // signal the maps to complete
-    TestJobTrackerRestart.signalTasks(dfs, fileSys, true, 
-                                      mapSignalFile, redSignalFile);
+    UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
     
     // check if job completion leaves the queue sane
     while (rJob2.getJobState() != JobStatus.SUCCEEDED) {
-      TestJobTrackerRestart.waitFor(10);
+      UtilsForTests.waitFor(10);
     }
     
     while (rJob1.getJobState() != JobStatus.SUCCEEDED) {
-      TestJobTrackerRestart.waitFor(10);
+      UtilsForTests.waitFor(10);
     }
     
     assertTrue("Job completion garbles the queue", 
@@ -316,7 +313,7 @@ public class TestJobInProgressListener extends TestCase {
     
     // wait for the job to be running
     while (rJob.getJobState() != JobStatus.RUNNING) {
-      TestJobTrackerRestart.waitFor(10);
+      UtilsForTests.waitFor(10);
     }
     
     LOG.info("Job " +  rJob.getID().toString() + " started running");
@@ -326,7 +323,7 @@ public class TestJobInProgressListener extends TestCase {
                 myListener.contains(rJob.getID(), true));
     
     while (rJob.getJobState() != JobStatus.SUCCEEDED) {
-      TestJobTrackerRestart.waitFor(10);
+      UtilsForTests.waitFor(10);
     }
     
     // check if the job success was notified

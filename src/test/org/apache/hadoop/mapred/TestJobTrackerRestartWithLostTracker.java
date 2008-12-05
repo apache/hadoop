@@ -35,13 +35,13 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
   final Path shareDir = new Path(testDir, "share");
   final Path outputDir = new Path(testDir, "output");
   
-  private JobConf configureJob(JobConf conf, int[] maps, int[] reduces,
+  private JobConf configureJob(JobConf conf, int maps, int reduces,
                                String mapSignal, String redSignal) 
   throws IOException {
-    JobPriority[] priority = new JobPriority[] {JobPriority.NORMAL};
-    return TestJobTrackerRestart.getJobs(conf, priority, 
-                                         maps, reduces, outputDir, inDir, 
-                                         mapSignal, redSignal)[0];
+    UtilsForTests.configureWaitingJobConf(conf, inDir, outputDir, 
+        maps, reduces, "test-jobtracker-restart-with-lost-tt", 
+        mapSignal, redSignal);
+    return conf;
   }
   
   public void testRecoveryWithLostTracker(MiniDFSCluster dfs,
@@ -51,15 +51,14 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     JobConf jobConf = mr.createJobConf();
     int numMaps = 50;
     int numReds = 1;
-    String mapSignalFile = TestJobTrackerRestart.getMapSignalFile(shareDir);
-    String redSignalFile = TestJobTrackerRestart.getReduceSignalFile(shareDir);
+    String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
+    String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
     
     // Configure the jobs
-    JobConf job = configureJob(jobConf, new int[] {numMaps}, 
-                               new int[] {numReds}, 
+    JobConf job = configureJob(jobConf, numMaps, numReds, 
                                mapSignalFile, redSignalFile);
       
-    TestJobTrackerRestart.cleanUp(fileSys, shareDir);
+    fileSys.delete(shareDir, true);
     
     // Submit a master job   
     JobClient jobClient = new JobClient(job);
@@ -70,17 +69,16 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     mr.initializeJob(id);
     
     // Make sure that the master job is 50% completed
-    while (TestJobTrackerRestart.getJobStatus(jobClient, id).mapProgress() 
+    while (UtilsForTests.getJobStatus(jobClient, id).mapProgress() 
            < 0.5f) {
-      TestJobTrackerRestart.waitFor(100);
+      UtilsForTests.waitFor(100);
     }
 
     // Kill the jobtracker
     mr.stopJobTracker();
 
     // Signal the maps to complete
-    TestJobTrackerRestart.signalTasks(dfs, fileSys, true, 
-                                      mapSignalFile, redSignalFile);
+    UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
     
     // Enable recovery on restart
     mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
@@ -90,7 +88,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     mr.stopTaskTracker(1);
     
     // Wait for a minute before submitting a job
-    TestJobTrackerRestart.waitFor(60 * 1000);
+    UtilsForTests.waitFor(60 * 1000);
     
     // Restart the jobtracker
     mr.startJobTracker();
@@ -98,13 +96,13 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     // Check if the jobs are still running
     
     // Wait for the JT to be ready
-    TestJobTrackerRestart.waitForJobTracker(jobClient);
+    UtilsForTests.waitForJobTracker(jobClient);
 
     // Signal the reducers to complete
-    TestJobTrackerRestart.signalTasks(dfs, fileSys, false, 
-                                      mapSignalFile, redSignalFile);
+    UtilsForTests.signalTasks(dfs, fileSys, false, mapSignalFile, 
+                              redSignalFile);
     
-    TestJobTrackerRestart.waitTillDone(jobClient);
+    UtilsForTests.waitTillDone(jobClient);
 
     // Check if the tasks on the lost tracker got re-executed
     assertTrue("Tracker killed while the jobtracker was down did not get lost "
@@ -134,9 +132,8 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
       }
 
       // Write the input file
-      TestRackAwareTaskPlacement.writeFile(dfs.getNameNode(), conf, 
-                                           new Path(inDir + "/file"), 
-                                           (short)1);
+      UtilsForTests.writeFile(dfs.getNameNode(), conf, 
+                              new Path(inDir + "/file"), (short)1);
 
       dfs.startDataNodes(conf, 1, true, null, null, null, null);
       dfs.waitActive();

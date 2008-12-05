@@ -23,14 +23,9 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -118,12 +113,12 @@ public class TestRackAwareTaskPlacement extends TestCase {
       if (!fileSys.mkdirs(inDir)) {
         throw new IOException("Mkdirs failed to create " + inDir.toString());
       }
-      writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file1"), (short)1);
+      UtilsForTests.writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file1"), (short)1);
       dfs.startDataNodes(conf, 2, true, null, rack2, hosts2, null);
       dfs.waitActive();
 
-      writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file2"), (short)3);
-      writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file3"), (short)3);
+      UtilsForTests.writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file2"), (short)3);
+      UtilsForTests.writeFile(dfs.getNameNode(), conf, new Path(inDir + "/file3"), (short)3);
       
       namenode = (dfs.getFileSystem()).getUri().getHost() + ":" + 
                  (dfs.getFileSystem()).getUri().getPort(); 
@@ -166,19 +161,6 @@ public class TestRackAwareTaskPlacement extends TestCase {
       }
     }
   }
-  static void writeFile(NameNode namenode, Configuration conf, Path name, 
-      short replication) throws IOException {
-    FileSystem fileSys = FileSystem.get(conf);
-    SequenceFile.Writer writer = 
-      SequenceFile.createWriter(fileSys, conf, name, 
-                                BytesWritable.class, BytesWritable.class,
-                                CompressionType.NONE);
-    writer.append(new BytesWritable(), new BytesWritable());
-    writer.close();
-    fileSys.setReplication(name, replication);
-    DFSTestUtil.waitReplication(fileSys, name, replication);
-  }
-
   static RunningJob launchJob(JobConf jobConf, Path inDir, Path outputPath, 
                               int numMaps, String jobName) throws IOException {
     jobConf.setJobName(jobName);

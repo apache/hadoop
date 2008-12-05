@@ -44,20 +44,23 @@ public class TestJobQueueInformation extends TestCase {
   private MiniDFSCluster dfsCluster;
   private JobConf jc;
   private static final String JOB_SCHEDULING_INFO = "TESTSCHEDULINGINFO";
-  private static final Path TEST_DIR = new Path("job-queue-info-testing");
+  private static final Path TEST_DIR = 
+    new Path(System.getProperty("test.build.data","/tmp"), 
+             "job-queue-info-testing");
+  private static final Path IN_DIR = new Path(TEST_DIR, "input");
+  private static final Path SHARE_DIR = new Path(TEST_DIR, "share");
+  private static final Path OUTPUT_DIR = new Path(TEST_DIR, "output");
   
+  static String getSignalFile() {
+    return (new Path(SHARE_DIR, "signal")).toString();
+  }
+
   // configure a waiting job with 2 maps
   private JobConf configureWaitingJob(JobConf conf) throws IOException {
-    Path inDir = new Path(TEST_DIR, "input");
-    Path shareDir = new Path(TEST_DIR, "share");
-    Path outputDir = new Path(TEST_DIR, "output");
-    String mapSignalFile = TestJobTrackerRestart.getMapSignalFile(shareDir);
-    String redSignalFile = TestJobTrackerRestart.getReduceSignalFile(shareDir);
-    JobPriority[] priority = new JobPriority[] {JobPriority.NORMAL};
-    return TestJobTrackerRestart.getJobs(conf, priority, 
-                                         new int[] {2}, new int[] {0}, 
-                                         outputDir, inDir, 
-                                         mapSignalFile, redSignalFile)[0];
+    
+    UtilsForTests.configureWaitingJobConf(conf, IN_DIR, OUTPUT_DIR, 2, 0, 
+        "test-job-queue-info", getSignalFile(), getSignalFile());
+    return conf;
   }
 
   public static class TestTaskScheduler extends LimitTasksPerJobTaskScheduler {
@@ -113,12 +116,12 @@ public class TestJobQueueInformation extends TestCase {
     conf.setJobName("test-job-queue-info-test");
     
     // clear the signal file if any
-    TestJobTrackerRestart.cleanUp(fileSys, TEST_DIR);
+    fileSys.delete(SHARE_DIR, true);
     
     RunningJob rJob = jc.submitJob(conf);
     
     while (rJob.getJobState() != JobStatus.RUNNING) {
-      TestJobTrackerRestart.waitFor(10);
+      UtilsForTests.waitFor(10);
     }
     
     int numberOfJobs = 0;
@@ -135,5 +138,8 @@ public class TestJobQueueInformation extends TestCase {
       }
     }
     assertEquals(1, numberOfJobs);
+    
+    UtilsForTests.signalTasks(dfsCluster, fileSys, getSignalFile(), 
+                              getSignalFile(), 4);
   }
 }

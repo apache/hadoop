@@ -92,8 +92,8 @@ public class TestMultipleLevelCaching extends TestCase {
       if (!fileSys.mkdirs(inDir)) {
         throw new IOException("Mkdirs failed to create " + inDir.toString());
       }
-      TestRackAwareTaskPlacement.writeFile(dfs.getNameNode(), conf, 
-    		                               new Path(inDir + "/file"), (short)1);
+      UtilsForTests.writeFile(dfs.getNameNode(), conf, 
+    		                        new Path(inDir + "/file"), (short)1);
       namenode = (dfs.getFileSystem()).getUri().getHost() + ":" + 
                  (dfs.getFileSystem()).getUri().getPort();
 

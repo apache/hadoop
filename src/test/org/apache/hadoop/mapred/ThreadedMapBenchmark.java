@@ -67,59 +67,6 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
   static enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
   
   /**
-   * A custom input format that creates virtual inputs of a single string
-   * for each map. Using {@link RandomWriter} code. 
-   */
-  public static class RandomInputFormat implements InputFormat<Text, Text> {
-    
-    public InputSplit[] getSplits(JobConf job, 
-                                  int numSplits) throws IOException {
-      InputSplit[] result = new InputSplit[numSplits];
-      Path outDir = FileOutputFormat.getOutputPath(job);
-      for(int i=0; i < result.length; ++i) {
-        result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i),
-                                  0, 1, (String[])null);
-      }
-      return result;
-    }
-
-    static class RandomRecordReader implements RecordReader<Text, Text> {
-      Path name;
-      public RandomRecordReader(Path p) {
-        name = p;
-      }
-      public boolean next(Text key, Text value) {
-        if (name != null) {
-          key.set(name.getName());
-          name = null;
-          return true;
-        }
-        return false;
-      }
-      public Text createKey() {
-        return new Text();
-      }
-      public Text createValue() {
-        return new Text();
-      }
-      public long getPos() {
-        return 0;
-      }
-      public void close() {}
-      public float getProgress() {
-        return 0.0f;
-      }
-    }
-
-    public RecordReader<Text, Text> getRecordReader(InputSplit split,
-                                                    JobConf job, 
-                                                    Reporter reporter) 
-    throws IOException {
-      return new RandomRecordReader(((FileSplit) split).getPath());
-    }
-  }
-
-  /**
    * Generates random input data of given size with keys and values of given 
    * sizes. By default it generates 128mb input data with 10 byte keys and 10 
    * byte values.
@@ -195,7 +142,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
     JobConf job = new JobConf(masterConf, ThreadedMapBenchmark.class);
     job.setJobName("threaded-map-benchmark-random-writer");
     job.setJarByClass(ThreadedMapBenchmark.class);
-    job.setInputFormat(RandomInputFormat.class);
+    job.setInputFormat(UtilsForTests.RandomInputFormat.class);
     job.setOutputFormat(SequenceFileOutputFormat.class);
     
     job.setMapperClass(Map.class);

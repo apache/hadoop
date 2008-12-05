@@ -1282,35 +1282,33 @@ class JobInProgress {
    * @param tip the tip that needs to be retired
    */
   private synchronized void retireMap(TaskInProgress tip) {
-    // Since a list for running maps is maintained if speculation is 'ON'
-    if (hasSpeculativeMaps) {
-      if (runningMapCache == null) {
-        LOG.warn("Running cache for maps missing!! "
-                 + "Job details are missing.");
-        return;
-      }
-      String[] splitLocations = tip.getSplitLocations();
+    if (runningMapCache == null) {
+      LOG.warn("Running cache for maps missing!! "
+               + "Job details are missing.");
+      return;
+    }
+    
+    String[] splitLocations = tip.getSplitLocations();
 
-      // Remove the TIP from the list for running non-local maps
-      if (splitLocations.length == 0) {
-        nonLocalRunningMaps.remove(tip);
-        return;
-      }
+    // Remove the TIP from the list for running non-local maps
+    if (splitLocations.length == 0) {
+      nonLocalRunningMaps.remove(tip);
+      return;
+    }
 
-      // Remove from the running map caches
-      for(String host: splitLocations) {
-        Node node = jobtracker.getNode(host);
-        
-        for (int j = 0; j < maxLevel; ++j) {
-          Set<TaskInProgress> hostMaps = runningMapCache.get(node);
-          if (hostMaps != null) {
-            hostMaps.remove(tip);
-            if (hostMaps.size() == 0) {
-              runningMapCache.remove(node);
-            }
+    // Remove from the running map caches
+    for(String host: splitLocations) {
+      Node node = jobtracker.getNode(host);
+
+      for (int j = 0; j < maxLevel; ++j) {
+        Set<TaskInProgress> hostMaps = runningMapCache.get(node);
+        if (hostMaps != null) {
+          hostMaps.remove(tip);
+          if (hostMaps.size() == 0) {
+            runningMapCache.remove(node);
           }
-          node = node.getParent();
         }
+        node = node.getParent();
       }
     }
   }
@@ -1321,15 +1319,12 @@ class JobInProgress {
    * @param tip the tip that needs to be retired
    */
   private synchronized void retireReduce(TaskInProgress tip) {
-    // Since a list for running reduces is maintained if speculation is 'ON'
-    if (hasSpeculativeReduces) {
-      if (runningReduces == null) {
-        LOG.warn("Running list for reducers missing!! "
-                 + "Job details are missing.");
-        return;
-      }
-      runningReduces.remove(tip);
+    if (runningReduces == null) {
+      LOG.warn("Running list for reducers missing!! "
+               + "Job details are missing.");
+      return;
     }
+    runningReduces.remove(tip);
   }
 
   /**
@@ -1338,34 +1333,31 @@ class JobInProgress {
    */
   private synchronized void scheduleMap(TaskInProgress tip) {
     
-    // Since a running list is maintained only if speculation is 'ON'
-    if (hasSpeculativeMaps) {
-      if (runningMapCache == null) {
-        LOG.warn("Running cache for maps is missing!! " 
-                 + "Job details are missing.");
-        return;
-      }
-      String[] splitLocations = tip.getSplitLocations();
+    if (runningMapCache == null) {
+      LOG.warn("Running cache for maps is missing!! " 
+               + "Job details are missing.");
+      return;
+    }
+    String[] splitLocations = tip.getSplitLocations();
 
-      // Add the TIP to the list of non-local running TIPs
-      if (splitLocations.length == 0) {
-        nonLocalRunningMaps.add(tip);
-        return;
-      }
+    // Add the TIP to the list of non-local running TIPs
+    if (splitLocations.length == 0) {
+      nonLocalRunningMaps.add(tip);
+      return;
+    }
 
-      for(String host: splitLocations) {
-        Node node = jobtracker.getNode(host);
-      
-        for (int j = 0; j < maxLevel; ++j) {
-          Set<TaskInProgress> hostMaps = runningMapCache.get(node);
-          if (hostMaps == null) {
-            // create a cache if needed
-            hostMaps = new LinkedHashSet<TaskInProgress>();
-            runningMapCache.put(node, hostMaps);
-          }
-          hostMaps.add(tip);
-          node = node.getParent();
+    for(String host: splitLocations) {
+      Node node = jobtracker.getNode(host);
+
+      for (int j = 0; j < maxLevel; ++j) {
+        Set<TaskInProgress> hostMaps = runningMapCache.get(node);
+        if (hostMaps == null) {
+          // create a cache if needed
+          hostMaps = new LinkedHashSet<TaskInProgress>();
+          runningMapCache.put(node, hostMaps);
         }
+        hostMaps.add(tip);
+        node = node.getParent();
       }
     }
   }
@@ -1375,15 +1367,12 @@ class JobInProgress {
    * @param tip the tip that needs to be scheduled as running
    */
   private synchronized void scheduleReduce(TaskInProgress tip) {
-    // Since a list for running reduces is maintained if speculation is 'ON'
-    if (hasSpeculativeReduces) {
-      if (runningReduces == null) {
-        LOG.warn("Running cache for reducers missing!! "
-                 + "Job details are missing.");
-        return;
-      }
-      runningReduces.add(tip);
+    if (runningReduces == null) {
+      LOG.warn("Running cache for reducers missing!! "
+               + "Job details are missing.");
+      return;
     }
+    runningReduces.add(tip);
   }
   
   /**
