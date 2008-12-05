@@ -288,6 +288,9 @@ Trunk (unreleased changes)
     HADOOP-4623. Maintain running tasks even if speculative execution is off.
     (Amar Kamat via yhemanth)
 
+    HADOOP-4786. Fix broken compilation error in 
+    TestTrackerBlacklistAcrossJobs. (yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

@@ -67,7 +67,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     if (!fileSys.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
-    TestRackAwareTaskPlacement.writeFile(dfs.getNameNode(), conf, 
+    UtilsForTests.writeFile(dfs.getNameNode(), conf, 
                                  new Path(inDir + "/file"), (short) 1);
     // start mr cluster
     JobConf jtConf = new JobConf();
