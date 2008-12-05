@@ -3279,8 +3279,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     //
     // Modify the blocks->datanode map and node's map.
     // 
-    addStoredBlock(block, node, delHintNode );
     pendingReplications.remove(block);
+    addStoredBlock(block, node, delHintNode );
   }
 
   long[] getStats() throws IOException {
