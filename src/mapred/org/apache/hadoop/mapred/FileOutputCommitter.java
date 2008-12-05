@@ -141,8 +141,13 @@ public class FileOutputCommitter extends OutputCommitter {
   }
 
   private Path getFinalPath(Path jobOutputDir, Path taskOutput, 
-                            Path taskOutputPath) {
-    URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
+                            Path taskOutputPath) throws IOException {
+    URI taskOutputUri = taskOutput.toUri();
+    URI relativePath = taskOutputPath.toUri().relativize(taskOutputUri);
+    if (taskOutputUri == relativePath) {//taskOutputPath is not a parent of taskOutput
+      throw new IOException("Can not get the relative path: base = " + 
+          taskOutputPath + " child = " + taskOutput);
+    }
     if (relativePath.getPath().length() > 0) {
       return new Path(jobOutputDir, relativePath.getPath());
     } else {
