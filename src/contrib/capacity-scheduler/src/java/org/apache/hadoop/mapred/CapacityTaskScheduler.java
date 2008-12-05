@@ -196,12 +196,18 @@ class CapacityTaskScheduler extends TaskScheduler {
     private QueueSchedulingInfo mqsi;
     private QueueSchedulingInfo rqsi;
     private boolean supportsPriority;
+    private JobQueuesManager mgr;
+    private long pollingInterval;
     
-    public SchedulingInfo(QueueSchedulingInfo mqsi, 
-        QueueSchedulingInfo rqsi, boolean supportsPriority ) {
+    
+    SchedulingInfo(QueueSchedulingInfo mqsi, 
+        QueueSchedulingInfo rqsi, boolean supportsPriority,
+        JobQueuesManager mgr, long pollingInterval) {
       this.mqsi = mqsi;
       this.rqsi = rqsi;
       this.supportsPriority=supportsPriority;
+      this.mgr = mgr;
+      this.pollingInterval = pollingInterval;
     }
     
     @Override
@@ -220,12 +226,12 @@ class CapacityTaskScheduler extends TaskScheduler {
           mqsi.numRunningTasks));
       sb.append(String.format("Number of Running Reduces : %d \n", 
           rqsi.numRunningTasks));
-      sb.append(String.format("Number of Waiting Maps : %d \n", 
-          mqsi.numPendingTasks));
-      sb.append(String.format("Number of Waiting Reduces : %d \n", 
-          rqsi.numPendingTasks));
+      sb.append(String.format("Number of Waiting Jobs : %d \n", mgr
+          .getWaitingJobCount(mqsi.queueName)));
       sb.append(String.format("Priority Supported : %s \n",
           supportsPriority?"YES":"NO"));      
+      sb.append(String.format("* Scheduling information can be off by "
+          + "maximum of %s\n", StringUtils.formatTime(pollingInterval)));
       return sb.toString();
     }
   }
@@ -1154,7 +1160,8 @@ class CapacityTaskScheduler extends TaskScheduler {
       
       SchedulingInfo schedulingInfo = new SchedulingInfo(
           mapScheduler.getQueueSchedulingInfo(queueName),
-          reduceScheduler.getQueueSchedulingInfo(queueName),supportsPrio);
+          reduceScheduler.getQueueSchedulingInfo(queueName),supportsPrio,
+          jobQueuesManager,rmConf.getSleepInterval());
       queueManager.setSchedulerInfo(queueName, schedulingInfo);
       
     }

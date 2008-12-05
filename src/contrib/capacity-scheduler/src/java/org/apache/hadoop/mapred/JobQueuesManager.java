@@ -121,6 +121,12 @@ class JobQueuesManager extends JobInProgressListener {
       }
     }
     
+    int getWaitingJobCount() {
+      synchronized (jobList) {
+       return jobList.size(); 
+      }
+    }
+    
   }
   
   // we maintain a hashmap of queue-names to queue info
@@ -258,7 +264,7 @@ class JobQueuesManager extends JobInProgressListener {
     }
   }
   
-  public void removeJobFromQueue(JobInProgress job) {
+  void removeJobFromQueue(JobInProgress job) {
     String queue = job.getProfile().getQueueName();
     QueueInfo qi = jobQueues.get(queue);
     qi.removeJob(new JobSchedulingInfo(job));
@@ -266,5 +272,10 @@ class JobQueuesManager extends JobInProgressListener {
   
   Comparator<JobSchedulingInfo> getComparator(String queue) {
     return jobQueues.get(queue).comparator;
+  }
+  
+  int getWaitingJobCount(String queue) {
+    QueueInfo qi = jobQueues.get(queue);
+    return qi.getWaitingJobCount();
   }
 }

@@ -271,6 +271,9 @@ Trunk (unreleased changes)
     commit hash for the version and not the message, which requires escaping.
     (cdouglas)
 
+    HADOOP-4576. Show pending job count instead of task count in the UI per
+    queue in capacity scheduler. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
