@@ -573,7 +573,7 @@ public class FsShell extends Configured implements Tool {
     boolean printHeader = (srcs.length == 1) ? true: false;
     int numOfErrors = 0;
     for(int i=0; i<srcs.length; i++) {
-      numOfErrors += ls(srcs[i].getPath(), srcFs, recursive, printHeader);
+      numOfErrors += ls(srcs[i], srcFs, recursive, printHeader);
     }
     return numOfErrors == 0 ? 0 : -1;
   }
@@ -581,7 +581,7 @@ public class FsShell extends Configured implements Tool {
   /* list all files under the directory <i>src</i>
    * ideally we should provide "-l" option, that lists like "ls -l".
    */
-  private int ls(Path src, FileSystem srcFs, boolean recursive,
+  private int ls(FileStatus src, FileSystem srcFs, boolean recursive,
       boolean printHeader) throws IOException {
     final String cmd = recursive? "lsr": "ls";
     final FileStatus[] items = shellListStatus(cmd, srcFs, src);
@@ -627,7 +627,7 @@ public class FsShell extends Configured implements Tool {
         System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
         if (recursive && stat.isDir()) {
-          numOfErrors += ls(cur,srcFs, recursive, printHeader);
+          numOfErrors += ls(stat,srcFs, recursive, printHeader);
         }
       }
       return numOfErrors;
@@ -1136,7 +1136,12 @@ public class FsShell extends Configured implements Tool {
   /** helper returns listStatus() */
   private static FileStatus[] shellListStatus(String cmd, 
                                                    FileSystem srcFs,
-                                                   Path path) {
+                                                   FileStatus src) {
+    if (!src.isDir()) {
+      FileStatus[] files = { src };
+      return files;
+    }
+    Path path = src.getPath();
     try {
       FileStatus[] files = srcFs.listStatus(path);
       if ( files == null ) {
@@ -1163,8 +1168,7 @@ public class FsShell extends Configured implements Tool {
     int errors = 0;
     handler.run(stat, srcFs);
     if (recursive && stat.isDir() && handler.okToContinue()) {
-      FileStatus[] files = shellListStatus(handler.getName(), srcFs, 
-                                                stat.getPath());
+      FileStatus[] files = shellListStatus(handler.getName(), srcFs, stat);
       if (files == null) {
         return 1;
       }

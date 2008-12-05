@@ -168,10 +168,13 @@ Trunk (unreleased changes)
     via cdouglas)
 
     HADOOP-4690.  fuse-dfs - create source file/function + utils + config +
-main source files. (pete wyckoff via mahadev)
+    main source files. (pete wyckoff via mahadev)
 
     HADOOP-3750. Fix and enforce module dependencies. (Sharad Agarwal via
     tomwhite)
+
+    HADOOP-4747. Speed up FsShell::ls by removing redundant calls to the
+    filesystem. (David Phillips via cdouglas)
 
   OPTIMIZATIONS
 
