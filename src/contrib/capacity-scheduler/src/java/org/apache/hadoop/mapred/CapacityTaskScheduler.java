@@ -212,26 +212,42 @@ class CapacityTaskScheduler extends TaskScheduler {
     
     @Override
     public String toString(){
+      float runningMaps = 0;
+      float runningReduces = 0;
+      
+      Collection<JobInProgress> runningJobs = 
+        mgr.getRunningJobQueue(mqsi.queueName);
+      
+      for(JobInProgress job : runningJobs) {
+        runningMaps += job.runningMaps();
+        runningReduces += job.runningReduces();
+      }
+      float usedMaps = mqsi.guaranteedCapacity!= 0 ? 
+          (runningMaps * 100/mqsi.guaranteedCapacity):0;
+      float usedReduces = rqsi.guaranteedCapacity != 0 ? 
+          (runningReduces * 100/rqsi.guaranteedCapacity) :0;
       StringBuffer sb = new StringBuffer();
-      sb.append("Guaranteed Capacity (%) : ");
+      sb.append("Guaranteed Capacity : ");
       sb.append(mqsi.guaranteedCapacityPercent);
-      sb.append(" \n");
+      sb.append(" %\n");
       sb.append(String.format("Guaranteed Capacity Maps : %d \n",
           mqsi.guaranteedCapacity));
       sb.append(String.format("Guaranteed Capacity Reduces : %d \n",
           rqsi.guaranteedCapacity));
-      sb.append(String.format("User Limit : %d \n",mqsi.ulMin));
-      sb.append(String.format("Reclaim Time limit : %d \n",mqsi.reclaimTime));
-      sb.append(String.format("Number of Running Maps : %d \n", 
-          mqsi.numRunningTasks));
-      sb.append(String.format("Number of Running Reduces : %d \n", 
-          rqsi.numRunningTasks));
+      sb.append(String.format("User Limit : %d %s\n",mqsi.ulMin, "%"));
+      sb.append(String.format("Reclaim Time limit : %s \n", 
+          StringUtils.formatTime(mqsi.reclaimTime)));
+      sb.append(String.format("Priority Supported : %s \n",
+          supportsPriority?"YES":"NO"));
+      sb.append("-------------\n");
+      sb.append(String.format("Running Maps : %s %s\n",
+          Float.valueOf(usedMaps).toString(),
+          "% of Guaranteed Capacity"));
+      sb.append(String.format("Running Reduces : %s %s\n",
+          Float.valueOf(usedReduces).toString(),
+          "% of Guaranteed Capacity" ));
       sb.append(String.format("Number of Waiting Jobs : %d \n", mgr
           .getWaitingJobCount(mqsi.queueName)));
-      sb.append(String.format("Priority Supported : %s \n",
-          supportsPriority?"YES":"NO"));      
-      sb.append(String.format("* Scheduling information can be off by "
-          + "maximum of %s\n", StringUtils.formatTime(pollingInterval)));
       return sb.toString();
     }
   }

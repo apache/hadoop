@@ -50,6 +50,10 @@ Trunk (unreleased changes)
     HADOOP-3497. Fix bug in overly restrictive file globbing with a
     PathFilter. (tomwhite)
 
+    HADOOP-4445. Replace running task counts with running task
+    percentage in capacity scheduler UI. (Sreekanth Ramakrishnan via
+    yhemanth)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
