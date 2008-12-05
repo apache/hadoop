@@ -1701,8 +1701,8 @@ public class JobHistory {
     }
 
     String taskTrackerName =
-        JobInProgress.convertTrackerNameToHostName(
-            attempt.get(Keys.TRACKER_NAME)).substring("tracker_".length());
+      JobInProgress.convertTrackerNameToHostName(
+        attempt.get(Keys.TRACKER_NAME));
     return TaskLogServlet.getTaskLogUrl(taskTrackerName, attempt
         .get(Keys.HTTP_PORT), attempt.get(Keys.TASK_ATTEMPT_ID));
   }

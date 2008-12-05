@@ -52,6 +52,7 @@ import org.apache.hadoop.io.WritableUtils;
 public class ClusterStatus implements Writable {
 
   private int task_trackers;
+  private int blacklisted_trackers;
   private int map_tasks;
   private int reduce_tasks;
   private int max_map_tasks;
@@ -73,7 +74,24 @@ public class ClusterStatus implements Writable {
    */
   ClusterStatus(int trackers, int maps, int reduces, int maxMaps,
                 int maxReduces, JobTracker.State state) {
+    this(trackers, 0, maps, reduces, maxMaps, maxReduces, state);
+  }
+  
+  /**
+   * Construct a new cluster status.
+   * 
+   * @param trackers no. of tasktrackers in the cluster
+   * @param blacklists no of blacklisted task trackers in the cluster
+   * @param maps no. of currently running map-tasks in the cluster
+   * @param reduces no. of currently running reduce-tasks in the cluster
+   * @param maxMaps the maximum no. of map tasks in the cluster
+   * @param maxReduces the maximum no. of reduce tasks in the cluster
+   * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   */
+  ClusterStatus(int trackers, int blacklists, int maps, int reduces,
+                int maxMaps, int maxReduces, JobTracker.State state) {
     task_trackers = trackers;
+    blacklisted_trackers = blacklists;
     map_tasks = maps;
     reduce_tasks = reduces;
     max_map_tasks = maxMaps;
@@ -82,7 +100,6 @@ public class ClusterStatus implements Writable {
     used_memory = Runtime.getRuntime().totalMemory();
     max_memory = Runtime.getRuntime().maxMemory();
   }
-  
 
   /**
    * Get the number of task trackers in the cluster.
@@ -91,6 +108,15 @@ public class ClusterStatus implements Writable {
    */
   public int getTaskTrackers() {
     return task_trackers;
+  }
+  
+  /**
+   * Get the number of blacklisted task trackers in the cluster.
+   * 
+   * @return the number of blacklisted task trackers in the cluster.
+   */
+  public int getBlacklistedTrackers() {
+    return blacklisted_trackers;
   }
   
   /**
@@ -159,6 +185,7 @@ public class ClusterStatus implements Writable {
 
   public void write(DataOutput out) throws IOException {
     out.writeInt(task_trackers);
+    out.writeInt(blacklisted_trackers);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
     out.writeInt(max_map_tasks);
@@ -170,6 +197,7 @@ public class ClusterStatus implements Writable {
 
   public void readFields(DataInput in) throws IOException {
     task_trackers = in.readInt();
+    blacklisted_trackers = in.readInt();
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
     max_map_tasks = in.readInt();

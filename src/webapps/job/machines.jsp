@@ -12,14 +12,22 @@
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+  String type = request.getParameter("type");
 %>
 <%!
   public void generateTaskTrackerTable(JspWriter out,
+                                       String type,
                                        JobTracker tracker) throws IOException {
-    Collection c = tracker.taskTrackers();
-
+    Collection c;
+    if (("blacklisted").equals(type)) {
+      c = tracker.blacklistedTaskTrackers();
+    } else if (("active").equals(type)) {
+      c = tracker.activeTaskTrackers();
+    } else {
+      c = tracker.taskTrackers();
+    }
     if (c.size() == 0) {
-      out.print("There are currently no known Task Trackers.");
+      out.print("There are currently no known " + type + " Task Trackers.");
     } else {
       out.print("<center>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
@@ -77,7 +85,7 @@
 
 <h2>Task Trackers</h2>
 <%
-  generateTaskTrackerTable(out, tracker);
+  generateTaskTrackerTable(out, type, tracker);
 %>
 
 <%

@@ -528,6 +528,10 @@ public class MiniMRCluster {
   public int getNumEventsRecovered() {
     return jobTracker.getJobTracker().recoveryManager.totalEventsRecovered();
   }
+
+  public int getFaultCount(String hostName) {
+    return jobTracker.getJobTracker().getFaultCount(hostName);
+  }
   
   /**
    * Start the jobtracker.

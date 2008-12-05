@@ -501,7 +501,6 @@ public class TaskTracker
     // Clear out temporary files that might be lying around
     DistributedCache.purgeCache(this.fConf);
     cleanupStorage();
-    this.justStarted = true;
 
     this.jobClient = (InterTrackerProtocol) 
       RPC.waitForProxy(InterTrackerProtocol.class,
@@ -1848,6 +1847,8 @@ public class TaskTracker
       task.setJobFile(localTaskFile.toString());
       localJobConf.set("mapred.local.dir",
                        fConf.get("mapred.local.dir"));
+      localJobConf.set("slave.host.name",
+                       fConf.get("slave.host.name"));
             
       localJobConf.set("mapred.task.id", task.getTaskID().toString());
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();

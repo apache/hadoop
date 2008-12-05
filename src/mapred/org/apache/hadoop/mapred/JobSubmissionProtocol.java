@@ -51,8 +51,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             setupProgress to JobStatus as part of HADOOP-4261           
    * Version 17: getClusterStatus returns the amount of memory used by 
    *             the server. HADOOP-4435
+   * Version 18: Added blacklisted trackers to the ClusterStatus 
+   *             for HADOOP-4305            
    */
-  public static final long versionID = 17L;
+  public static final long versionID = 18L;
 
   /**
    * Allocate a name for the job.

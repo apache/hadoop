@@ -1296,6 +1296,17 @@ creations/deletions), or "all".</description>
 </property> 
 
 <property>
+  <name>mapred.max.tracker.blacklists</name>
+  <value>4</value>
+  <description>The number of blacklists for a taskTracker by various jobs 
+               after which the task tracker could be blacklisted across
+               all jobs. The tracker will be given a tasks later 
+               (after a day). The tracker will become a healthy 
+               tracker after a restart. 
+  </description>
+</property>
+
+<property>
   <name>mapred.max.tracker.failures</name>
   <value>4</value>
   <description>The number of task-failures on a tasktracker of a given job 

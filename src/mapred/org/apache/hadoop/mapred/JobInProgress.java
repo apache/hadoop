@@ -1203,7 +1203,7 @@ class JobInProgress {
     String trackerHostName = (indexOfColon == -1) ? 
       trackerName : 
       trackerName.substring(0, indexOfColon);
-    return trackerHostName;
+    return trackerHostName.substring("tracker_".length());
   }
     
   /**
@@ -1237,6 +1237,21 @@ class JobInProgress {
     return (failedTasks != null) ? failedTasks.intValue() : 0; 
   }
     
+  /**
+   * Get the black listed trackers for the job
+   * 
+   * @return List of blacklisted tracker names
+   */
+  List<String> getBlackListedTrackers() {
+    List<String> blackListedTrackers = new ArrayList<String>();
+    for (Map.Entry<String,Integer> e : trackerToFailuresMap.entrySet()) {
+       if (e.getValue().intValue() >= conf.getMaxTaskFailuresPerTracker()) {
+         blackListedTrackers.add(e.getKey());
+       }
+    }
+    return blackListedTrackers;
+  }
+  
   /**
    * Get the no. of 'flaky' tasktrackers for a given job.
    * 

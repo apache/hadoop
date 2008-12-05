@@ -55,8 +55,10 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 21: Changed information reported in TaskTrackerStatus'
    *             ResourceStatus and the corresponding accessor methods
    *             (HADOOP-4035)
+   * Version 22: Replaced parameter 'initialContact' with 'restarted' 
+   *             in heartbeat method (HADOOP-4305) 
    */
-  public static final long versionID = 21L;
+  public static final long versionID = 22L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -73,8 +75,8 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * it recieved from the {@link JobTracker} 
    * 
    * @param status the status update
-   * @param initialContact <code>true</code> if this is first interaction since
-   *                       'refresh', <code>false</code> otherwise.
+   * @param restarted <code>true</code> if the process has just started or 
+   *                   restarted, <code>false</code> otherwise
    * @param acceptNewTasks <code>true</code> if the {@link TaskTracker} is
    *                       ready to accept new tasks to run.                 
    * @param responseId the last responseId successfully acted upon by the
@@ -83,7 +85,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *         fresh instructions.
    */
   HeartbeatResponse heartbeat(TaskTrackerStatus status, 
-                              boolean initialContact, boolean acceptNewTasks, short responseId)
+                              boolean restarted, 
+                              boolean acceptNewTasks,
+                              short responseId)
     throws IOException;
   
   /**

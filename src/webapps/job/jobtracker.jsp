@@ -31,15 +31,18 @@
               "<tr><th>Maps</th><th>Reduces</th>" + 
               "<th>Total Submissions</th>" +
               "<th>Nodes</th><th>Map Task Capacity</th>" +
-              "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th></tr>\n");
+              "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th>" + 
+              "<th>Blacklisted Nodes</th></tr>\n");
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
               tracker.getTotalSubmissions() +
-              "</td><td><a href=\"machines.jsp\">" +
+              "</td><td><a href=\"machines.jsp?type=active\">" +
               status.getTaskTrackers() +
               "</a></td><td>" + status.getMaxMapTasks() +
               "</td><td>" + status.getMaxReduceTasks() +
               "</td><td>" + tasksPerNode +
+              "</td><td><a href=\"machines.jsp?type=blacklisted\">" +
+              status.getBlacklistedTrackers() + "</a>" +
               "</td></tr></table>\n");
 
     out.print("<br>");

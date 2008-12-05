@@ -176,6 +176,17 @@ Trunk (unreleased changes)
     HADOOP-4747. Speed up FsShell::ls by removing redundant calls to the
     filesystem. (David Phillips via cdouglas)
 
+    HADOOP-4305. Improves the blacklisting strategy, whereby, tasktrackers
+    that are blacklisted are not given tasks to run from other jobs, subject
+    to the following conditions (all must be met):
+    1) The TaskTracker has been blacklisted by at least 4 jobs (configurable)
+    2) The TaskTracker has been blacklisted 50% more number of times than
+       the average (configurable)
+    3) The cluster has less than 50% trackers blacklisted
+    Once in 24 hours, a TaskTracker blacklisted for all jobs is given a chance.
+    Restarting the TaskTracker moves it out of the blacklist.
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
