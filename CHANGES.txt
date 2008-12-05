@@ -308,6 +308,9 @@ Trunk (unreleased changes)
     HADOOP-4785. Fixes theJobTracker heartbeat to not make two calls to 
     System.currentTimeMillis(). (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4792. Add generated Chukwa configuration files to version control
+    ignore lists. (cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
