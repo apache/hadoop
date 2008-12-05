@@ -50,10 +50,6 @@ Trunk (unreleased changes)
     HADOOP-3497. Fix bug in overly restrictive file globbing with a
     PathFilter. (tomwhite)
 
-    HADOOP-4648. Remove deprecated ChecksumFileSystems. (cdouglas)
-      InMemoryFileSystem is removed.
-      ChecksumDistributedFileSystem is removed.
-
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
