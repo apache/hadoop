@@ -295,6 +295,9 @@ Trunk (unreleased changes)
     HADOOP-4786. Fix broken compilation error in 
     TestTrackerBlacklistAcrossJobs. (yhemanth)
 
+    HADOOP-4785. Fixes theJobTracker heartbeat to not make two calls to 
+    System.currentTimeMillis(). (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

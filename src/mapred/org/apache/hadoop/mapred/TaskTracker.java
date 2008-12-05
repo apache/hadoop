@@ -1847,8 +1847,10 @@ public class TaskTracker
       task.setJobFile(localTaskFile.toString());
       localJobConf.set("mapred.local.dir",
                        fConf.get("mapred.local.dir"));
-      localJobConf.set("slave.host.name",
-                       fConf.get("slave.host.name"));
+      if (fConf.get("slave.host.name") != null) {
+        localJobConf.set("slave.host.name",
+                         fConf.get("slave.host.name"));
+      }
             
       localJobConf.set("mapred.task.id", task.getTaskID().toString());
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();

@@ -551,13 +551,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
      * chance again to run tasks of a job.
      * 
      * @param hostName The tracker name
+     * @param now The current time
+     * 
      * @return true if the tracker is blacklisted 
      *         false otherwise
      */
-    boolean shouldAssignTasksToTracker(String hostName) {
+    boolean shouldAssignTasksToTracker(String hostName, long now) {
       synchronized (potentiallyFaultyTrackers) {
         FaultInfo fi = potentiallyFaultyTrackers.get(hostName);
-        long now = System.currentTimeMillis(); 
         if (fi != null &&
             (now - fi.getLastUpdated()) > UPDATE_FAULTY_TRACKER_INTERVAL) {
           int numFaults = fi.getFaultCount() - 1;
@@ -2159,12 +2160,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     // First check if the last heartbeat response got through
     String trackerName = status.getTrackerName();
+    long now = System.currentTimeMillis();
     boolean isBlacklisted = false;
     if (restarted) {
       faultyTrackers.markTrackerHealthy(status.getHost());
     } else {
       isBlacklisted = 
-        faultyTrackers.shouldAssignTasksToTracker(status.getHost());
+        faultyTrackers.shouldAssignTasksToTracker(status.getHost(), now);
     }
     
     HeartbeatResponse prevHeartbeatResponse =
@@ -2208,6 +2210,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       
     // Process this heartbeat 
     short newResponseId = (short)(responseId + 1);
+    status.setLastSeen(now);
     if (!processHeartbeat(status, restarted)) {
       return new HeartbeatResponse(newResponseId, 
                    new TaskTrackerAction[] {new ReinitTrackerAction()});
@@ -2372,7 +2375,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                  TaskTrackerStatus trackerStatus, 
                                  boolean restarted) {
     String trackerName = trackerStatus.getTrackerName();
-    trackerStatus.setLastSeen(System.currentTimeMillis());
 
     synchronized (taskTrackers) {
       synchronized (trackerExpiryQueue) {
