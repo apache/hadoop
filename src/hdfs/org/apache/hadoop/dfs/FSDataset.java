@@ -1165,6 +1165,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
                             " metafile " + meta +
                             " does not exist on disk.");
     }
+    if (meta.length() == 0) {
+      throw new IOException("Block " + b + " metafile " + meta + " is empty.");
+    }
     long stamp = parseGenerationStamp(f, meta);
     if (stamp != b.getGenerationStamp()) {
       throw new IOException("Block " + b + 
