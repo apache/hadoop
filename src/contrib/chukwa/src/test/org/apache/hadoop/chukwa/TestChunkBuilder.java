@@ -35,4 +35,5 @@ public class TestChunkBuilder extends TestCase {
     assertEquals(5, chunk.getRecordOffsets()[1]);
     assertEquals(8, chunk.getRecordOffsets()[2]);
   }
+
 }

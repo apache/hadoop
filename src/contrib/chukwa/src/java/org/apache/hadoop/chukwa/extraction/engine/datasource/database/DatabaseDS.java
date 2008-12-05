@@ -34,15 +34,16 @@ import java.util.TreeMap;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
 import org.apache.hadoop.chukwa.extraction.engine.Record;
 import org.apache.hadoop.chukwa.extraction.engine.SearchResult;
+import org.apache.hadoop.chukwa.extraction.engine.Token;
 import org.apache.hadoop.chukwa.extraction.engine.datasource.DataSource;
 import org.apache.hadoop.chukwa.extraction.engine.datasource.DataSourceException;
-import org.apache.hadoop.chukwa.hicc.ClusterConfig;
+//import org.apache.hadoop.chukwa.hicc.ClusterConfig;
 
 public class DatabaseDS implements DataSource
 {
 		
 	public SearchResult search(SearchResult result, String cluster,
-			String dataSource, long t0, long t1, String filter)
+			String dataSource, long t0, long t1, String filter,Token token)
 			throws DataSourceException
 	{
 		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd kk:mm:ss");
@@ -79,8 +80,8 @@ public class DatabaseDS implements DataSource
 	    	String dateclause = timeField + " >= '" + startS 
 	    		+ "' and " + timeField + " <= '" + endS + "'";
 	    	
-		       ClusterConfig cc = new ClusterConfig();
-		       String jdbc = cc.getURL(cluster);
+		       //ClusterConfig cc = new ClusterConfig();
+		       String jdbc = ""; //cc.getURL(cluster);
 		       
 			   Connection conn = DriverManager.getConnection(jdbc);
 			   

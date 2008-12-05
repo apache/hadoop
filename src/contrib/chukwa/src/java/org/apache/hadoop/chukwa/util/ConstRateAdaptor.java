@@ -35,24 +35,30 @@ public class ConstRateAdaptor  extends Thread implements Adaptor {
   private long offset;
   private int bytesPerSec;
   private ChunkReceiver dest;
+  private long adaptorID;
   
   private volatile boolean stopping = false;
   public String getCurrentStatus() throws AdaptorException {
     return Integer.toString(bytesPerSec);
   }
 
-  public void start(String type, String status, long offset, ChunkReceiver dest) throws AdaptorException
+  public void start(long adaptor, String type, String status, long offset, ChunkReceiver dest) throws AdaptorException
   {
     try{
       bytesPerSec = Integer.parseInt(status);
     } catch(NumberFormatException e) {
       throw new AdaptorException("bad argument to const rate adaptor: " + status);
     }
+    this.adaptorID = adaptor;
     this.offset = offset;
     this.type = type;
     this.dest = dest;
     this.setName("ConstRate Adaptor");
     super.start();  //this is a Thread.start
+  }
+  
+  public String getStreamName() {
+	  return ""+bytesPerSec;
   }
   
   public void run()

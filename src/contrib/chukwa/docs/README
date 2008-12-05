@@ -78,7 +78,17 @@ on localhost:
   - Edit bin/chukwa-config.sh to match your system configuration
   
   - In the chukwa root directory, say ``bash bin/processSinkFiles.sh'' 
+
+*  Configuring and starting Database
+
+  - Download MySQL connector from http://dev.mysql.com/downloads/connector/j/5.1.html
+
+  - Copy mysql-connector-*.jar to Chukwa lib directory.
+
+  - Configure mysql, and run:  mysql -u root dbname < database_create_table to install new database schema from Chukwa conf directory.
   
+  - Configure JDBC driver name in conf/chukwa-env.sh: com.mysql.jdbc.Driver
+
 *  Configuring and starting HICC
 
   - Download Apache Tomcat from http://tomcat.apache.org/download-60.cgi

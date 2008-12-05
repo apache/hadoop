@@ -188,11 +188,14 @@ public class Workspace extends HttpServlet {
             JSONObject updateObject = new JSONObject(original);
             updateObject.put("description",jt.get("description"));
             setContents(path+"/views/"+id+".view",updateObject.toString());
+            if(!rename(id,jt.get("description").toString())) {
+            	throw new Exception("Rename view file failed");
+            }
             File deleteCache = new File(path+"/views/workspace_view_list.cache");
             deleteCache.delete();
             genViewCache(path+"/views");
             out.println("Workspace is stored successfully.");
-        } catch(JSONException e) {
+        } catch(Exception e) {
             out.println("Workspace store failed.");
         }
     }
@@ -343,6 +346,17 @@ public class Workspace extends HttpServlet {
             }
         }
         return hash;
+    }
+    
+    private boolean rename(String id, String desc) {
+    	try {
+            File view = new File(path+"/views/"+id+".view");
+            File newFile = new File(path+File.separator+"views"+File.separator+desc+".view");
+            view.renameTo(newFile);
+    	} catch(Exception e) {
+    		return false;
+    	}
+    	return true;
     }
     private JSONObject filterViewsByPermission(String userid, JSONObject viewArray) {
         return viewArray;

@@ -22,9 +22,13 @@ import org.apache.hadoop.chukwa.ChunkImpl;
 import org.apache.hadoop.chukwa.datacollection.ChunkReceiver;
 import org.apache.hadoop.chukwa.datacollection.adaptor.Adaptor;
 import org.apache.hadoop.chukwa.datacollection.adaptor.AdaptorException;
+import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
+import org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
 import java.io.*;
+import java.util.Timer;
 
 /**
  * An adaptor that repeatedly tails a specified file, sending the new bytes.
@@ -42,8 +46,12 @@ public class FileTailingAdaptor implements Adaptor
 	 * to the next. This way, we get quick response time for other files if one
 	 * file is growing rapidly.
 	 */
-	public static final int MAX_READ_SIZE = 128 * 1024;
-
+	public static final int DEFAULT_MAX_READ_SIZE = 128 * 1024 ;
+	public static int MAX_READ_SIZE = DEFAULT_MAX_READ_SIZE ;
+	public static int MAX_RETRIES = 300;
+	protected static Configuration conf = null;
+	private int attempts = 0;
+	
 	File toWatch;
 	/**
 	 * next PHYSICAL offset to read
@@ -51,6 +59,8 @@ public class FileTailingAdaptor implements Adaptor
 	protected long fileReadOffset;
 	protected String type;
 	private ChunkReceiver dest;
+	protected RandomAccessFile reader = null;
+	protected long adaptorID;
 	
 	/**
 	 * The logical offset of the first byte of the file
@@ -64,21 +74,24 @@ public class FileTailingAdaptor implements Adaptor
 		log =Logger.getLogger(FileTailingAdaptor.class);
 	}
 
-	public void start(String type, String params, long bytes, ChunkReceiver dest) {
-	  //in this case params = filename 
+	public void start(long adaptorID, String type, String params, long bytes, ChunkReceiver dest) {
+	    //in this case params = filename 
 		log.info("started file tailer on file " + params);
-	  this.type = type;
-	  this.dest = dest;
+		this.adaptorID = adaptorID;
+	    this.type = type;
+	    this.dest = dest;
+	    this.attempts = 0;
 			  
-	  String[] words = params.split(" ");
-	  if(words.length > 1) {
-	    offsetOfFirstByte = Long.parseLong(words[0]);
-	    toWatch = new File(params.substring(words[0].length() + 1));
-	  }
-	  else
-	    toWatch = new File(params);
+	    String[] words = params.split(" ");
+	    if(words.length > 1) {
+	        offsetOfFirstByte = Long.parseLong(words[0]);
+	        toWatch = new File(params.substring(words[0].length() + 1));
+	    } else {
+	        toWatch = new File(params);
+	    }
 	  
-		this.fileReadOffset= bytes - offsetOfFirstByte;
+	    
+		this.fileReadOffset= bytes;
 		tailer.startWatchingFile(this);
 	}
 
@@ -88,25 +101,38 @@ public class FileTailingAdaptor implements Adaptor
 	 */
 	public long shutdown() throws AdaptorException {
 	  try{
-	    tailFile(tailer.eq); // get tail end of file.
-	  } catch(InterruptedException e) {
-	    Thread.currentThread().interrupt();
+	    if(toWatch.exists()) {
+	    	int retry=0;
+	    	tailer.stopWatchingFile(this);
+			TerminatorThread lastTail = new TerminatorThread(this,tailer.eq);
+			lastTail.setDaemon(true);
+			lastTail.start();
+			while(lastTail.isAlive() && retry < 60) {
+				try {
+					log.info("Retry:"+retry);
+				    Thread.currentThread().sleep(1000);
+				    retry++;
+				} catch(InterruptedException ex) {
+				}
+			}
+	    }
+	  } finally {
+	    return fileReadOffset + offsetOfFirstByte;
 	  }
-		hardStop();//need to do this afterwards, so that offset stays visible during tailFile().
-		return fileReadOffset + offsetOfFirstByte;
+
 	}
 	/**
 	 * Stop tailing the file, effective immediately.
 	 */
 	public void hardStop() throws AdaptorException {
-    tailer.stopWatchingFile(this);
+        tailer.stopWatchingFile(this);
 	}
 
   /**
    * @see org.apache.hadoop.chukwa.datacollection.adaptor.Adaptor#getCurrentStatus()
    */
 	public String getCurrentStatus() {
-		return type + " " + offsetOfFirstByte+ " " + toWatch.getPath();
+		return type.trim() + " " + offsetOfFirstByte+ " " + toWatch.getPath() + " " + fileReadOffset;
 		// can make this more efficient using a StringBuilder
 	}
 
@@ -114,6 +140,10 @@ public class FileTailingAdaptor implements Adaptor
 		return "Tailer on " + toWatch;
 	}
 
+	public String getStreamName() {
+		return toWatch.getPath();
+	}
+	
 	/**
 	 * Looks at the tail of the associated file, adds some of it to event queue
 	 * This method is not thread safe. Returns true if there's more data in the
@@ -123,35 +153,119 @@ public class FileTailingAdaptor implements Adaptor
 	 */
 	public synchronized boolean tailFile(ChunkReceiver eq) throws InterruptedException {
     boolean hasMoreData = false;
-    try {
-      if(!toWatch.exists())
-        return false;  //no more data
-      
-    	RandomAccessFile reader = new RandomAccessFile(toWatch, "r");
-    	long len = reader.length();
-    	if (len > fileReadOffset) {
-    		reader.seek(fileReadOffset);
-    
-    		long bufSize = len - fileReadOffset;
-    		if (bufSize > MAX_READ_SIZE) {
-    			bufSize = MAX_READ_SIZE;
-    			hasMoreData = true;
-    		}
-    		byte[] buf = new byte[(int) bufSize];
-    		reader.read(buf);
-    		assert reader.getFilePointer() == fileReadOffset + bufSize : " event size arithmetic is broken: "
-    				+ " pointer is "
-    				+ reader.getFilePointer()
-    				+ " but offset is " + fileReadOffset + bufSize;
-    
-    		int bytesUsed = extractRecords(dest, fileReadOffset + offsetOfFirstByte, buf);
-    		fileReadOffset = fileReadOffset + bytesUsed;
-    	}
-    	reader.close();
-    } catch (IOException e) {
-    	log.warn("failure reading " + toWatch, e);
-    }
-    return hasMoreData;
+	    try {
+	        if(!toWatch.exists() && attempts>MAX_RETRIES) {
+	    	    log.warn("Adaptor|" + adaptorID +"| File does not exist: "+toWatch.getAbsolutePath()+", streaming policy expired.  File removed from streaming.");
+       			ChukwaAgent agent = ChukwaAgent.getAgent();
+    			if (agent != null) {
+    				agent.stopAdaptor(adaptorID, false);
+    			} else {
+    				log.info("Agent is null, running in default mode");
+    			}
+    		    tailer.stopWatchingFile(this);
+	    	    return false;
+	        } else if(!toWatch.exists()) {
+	        	log.warn("failed to stream data for: "+toWatch.getAbsolutePath()+", attempt: "+attempts+" of "+MAX_RETRIES);
+	        	attempts++;
+	            return false;  //no more data
+	        }
+	      	if (reader == null)
+	      	{
+	      		reader = new RandomAccessFile(toWatch, "r");
+	      		log.info("Adaptor|" + adaptorID + "|Opening the file for the first time|seek|" + fileReadOffset);
+	      	}
+	      	
+	      	long len = 0L;
+	    	try {
+		      	RandomAccessFile newReader = new RandomAccessFile(toWatch,"r");
+		    	len = reader.length();
+		    	long newLength = newReader.length();
+		      	if(newLength<len && fileReadOffset >= len) {
+		      		reader.close();
+		      		reader = newReader;
+		      		fileReadOffset=0L;
+		      		log.debug("Adaptor|" + adaptorID +"| File size mismatched, rotating: "+toWatch.getAbsolutePath());
+		      	} else {
+		      		try {
+		      		    newReader.close();
+		      		} catch(IOException e) {
+		      			// do nothing.
+		      		}
+		      	}
+	    	} catch(IOException e) {
+      			// do nothing, if file doesn't exist.	    		
+	    	}
+	    	if (len >= fileReadOffset) {
+	    		if(offsetOfFirstByte>fileReadOffset) {
+	    			// If the file rotated, the recorded offsetOfFirstByte is greater than file size,
+	    			// reset the first byte position to beginning of the file.
+	        		offsetOfFirstByte = 0L;    			
+	    			fileReadOffset=0;
+	    		}
+	    		
+	    		log.debug("Adaptor|" + adaptorID + "|seeking|" + fileReadOffset );
+	    		reader.seek(fileReadOffset);
+	    
+	    		long bufSize = len - fileReadOffset;
+	    		
+	    		if (conf == null)
+	    		{
+	    			ChukwaAgent agent = ChukwaAgent.getAgent();
+	    			if (agent != null)
+	    			{
+	    				conf = agent.getConfiguration();
+	        			if (conf != null)
+	        			{
+	        				MAX_READ_SIZE= conf.getInt("chukwaAgent.fileTailingAdaptor.maxReadSize", DEFAULT_MAX_READ_SIZE);
+	        				log.info("chukwaAgent.fileTailingAdaptor.maxReadSize: " + MAX_READ_SIZE);
+	        			}	
+	        			else
+	        			{
+	        				log.info("Conf is null, running in default mode");
+	        			}
+	    			}
+	    			else
+	    			{
+	    				log.info("Agent is null, running in default mode");
+	    			}
+	    		}
+	    		
+	    		if (bufSize > MAX_READ_SIZE) {
+	    			bufSize = MAX_READ_SIZE;
+	    			hasMoreData = true;
+	    		}
+	    		byte[] buf = new byte[(int) bufSize];
+	    		
+	    		
+	    		long curOffset = fileReadOffset;
+	    		
+	    		reader.read(buf);
+	    		assert reader.getFilePointer() == fileReadOffset + bufSize : " event size arithmetic is broken: "
+	    				+ " pointer is "
+	    				+ reader.getFilePointer()
+	    				+ " but offset is " + fileReadOffset + bufSize;
+	    
+	    		int bytesUsed = extractRecords(dest, fileReadOffset + offsetOfFirstByte, buf);
+	    		fileReadOffset = fileReadOffset + bytesUsed;
+	    		
+	    		
+	    		log.debug("Adaptor|" + adaptorID + "|start|" + curOffset + "|end|"+ fileReadOffset);
+	    		
+	    		
+	    	} else {
+	    		// file has rotated and no detection
+	    		reader.close();
+	    		reader=null;
+	    		fileReadOffset = 0L;
+	    		offsetOfFirstByte = 0L;
+	    		hasMoreData = true;
+				log.warn("Adaptor|" + adaptorID +"| file has rotated and no detection - reset counters to 0L");	    	
+	    	}
+	    } catch (IOException e) {
+	    	log.warn("failure reading " + toWatch, e);
+	    }
+	    attempts=0;
+	    return hasMoreData;
 	}
 	
   /**

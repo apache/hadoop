@@ -88,4 +88,10 @@ public class ConsoleOutConnector extends Thread implements Connector {
     this.interrupt();
   }
 
+@Override
+public void reloadConfiguration()
+{
+	System.out.println("reloadConfiguration");
+}
+
 }

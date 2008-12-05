@@ -19,18 +19,17 @@
 package org.apache.hadoop.chukwa.extraction.engine.datasource.record;
 
 import java.io.IOException;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Date;
 
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.chukwa.extraction.engine.Record;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 
 public class ChukwaSequenceFileParser
 {
@@ -67,60 +66,59 @@ public class ChukwaSequenceFileParser
 			long offset = 0;
 			
 //			HdfsWriter.HdfsWriterKey key = new HdfsWriter.HdfsWriterKey();
-			Text key = new Text();
-
-		    ChukwaRecord evt = new ChukwaRecord();
-			while(r.next(key, evt))
+			ChukwaRecordKey key = new ChukwaRecordKey();
+		    ChukwaRecord record = new ChukwaRecord();
+		    
+			while(r.next(key, record))
 			{	
 				lineCount ++;
 				
-				System.out.println("NameNodeParser Line [" +evt.getValue(Record.bodyField) + "]");	
+				System.out.println("NameNodeParser Line [" +record.getValue(Record.bodyField) + "]");	
 				
-				if (evt != null)
+				if (record != null)
 				{
-					timestamp = evt.getTime();
+					timestamp = record.getTime();
 					if (timestamp < t0) 
 					{
-						 System.out.println("Line not in range. Skipping: " +evt.getValue(Record.bodyField));
+						 System.out.println("Line not in range. Skipping: " +record.getValue(Record.bodyField));
 						 System.out.println("Search for: " + new Date(t0) + " is :" + new Date(timestamp));
 						 continue;
 					} 
 					else if ((timestamp < t1) && (offset < maxOffset )) //JB (epochTS < maxDate)
 					{
 						
-						System.out.println("In Range: " + evt.getValue(Record.bodyField));
+						System.out.println("In Range: " + record.getValue(Record.bodyField));
 						boolean valid = false;
 						
 						 if ( (filter == null || filter.equals("") ))
 						 {
 							 valid = true;
 						 }
-						 else if (evt.getValue(Record.rawField).toLowerCase().indexOf(filter) > 0)
-						   {
- System.out.println("MATCH " +  filter + "===========================>>>>>>>" + evt.getValue(Record.rawField));
-							   valid = true;
-						   }
+						 else if ( isValid(record,filter))
+						 {
+							 valid = true;
+						 }
 						 
 						 if (valid)
 						 {
-							records.add(evt);
-evt = new ChukwaRecord();
+							records.add(record);
+							record = new ChukwaRecord();
 							listSize = records.size();
 							if (listSize > maxRows)
 							{
 								records.remove(0);
-								System.out.println("==========>>>>>REMOVING: " + evt.getValue(Record.bodyField));
+								System.out.println("==========>>>>>REMOVING: " + record.getValue(Record.bodyField));
 							}
 						 }
 						else 
 						{
-							System.out.println("In Range ==================>>>>>>>>> OUT Regex: " + evt.getValue(Record.bodyField));
+							System.out.println("In Range ==================>>>>>>>>> OUT Regex: " + record.getValue(Record.bodyField));
 						}
 
 					}
 					else
 					{
-						 System.out.println("Line out of range. Stopping now: " +evt.getValue(Record.bodyField));
+						 System.out.println("Line out of range. Stopping now: " +record.getValue(Record.bodyField));
 						break;
 					}
 				}
@@ -146,26 +144,17 @@ evt = new ChukwaRecord();
 		return records;
 	}
 	
-	public static void main(String[] args) throws Throwable
+	
+	protected static boolean isValid(ChukwaRecord record, String filter)
 	{
-		Configuration conf = new Configuration();
-
-	    FileSystem fs = FileSystem.get(conf);//FileSystem.get(new URI(fsURL), conf);
-	    Calendar c = Calendar.getInstance();
-	    c.add(Calendar.MONTH, -2);
-	    
-	    ChukwaSequenceFileParser.readData(	"/tmp/t1", "NameNode",
-	    									200, new java.util.Date().getTime(), 
-	    									c.getTimeInMillis(), Long.MAX_VALUE, null, 
-	    									args[0], fs, conf);
-	    
-	    SequenceFile.Reader r= new SequenceFile.Reader(fs, new Path(args[0]), conf);
-	    Text key = new Text();
-	    
-	    ChukwaRecord evt = new ChukwaRecord();
-	    while(r.next(key, evt))
-	    {
-	      System.out.println( evt);
-	    }
+		String[] fields = record.getFields();
+		for(String field: fields)
+		{
+			if ( record.getValue(field).toLowerCase().indexOf(filter) >= 0)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }

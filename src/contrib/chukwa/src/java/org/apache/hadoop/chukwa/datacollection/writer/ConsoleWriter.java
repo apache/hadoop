@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.chukwa.datacollection.writer;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -59,14 +59,14 @@ public class ConsoleWriter implements ChukwaWriter {
     statTimer.cancel();
   }
 
-  public void init() throws IOException
+  public void init() throws WriterException
   {
      System.out.println("----  DUMMY HDFS WRITER IN USE ---");
 
      statTimer.schedule(new StatReportingTask(), 1000,10*1000);
   }
 
-  public void add(Chunk data) throws IOException
+  public void add(Chunk data) throws WriterException
   {
     int startOffset = 0;
 
@@ -86,5 +86,15 @@ public class ConsoleWriter implements ChukwaWriter {
       }
     }
   }
+
+@Override
+public void add(List<Chunk> chunks) throws WriterException
+{
+	for(Chunk chunk: chunks)
+	{
+		add(chunk);
+	}
+	
+}
 
 }

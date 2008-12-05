@@ -18,6 +18,7 @@
 package org.apache.hadoop.chukwa.datacollection.writer;
 
 import java.io.*;
+import java.util.List;
 
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.ChunkImpl;
@@ -25,29 +26,44 @@ import org.apache.hadoop.chukwa.ChunkImpl;
 public class InMemoryWriter implements ChukwaWriter {
 
   ByteArrayOutputStream buf;
-  
+
   public void close() {
     buf.reset();
   }
 
-  public void init() throws IOException {
+  public void init() throws WriterException {
     buf = new ByteArrayOutputStream();
   }
 
-  public void add(Chunk data) throws IOException {
+  public void add(Chunk data) throws WriterException {
     DataOutputStream dos = new DataOutputStream(buf);
-    data.write(dos);
-    synchronized(this) {
+    try {
+      data.write(dos);
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new WriterException(e);
+    }
+    synchronized (this) {
       notify();
     }
   }
-  
+
+  @Override
+  public void add(List<Chunk> chunks) throws WriterException {
+    for (Chunk chunk : chunks) {
+      add(chunk);
+    }
+
+  }
+
   DataInputStream dis = null;
+
   /**
    * Try to read bytes, waiting up to ms
+   * 
    * @param bytes amount to try to read
-   * @param ms  time to wait
-   * @return a newly read-in chunk
+   * @param ms time to wait
+  * @return a newly read-in chunk
    * @throws IOException
    */
   public Chunk readOutChunk(int bytes, int ms) throws IOException {
@@ -63,13 +79,11 @@ public class InMemoryWriter implements ChukwaWriter {
       }
       if(dis == null)
        dis = new DataInputStream( new ByteArrayInputStream(buf.toByteArray()));
-      
       return ChunkImpl.read(dis);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;
     }
-    
   }
 
 }

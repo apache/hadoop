@@ -19,22 +19,27 @@
 package org.apache.hadoop.chukwa.extraction.demux;
 
 
+import org.apache.hadoop.chukwa.extraction.demux.processor.Util;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
-import org.apache.hadoop.chukwa.extraction.engine.Record;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
+import org.apache.hadoop.chukwa.extraction.engine.RecordUtil;
 import org.apache.hadoop.mapred.lib.MultipleSequenceFileOutputFormat;
 import org.apache.log4j.Logger;
 
-public class ChukwaRecordOutputFormat extends MultipleSequenceFileOutputFormat<Text, ChukwaRecord>
+public class ChukwaRecordOutputFormat extends MultipleSequenceFileOutputFormat<ChukwaRecordKey, ChukwaRecord>
 {
 	static Logger log = Logger.getLogger(ChukwaRecordOutputFormat.class);
-
+	
 	@Override
-	protected String generateFileNameForKeyValue(Text key, ChukwaRecord record,
+	protected String generateFileNameForKeyValue(ChukwaRecordKey key, ChukwaRecord record,
 			String name)
 	{
-		if (log.isDebugEnabled())
-			{log.debug("ChukwaOutputFormat.fileName: " +record.getValue(Record.destinationField));}
-		return record.getValue(Record.destinationField);
+		String output = RecordUtil.getClusterName(record)
+							+ "/" + key.getReduceType() 
+							+ "/" + key.getReduceType() + Util.generateTimeOutput(record.getTime());
+
+		//{log.info("ChukwaOutputFormat.fileName: [" + output +"]");}
+	
+		return output;
 	}
 }

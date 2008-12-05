@@ -19,20 +19,19 @@
 package org.apache.hadoop.chukwa.extraction.engine.datasource.record;
 
 import java.io.IOException;
-import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.hadoop.chukwa.extraction.engine.ChukwaSearchResult;
+import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
 import org.apache.hadoop.chukwa.extraction.engine.Record;
 import org.apache.hadoop.chukwa.extraction.engine.SearchResult;
+import org.apache.hadoop.chukwa.extraction.engine.Token;
 import org.apache.hadoop.chukwa.extraction.engine.datasource.DataSource;
 import org.apache.hadoop.chukwa.extraction.engine.datasource.DataSourceException;
 import org.apache.hadoop.chukwa.inputtools.mdl.DataConfig;
-import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 
 public class RecordDS implements DataSource
@@ -64,7 +63,7 @@ public class RecordDS implements DataSource
 									String dataSource, 
 									long t0, 
 									long t1, 
-									String filter)
+									String filter,Token token)
 			throws DataSourceException
 	{
 		
@@ -77,20 +76,20 @@ public class RecordDS implements DataSource
 		
 		TreeMap<Long, List<Record>> records = result.getRecords();
 		int maxCount = 200;
-		
+		SimpleDateFormat sdf = new java.text.SimpleDateFormat("_yyyyMMdd_HH_");
 		do
 		{
 			System.out.println("start Date [" + calendar.getTime() + "]");
-			String fileName = new java.text.SimpleDateFormat("_yyyy_MM_dd_HH").format(calendar.getTime());
+			String fileName = sdf.format(calendar.getTime());
 			int minutes = calendar.get(Calendar.MINUTE);
 			int dec = minutes/10;
-			fileName += "_" + dec ;
+			fileName +=  dec ;
 			
 			int m = minutes - (dec*10);
 			if (m < 5)
-			{ fileName += "0.evt";}
+			{ fileName += "0.1.evt";}
 			else
-			{ fileName += "5.evt";}
+			{ fileName += "5.1.evt";}
 			
 			fileName = filePath + "/" + dataSource + fileName;
 			
@@ -144,39 +143,6 @@ public class RecordDS implements DataSource
 
 		
 		return result;
-	}
-
-	
-	public static void main(String[] args) throws DataSourceException
-	{
-		long t1 = 0;
-		long t0 = 0;
-		System.out.println("Hello");
-		Calendar calendar = Calendar.getInstance();
-		Date d1;
-		try
-		{
-			d1 = new java.text.SimpleDateFormat ("dd/MM/yyyy HH:mm:ss").parse("05/06/2008 19:31:05");
-			calendar.setTime(d1);
-			t1 = calendar.getTimeInMillis();
-			d1 = new java.text.SimpleDateFormat ("dd/MM/yyyy HH:mm:ss").parse("05/06/2008 19:26:05");
-			calendar.setTime(d1);
-			t0 = calendar.getTimeInMillis();
-			
-		} catch (ParseException e)
-		{
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		String filter = null;
-		RecordDS dao = new RecordDS();
-		SearchResult result = new ChukwaSearchResult();
-		
-		TreeMap<Long, List<Record>> records = new TreeMap<Long,List<Record>> ();
-		result.setRecords(records);
-		
-		dao.search(result,"output2","NameNode",t0,t1,filter);
 	}
 	
 	public boolean isThreadSafe()

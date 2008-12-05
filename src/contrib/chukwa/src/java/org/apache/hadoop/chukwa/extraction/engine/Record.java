@@ -21,17 +21,21 @@ package org.apache.hadoop.chukwa.extraction.engine;
 public interface Record
 {
 	public static final String bodyField = "body";
-	
+	public static final String sourceField = "csource";
+	public static final String applicationField = "capp";
+	public static final String tagsField = "ctags";
+  public static final String chunkDataField = "cchunkData";
+  public static final String chunkExceptionField = "cchunkException";
+  
+	public static final String classField = "class";
 	public static final String logLevelField = "logLevel";
-	public static final String destinationField = "dest";
-	public static final String dataSourceField = "ds";
-	public static final String sourceField = "src";
-	public static final String streamNameField = "sname";
-	public static final String typeField = "type";
-	public static final String classField = "pkg";
-	public static final String rawField = "raw";
 	
-	public static final String fieldSeparator = ":";
+//	public static final String streamNameField = "sname";
+//	public static final String typeField = "type";
+	
+//	public static final String rawField = "raw";
+	
+//	public static final String fieldSeparator = ":";
 	
 	public long getTime();
 	public void add(String key, String value);

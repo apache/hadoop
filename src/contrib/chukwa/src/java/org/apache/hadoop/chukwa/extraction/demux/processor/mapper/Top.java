@@ -20,19 +20,16 @@ package org.apache.hadoop.chukwa.extraction.demux.processor.mapper;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.chukwa.extraction.database.DatabaseHelper;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
-import org.apache.hadoop.chukwa.extraction.engine.Record;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.log4j.Logger;
-import java.util.HashMap;
 
 public class Top extends AbstractProcessor
 {
@@ -48,138 +45,118 @@ public class Top extends AbstractProcessor
 	public Top()
 	{
 		//TODO move that to config
-		sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
+		sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		p = Pattern.compile(regex);
 	}
 
 	@Override
-	protected void parse(String recordEntry, OutputCollector<Text, ChukwaRecord> output,
+	protected void parse(String recordEntry, OutputCollector<ChukwaRecordKey, ChukwaRecord> output,
 			Reporter reporter)
+	 throws Throwable
 	{
 		
-		log.info("Top record: [" + recordEntry + "] type[" + chunk.getDataType() + "]");
-		StringBuilder sb = new StringBuilder(); 	 
+		log.debug("Top record: [" + recordEntry + "] type[" + chunk.getDataType() + "]");
 		
-		String logLevel = null;
-		String className = null;
-		String body = null;
 		
 		matcher=p.matcher(recordEntry);
 		while (matcher.find())
 		{
-			log.info("Top Processor Matches");
+			log.debug("Top Processor Matches");
 			
 			try
 			{
 				Date d = sdf.parse( matcher.group(1).trim());
-				
-				logLevel = matcher.group(2);
-				className = matcher.group(3);
-				
-				//TODO create a more specific key structure
-				// part of ChukwaArchiveKey + record index if needed
-				key.set("" + d.getTime());
+
+				ChukwaRecord record = new ChukwaRecord();
 				String[] lines = recordEntry.split("\n");
 				int i = 0;
+				if(lines.length<2) {
+					return;
+				}
 				String summaryString = "";
 				while(!lines[i].equals("")) {
 					summaryString = summaryString + lines[i] + "\n";
 				    i++;
 				}
 				i++;
-				String[] headers = lines[i].split("\\s+");
-				HashMap<String, String>summary = parseSummary(summaryString);
-				DatabaseHelper databaseRecord = new DatabaseHelper("system");
-				Iterator<String> ki = summary.keySet().iterator();
-				while(ki.hasNext()) {
-					String key = ki.next();
-				    databaseRecord.add(d.getTime(),key, summary.get(key));
-				}
-				output.collect(key, databaseRecord.buildChukwaRecord());
-				while (i < lines.length)
-				{
-					databaseRecord = null;
-					String data[] = lines[i].split("\\s+",headers.length);
-					if(lines[i].indexOf("PID USER")<0) {
-						databaseRecord = new DatabaseHelper("system");	
-					}
-					if(databaseRecord!=null) {
-						int j=0;
-						log.debug("Data Length: " + data.length);
-	                    while(j<data.length-1) {
-	                    	if(headers[0].equals("")) {
-		                    	log.debug("header:"+headers[j+1]+" data:"+data[j+1]);
-	                    		databaseRecord.add(d.getTime(),headers[j+1],data[j+1]);
-	                    	} else {
-		                    	log.debug("header:"+headers[j+1]+" data:"+data[j]);
-							    databaseRecord.add(d.getTime(),headers[j+1],data[j]);
-	                    	}
-						    j++;
-	                    }						
-						//Output Sar info to database
-						output.collect(key, databaseRecord.buildChukwaRecord());
-					}
+				record = new ChukwaRecord();
+				key = new ChukwaRecordKey();
+				parseSummary(record,summaryString);
+				this.buildGenericRecord(record, null, d.getTime(), "SystemMetrics");
+				output.collect(key, record);
+				
+				StringBuffer buffer = new StringBuffer();
+				//FIXME please validate this
+				while (i < lines.length) {
+					record = null;
+					buffer.append(lines[i]+"\n");
 					i++;
+					
 				}
+				record = new ChukwaRecord();
+				key = new ChukwaRecordKey();
+				this.buildGenericRecord(record, buffer.toString(), d.getTime(), "Top");
+				//Output Top info to database
+				output.collect(key, record);
+
 				// End of parsing
 			} catch (Exception e)
 			{
 				e.printStackTrace();
+				throw e;
 			}
 		}
 	}
 	
-	public HashMap<String, String> parseSummary(String header) {
-		HashMap<String, String> keyValues = new HashMap<String, String>();
+	public void parseSummary(ChukwaRecord record,String header) {
+		HashMap<String, Object> keyValues = new HashMap<String, Object>();
 		String[] headers = header.split("\n");
-		int i=0;
 		Pattern p = Pattern.compile("top - (.*?) up (.*?),\\s+(\\d+) users");
 		Matcher matcher = p.matcher(headers[0]);
 		if(matcher.find()) {
-            keyValues.put("uptime",matcher.group(2));
-            keyValues.put("users",matcher.group(3));
+            record.add("uptime",matcher.group(2));
+            record.add("users",matcher.group(3));
 		}
 		p = Pattern.compile("Tasks:\\s+(\\d+) total,\\s+(\\d+) running,\\s+(\\d+) sleeping,\\s+(\\d+) stopped,\\s+(\\d+) zombie");
 		matcher = p.matcher(headers[1]);
 		if(matcher.find()) {
-            keyValues.put("tasks_total",matcher.group(1));
-            keyValues.put("tasks_running",matcher.group(2));
-            keyValues.put("tasks_sleeping",matcher.group(3));
-            keyValues.put("tasks_stopped",matcher.group(4));
-            keyValues.put("tasks_zombie",matcher.group(5));
+			record.add("tasks_total",matcher.group(1));
+			record.add("tasks_running",matcher.group(2));
+			record.add("tasks_sleeping",matcher.group(3));
+			record.add("tasks_stopped",matcher.group(4));
+			record.add("tasks_zombie",matcher.group(5));
 		}
 		p = Pattern.compile("Cpu\\(s\\):\\s+(.*?)% us,\\s+(.*?)% sy,\\s+(.*?)% ni,\\s+(.*?)% id,\\s+(.*?)% wa,\\s+(.*?)% hi,\\s+(.*?)% si");
 		matcher = p.matcher(headers[2]);
 		if(matcher.find()) {
-            keyValues.put("cpu_user%",matcher.group(1));
-            keyValues.put("cpu_sys%",matcher.group(2));
-            keyValues.put("cpu_nice%",matcher.group(3));
-            keyValues.put("cpu_wait%",matcher.group(4));
-            keyValues.put("cpu_hi%",matcher.group(5));
-            keyValues.put("cpu_si%",matcher.group(6));
+			record.add("cpu_user%",matcher.group(1));
+			record.add("cpu_sys%",matcher.group(2));
+			record.add("cpu_nice%",matcher.group(3));
+			record.add("cpu_wait%",matcher.group(4));
+			record.add("cpu_hi%",matcher.group(5));
+			record.add("cpu_si%",matcher.group(6));
 		}
 		p = Pattern.compile("Mem:\\s+(.*?)k total,\\s+(.*?)k used,\\s+(.*?)k free,\\s+(.*?)k buffers");
 		matcher = p.matcher(headers[3]);
 		if(matcher.find()) {
-			keyValues.put("mem_total",matcher.group(1));
-			keyValues.put("mem_used",matcher.group(2));
-			keyValues.put("mem_free",matcher.group(3));
-			keyValues.put("mem_buffers",matcher.group(4));
+			record.add("mem_total",matcher.group(1));
+			record.add("mem_used",matcher.group(2));
+			record.add("mem_free",matcher.group(3));
+			record.add("mem_buffers",matcher.group(4));
 		}
 		p = Pattern.compile("Swap:\\s+(.*?)k total,\\s+(.*?)k used,\\s+(.*?)k free,\\s+(.*?)k cached");
 		matcher = p.matcher(headers[4]);
 		if(matcher.find()) {
-			keyValues.put("swap_total",matcher.group(1));
-			keyValues.put("swap_used",matcher.group(2));
-			keyValues.put("swap_free",matcher.group(3));
-			keyValues.put("swap_cached",matcher.group(4));
+			record.add("swap_total",matcher.group(1));
+			record.add("swap_used",matcher.group(2));
+			record.add("swap_free",matcher.group(3));
+			record.add("swap_cached",matcher.group(4));
 		}
 		Iterator<String> ki = keyValues.keySet().iterator();
 		while(ki.hasNext()) {
 			String key = ki.next();
-			log.info(key+":"+keyValues.get(key));
+			log.debug(key+":"+keyValues.get(key));
 		}
-		return keyValues;
 	}
 
 	public String getDataType() {

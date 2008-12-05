@@ -30,7 +30,7 @@ import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
 public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk 
 {
   public static int PROTOCOL_VERSION=1;
-	
+  
   private String source = "";
   private String application = "";
   private String dataType = "";
@@ -38,10 +38,10 @@ public class ChunkImpl implements org.apache.hadoop.io.Writable, Chunk
   private byte[] data = null;
   private int[] recordEndOffsets;
   private int protocolVersion=1;
-  private long seqID;
-  
   private String debuggingInfo="";
+  
   private transient Adaptor initiator;
+  long seqID;
   
   ChunkImpl() {
     this.tags = ChukwaAgent.getTags();

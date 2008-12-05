@@ -23,10 +23,8 @@ import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.chukwa.extraction.database.DatabaseHelper;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
-import org.apache.hadoop.chukwa.extraction.engine.Record;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.log4j.Logger;
@@ -45,23 +43,19 @@ public class Iostat extends AbstractProcessor
 	public Iostat()
 	{
 		//TODO move that to config
-		sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
+		sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		p = Pattern.compile(regex);
 	}
 
 	@Override
-	protected void parse(String recordEntry, OutputCollector<Text, ChukwaRecord> output,
+	protected void parse(String recordEntry, OutputCollector<ChukwaRecordKey, ChukwaRecord> output,
 			Reporter reporter)
+  throws Throwable
 	{
 		
 		log.debug("Iostat record: [" + recordEntry + "] type[" + chunk.getDataType() + "]");
-		StringBuilder sb = new StringBuilder(); 	 
 		int i = 0;
-		
-		String logLevel = null;
-		String className = null;
-		String body = null;
-		
+
 		matcher=p.matcher(recordEntry);
 		while (matcher.find())
 		{
@@ -71,55 +65,54 @@ public class Iostat extends AbstractProcessor
 			{
 				Date d = sdf.parse( matcher.group(1).trim());
 				
-				logLevel = matcher.group(2);
-				className = matcher.group(3);
-				String hostname = matcher.group(5);
-				
-				//TODO create a more specific key structure
-				// part of ChukwaArchiveKey + record index if needed
-				key.set("" + d.getTime());
+
 				
 				String[] lines = recordEntry.split("\n");
-				int skip=0;
-				i++;
 				String[] headers = null;
-				while (skip<2 && i < lines.length) {
-					// Skip the first output because the numbers are averaged from system boot up
-					if(lines[i].indexOf("avg-cpu:")>0) {
-						skip++;
-					}
-					i++;					
+				for(int skip=0;skip<2;skip++) {
+				    i++;
+					while ( i < lines.length && lines[i].indexOf("avg-cpu")<0) {
+					    // Skip the first output because the numbers are averaged from system boot up
+					    log.debug("skip line:"+lines[i]);
+					    i++;					
+				    }
 				}
 				while (i < lines.length)
 				{
-					DatabaseHelper databaseRecord = null;
-					if(lines[i].equals("")) {
-						i++;
+					ChukwaRecord record = null;
+					
+					if(lines[i].indexOf("avg-cpu")>=0 || lines[i].indexOf("Device")>=0) {
 						headers = parseHeader(lines[i]);
 						i++;
 					}
 					String data[] = parseData(lines[i]);
 					if(headers[0].equals("avg-cpu:")) {
 						log.debug("Matched CPU-Utilization");
-						databaseRecord = new DatabaseHelper("system");
+						record = new ChukwaRecord();
+					  key = new ChukwaRecordKey();
+					  buildGenericRecord(record, null, d.getTime(), "SystemMetrics");
 					} else if(headers[0].equals("Device:")) {
 						log.debug("Matched Iostat");
-						databaseRecord = new DatabaseHelper("system");	
+						record = new ChukwaRecord();
+						key = new ChukwaRecordKey();
+					  buildGenericRecord(record, null, d.getTime(), "SystemMetrics");
 					} else {
 						log.debug("No match:"+headers[0]);
 					}
-					if(databaseRecord!=null) {
+					if(record!=null) {
 						int j=0;
 						log.debug("Data Length: " + data.length);
-	                    while(j<data.length) {
-	                    	log.debug("header:"+headers[j]+" data:"+data[j]);
-	                    	if(!headers[j].equals("avg-cpu:")) {
-						        databaseRecord.add(d.getTime(),headers[j],data[j]);
-	                    	}
-						    j++;
-	                    }						
-						//Output Sar info to database
-						output.collect(key, databaseRecord.buildChukwaRecord());
+			            while(j<data.length) {
+			            	log.debug("header:"+headers[j]+" data:"+data[j]);
+			            	if(!headers[j].equals("avg-cpu:")) {
+			            		record.add(headers[j],data[j]);
+			            	}
+						  j++;
+			            }
+			            record.setTime(d.getTime());
+			            if(data.length>3) {
+						    output.collect(key, record);
+			            }
 					}
 					i++;
 				}
@@ -127,6 +120,7 @@ public class Iostat extends AbstractProcessor
 			} catch (Exception e)
 			{
 				e.printStackTrace();
+				throw e;
 			}
 		}
 	}

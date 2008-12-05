@@ -31,6 +31,10 @@ public class ServletDiagnostics {
 
   static Logger log=  Logger.getLogger(ServletDiagnostics.class);
   
+
+  static int CHUNKS_TO_KEEP = 50;
+  static int CHUNKS_TO_DISPLAY = 50;
+  
   private static class PostStats { //statistics about a chunk
     public PostStats(String src, int count, long receivedTs)
     {
@@ -75,7 +79,6 @@ public class ServletDiagnostics {
 
   static LinkedList<PostStats> lastPosts;
   PostStats curPost;
-  static int CHUNKS_TO_KEEP = 300;
 
   
   public void sawPost(String source, int chunks, long receivedTs) {
@@ -96,28 +99,33 @@ public class ServletDiagnostics {
     long timeWindowOfSample = Long.MAX_VALUE;
     long now = System.currentTimeMillis();
 
-
     out.println("<ul>");
     
     synchronized(lastPosts) {
+      int toSkip = lastPosts.size() - CHUNKS_TO_DISPLAY; 
+      
       if(!lastPosts.isEmpty())
         timeWindowOfSample = now -  lastPosts.peek().receivedTs;
       
       for(PostStats stats: lastPosts) {
-        out.print("<li>");
-        
-        out.print(stats.dataSize + " bytes from " + stats.src + " at timestamp " + stats.receivedTs);
-        out.println(" which was " +  ((now - stats.receivedTs)/ 1000) + " seconds ago");
         Long oldBytes = bytesFromHost.get(stats.src);
         long newBytes = stats.dataSize;
         if(oldBytes != null)
           newBytes += oldBytes;
         bytesFromHost.put(stats.src, newBytes);
-        out.println("<ol>");
-        for(int i =0; i < stats.count; ++i)
-          out.println("<li> "+ stats.lengths[i] + " bytes of type " +
-              stats.types[i] + ".  Adaptor name ="+ stats.names[i] +" </li>");
-        out.println("</ol></li>");
+        
+        if( -- toSkip < 0) { //done skipping
+          out.print("<li>");
+          
+          out.print(stats.dataSize + " bytes from " + stats.src + " at timestamp " + stats.receivedTs);
+          out.println(" which was " +  ((now - stats.receivedTs)/ 1000) + " seconds ago");
+  
+          out.println("<ol>");
+          for(int i =0; i < stats.count; ++i)
+            out.println("<li> "+ stats.lengths[i] + " bytes of type " +
+                stats.types[i] + ".  Adaptor name ="+ stats.names[i] +" </li>");
+          out.println("</ol></li>");
+        }
       }
     }
     out.println("</ul>");
@@ -137,7 +145,7 @@ public class ServletDiagnostics {
   public void doneWithPost() {
     synchronized(lastPosts) {
       if(lastPosts.size() > CHUNKS_TO_KEEP)
-        lastPosts.remove();
+        lastPosts.removeFirst();
       lastPosts.add(curPost);
     }
   }

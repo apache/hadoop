@@ -22,19 +22,34 @@ bin=`cd "$bin"; pwd`
 
 JVM_OPTS="-Xms4M -Xmx4M"
 
-if [ "X$1" = "Xstop" ]; then
+trap 'shutdown' 1 2 15
+
+function shutdown {
   echo -n "Shutting down System Data Loader..."
   if [ -f ${CHUKWA_HOME}/var/run/Sar-data-loader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/Sar-data-loader.pid`
+    kill -9 `cat ${CHUKWA_HOME}/var/run/Sar-data-loader.pid`
   fi
   if [ -f ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid`
+    kill -9 `cat ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid`
   fi
   if [ -f ${CHUKWA_HOME}/var/run/Top-data-loader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/Top-data-loader.pid`
+    kill -9 `cat ${CHUKWA_HOME}/var/run/Top-data-loader.pid`
   fi
   if [ -f ${CHUKWA_HOME}/var/run/Df-data-loader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/Df-data-loader.pid`
+    kill -9 `cat ${CHUKWA_HOME}/var/run/Df-data-loader.pid`
+  fi
+  if [ -f ${CHUKWA_HOME}/var/run/Netstat-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_HOME}/var/run/Netstat-data-loader.pid`
+  fi
+  rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid
+  echo "done"
+  exit 0
+}
+
+if [ "X$1" = "Xstop" ]; then
+  echo -n "Shutting down System Data Loader..."
+  if [ -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid ]; then
+    kill -TERM `head $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid`
   fi
   echo "done"
   exit 0
@@ -58,7 +73,7 @@ if [ -f $pidFile ]; then
 fi
 
 if [ ${EXISTS} -lt 1 ]; then
-    ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Sar -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec sar -q -r -n FULL 55 &
+    ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DRECORD_TYPE=Sar -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec sar -q -r -n FULL 55 &
 fi
 
 EXISTS=0
@@ -72,7 +87,7 @@ if [ -f $pidFile ]; then
 fi
 
 if [ ${EXISTS} -lt 1 ]; then
-  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Iostat -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec iostat -x 55 2 &
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DRECORD_TYPE=Iostat -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec iostat -x 55 2 &
 fi
 
 EXISTS=0
@@ -86,7 +101,7 @@ if [ -f $pidFile ]; then
 fi
 
 if [ ${EXISTS} -lt 1 ]; then
-  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Top -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec top -b -n 1 -c &
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DRECORD_TYPE=Top -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec top -b -n 1 -c &
 fi
 
 EXISTS=0
@@ -100,7 +115,27 @@ if [ -f $pidFile ]; then
 fi
 
 if [ ${EXISTS} -lt 1 ]; then
-  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DRECORD_TYPE=Df -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec df -l &
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DRECORD_TYPE=Df -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec df -l &
+fi
+
+EXISTS=0
+pidFile="${CHUKWA_HOME}/var/run/Netstat-data-loader.pid"
+if [ -f $pidFile ]; then
+  pid=`head ${pidFile}`
+  ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+  if [ $ChildPIDRunningStatus -ge 1 ]; then
+    EXISTS=1
+  fi
+fi
+
+if [ ${EXISTS} -lt 1 ]; then
+  ${JAVA_HOME}/bin/java $JVM_OPTS -DPERIOD=60 -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DRECORD_TYPE=Netstat -Dlog4j.configuration=system-data-loader.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${TOOLS}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec ${CHUKWA_HOME}/bin/netstat.sh &
 fi
 
 echo "done"
+
+while [ 1 ]
+do
+    # sleep until shutdown signal has been sent.
+    sleep 5
+done

@@ -27,7 +27,6 @@ import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.chukwa.inputtools.mdl.DataConfig;
 
 public class DatabaseWriter {
     private static Log log = LogFactory.getLog(DatabaseWriter.class);
@@ -36,18 +35,19 @@ public class DatabaseWriter {
     private ResultSet rs = null;
 
     public DatabaseWriter(String host, String user, String password) {
-    	DataConfig mdlConfig = new DataConfig();
-    	String jdbc_url = "jdbc:mysql://"+host+"/";
-        if(user!=null) {
+    	String jdbc_url = System.getenv("JDBC_URL_PREFIX")+host+"/";
+    	
+		if(user!=null) {
             jdbc_url = jdbc_url + "?user=" + user;
             if(password!=null) {
                 jdbc_url = jdbc_url + "&password=" + password;
             }
-        }
+		}
         try {
             // The newInstance() call is a work around for some
             // broken Java implementations
-            Class.forName("com.mysql.jdbc.Driver").newInstance();
+            String jdbcDriver = System.getenv("JDBC_DRIVER");
+            Class.forName(jdbcDriver).newInstance();
         } catch (Exception ex) {
             // handle the error
             log.error(ex,ex);
@@ -60,19 +60,14 @@ public class DatabaseWriter {
         }
     }
 
-    public DatabaseWriter() {
-    	DataConfig mdlConfig = new DataConfig();
-    	String jdbc_url = "jdbc:mysql://"+mdlConfig.get("jdbc.host")+"/"+mdlConfig.get("jdbc.db");
-        if(mdlConfig.get("jdbc.user")!=null) {
-            jdbc_url = jdbc_url + "?user=" + mdlConfig.get("jdbc.user");
-            if(mdlConfig.get("jdbc.password")!=null) {
-                jdbc_url = jdbc_url + "&password=" + mdlConfig.get("jdbc.password");
-            }
-        }
+    public DatabaseWriter(String cluster) {
+    	ClusterConfig cc = new ClusterConfig();
+    	String jdbc_url = cc.getURL(cluster);
         try {
             // The newInstance() call is a work around for some
             // broken Java implementations
-            Class.forName("com.mysql.jdbc.Driver").newInstance();
+        	String jdbcDriver = System.getenv("JDBC_DRIVER");
+            Class.forName(jdbcDriver).newInstance();
         } catch (Exception ex) {
             // handle the error
             log.error(ex,ex);
@@ -84,6 +79,7 @@ public class DatabaseWriter {
             log.error(ex,ex);
         }
     }
+    
     public void execute(String query) {
         try {
             stmt = conn.createStatement(); 
@@ -106,17 +102,18 @@ public class DatabaseWriter {
             }
         }
     }
-    public ResultSet query(String query) {
+    public ResultSet query(String query) throws SQLException {
         try {
             stmt = conn.createStatement(); 
             rs = stmt.executeQuery(query);
         } catch (SQLException ex) {
             // handle any errors
-            log.error(ex, ex);
-            log.error("SQL Statement:" + query);
-            log.error("SQLException: " + ex.getMessage());
-            log.error("SQLState: " + ex.getSQLState());
-            log.error("VendorError: " + ex.getErrorCode());
+            log.debug(ex, ex);
+            log.debug("SQL Statement:" + query);
+            log.debug("SQLException: " + ex.getMessage());
+            log.debug("SQLState: " + ex.getSQLState());
+            log.debug("VendorError: " + ex.getErrorCode());
+            throw ex;
         } finally {
         }
         return rs;
@@ -151,7 +148,7 @@ public class DatabaseWriter {
             conn = null;
         }
     }
-    public String formatTimeStamp(long timestamp) {
+    public static String formatTimeStamp(long timestamp) {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String format = formatter.format(timestamp);
 

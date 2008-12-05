@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
 import org.apache.hadoop.chukwa.inputtools.mdl.DataConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,15 +45,20 @@ public class DsDirectory
 	private DsDirectory()
 	{
 		dataConfig = new DataConfig();
-		conf = new Configuration();
+		conf = new ChukwaConfiguration();
 		try
 		{
 			fs = FileSystem.get(conf);
-		} catch (IOException e)
+		} 
+		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
 		rootFolder = dataConfig.get("chukwa.engine.dsDirectory.rootFolder");
+		if (!rootFolder.endsWith("/"))
+		{
+			rootFolder +="/";
+		}
 	}
 	
 	public static DsDirectory getInstance()
@@ -94,7 +100,7 @@ public class DsDirectory
 	public static void main(String[] args) throws DataSourceException
 	{
 		DsDirectory dsd = DsDirectory.getInstance();
-		String[] dss = dsd.list("localhost");
+		String[] dss = dsd.list("unknown");
 		for (String d : dss)
 		{
 			System.out.println(d);

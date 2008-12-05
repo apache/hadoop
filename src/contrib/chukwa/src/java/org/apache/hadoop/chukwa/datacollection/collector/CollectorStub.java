@@ -22,53 +22,77 @@ import org.mortbay.jetty.*;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.*;
 import org.apache.hadoop.chukwa.datacollection.collector.servlet.ServletCollector;
-import org.apache.hadoop.chukwa.datacollection.writer.ConsoleWriter;
+import org.apache.hadoop.chukwa.datacollection.writer.*;
+import org.apache.hadoop.chukwa.util.PidFile;
 import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
 
 public class CollectorStub {
   
-  
-  public static void main(String[] args)
-  {
-    
+  static int THREADS = 80;
+  private static PidFile pFile = null;
+  public static Server jettyServer = null;
+  public static void main(String[] args) {
+	
+	pFile=new PidFile("Collector");
+	Runtime.getRuntime().addShutdownHook(pFile); 	 	  
     try {
       System.out.println("usage:  CollectorStub [portno] [pretend]");
-      System.out.println("note: if no portno defined, defaults to value in chukwa-site.xml");
+      System.out.println("note: if no portno defined, " +
+      		"defaults to value in chukwa-site.xml");
  
       ChukwaConfiguration conf = new ChukwaConfiguration();
       int portNum = conf.getInt("chukwaCollector.http.port", 9999);
-
+      THREADS = conf.getInt("chukwaCollector.http.threads", 80);
+      
       if(args.length != 0)
         portNum = Integer.parseInt(args[0]);
+      
+        //pick a writer.
       if(args.length > 1) {
         if(args[1].equals("pretend"))
           ServletCollector.setWriter(new ConsoleWriter(true));
         else if(args[1].equals("pretend-quietly"))
           ServletCollector.setWriter(new ConsoleWriter(false));
+        else if(args[1].equals("-classname")) {
+          if(args.length < 3)
+            System.err.println("need to specify a writer class");
+          else {
+            Class<?> writerClass = Class.forName(args[2]);
+            if(writerClass != null &&
+                ChukwaWriter.class.isAssignableFrom(writerClass))
+              ServletCollector.setWriter(
+                  (ChukwaWriter) writerClass.newInstance());
+            else
+              System.err.println(args[2]+ "is not a ChukwaWriter");
+          }
+        }
         else
-          System.out.println("WARNING: don't know what to do with command line arg "+ args[1]);
+          System.out.println("WARNING: unknown command line arg "+ args[1]);
       }
       
+        //set up jetty connector
       SelectChannelConnector jettyConnector = new SelectChannelConnector();
-      jettyConnector.setLowResourcesConnections(20);
-      jettyConnector.setLowResourceMaxIdleTime(1000);
+      jettyConnector.setLowResourcesConnections(THREADS-10);
+      jettyConnector.setLowResourceMaxIdleTime(1500);
       jettyConnector.setPort(portNum);
-      Server server = new Server(portNum);
-      server.setConnectors(new Connector[]{ jettyConnector});
-      org.mortbay.thread.BoundedThreadPool pool = new  org.mortbay.thread.BoundedThreadPool();
-      pool.setMaxThreads(30);
-      server.setThreadPool(pool);
-      Context root = new Context(server,"/",Context.SESSIONS);
+        //set up jetty server
+      jettyServer = new Server(portNum);
+      
+      jettyServer.setConnectors(new Connector[]{ jettyConnector});
+      org.mortbay.thread.BoundedThreadPool pool = 
+        new org.mortbay.thread.BoundedThreadPool();
+      pool.setMaxThreads(THREADS);
+      jettyServer.setThreadPool(pool);
+        //and add the servlet to it
+      Context root = new Context(jettyServer,"/",Context.SESSIONS);
       root.addServlet(new ServletHolder(new ServletCollector()), "/*");
-      server.start();
-      server.setStopAtShutdown(false);
+      jettyServer.start();
+      jettyServer.setStopAtShutdown(false);
      
       System.out.println("started http collector on port number " + portNum);
 
-    }
-    catch(Exception e)
-    {
-      e.printStackTrace();
+    } catch(Exception e) {
+     e.printStackTrace();
       System.exit(0);
     }
 

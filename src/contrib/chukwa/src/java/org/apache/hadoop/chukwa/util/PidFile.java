@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.chukwa.util;
 
-import java.io.IOException;
-import java.io.File;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.nio.channels.*;
@@ -51,7 +49,10 @@ public class PidFile extends Thread {
   	     String pid=items[0];
 	     String chukwaPath=System.getProperty("CHUKWA_HOME");
 	     StringBuffer pidFilesb=new StringBuffer();
-	     String pidDir = chukwaPath+File.separator+"var"+File.separator+"run";
+	     String pidDir = System.getenv("CHUKWA_PID_DIR");
+	     if (pidDir == null) {
+	       pidDir = chukwaPath+File.separator+"var"+File.separator+"run";
+	     }
 	     pidFilesb.append(pidDir).append(File.separator).append(name).append(".pid");
 	     try{
 	    	 File existsFile = new File(pidDir);
@@ -87,7 +88,11 @@ public class PidFile extends Thread {
 	public void clean(){
         String chukwaPath=System.getenv("CHUKWA_HOME");
         StringBuffer pidFilesb=new StringBuffer();
-        pidFilesb.append(chukwaPath).append("/var/run/").append(name).append(".pid"); 
+        String pidDir = System.getenv("CHUKWA_PID_DIR");
+        if (pidDir == null) {
+          pidDir = chukwaPath+File.separator+"var"+File.separator+"run";
+        }
+        pidFilesb.append(pidDir).append(File.separator).append(name).append(".pid"); 
         String pidFileName=pidFilesb.toString();
 
         File pidFile=new File(pidFileName);

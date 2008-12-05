@@ -44,7 +44,7 @@ public interface Adaptor
    * @param offset the stream offset of the first byte sent by this adaptor
    * @throws AdaptorException
    */
-	public void start(String type, String status, long offset, ChunkReceiver dest) throws AdaptorException;
+	public void start(long adaptorID, String type, String status, long offset, ChunkReceiver dest) throws AdaptorException;
 	
 	/**
 	 * Return the adaptor's state
@@ -54,6 +54,12 @@ public interface Adaptor
 	 */
 	public String getCurrentStatus() throws AdaptorException;
 	public String getType();
+	
+	/**
+	 * Return the stream name
+	 * @return Stream name as a string
+	 */
+	public String getStreamName();
 	/**
 	 * Signals this adaptor to come to an orderly stop.
 	 * The adaptor ought to push out all the data it can

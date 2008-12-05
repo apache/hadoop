@@ -67,6 +67,12 @@ implements Record
 		return this.mapFields.containsKey(field);
 	}
 
+	public void removeValue(String field) {
+		if(this.mapFields.containsKey(field)) {
+			this.mapFields.remove(field);
+		}
+	}
+	
 	@Override
 	public String toString()
 	{
@@ -76,36 +82,37 @@ implements Record
 		Map.Entry<String,Buffer> entry = null;
 		StringBuilder sb = new StringBuilder();
 		sb.append("<event  ");
-		String body = null;
+		StringBuilder body = new StringBuilder();
+		
 		String key = null;
 		String val = null;
-		
+		boolean hasBody = false;
+		String bodyVal = null;
 		while (it.hasNext())
 		{
 			entry = it.next();
 			key = entry.getKey().intern();
 			val = new String(entry.getValue().get());
-			if (key == Record.rawField.intern())
+			if (key.intern() == Record.bodyField.intern())
 			{
-				continue;
-			}
-			
-			if (key == Record.bodyField.intern())
-			{
-				body = val;
+				hasBody = true;
+				bodyVal = val;
 			}
 			else
 			{
-				sb.append(entry.getKey()).append("=\"").append(val).append("\" ");
+				sb.append(key).append("=\"").append(val).append("\" ");
+				body.append(key).append( " = ").append(val).append("<br>");
 			}
+			
+			
 		}
-		sb.append(">").append(body);
+		if (hasBody)	
+		{ sb.append(">").append(bodyVal);}
+		else
+		{ sb.append(">").append(body);}
 		sb.append("</event>");
 		
 		return sb.toString();
-//		//<event start="Jun 15 2008 00:00:00" end="Jun 15 2008 12:00:00" title="hello" link="/here">body</event>
-//		return 	"<event start=\"" + formatter.format(new Date(this.getTime())) + "\" title=\""
-//		+  this.getValue(Record.sourceField)   + "\" >" + this.getValue(Record.bodyField) + "</event>" ;
 	}
 
 	

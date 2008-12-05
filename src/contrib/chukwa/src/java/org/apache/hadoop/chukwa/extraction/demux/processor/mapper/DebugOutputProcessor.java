@@ -21,7 +21,7 @@ package org.apache.hadoop.chukwa.extraction.demux.processor.mapper;
 import java.io.IOException;
 
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.log4j.Logger;
@@ -32,14 +32,14 @@ public class DebugOutputProcessor extends AbstractProcessor
 	public static final String recordType = "Debug";
 		
 	@Override
-	public void parse(String line, OutputCollector<Text, ChukwaRecord> output,
+	public void parse(String line, OutputCollector<ChukwaRecordKey, ChukwaRecord> output,
 			Reporter reporter)
 	{
 		log.info("record: [" + line + "] type[" + chunk.getDataType() + "]");
 		
 		ChukwaRecord record = new ChukwaRecord();
 		buildGenericRecord(record,line, System.currentTimeMillis(),recordType);
-		key.set("" + chunk.getSeqID());
+		key.setKey("" + chunk.getSeqID());
 		try
 		{
 			output.collect(key, record);

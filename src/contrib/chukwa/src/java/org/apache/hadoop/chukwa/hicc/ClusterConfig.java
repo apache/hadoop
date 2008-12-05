@@ -23,7 +23,7 @@ import java.util.*;
 
 public class ClusterConfig {
     public static HashMap<String, String> clusterMap = new HashMap<String, String>();
-    private String path=System.getenv("CHUKWA_HOME")+File.separator+"conf"+File.separator;
+    private String path=System.getenv("CHUKWA_CONF_DIR")+File.separator;
     static public String getContents(File aFile) {
         //...checks on aFile are elided
         StringBuffer contents = new StringBuffer();

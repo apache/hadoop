@@ -22,12 +22,9 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
-import org.apache.hadoop.chukwa.extraction.engine.Record;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.log4j.Logger;
@@ -41,11 +38,7 @@ public class HadoopLogProcessor extends AbstractProcessor
 	private static final String recordType = "HadoopLog";
 	private static final String nameNodeType = "NameNode";
 	private static final String dataNodeType = "DataNode";
-	
-	private static String regex= null;
-	private static Pattern p = null;
-	
-	private Matcher matcher = null;
+	private static final String auditType = "Audit";
 	private SimpleDateFormat sdf = null;
 	
 	
@@ -53,54 +46,46 @@ public class HadoopLogProcessor extends AbstractProcessor
 	{
 		//TODO move that to config
 		sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
-		regex="([0-9]{4}\\-[0-9]{2}\\-[0-9]{2} [0-9]{2}\\:[0-9]{2}:[0-9]{2},[0-9]{3}) (INFO|DEBUG|ERROR|WARN) (.*?): ((.*)\n*)*\\z";
-		p = Pattern.compile(regex);
-		matcher = p.matcher("-");
 	}
 	
 	@Override
-	public void parse(String line, OutputCollector<Text, ChukwaRecord> output,
+	public void parse(String recordEntry, OutputCollector<ChukwaRecordKey, ChukwaRecord> output,
 			Reporter reporter)
+	 throws Throwable
 	{
-		log.info("record: [" + line + "] type[" + chunk.getDataType() + "]");
-		
-		ChukwaRecord record = new ChukwaRecord();
-		
-		matcher.reset(line);
-		if (matcher.matches())
-		{
 			try
 			{
-				Date d = sdf.parse( matcher.group(0).trim());
-				if (this.chunk.getStreamName().indexOf("datanode") > 0)
-				{
-					buildGenericRecord(record,line,d.getTime(),dataNodeType);
-				}
-				else if (this.chunk.getStreamName().indexOf("namenode") > 0)
-				{
-					buildGenericRecord(record,line,d.getTime(),nameNodeType);
-				}
-				else
-				{
-					buildGenericRecord(record,line,d.getTime(),recordType);
+				String dStr = recordEntry.substring(0, 23);
+				Date d = sdf.parse(dStr);
+				ChukwaRecord record = new ChukwaRecord();
+
+				if (this.chunk.getStreamName().indexOf("datanode") > 0) {
+					buildGenericRecord(record,recordEntry,d.getTime(),dataNodeType);
+				} else if (this.chunk.getStreamName().indexOf("namenode") > 0) {
+					buildGenericRecord(record,recordEntry,d.getTime(),nameNodeType);
+				} else if (this.chunk.getStreamName().indexOf("audit") > 0) {
+					buildGenericRecord(record,recordEntry,d.getTime(),auditType);
+				} else {
+					buildGenericRecord(record,recordEntry,d.getTime(),recordType);
 				}
 				
-				key.set("" + d.getTime());
-				record.add(Record.logLevelField, "" +matcher.group(2));
-				record.add(Record.classField, "" +matcher.group(3));
-				record.add(Record.bodyField, "" +matcher.group(4));
+				
 				output.collect(key, record);
 			}
 			catch (ParseException e)
 			{
+				log.warn("Unable to parse the date in DefaultProcessor ["
+						+ recordEntry + "]", e);
 				e.printStackTrace();
+				throw e;
 			}
 			catch (IOException e)
 			{
+				log.warn("Unable to collect output in DefaultProcessor ["
+						+ recordEntry + "]", e);
 				e.printStackTrace();
-			}
-		}
-		
+				throw e;
+			}		
 	}
 
 	public String getDataType()

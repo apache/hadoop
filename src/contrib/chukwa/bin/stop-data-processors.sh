@@ -22,24 +22,52 @@ java=$JAVA_HOME/bin/java
 . "$bin"/chukwa-config.sh
 
 # stop processSinkFiles.sh
-pidFile=$CHUKWA_HOME/var/run/ProcessSinkFiles.pid
+pidFile=$CHUKWA_PID_DIR/ProcessSinkFiles.pid
 if [ -f $pidFile ]; then  
    echo -n "Shutting down Data Processors.."
    DP_PID=`head ${pidFile}`
    kill -TERM ${DP_PID}
-   rm ${pidFile}
+   for i in 1 2 5; do
+       test_pid=`ps ax | grep ${DP_PID} | grep -v grep | grep processSinkFiles.sh | wc -l`
+       if [ $test_pid -ge 1 ]; then
+           sleep $i
+           kill -TERM ${DP_PID}
+       else
+           break
+       fi
+   done
+   test_pid=`ps ax | grep ${DP_PID} | grep -v grep | grep processSinkFiles.sh | wc -l`
+   if [ $test_pid -ge 1 ]; then
+       kill -9 ${DBADMIN_PID} &>/dev/null
+   fi
+   rm -f ${pidFile}
+   rm -f $CHUKWA_PID_DIR/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid
    echo "done"
 else
   echo " no $pidFile"
 fi
 
 # stop dbAdmin.sh
-pidFile=$CHUKWA_HOME/var/run/dbAdmin.pid
+pidFile=$CHUKWA_PID_DIR/dbAdmin.pid
 if [ -f $pidFile ]; then  
    echo -n "Shutting down Database Admin.."
    DBADMIN_PID=`head ${pidFile}`
    kill -TERM ${DBADMIN_PID}
-   rm ${pidFile}
+   for i in 1 2 5; do
+       test_pid=`ps ax | grep ${DBADMIN_PID} | grep -v grep | grep dbAdmin.sh | wc -l`
+       if [ $test_pid -ge 1 ]; then
+           sleep $i
+           kill -TERM ${DBADMIN_PID}
+       else
+           break
+       fi
+   done
+   test_pid=`ps ax | grep ${DBADMIN_PID} | grep -v grep | grep dbAdmin.sh | wc -l`
+   if [ $test_pid -ge 1 ]; then
+       kill -9 ${DBADMIN_PID} &>/dev/null
+   fi
+   rm -f ${pidFile}
+   rm -f $CHUKWA_PID_DIR/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid
    echo "done"
 else
   echo " no $pidFile"

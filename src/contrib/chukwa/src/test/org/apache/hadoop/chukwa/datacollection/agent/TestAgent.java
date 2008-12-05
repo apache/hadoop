@@ -41,11 +41,10 @@ public class TestAgent extends TestCase {
       ChukwaAgentController cli = new ChukwaAgentController("localhost", portno);
       
       for(int i=1; i < 20; ++i) {
-        cli.add("org.apache.hadoop.chukwa.util.ConstRateAdaptor", "raw" + i, "20000", 0);
-        assertTrue(agent.adaptorCount() == 1);
+        long adaptorId = cli.add("org.apache.hadoop.chukwa.util.ConstRateAdaptor", "raw" + i, "2000" + i, 0);
+        assertTrue(adaptorId != -1);
         Thread.sleep(2000);   
         cli.removeAll();
-        assertTrue(agent.adaptorCount() == 0);
       }
       agent.shutdown();
       conn.shutdown();
@@ -61,26 +60,30 @@ public class TestAgent extends TestCase {
       ChukwaAgent agent = new ChukwaAgent();
       ConsoleOutConnector conn = new ConsoleOutConnector(agent, true);
       conn.start();
-      
+      int count = agent.adaptorCount();
       for(int trial=0; trial < 20; ++trial) {
         ArrayList<Long> runningAdaptors = new ArrayList<Long>();
        
         for(int i = 1; i < 7; ++i) {
-          long l = agent.processCommand("add org.apache.hadoop.chukwa.util.ConstRateAdaptor raw"+i+ " 20000 0");
-          assertTrue(agent.adaptorCount() == i); 
+          long l = agent.processCommand("add org.apache.hadoop.chukwa.util.ConstRateAdaptor raw"+i+ " 2000"+i+" 0");
           assertTrue(l != -1);
           runningAdaptors.add(l);
         }
         Thread.sleep(1000);   
         for(Long l: runningAdaptors)
-          agent.stopAdaptor(l, true);
-        assertTrue(agent.adaptorCount() == 0);
+          agent.stopAdaptor(l, false);
+        Thread.sleep(5000);
+        assertTrue(agent.adaptorCount() == count);
       }
       agent.shutdown();
     } catch(Exception e) {
       e.printStackTrace();
       fail(e.toString());
     }
+  }
+  
+  public void testLogRotate() {
+
   }
 
 }

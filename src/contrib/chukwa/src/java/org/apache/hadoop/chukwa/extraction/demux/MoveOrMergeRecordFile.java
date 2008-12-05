@@ -23,17 +23,19 @@ import java.net.URI;
 
 import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
@@ -41,6 +43,11 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class MoveOrMergeRecordFile extends Configured implements Tool
 {
+	static ChukwaConfiguration conf = null;
+	static FileSystem fs = null;
+	static final String HadoopLogDir = "_logs";
+	static final String hadoopTempDir = "_temporary";
+	
 	public int run(String[] args) throws Exception
 	{
 		JobConf conf = new JobConf(getConf(), MoveOrMergeRecordFile.class);
@@ -54,9 +61,9 @@ public class MoveOrMergeRecordFile extends Configured implements Tool
 		//conf.setPartitionerClass(ChukwaPartitioner.class);
 		//conf.setOutputFormat(ChukwaOutputFormat.class);
 		
-		conf.setOutputKeyClass(Text.class);
+		conf.setOutputKeyClass(ChukwaRecordKey.class);
 		conf.setOutputValueClass(ChukwaRecord.class);
-		
+		conf.setOutputFormat(SequenceFileOutputFormat.class);
 		
 		FileInputFormat.setInputPaths(conf, args[0]);
 		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
@@ -65,23 +72,15 @@ public class MoveOrMergeRecordFile extends Configured implements Tool
 		return 0;
 	}
 
-	/**
-	 * @param args
-	 * @throws Exception 
-	 */
-	public static void main(String[] args) throws Exception
+	
+    static void moveOrMergeOneCluster(Path srcDir,String destDir) throws Exception
 	{
-		ChukwaConfiguration conf = new ChukwaConfiguration();
-		String fsName = conf.get("writer.hdfs.filesystem");
-		FileSystem fs = FileSystem.get(new URI(fsName), conf);
-		Path srcDir = new Path(args[0]);
-		String destDir = args[1];
-		
+		System.out.println("moveOrMergeOneCluster (" + srcDir.getName() + "," + destDir +")");
 		FileStatus fstat = fs.getFileStatus(srcDir);
 		
 		if (!fstat.isDir())
 		{
-			throw new IOException(args[0] + " is not a directory!");
+			throw new IOException(srcDir + " is not a directory!");
 		}
 		else
 		{
@@ -95,11 +94,6 @@ public class MoveOrMergeRecordFile extends Configured implements Tool
 				}
 				
 				String dirName = datasourceDirectory.getPath().getName();
-				
-				if (dirName.equals("_logs"))
-				{
-					continue;
-				}
 				
 				Path destPath = new Path(destDir + "/" + dirName);
 				System.out.println("dest directory path: " + destPath);
@@ -121,7 +115,8 @@ public class MoveOrMergeRecordFile extends Configured implements Tool
 					if (!fs.exists(destFilePath))
 					{
 						System.out.println("Moving File: [" + destFilePath +"]");
-						fs.rename(eventFilePath, destFilePath);
+						// Copy to final Location 
+						FileUtil.copy(fs,eventFilePath,fs,destFilePath,false,false,conf);
 					}
 					else
 					{
@@ -132,32 +127,109 @@ public class MoveOrMergeRecordFile extends Configured implements Tool
 						// Create MR input Dir
 						fs.mkdirs(mrPath);
 						// Move Input files 
-						fs.rename(eventFilePath, new Path(strMrPath+"/1.done"));
-						fs.rename(destFilePath, new Path(strMrPath+"/2.done"));
+						FileUtil.copy(fs,eventFilePath,fs,new Path(strMrPath+"/1.evt"),false,false,conf);
+						fs.rename(destFilePath, new Path(strMrPath+"/2.evt"));
 						
 						// Merge
 						String[] mergeArgs = new String[2];
 						mergeArgs[0] = strMrPath;
 						mergeArgs[1] = strMrPath + "/mrOutput";
-						System.out.println("\t Running Merge! : output [" + mergeArgs[1] +"]");
-						int res = ToolRunner.run(new ChukwaConfiguration(),new MoveOrMergeRecordFile(), mergeArgs);
-						System.out.println("MR exit status: " + res);
-						if (res == 0)
-						{
-							System.out.println("\t Moving output file : to [" + destFilePath +"]");
-							fs.rename(new Path(mergeArgs[1]+"/part-00000"), destFilePath);
-						}
-						else
-						{
-							throw new RuntimeException("Error in M/R merge operation!");
-						}
+						DoMerge merge = new DoMerge(conf,fs,eventFilePath,destFilePath,mergeArgs);
+						merge.start();
 					}
 				}
 			}
 		}
-		System.out.println("Done with mapred main()");
+
+	}
+    
+	/**
+	 * @param args
+	 * @throws Exception 
+	 */
+	public static void main(String[] args) throws Exception
+	{
+		conf = new ChukwaConfiguration();
+		String fsName = conf.get("writer.hdfs.filesystem");
+		fs = FileSystem.get(new URI(fsName), conf);
+		
+		Path srcDir = new Path(args[0]);
+		String destDir = args[1];
+		
+		
+		FileStatus fstat = fs.getFileStatus(srcDir);
+		
+		if (!fstat.isDir())
+		{
+			throw new IOException(srcDir + " is not a directory!");
+		}
+		else
+		{
+			FileStatus[] clusters = fs.listStatus(srcDir);
+			// Run a moveOrMerge on all clusters
+			String name = null;
+			for(FileStatus cluster : clusters)
+			{
+				name = cluster.getPath().getName();
+				// Skip hadoop outDir
+				if ( (name.intern() == HadoopLogDir.intern() ) || (name.intern() == hadoopTempDir.intern()) )
+				{
+					continue;
+				}
+				moveOrMergeOneCluster(cluster.getPath(),destDir + "/" + cluster.getPath().getName());
+			}
+		}
+		System.out.println("Done with moveOrMerge main()");
 	}
 }
+
+
+class DoMerge extends Thread
+{
+	ChukwaConfiguration conf = null;
+	FileSystem fs = null;
+	String[] mergeArgs = new String[2];
+	Path destFilePath = null;
+	Path eventFilePath = null;
+	public DoMerge(ChukwaConfiguration conf,FileSystem fs,
+			Path eventFilePath,Path destFilePath,String[] mergeArgs)
+	{
+		this.conf = conf;
+		this.fs = fs;
+		this.eventFilePath = eventFilePath;
+		this.destFilePath = destFilePath;
+		this.mergeArgs = mergeArgs;
+	}
+	@Override
+	public void run()
+	{
+		System.out.println("\t Running Merge! : output [" + mergeArgs[1] +"]");
+		int res;
+		try
+		{
+			res = ToolRunner.run(new ChukwaConfiguration(),new MoveOrMergeRecordFile(), mergeArgs);
+			System.out.println("MR exit status: " + res);
+			if (res == 0)
+			{
+				System.out.println("\t Moving output file : to [" + destFilePath +"]");
+				FileUtil.copy(fs,new Path(mergeArgs[1]+"/part-00000"),fs,destFilePath,false,false,conf);
+				fs.rename(new Path(mergeArgs[1]+"/part-00000"), eventFilePath);
+			}
+			else
+			{
+				throw new RuntimeException("Error in M/R merge operation!");
+			}
+
+		} 
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			throw new RuntimeException("Error in M/R merge operation!",e);
+		}
+	}
+	
+}
+
 
 class EventFileFilter implements PathFilter {
 	  public boolean accept(Path path) {

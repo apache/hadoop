@@ -35,18 +35,24 @@ public class MaxRateSender  extends Thread implements Adaptor {
   private long offset;
   private String type;
   ChunkReceiver dest;
+  private long adaptorID;
   
   public String getCurrentStatus() throws AdaptorException {
     return "";
   }
 
-  public void start(String type, String status, long offset, ChunkReceiver dest) throws AdaptorException
+  public void start(long adaptor, String type, String status, long offset, ChunkReceiver dest) throws AdaptorException
   {
     this.setName("MaxRateSender adaptor");
+    this.adaptorID = adaptor;
     this.offset = offset;
     this.type = type;
     this.dest = dest;
     super.start();  //this is a Thread.start
+  }
+  
+  public String getStreamName() {
+	  return type;
   }
   
   public void run()

@@ -23,8 +23,11 @@ import java.util.TreeMap;
 
 
 
+
 public interface SearchResult
 {
+	public void setToken(Token token);
+	public Token getToken();
 	public TreeMap<Long, List<Record>> getRecords();
 	public void setRecords(TreeMap<Long, List<Record>> records);
 }

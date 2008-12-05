@@ -21,11 +21,17 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "${CHUKWA_PID_DIR}/Collector.pid"
+trap 'stop; exit 0' 1 2 15
 
+function stop {
+  echo -n "Shutting down Collector..."
+  ${JPS} | grep CollectorStub | cut -f 1 -d" " | xargs kill -TERM >&/dev/null
+  echo "done"
+  exit 0
+}
 
-if [ $# -lt 1 ]; then 
-${JAVA_HOME}/bin/java -classpath ${CLASSPATH}:${chukwaCore}:${common}:${HADOOP_JAR}:${CHUKWA_HOME}/conf:${HADOOP_HOME}/conf org.apache.hadoop.chukwa.datacollection.collector.CollectorStub 9310
-else
-${JAVA_HOME}/bin/java -classpath ${CLASSPATH}:${chukwaCore}:${common}:${HADOOP_JAR}:${CHUKWA_HOME}/conf:${HADOOP_HOME}/conf org.apache.hadoop.chukwa.datacollection.collector.CollectorStub $@
+if [ "X$1" = "Xstop" ]; then
+  stop
 fi
+
+${JAVA_HOME}/bin/java -DAPP=collector -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.datacollection.collector.CollectorStub 

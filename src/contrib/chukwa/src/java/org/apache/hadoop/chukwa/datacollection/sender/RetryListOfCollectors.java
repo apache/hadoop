@@ -22,12 +22,15 @@ import java.io.*;
 import java.net.URL;
 import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
+
 /***
  * An iterator returning a list of Collectors to try.
  * This class is nondeterministic, since it puts collectors back on the list after some period.
  * 
  * No node will be polled more than once per maxRetryRateMs milliseconds. hasNext() will continue return
  * true if you have not called it recently.
+ *
  *
  */
 public class RetryListOfCollectors implements Iterator<String> {
@@ -36,25 +39,39 @@ public class RetryListOfCollectors implements Iterator<String> {
   List<String> collectors;
   long lastLookAtFirstNode;
   int nextCollector=0;
+  private String portNo; 
+  Configuration conf;
   
-
   public RetryListOfCollectors(File collectorFile, int maxRetryRateMs) throws IOException {
     this.maxRetryRateMs = maxRetryRateMs;
     lastLookAtFirstNode = 0;
     collectors = new ArrayList<String>();
+    conf = new Configuration();
+    portNo = conf.get("chukwaCollector.http.port","8080");
     
     try{
       BufferedReader br  = new BufferedReader(new FileReader(collectorFile));
       String line;
       while((line = br.readLine()) != null) {
-        if(!line.contains("://")) //no protocol, assume http
-          collectors.add("http://"+line);
-        else
-          collectors.add(line);
+        if(!line.contains("://")) { 
+        	//no protocol, assume http
+        	if(line.matches(":\\d+")) {
+                collectors.add("http://" + line);
+        	} else {
+                collectors.add("http://" + line + ":" + portNo + "/");
+        	}
+        } else {
+        	if(line.matches(":\\d+")) {
+                collectors.add(line);
+        	} else {
+                collectors.add(line + ":" + portNo + "/");
+        	}
+        	collectors.add(line);
+        }
       }
       br.close();
     }catch(FileNotFoundException e){
-      System.err.println("Error in RetryListOfCollectors() opening file conf/connectors file from agent, double check that you have set the CHUKWA_HOME environment variable. Also, ensure file exists and is in classpath");
+      System.err.println("Error in RetryListOfCollectors() opening file: collectors, double check that you have set the CHUKWA_CONF_DIR environment variable. Also, ensure file exists and is in classpath");
     }catch(IOException e){
       System.err.println("I/O error in RetryListOfcollectors instantiation in readLine() from specified collectors file");
       throw e;

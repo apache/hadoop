@@ -23,6 +23,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.hadoop.chukwa.datacollection.DataFactory;
 import org.apache.hadoop.chukwa.datacollection.ChunkQueue;
+import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
+import org.apache.hadoop.conf.Configuration;
+import org.mortbay.log.Log;
 
 /**
  * A shared thread used by all FileTailingAdaptors. 
@@ -40,21 +43,32 @@ class FileTailer extends Thread {
   /**
    * How often to tail each file.
    */
-  int SAMPLE_PERIOD_MS = 1000* 2; //FIXME: should be configurable
+  int DEFAULT_SAMPLE_PERIOD_MS = 1000* 2;
+  int SAMPLE_PERIOD_MS = DEFAULT_SAMPLE_PERIOD_MS;
+  private static Configuration conf = null;
   
   FileTailer() {
-     eq = DataFactory.getInstance().getEventQueue();
+	if (conf == null) {
+	  ChukwaAgent agent = ChukwaAgent.getAgent();
+	  if (agent != null) {
+		conf = agent.getConfiguration();
+    	if (conf != null) {
+    	  SAMPLE_PERIOD_MS= conf.getInt("chukwaAgent.adaptor.context.switch.time", DEFAULT_SAMPLE_PERIOD_MS);
+        }
+	  }
+	}
+    eq = DataFactory.getInstance().getEventQueue();
      
-       //iterations are much more common than adding a new adaptor
-     adaptors = new CopyOnWriteArrayList<FileTailingAdaptor>();
+    //iterations are much more common than adding a new adaptor
+    adaptors = new CopyOnWriteArrayList<FileTailingAdaptor>();
 
-     this.setDaemon(true);
-     start();//start the file-tailing thread
+    this.setDaemon(true);
+    start();//start the file-tailing thread
   }
    
   //called by FileTailingAdaptor, only
    void startWatchingFile(FileTailingAdaptor f) {
-       adaptors.add(f);
+     adaptors.add(f);
    }
 
    //called by FileTailingAdaptor, only
@@ -64,7 +78,7 @@ class FileTailer extends Thread {
    
   public void run()  {
     try{
-      while(true) {
+      while(true) {    	  
         boolean shouldISleep = true;
         long startTime = System.currentTimeMillis();
         for(FileTailingAdaptor f: adaptors) {
@@ -72,13 +86,12 @@ class FileTailer extends Thread {
           shouldISleep &= !hasMoreData;
         }
         long timeToReadFiles = System.currentTimeMillis() - startTime;
-        assert timeToReadFiles >= 0 : " time shouldn't go backwards";
-        if(timeToReadFiles < SAMPLE_PERIOD_MS && shouldISleep)
-          Thread.sleep(SAMPLE_PERIOD_MS - timeToReadFiles+1);
+        if(timeToReadFiles < SAMPLE_PERIOD_MS || shouldISleep) {
+          Thread.sleep(SAMPLE_PERIOD_MS);
+        }
       }
+    } catch(InterruptedException e) {
     }
-    catch(InterruptedException e)
-    {}
   }
   
   

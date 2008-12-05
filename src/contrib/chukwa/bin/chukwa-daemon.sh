@@ -98,25 +98,31 @@ case $startStop in
   (start)
     MAIL=`cat ${CHUKWA_HOME}/conf/alert.conf`
 
+    RANDOM=`date '+%s'`
+    PARTROL_HOUR=$[($RANDOM % 24)]
+    if [ ${PARTROL_HOUR} -gt 12 ]; then
+        PARTROL_HOUR2=$[${PARTROL_HOUR}-12]
+    else 
+        PARTROL_HOUR2=$[${PARTROL_HOUR}+12]
+    fi
     if [ "${WATCHDOG}" != "" ]; then
         mkdir -p ${CHUKWA_HOME}/var/tmp >&/dev/null
         crontab -l > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
         crontest=$?
 
         if [ "X${crontest}" != "X0" ]; then
-          cat > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
-MAILTO=${MAIL}
-1,30 * * * * ${CHUKWA_HOME}/bin/watchdog.sh
-CRON
+          echo "MAILTO=${MAIL}" > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
         else
-          grep -v "${CHUKWA_HOME}/bin/watchdog.sh" ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} | grep -v MAILTO > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2
+          grep -v "${CHUKWA_HOME}/bin/watchdog.sh" ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} | grep -v MAILTO | grep -v "cat ${CHUKWA_HOME}/var/run/watchdog.out" | grep -v ${CHUKWA_HOME}/tools/expire.sh > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2
           echo "MAILTO=${MAIL}" > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
           cat ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2 >> ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
           rm -f ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2
-          cat >> ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
-1,30 * * * * ${CHUKWA_HOME}/bin/watchdog.sh
-CRON
         fi
+        cat >> ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
+*/5 * * * * ${CHUKWA_HOME}/bin/watchdog.sh > ${CHUKWA_HOME}/var/run/watchdog.out
+1 ${PARTROL_HOUR},${PARTROL_HOUR2} * * * /bin/bash -c "cat ${CHUKWA_HOME}/var/run/watchdog.out; cat /dev/null > ${CHUKWA_HOME}/var/run/watchdog.out"
+15 3 * * * ${CHUKWA_HOME}/tools/expire.sh 10 ${CHUKWA_LOG_DIR} nowait
+CRON
 
         # save crontab
         echo -n "Registering watchdog.."
@@ -152,7 +158,7 @@ CRON
 
     if [ "${WATCHDOG}" != "" ]; then
         # remove watchdog
-        crontab -l | grep -v ${CHUKWA_HOME}/bin/watchdog.sh > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
+        crontab -l | grep -v ${CHUKWA_HOME}/bin/watchdog.sh | grep -v ${CHUKWA_HOME}/var/run/watchdog.out | grep -v ${CHUKWA_HOME}/tools/expire.sh > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
         crontab ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
         rm -f ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
     fi

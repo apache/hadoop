@@ -19,11 +19,24 @@
 package org.apache.hadoop.chukwa.datacollection.controller;
 
 
-import java.net.*;
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
+import org.apache.log4j.Logger;
 
 /**
  * A convenience library for applications to communicate to the {@link ChukwaAgent}. Can be used
@@ -31,14 +44,16 @@ import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
  * use for handling log rations.  
  */
 public class ChukwaAgentController {
-  
-  public class AddAdaptorTask extends TimerTask {
-    String adaptorName;
-    String type;
-    String params;
-    long offset;
-    long numRetries;
-    long retryInterval;
+	static Logger log = Logger.getLogger(ChukwaAgentController.class);
+  public class AddAdaptorTask extends TimerTask 
+  {
+	  	
+	    String adaptorName;
+	    String type;
+	    String params;
+	    long offset;
+	    long numRetries;
+	    long retryInterval;
     
     AddAdaptorTask(String adaptorName, String type, String params,
         long offset, long numRetries, long retryInterval){
@@ -50,8 +65,18 @@ public class ChukwaAgentController {
       this.retryInterval = retryInterval;
     }
     @Override
-    public void run() {
-      add(adaptorName, type, params, offset, numRetries, retryInterval);
+    public void run() 
+    {
+    	try
+    	{
+    		log.info("Trying to resend the add command [" + adaptorName + "][" + offset + "][" + params +"] [" + numRetries+"]");
+    		add(adaptorName, type, params, offset, numRetries, retryInterval);
+    	}
+    	catch(Exception e)
+    	{
+    		log.warn("Exception in AddAdaptorTask.run", e);
+    		e.printStackTrace();
+    	} 
     }
   }
 
@@ -148,7 +173,7 @@ public class ChukwaAgentController {
   Map<Long, ChukwaAgentController.Adaptor> pausedAdaptors;
   String hostname;
   int portno;
-  private Timer addFileTimer = new Timer();
+  
   
   public ChukwaAgentController(){
     portno = DEFAULT_PORT;
@@ -218,6 +243,7 @@ public class ChukwaAgentController {
          System.out.println("Scheduling a agent connection retry for adaptor add() in another " +
              retryInterval + " milliseconds, " + numRetries + " retries remaining");
          
+         Timer addFileTimer = new Timer();
          addFileTimer.schedule(new AddAdaptorTask(adaptorName, type, params, offset, numRetries-1, retryInterval), retryInterval);
        }
      }else{

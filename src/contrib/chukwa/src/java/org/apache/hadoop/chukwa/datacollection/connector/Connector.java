@@ -42,5 +42,6 @@ public interface Connector
 
 	
 	public void start();
-  public void shutdown();
+    public void shutdown();
+    public void reloadConfiguration();
 }

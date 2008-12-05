@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.chukwa.datacollection.collector.servlet;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -27,26 +33,30 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.ChunkImpl;
 import org.apache.hadoop.chukwa.datacollection.writer.SeqFileWriter;
+import org.apache.hadoop.chukwa.datacollection.writer.WriterException;
 import org.apache.log4j.Logger;
 
 public class ServletCollector extends HttpServlet
 {
 
-  static final boolean FANCY_DIAGNOSTICS = true;
+  static final boolean FANCY_DIAGNOSTICS = false;
 	static org.apache.hadoop.chukwa.datacollection.writer.ChukwaWriter writer = null;
 	 
   private static final long serialVersionUID = 6286162898591407111L;
   Logger log = Logger.getRootLogger();//.getLogger(ServletCollector.class);
-	  
   
-	public static void setWriter(org.apache.hadoop.chukwa.datacollection.writer.ChukwaWriter w) throws IOException
+	public static void setWriter(org.apache.hadoop.chukwa.datacollection.writer.ChukwaWriter w) throws WriterException
 	{
 	  writer = w;
 	  w.init();
 	}
-  
+	static long statTime = 0L;
+	static int numberHTTPConnection = 0;
+	static int numberchunks = 0;
+	
 	public void init(ServletConfig servletConf) throws ServletException
 	{
 	  
@@ -55,6 +65,20 @@ public class ServletCollector extends HttpServlet
 			log.fatal("no servlet config");
 			return;
 		}
+		
+		
+		Timer statTimer = new Timer();
+		statTimer.schedule(new TimerTask()
+		{
+			public void run() 
+			{
+				log.info("stats:ServletCollector,numberHTTPConnection:" + numberHTTPConnection
+						 + ",numberchunks:"+numberchunks);
+				statTime = System.currentTimeMillis();
+				numberHTTPConnection = 0;
+				numberchunks = 0;
+			}
+		}, (1000), (60*1000));
 		
 		try
 		{
@@ -81,56 +105,75 @@ public class ServletCollector extends HttpServlet
 			if (writer == null)
 				writer =  new SeqFileWriter();
 
-		} catch (IOException e) {
+		} catch (WriterException e) {
 			throw new ServletException("Problem init-ing servlet", e);
 		}		
 	}
 
 	protected void accept(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException
+	throws ServletException
 	{
-	  ServletDiagnostics diagnosticPage = new ServletDiagnostics();
+		numberHTTPConnection ++;
+		ServletDiagnostics diagnosticPage = new ServletDiagnostics();
+		final long currentTime = System.currentTimeMillis();
 		try {
-	    
-		  final long currentTime = System.currentTimeMillis();
-		  log.debug("new post from " + req.getRemoteHost() + " at " + currentTime);
+
+			log.debug("new post from " + req.getRemoteHost() + " at " + currentTime);
 			java.io.InputStream in = req.getInputStream();
-						
+
 			ServletOutputStream l_out = resp.getOutputStream();
 			final DataInputStream di = new DataInputStream(in);
 			final int numEvents = di.readInt();
-		  //	log.info("saw " + numEvents+ " in request");
+			//	log.info("saw " + numEvents+ " in request");
 
-      if(FANCY_DIAGNOSTICS)
-        diagnosticPage.sawPost(req.getRemoteHost(), numEvents, currentTime);
-			for (int i = 0; i < numEvents; i++){
-				// TODO: pass new data to all registered stream handler methods for this chunk's stream
+			if(FANCY_DIAGNOSTICS)
+			{ diagnosticPage.sawPost(req.getRemoteHost(), numEvents, currentTime); }
+
+			List<Chunk> events = new LinkedList<Chunk>();
+			ChunkImpl logEvent = null;
+			StringBuilder sb = new StringBuilder();
+
+			for (int i = 0; i < numEvents; i++)
+			{
+				// TODO: pass new data to all registered stream handler 
+			  //       methods for this chunk's stream
 				// TODO: should really have some dynamic assignment of events to writers
 
-	      ChunkImpl logEvent =  ChunkImpl.read(di);
+				logEvent =  ChunkImpl.read(di);
+				sb.append("ok:");
+				sb.append(logEvent.getData().length);
+				sb.append(" bytes ending at offset ");
+				sb.append(logEvent.getSeqID()-1).append("\n");
 
-	      if(FANCY_DIAGNOSTICS)
-	        diagnosticPage.sawChunk(logEvent, i);
-	      
-				// write new data to data sync file
-				if(writer != null) {
-				  writer.add(logEvent);  //save() blocks until data is written
-				  //this is where we ACK this connection
-					l_out.print("ok:");
-					l_out.print(logEvent.getData().length);
-					l_out.print(" bytes ending at offset ");
-					l_out.println(logEvent.getSeqID()-1);
-				}
-				else
-					l_out.println("can't write: no writer");	
+				events.add(logEvent);
+
+				if(FANCY_DIAGNOSTICS)
+				{ diagnosticPage.sawChunk(logEvent, i); }
 			}
 
-      if(FANCY_DIAGNOSTICS)
-        diagnosticPage.doneWithPost();
-	    resp.setStatus(200);
-			
-		} catch (IOException e) 	{
-			log.warn("IO error", e);
+			// write new data to data sync file
+			if(writer != null) 
+			{
+				writer.add(events);
+				numberchunks += events.size();
+				//this is where we ACK this connection
+				l_out.print(sb.toString());
+			}
+			else
+			{
+				l_out.println("can't write: no writer");
+			}
+
+
+			if(FANCY_DIAGNOSTICS)
+			{ diagnosticPage.doneWithPost(); }
+
+			resp.setStatus(200);
+
+		} 
+		catch(Throwable e) 
+		{
+			log.warn("Exception talking to " +req.getRemoteHost() + " at " + currentTime , e);
 			throw new ServletException(e);
 		}
 	}
@@ -147,16 +190,30 @@ public class ServletCollector extends HttpServlet
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 	{
-	  PrintStream out = new PrintStream(resp.getOutputStream());
-    resp.setStatus(200);
-	  out.println("<html><body><h2>Chukwa servlet running</h2>");
-	  if(FANCY_DIAGNOSTICS)
-	    ServletDiagnostics.printPage(out);
-	  out.println("</body></html>");
-//		accept(req,resp);
+	
+		PrintStream out = new PrintStream(resp.getOutputStream());
+		resp.setStatus(200);
+		
+	  String pingAtt = req.getParameter("ping");
+	  if (pingAtt!=null)
+	  {
+		  out.println("Date:" + ServletCollector.statTime);
+		  out.println("Now:" + System.currentTimeMillis());
+		  out.println("numberHTTPConnection:" + ServletCollector.numberHTTPConnection);
+		  out.println("numberchunks:" + ServletCollector.numberchunks);
+	  }
+	  else
+	  {
+		  out.println("<html><body><h2>Chukwa servlet running</h2>");
+		  if(FANCY_DIAGNOSTICS)
+		    ServletDiagnostics.printPage(out);
+		  out.println("</body></html>");
+	  }
+    
+	  
 	}
 
-  @Override	
+    @Override	
 	public String getServletInfo()
 	{
 		return "Chukwa Servlet Collector";
@@ -165,10 +222,14 @@ public class ServletCollector extends HttpServlet
 	@Override
 	public void destroy()
 	{
-	  synchronized(writer)
-	  {
-	    writer.close();
-	  }
+	  try
+	{
+		writer.close();
+	} catch (WriterException e)
+	{
+		log.warn("Exception during close", e);
+		e.printStackTrace();
+	}
 	  super.destroy();
 	}
 }

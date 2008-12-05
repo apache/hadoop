@@ -18,28 +18,30 @@
 
 package org.apache.hadoop.chukwa.extraction.demux;
 
-import org.apache.hadoop.chukwa.extraction.engine.Record;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;
 import org.apache.log4j.Logger;
 
-public class ChukwaRecordPartitioner<Text, ChukwaRecord> implements Partitioner<org.apache.hadoop.io.Text, org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord>
+public class ChukwaRecordPartitioner<K, V> 
+	implements Partitioner<ChukwaRecordKey, ChukwaRecord>
 {
 	static Logger log = Logger.getLogger(ChukwaRecordPartitioner.class);
 	public void configure(JobConf arg0)
 	{}
 
-	public int getPartition(org.apache.hadoop.io.Text key,
+	public int getPartition(org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey key,
 			org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord record, int numReduceTasks)
 	{
-		if (!record.containsField(Record.dataSourceField))
+		if (log.isDebugEnabled())
 		{
-			throw new RuntimeException("PartitionerField not set!");
+
+			log.debug("Partitioner key: [" + key.getReduceType() 
+					+ "] - Reducer:"
+					+ ( (key.getReduceType().hashCode() & Integer.MAX_VALUE) % numReduceTasks));	
 		}
-		//FIXME remove before production or set to debug level
-		log.info("Partitioner key: [" + record.getValue(Record.dataSourceField) + "] - Reducer:" + ( (record.getValue(Record.dataSourceField).hashCode() & Integer.MAX_VALUE) % numReduceTasks));
-		
-		return (record.getValue(Record.dataSourceField).hashCode() & Integer.MAX_VALUE) % numReduceTasks;
+		return (key.getReduceType().hashCode() & Integer.MAX_VALUE) % numReduceTasks;
 	}
 
 }

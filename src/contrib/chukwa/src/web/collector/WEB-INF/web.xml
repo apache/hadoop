@@ -16,7 +16,7 @@
       <servlet-class>org.apache.hadoop.chukwa.datacollection.collector.servlet.ServletCollector</servlet-class>
           <init-param>
             <param-name>chukwaCollector.outputDir</param-name>
-            <param-value>hdfs://localhost:9000/user/jboulon/chukwa/logs</param-value>
+            <param-value>hdfs://localhost:9000/chukwa/logs</param-value>
           </init-param>
           <init-param>
             <param-name>chukwaCollector.rotateInterval</param-name>

@@ -25,4 +25,5 @@ bin=`cd "$bin"; pwd`
 
 "$bin"/stop-probes.sh --config $CHUKWA_CONF_DIR
 "$bin"/stop-data-processors.sh --config $CHUKWA_CONF_DIR
+"$bin"/stop-agents.sh --config $CHUKWA_CONF_DIR
 "$bin"/stop-collectors.sh --config $CHUKWA_CONF_DIR

@@ -26,4 +26,3 @@ bin=`cd "$bin"; pwd`
 "$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR stop systemDataLoader.sh
 "$bin"/chukwa-daemon.sh --config $CHUKWA_CONF_DIR stop torqueDataLoader.sh
 "$bin"/chukwa-daemon.sh --config $CHUKWA_CONF_DIR stop nodeActivityDataLoader.sh
-"$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR --watchdog stop agent.sh

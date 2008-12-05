@@ -31,6 +31,7 @@ public class ChukwaArchiveDailyOutputFormat extends MultipleSequenceFileOutputFo
 	static Logger log = Logger.getLogger(ChukwaArchiveDailyOutputFormat.class);
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
+	
 	@Override
 	protected String generateFileNameForKeyValue(ChukwaArchiveKey key, ChunkImpl chunk,
 			String name)
@@ -38,6 +39,7 @@ public class ChukwaArchiveDailyOutputFormat extends MultipleSequenceFileOutputFo
 		
 		if (log.isDebugEnabled())
 			{log.debug("ChukwaArchiveOutputFormat.fileName: " + sdf.format(key.getTimePartition()));}
+		
 		return sdf.format(key.getTimePartition()) + ".arc";
 	}
 }

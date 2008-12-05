@@ -56,15 +56,18 @@ public class HttpConnector implements Connector, Runnable  {
 
   static Timer statTimer = null;
   static volatile int chunkCount = 0;
-  static final int MAX_EVENTS_PER_POST = 1000;
-  static final int MIN_POST_INTERVAL= 4 * 1000;
+  static final int MAX_SIZE_PER_POST = 2*1024*1024;
+  static final int MIN_POST_INTERVAL= 5 * 1000;
   static ChunkQueue chunkQueue;
   
   ChukwaAgent agent;
   String argDestination = null;
   
   private boolean stopMe = false;
-
+  private boolean reloadConfiguration = false;
+  private Iterator<String> collectors = null;
+  protected ChukwaSender connectorClient = null;
+  
   static{
     statTimer = new Timer();
     chunkQueue = DataFactory.getInstance().getEventQueue();
@@ -97,65 +100,104 @@ public class HttpConnector implements Connector, Runnable  {
 	}
 	
 	public void run(){
-	 	log.info("HttpConnector started at time:" + System.currentTimeMillis());
+		log.info("HttpConnector started at time:" + System.currentTimeMillis());
 
-	 	Iterator<String> destinations = null;
-	  
+		Iterator<String> destinations = null;
+
+		// build a list of our destinations from collectors
+		try{
+			destinations = DataFactory.getInstance().getCollectorURLs();
+		} catch (IOException e){
+			log.error("Failed to retreive list of collectors from " +
+					"conf/collectors file", e);
+		}
+
+		connectorClient = new ChukwaHttpSender();
+
+		if (argDestination != null) 
+		{
+			ArrayList<String> tmp = new ArrayList<String>();
+			tmp.add(argDestination);
+			collectors = tmp.iterator();
+			connectorClient.setCollectors(collectors);
+			log.info("using collector specified at agent runtime: " + argDestination);
+		} 
+		else if (destinations != null && destinations.hasNext()) 
+		{
+			collectors = destinations;
+			connectorClient.setCollectors(destinations);
+			log.info("using collectors from collectors file");
+		} 
+		else {
+			log.error("No collectors specified, exiting (and taking agent with us).");
+			agent.shutdown(true);//error is unrecoverable, so stop hard.
+			return;
+		}
+
+		try {
+			long lastPost = System.currentTimeMillis();
+			while(!stopMe) {
+				List<Chunk> newQueue = new ArrayList<Chunk>();
+				try {
+					//get all ready chunks from the chunkQueue to be sent
+					chunkQueue.collect(newQueue,MAX_SIZE_PER_POST); //FIXME: should really do this by size
+
+				} catch(InterruptedException e) {
+					System.out.println("thread interrupted during addChunks(ChunkQueue)");
+					Thread.currentThread().interrupt();
+					break;
+				}
+				int toSend = newQueue.size();
+				List<ChukwaHttpSender.CommitListEntry> results = connectorClient.send(newQueue);
+				log.info("sent " +toSend + " chunks, got back " + results.size() + " acks");
+				//checkpoint the chunks which were committed
+				for(ChukwaHttpSender.CommitListEntry cle : results) {
+					agent.reportCommit(cle.adaptor, cle.uuid);
+					chunkCount++;
+				}
+
+				if (reloadConfiguration)
+				{
+					connectorClient.setCollectors(collectors);
+					log.info("Resetting colectors");
+					reloadConfiguration = false;
+				}
+
+				long now = System.currentTimeMillis();
+				if( now - lastPost < MIN_POST_INTERVAL )  
+					Thread.sleep(now - lastPost);  //wait for stuff to accumulate
+				lastPost = now;
+			} //end of try forever loop
+			log.info("received stop() command so exiting run() loop to shutdown connector");
+		} catch(OutOfMemoryError e) {
+			log.warn("Bailing out",e);
+			System.exit(-1);
+		} catch(InterruptedException e) {
+			//do nothing, let thread die.
+			log.warn("Bailing out",e);
+			System.exit(-1);
+		}catch(java.io.IOException e) {
+			log.error("connector failed; shutting down agent");
+			agent.shutdown(true);
+		}
+	}
+
+	@Override
+	public void reloadConfiguration()
+	{
+		reloadConfiguration = true;
+		Iterator<String> destinations = null;
+		  
 	 	// build a list of our destinations from collectors
 	 	try{
-	    destinations = DataFactory.getInstance().getCollectors();
+	    destinations = DataFactory.getInstance().getCollectorURLs();
 	  } catch (IOException e){
 	    log.error("Failed to retreive list of collectors from conf/collectors file", e);
 	  }
-	  
-    ChukwaSender connectorClient = new ChukwaHttpSender();
-	  if (argDestination != null) {
-
-	    ArrayList<String> tmp = new ArrayList<String>();
-	    tmp.add(argDestination);
-      connectorClient.setCollectors(tmp.iterator());
-      log.info("using collector specified at agent runtime: " + argDestination);
-    } else if (destinations != null && destinations.hasNext()) {
-      connectorClient.setCollectors(destinations);
-      log.info("using collectors from collectors file");
-	  } else {
-	    log.error("No collectors specified, exiting (and taking agent with us).");
-	    agent.shutdown(true);//error is unrecoverable, so stop hard.
-	    return;
+	  if (destinations != null && destinations.hasNext()) 
+	  {
+		  collectors = destinations;
 	  }
-	  
-	  try {
-	    long lastPost = System.currentTimeMillis();
-  	  while(!stopMe) {
-  	    List<Chunk> newQueue = new ArrayList<Chunk>();
-  	    try {
-  	      //get all ready chunks from the chunkQueue to be sent
-  	      chunkQueue.collect(newQueue,MAX_EVENTS_PER_POST); //FIXME: should really do this by size
-  	     
-  	    } catch(InterruptedException e) {
-  	      System.out.println("thread interrupted during addChunks(ChunkQueue)");
-  	      Thread.currentThread().interrupt();
-  	      break;
-  	    }
-  	    int toSend = newQueue.size();
-  	    List<ChukwaHttpSender.CommitListEntry> results = connectorClient.send(newQueue);
-  	    log.info("sent " +toSend + " chunks, got back " + results.size() + " acks");
-  	    //checkpoint the chunks which were committed
-  	    for(ChukwaHttpSender.CommitListEntry cle : results) {
-          agent.reportCommit(cle.adaptor, cle.uuid);
-          chunkCount++;
-        }
-  	    long now = System.currentTimeMillis();
-  	    if( now - lastPost < MIN_POST_INTERVAL )  
-  	      Thread.sleep(now - lastPost);  //wait for stuff to accumulate
-        lastPost = now;
-  	  } //end of try forever loop
-  	  log.info("received stop() command so exiting run() loop to shutdown connector");
-  	} catch(InterruptedException e) {
-	  //do nothing, let thread die.
-  	}catch(java.io.IOException e) {
-  	  log.error("connector failed; shutting down agent");
-  	  agent.shutdown(true);
-    }
+    
 	}
 }

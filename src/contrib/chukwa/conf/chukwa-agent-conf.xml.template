@@ -5,6 +5,13 @@
 
 <configuration>
   
+  
+  <property>
+    <name>chukwaAgent.tags</name>
+    <value>cluster="demo"</value>
+    <description>The cluster's name for this agent</description>
+  </property>
+  
   <property>
     <name>chukwaAgent.control.port</name>
     <value>9093</value>
@@ -18,12 +25,6 @@
   </property>
 
   <property>
-    <name>chukwaAgent.tags</name>
-    <value>cluster="demo"</value>
-    <description>The cluster's name for this agent</description>
-  </property>
-
-  <property>
     <name>chukwaAgent.checkpoint.name</name>
     <value>chukwa_agent_checkpoint</value>
     <description>the prefix to to prepend to the agent's checkpoint file(s)</description>
@@ -31,7 +32,7 @@
   
   <property>
     <name>chukwaAgent.checkpoint.dir</name>
-    <value>/tmp/</value>
+    <value>${CHUKWA_HOME}/var/tmp/</value>
     <description>the location to put the agent's checkpoint file(s)</description>
   </property>
 

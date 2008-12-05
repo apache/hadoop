@@ -256,7 +256,7 @@ public class TorqueInfoProcessor {
             	     log.info(data);
             	     num++;   
 			      }
-		     } 	 
+		     }
 			 Timestamp startTimedb=new Timestamp(startTimeValue);
 			 Timestamp endTimedb=new Timestamp(endTimeValue);
 			 StringBuffer data=new StringBuffer();
@@ -267,7 +267,7 @@ public class TorqueInfoProcessor {
 			 data.append(", TimeQueued=").append(timeQueued);
 			 data.append(", NumOfMachines=").append(num);
 			 data.append(", EndTime=").append(endTimedb);
-    	     //log.info(data);
+    	     log.info(data);
 			 qstatfinished=true;
 			 
 	      } else{
@@ -289,28 +289,19 @@ public class TorqueInfoProcessor {
 	 
 	 private boolean loadTraceJobData(String hodId) throws IOException,SQLException{
 		 TreeMap<String,String> aJobData=currentHodJobs.get(hodId);
-		 //String queue=aJobData.get("queue");
 		 String userId=aJobData.get("userId");
 		 String process=aJobData.get("process");
-		 //String numOfMachine=aJobData.get("numOfMachine");
 		 
-		 //StringBuffer traceJobsb=new StringBuffer();
 		 StringBuffer sb=new StringBuffer();
 		 sb.append(torqueBinDir).append("/tracejob -n 10 -l -m -s ").append(hodId);
-	   	 //ProcessBuilder pb= new ProcessBuilder(getQueueInfoCommand.toString());
 		 String[] traceJobCommand=new String [3];
 		 traceJobCommand[0]="ssh";
 		 traceJobCommand[1]=torqueServer;
 		 traceJobCommand[2]=sb.toString();
 		 
          String command=traceJobCommand[0]+" "+traceJobCommand[1]+" "+traceJobCommand[2];
-		 //System.out.println(command);
 		 ProcessBuilder pb= new ProcessBuilder(traceJobCommand);
          
-         //String testCommand="/home/lyyang/work/chukwa/src/java/org/apache/hadoop/chukwa/ikit/sleeping";
-         //ProcessBuilder pb= new ProcessBuilder(testCommand);
-		 //pb.redirectErrorStream(false);
-
 		 Process p=pb.start();
 		 
 		 Timer timeout=new Timer();
@@ -321,17 +312,6 @@ public class TorqueInfoProcessor {
 		 ErStreamHandler errorHandler=new ErStreamHandler(p.getErrorStream(),command,false);
 		 errorHandler.start();
 		 String line=null;
-		 /*
-		 BufferedReader error = new BufferedReader (new InputStreamReader(p.getErrorStream()));
-		 String line = null;
-		 boolean start=false;
-         TreeSet<String> jobsInTorque=new TreeSet<String>();
-         String errorLine = null;;
-         while((errorLine=error.readLine())!=null) {
-        	 //discard the error message;
-        	 ;
-         }
-         */
          String exit_status=null;
          String hosts=null;
          long timeQueued=-1;
@@ -370,43 +350,33 @@ public class TorqueInfoProcessor {
 			      Timestamp endTimedb=new Timestamp(endTimeValue*1000);
 			      
 			      exit_status=jobData.get("Exit_status");
-			      //if (process.equals("0")){
-			    	  hosts=jobData.get("exec_host");
-			    	  String [] items2=hosts.split("[+]");
-			    	  int num=0;
-			    	  for (int i=0;i<items2.length;i++) {
-			    		  String machinetemp=items2[i];
-			    		  if (machinetemp.length()>=3){
-	            		 
-			    			  String machine=items2[i].substring(0,items2[i].length()-2);
-			    			  StringBuffer data=new StringBuffer();
-			    			  data.append("HodId=").append(hodId);
-			    			  data.append(", Machine=").append(machine);
-		            	      if(domain!=null) {
-			            	   	 data.append(".").append(domain);
-			            	  }
-			    			  log.info(data.toString());
-			    			  num++;
-			    		  }  
-			    	  }
+			      hosts=jobData.get("exec_host");
+			      String [] items2=hosts.split("[+]");
+			      int num=0;
+			      for (int i=0;i<items2.length;i++) {
+			          String machinetemp=items2[i];
+			          if (machinetemp.length()>=3){	            		 
+			    		 String machine=items2[i].substring(0,items2[i].length()-2);
+			    	     StringBuffer data=new StringBuffer();
+			    	     data.append("HodId=").append(hodId);
+			             data.append(", Machine=").append(machine);
+		            	 if(domain!=null) {
+			            	  data.append(".").append(domain);
+			             }
+			    	     log.info(data.toString());
+			    	     num++;
+			    	  }  
+			      }
 			      
-			    	  StringBuffer data=new StringBuffer();
-			    	  data.append("HodID=").append(hodId);
-			    	  data.append(", UserId=").append(userId);		
-			    	  data.append(", Status=").append(exit_status);
-			    	  data.append(", TimeQueued=").append(timeQueued);
-			    	  data.append(", StartTime=").append(startTimedb);
-			    	  data.append(", EndTime=").append(endTimedb);
-			    	  data.append(", NumOfMachines=").append(num);
-			          log.info(data.toString());
-//			      } else{
-//			    	  StringBuffer data=new StringBuffer();
-//			    	  data.append("HodID=").append(hodId);
-//			    	  data.append(", TimeQueued=").append(timeQueued);
-//			    	  data.append(", EndTime=").append(endTimedb);
-//			    	  data.append(", Status=").append(exit_status);
-//			    	  log.info(data.toString());
-//			      }
+			      StringBuffer data=new StringBuffer();
+			      data.append("HodID=").append(hodId);
+			      data.append(", UserId=").append(userId);		
+			      data.append(", Status=").append(exit_status);
+		    	  data.append(", TimeQueued=").append(timeQueued);
+		    	  data.append(", StartTime=").append(startTimedb);
+		    	  data.append(", EndTime=").append(endTimedb);
+		    	  data.append(", NumOfMachines=").append(num);
+		          log.info(data.toString());
 				  findResult=true;
 		          log.debug(" hod info for job "+hodId+" has been loaded ");
 			 }//if
@@ -431,28 +401,11 @@ public class TorqueInfoProcessor {
             
             log.debug("did not find tracejob info for job "+hodId+", after "+traceCheckCountValue+" times checking");
             if (traceCheckCountValue>=2){ 
-            	tracedone= true;
-            	
-//                StringBuffer deletesb1=new StringBuffer();
-//                deletesb1.append(" Delete from ").append(hodJobTable);
-//                deletesb1.append(" where hodid='").append(hodId).append("'");
-//                String delete1=deletesb1.toString();
-//                
-////                dbWriter.execute(delete1);
-//                
-//                StringBuffer deletesb2=new StringBuffer();
-//                deletesb2.append(" Delete from  ").append(hodMachineTable);
-//                deletesb2.append(" where hodid='").append(hodId).append("'");
-//                String delete2=deletesb2.toString();
-////                dbWriter.execute(delete2);
+            	tracedone= true;            	
             }
         }
-        boolean finished=findResult|tracedone;
-       
-	   
+        boolean finished=findResult|tracedone;	   
         return finished;
-      
-    //  return true;   
 	 }
 	 
 		 
@@ -469,8 +422,6 @@ public class TorqueInfoProcessor {
 		 while (hodIdsIt.hasNext()){
 			 String hodId=(String) hodIdsIt.next();
 			 TreeMap<String,String> aJobData=currentHodJobs.get(hodId);
-			 //String queue=aJobData.get("queue");
-			 //String numOfMachine=aJobData.get("numOfMachine");
 			 String status=aJobData.get("status");
 			 String process=aJobData.get("process");
 			 if (process.equals("0") && (status.equals("R") ||status.equals("E"))){
@@ -502,24 +453,22 @@ public class TorqueInfoProcessor {
 		 } //while
 		 
 	 }
-	 
-	 
+	 	 
 	 private void handle_jobData() throws SQLException{		 
-		 try{
+		 try {
 		     getHodJobInfo();
 		 }catch (IOException ex){
 			 log.error("getQueueInfo Error:"+ex.getMessage());
 			 return;
 		 }
-		 try{    
+		 try {    
 	         process_data();
 		 } catch (SQLException ex){
 			 log.error("process_data Error:"+ex.getMessage());
 			 throw ex;
 		 }
 	 }
-     
-	 
+     	 
 	 public void run_forever() throws SQLException{    	            
      	  while(true){
           	  handle_jobData();
@@ -531,11 +480,7 @@ public class TorqueInfoProcessor {
               }
           }
      }
-     
-	 
+
 	 public void shutdown(){
      }
-   	  
-	
-
 }

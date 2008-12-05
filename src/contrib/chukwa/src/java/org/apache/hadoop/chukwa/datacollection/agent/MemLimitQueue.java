@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.chukwa.datacollection.agent;
 
-import java.util.*;
-//import java.util.concurrent.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.datacollection.ChunkQueue;
@@ -33,13 +34,14 @@ import org.apache.log4j.Logger;
  */
 public class MemLimitQueue implements ChunkQueue
 {
-
 	static Logger log = Logger.getLogger(WaitingQueue.class);
 	
 	private Queue<Chunk> queue = new LinkedList<Chunk>();
 	private long dataSize = 0;
 	private final long MAX_MEM_USAGE;
 
+
+	
   public MemLimitQueue(int limit) {
     MAX_MEM_USAGE = limit;
   }
@@ -47,15 +49,21 @@ public class MemLimitQueue implements ChunkQueue
 	/**
 	 * @see org.apache.hadoop.chukwa.datacollection.ChunkQueue#add(org.apache.hadoop.chukwa.Chunk)
 	 */
-	public void add(Chunk event) throws InterruptedException
+	public void add(Chunk chunk) throws InterruptedException
 	{
-	  assert event != null: "can't enqueue null chunks";
+	  assert chunk != null: "can't enqueue null chunks";
     synchronized(this) {
-      while(event.getData().length  + dataSize > MAX_MEM_USAGE)
-        this.wait();
-      
-      dataSize += event.getData().length;
-      queue.add(event);
+      while(chunk.getData().length  + dataSize > MAX_MEM_USAGE)
+      {
+    	  try 
+    	  { 
+    		  this.wait();
+    		  log.info("MemLimitQueue is full [" + dataSize +"]");
+    	  }
+    	  catch(InterruptedException e) {}
+      }
+      dataSize += chunk.getData().length;
+      queue.add(chunk);
       this.notifyAll();
     }
 	 
@@ -64,7 +72,7 @@ public class MemLimitQueue implements ChunkQueue
 	/**
 	 * @see org.apache.hadoop.chukwa.datacollection.ChunkQueue#collect(java.util.List, int)
 	 */
-	public void collect(List<Chunk> events,int maxCount) throws InterruptedException
+	public void collect(List<Chunk> events,int maxSize) throws InterruptedException
 	{
 		synchronized(this) {
 		  //we can't just say queue.take() here, since we're holding a lock.
@@ -72,10 +80,13 @@ public class MemLimitQueue implements ChunkQueue
 		    this.wait();
 		  }
 		  
-		  int i = 0;
-		  while(!queue.isEmpty() && (i++ < maxCount)) { 
+		  
+		  int size = 0;
+		  while(!queue.isEmpty() && (size < maxSize)) { 
 		    Chunk e = this.queue.remove();
-		    dataSize -= e.getData().length;
+		    int chunkSize = e.getData().length;
+		    size += chunkSize;
+		    dataSize -= chunkSize;
 		    events.add(e);
 		  }
 		  this.notifyAll();

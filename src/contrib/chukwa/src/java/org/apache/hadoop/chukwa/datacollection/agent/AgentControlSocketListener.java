@@ -56,11 +56,14 @@ public class AgentControlSocketListener extends Thread {
       InputStream in = connection.getInputStream();
       BufferedReader br = new BufferedReader(new InputStreamReader(in));
       PrintStream out = new PrintStream(new BufferedOutputStream(connection.getOutputStream()));
+      //out.println("You are connected to the chukwa agent on "+ InetAddress.getLocalHost().getCanonicalHostName());
+      //out.flush();
       String cmd = null;
       while((cmd = br.readLine()) != null)  {
         processCommand(cmd, out);
       }
-      log.info("control connection closed");
+      if (log.isDebugEnabled())
+  		{ log.debug("control connection closed");}
       }
       catch(SocketException e ) {
         if(e.getMessage().equals("Socket Closed"))
@@ -78,7 +81,8 @@ public class AgentControlSocketListener extends Thread {
      */
     public void processCommand(String cmd, PrintStream out) throws IOException  {
       String[] words = cmd.split(" ");
-      log.info("command from " + connection.getRemoteSocketAddress() + ":"+ cmd);
+      if (log.isDebugEnabled())
+  		{ log.debug("command from " + connection.getRemoteSocketAddress() + ":"+ cmd);}
       
       if(words[0].equalsIgnoreCase("help"))  {
         out.println("you're talking to the Chukwa agent.  Commands available: ");
@@ -88,6 +92,7 @@ public class AgentControlSocketListener extends Thread {
         out.println("list -- list running adaptors");
         out.println("close -- close this connection");
         out.println("stopagent -- stop the whole agent process");
+        out.println("reloadCollectors -- reload the list of collectors");
         out.println("help -- print this message");
         out.println("\t Command names are case-blind.");
       }
@@ -123,9 +128,15 @@ public class AgentControlSocketListener extends Thread {
           out.println("OK adaptor "+ num+ " stopped");
         }
       }
-      else if(words[0].equalsIgnoreCase("list") )  {
+      else if(words[0].equalsIgnoreCase("reloadCollectors"))  {
+            agent.getConnector().reloadConfiguration();
+            out.println("OK reloadCollectors done");
+        }else if(words[0].equalsIgnoreCase("list") )  {
         Map<Long, Adaptor> adaptorsByNumber = agent.getAdaptorList();
-        System.out.println("number of adaptors: " + adaptorsByNumber.size());
+        
+        if (log.isDebugEnabled())
+    		{ log.debug("number of adaptors: " + adaptorsByNumber.size());}
+        
         synchronized(adaptorsByNumber)   {
           for(Map.Entry<Long, Adaptor> a: adaptorsByNumber.entrySet())  {
             try{
@@ -168,7 +179,7 @@ public class AgentControlSocketListener extends Thread {
   }
   
   public String formatAdaptorStatus(Adaptor a)  throws AdaptorException  {
-    return a.getClass().getCanonicalName() + " " + a.getCurrentStatus() + " " + agent.getOffset(a);
+    return a.getClass().getCanonicalName() + " " + a.getCurrentStatus();
   }
 
   /**
@@ -186,7 +197,8 @@ public class AgentControlSocketListener extends Thread {
     {
       try {
         Socket connection = s.accept();
-        log.info("new connection from " + connection.getInetAddress());
+        if (log.isDebugEnabled())
+        	{ log.debug("new connection from " + connection.getInetAddress());}
         ListenThread l = new ListenThread(connection);
         l.setDaemon(true);
         l.start();

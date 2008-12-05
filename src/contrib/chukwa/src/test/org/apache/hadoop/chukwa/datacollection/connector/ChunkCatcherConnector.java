@@ -37,4 +37,10 @@ public class ChunkCatcherConnector implements Connector {
   public void shutdown() {
   }
 
+  @Override
+  public void reloadConfiguration()
+  {
+  	System.out.println("reloadConfiguration");
+  }
+
 }

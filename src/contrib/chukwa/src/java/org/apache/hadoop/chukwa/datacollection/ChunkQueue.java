@@ -31,16 +31,16 @@ public interface ChunkQueue extends ChunkReceiver
 {
   /**
    *  Add a chunk to the queue, blocking if queue is full.
-   * @param event
+   * @param chunk
    * @throws InterruptedException if thread is interrupted while blocking
    */
-	public void add(Chunk event) throws InterruptedException;
+	public void add(Chunk chunk) throws InterruptedException;
 	
 	/**
-	 * Return at least one, and no more than count, Chunks into events.
+	 * Return at least one, and no more than count, Chunks into chunks.
 	 * Blocks if queue is empty.
 	 */
-	public void collect(List<Chunk> events,int count) throws InterruptedException;
+	public void collect(List<Chunk> chunks,int count) throws InterruptedException;
 	
 	/**
 	 * Return an approximation of the number of chunks in the queue currently.

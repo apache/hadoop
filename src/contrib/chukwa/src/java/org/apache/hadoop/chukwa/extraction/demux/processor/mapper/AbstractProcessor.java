@@ -20,78 +20,125 @@ package org.apache.hadoop.chukwa.extraction.demux.processor.mapper;
 
 import java.util.Calendar;
 
+import org.apache.hadoop.chukwa.ChukwaArchiveKey;
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecord;
+import org.apache.hadoop.chukwa.extraction.engine.ChukwaRecordKey;
 import org.apache.hadoop.chukwa.extraction.engine.Record;
 import org.apache.hadoop.chukwa.util.RecordConstants;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.log4j.Logger;
 
-public abstract class  AbstractProcessor implements ChunkProcessor
+public abstract class AbstractProcessor implements MapProcessor
 {
-	Calendar calendar = Calendar.getInstance();
-	Chunk chunk = null;
-	byte[] bytes;
-	int[] recordOffsets ;
-	int currentPos = 0;
-	int startOffset = 0;
-	Text key = new Text();
-	
-	public AbstractProcessor()
-	{}
-	
-	protected abstract void parse(String recordEntry, OutputCollector<Text, ChukwaRecord> output, Reporter reporter);
-	
-	
-	public void process(Chunk chunk,OutputCollector<Text, ChukwaRecord> output, Reporter reporter)	{
-		reset(chunk);
-		while (hasNext()) {
-			parse(nextLine(), output, reporter);
-		}
-	}
-	
-	
-	protected void buildGenericRecord(ChukwaRecord record, String body,long timestamp,String dataSource)	{
-		calendar.setTimeInMillis( timestamp);
-		String fileName = dataSource + "/" + dataSource + new java.text.SimpleDateFormat("_yyyy_MM_dd_HH").format(calendar.getTime());
-		int minutes = calendar.get(Calendar.MINUTE);
-		int dec = minutes/10;
-		fileName += "_" + dec ;
-		
-		int m = minutes - (dec*10);
-		if (m < 5) { 
-		  fileName += "0.evt";
-		} else {
-		  fileName += "5.evt";
-		}
+  static Logger log = Logger.getLogger(AbstractProcessor.class);
+  
+  Calendar calendar = Calendar.getInstance();
+  byte[] bytes;
+  int[] recordOffsets;
+  int currentPos = 0;
+  int startOffset = 0;
 
-		record.setTime(timestamp);
-		record.add(Record.rawField, body);
-		record.add(Record.dataSourceField, dataSource);
-		record.add(Record.destinationField, fileName);
-		record.add(Record.sourceField, chunk.getSource());
-		record.add(Record.streamNameField, chunk.getStreamName());
-		record.add(Record.typeField, chunk.getDataType());
-	}
+  ChukwaArchiveKey archiveKey = null;
+  ChukwaRecordKey key = new ChukwaRecordKey();
+  Chunk chunk = null;
 
-	
-	protected void reset(Chunk chunk)	{
-		this.chunk = chunk;
-		this.bytes = chunk.getData();
-		this.recordOffsets = chunk.getRecordOffsets();
-		currentPos = 0;
-		startOffset = 0;
-	}
-	
-	protected boolean hasNext() {
-		return (currentPos < recordOffsets.length);
-	}
-	
-	protected String nextLine()	{
-		String log = new String(bytes,startOffset,(recordOffsets[currentPos]-startOffset));
-		startOffset = recordOffsets[currentPos] + 1;
-		currentPos ++;
-		return RecordConstants.recoverRecordSeparators("\n", log);
-	}
+  boolean chunkInErrorSaved = false;
+  OutputCollector<ChukwaRecordKey, ChukwaRecord> output = null;
+  Reporter reporter = null;
+
+  public AbstractProcessor()
+  {
+  }
+
+  protected abstract void parse(String recordEntry,
+      OutputCollector<ChukwaRecordKey, ChukwaRecord> output, Reporter reporter)
+      throws Throwable;
+
+  protected void saveChunkInError(Throwable throwable)
+  {
+    if (chunkInErrorSaved == false)
+    {
+      try
+      {
+        ChunkSaver.saveChunk(chunk, throwable, output, reporter);
+        chunkInErrorSaved = true;
+      } catch (Exception e)
+      {
+        e.printStackTrace();
+      }
+    }
+
+  }
+
+  public void process(ChukwaArchiveKey archiveKey, Chunk chunk,
+      OutputCollector<ChukwaRecordKey, ChukwaRecord> output, Reporter reporter)
+  {
+    chunkInErrorSaved = false;
+    
+    this.archiveKey = archiveKey;
+    this.output = output;
+    this.reporter = reporter;
+    
+    reset(chunk);
+    
+    while (hasNext())
+    {
+      try
+      {
+        parse(nextLine(), output, reporter);
+      } catch (Throwable e)
+      {
+        saveChunkInError(e);
+      }
+    }
+  }
+
+  protected void buildGenericRecord(ChukwaRecord record, String body,
+      long timestamp, String dataSource)
+  {
+    calendar.setTimeInMillis(timestamp);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+
+    key.setKey("" + calendar.getTimeInMillis() + "/" + chunk.getSource() + "/"
+        + timestamp);
+    key.setReduceType(dataSource);
+
+    if (body != null)
+    {
+      record.add(Record.bodyField, body);
+    }
+    record.setTime(timestamp);
+
+    record.add(Record.tagsField, chunk.getTags());
+    record.add(Record.sourceField, chunk.getSource());
+    record.add(Record.applicationField, chunk.getApplication());
+
+  }
+
+  protected void reset(Chunk chunk)
+  {
+    this.chunk = chunk;
+    this.bytes = chunk.getData();
+    this.recordOffsets = chunk.getRecordOffsets();
+    currentPos = 0;
+    startOffset = 0;
+  }
+
+  protected boolean hasNext()
+  {
+    return (currentPos < recordOffsets.length);
+  }
+
+  protected String nextLine()
+  {
+    String log = new String(bytes, startOffset, (recordOffsets[currentPos]
+        - startOffset + 1));
+    startOffset = recordOffsets[currentPos] + 1;
+    currentPos++;
+    return RecordConstants.recoverRecordSeparators("\n", log);
+  }
 }

@@ -21,6 +21,16 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "$CHUKWA_HOME/var/run/Agent.pid"
+echo "hadoop jar for agent is " ${HADOOP_JAR}
+trap '${JPS} | grep ChukwaAgent | cut -f 1 -d" " | xargs kill -TERM ; exit 0' 1 2 15
 
-${JAVA_HOME}/bin/java -DCHUKWA_HOME=${CHUKWA_HOME} -classpath ${CLASSPATH}:${chukwaCore}:${chukwaAgent}:${HADOOP_JAR}:${CHUKWA_HOME}/conf:${HADOOP_HOME}/conf:${common} org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent $@
+if [ "X$1" = "Xstop" ]; then
+  echo -n "Shutting down agent..."
+  JETTY_PID=`${JPS} | grep ChukwaAgent | cut -f 1 -d" "`
+  kill -TERM ${JETTY_PID} >&/dev/null
+  echo "done"
+  exit 0
+fi
+
+
+${JAVA_HOME}/bin/java -Xms32M -Xmx64M -DAPP=agent -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -classpath ${CLASSPATH}:${CHUKWA_AGENT}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent $@

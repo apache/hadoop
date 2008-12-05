@@ -27,15 +27,13 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-# start agents
-"$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR --watchdog start agent.sh
 # start system data loader daemons
 "$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR start systemDataLoader.sh
 
 # start torque data loader daemons
-if [ ${TORQUE_HOME} != "" ]; then
+if [ "x${TORQUE_HOME}" != "x" ]; then
   "$bin"/chukwa-daemon.sh --config $CHUKWA_CONF_DIR start torqueDataLoader.sh
 fi
-if [ ${nodeActivityCmde} != "" ]; then
+if [ "x${nodeActivityCmde}" != "x" ]; then
   "$bin"/chukwa-daemon.sh --config $CHUKWA_CONF_DIR start nodeActivityDataLoader.sh
 fi

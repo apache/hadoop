@@ -21,7 +21,7 @@ package org.apache.hadoop.chukwa.extraction.engine.datasource;
 import java.util.HashMap;
 
 import org.apache.hadoop.chukwa.extraction.engine.datasource.database.DatabaseDS;
-import org.apache.hadoop.chukwa.extraction.engine.datasource.record.RecordDS;
+import org.apache.hadoop.chukwa.extraction.engine.datasource.record.ChukwaRecordDataSource;
 
 public class DataSourceFactory
 {
@@ -37,10 +37,7 @@ public class DataSourceFactory
 		dataSources.put("MRJob", databaseDS);
 		dataSources.put("HodJob", databaseDS);
 		dataSources.put("QueueInfo", databaseDS);
-		
-		DataSource recordDS = new RecordDS();
-		dataSources.put("NameNode", recordDS);
-		dataSources.put("ChukwaLocalAgent", recordDS);
+	
 	}
 	
 	public static DataSourceFactory getInstance()
@@ -64,7 +61,7 @@ public class DataSourceFactory
 		}
 		else
 		{
-			DataSource hsdfsDS = new RecordDS();
+			DataSource hsdfsDS = new ChukwaRecordDataSource();
 			dataSources.put(datasourceName, hsdfsDS);
 			return hsdfsDS;
 			//TODO proto only!

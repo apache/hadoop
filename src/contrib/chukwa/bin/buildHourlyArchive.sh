@@ -20,11 +20,45 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "$CHUKWA_HOME/var/run/BuildDailyArchive.pid"
+echo "${pid}" > "$CHUKWA_HOME/var/run/buildDailyArchive.pid"
 
 HADOOP_CONF_DIR="${HADOOP_HOME}/conf/"
 HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "
 
+while [ 1 ]
+ do
+  now=`date +%s`
+  strDate=`date +%m/%d/%y%n`
+  srcHourly="/chukwa/postprocess/srcHourly$now/"
 
-  $HADOOP_CMDE jar ${chukwaCore} org.apache.hadoop.chukwa.extraction.archive.ChuckwaArchiveBuilder Hourly $srcEventHdfsDir ${chuwaRecordsRepository}
+  echo "Running $strDate $now" >> "${CHUKWA_LOG_DIR}/hourly.log"
+
+  echo "srcHourly: $srcHourly " >> "${CHUKWA_LOG_DIR}/hourly.log"
+
+  $HADOOP_CMDE dfs -mkdir $srcHourly/raw
+  echo "done with mkdir" >> "${CHUKWA_LOG_DIR}/hourly.log"
  
+  $HADOOP_CMDE dfs -mv "/chukwa/archives/raw/*.arc" ${srcHourly}/raw/
+  echo "done with mv archives" >> "${CHUKWA_LOG_DIR}/hourly.log"
+ 
+  # Build the archive
+  $HADOOP_CMDE jar ${CHUKWA_CORE} org.apache.hadoop.chukwa.extraction.archive.ChuckwaArchiveBuilder Hourly $srcHourly/arcFiles $srcHourly/hourly
+  echo "done with chuckwaArchiveBuilder" >> "${CHUKWA_LOG_DIR}/hourly.log"
+  
+   ## Hourly Archive available call all processors
+   ##############  ############## 
+  
+   ##############  ############## 
+  
+  
+  ############## MERGE or MOVE ##############
+  
+  ############## MERGE or MOVE ##############
+  
+  
+  now=`date +%s`
+  strDate=`date +%m/%d/%y%n`
+  echo "Stopping ${strDate} ${now}" >> "${CHUKWA_LOG_DIR}/hourly.log"
+
+  sleep 36000
+done

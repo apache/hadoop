@@ -44,24 +44,29 @@ public class TimeHandler {
     }
     
     public TimeHandler(HttpServletRequest request, String tz) {
-    	this.tz=TimeZone.getTimeZone(tz);
+    	if(tz!=null) {
+    	    this.tz=TimeZone.getTimeZone(tz);
+    	} else {
+        	this.tz=TimeZone.getTimeZone("UTC");    		
+    	}
     	init(request);
     }
     
     public void init(HttpServletRequest request) {
+        Calendar now = Calendar.getInstance();
     	this.session = request.getSession();
     	this.request = request;
-    	String timeType = (String)session.getAttribute("time_type");
-    	if((request.getParameter("period")!=null && !request.getParameter("period").equals("")) || (timeType!=null && timeType.equals("last"))) {
-            String period = request.getParameter("period");
-        	if(period == null) {
-                period = (String) session.getAttribute("period");
-                if(period == null) {
-                    period = "last1hr";
-                    session.setAttribute("period",period);
-                }
-            }
-            Calendar now = Calendar.getInstance();
+    	String timeType = "last";
+    	if(request.getParameter("time_type")==null && session.getAttribute("time_type")==null && session.getAttribute("period")==null && request.getParameter("period")==null) {
+    		timeType = "last";
+    		end = now.getTimeInMillis();
+    		start = end - 60*60*1000;
+    		session.setAttribute("period", "last1hr");
+    		session.setAttribute("time_type", "last");
+            session.setAttribute("start", ""+start);
+            session.setAttribute("end", ""+end);
+    	} else if(request.getParameter("period")!=null && !request.getParameter("period").equals("")) {
+    		String period = request.getParameter("period");
             this.start = now.getTimeInMillis();
             this.end = now.getTimeInMillis();            
         	if(period.equals("last1hr")) {
@@ -80,15 +85,57 @@ public class TimeHandler {
                 start = end - (7*24*60*60*1000);
             } else if(period.equals("last30d")) {
                 start = end - (30*24*60*60*1000);
-            }
-        	if(request.getParameter("time_type")!=null && request.getParameter("time_type").equals("range")) {
-                session.setAttribute("start", ""+start);
-                session.setAttribute("end", ""+end);
-        	}
-        } else {
+            }    		
+    	} else if(request.getParameter("start")!=null && request.getParameter("end")!=null) {
+    		start = Long.parseLong(request.getParameter("start"));
+    		end = Long.parseLong(request.getParameter("end"));
+    	} else if(session.getAttribute("time_type").equals("range")) {
             start = Long.parseLong((String) session.getAttribute("start"));
-            end = Long.parseLong((String) session.getAttribute("end"));        	
-        }
+            end = Long.parseLong((String) session.getAttribute("end"));
+    	} else if(session.getAttribute("time_type").equals("last") && session.getAttribute("period")!=null){
+    		String period = (String) session.getAttribute("period");
+            this.start = now.getTimeInMillis();
+            this.end = now.getTimeInMillis();            
+        	if(period.equals("last1hr")) {
+                start = end - (60*60*1000);
+            } else if(period.equals("last2hr")) {
+                start = end - (2*60*60*1000);
+            } else if(period.equals("last3hr")) {
+                start = end - (3*60*60*1000);
+            } else if(period.equals("last6hr")) {
+                start = end - (6*60*60*1000);
+            } else if(period.equals("last12hr")) {
+                start = end - (12*60*60*1000);
+            } else if(period.equals("last24hr")) {
+                start = end - (24*60*60*1000);
+            } else if(period.equals("last7d")) {
+                start = end - (7*24*60*60*1000);
+            } else if(period.equals("last30d")) {
+                start = end - (30L*24*60*60*1000);
+            }    		
+    	}
+//    	if((request.getParameter("period")==null || request.getParameter("period").equals("")) && session.getAttribute("time_type")!=null) {
+//        	timeType = (String)session.getAttribute("time_type");
+//    	}
+//    	if((request.getParameter("period")!=null && !request.getParameter("period").equals("")) || (timeType!=null && timeType.equals("last"))) {
+//            String period = request.getParameter("period");
+//        	if(period == null) {
+//                period = (String) session.getAttribute("period");
+//                if(period == null) {
+//                    period = "last1hr";
+//                    session.setAttribute("period",period);
+//                }
+//            }
+//        	// no time specified in request nor session, set default time in session.
+//        	if(request.getParameter("time_type")!=null && request.getParameter("time_type").equals("range")) {
+//                session.setAttribute("start", ""+start);
+//                session.setAttribute("end", ""+end);
+//        	}
+//        } else {
+//        	// no time specified in request, use session time.
+//            start = Long.parseLong((String) session.getAttribute("start"));
+//            end = Long.parseLong((String) session.getAttribute("end"));        	
+//        }
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat formatHour = new SimpleDateFormat("HH");
@@ -109,6 +156,12 @@ public class TimeHandler {
         this.endMin = formatMin.format(end);
     }
 
+    public String getStartDate(String format) {
+    	SimpleDateFormat formatter = new SimpleDateFormat(format);
+    	formatter.setTimeZone(this.tz);
+        return	formatter.format(this.start);
+    }
+    
     public String getStartDate() {
         return this.startDate;        	
     }
@@ -128,7 +181,13 @@ public class TimeHandler {
     public long getStartTime() {
         return start;	
     }
-    
+
+    public String getEndDate(String format) {
+    	SimpleDateFormat formatter = new SimpleDateFormat(format);
+    	formatter.setTimeZone(this.tz);
+        return	formatter.format(this.end);
+    }
+
     public String getEndDate() {
     	return this.endDate;
     }

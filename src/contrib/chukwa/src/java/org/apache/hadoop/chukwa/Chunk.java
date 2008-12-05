@@ -93,13 +93,13 @@ public interface Chunk {
   public int getSerializedSizeEstimate();
   
 /**
- * @return tags from this chunk.
+ * @return name of cluster that this chunk comes from.
  * 
  */
   public String getTags();  
   
   /**
-   * Set tags to this chunk.
+   * Set the name of the cluster that this chunk comes from.
    * 
    */
     public void setTags(String tags);  

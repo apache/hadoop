@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.chukwa.hicc;
 
+import java.text.SimpleDateFormat;
+import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,19 +31,21 @@ import org.apache.commons.logging.LogFactory;
 public class DatasetMapper {
     private String jdbc;
     private static Log log = LogFactory.getLog(DatasetMapper.class);
-    private HashMap<String, ArrayList<Double>> dataset;
+    private TreeMap<String, TreeMap<String, Double>> dataset;
     private List<String> labels;
 	public DatasetMapper(String jdbc) {
 	    this.jdbc=jdbc;
-	    this.dataset = new HashMap<String, ArrayList<Double>>();
+	    this.dataset = new TreeMap<String, TreeMap<String, Double>>();
 	    this.labels = new ArrayList<String>();
 	}
-	public void execute(String query, boolean groupBySecondColumn) {
+	public void execute(String query, boolean groupBySecondColumn, boolean calculateSlope, String formatTime) {
+		SimpleDateFormat sdf = null;
 		dataset.clear();
 	    try {
 	        // The newInstance() call is a work around for some
 	        // broken Java implementations
-	        Class.forName("com.mysql.jdbc.Driver").newInstance();
+                String jdbcDriver = System.getenv("JDBC_DRIVER");
+	        Class.forName(jdbcDriver).newInstance();
 	    } catch (Exception ex) {
 	        // handle the error
 	    }
@@ -61,11 +65,18 @@ public class DatasetMapper {
 	            rs = stmt.getResultSet();
 	            ResultSetMetaData rmeta = rs.getMetaData();
 	            int col=rmeta.getColumnCount();
+	            double[] previousArray = new double[col+1];
+	            for(int k=0;k<col;k++) {
+	            	previousArray[k]=0.0;
+	            }
 	            int i=0;
-	            java.util.ArrayList<Double> data = null;
+	            java.util.TreeMap<String, Double> data = null;
+	            HashMap<String, Double> previousHash = new HashMap<String, Double>();
 	            HashMap<String, Integer> xAxisMap = new HashMap<String, Integer>();
 	            while (rs.next()) {
-	                String label = rs.getString(1);
+	                String label = "";
+	                long  time = rs.getTimestamp(1).getTime();
+	                label = ""+time;
 	                if(!xAxisMap.containsKey(label)) {
 	                    xAxisMap.put(label, i);
 	                    labels.add(label);
@@ -74,15 +85,33 @@ public class DatasetMapper {
 	                if(groupBySecondColumn) {
 	                    String item = rs.getString(2);
 	                    // Get the data from the row using the series column
-	                    double current = rs.getDouble(3);
-	                    if(current>max) {
-	                        max=current;
-	                    }
 	                    data = dataset.get(item);
 	                    if(data == null) {
-	                        data = new java.util.ArrayList<Double>();
+	                        data = new java.util.TreeMap<String, Double>();
 	                    }
-	                    data.add(rs.getDouble(3));
+	                    if(calculateSlope) {
+	                    	double current = rs.getDouble(3);
+	                    	double tmp = 0L;
+	                    	if(data.size()>1) {
+                            	tmp = current - previousHash.get(item).doubleValue();
+                            } else {
+                            	tmp = 0;
+                            }
+                            if(tmp<0) {
+                                tmp=0;
+                            }
+                            if(tmp>max) {
+                            	max=tmp;
+                            }
+                            previousHash.put(item,current);
+                            data.put(label, tmp);
+	                    } else {
+	                    	double current = rs.getDouble(3);
+		                    if(current>max) {
+		                        max=current;
+		                    }
+		                    data.put(label, current);	                    	
+	                    }
 	                    dataset.put(item,data);
 	                } else {
 	                    for(int j=2;j<=col;j++) {
@@ -94,16 +123,30 @@ public class DatasetMapper {
 	                        }
 	                        data = dataset.get(item);
 	                        if(data == null) {
-	                            data = new java.util.ArrayList<Double>();
+	                            data = new java.util.TreeMap<String, Double>();
 	                        }
-	                        data.add(rs.getDouble(j));
+	                        if(calculateSlope) {
+	                        	double tmp = rs.getDouble(j);
+                                if(data.size()>1) {
+	                        	    tmp = tmp - previousArray[j];
+                                } else {
+                                    tmp = 0.0;
+                                }
+                                previousArray[j]=current;
+                                if(tmp<0) {
+                                  	tmp=0;
+                                }
+	                        	data.put(label, tmp);
+	                        } else {
+		                        data.put(label, current);	                        	
+	                        }
 	                        dataset.put(item,data);
 	                    }
 	                }
 	            }
 	            labelsCount=i;
 	        } else {
-	                log.error("query is not executed.");
+	            log.error("query is not executed.");
 	        }
 	        // Now do something with the ResultSet ....
 	    } catch (SQLException ex) {
@@ -146,7 +189,7 @@ public class DatasetMapper {
 	public List<String> getXAxisMap() {
 		return labels;
 	}
-	public HashMap<String, ArrayList<Double>> getDataset() {
+	public TreeMap<String, TreeMap<String, Double>> getDataset() {
 		return dataset;
 	}
 }

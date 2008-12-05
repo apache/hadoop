@@ -129,9 +129,8 @@ import org.apache.log4j.spi.LoggingEvent;
     <p>Do not use the colon ":" character in anywhere in the
     <b>DatePattern</b> option. The text before the colon is interpeted
     as the protocol specificaion of a URL which is probably not what
-    you want. 
+    you want. */
 
-*/
 
 public class ChukwaDailyRollingFileAppender extends FileAppender {
 
