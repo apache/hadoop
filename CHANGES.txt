@@ -164,6 +164,8 @@ Release 0.19.0 - Unreleased
    HBASE-1030  Bit of polish on HBASE-1018
    HBASE-847   new API: HTable.getRow with numVersion specified
                (Doğacan Güney via Stack)
+   HBASE-1048  HLog: Found 0 logs to remove out of total 1450; oldest
+               outstanding seqnum is 162297053 fr om region -ROOT-,,0
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

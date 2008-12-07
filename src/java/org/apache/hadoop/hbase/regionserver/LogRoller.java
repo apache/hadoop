@@ -26,9 +26,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Runs periodically to determine if the HLog should be rolled
+ * Runs periodically to determine if the HLog should be rolled.
  * 
  * NOTE: This class extends Thread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
@@ -61,7 +62,10 @@ class LogRoller extends Thread implements LogRollListener {
       }
       rollLock.lock();          // Don't interrupt us. We're working
       try {
-        server.getLog().rollWriter();
+        byte [] regionToFlush = server.getLog().rollWriter();
+        if (regionToFlush != null) {
+          scheduleFlush(regionToFlush);
+        }
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);
         server.abort();
@@ -78,6 +82,23 @@ class LogRoller extends Thread implements LogRollListener {
       }
     }
     LOG.info("LogRoller exiting.");
+  }
+  
+  private void scheduleFlush(final byte [] region) {
+    boolean scheduled = false;
+    HRegion r = this.server.getOnlineRegion(region);
+    FlushRequester requester = null;
+    if (r != null) {
+      requester = this.server.getFlushRequester();
+      if (requester != null) {
+        requester.request(r);
+        scheduled = true;
+      }
+    }
+    if (!scheduled) {
+    LOG.warn("Failed to schedule flush of " +
+      Bytes.toString(region) + "r=" + r + ", requester=" + requester);
+    }
   }
 
   public void logRollRequested() {

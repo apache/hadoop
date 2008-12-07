@@ -137,6 +137,13 @@ public class HLog implements HConstants, Syncable {
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
   private final Integer updateLock = new Integer(0);
+  
+  /*
+   * If more than this many logs, force flush of oldest region to oldest edit
+   * goes to disk.  If too many and we crash, then will take forever replaying.
+   * Keep the number of logs tidy.
+   */
+  private final int maxLogs;
 
   /**
    * Create an edit log at the given <code>dir</code> location.
@@ -152,10 +159,9 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Configuration conf,
-      final LogRollListener listener) throws IOException {
-    
+    final LogRollListener listener)
+  throws IOException {
     super();
-    
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
@@ -172,6 +178,7 @@ public class HLog implements HConstants, Syncable {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
     fs.mkdirs(dir);
+    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 64);
     rollWriter();
   }
 
@@ -234,14 +241,17 @@ public class HLog implements HConstants, Syncable {
    * cacheFlushLock and then completeCacheFlush could be called which would wait
    * for the lock on this and consequently never release the cacheFlushLock
    *
+   * @return If lots of logs, flush the returned region so next time through
+   * we can clean logs. Returns null if nothing to flush.
    * @throws FailedLogCloseException
    * @throws IOException
    */
-  public void rollWriter() throws FailedLogCloseException, IOException {
+  public byte [] rollWriter() throws FailedLogCloseException, IOException {
+    byte [] regionToFlush = null;
     this.cacheFlushLock.lock();
     try {
       if (closed) {
-        return;
+        return regionToFlush;
       }
       synchronized (updateLock) {
         // Clean up current writer.
@@ -268,7 +278,7 @@ public class HLog implements HConstants, Syncable {
             }
             this.outputfiles.clear();
           } else {
-            cleanOldLogs();
+            regionToFlush = cleanOldLogs();
           }
         }
         this.numEntries = 0;
@@ -277,32 +287,28 @@ public class HLog implements HConstants, Syncable {
     } finally {
       this.cacheFlushLock.unlock();
     }
+    return regionToFlush;
   }
   
   /*
    * Clean up old commit logs.
+   * @return If lots of logs, flush the returned region so next time through
+   * we can clean logs. Returns null if nothing to flush.
    * @throws IOException
    */
-  private void cleanOldLogs() throws IOException {
-    // Get oldest edit/sequence id.  If logs are older than this id,
-    // then safe to remove.
-    Long oldestOutstandingSeqNum =
-      Collections.min(this.lastSeqWritten.values());
+  private byte [] cleanOldLogs() throws IOException {
+    byte [] regionToFlush = null;
+    Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
     // Get the set of all log files whose final ID is older than or
     // equal to the oldest pending region operation
     TreeSet<Long> sequenceNumbers =
       new TreeSet<Long>(this.outputfiles.headMap(
         (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
     // Now remove old log files (if any)
+    byte [] oldestRegion = null;
     if (LOG.isDebugEnabled()) {
       // Find region associated with oldest key -- helps debugging.
-      byte [] oldestRegion = null;
-      for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
-        if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
-          oldestRegion = e.getKey();
-          break;
-        }
-      }
+      oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
       LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
         " out of total " + this.outputfiles.size() + "; " +
         "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
@@ -313,6 +319,33 @@ public class HLog implements HConstants, Syncable {
         deleteLogFile(this.outputfiles.remove(seq), seq);
       }
     }
+    int countOfLogs = this.outputfiles.size() - sequenceNumbers.size();
+    if (countOfLogs > this.maxLogs) {
+      regionToFlush = oldestRegion != null?
+        oldestRegion: getOldestRegion(oldestOutstandingSeqNum);
+      LOG.info("Too many logs: logs=" + countOfLogs + ", maxlogs=" +
+        this.maxLogs + "; forcing flush of region with oldest edits: " +
+        Bytes.toString(regionToFlush));
+    }
+    return regionToFlush;
+  }
+
+  /*
+   * @return Logs older than this id are safe to remove.
+   */
+  private Long getOldestOutstandingSeqNum() {
+    return Collections.min(this.lastSeqWritten.values());
+  }
+
+  private byte [] getOldestRegion(final Long oldestOutstandingSeqNum) {
+    byte [] oldestRegion = null;
+    for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
+      if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
+        oldestRegion = e.getKey();
+        break;
+      }
+    }
+    return oldestRegion;
   }
 
   /*
