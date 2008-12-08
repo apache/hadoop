@@ -39,13 +39,13 @@ public class TestMiniMRDFSSort extends TestCase {
 
   // Knobs to control randomwriter; and hence sort
   private static final int NUM_HADOOP_SLAVES = 3;
-  private static final int RW_BYTES_PER_MAP = 50000;
-  private static final int RW_MAPS_PER_HOST = 5;
-  
+  private static final int RW_BYTES_PER_MAP = 2 * 1024 * 1024;
+  private static final int RW_MAPS_PER_HOST = 2;
+
   private static void runRandomWriter(JobConf job, Path sortInput) 
   throws Exception {
     // Scale down the default settings for RandomWriter for the test-case
-    // Generates NUM_HADOOP_SLAVES * RW_MAPS_PER_HOST * RW_BYTES_PER_MAP -> 1MB
+    // Generates NUM_HADOOP_SLAVES * RW_MAPS_PER_HOST * RW_BYTES_PER_MAP
     job.setInt("test.randomwrite.bytes_per_map", RW_BYTES_PER_MAP);
     job.setInt("test.randomwriter.maps_per_host", RW_MAPS_PER_HOST);
     String[] rwArgs = {sortInput.toString()};
@@ -56,6 +56,9 @@ public class TestMiniMRDFSSort extends TestCase {
   
   private static void runSort(JobConf job, Path sortInput, Path sortOutput) 
   throws Exception {
+
+    job.setInt("io.sort.mb", 1);
+    job.setLong("mapred.min.split.size", Long.MAX_VALUE);
     // Setup command-line arguments to 'sort'
     String[] sortArgs = {sortInput.toString(), sortOutput.toString()};
     
@@ -78,9 +81,6 @@ public class TestMiniMRDFSSort extends TestCase {
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
     try {
-      // set io.sort.mb and fsinmemory.size.mb to lower value in test
-      conf.setInt("io.sort.mb", 5);
-      conf.setInt("fs.inmemory.size.mb", 20);
 
       // Start the mini-MR and mini-DFS clusters
       dfs = new MiniDFSCluster(conf, NUM_HADOOP_SLAVES, true, null);

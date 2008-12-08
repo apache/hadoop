@@ -201,6 +201,9 @@ Trunk (unreleased changes)
     Restarting the TaskTracker moves it out of the blacklist.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4688. Modify the MiniMRDFSSort unit test to spill multiple times,
+    exercising the map-side merge code. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
