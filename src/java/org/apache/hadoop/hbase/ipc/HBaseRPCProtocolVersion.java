@@ -63,7 +63,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 11: Changed getClosestRowBefore signature.</li>
    * <li>Version 12: HServerLoad extensions (HBASE-1018).</li>
    * <li>Version 13: HBASE-847</li>
+   * <li>Version 14: HBASE-900</li>
    * </ul>
    */
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
 }

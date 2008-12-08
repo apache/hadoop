@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
@@ -192,7 +192,7 @@ public class HConnectionManager implements HConstants {
           masterLocation = new HServerAddress(this.conf.get(MASTER_ADDRESS,
             DEFAULT_MASTER_ADDRESS));
           try {
-            HMasterInterface tryMaster = (HMasterInterface)HbaseRPC.getProxy(
+            HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                 HMasterInterface.class, HBaseRPCProtocolVersion.versionID, 
                 masterLocation.getInetSocketAddress(), this.conf);
             
@@ -732,7 +732,7 @@ public class HConnectionManager implements HConstants {
         server = this.servers.get(regionServer.toString());
         if (server == null) { // Get a connection
           try {
-            server = (HRegionInterface)HbaseRPC.waitForProxy(
+            server = (HRegionInterface)HBaseRPC.waitForProxy(
                 serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
                 regionServer.getInetSocketAddress(), this.conf, 
                 this.maxRPCAttempts);
@@ -954,7 +954,7 @@ public class HConnectionManager implements HConstants {
     void close(boolean stopProxy) {
       if (master != null) {
         if (stopProxy) {
-          HbaseRPC.stopProxy(master);
+          HBaseRPC.stopProxy(master);
         }
         master = null;
         masterChecked = false;
@@ -962,7 +962,7 @@ public class HConnectionManager implements HConstants {
       if (stopProxy) {
         synchronized (servers) {
           for (HRegionInterface i: servers.values()) {
-            HbaseRPC.stopProxy(i);
+            HBaseRPC.stopProxy(i);
           }
         }
       }

@@ -44,8 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.HBaseClient;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
@@ -76,14 +74,14 @@ import org.apache.hadoop.security.UserGroupInformation;
  * All methods in the protocol should throw only IOException.  No field data of
  * the protocol instance is transmitted.
  */
-public class HbaseRPC {
+public class HBaseRPC {
   // Leave this out in the hadoop ipc package but keep class name.  Do this
   // so that we dont' get the logging of this class's invocations by doing our
   // blanket enabling DEBUG on the o.a.h.h. package.
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HbaseRPC");
 
-  private HbaseRPC() {
+  private HBaseRPC() {
     super();
   }                                  // no public ctor
 
@@ -235,8 +233,8 @@ public class HbaseRPC {
 
   /* Cache a client using its socket factory as the hash key */
   static private class ClientCache {
-    private Map<SocketFactory, Client> clients =
-      new HashMap<SocketFactory, Client>();
+    private Map<SocketFactory, HBaseClient> clients =
+      new HashMap<SocketFactory, HBaseClient>();
 
     /**
      * Construct & cache an IPC client with the user-provided SocketFactory 
@@ -245,14 +243,14 @@ public class HbaseRPC {
      * @param conf Configuration
      * @return an IPC client
      */
-    private synchronized Client getClient(Configuration conf,
+    private synchronized HBaseClient getClient(Configuration conf,
         SocketFactory factory) {
       // Construct & cache client.  The configuration is only used for timeout,
       // and Clients have connection pools.  So we can either (a) lose some
       // connection pooling and leak sockets, or (b) use the same timeout for all
       // configurations.  Since the IPC is usually intended globally, not
       // per-job, we choose (a).
-      Client client = clients.get(factory);
+      HBaseClient client = clients.get(factory);
       if (client == null) {
         // Make an hbase client instead of hadoop Client.
         client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
@@ -270,7 +268,7 @@ public class HbaseRPC {
      * @param conf Configuration
      * @return an IPC client
      */
-    private synchronized Client getClient(Configuration conf) {
+    private synchronized HBaseClient getClient(Configuration conf) {
       return getClient(conf, SocketFactory.getDefault());
     }
 
@@ -278,7 +276,7 @@ public class HbaseRPC {
      * Stop a RPC client connection 
      * A RPC client is closed only when its reference count becomes zero.
      */
-    private void stopClient(Client client) {
+    private void stopClient(HBaseClient client) {
       synchronized (this) {
         ((HBaseClient)client).decCount();
         if (((HBaseClient)client).isZeroReference()) {
@@ -296,7 +294,7 @@ public class HbaseRPC {
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
     private UserGroupInformation ticket;
-    private Client client;
+    private HBaseClient client;
     private boolean isClosed = false;
 
     /**
@@ -521,7 +519,7 @@ public class HbaseRPC {
     Invocation[] invocations = new Invocation[params.length];
     for (int i = 0; i < params.length; i++)
       invocations[i] = new Invocation(method, params[i]);
-    Client client = CLIENTS.getClient(conf);
+    HBaseClient client = CLIENTS.getClient(conf);
     try {
     Writable[] wrappedValues = client.call(invocations, addrs);
     
@@ -578,7 +576,7 @@ public class HbaseRPC {
   }
 
   /** An RPC Server. */
-  public static class Server extends org.apache.hadoop.ipc.Server {
+  public static class Server extends HBaseServer {
     private Object instance;
     private Class<?> implementation;
     private boolean verbose;

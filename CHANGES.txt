@@ -101,6 +101,8 @@ Release 0.19.0 - Unreleased
                hard code memory sizes
    HBASE-1000  Sleeper.sleep does not go back to sleep when interrupted
                and no stop flag given.
+   HBASE-900   Regionserver memory leak causing OOME during relatively
+               modest bulk importing; part 1
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

@@ -60,10 +60,11 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,7 +77,6 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.Server;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -91,8 +91,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
-      @SuppressWarnings("unused") long clientVersion) {
+  public long getProtocolVersion(String protocol, long clientVersion) {
     return HBaseRPCProtocolVersion.versionID;
   }
 
@@ -117,7 +116,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   volatile BlockingQueue<RegionServerOperation> toDoQueue =
     new LinkedBlockingQueue<RegionServerOperation>();
 
-  private final Server server;
+  private final HBaseServer server;
   private final HServerAddress address;
 
   final ServerConnection connection;
@@ -222,7 +221,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       conf.getLong("hbase.hbasemaster.maxregionopen", 120 * 1000);
     this.leaseTimeout = conf.getInt("hbase.master.lease.period", 120 * 1000);
     
-    this.server = HbaseRPC.getServer(this, address.getBindAddress(),
+    this.server = HBaseRPC.getServer(this, address.getBindAddress(),
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
 
@@ -530,13 +529,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * HMasterRegionInterface
    */
-
-  @SuppressWarnings("unused")
   public MapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
     // Set the address for now even tho it will not be persisted on
     // the HRS side.
-    String rsAddress = Server.getRemoteAddress();
+    String rsAddress = HBaseServer.getRemoteAddress();
     serverInfo.setServerAddress(new HServerAddress
         (rsAddress, serverInfo.getServerAddress().getPort()));
     // register with server manager
@@ -552,7 +549,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   protected MapWritable createConfigurationSubset() {
     MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
     // Get the real address of the HRS.
-    String rsAddress = Server.getRemoteAddress();
+    String rsAddress = HBaseServer.getRemoteAddress();
     if (rsAddress != null) {
       mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
     }

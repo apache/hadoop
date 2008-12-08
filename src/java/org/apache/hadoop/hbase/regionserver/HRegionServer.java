@@ -72,8 +72,8 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.UnknownRowLockException;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.ValueOverMaxLengthException;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.ServerConnection;
@@ -84,10 +84,11 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -96,7 +97,6 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -154,7 +154,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
-  final Server server;
+  final HBaseServer server;
   
   // Leases
   private final Leases leases;
@@ -258,7 +258,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.workerThread = new Thread(worker);
 
     // Server to handle client requests
-    this.server = HbaseRPC.getServer(this, address.getBindAddress(), 
+    this.server = HBaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     // Address is givin a default IP for the moment. Will be changed after
@@ -518,7 +518,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         serverInfo.getServerAddress().toString());
     }
     if (this.hbaseMaster != null) {
-      HbaseRPC.stopProxy(this.hbaseMaster);
+      HBaseRPC.stopProxy(this.hbaseMaster);
       this.hbaseMaster = null;
     }
     join();
@@ -959,7 +959,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         // Do initial RPC setup.  The final argument indicates that the RPC
         // should retry indefinitely.
-        master = (HMasterRegionInterface)HbaseRPC.waitForProxy(
+        master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
             this.conf, -1);

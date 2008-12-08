@@ -823,7 +823,7 @@ public class HStore implements HConstants {
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         if (this.storefiles.size() <= 0) {
-          LOG.debug("no store files to compact");
+          LOG.debug(this.storeNameStr + ": no store files to compact");
           return null;
         }
         // filesToCompact are sorted oldest to newest.
