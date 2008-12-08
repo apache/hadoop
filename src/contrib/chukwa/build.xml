@@ -222,8 +222,8 @@
 
 
 
-	<target name="test-chunk" depends="compile,compile-test" description="Test chunk">
-               
+	<target name="test-chukwa" depends="compile,compile-test" description="Run Chukwa unit tests">
+          <mkdir dir="${basedir}/var"/>
           <junit showoutput="yes"
             fork="yes"
             printsummary="${test.junit.printsummary}"
@@ -234,12 +234,20 @@
            <classpath refid="testClasspath"/>
            <sysproperty key="test.src.dir" value="${test.src.dir}"/>
            <formatter type="${test.junit.output.format}" />
-           <batchtest todir="${test.build.dir}" >
-            <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/*.java"/>
+           <batchtest todir="${test.build.dir}" unless="testcase">
+            <fileset dir="${test.src.dir}">
+              <include name="**/${test.include}.java"/>
+              <exclude name="**/${test.exclude}.java"/>
+            </fileset>
+           </batchtest>
+           <batchtest todir="${test.build.dir}" if="testcase">
+            <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
            </batchtest>
          </junit>
          <fail if="tests.failed">Tests failed!</fail>
-
+         <delete>
+            <fileset dir="${basedir}/var" includes="*"/>
+         </delete>
         </target>
 
 	<target name="collector" depends="compile" description="Prepare collector.war">
@@ -469,30 +477,7 @@
 		</copy>
 	</target>
 
-	<target name="test" depends="compile,compile-test,test-chunk,test-input-tools,test-agent,test-database" description="Automated Test Framework">
-	</target>
-
-	<target name="test-input-tools" depends="compile,compile-test" description="Test Input Tools">
-            <junit showoutput="${test.output}"
-             printsummary="${test.junit.printsummary}"
-             haltonfailure="${test.junit.haltonfailure}"
-             fork="yes"
-             forkmode="${test.junit.fork.mode}"
-             maxmemory="${test.junit.maxmemory}"
-             dir="${basedir}" timeout="${test.timeout}"
-             errorProperty="tests.failed" failureProperty="tests.failed">
-               <sysproperty key="CHUKWA_HOME" value="${basedir}"/>
-               <sysproperty key="CHUKWA_CONF_DIR" value="${basedir}/conf"/>
-               <classpath refid="testClasspath"/>
-               <formatter type="${test.junit.output.format}" />
-               <batchtest todir="${build.dir}/test" >
-               <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/datacollection/adaptor/filetailer/*.java"/>
-               </batchtest>
-            </junit>
-            <delete>
-               <fileset dir="${basedir}/var" includes="*"/>
-            </delete>
-            <fail if="tests.failed">Tests failed!</fail>
+	<target name="test" depends="compile,compile-test,test-chukwa" description="Automated Test Framework">
 	</target>
 
         <!-- ================================================================== -->
@@ -502,78 +487,6 @@
             <delete dir="${build.dir}"/>
             <delete dir="${docs.src}/build"/>
         </target>
-	<target name="test-agent" depends="compile,compile-test" description="Test Agent">
-            <junit showoutput="${test.output}"
-             printsummary="${test.junit.printsummary}"
-             haltonfailure="${test.junit.haltonfailure}"
-             fork="yes"
-             forkmode="${test.junit.fork.mode}"
-             maxmemory="${test.junit.maxmemory}"
-             dir="${basedir}" timeout="${test.timeout}"
-             errorProperty="tests.failed" failureProperty="tests.failed">
-               <sysproperty key="CHUKWA_HOME" value="${basedir}"/>
-               <sysproperty key="CHUKWA_CONF_DIR" value="${basedir}/conf"/>
-               <classpath refid="testClasspath"/>
-               <formatter type="${test.junit.output.format}" />
-               <batchtest todir="${build.dir}/test" >
-               <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/datacollection/agent/TestAgent.java"/>
-               </batchtest>
-            </junit> 
-            <delete>
-               <fileset dir="${basedir}/var" includes="*"/>
-            </delete>
-            <fail if="tests.failed">Tests failed!</fail>
-	</target>
-
-	<target name="test-demux" depends="compile,compile-test" description="Test Demux">
-           <copy file="${basedir}/data/demuxData.tgz" todir="${test.cache.data}"/> 
-           <junit showoutput="${test.output}"
-             printsummary="${test.junit.printsummary}"
-             haltonfailure="${test.junit.haltonfailure}"
-             fork="yes"
-             forkmode="${test.junit.fork.mode}"
-             maxmemory="${test.junit.maxmemory}"
-             dir="${basedir}" timeout="${test.timeout}"
-             errorProperty="tests.failed" failureProperty="tests.failed">
-               <sysproperty key="test.build.data" value="${test.build.data}"/>
-               <sysproperty key="test.demux.data" value="${test.cache.data}"/>
-               <sysproperty key="CHUKWA_HOME" value="${basedir}"/>
-               <sysproperty key="CHUKWA_CONF_DIR" value="${basedir}/conf"/>
-               <classpath refid="testDemuxClasspath"/>
-               <formatter type="${test.junit.output.format}" />
-               <batchtest todir="${build.dir}/test" >
-               <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/validationframework/TestDemux.java"/>
-               </batchtest>
-            </junit> 
-            <delete>
-               <fileset dir="${basedir}/var" includes="*"/>
-            </delete>
-            <fail if="tests.failed">Tests failed!</fail>
-	</target>
-
-	<target name="test-database" depends="compile,compile-test" description="Test Database">
-            <junit showoutput="${test.output}"
-             printsummary="${test.junit.printsummary}"
-             haltonfailure="${test.junit.haltonfailure}"
-             fork="yes"
-             forkmode="${test.junit.fork.mode}"
-             maxmemory="${test.junit.maxmemory}"
-             dir="${basedir}" timeout="${test.timeout}"
-             errorProperty="tests.failed" failureProperty="tests.failed">
-               <sysproperty key="CHUKWA_HOME" value="${basedir}"/>
-               <sysproperty key="CHUKWA_CONF_DIR" value="${basedir}/conf"/>
-               <classpath refid="testClasspath"/>
-               <formatter type="${test.junit.output.format}" />
-               <batchtest todir="${build.dir}/test" >
-               <fileset dir="${test.src.dir}" includes="org/apache/hadoop/chukwa/*.java"/>
-               </batchtest>
-            </junit> 
-            <delete>
-               <fileset dir="${basedir}/var" includes="*"/>
-            </delete>
-            <fail if="tests.failed">Tests failed!</fail>
-	</target>
-
 	<!-- ====================================================== -->
 	<!-- Macro definitions                                      -->
 	<!-- ====================================================== -->

@@ -311,6 +311,9 @@ Trunk (unreleased changes)
     HADOOP-4792. Add generated Chukwa configuration files to version control
     ignore lists. (cdouglas)
 
+    HADOOP-4796. Fix Chukwa test configuration, remove unused components. (Eric
+    Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
