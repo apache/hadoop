@@ -64,14 +64,19 @@ Trunk (unreleased changes)
     (szetszwo)
 
     HADOOP-4709. Add several new features and bug fixes to Chukwa.
-    (Jerome Boulon, Eric Yang, Andy Konwinski, Ariel Rabkin via cdouglas)
-      Added Hadoop Infrastructure Care Center (UI for visualize data collected by Chukwa)
+      Added Hadoop Infrastructure Care Center (UI for visualize data collected
+                                               by Chukwa)
       Added FileAdaptor for streaming small file in one chunk
       Added compression to archive and demux output
-      Added unit tests and validation for agent, collector, and demux map reduce job
-      Added database loader for loading demux output (sequence file) to jdbc connected database
+      Added unit tests and validation for agent, collector, and demux map 
+        reduce job
+      Added database loader for loading demux output (sequence file) to jdbc 
+        connected database
       Added algorithm to distribute collector load more evenly
+    (Jerome Boulon, Eric Yang, Andy Konwinski, Ariel Rabkin via cdouglas)
 
+    HADOOP-4179. Add Vaidya tool to analyze map/reduce job logs for performanc
+    problems. (Suhas Gogate via omalley)
 
   IMPROVEMENTS
 
