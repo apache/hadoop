@@ -1164,11 +1164,45 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * Remove the temporary block file (if any)
    */
   public synchronized void unfinalizeBlock(Block b) throws IOException {
-    ongoingCreates.remove(b);
+    // remove the block from in-memory data structure
+    ActiveFile activefile = ongoingCreates.remove(b);
+    if (activefile == null) {
+      return;
+    }
     volumeMap.remove(b);
-    DataNode.LOG.warn("Block " + b + " unfinalized and removed. " );
+    
+    // delete the on-disk temp file
+    if (delBlockFromDisk(activefile.file, getMetaFile(activefile.file, b), b)) {
+      DataNode.LOG.warn("Block " + b + " unfinalized and removed. " );
+    }
   }
 
+  /**
+   * Remove a block from disk
+   * @param blockFile block file
+   * @param metaFile block meta file
+   * @param b a block
+   * @return true if on-disk files are deleted; false otherwise
+   */
+  private boolean delBlockFromDisk(File blockFile, File metaFile, Block b) {
+    if (blockFile == null) {
+      DataNode.LOG.warn("No file exists for block: " + b);
+      return true;
+    }
+    
+    if (!blockFile.delete()) {
+      DataNode.LOG.warn("Not able to delete the block file: " + blockFile);
+      return false;
+    } else { // remove the meta file
+      if (metaFile != null && !metaFile.delete()) {
+        DataNode.LOG.warn(
+            "Not able to delete the meta block file: " + metaFile);
+        return false;
+      }
+    }
+    return true;
+  }
+  
   /**
    * Return a table of block data
    */
