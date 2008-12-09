@@ -86,11 +86,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.isRecovery = isRecovery;
       this.clientName = clientName;
       this.offsetInBlock = 0;
+      this.srcDataNode = srcDataNode;
+      this.datanode = datanode;
       this.checksum = DataChecksum.newDataChecksum(in);
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
-      this.srcDataNode = srcDataNode;
-      this.datanode = datanode;
       //
       // Open local disk out
       //
@@ -109,11 +109,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
     } catch(IOException ioe) {
       IOUtils.closeStream(this);
+      removeBlock();
+      
+      // check if there is a disk error
       IOException cause = FSDataset.getCauseIfDiskError(ioe);
       if (cause != null) { // possible disk error
         ioe = cause;
-        datanode.checkDiskError(ioe);
+        datanode.checkDiskError(ioe); // may throw an exception here
       }
+      
       throw ioe;
     }
   }
@@ -553,6 +557,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       if (responder != null) {
         responder.interrupt();
       }
+      removeBlock();
       throw ioe;
     } finally {
       if (responder != null) {
@@ -563,6 +568,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         }
         responder = null;
       }
+    }
+  }
+
+  /** Remove a partial block 
+   * if this write is for a replication request (and not from a client)
+   */
+  private void removeBlock() throws IOException {
+    if (clientName.length() == 0) { // not client write
+      datanode.data.unfinalizeBlock(block);
     }
   }
 

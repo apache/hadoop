@@ -1368,7 +1368,7 @@ Release 0.18.3 - Unreleased
     HADOOP-4061. Throttle Datanode decommission monitoring in Namenode.
     (szetszwo)
 
-    HADOOP-4659. Root cause of connection failure is being ost to code that
+    HADOOP-4659. Root cause of connection failure is being lost to code that
     uses it for delaying startup. (Steve Loughran and Hairong via hairong)
 
     HADOOP-4614. Lazily open segments when merging map spills to avoid using
@@ -1400,6 +1400,9 @@ Release 0.18.3 - Unreleased
     (szetszwo)
 
     HADOOP-4742. Replica gets deleted by mistake. (Wang Xu via hairong)
+
+    HADOOP-4702. Failed block replication leaves an incomplete block in
+    receiver's tmp data directory. (hairong)
 
 Release 0.18.2 - 2008-11-03
 
