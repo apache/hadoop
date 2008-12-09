@@ -2364,10 +2364,10 @@ public class DataNode extends Configured
         this.isRecovery = isRecovery;
         this.clientName = clientName;
         this.offsetInBlock = 0;
+        this.srcDataNode = srcDataNode;
         this.checksum = DataChecksum.newDataChecksum(in);
         this.bytesPerChecksum = checksum.getBytesPerChecksum();
         this.checksumSize = checksum.getChecksumSize();
-        this.srcDataNode = srcDataNode;
         //
         // Open local disk out
         //
@@ -2381,6 +2381,9 @@ public class DataNode extends Configured
         }
       } catch(IOException ioe) {
         IOUtils.closeStream(this);
+        removeBlock();
+
+        // check if there is a disk error
         IOException cause = FSDataset.getCauseIfDiskError(ioe);
         if (cause != null) { // possible disk error
           ioe = cause;
@@ -2792,6 +2795,7 @@ public class DataNode extends Configured
         if (responder != null) {
           responder.interrupt();
         }
+        removeBlock();
         throw ioe;
       } finally {
         if (responder != null) {
@@ -2802,6 +2806,15 @@ public class DataNode extends Configured
           }
           responder = null;
         }
+      }
+    }
+
+    /** Remove a partial block
+     * if this write is for a replication request (and not from a client)
+     */
+    private void removeBlock() throws IOException {
+      if (clientName.length() == 0) { // not client write
+        data.unfinalizeBlock(block);
       }
     }
 
