@@ -326,6 +326,9 @@ Trunk (unreleased changes)
     HADOOP-4796. Fix Chukwa test configuration, remove unused components. (Eric
     Yang via cdouglas)
 
+    HADOOP-4708. Add binaries missed in the initial checkin for Chukwa. (Eric
+    Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
