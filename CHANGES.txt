@@ -78,6 +78,10 @@ Trunk (unreleased changes)
     HADOOP-4179. Add Vaidya tool to analyze map/reduce job logs for performanc
     problems. (Suhas Gogate via omalley)
 
+    HADOOP-4029. Add NameNode storage information to the dfshealth page and
+    move DataNode information to a separated page. (Boris Shkolnik via
+    szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4234. Fix KFS "glue" layer to allow applications to interface

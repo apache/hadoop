@@ -8,6 +8,8 @@
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
   import="org.apache.hadoop.hdfs.server.datanode.*"
+  import="org.apache.hadoop.hdfs.server.common.Storage"
+  import="org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory"
   import="org.apache.hadoop.hdfs.protocol.*"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
@@ -116,6 +118,41 @@
               "<td title=" + "\"blocks scheduled : " + d.getBlocksScheduled() + 
               "\" class=\"blocks\">" + d.numBlocks() + "\n");
   }
+  
+  
+  public void generateConfReport( JspWriter out,
+		  FSNamesystem fsn,
+		  HttpServletRequest request)
+  throws IOException {
+	  long underReplicatedBlocks = fsn.getUnderReplicatedBlocks();
+	  FSImage fsImage = fsn.getFSImage();
+	  List<Storage.StorageDirectory> removedStorageDirs = fsImage.getRemovedStorageDirs();
+	  String storageDirsSizeStr="", removedStorageDirsSizeStr="", storageDirsStr="", removedStorageDirsStr="", storageDirsDiv="", removedStorageDirsDiv="";
+
+	  //FS Image storage configuration
+	  out.print("<h3> NameNode Storage: </h3>");
+	  out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"+
+	  "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
+	  
+	  StorageDirectory st =null;
+	  for (Iterator<StorageDirectory> it = fsImage.dirIterator(); it.hasNext();) {
+	      st = it.next();
+	      String dir = "" +  st.getRoot();
+		  String type = "" + st.getStorageDirType();
+		  out.print("<tr><td>"+dir+"</td><td>"+type+"</td><td>Active</td></tr>");
+	  }
+	  
+	  long storageDirsSize = removedStorageDirs.size();
+	  for(int i=0; i< storageDirsSize; i++){
+		  st = removedStorageDirs.get(i);
+		  String dir = "" +  st.getRoot();
+		  String type = "" + st.getStorageDirType();
+		  out.print("<tr><td>"+dir+"</td><td>"+type+"</td><td><font color=red>Failed</font></td></tr>");
+	  }
+	  
+	  out.print("</table></div><br>\n");
+  }
+
 
   public void generateDFSHealthReport(JspWriter out,
                                       NameNode nn,
@@ -173,74 +210,15 @@
 	       rowTxt() + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt() +
 	       StringUtils.limitDecimalTo2(percentRemaining) + " %" +
 	       rowTxt() + colTxt() +
-               "<a href=\"#LiveNodes\">Live Nodes</a> " +
-               colTxt() + ":" + colTxt() + live.size() +
+	       		"<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> " +
+	       		colTxt() + ":" + colTxt() + live.size() +
 	       rowTxt() + colTxt() +
-               "<a href=\"#DeadNodes\">Dead Nodes</a> " +
-               colTxt() + ":" + colTxt() + dead.size() +
-               "</table></div><br><hr>\n" );
+	       		"<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> " +
+	       		colTxt() + ":" + colTxt() + dead.size() +
+               "</table></div><br>\n" );
     
     if (live.isEmpty() && dead.isEmpty()) {
         out.print("There are no datanodes in the cluster");
-    }
-    else {
-        
-	out.print( "<div id=\"dfsnodetable\"> "+
-                   "<a name=\"LiveNodes\" id=\"title\">" +
-                   "Live Datanodes : " + live.size() + "</a>" +
-                   "<br><br>\n<table border=1 cellspacing=0>\n" );
-
-        counterReset();
-        
-  int nnHttpPort = nn.getHttpAddress().getPort();
-	if ( live.size() > 0 ) {
-            
-            if ( live.get(0).getCapacity() > 1024 * diskBytes ) {
-                diskBytes *= 1024;
-                diskByteStr = "TB";
-            }
-
-      out.print( "<tr class=\"headerRow\"> <th " +
-                 NodeHeaderStr("name") + "> Node <th " +
-                 NodeHeaderStr("lastcontact") + "> Last <br>Contact <th " +
-                 NodeHeaderStr("adminstate") + "> Admin State <th " +
-                 NodeHeaderStr("capacity") + "> Configured <br>Capacity (" + 
-                 diskByteStr + ") <th " + 
-                 NodeHeaderStr("used") + "> Used <br>(" + 
-                 diskByteStr + ") <th " + 
-                 NodeHeaderStr("nondfsused") + "> Non DFS <br>Used (" + 
-                 diskByteStr + ") <th " + 
-                 NodeHeaderStr("remaining") + "> Remaining <br>(" + 
-                 diskByteStr + ") <th " + 
-                 NodeHeaderStr("pcused") + "> Used <br>(%) <th " + 
-                 NodeHeaderStr("pcused") + "> Used <br>(%) <th " +
-                 NodeHeaderStr("pcremaining") + "> Remaining <br>(%) <th " +
-                 NodeHeaderStr("blocks") + "> Blocks\n" );
-            
-      jspHelper.sortNodeList(live, sorterField, sorterOrder);
-      for ( int i=0; i < live.size(); i++ ) {
-        generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort);
-      }
-    }
-    out.print("</table>\n");
-    
-    counterReset();
-	
-	out.print("<br> <a name=\"DeadNodes\" id=\"title\"> " +
-                  " Dead Datanodes : " +dead.size() + "</a><br><br>\n");
-
-	if ( dead.size() > 0 ) {
-	    out.print( "<table border=1 cellspacing=0> <tr id=\"row1\"> " +
-		       "<td> Node \n" );
-	    
-      jspHelper.sortNodeList(dead, "name", "ASC");
-	    for ( int i=0; i < dead.size() ; i++ ) {
-        generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
-	    }
-	    
-	    out.print("</table>\n");
-	}
-	out.print("</div>");
     }
   }%>
 
@@ -276,7 +254,10 @@
 <%
     generateDFSHealthReport(out, nn, request); 
 %>
-
+<hr>
+<%
+	generateConfReport(out, fsn, request);
+%>
 <%
 out.println(ServletUtil.htmlFooter());
 %>

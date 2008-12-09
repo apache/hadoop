@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Map;
@@ -111,6 +112,12 @@ public class FSImage extends Storage {
   protected long checkpointTime = -1L;
   private FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
+  
+  /**
+   * list of failed (and thus removed) storages
+   */
+  protected List<StorageDirectory> removedStorageDirs = new ArrayList<StorageDirectory>();
+  
   /**
    * Directories for importing an image from a checkpoint.
    */
@@ -163,6 +170,7 @@ public class FSImage extends Storage {
                         Collection<File> fsEditsDirs
                              ) throws IOException {
     this.storageDirs = new ArrayList<StorageDirectory>();
+    this.removedStorageDirs = new ArrayList<StorageDirectory>();
    // Add all name dirs with appropriate NameNodeDirType 
     for (File dirName : fsNameDirs) {
       boolean isAlsoEdits = false;
@@ -194,6 +202,10 @@ public class FSImage extends Storage {
   
   static File getImageFile(StorageDirectory sd, NameNodeFile type) {
     return new File(sd.getCurrentDir(), type.getName());
+  }
+  
+  List<StorageDirectory> getRemovedStorageDirs() {
+	  return this.removedStorageDirs;
   }
   
   File getEditFile(StorageDirectory sd) {
@@ -616,6 +628,9 @@ public class FSImage extends Storage {
         // Close any edits stream associated with this dir and remove directory
      if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
        editLog.processIOError(sd);
+     
+   //add storage to the removed list
+     removedStorageDirs.add(sd);
      it.remove();
       }
     }
@@ -627,10 +642,14 @@ public class FSImage extends Storage {
   
   void processIOError(File dirName) {
     for (Iterator<StorageDirectory> it = 
-            dirIterator(); it.hasNext();) {
+      dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
-      if (sd.getRoot().getPath().equals(dirName.getParent()))
+      if (sd.getRoot().getPath().equals(dirName.getPath())) {
+        //add storage to the removed list
+        LOG.info(" removing " + dirName.getPath());
+        removedStorageDirs.add(sd);
         it.remove();
+      }
     }
   }
 
@@ -1304,6 +1323,8 @@ public class FSImage extends Storage {
           // Close edit stream, if this directory is also used for edits
           if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
             editLog.processIOError(sd);
+        // add storage to the removed list
+          removedStorageDirs.add(sd);
           it.remove();
         }
       }
@@ -1335,6 +1356,8 @@ public class FSImage extends Storage {
         // Close edit stream, if this directory is also used for edits
         if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
           editLog.processIOError(sd);
+      //add storage to the removed list
+        removedStorageDirs.add(sd);
         it.remove();
       }
     }
