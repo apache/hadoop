@@ -329,6 +329,9 @@ Trunk (unreleased changes)
     HADOOP-4708. Add binaries missed in the initial checkin for Chukwa. (Eric
     Yang via cdouglas)
 
+    HADOOP-4805. Remove black list collector from Chukwa Agent HTTP Sender.
+    (Eric Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
