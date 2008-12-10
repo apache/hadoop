@@ -59,7 +59,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
-      Path dir1 = new Path("/user/dir1");
+      Path dir1 = new Path("/user/a+b/dir1");
       Path file1 = new Path(dir1, "file1");
       FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
       System.out.println("testFileCreationDeleteParent: "
