@@ -175,4 +175,14 @@ public class IndexSpecification implements Writable {
         .writeObject(out, keyGenerator, IndexKeyGenerator.class, conf);
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("ID => ");
+    sb.append(indexId);
+    return sb.toString();
+  }
+  
+  
 }

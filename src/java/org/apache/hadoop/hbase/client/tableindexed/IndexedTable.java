@@ -164,7 +164,10 @@ public class IndexedTable extends TransactionalTable {
         if (columns != null && columns.length > 0) {
           LOG.debug("Going to base table for remaining columns");
           RowResult baseResult = IndexedTable.this.getRow(baseRow, columns);
-          colValues.putAll(baseResult);
+          
+          if (baseResult != null) {
+            colValues.putAll(baseResult);
+          }
         }
         for (Entry<byte[], Cell> entry : row.entrySet()) {
           byte[] col = entry.getKey();

@@ -188,6 +188,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
     }
+    this.indexes.putAll(desc.indexes);
   }
 
   /*
@@ -494,6 +495,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     s.append(FAMILIES);
     s.append(" => ");
     s.append(families.values());
+
+    s.append(", ");
+    s.append("INDEXES");
+    s.append(" => ");
+    s.append(indexes.values());
     s.append('}');
     return s.toString();
   }
