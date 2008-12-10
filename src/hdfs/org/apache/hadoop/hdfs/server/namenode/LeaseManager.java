@@ -288,7 +288,8 @@ public class LeaseManager {
     for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPath)) {
       final String oldpath = entry.getKey();
       final Lease lease = entry.getValue();
-      final String newpath = oldpath.replaceFirst(overwrite, replaceBy);
+      final String newpath = oldpath.replaceFirst(
+          java.util.regex.Pattern.quote(overwrite), replaceBy);
       if (LOG.isDebugEnabled()) {
         LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
       }
