@@ -24,6 +24,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4727. Fix a group checking bug in fill_stat_structure(...) in
     fuse-dfs.  (Brian Bockelman via szetszwo)
 
+    HADOOP-4731. Fix capacity scheduler to correctly remove job on completion 
+    from waiting queue. (Amar Kamat via yhemanth)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

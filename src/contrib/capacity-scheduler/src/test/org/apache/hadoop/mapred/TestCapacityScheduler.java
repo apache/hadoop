@@ -139,6 +139,11 @@ public class TestCapacityScheduler extends TestCase {
     Set<TaskInProgress> getRunningReduces() {
       return (Set<TaskInProgress>)reduceTips;
     }
+    
+    @Override
+    public void kill() {
+      this.status.setRunState(JobStatus.KILLED);
+    }
   }
   
   static class FakeTaskInProgress extends TaskInProgress {
@@ -478,6 +483,63 @@ public class TestCapacityScheduler extends TestCase {
     JobStatus newStatus = (JobStatus)jip.getStatus().clone();
     return new JobStatusChangeEvent(jip, EventType.RUN_STATE_CHANGED, 
                                     oldStatus, newStatus);
+  }
+  
+  // test job completion
+  // test if the job completion/killing is reflected while the job is in
+  //   - prep
+  //   - running
+  public void testJobCompletion() throws IOException {
+    // start the scheduler
+    taskTrackerManager.addQueues(new String[] {"default"});
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1, true, 1));
+    resConf.setFakeQueues(queues);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+    
+    // submit the job
+    FakeJobInProgress fjob1 = 
+      submitJob(JobStatus.PREP, 1, 0, "default", "user");
+    
+    // submit another job
+    FakeJobInProgress fjob2 = 
+      submitJob(JobStatus.PREP, 1, 0, "default", "user");
+    
+    // kill the first job 
+    fjob1.kill();
+    taskTrackerManager.finalizeJob(fjob1);
+    
+    // check if the state change is reflected
+    assertEquals("Waiting queue is garbled on waiting job-kill", 1, 
+                 scheduler.jobQueuesManager.getWaitingJobQueue("default")
+                          .size());
+    
+    // Init the other job
+    JobChangeEvent event = initTasksAndReportEvent(fjob2);
+    
+    // inform the scheduler
+    scheduler.jobQueuesManager.jobUpdated(event);
+    
+    // schedule a task
+    List<Task> tasks = scheduler.assignTasks(tracker("tt1"));
+    
+    // complete the job
+    taskTrackerManager.finishTask("tt1", tasks.get(0).getTaskID().toString(), 
+                                  fjob2);
+    
+    // kill the job now
+    fjob2.kill();
+    
+    // mark the job as complete
+    taskTrackerManager.finalizeJob(fjob2);
+    
+    // check if the state change has not changed running queue
+    assertEquals("Runnning queue is garbled on running job-kill", 0, 
+                 scheduler.jobQueuesManager.getRunningJobQueue("default")
+                          .size());
+    
   }
   
   // test job run-state change

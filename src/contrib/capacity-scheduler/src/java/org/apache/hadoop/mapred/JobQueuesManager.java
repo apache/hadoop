@@ -143,7 +143,7 @@ class JobQueuesManager extends JobInProgressListener {
     LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
              + job.getProfile().getQueueName() + " has completed");
     // job could be in running or waiting queue
-    if (qi.runningJobs.remove(oldInfo) != null) {
+    if (qi.runningJobs.remove(oldInfo) == null) {
       qi.waitingJobs.remove(oldInfo);
     }
     // let scheduler know
