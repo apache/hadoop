@@ -1410,6 +1410,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4702. Failed block replication leaves an incomplete block in
     receiver's tmp data directory. (hairong)
 
+    HADOOP-4613. Fix block browsing on Web UI. (Johan Oskarsson via shv)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
