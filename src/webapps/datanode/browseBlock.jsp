@@ -144,6 +144,7 @@
                         "&blockSize=" + blockSize +
                "&filename=" + URLEncoder.encode(filename, "UTF-8")+ 
                         "&datanodePort=" + datanodePort + 
+                        "&genstamp=" + cur.getBlock().getGenerationStamp() + 
                         "&namenodeInfoPort=" + namenodeInfoPort +
                         "&chunkSizeToView=" + chunkSizeToView;
         out.print("<td>&nbsp</td>" 
