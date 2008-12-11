@@ -29,3 +29,4 @@ logs/
 src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/contrib/index/conf/index-config.xml
 src/docs/build
+src/docs/cn/build
