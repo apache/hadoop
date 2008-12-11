@@ -1081,6 +1081,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4806. HDFS rename should not use src path as a regular expression.
     (szetszwo)
 
+    HADOOP-4795. Prevent lease monitor getting into an infinite loop when
+    leases and the namespace tree does not match. (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

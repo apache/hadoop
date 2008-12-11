@@ -318,7 +318,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             conf.getInt("dfs.replication.pending.timeout.sec", 
                                         -1) * 1000L);
     this.hbthread = new Daemon(new HeartbeatMonitor());
-    this.lmthread = new Daemon(leaseManager.createMonitor());
+    this.lmthread = new Daemon(leaseManager.new Monitor());
     this.replthread = new Daemon(new ReplicationMonitor());
     hbthread.start();
     lmthread.start();
@@ -1827,20 +1827,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     INodeFile iFile = dir.getFileINode(src);
     if (iFile == null) {
-      NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
-                                   + "attempt to release a create lock on "
-                                   + src + " file does not exist.");
-      return;
+      final String message = "DIR* NameSystem.internalReleaseCreate: "
+        + "attempt to release a create lock on "
+        + src + " file does not exist.";
+      NameNode.stateChangeLog.warn(message);
+      throw new IOException(message);
     }
     if (!iFile.isUnderConstruction()) {
-      NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
-                                   + "attempt to release a create lock on "
-                                   + src + " but file is already closed.");
-      return;
-    }
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.internalReleaseCreate: "
-          + src + " does not being written in " + lease);
+      final String message = "DIR* NameSystem.internalReleaseCreate: "
+        + "attempt to release a create lock on "
+        + src + " but file is already closed.";
+      NameNode.stateChangeLog.warn(message);
+      throw new IOException(message);
     }
 
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
