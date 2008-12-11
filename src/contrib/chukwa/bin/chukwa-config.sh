@@ -98,8 +98,8 @@ fi
 export DATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml
 COMMON=`ls ${CHUKWA_HOME}/lib/*.jar ${CHUKWA_HOME}/hadoopjars/commons*.jar`
 export COMMON=`echo ${COMMON} | sed 'y/ /:/'`
-export CHUKWA_CORE=${CHUKWA_HOME}/build/chukwa-core-${CHUKWA_VERSION}.jar
-export CHUKWA_AGENT=${CHUKWA_HOME}/build/chukwa-agent-${CHUKWA_VERSION}.jar
+export CHUKWA_CORE=${CHUKWA_HOME}/chukwa-core-${CHUKWA_VERSION}.jar
+export CHUKWA_AGENT=${CHUKWA_HOME}/chukwa-agent-${CHUKWA_VERSION}.jar
 export CURRENT_DATE=`date +%Y%m%d%H%M`
 
 if [ -z ${HADOOP_JAR} ]; then
@@ -107,9 +107,9 @@ if [ -z ${HADOOP_JAR} ]; then
         export HADOOP_HOME=../../..
     fi
     if [ -d ${HADOOP_HOME} ]; then
-        export HADOOP_JAR=`ls ${HADOOP_HOME}/build/hadoop-*-core.jar`
+        export HADOOP_JAR=`ls ${HADOOP_HOME}/hadoop-*-core.jar`
         if [ -z ${HADOOP_JAR} ]; then
-            echo "Please make sure hadoop-*-core.jar exists in ${HADOOP_HOME}/build"
+            echo "Please make sure hadoop-*-core.jar exists in ${HADOOP_HOME}"
             exit -1
         fi
     else
@@ -127,5 +127,5 @@ if [ -z "$JAVA_HOME" ] ; then
   echo ERROR! You forgot to set JAVA_HOME in conf/chukwa-env.sh   
 fi
 
-export JPS=${JAVA_HOME}/bin/jps
+export JPS="ps ax"
 

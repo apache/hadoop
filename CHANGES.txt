@@ -343,6 +343,9 @@ Trunk (unreleased changes)
     HADOOP-4837. Move HADOOP_CONF_DIR configuration to chukwa-env.sh (Jerome
     Boulon via cdouglas)
 
+    HADOOP-4825. Use ps instead of jps for querying process status in Chukwa.
+    (Eric Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

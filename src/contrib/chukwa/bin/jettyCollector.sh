@@ -25,7 +25,7 @@ trap 'stop; exit 0' 1 2 15
 
 function stop {
   echo -n "Shutting down Collector..."
-  ${JPS} | grep CollectorStub | cut -f 1 -d" " | xargs kill -TERM >&/dev/null
+  ${JPS} | grep CollectorStub | grep -v grep | cut -f 1 -d" " | xargs kill -TERM >&/dev/null
   echo "done"
   exit 0
 }
