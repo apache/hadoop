@@ -33,12 +33,12 @@ import org.apache.hadoop.util.StringUtils;
 
 /** This class encapsulates a MapReduce job and its dependency. It monitors 
  *  the states of the depending jobs and updates the state of this job.
- *  A job stats in the WAITING state. If it does not have any deoending jobs, or
+ *  A job starts in the WAITING state. If it does not have any depending jobs, or
  *  all of the depending jobs are in SUCCESS state, then the job state will become
  *  READY. If any depending jobs fail, the job will fail too. 
  *  When in READY state, the job can be submitted to Hadoop for execution, with
  *  the state changing into RUNNING state. From RUNNING state, the job can get into 
- *  SUCCESS or FAILED state, depending the status of the jon execution.
+ *  SUCCESS or FAILED state, depending the status of the job execution.
  *  
  */
 

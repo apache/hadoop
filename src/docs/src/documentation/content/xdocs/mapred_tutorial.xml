@@ -1289,7 +1289,7 @@
         : The job.xml file, the generic job configuration, localized for 
         the job. </li>
         <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid</code>
-        : The task direcrory for each task attempt. Each task directory
+        : The task directory for each task attempt. Each task directory
         again has the following structure :
         <ul>
         <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid/job.xml</code>

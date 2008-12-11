@@ -27,6 +27,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4731. Fix capacity scheduler to correctly remove job on completion 
     from waiting queue. (Amar Kamat via yhemanth)
 
+    HADOOP-4836. Correct typos in mapred related documentation.  (Jordà Polo
+    via szetszwo)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
