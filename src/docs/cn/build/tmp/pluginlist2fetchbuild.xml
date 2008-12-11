@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="fetchplugin">
+<target name="fetchplugin" depends="fetch-local-unversioned-plugin, fetch-remote-unversioned-plugin-version-forrest,fetch-remote-unversioned-plugin-unversion-forrest, final-check"/>
+<target name="fetch-local-versioned-plugin">
+<antcallback return="plugin-found" target="get-local">
+<param name="local-plugin-version" value="-"/>
+<param name="local-plugin-name" value="org.apache.forrest.plugin.output.pdf"/>
+</antcallback>
+</target>
+<target unless="plugin-found" name="fetch-remote-versioned-plugin-version-forrest">
+<antcallback return="plugin-found,desired.plugin.zip.present" target="download">
+<param name="download-plugin-version" value="-"/>
+<param name="download-plugin-name" value="org.apache.forrest.plugin.output.pdf"/>
+<param name="download-forrest-version" value="0.8/"/>
+</antcallback>
+</target>
+<target unless="plugin-found" name="fetch-local-unversioned-plugin">
+<antcallback return="plugin-found" target="get-local">
+<param value="" name="local-plugin-version"/>
+<param name="local-plugin-name" value="org.apache.forrest.plugin.output.pdf"/>
+</antcallback>
+</target>
+<target unless="plugin-found" name="fetch-remote-unversioned-plugin-version-forrest">
+<antcallback return="plugin-found,desired.plugin.zip.present" target="download">
+<param value="" name="download-plugin-version"/>
+<param name="download-plugin-name" value="org.apache.forrest.plugin.output.pdf"/>
+<param name="download-forrest-version" value="0.8/"/>
+</antcallback>
+</target>
+<target unless="plugin-found" name="fetch-remote-unversioned-plugin-unversion-forrest">
+<antcallback return="plugin-found,desired.plugin.zip.present" target="download">
+<param value="" name="download-plugin-version"/>
+<param name="download-plugin-name" value="org.apache.forrest.plugin.output.pdf"/>
+<param value="" name="download-forrest-version"/>
+</antcallback>
+</target>
+<target name="get-local">
+<echo>Trying to locally get ${local-plugin-name}${local-plugin-version}</echo>
+<trycatch property="plugin-found">
+<try>
+<for param="plugin-src-dir" list="/Users/oom/tools/src/apache-forrest-0.8/plugins,/Users/oom/tools/src/apache-forrest-0.8/whiteboard/plugins">
+<sequential>
+<echo>Looking in local @{plugin-src-dir}</echo>
+<if>
+<available type="dir" property="plugin.src.present" file="@{plugin-src-dir}/${local-plugin-name}${local-plugin-version}"/>
+<then>
+<echo message="Found !"/>
+<ant target="local-deploy" antfile="@{plugin-src-dir}/${local-plugin-name}${local-plugin-version}/build.xml" dir="@{plugin-src-dir}/${local-plugin-name}${local-plugin-version}">
+<property value="true" name="no.echo.init"/>
+</ant>
+<fail/>
+</then>
+</if>
+</sequential>
+</for>
+</try>
+<catch>
+<echo>Plugin ${local-plugin-name}${local-plugin-version} deployed ! Ready to configure</echo>
+</catch>
+</trycatch>
+</target>
+<target depends="keep-original-zip,get-from-remote-site,is-downloaded,remove-original-zip" name="download"/>
+<target if="original.zip.exists" depends="available-original-zip" name="keep-original-zip">
+<copy preservelastmodified="true" file="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip" tofile="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip.orig"/>
+</target>
+<target name="available-original-zip">
+<available property="original.zip.exists" file="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip"/>
+</target>
+<target name="get-from-remote-site">
+<echo>Tying to download ${download-plugin-name}${download-plugin-version} from the distribution site ...</echo>
+<if>
+<not>
+<equals arg2="" arg1="${download.forrest.version}"/>
+</not>
+<then>
+<echo>Using Forrest version : ${download-forrest-version}</echo>
+</then>
+</if>
+<get ignoreerrors="true" usetimestamp="true" verbose="true" src="http://forrest.apache.org/plugins//${download-forrest-version}${download-plugin-name}${download-plugin-version}.zip" dest="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip"/>
+<available property="desired.plugin.zip.present" file="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip"/>
+<condition property="plugin-found">
+<and>
+<isset property="desired.plugin.zip.present"/>
+<not>
+<isset property="original.zip.exists"/>
+</not>
+</and>
+</condition>
+</target>
+<target if="original.zip.exists" name="is-downloaded">
+<uptodate property="no-difference-found" srcfile="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip" targetfile="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip.orig"/>
+<if>
+<not>
+<isset property="no-difference-found"/>
+</not>
+<then>
+<property value="true" name="plugin-found"/>
+</then>
+</if>
+</target>
+<target if="original.zip.exists" name="remove-original-zip">
+<delete file="/Users/oom/tools/src/apache-forrest-0.8/build/plugins/${download-plugin-name}.zip.orig"/>
+</target>
+<target depends="has-been-downloaded,downloaded-message,uptodate-message,not-found-message" name="final-check"/>
+<target if="desired.plugin.zip.present" name="has-been-downloaded">
+<condition property="up-to-date">
+<not>
+<isset property="plugin-found"/>
+</not>
+</condition>
+<condition property="downloaded">
+<isset property="plugin-found"/>
+</condition>
+</target>
+<target if="downloaded" name="downloaded-message">
+<echo>Plugin org.apache.forrest.plugin.output.pdf downloaded ! Ready to install</echo>
+</target>
+<target if="up-to-date" name="uptodate-message">
+<echo>Plugin org.apache.forrest.plugin.output.pdf was up-to-date ! Ready to configure</echo>
+<property value="true" name="plugin-found"/>
+</target>
+<target unless="desired.plugin.zip.present" name="not-found-message">
+<fail>
+  Unable to download the
+  "org.apache.forrest.plugin.output.pdf" plugin
+  
+  or an equivalent unversioned plugin
+  from http://forrest.apache.org/plugins/
+  There are a number of possible causes for this:
+
+  One possible problem is that you do not have write access to
+  FORREST_HOME, in which case ask your system admin to install the
+  required Forrest plugin as described below.
+
+  A further possibility is that Forrest may be unable to connect to
+  the plugin distribution server. Again the solution is to manually
+  install the plugin.
+
+  To manually install a plugin, download the plugin zip file from
+  http://forrest.apache.org/plugins/ and
+  extract it into
+  /Users/oom/tools/src/apache-forrest-0.8/build/plugins/org.apache.forrest.plugin.output.pdf</fail>
+</target>
+</project>

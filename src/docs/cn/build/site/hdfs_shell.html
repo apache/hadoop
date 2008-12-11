@@ -1,0 +1,860 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title>Hadoop Shell命令</title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/core/">项目</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop">维基</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.18文档</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">文档</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">概述</a>
+</div>
+<div class="menuitem">
+<a href="quickstart.html">快速入门</a>
+</div>
+<div class="menuitem">
+<a href="cluster_setup.html">集群搭建</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS构架设计</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS使用指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS权限指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS配额管理指南</a>
+</div>
+<div class="menuitem">
+<a href="commands_manual.html">命令手册</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">FS Shell使用指南</div>
+</div>
+<div class="menuitem">
+<a href="distcp.html">DistCp使用指南</a>
+</div>
+<div class="menuitem">
+<a href="mapred_tutorial.html">Map-Reduce教程</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop本地库</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
+</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/index.html">API参考</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/">维基</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/FAQ">常见问题</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/mailing_lists.html">邮件列表</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html">发行说明</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html">变更日志</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="hdfs_shell.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1>Hadoop Shell命令</h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#FS+Shell"> FS Shell </a>
+<ul class="minitoc">
+<li>
+<a href="#cat"> cat </a>
+</li>
+<li>
+<a href="#chgrp"> chgrp </a>
+</li>
+<li>
+<a href="#chmod"> chmod </a>
+</li>
+<li>
+<a href="#chown"> chown </a>
+</li>
+<li>
+<a href="#copyFromLocal">copyFromLocal</a>
+</li>
+<li>
+<a href="#copyToLocal"> copyToLocal</a>
+</li>
+<li>
+<a href="#cp"> cp </a>
+</li>
+<li>
+<a href="#du">du</a>
+</li>
+<li>
+<a href="#dus"> dus </a>
+</li>
+<li>
+<a href="#expunge"> expunge </a>
+</li>
+<li>
+<a href="#get"> get </a>
+</li>
+<li>
+<a href="#getmerge"> getmerge </a>
+</li>
+<li>
+<a href="#ls"> ls </a>
+</li>
+<li>
+<a href="#lsr">lsr</a>
+</li>
+<li>
+<a href="#mkdir"> mkdir </a>
+</li>
+<li>
+<a href="#movefromLocal"> movefromLocal </a>
+</li>
+<li>
+<a href="#mv"> mv </a>
+</li>
+<li>
+<a href="#put"> put </a>
+</li>
+<li>
+<a href="#rm"> rm </a>
+</li>
+<li>
+<a href="#rmr"> rmr </a>
+</li>
+<li>
+<a href="#setrep"> setrep </a>
+</li>
+<li>
+<a href="#stat"> stat </a>
+</li>
+<li>
+<a href="#tail"> tail </a>
+</li>
+<li>
+<a href="#test"> test </a>
+</li>
+<li>
+<a href="#text"> text </a>
+</li>
+<li>
+<a href="#touchz"> touchz </a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<!--DCCOMMENT:diff begin-->
+		
+<a name="N1000F"></a><a name="FS+Shell"></a>
+<h2 class="h3"> FS Shell </h2>
+<div class="section">
+<p>
+      调用文件系统(FS)Shell命令应使用
+      <span class="codefrag">bin/hadoop fs &lt;args&gt;</span>的形式。
+      所有的的FS shell命令使用URI路径作为参数。URI格式是<em>scheme://authority/path</em>。对HDFS文件系统，scheme是<em>hdfs</em>，对本地文件系统，scheme是<em>file</em>。其中scheme和authority参数都是可选的，如果未加指定，就会使用配置中指定的默认scheme。一个HDFS文件或目录比如<em>/parent/child</em>可以表示成<em>hdfs://namenode:namenodeport/parent/child</em>，或者更简单的<em>/parent/child</em>（假设你配置文件中的默认值是<em>namenode:namenodeport</em>）。大多数FS Shell命令的行为和对应的Unix Shell命令类似，不同之处会在下面介绍各命令使用详情时指出。出错信息会输出到<em>stderr</em>，其他信息输出到<em>stdout</em>。
+  </p>
+<a name="N10036"></a><a name="cat"></a>
+<h3 class="h4"> cat </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -cat URI [URI &hellip;]</span>
+			
+</p>
+<p>
+		   将路径指定文件的内容输出到<em>stdout</em>。
+		   </p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2 
+		   </span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag">hadoop fs -cat file:///file3 /user/hadoop/file4 </span>
+				
+</li>
+			
+</ul>
+<p>返回值：<br>
+<!--DCCOMMENT:diff end
+note:"hadoop dfs" has been replaced by "hadoop fs" in this doc.
+
+@@ -39,11 +50,11 @@
+                        <p>Example:</p>
+                        <ul>
+                                <li>
+-                                       <code> hadoop dfs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2
++                                       <code> hadoop fs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2
+                   </code>
+                                </li>
+                                <li>
+-                                       <code>hadoop dfs -cat file:///file3 /user/hadoop/file4 </code>
++                                       <code>hadoop fs -cat file:///file3 /user/hadoop/file4 </code>
+                                </li>
+                        </ul>
+                        <p>Exit Code:<br/>
+-->
+		   
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+</p>
+<a name="N10068"></a><a name="chgrp"></a>
+<h3 class="h4"> chgrp </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -chgrp [-R] GROUP URI [URI &hellip;]</span>
+            Change group association of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+--&gt;
+			</p>
+<p>
+	    改变文件所属的组。使用<span class="codefrag">-R</span>将使改变在目录结构下递归进行。命令的使用者必须是文件的所有者或者超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+<a name="N10086"></a><a name="chmod"></a>
+<h3 class="h4"> chmod </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &hellip;]</span>
+			
+</p>
+<p>
+	    改变文件的权限。使用<span class="codefrag">-R</span>将使改变在目录结构下递归进行。命令的使用者必须是文件的所有者或者超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+<a name="N1009D"></a><a name="chown"></a>
+<h3 class="h4"> chown </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</span>
+			
+</p>
+<p>
+	    改变文件的拥有者。使用<span class="codefrag">-R</span>将使改变在目录结构下递归进行。命令的使用者必须是超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+<a name="N100B4"></a><a name="copyFromLocal"></a>
+<h3 class="h4">copyFromLocal</h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -copyFromLocal &lt;localsrc&gt; URI</span>
+			
+</p>
+<p>除了限定源路径是一个本地文件外，和<a href="#putlink"><strong>put</strong></a>命令相似。</p>
+<a name="N100C9"></a><a name="copyToLocal"></a>
+<h3 class="h4"> copyToLocal</h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</span>
+			
+</p>
+<p>除了限定目标路径是一个本地文件外，和<a href="#getlink"><strong>get</strong></a>命令类似。</p>
+<a name="N100DE"></a><a name="cp"></a>
+<h3 class="h4"> cp </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -cp URI [URI &hellip;] &lt;dest&gt;</span>
+			
+</p>
+<p>
+	    将文件从源路径复制到目标路径。这个命令允许有多个源路径，此时目标路径必须是一个目录。
+	    <br>
+	    示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2</span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N10108"></a><a name="du"></a>
+<h3 class="h4">du</h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -du URI [URI &hellip;]</span>
+			
+</p>
+<p>
+	     显示目录中所有文件的大小，或者当只指定一个文件时，显示此文件的大小。<br>
+	     示例：<br>
+<span class="codefrag">hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://host:port/user/hadoop/dir1</span>
+<br>
+	     返回值：<br>
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+<br>
+</p>
+<a name="N10123"></a><a name="dus"></a>
+<h3 class="h4"> dus </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -dus &lt;args&gt;</span>
+			
+</p>
+<p>
+	   显示文件的大小。
+	   </p>
+<a name="N10133"></a><a name="expunge"></a>
+<h3 class="h4"> expunge </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -expunge</span>
+			
+</p>
+<p>清空回收站。请参考<a href="hdfs_design.html">HDFS设计</a>文档以获取更多关于回收站特性的信息。
+	   </p>
+<a name="N10147"></a><a name="get"></a>
+<h3 class="h4"> get </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</span>
+				
+<br>
+			
+</p>
+<p>
+	   复制文件到本地文件系统。可用<span class="codefrag">-ignorecrc</span>选项复制CRC校验失败的文件。使用<span class="codefrag">-crc</span>选项复制文件以及CRC信息。
+	  		</p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -get /user/hadoop/file localfile </span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -get hdfs://host:port/user/hadoop/file localfile</span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N1017B"></a><a name="getmerge"></a>
+<h3 class="h4"> getmerge </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</span>
+			
+</p>
+<p>
+	  接受一个源目录和一个目标文件作为输入，并且将源目录中所有的文件连接成本地目标文件。<span class="codefrag">addnl</span>是可选的，用于指定在每个文件结尾添加一个换行符。 
+	  </p>
+<a name="N1018E"></a><a name="ls"></a>
+<h3 class="h4"> ls </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -ls &lt;args&gt;</span>
+			
+</p>
+<p>如果是文件，则按照如下格式返回文件信息：<br>
+<span class="codefrag">文件名 &lt;副本数&gt; 文件大小 修改日期 修改时间 权限 用户ID 组ID</span>
+<br>
+	         如果是目录，则返回它直接子文件的一个列表，就像在Unix中一样。目录返回列表的信息如下：<br>
+<span class="codefrag">目录名 &lt;dir&gt; 修改日期 修改时间 权限 用户ID 组ID</span>
+<br>
+	         示例：<br>
+<span class="codefrag">hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://host:port/user/hadoop/dir1 /nonexistentfile</span>
+<br>
+	         返回值：<br>
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+<br>
+</p>
+<a name="N101B1"></a><a name="lsr"></a>
+<h3 class="h4">lsr</h3>
+<p>
+<span class="codefrag">使用方法：hadoop fs -lsr &lt;args&gt;</span>
+<br>
+	      
+<span class="codefrag">ls</span>命令的递归版本。类似于Unix中的<span class="codefrag">ls -R</span>。
+	      </p>
+<a name="N101C4"></a><a name="mkdir"></a>
+<h3 class="h4"> mkdir </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -mkdir &lt;paths&gt;</span>
+				
+<br>
+			
+</p>
+<p>接受路径指定的uri作为参数，创建这些目录。其行为类似于Unix的mkdir -p，它会创建路径中的各级父目录。</p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag">hadoop fs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag">hadoop fs -mkdir hdfs://host1:port1/user/hadoop/dir hdfs://host2:port2/user/hadoop/dir
+	  </span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag">成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N101F1"></a><a name="movefromLocal"></a>
+<h3 class="h4"> movefromLocal </h3>
+<p>
+				
+<span class="codefrag">使用方法：dfs -moveFromLocal &lt;src&gt; &lt;dst&gt;</span>
+			
+</p>
+<p>输出一个&rdquo;not implemented&ldquo;信息。
+	   </p>
+<a name="N10201"></a><a name="mv"></a>
+<h3 class="h4"> mv </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -mv URI [URI &hellip;] &lt;dest&gt;</span>
+			
+</p>
+<p>
+	    将文件从源路径移动到目标路径。这个命令允许有多个源路径，此时目标路径必须是一个目录。不允许在不同的文件系统间移动文件。
+	    <br>
+	    示例：
+	    </p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -mv /user/hadoop/file1 /user/hadoop/file2</span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -mv hdfs://host:port/file1 hdfs://host:port/file2 hdfs://host:port/file3 hdfs://host:port/dir1</span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N1022B"></a><a name="put"></a>
+<h3 class="h4"> put </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -put &lt;localsrc&gt; ... &lt;dst&gt;</span>
+			
+</p>
+<p>从本地文件系统中复制单个或多个源路径到目标文件系统。也支持从标准输入中读取输入写入目标文件系统。<br>
+	   
+</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -put localfile /user/hadoop/hadoopfile</span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir</span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -put localfile hdfs://host:port/hadoop/hadoopfile</span>
+				
+</li>
+				
+<li>
+<span class="codefrag">hadoop fs -put - hdfs://host:port/hadoop/hadoopfile</span>
+<br>从标准输入中读取输入。</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N10262"></a><a name="rm"></a>
+<h3 class="h4"> rm </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -rm URI [URI &hellip;] </span>
+			
+</p>
+<p>
+	   删除指定的文件。只删除非空目录和文件。请参考rmr命令了解递归删除。<br>
+	   示例：
+	   </p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -rm hdfs://host:port/file /user/hadoop/emptydir </span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N10286"></a><a name="rmr"></a>
+<h3 class="h4"> rmr </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -rmr URI [URI &hellip;]</span>
+			
+</p>
+<p>delete的递归版本。<br>
+	   示例：
+	   </p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -rmr /user/hadoop/dir </span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -rmr hdfs://host:port/user/hadoop/dir </span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N102B0"></a><a name="setrep"></a>
+<h3 class="h4"> setrep </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -setrep [-R] &lt;path&gt;</span>
+			
+</p>
+<p>
+	   改变一个文件的副本系数。-R选项用于递归改变目录下所有文件的副本系数。
+	  </p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -setrep -w 3 -R /user/hadoop/dir1 </span>
+				
+</li>
+			
+</ul>
+<p>返回值：</p>
+<p>
+				
+<span class="codefrag">成功返回0，失败返回-1。</span>
+			
+</p>
+<a name="N102D5"></a><a name="stat"></a>
+<h3 class="h4"> stat </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -stat URI [URI &hellip;]</span>
+			
+</p>
+<p>
+	   返回指定路径的统计信息。
+	   </p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -stat path </span>
+				
+</li>
+			
+</ul>
+<p>返回值：<br>
+	   
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+</p>
+<a name="N102F8"></a><a name="tail"></a>
+<h3 class="h4"> tail </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -tail [-f] URI </span>
+			
+</p>
+<p>
+	   将文件尾部1K字节的内容输出到stdout。支持-f选项，行为和Unix中一致。
+	   </p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -tail pathname </span>
+				
+</li>
+			
+</ul>
+<p>返回值：<br>
+	   
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+</p>
+<a name="N1031B"></a><a name="test"></a>
+<h3 class="h4"> test </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -test -[ezd] URI</span>
+			
+</p>
+<p>
+	   选项：<br>
+	   -e 检查文件是否存在。如果存在则返回0。<br>
+	   -z 检查文件是否是0字节。如果是则返回0。 <br>
+	   -d 如果路径是个目录，则返回1，否则返回0。<br>
+</p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop fs -test -e filename </span>
+				
+</li>
+			
+</ul>
+<a name="N1033E"></a><a name="text"></a>
+<h3 class="h4"> text </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -text &lt;src&gt;</span>
+				
+<br>
+			
+</p>
+<p>
+	   将源文件输出为文本格式。允许的格式是zip和TextRecordInputStream。
+	  </p>
+<a name="N10350"></a><a name="touchz"></a>
+<h3 class="h4"> touchz </h3>
+<p>
+				
+<span class="codefrag">使用方法：hadoop fs -touchz URI [URI &hellip;]</span>
+				
+<br>
+			
+</p>
+<p>
+	   创建一个0字节的空文件。
+	   </p>
+<p>示例：</p>
+<ul>
+				
+<li>
+					
+<span class="codefrag"> hadoop -touchz pathname </span>
+				
+</li>
+			
+</ul>
+<p>返回值：<br>
+	   
+<span class="codefrag"> 成功返回0，失败返回-1。</span>
+</p>
+</div>
+	
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>

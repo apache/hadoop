@@ -63,10 +63,19 @@ mapred tutorial.<br />(Vivek Ratan via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(6)
     <ol id="release_0.19.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4697">HADOOP-4697</a>. Fix getBlockLocations in KosmosFileSystem to handle multiple
 blocks correctly.<br />(Sriram Rao via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4420">HADOOP-4420</a>. Add null checks for job, caused by invalid job IDs.<br />(Aaron Kimball via tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4632">HADOOP-4632</a>. Fix TestJobHistoryVersion to use test.build.dir instead of the
+current workding directory for scratch space.<br />(Amar Kamat via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4508">HADOOP-4508</a>. Fix FSDataOutputStream.getPos() for append.<br />(dhruba via
+szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4727">HADOOP-4727</a>. Fix a group checking bug in fill_stat_structure(...) in
+fuse-dfs.<br />(Brian Bockelman via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4731">HADOOP-4731</a>. Fix capacity scheduler to correctly remove job on completion
+from waiting queue.<br />(Amar Kamat via yhemanth)</li>
     </ol>
   </li>
 </ul>
@@ -403,7 +412,7 @@ org.apache.hadoop.mapred  package private instead of public.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(153)
+</a>&nbsp;&nbsp;&nbsp;(152)
     <ol id="release_0.19.0_-_2008-11-18_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3563">HADOOP-3563</a>.  Refactor the distributed upgrade code so that it is
 easier to identify datanode and namenode related code.<br />(dhruba)</li>
@@ -602,9 +611,6 @@ negatvies.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3942">HADOOP-3942</a>. Update distcp documentation to include features introduced in
 <a href="http://issues.apache.org/jira/browse/HADOOP-3873">HADOOP-3873</a>, <a href="http://issues.apache.org/jira/browse/HADOOP-3939">HADOOP-3939</a>. (Tsz Wo (Nicholas), SZE via cdouglas)
 </li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4257">HADOOP-4257</a>. The DFS client should pick only one datanode as the candidate
-to initiate lease recovery.  (Tsz Wo (Nicholas), SZE via dhruba)
-</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4319">HADOOP-4319</a>. fuse-dfs dfs_read function returns as many bytes as it is
 told to read unlesss end-of-file is reached.<br />(Pete Wyckoff via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4246">HADOOP-4246</a>. Ensure we have the correct lower bound on the number of
@@ -710,7 +716,7 @@ via acmurthy)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(18)
+</a>&nbsp;&nbsp;&nbsp;(26)
     <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
@@ -728,7 +734,7 @@ live replicas for a block.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4647">HADOOP-4647</a>. NamenodeFsck should close the DFSClient it has created.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4616">HADOOP-4616</a>. Fuse-dfs can handle bad values from FileSystem.read call.<br />(Pete Wyckoff via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4061">HADOOP-4061</a>. Throttle Datanode decommission monitoring in Namenode.<br />(szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4659">HADOOP-4659</a>. Root cause of connection failure is being ost to code that
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4659">HADOOP-4659</a>. Root cause of connection failure is being lost to code that
 uses it for delaying startup.<br />(Steve Loughran and Hairong via hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4614">HADOOP-4614</a>. Lazily open segments when merging map spills to avoid using
 too many file descriptors.<br />(Yuri Pradkin via cdouglas)</li>
@@ -742,6 +748,17 @@ Kunz via cdouglas)</li>
 between progress reports configurable.<br />(Jothi Padmanabhan via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4726">HADOOP-4726</a>. Fix documentation typos "the the".<br />(Edward J. Yoon via
 szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4679">HADOOP-4679</a>. Datanode prints tons of log messages: waiting for threadgroup
+to exit, active threads is XX.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4746">HADOOP-4746</a>. Job output directory should be normalized.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4717">HADOOP-4717</a>. Removal of default port# in NameNode.getUri() causes a
+map/reduce job failed to prompt temporary output.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4778">HADOOP-4778</a>. Check for zero size block meta file when updating a block.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4742">HADOOP-4742</a>. Replica gets deleted by mistake.<br />(Wang Xu via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4702">HADOOP-4702</a>. Failed block replication leaves an incomplete block in
+receiver's tmp data directory.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4613">HADOOP-4613</a>. Fix block browsing on Web UI.<br />(Johan Oskarsson via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4806">HADOOP-4806</a>. HDFS rename should not use src path as a regular expression.<br />(szetszwo)</li>
     </ol>
   </li>
 </ul>
@@ -1357,6 +1374,13 @@ cdouglas)</li>
 <h3><a href="javascript:toggleList('release_0.17.3_-_unreleased_')">Release 0.17.3 - Unreleased
 </a></h3>
 <ul id="release_0.17.3_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.17.3_-_unreleased_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4164">HADOOP-4164</a>. Chinese translation of the documentation.<br />(Xuebing Yan via
+omalley)</li>
+    </ol>
+  </li>
   <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._bug_fixes_')">  BUG FIXES
 </a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="release_0.17.3_-_unreleased_._bug_fixes_">

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!--
+Forrest site.xml
+
+This file contains an outline of the site's information content.  It is used to:
+- Generate the website menus (though these can be overridden - see docs)
+- Provide semantic, location-independent aliases for internal 'site:' URIs, eg
+<link href="site:changes"> links to changes.html (or ../changes.html if in
+  subdir).
+- Provide aliases for external URLs in the external-refs section.  Eg, <link
+  href="ext:cocoon"> links to http://xml.apache.org/cocoon/
+
+See http://forrest.apache.org/docs/linking.html for more info.
+-->
+
+<site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
+
+  <docs label="文档"> 
+    <overview  label="概述"           href="index.html" />
+    <quickstart label="快速入门"        href="quickstart.html" />
+    <setup     label="集群搭建"      href="cluster_setup.html" />
+    <hdfs      label="HDFS构架设计"  href="hdfs_design.html" />
+    <hdfs      label="HDFS使用指南"    href="hdfs_user_guide.html" />
+    <hdfs      label="HDFS权限指南"    href="hdfs_permissions_guide.html" />
+    <hdfs      label="HDFS配额管理指南" href="hdfs_quota_admin_guide.html" />
+    <commands  label="命令手册"     href="commands_manual.html" />
+    <fs        label="FS Shell使用指南"   href="hdfs_shell.html" />
+    <distcp    label="DistCp使用指南"       href="distcp.html" />
+    <mapred    label="Map-Reduce教程" href="mapred_tutorial.html" />
+    <mapred    label="Hadoop本地库" href="native_libraries.html" />
+    <streaming label="Streaming"          href="streaming.html" />
+    <archives label="Hadoop Archives"     href="hadoop_archives.html"/>
+    <hod       label="Hadoop On Demand" href="hod.html">
+      <hod-user-guide href="hod_user_guide.html"/>
+      <hod-admin-guide href="hod_admin_guide.html"/>
+      <hod-config-guide href="hod_config_guide.html"/>
+    </hod>
+    <api       label="API参考"           href="ext:api/index" />
+    <jdiff     label="API Changes"        href="ext:jdiff" />
+    <wiki      label="维基"               href="ext:wiki" />
+    <faq       label="常见问题"                href="ext:faq" />
+    <lists     label="邮件列表"      href="ext:lists" />
+    <relnotes  label="发行说明"      href="ext:relnotes" />
+    <changes   label="变更日志"        href="ext:changes" />
+  </docs>
+
+ <external-refs>
+    <site      href="http://hadoop.apache.org/core/"/>
+    <lists     href="http://hadoop.apache.org/core/mailing_lists.html"/>
+    <releases  href="http://hadoop.apache.org/core/releases.html">
+      <download href="#Download" />
+    </releases>
+    <jira      href="http://hadoop.apache.org/core/issue_tracking.html"/>
+    <wiki      href="http://wiki.apache.org/hadoop/" />
+    <faq       href="http://wiki.apache.org/hadoop/FAQ" />
+    <hadoop-default href="http://hadoop.apache.org/core/docs/current/hadoop-default.html" />
+    <zlib      href="http://www.zlib.net/" />
+    <lzo       href="http://www.oberhumer.com/opensource/lzo/" />
+    <gzip      href="http://www.gzip.org/" />
+    <cygwin    href="http://www.cygwin.com/" />
+    <osx       href="http://www.apple.com/macosx" />
+    <hod href="">
+      <cluster-resources href="http://www.clusterresources.com" />
+      <torque href="http://www.clusterresources.com/pages/products/torque-resource-manager.php" />
+      <torque-download href="http://www.clusterresources.com/downloads/torque/" />
+      <torque-docs href="http://www.clusterresources.com/pages/resources/documentation.php" />
+      <torque-wiki href="http://www.clusterresources.com/wiki/doku.php?id=torque:torque_wiki" />
+      <torque-mailing-list href="http://www.clusterresources.com/pages/resources/mailing-lists.php" />
+      <torque-basic-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.2_basic_configuration" />
+      <torque-advanced-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.3_advanced_configuration" />
+      <maui href="http://www.clusterresources.com/pages/products/maui-cluster-scheduler.php"/>
+      <python href="http://www.python.org" />
+      <twisted-python href="http://twistedmatrix.com/trac/" />
+    </hod>
+    <relnotes href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html" />
+    <changes href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html" />
+    <jdiff href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html" />
+    <api href="http://hadoop.apache.org/core/docs/r0.18.2/api/">
+      <index href="index.html" />
+      <org href="org/">
+        <apache href="apache/">
+          <hadoop href="hadoop/">
+            <conf href="conf/">
+              <configuration href="Configuration.html">
+                <final_parameters href="#FinalParams" />
+                <get href="#get(java.lang.String, java.lang.String)" />
+                <set href="#set(java.lang.String, java.lang.String)" />
+              </configuration>
+            </conf>
+            <filecache href="filecache/">
+              <distributedcache href="DistributedCache.html">
+                <addarchivetoclasspath href="#addArchiveToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
+                <addfiletoclasspath href="#addFileToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
+                <addcachefile href="#addCacheFile(java.net.URI,%20org.apache.hadoop.conf.Configuration)" />
+                <addcachearchive href="#addCacheArchive(java.net.URI,%20org.apache.hadoop.conf.Configuration)" />
+                <setcachefiles href="#setCacheFiles(java.net.URI[],%20org.apache.hadoop.conf.Configuration)" />
+                <setcachearchives href="#setCacheArchives(java.net.URI[],%20org.apache.hadoop.conf.Configuration)" />
+                <createsymlink href="#createSymlink(org.apache.hadoop.conf.Configuration)" />
+              </distributedcache>  
+            </filecache>
+            <fs href="fs/">
+              <filesystem href="FileSystem.html" />
+            </fs>
+            <io href="io/">
+              <closeable href="Closeable.html">
+                <close href="#close()" />
+              </closeable>
+              <sequencefile href="SequenceFile.html" />
+              <sequencefilecompressiontype href="SequenceFile.CompressionType.html">
+                <none href="#NONE" />
+                <record href="#RECORD" />
+                <block href="#BLOCK" />
+              </sequencefilecompressiontype>
+              <writable href="Writable.html" />
+              <writablecomparable href="WritableComparable.html" />
+              <compress href="compress/">
+                <compressioncodec href="CompressionCodec.html" />
+              </compress>
+            </io>
+            <mapred href="mapred/">
+              <clusterstatus href="ClusterStatus.html" />
+              <counters href="Counters.html" />
+              <fileinputformat href="FileInputFormat.html">
+                 <setinputpaths href="#setInputPaths(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.fs.Path[])" />
+                 <addinputpath href="#addInputPath(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.fs.Path)" />
+                 <setinputpathstring href="#setInputPaths(org.apache.hadoop.mapred.JobConf,%20java.lang.String)" />
+                 <addinputpathstring href="#addInputPath(org.apache.hadoop.mapred.JobConf,%20java.lang.String)" />
+              </fileinputformat>
+              <fileoutputformat href="FileOutputFormat.html">
+                <getoutputpath href="#getOutputPath(org.apache.hadoop.mapred.JobConf)" />
+                <getworkoutputpath href="#getWorkOutputPath(org.apache.hadoop.mapred.JobConf)" />
+                <setoutputpath href="#setOutputPath(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.fs.Path)" />
+                <setcompressoutput href="#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)" />
+                <setoutputcompressorclass href="#setOutputCompressorClass(org.apache.hadoop.mapred.JobConf,%20java.lang.Class)" />
+              </fileoutputformat>
+              <filesplit href="FileSplit.html" />
+              <inputformat href="InputFormat.html" />
+              <inputsplit href="InputSplit.html" />
+              <isolationrunner href="IsolationRunner.html" />
+              <jobclient href="JobClient.html">
+                <runjob href="#runJob(org.apache.hadoop.mapred.JobConf)" />
+                <submitjob href="#submitJob(org.apache.hadoop.mapred.JobConf)" />
+              </jobclient>
+              <jobconf href="JobConf.html">
+                <setnummaptasks href="#setNumMapTasks(int)" />
+                <setnumreducetasks href="#setNumReduceTasks(int)" />
+                <setoutputkeycomparatorclass href="#setOutputKeyComparatorClass(java.lang.Class)" />
+                <setoutputvaluegroupingcomparator href="#setOutputValueGroupingComparator(java.lang.Class)" />
+                <setcombinerclass href="#setCombinerClass(java.lang.Class)" />
+                <setmapdebugscript href="#setMapDebugScript(java.lang.String)" />
+                <setreducedebugscript href="#setReduceDebugScript(java.lang.String)" />
+                <setmapspeculativeexecution href="#setMapSpeculativeExecution(boolean)" />
+                <setreducespeculativeexecution href="#setReduceSpeculativeExecution(boolean)" />
+                <setmaxmapattempts href="#setMaxMapAttempts(int)" />
+                <setmaxreduceattempts href="#setMaxReduceAttempts(int)" />
+                <setmaxmaptaskfailurespercent href="#setMaxMapTaskFailuresPercent(int)" />
+                <setmaxreducetaskfailurespercent href="#setMaxReduceTaskFailuresPercent(int)" />
+                <setjobendnotificationuri href="#setJobEndNotificationURI(java.lang.String)" />
+                <setcompressmapoutput href="#setCompressMapOutput(boolean)" />
+                <setmapoutputcompressorclass href="#setMapOutputCompressorClass(java.lang.Class)" />
+                <setprofileenabled href="#setProfileEnabled(boolean)" />
+                <setprofiletaskrange href="#setProfileTaskRange(boolean,%20java.lang.String)" />
+                <setprofileparams href="#setProfileParams(java.lang.String)" />
+                <getjoblocaldir href="#getJobLocalDir()" />
+                <getjar href="#getJar()" />
+              </jobconf>
+              <jobconfigurable href="JobConfigurable.html">
+                <configure href="#configure(org.apache.hadoop.mapred.JobConf)" />
+              </jobconfigurable>
+              <jobcontrol href="jobcontrol/">
+                <package-summary href="package-summary.html" />
+              </jobcontrol>
+              <mapper href="Mapper.html">
+                <map href="#map(K1, V1, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)" />
+              </mapper>
+              <outputcollector href="OutputCollector.html">
+                <collect href="#collect(K, V)" />
+              </outputcollector>
+              <outputformat href="OutputFormat.html" />
+              <outputformatbase href="OutputFormatBase.html">
+                <setcompressoutput href="#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)" />
+                <setoutputcompressorclass href="#setOutputCompressorClass(org.apache.hadoop.mapred.JobConf,%20java.lang.Class)" />
+              </outputformatbase>
+              <outputlogfilter href="OutputLogFilter.html" />
+              <sequencefileoutputformat href="SequenceFileOutputFormat.html">
+                <setoutputcompressiontype href="#setOutputCompressionType(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.io.SequenceFile.CompressionType)" />
+              </sequencefileoutputformat>
+              <partitioner href="Partitioner.html" />
+              <recordreader href="RecordReader.html" />
+              <recordwriter href="RecordWriter.html" />
+              <reducer href="Reducer.html">
+                <reduce href="#reduce(K2, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)" />
+              </reducer>
+              <reporter href="Reporter.html">
+                <incrcounterEnum href="#incrCounter(java.lang.Enum, long)" />
+                <incrcounterString href="#incrCounter(java.lang.String, java.lang.String, long amount)" />
+              </reporter>
+              <runningjob href="RunningJob.html" />
+              <textinputformat href="TextInputFormat.html" />
+              <textoutputformat href="TextOutputFormat.html" />
+              <lib href="lib/">
+                <package-summary href="package-summary.html" />
+                <hashpartitioner href="HashPartitioner.html" />
+              </lib>
+              <pipes href="pipes/">
+                <package-summary href="package-summary.html" />
+              </pipes>
+            </mapred>
+            <net href="net/">
+              <dnstoswitchmapping href="DNSToSwitchMapping.html">
+              <resolve href="#resolve(java.util.List)" />
+              </dnstoswitchmapping>
+            </net>
+            <streaming href="streaming/">
+              <package-summary href="package-summary.html" />
+            </streaming>
+            <util href="util/">
+              <genericoptionsparser href="GenericOptionsParser.html" />
+              <progress href="Progress.html" />
+              <tool href="Tool.html" />
+              <toolrunner href="ToolRunner.html">
+                <run href="#run(org.apache.hadoop.util.Tool, java.lang.String[])" />
+              </toolrunner>
+            </util>
+          </hadoop>
+        </apache>
+      </org>
+    </api>
+  </external-refs>
+ 
+</site>
+

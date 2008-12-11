@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+  
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+      
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, 
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+	<header>
+		<title>Hadoop Shell命令</title>
+	</header>
+	<body>
+<!--DCCOMMENT:diff begin-->
+		<section>
+			<title> FS Shell </title>
+			<p>
+      调用文件系统(FS)Shell命令应使用
+      <code>bin/hadoop fs &lt;args&gt;</code>的形式。
+      所有的的FS shell命令使用URI路径作为参数。URI格式是<em>scheme://authority/path</em>。对HDFS文件系统，scheme是<em>hdfs</em>，对本地文件系统，scheme是<em>file</em>。其中scheme和authority参数都是可选的，如果未加指定，就会使用配置中指定的默认scheme。一个HDFS文件或目录比如<em>/parent/child</em>可以表示成<em>hdfs://namenode:namenodeport/parent/child</em>，或者更简单的<em>/parent/child</em>（假设你配置文件中的默认值是<em>namenode:namenodeport</em>）。大多数FS Shell命令的行为和对应的Unix Shell命令类似，不同之处会在下面介绍各命令使用详情时指出。出错信息会输出到<em>stderr</em>，其他信息输出到<em>stdout</em>。
+  </p>
+		<section>
+			<title> cat </title>
+			<p>
+				<code>使用方法：hadoop fs -cat URI [URI &#x2026;]</code>
+			</p>
+<!--DCCOMMENT:diff end
+@@ -21,17 +21,28 @@
+        </header>
+        <body>
+                <section>
+-                       <title> DFShell </title>
++                       <title> FS Shell </title>
+                        <p>
+-      The HDFS shell is invoked by
+-      <code>bin/hadoop dfs &lt;args&gt;</code>.
+-      All the HDFS shell commands take path URIs as arguments. The URI format is <em>scheme://autority/path</em>. For HDFS the scheme is <em>hdfs</em>, and for the local filesystem the scheme is <em>file</em>. The scheme and authority are optional. If not specified, the default scheme specified in the configuration is used. An HDFS file or directory such as <em>/parent/child</em> can be specified as <em>hdfs://namenode:namenodeport/parent/child</em> or simply as <em>/parent/child</em> (given that your configuration is set to point to <em>namenode:namenodeport</em>). Most of the commands in HDFS shell behave like corresponding Unix commands. Differences are described with each of the commands. Error information is sent to <em>stderr</em> and the output is sent to <em>stdout</em>.
++      The FileSystem (FS) shell is invoked by
++      <code>bin/hadoop fs &lt;args&gt;</code>.
++      All the FS shell commands take path URIs as arguments. The URI
++      format is <em>scheme://autority/path</em>. For HDFS the scheme
++      is <em>hdfs</em>, and for the local filesystem the scheme
++      is <em>file</em>. The scheme and authority are optional. If not
++      specified, the default scheme specified in the configuration is
++      used. An HDFS file or directory such as <em>/parent/child</em>
++      can be specified as <em>hdfs://namenodehost/parent/child</em> or
++      simply as <em>/parent/child</em> (given that your configuration
++      is set to point to <em>hdfs://namenodehost</em>). Most of the
++      commands in FS shell behave like corresponding Unix
++      commands. Differences are described with each of the
++      commands. Error information is sent to <em>stderr</em> and the
++      output is sent to <em>stdout</em>.
+   </p>
+-               </section>
+                <section>
+                        <title> cat </title>
+                        <p>
+-                               <code>Usage: hadoop dfs -cat URI [URI &#x2026;]</code>
++                               <code>Usage: hadoop fs -cat URI [URI &#x2026;]</code>
+                        </p>
+                        <p>
+
+-->
+			<p>
+		   将路径指定文件的内容输出到<em>stdout</em>。
+		   </p>
+<!--DCCOMMENT:diff begin-->
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2 
+		   </code>
+				</li>
+				<li>
+					<code>hadoop fs -cat file:///file3 /user/hadoop/file4 </code>
+				</li>
+			</ul>
+			<p>返回值：<br/>
+<!--DCCOMMENT:diff end
+note:"hadoop dfs" has been replaced by "hadoop fs" in this doc.
+
+@@ -39,11 +50,11 @@
+                        <p>Example:</p>
+                        <ul>
+                                <li>
+-                                       <code> hadoop dfs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2
++                                       <code> hadoop fs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2
+                   </code>
+                                </li>
+                                <li>
+-                                       <code>hadoop dfs -cat file:///file3 /user/hadoop/file4 </code>
++                                       <code>hadoop fs -cat file:///file3 /user/hadoop/file4 </code>
+                                </li>
+                        </ul>
+                        <p>Exit Code:<br/>
+-->
+		   <code> 成功返回0，失败返回-1。</code></p>
+		</section>
+		<section>
+			<title> chgrp </title>
+			<p>
+				<code>使用方法：hadoop fs -chgrp [-R] GROUP URI [URI &#x2026;]</code>
+            Change group association of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+-->
+			</p>
+			<p>
+	    改变文件所属的组。使用<code>-R</code>将使改变在目录结构下递归进行。命令的使用者必须是文件的所有者或者超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+		</section>
+		<section>
+			<title> chmod </title>
+			<p>
+				<code>使用方法：hadoop fs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	    改变文件的权限。使用<code>-R</code>将使改变在目录结构下递归进行。命令的使用者必须是文件的所有者或者超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+		</section>
+		<section>
+			<title> chown </title>
+			<p>
+				<code>使用方法：hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</code>
+			</p>
+			<p>
+	    改变文件的拥有者。使用<code>-R</code>将使改变在目录结构下递归进行。命令的使用者必须是超级用户。更多的信息请参见<a href="hdfs_permissions_guide.html">HDFS权限用户指南</a>。
+	    </p>
+		</section>
+		<section>
+			<title>copyFromLocal</title>
+			<p>
+				<code>使用方法：hadoop fs -copyFromLocal &lt;localsrc&gt; URI</code>
+			</p>
+			<p>除了限定源路径是一个本地文件外，和<a href="#putlink"><strong>put</strong></a>命令相似。</p>
+		</section>
+		<section>
+			<title> copyToLocal</title>
+			<p>
+				<code>使用方法：hadoop fs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</code>
+			</p>
+			<p>除了限定目标路径是一个本地文件外，和<a href="#getlink"><strong>get</strong></a>命令类似。</p>
+		</section>
+		<section>
+			<title> cp </title>
+			<p>
+				<code>使用方法：hadoop fs -cp URI [URI &#x2026;] &lt;dest&gt;</code>
+			</p>
+			<p>
+	    将文件从源路径复制到目标路径。这个命令允许有多个源路径，此时目标路径必须是一个目录。
+	    <br/>
+	    示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2</code>
+				</li>
+				<li>
+					<code> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title>du</title>
+			<p>
+				<code>使用方法：hadoop fs -du URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	     显示目录中所有文件的大小，或者当只指定一个文件时，显示此文件的大小。<br/>
+	     示例：<br/><code>hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://host:port/user/hadoop/dir1</code><br/>
+	     返回值：<br/><code> 成功返回0，失败返回-1。</code><br/></p>
+		</section>
+		<section>
+			<title> dus </title>
+			<p>
+				<code>使用方法：hadoop fs -dus &lt;args&gt;</code>
+			</p>
+			<p>
+	   显示文件的大小。
+	   </p>
+		</section>
+		<section>
+			<title> expunge </title>
+			<p>
+				<code>使用方法：hadoop fs -expunge</code>
+			</p>
+			<p>清空回收站。请参考<a href="hdfs_design.html">HDFS设计</a>文档以获取更多关于回收站特性的信息。
+	   </p>
+		</section>
+		<section>
+			<title id="getlink"> get </title>
+			<p>
+				<code>使用方法：hadoop fs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</code>
+				<br/>
+			</p>
+			<p>
+	   复制文件到本地文件系统。可用<code>-ignorecrc</code>选项复制CRC校验失败的文件。使用<code>-crc</code>选项复制文件以及CRC信息。
+	  		</p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -get /user/hadoop/file localfile </code>
+				</li>
+				<li>
+					<code> hadoop fs -get hdfs://host:port/user/hadoop/file localfile</code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> getmerge </title>
+			<p>
+				<code>使用方法：hadoop fs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</code>
+			</p>
+			<p>
+	  接受一个源目录和一个目标文件作为输入，并且将源目录中所有的文件连接成本地目标文件。<code>addnl</code>是可选的，用于指定在每个文件结尾添加一个换行符。 
+	  </p>
+		</section>
+		<section>
+			<title> ls </title>
+			<p>
+				<code>使用方法：hadoop fs -ls &lt;args&gt;</code>
+			</p>
+			<p>如果是文件，则按照如下格式返回文件信息：<br/><code>文件名 &lt;副本数&gt; 文件大小 修改日期 修改时间 权限 用户ID 组ID</code><br/>
+	         如果是目录，则返回它直接子文件的一个列表，就像在Unix中一样。目录返回列表的信息如下：<br/><code>目录名 &lt;dir&gt; 修改日期 修改时间 权限 用户ID 组ID</code><br/>
+	         示例：<br/><code>hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://host:port/user/hadoop/dir1 /nonexistentfile</code><br/>
+	         返回值：<br/><code> 成功返回0，失败返回-1。</code><br/></p>
+		</section>
+		<section>
+			<title>lsr</title>
+			<p><code>使用方法：hadoop fs -lsr &lt;args&gt;</code><br/>
+	      <code>ls</code>命令的递归版本。类似于Unix中的<code>ls -R</code>。
+	      </p>
+		</section>
+		<section>
+			<title> mkdir </title>
+			<p>
+				<code>使用方法：hadoop fs -mkdir &lt;paths&gt;</code>
+				<br/>
+			</p>
+			<p>接受路径指定的uri作为参数，创建这些目录。其行为类似于Unix的mkdir -p，它会创建路径中的各级父目录。</p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code>hadoop fs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </code>
+				</li>
+				<li>
+					<code>hadoop fs -mkdir hdfs://host1:port1/user/hadoop/dir hdfs://host2:port2/user/hadoop/dir
+	  </code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code>成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> movefromLocal </title>
+			<p>
+				<code>使用方法：dfs -moveFromLocal &lt;src&gt; &lt;dst&gt;</code>
+			</p>
+			<p>输出一个”not implemented“信息。
+	   </p>
+		</section>
+		<section>
+			<title> mv </title>
+			<p>
+				<code>使用方法：hadoop fs -mv URI [URI &#x2026;] &lt;dest&gt;</code>
+			</p>
+			<p>
+	    将文件从源路径移动到目标路径。这个命令允许有多个源路径，此时目标路径必须是一个目录。不允许在不同的文件系统间移动文件。
+	    <br/>
+	    示例：
+	    </p>
+			<ul>
+				<li>
+					<code> hadoop fs -mv /user/hadoop/file1 /user/hadoop/file2</code>
+				</li>
+				<li>
+					<code> hadoop fs -mv hdfs://host:port/file1 hdfs://host:port/file2 hdfs://host:port/file3 hdfs://host:port/dir1</code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title id="putlink"> put </title>
+			<p>
+				<code>使用方法：hadoop fs -put &lt;localsrc&gt; ... &lt;dst&gt;</code>
+			</p>
+			<p>从本地文件系统中复制单个或多个源路径到目标文件系统。也支持从标准输入中读取输入写入目标文件系统。<br/>
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop fs -put localfile /user/hadoop/hadoopfile</code>
+				</li>
+				<li>
+					<code> hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir</code>
+				</li>
+				<li>
+					<code> hadoop fs -put localfile hdfs://host:port/hadoop/hadoopfile</code>
+				</li>
+				<li><code>hadoop fs -put - hdfs://host:port/hadoop/hadoopfile</code><br/>从标准输入中读取输入。</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> rm </title>
+			<p>
+				<code>使用方法：hadoop fs -rm URI [URI &#x2026;] </code>
+			</p>
+			<p>
+	   删除指定的文件。只删除非空目录和文件。请参考rmr命令了解递归删除。<br/>
+	   示例：
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop fs -rm hdfs://host:port/file /user/hadoop/emptydir </code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> rmr </title>
+			<p>
+				<code>使用方法：hadoop fs -rmr URI [URI &#x2026;]</code>
+			</p>
+			<p>delete的递归版本。<br/>
+	   示例：
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop fs -rmr /user/hadoop/dir </code>
+				</li>
+				<li>
+					<code> hadoop fs -rmr hdfs://host:port/user/hadoop/dir </code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code> 成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> setrep </title>
+			<p>
+				<code>使用方法：hadoop fs -setrep [-R] &lt;path&gt;</code>
+			</p>
+			<p>
+	   改变一个文件的副本系数。-R选项用于递归改变目录下所有文件的副本系数。
+	  </p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -setrep -w 3 -R /user/hadoop/dir1 </code>
+				</li>
+			</ul>
+			<p>返回值：</p>
+			<p>
+				<code>成功返回0，失败返回-1。</code>
+			</p>
+		</section>
+		<section>
+			<title> stat </title>
+			<p>
+				<code>使用方法：hadoop fs -stat URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	   返回指定路径的统计信息。
+	   </p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -stat path </code>
+				</li>
+			</ul>
+			<p>返回值：<br/>
+	   <code> 成功返回0，失败返回-1。</code></p>
+		</section>
+		<section>
+			<title> tail </title>
+			<p>
+				<code>使用方法：hadoop fs -tail [-f] URI </code>
+			</p>
+			<p>
+	   将文件尾部1K字节的内容输出到stdout。支持-f选项，行为和Unix中一致。
+	   </p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -tail pathname </code>
+				</li>
+			</ul>
+			<p>返回值：<br/>
+	   <code> 成功返回0，失败返回-1。</code></p>
+		</section>
+		<section>
+			<title> test </title>
+			<p>
+				<code>使用方法：hadoop fs -test -[ezd] URI</code>
+			</p>
+			<p>
+	   选项：<br/>
+	   -e 检查文件是否存在。如果存在则返回0。<br/>
+	   -z 检查文件是否是0字节。如果是则返回0。 <br/>
+	   -d 如果路径是个目录，则返回1，否则返回0。<br/></p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop fs -test -e filename </code>
+				</li>
+			</ul>
+		</section>
+		<section>
+			<title> text </title>
+			<p>
+				<code>使用方法：hadoop fs -text &lt;src&gt;</code>
+				<br/>
+			</p>
+			<p>
+	   将源文件输出为文本格式。允许的格式是zip和TextRecordInputStream。
+	  </p>
+		</section>
+		<section>
+			<title> touchz </title>
+			<p>
+				<code>使用方法：hadoop fs -touchz URI [URI &#x2026;]</code>
+				<br/>
+			</p>
+			<p>
+	   创建一个0字节的空文件。
+	   </p>
+			<p>示例：</p>
+			<ul>
+				<li>
+					<code> hadoop -touchz pathname </code>
+				</li>
+			</ul>
+			<p>返回值：<br/>
+	   <code> 成功返回0，失败返回-1。</code></p>
+<!--DCCOMMENT:diff begin-->
+		</section>
+         </section>
+	</body>
+</document>
+<!--DCCOMMENT:diff end
+                        <p>Exit Code:<br/>
+           <code> Returns 0 on success and -1 on error.</code></p>
+                </section>
++        </section>
+        </body>
+ </document>
+
+-->
+
