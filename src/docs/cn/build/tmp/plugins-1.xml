@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE plugins [
+  <!ENTITY % links.att 'name CDATA #REQUIRED'>
+  <!ENTITY % link.att 'name CDATA #REQUIRED href CDATA #REQUIRED'>
+  <!ELEMENT plugins (plugin*)>
+  <!ATTLIST plugins type CDATA #REQUIRED>
+  <!ELEMENT plugin (description, forrestVersion)>
+  <!ATTLIST plugin name CDATA #REQUIRED
+                 type (input|output|internal) #REQUIRED
+                 url  CDATA #REQUIRED
+                 author CDATA #REQUIRED
+                 website CDATA #IMPLIED
+                 version CDATA #IMPLIED>
+  <!ELEMENT description (#PCDATA)>
+  <!ELEMENT forrestVersion (#PCDATA)>
+  ]>
+<plugins type="released">
+<!-- ================================================================== -->
+<!-- Input Plugins                                                      -->
+<!-- ================================================================== -->
+  <plugin name="org.apache.forrest.plugin.input.dtdx"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.dtdx"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Use the NekoDTD tool packaged as a Cocoon Generator to automatically
+      generate some hyperlinked DTD reference documentation.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.excel"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.excel/"
+        url="http://forrest.apache.org/plugins"
+        version="0.3">
+    <description>
+      Reads (simple) Excel sheets from the Excel "Save As" (Type=XML).
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.feeder"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.feeder"
+        url="http://forrest.apache.org/plugins"
+        version="0.2">
+    <description>
+      Embed syndicated content in a Forrest site.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.listLocations"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.listLocations"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Use lists of locations maintained in a simple xml format and transform
+      them to documents.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.OpenOffice.org"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.OpenOffice.org"
+        url="http://forrest.apache.org/plugins"
+        version="0.2">
+    <description>
+      Use various OpenOffice.org document formats as input sources.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.PhotoGallery"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.PhotoGallery"
+        url="http://forrest.apache.org/plugins"
+        version="0.3">
+    <description>
+      Create a photo Gallery by simply dropping your photos into a directory.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.rblasch.forrest.plugin.input.pod"
+        type="input"
+        author="Ronald Blaschke"
+	website="http://www.rblasch.org/projects/pod-input/"
+	url="http://www.rblasch.org/projects/pod-input"
+        version="0.1">
+    <description>
+      Embed Pod (Plain Old Documentation) documents in a Forrest site.
+    </description>
+    <forrestVersion>0.7</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.projectInfo"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.projectInfo"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Generates project info such as changelog and todo list.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.simplifiedDocbook"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.simplifiedDocbook"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Enable Simplified Docbook to be used as input.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.input.wiki"
+        type="input"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.input.wiki"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Embed various wiki documents in a Forrest site.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+<!-- ================================================================== -->
+<!-- Output Plugins                                                     -->
+<!-- ================================================================== -->
+  <plugin name="org.apache.forrest.plugin.output.pdf"
+        type="output"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.output.pdf"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Enable Forrest documents to be output in PDF format.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.output.POD"
+        type="output"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.output.POD"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Enable Forrest documents to be output in Plain Old Documentation (POD)
+      format.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="org.apache.forrest.plugin.output.Text"
+        type="output"
+        author="Apache Forrest Project"
+        website="http://forrest.apache.org/pluginDocs/plugins_0_80/org.apache.forrest.plugin.output.Text"
+        url="http://forrest.apache.org/plugins/"
+        version="0.2">
+    <description>
+      Enable Forrest documents to be output in Text format.
+    </description>
+    <forrestVersion>0.8</forrestVersion>
+  </plugin>
+  <plugin name="s5"
+        type="output"
+        author="Ross Gardler"
+        website="http://forrest.apache.org/~rgardler/testingGround/forrestPlugins/s5"
+        url="http://www.apache.org/~rgardler/testingGround/forrestPlugins/"
+        version="0.1">
+    <description>
+      Create S5: A Simple Standards-Based Slide Show System presentations from
+      xdocs.
+    </description>
+    <forrestVersion>0.7</forrestVersion>
+  </plugin>
+<!-- ================================================================== -->
+<!-- Internal Plugins                                                   -->
+<!-- ================================================================== -->
+</plugins>

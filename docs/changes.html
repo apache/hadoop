@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(13)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4210">HADOOP-4210</a>. Fix findbugs warnings for equals implementations of mapred ID
 classes. Removed public, static ID::read and ID::forName; made ID an
@@ -85,19 +85,40 @@ Sriramadasu via cdouglas)
   JobShell, TestJobShell classes are removed
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4422">HADOOP-4422</a>. S3 file systems should not create bucket.<br />(David Phillips via tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4035">HADOOP-4035</a>. Support memory based scheduling in capacity scheduler.<br />(Vinod Kumar Vavilapalli via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3497">HADOOP-3497</a>. Fix bug in overly restrictive file globbing with a
+PathFilter.<br />(tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4445">HADOOP-4445</a>. Replace running task counts with running task
+percentage in capacity scheduler UI.<br />(Sreekanth Ramakrishnan via
+yhemanth)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(2)
+</a>&nbsp;&nbsp;&nbsp;(5)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4575">HADOOP-4575</a>. Add a proxy service for relaying HsftpFileSystem requests.
 Includes client authentication via user certificates and config-based
 access control.<br />(Kan Zhang via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4661">HADOOP-4661</a>. Add DistCh, a new tool for distributed ch{mod,own,grp}.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4709">HADOOP-4709</a>. Add several new features and bug fixes to Chukwa.
+  Added Hadoop Infrastructure Care Center (UI for visualize data collected
+                                           by Chukwa)
+  Added FileAdaptor for streaming small file in one chunk
+  Added compression to archive and demux output
+  Added unit tests and validation for agent, collector, and demux map
+    reduce job
+  Added database loader for loading demux output (sequence file) to jdbc
+    connected database
+  Added algorithm to distribute collector load more evenly<br />(Jerome Boulon, Eric Yang, Andy Konwinski, Ariel Rabkin via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4179">HADOOP-4179</a>. Add Vaidya tool to analyze map/reduce job logs for performanc
+problems.<br />(Suhas Gogate via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4029">HADOOP-4029</a>. Add NameNode storage information to the dfshealth page and
+move DataNode information to a separated page.<br />(Boris Shkolnik via
+szetszwo)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(34)
+</a>&nbsp;&nbsp;&nbsp;(42)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4234">HADOOP-4234</a>. Fix KFS "glue" layer to allow applications to interface
 with multiple KFS metaservers.<br />(Sriram Rao via lohit)</li>
@@ -155,6 +176,29 @@ ReduceTask.<br />(Ravi Gummadi via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4649">HADOOP-4649</a>. Improve abstraction for spill indices.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3770">HADOOP-3770</a>. Add gridmix2, an iteration on the gridmix benchmark.<br />(Runping
 Qi via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4708">HADOOP-4708</a>. Add support for dfsadmin commands in TestCLI.<br />(Boris Shkolnik
+via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4758">HADOOP-4758</a>. Add a splitter for metrics contexts to support more than one
+type of collector.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4722">HADOOP-4722</a>. Add tests for dfsadmin quota error messages.<br />(Boris Shkolnik
+via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4690">HADOOP-4690</a>.  fuse-dfs - create source file/function + utils + config +
+main source files.<br />(pete wyckoff via mahadev)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3750">HADOOP-3750</a>. Fix and enforce module dependencies.<br />(Sharad Agarwal via
+tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4747">HADOOP-4747</a>. Speed up FsShell::ls by removing redundant calls to the
+filesystem.<br />(David Phillips via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4305">HADOOP-4305</a>. Improves the blacklisting strategy, whereby, tasktrackers
+that are blacklisted are not given tasks to run from other jobs, subject
+to the following conditions (all must be met):
+1) The TaskTracker has been blacklisted by at least 4 jobs (configurable)
+2) The TaskTracker has been blacklisted 50% more number of times than
+   the average (configurable)
+3) The cluster has less than 50% trackers blacklisted
+Once in 24 hours, a TaskTracker blacklisted for all jobs is given a chance.
+Restarting the TaskTracker moves it out of the blacklist.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4688">HADOOP-4688</a>. Modify the MiniMRDFSSort unit test to spill multiple times,
+exercising the map-side merge code.<br />(cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -165,7 +209,7 @@ based on the rack/host that has the most number of bytes.<br />(Jothi Padmanabha
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(26)
+</a>&nbsp;&nbsp;&nbsp;(37)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4204">HADOOP-4204</a>. Fix findbugs warnings related to unused variables, naive
 Number subclass instantiation, Map iteration, and badly scoped inner
@@ -215,6 +259,24 @@ meaningful values.<br />(Hong Tang via cdouglas)</li>
 enabled<br />(Dhruba Borthakur via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4732">HADOOP-4732</a>. Pass connection and read timeouts in the correct order when
 setting up fetch in reduce.<br />(Amareshwari Sriramadasu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4558">HADOOP-4558</a>. Fix capacity reclamation in capacity scheduler.<br />(Amar Kamat via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4770">HADOOP-4770</a>. Fix rungridmix_2 script to work with RunJar.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4738">HADOOP-4738</a>. When using git, the saveVersion script will use only the
+commit hash for the version and not the message, which requires escaping.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4576">HADOOP-4576</a>. Show pending job count instead of task count in the UI per
+queue in capacity scheduler.<br />(Sreekanth Ramakrishnan via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4623">HADOOP-4623</a>. Maintain running tasks even if speculative execution is off.<br />(Amar Kamat via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4786">HADOOP-4786</a>. Fix broken compilation error in
+TestTrackerBlacklistAcrossJobs.<br />(yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4785">HADOOP-4785</a>. Fixes theJobTracker heartbeat to not make two calls to
+System.currentTimeMillis().<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4792">HADOOP-4792</a>. Add generated Chukwa configuration files to version control
+ignore lists.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4796">HADOOP-4796</a>. Fix Chukwa test configuration, remove unused components.<br />(Eric
+Yang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4708">HADOOP-4708</a>. Add binaries missed in the initial checkin for Chukwa.<br />(Eric
+Yang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4805">HADOOP-4805</a>. Remove black list collector from Chukwa Agent HTTP Sender.<br />(Eric Yang via cdouglas)</li>
     </ol>
   </li>
 </ul>
@@ -229,10 +291,17 @@ mapred tutorial.<br />(Vivek Ratan via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(5)
     <ol id="release_0.19.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4697">HADOOP-4697</a>. Fix getBlockLocations in KosmosFileSystem to handle multiple
 blocks correctly.<br />(Sriram Rao via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4420">HADOOP-4420</a>. Add null checks for job, caused by invalid job IDs.<br />(Aaron Kimball via tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4632">HADOOP-4632</a>. Fix TestJobHistoryVersion to use test.build.dir instead of the
+current workding directory for scratch space.<br />(Amar Kamat via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4508">HADOOP-4508</a>. Fix FSDataOutputStream.getPos() for append.<br />(dhruba via
+szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4727">HADOOP-4727</a>. Fix a group checking bug in fill_stat_structure(...) in
+fuse-dfs.<br />(Brian Bockelman via szetszwo)</li>
     </ol>
   </li>
 </ul>
@@ -876,7 +945,7 @@ restrictions on combiners.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(18)
+</a>&nbsp;&nbsp;&nbsp;(26)
     <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
@@ -894,7 +963,7 @@ live replicas for a block.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4647">HADOOP-4647</a>. NamenodeFsck should close the DFSClient it has created.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4616">HADOOP-4616</a>. Fuse-dfs can handle bad values from FileSystem.read call.<br />(Pete Wyckoff via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4061">HADOOP-4061</a>. Throttle Datanode decommission monitoring in Namenode.<br />(szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4659">HADOOP-4659</a>. Root cause of connection failure is being ost to code that
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4659">HADOOP-4659</a>. Root cause of connection failure is being lost to code that
 uses it for delaying startup.<br />(Steve Loughran and Hairong via hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4614">HADOOP-4614</a>. Lazily open segments when merging map spills to avoid using
 too many file descriptors.<br />(Yuri Pradkin via cdouglas)</li>
@@ -908,6 +977,17 @@ Kunz via cdouglas)</li>
 between progress reports configurable.<br />(Jothi Padmanabhan via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4726">HADOOP-4726</a>. Fix documentation typos "the the".<br />(Edward J. Yoon via
 szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4679">HADOOP-4679</a>. Datanode prints tons of log messages: waiting for threadgroup
+to exit, active threads is XX.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4746">HADOOP-4746</a>. Job output directory should be normalized.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4717">HADOOP-4717</a>. Removal of default port# in NameNode.getUri() causes a
+map/reduce job failed to prompt temporary output.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4778">HADOOP-4778</a>. Check for zero size block meta file when updating a block.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4742">HADOOP-4742</a>. Replica gets deleted by mistake.<br />(Wang Xu via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4702">HADOOP-4702</a>. Failed block replication leaves an incomplete block in
+receiver's tmp data directory.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4613">HADOOP-4613</a>. Fix block browsing on Web UI.<br />(Johan Oskarsson via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4806">HADOOP-4806</a>. HDFS rename should not use src path as a regular expression.<br />(szetszwo)</li>
     </ol>
   </li>
 </ul>

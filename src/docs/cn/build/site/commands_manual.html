@@ -1,0 +1,1116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title>命令手册</title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/core/">项目</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop">维基</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.18文档</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">文档</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">概述</a>
+</div>
+<div class="menuitem">
+<a href="quickstart.html">快速入门</a>
+</div>
+<div class="menuitem">
+<a href="cluster_setup.html">集群搭建</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS构架设计</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS使用指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS权限指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS配额管理指南</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">命令手册</div>
+</div>
+<div class="menuitem">
+<a href="hdfs_shell.html">FS Shell使用指南</a>
+</div>
+<div class="menuitem">
+<a href="distcp.html">DistCp使用指南</a>
+</div>
+<div class="menuitem">
+<a href="mapred_tutorial.html">Map-Reduce教程</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop本地库</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
+</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/index.html">API参考</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/">维基</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/FAQ">常见问题</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/mailing_lists.html">邮件列表</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html">发行说明</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html">变更日志</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="commands_manual.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1>命令手册</h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#%E6%A6%82%E8%BF%B0">概述</a>
+<ul class="minitoc">
+<li>
+<a href="#%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9">常规选项</a>
+</li>
+</ul>
+</li>
+<li>
+<a href="#%E7%94%A8%E6%88%B7%E5%91%BD%E4%BB%A4"> 用户命令 </a>
+<ul class="minitoc">
+<li>
+<a href="#archive"> archive </a>
+</li>
+<li>
+<a href="#distcp"> distcp </a>
+</li>
+<li>
+<a href="#fs"> fs </a>
+</li>
+<li>
+<a href="#fsck"> fsck </a>
+</li>
+<li>
+<a href="#jar"> jar </a>
+</li>
+<li>
+<a href="#job"> job </a>
+</li>
+<li>
+<a href="#pipes"> pipes </a>
+</li>
+<li>
+<a href="#version"> version </a>
+</li>
+<li>
+<a href="#CLASSNAME"> CLASSNAME </a>
+</li>
+</ul>
+</li>
+<li>
+<a href="#%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4">管理命令</a>
+<ul class="minitoc">
+<li>
+<a href="#balancer"> balancer </a>
+</li>
+<li>
+<a href="#daemonlog"> daemonlog </a>
+</li>
+<li>
+<a href="#datanode"> datanode</a>
+</li>
+<li>
+<a href="#dfsadmin"> dfsadmin </a>
+</li>
+<li>
+<a href="#jobtracker"> jobtracker </a>
+</li>
+<li>
+<a href="#namenode"> namenode </a>
+</li>
+<li>
+<a href="#secondarynamenode"> secondarynamenode </a>
+</li>
+<li>
+<a href="#tasktracker"> tasktracker </a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+		
+<a name="N1000D"></a><a name="%E6%A6%82%E8%BF%B0"></a>
+<h2 class="h3">概述</h2>
+<div class="section">
+<p>
+				所有的hadoop命令均由bin/hadoop脚本引发。不指定参数运行hadoop脚本会打印所有命令的描述。
+			</p>
+<p>
+				
+<span class="codefrag">用法：hadoop [--config confdir] [COMMAND] [GENERIC_OPTIONS] [COMMAND_OPTIONS]</span>
+			
+</p>
+<p>
+				Hadoop有一个选项解析框架用于解析一般的选项和运行类。
+			</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述 </th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">--config confdir</span></td>
+			            <td colspan="1" rowspan="1">覆盖缺省配置目录。缺省是${HADOOP_HOME}/conf。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">GENERIC_OPTIONS</span></td>
+			            <td colspan="1" rowspan="1">多个命令都支持的通用选项。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">COMMAND</span>
+<br>
+<span class="codefrag">命令选项S</span></td>
+			            <td colspan="1" rowspan="1">各种各样的命令和它们的选项会在下面提到。这些命令被分为
+			             <a href="commands_manual.html#%E7%94%A8%E6%88%B7%E5%91%BD%E4%BB%A4">用户命令</a> 
+			             <a href="commands_manual.html#%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4">管理命令</a>两组。</td>
+			           
+</tr>
+			     
+</table>
+<a name="N10061"></a><a name="%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9"></a>
+<h3 class="h4">常规选项</h3>
+<p>
+				  下面的选项被
+				  <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
+				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a>和 
+				  <a href="commands_manual.html#job">job</a>支持。 
+				  应用程序要实现
+				  <a href="http://hadoop.apache.org/core/docs/r0.18.2/api/org/apache/hadoop/util/Tool.html">Tool</a>来支持
+				  <a href="http://hadoop.apache.org/core/docs/r0.18.2/api/org/apache/hadoop/util/GenericOptionsParser.html">
+				  常规选项</a>。
+				</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> GENERIC_OPTION </th><th colspan="1" rowspan="1"> 描述 </th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-conf &lt;configuration file&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定应用程序的配置文件。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-D &lt;property=value&gt;</span></td>
+			            <td colspan="1" rowspan="1">为指定property指定值value。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-fs &lt;local|namenode:port&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定namenode。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-jt &lt;local|jobtracker:port&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定job tracker。只适用于<a href="commands_manual.html#job">job</a>。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-files &lt;逗号分隔的文件列表&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定要拷贝到map reduce集群的文件的逗号分隔的列表。
+			            只适用于<a href="commands_manual.html#job">job</a>。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-libjars &lt;逗号分隔的jar列表&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定要包含到classpath中的jar文件的逗号分隔的列表。
+			            只适用于<a href="commands_manual.html#job">job</a>。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-archives &lt;逗号分隔的archive列表&gt;</span></td>
+			            <td colspan="1" rowspan="1">指定要被解压到计算节点上的档案文件的逗号分割的列表。
+			            只适用于<a href="commands_manual.html#job">job</a>。</td>
+			           
+</tr>
+				
+</table>
+</div>
+		
+		
+<a name="N10103"></a><a name="%E7%94%A8%E6%88%B7%E5%91%BD%E4%BB%A4"></a>
+<h2 class="h3"> 用户命令 </h2>
+<div class="section">
+<p>hadoop集群用户的常用命令。</p>
+<a name="N1010C"></a><a name="archive"></a>
+<h3 class="h4"> archive </h3>
+<p>
+					创建一个hadoop档案文件。参考 <a href="hadoop_archives.html">Hadoop Archives</a>.
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop archive -archiveName NAME &lt;src&gt;* &lt;dest&gt;</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+					   
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-archiveName NAME</span></td>
+			            <td colspan="1" rowspan="1">要创建的档案的名字。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">src</span></td>
+			            <td colspan="1" rowspan="1">文件系统的路径名，和通常含正则表达的一样。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">dest</span></td>
+			            <td colspan="1" rowspan="1">保存档案文件的目标目录。</td>
+			           
+</tr>
+			     
+</table>
+<a name="N10157"></a><a name="distcp"></a>
+<h3 class="h4"> distcp </h3>
+<p>
+					递归地拷贝文件或目录。参考<a href="distcp.html">DistCp指南</a>以获取等多信息。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop distcp &lt;srcurl&gt; &lt;desturl&gt;</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">srcurl</span></td>
+			            <td colspan="1" rowspan="1">源Url</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">desturl</span></td>
+			            <td colspan="1" rowspan="1">目标Url</td>
+			           
+</tr>
+			     
+</table>
+<a name="N10194"></a><a name="fs"></a>
+<h3 class="h4"> fs </h3>
+<p>
+					
+<span class="codefrag">用法：hadoop fs [</span><a href="commands_manual.html#%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9">GENERIC_OPTIONS</a><span class="codefrag">] 
+					[COMMAND_OPTIONS]</span>
+				
+</p>
+<p>
+					运行一个常规的文件系统客户端。
+				</p>
+<p>
+					各种命令选项可以参考<a href="hdfs_shell.html">HDFS Shell指南</a>。
+				</p>
+<a name="N101B0"></a><a name="fsck"></a>
+<h3 class="h4"> fsck </h3>
+<p>
+					运行HDFS文件系统检查工具。参考<a href="hdfs_user_guide.html#fsck">Fsck</a>了解更多。
+				</p>
+<p>
+<span class="codefrag">用法：hadoop fsck [</span><a href="commands_manual.html#%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9">GENERIC_OPTIONS</a><span class="codefrag">] 
+				&lt;path&gt; [-move | -delete | -openforwrite] [-files [-blocks 
+				[-locations | -racks]]]</span>
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述 </th>
+</tr>
+			          
+<tr>
+			            
+<td colspan="1" rowspan="1"><span class="codefrag">&lt;path&gt;</span></td>
+			            <td colspan="1" rowspan="1">检查的起始目录。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-move</span></td>
+			            <td colspan="1" rowspan="1">移动受损文件到/lost+found</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-delete</span></td>
+			            <td colspan="1" rowspan="1">删除受损文件。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-openforwrite</span></td>
+			            <td colspan="1" rowspan="1">打印出写打开的文件。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-files</span></td>
+			            <td colspan="1" rowspan="1">打印出正被检查的文件。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-blocks</span></td>
+			            <td colspan="1" rowspan="1">打印出块信息报告。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-locations</span></td>
+			            <td colspan="1" rowspan="1">打印出每个块的位置信息。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-racks</span></td>
+			            <td colspan="1" rowspan="1">打印出data-node的网络拓扑结构。</td>
+			           
+</tr>
+					
+</table>
+<a name="N10244"></a><a name="jar"></a>
+<h3 class="h4"> jar </h3>
+<p>
+					运行jar文件。用户可以把他们的Map Reduce代码捆绑到jar文件中，使用这个命令执行。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop jar &lt;jar&gt; [mainClass] args...</span>
+				
+</p>
+<p>
+					streaming作业是通过这个命令执行的。参考<a href="streaming.html#%E5%85%B6%E4%BB%96%E4%BE%8B%E5%AD%90">Streaming examples</a>中的例子。
+				</p>
+<p>
+					Word count例子也是通过jar命令运行的。参考<a href="mapred_tutorial.html#%E7%94%A8%E6%B3%95">Wordcount example</a>。
+				</p>
+<a name="N10262"></a><a name="job"></a>
+<h3 class="h4"> job </h3>
+<p>
+					用于和Map Reduce作业交互和命令。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop job [</span><a href="commands_manual.html#%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9">GENERIC_OPTIONS</a><span class="codefrag">] 
+					[-submit &lt;job-file&gt;] | [-status &lt;job-id&gt;] | 
+					[-counter &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;] | [-kill &lt;job-id&gt;] | 
+					[-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;] | [-history [all] &lt;jobOutputDir&gt;] |
+					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-submit &lt;job-file&gt;</span></td>
+			            <td colspan="1" rowspan="1">提交作业</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-status &lt;job-id&gt;</span></td>
+			            <td colspan="1" rowspan="1">打印map和reduce完成百分比和所有计数器。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-counter &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;</span></td>
+			            <td colspan="1" rowspan="1">打印计数器的值。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-kill &lt;job-id&gt;</span></td>
+			            <td colspan="1" rowspan="1">杀死指定作业。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;</span></td>
+			            <td colspan="1" rowspan="1">打印给定范围内jobtracker接收到的事件细节。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-history [all] &lt;jobOutputDir&gt;</span></td>
+			            <td colspan="1" rowspan="1">-history &lt;jobOutputDir&gt; 打印作业的细节、失败及被杀死原因的细节。更多的关于一个作业的细节比如成功的任务，做过的任务尝试等信息可以通过指定[all]选项查看。
+			            </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-list [all]</span></td>
+			            <td colspan="1" rowspan="1">-list all显示所有作业。-list只显示将要完成的作业。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-kill-task &lt;task-id&gt;</span></td>
+			            <td colspan="1" rowspan="1">杀死任务。被杀死的任务不会不利于失败尝试。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-fail-task &lt;task-id&gt;</span></td>
+			            <td colspan="1" rowspan="1">使任务失败。被失败的任务会对失败尝试不利。</td>
+			           
+</tr>
+					
+</table>
+<a name="N10302"></a><a name="pipes"></a>
+<h3 class="h4"> pipes </h3>
+<p>
+					运行pipes作业。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop pipes [-conf &lt;path&gt;] [-jobconf &lt;key=value&gt;, &lt;key=value&gt;, ...] 
+					[-input &lt;path&gt;] [-output &lt;path&gt;] [-jar &lt;jar file&gt;] [-inputformat &lt;class&gt;] 
+					[-map &lt;class&gt;] [-partitioner &lt;class&gt;] [-reduce &lt;class&gt;] [-writer &lt;class&gt;] 
+					[-program &lt;executable&gt;] [-reduces &lt;num&gt;] </span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			          
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-conf &lt;path&gt;</span></td>
+			            <td colspan="1" rowspan="1">作业的配置</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-jobconf &lt;key=value&gt;, &lt;key=value&gt;, ...</span></td>
+			            <td colspan="1" rowspan="1">增加/覆盖作业的配置项</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-input &lt;path&gt;</span></td>
+			            <td colspan="1" rowspan="1">输入目录</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-output &lt;path&gt;</span></td>
+			            <td colspan="1" rowspan="1">输出目录</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-jar &lt;jar file&gt;</span></td>
+			            <td colspan="1" rowspan="1">Jar文件名</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-inputformat &lt;class&gt;</span></td>
+			            <td colspan="1" rowspan="1">InputFormat类</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-map &lt;class&gt;</span></td>
+			            <td colspan="1" rowspan="1">Java Map类</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-partitioner &lt;class&gt;</span></td>
+			            <td colspan="1" rowspan="1">Java Partitioner</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-reduce &lt;class&gt;</span></td>
+			            <td colspan="1" rowspan="1">Java Reduce类</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-writer &lt;class&gt;</span></td>
+			            <td colspan="1" rowspan="1">Java RecordWriter</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-program &lt;executable&gt;</span></td>
+			            <td colspan="1" rowspan="1">可执行程序的URI</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-reduces &lt;num&gt;</span></td>
+			            <td colspan="1" rowspan="1">reduce个数</td>
+			           
+</tr>
+					
+</table>
+<a name="N103C7"></a><a name="version"></a>
+<h3 class="h4"> version </h3>
+<p>
+					打印版本信息。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop version</span>
+				
+</p>
+<a name="N103D7"></a><a name="CLASSNAME"></a>
+<h3 class="h4"> CLASSNAME </h3>
+<p>
+					 hadoop脚本可用于调调用任何类。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop CLASSNAME</span>
+				
+</p>
+<p>
+					 运行名字为CLASSNAME的类。
+				</p>
+</div>
+		
+		
+<a name="N103EB"></a><a name="%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4"></a>
+<h2 class="h3">管理命令</h2>
+<div class="section">
+<p>hadoop集群管理员常用的命令。</p>
+<a name="N103F4"></a><a name="balancer"></a>
+<h3 class="h4"> balancer </h3>
+<p>
+					运行集群平衡工具。管理员可以简单的按Ctrl-C来停止平衡过程。参考<a href="hdfs_user_guide.html#Rebalancer">Rebalancer</a>了解更多。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop balancer [-threshold &lt;threshold&gt;]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-threshold &lt;threshold&gt;</span></td>
+			            <td colspan="1" rowspan="1">磁盘容量的百分比。这会覆盖缺省的阀值。</td>
+			           
+</tr>
+			     
+</table>
+<a name="N10423"></a><a name="daemonlog"></a>
+<h3 class="h4"> daemonlog </h3>
+<p>
+					 获取或设置每个守护进程的日志级别。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop daemonlog  -getlevel &lt;host:port&gt; &lt;name&gt;</span>
+<br>
+					
+<span class="codefrag">用法：hadoop daemonlog  -setlevel &lt;host:port&gt; &lt;name&gt; &lt;level&gt;</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-getlevel &lt;host:port&gt; &lt;name&gt;</span></td>
+			            <td colspan="1" rowspan="1">打印运行在&lt;host:port&gt;的守护进程的日志级别。这个命令内部会连接http://&lt;host:port&gt;/logLevel?log=&lt;name&gt;</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-setlevel &lt;host:port&gt; &lt;name&gt; &lt;level&gt;</span></td>
+			            <td colspan="1" rowspan="1">设置运行在&lt;host:port&gt;的守护进程的日志级别。这个命令内部会连接http://&lt;host:port&gt;/logLevel?log=&lt;name&gt;</td>
+			           
+</tr>
+			     
+</table>
+<a name="N10460"></a><a name="datanode"></a>
+<h3 class="h4"> datanode</h3>
+<p>
+					运行一个HDFS的datanode。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop datanode [-rollback]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-rollback</span></td>
+			            <td colspan="1" rowspan="1">将datanode回滚到前一个版本。这需要在停止datanode，分发老的hadoop版本之后使用。
+			            </td>
+			           
+</tr>
+			     
+</table>
+<a name="N1048B"></a><a name="dfsadmin"></a>
+<h3 class="h4"> dfsadmin </h3>
+<p>
+					运行一个HDFS的dfsadmin客户端。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop dfsadmin  [</span><a href="commands_manual.html#%E5%B8%B8%E8%A7%84%E9%80%89%E9%A1%B9">GENERIC_OPTIONS</a><span class="codefrag">] [-report] [-safemode enter | leave | get | wait] [-refreshNodes]
+					 [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] 
+					 [-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;] [-clrQuota &lt;dirname&gt;...&lt;dirname&gt;] 
+					 [-help [cmd]]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-report</span></td>
+			            <td colspan="1" rowspan="1">报告文件系统的基本信息和统计信息。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-safemode enter | leave | get | wait</span></td>
+			            <td colspan="1" rowspan="1">安全模式维护命令。安全模式是Namenode的一个状态，这种状态下，Namenode <br>
+					1.  不接受对名字空间的更改(只读)<br> 
+					2.  不复制或删除块<br>
+					Namenode会在启动时自动进入安全模式，当配置的块最小百分比数满足最小的副本数条件时，会自动离开安全模式。安全模式可以手动进入，但是这样的话也必须手动关闭安全模式。
+                </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-refreshNodes</span></td>
+			            <td colspan="1" rowspan="1">重新读取hosts和exclude文件，更新允许连到Namenode的或那些需要退出或入编的Datanode的集合。
+                </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-finalizeUpgrade</span></td>
+			            <td colspan="1" rowspan="1">终结HDFS的升级操作。Datanode删除前一个版本的工作目录，之后Namenode也这样做。这个操作完结整个升级过程。
+                </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-upgradeProgress status | details | force</span></td>
+			            <td colspan="1" rowspan="1">请求当前系统的升级状态，状态的细节，或者强制升级操作进行。
+                </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-metasave filename</span></td>
+			            <td colspan="1" rowspan="1">保存Namenode的主要数据结构到hadoop.log.dir属性指定的目录下的&lt;filename&gt;文件。对于下面的每一项，&lt;filename&gt;中都会一行内容与之对应<br>
+                        1. Namenode收到的Datanode的心跳信号<br>
+                        2. 等待被复制的块<br>
+                        3. 正在被复制的块<br>
+                        4. 等待被删除的块</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;</span></td>
+			            <td colspan="1" rowspan="1">为每个目录 &lt;dirname&gt;设定配额&lt;quota&gt;。目录配额是一个长整型整数，强制限定了目录树下的名字个数。<br>
+                命令会在这个目录上工作良好，以下情况会报错：<br>
+                1. N不是一个正整数，或者<br>
+                2. 用户不是管理员，或者<br>
+                3. 这个目录不存在或是文件，或者<br>
+                4. 目录会马上超出新设定的配额。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-clrQuota &lt;dirname&gt;...&lt;dirname&gt;</span></td>
+			            <td colspan="1" rowspan="1">为每一个目录&lt;dirname&gt;清除配额设定。<br>
+                命令会在这个目录上工作良好，以下情况会报错：<br>
+                1. 这个目录不存在或是文件，或者<br>
+                2. 用户不是管理员。<br>
+                如果目录原来没有配额不会报错。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-help [cmd]</span></td>
+			            <td colspan="1" rowspan="1">显示给定命令的帮助信息，如果没有给定命令，则显示所有命令的帮助信息。</td>
+			           
+</tr>
+			     
+</table>
+<a name="N1054B"></a><a name="jobtracker"></a>
+<h3 class="h4"> jobtracker </h3>
+<p>
+					运行MapReduce job Tracker节点。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop jobtracker</span>
+				
+</p>
+<a name="N1055B"></a><a name="namenode"></a>
+<h3 class="h4"> namenode </h3>
+<p>
+					运行namenode。有关升级，回滚，升级终结的更多信息请参考<a href="hdfs_user_guide.html#%E5%8D%87%E7%BA%A7%E5%92%8C%E5%9B%9E%E6%BB%9A">升级和回滚</a>。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-format</span></td>
+			            <td colspan="1" rowspan="1">格式化namenode。它启动namenode，格式化namenode，之后关闭namenode。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-upgrade</span></td>
+			            <td colspan="1" rowspan="1">分发新版本的hadoop后，namenode应以upgrade选项启动。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-rollback</span></td>
+			            <td colspan="1" rowspan="1">将namenode回滚到前一版本。这个选项要在停止集群，分发老的hadoop版本后使用。
+			            </td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-finalize</span></td>
+			            <td colspan="1" rowspan="1">finalize会删除文件系统的前一状态。最近的升级会被持久化，rollback选项将再不可用，升级终结操作之后，它会停掉namenode。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-importCheckpoint</span></td>
+			            <td colspan="1" rowspan="1">从检查点目录装载镜像并保存到当前检查点目录，检查点目录由fs.checkpoint.dir指定。
+			            </td>
+			           
+</tr>
+			     
+</table>
+<a name="N105C2"></a><a name="secondarynamenode"></a>
+<h3 class="h4"> secondarynamenode </h3>
+<p>
+					运行HDFS的secondary namenode。参考<a href="hdfs_user_guide.html#Secondary+NameNode">Secondary Namenode</a>了解更多。 
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop secondarynamenode [-checkpoint [force]] | [-geteditsize]</span>
+				
+</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+			          
+<tr>
+<th colspan="1" rowspan="1"> 命令选项 </th><th colspan="1" rowspan="1"> 描述</th>
+</tr>
+			
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-checkpoint [force]</span></td>
+			            <td colspan="1" rowspan="1">如果EditLog的大小 &gt;= fs.checkpoint.size，启动Secondary namenode的检查点过程。
+			            如果使用了-force，将不考虑EditLog的大小。</td>
+			           
+</tr>
+			           
+<tr>
+			          	
+<td colspan="1" rowspan="1"><span class="codefrag">-geteditsize</span></td>
+			            <td colspan="1" rowspan="1">打印EditLog大小。</td>
+			           
+</tr>
+			     
+</table>
+<a name="N105FF"></a><a name="tasktracker"></a>
+<h3 class="h4"> tasktracker </h3>
+<p>
+					运行MapReduce的task Tracker节点。
+				</p>
+<p>
+					
+<span class="codefrag">用法：hadoop tasktracker</span>
+				
+</p>
+</div>
+		
+		
+		      
+
+	
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>

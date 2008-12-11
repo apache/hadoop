@@ -2291,6 +2291,11 @@ Release 0.18.0 - 2008-08-19
 
 Release 0.17.3 - Unreleased
 
+  IMPROVEMENTS
+
+    HADOOP-4164. Chinese translation of the documentation. (Xuebing Yan via 
+    omalley)
+
   BUG FIXES
 
     HADOOP-4277. Checksum verification was mistakenly disabled for

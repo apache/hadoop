@@ -41,8 +41,10 @@
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
+  <property name="cndocs.dir" value="${basedir}/docs/cn"/>
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
+  <property name="cndocs.src" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
   <property name="c++.src" value="${basedir}/src/c++"/>
   <property name="c++.utils.src" value="${c++.src}/utils"/>
@@ -250,6 +252,10 @@
     <exec executable="sh">
        <arg line="src/saveVersion.sh ${version}"/>
     </exec>
+	
+   <exec executable="sh">
+       <arg line="src/fixFontsPath.sh ${cndocs.src}"/>
+   </exec>
   </target>
 
   <!-- ====================================================== -->
@@ -827,6 +833,22 @@
     <style basedir="${conf.dir}" destdir="${docs.dir}"
            includes="hadoop-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
+    <antcall target="cn-docs"/>
+  </target>
+
+  <target name="cn-docs" depends="forrest.check, init" 
+       description="Generate forrest-based Chinese documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
+        if="forrest.home">
+    <exec dir="${cndocs.src}" executable="${forrest.home}/bin/forrest" failonerror="true">
+      <env key="LANG" value="en_US.utf8"/>
+      <env key="JAVA_HOME" value="${java5.home}"/>
+    </exec>
+    <copy todir="${cndocs.dir}">
+      <fileset dir="${cndocs.src}/build/site/" />
+    </copy>
+    <style basedir="${conf.dir}" destdir="${cndocs.dir}"
+          includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+    <antcall target="changes-to-html"/>
   </target>
 
   <target name="forrest.check" unless="forrest.home" depends="java5.check">
@@ -1117,6 +1139,7 @@
   <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
+    <delete dir="${cndocs.src}/build"/>
   </target>
 
   <!-- ================================================================== -->
