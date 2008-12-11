@@ -1,0 +1,574 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title>Hadoop快速入门</title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/core/">项目</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop">维基</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.18文档</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">文档</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">概述</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">快速入门</div>
+</div>
+<div class="menuitem">
+<a href="cluster_setup.html">集群搭建</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS构架设计</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS使用指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS权限指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS配额管理指南</a>
+</div>
+<div class="menuitem">
+<a href="commands_manual.html">命令手册</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_shell.html">FS Shell使用指南</a>
+</div>
+<div class="menuitem">
+<a href="distcp.html">DistCp使用指南</a>
+</div>
+<div class="menuitem">
+<a href="mapred_tutorial.html">Map-Reduce教程</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop本地库</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
+</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/index.html">API参考</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/">维基</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/FAQ">常见问题</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/mailing_lists.html">邮件列表</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html">发行说明</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html">变更日志</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="quickstart.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1>Hadoop快速入门</h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#%E7%9B%AE%E7%9A%84">目的</a>
+</li>
+<li>
+<a href="#PreReqs">先决条件</a>
+<ul class="minitoc">
+<li>
+<a href="#%E6%94%AF%E6%8C%81%E5%B9%B3%E5%8F%B0">支持平台</a>
+</li>
+<li>
+<a href="#%E6%89%80%E9%9C%80%E8%BD%AF%E4%BB%B6">所需软件</a>
+</li>
+<li>
+<a href="#%E5%AE%89%E8%A3%85%E8%BD%AF%E4%BB%B6">安装软件</a>
+</li>
+</ul>
+</li>
+<li>
+<a href="#%E4%B8%8B%E8%BD%BD">下载</a>
+</li>
+<li>
+<a href="#%E8%BF%90%E8%A1%8CHadoop%E9%9B%86%E7%BE%A4%E7%9A%84%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C">运行Hadoop集群的准备工作</a>
+</li>
+<li>
+<a href="#Local">单机模式的操作方法</a>
+</li>
+<li>
+<a href="#PseudoDistributed">伪分布式模式的操作方法</a>
+<ul class="minitoc">
+<li>
+<a href="#%E9%85%8D%E7%BD%AE">配置</a>
+</li>
+<li>
+<a href="#%E5%85%8D%E5%AF%86%E7%A0%81">免密码ssh设置</a>
+</li>
+<li>
+<a href="#%E6%89%A7%E8%A1%8C">执行</a>
+</li>
+</ul>
+</li>
+<li>
+<a href="#FullyDistributed">完全分布式模式的操作方法</a>
+</li>
+</ul>
+</div>
+  
+    
+<a name="N1000D"></a><a name="%E7%9B%AE%E7%9A%84"></a>
+<h2 class="h3">目的</h2>
+<div class="section">
+<p>这篇文档的目的是帮助你快速完成单机上的Hadoop安装与使用以便你对<a href="hdfs_design.html">Hadoop分布式文件系统(<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a>和Map-Reduce框架有所体会，比如在HDFS上运行示例程序或简单作业等。</p>
+</div>
+    
+<a name="N1001F"></a><a name="PreReqs"></a>
+<h2 class="h3">先决条件</h2>
+<div class="section">
+<a name="N10025"></a><a name="%E6%94%AF%E6%8C%81%E5%B9%B3%E5%8F%B0"></a>
+<h3 class="h4">支持平台</h3>
+<ul>
+          
+<li>
+                GNU/Linux是产品开发和运行的平台。
+	        Hadoop已在有2000个节点的GNU/Linux主机组成的集群系统上得到验证。
+          </li>
+          
+<li>
+            Win32平台是作为<em>开发平台</em>支持的。由于分布式操作尚未在Win32平台上充分测试，所以还不作为一个<em>生产平台</em>被支持。
+          </li>
+        
+</ul>
+<a name="N1003B"></a><a name="%E6%89%80%E9%9C%80%E8%BD%AF%E4%BB%B6"></a>
+<h3 class="h4">所需软件</h3>
+<p>Linux和Windows所需软件包括:</p>
+<ol>
+          
+<li>
+            Java<sup>TM</sup>1.5.x，必须安装，建议选择Sun公司发行的Java版本。
+          </li>
+          
+<li>
+            
+<strong>ssh</strong> 必须安装并且保证 <strong>sshd</strong>一直运行，以便用Hadoop
+	    脚本管理远端Hadoop守护进程。
+          </li>
+        
+</ol>
+<p>Windows下的附加软件需求</p>
+<ol>
+            
+<li>
+              
+<a href="http://www.cygwin.com/">Cygwin</a> - 提供上述软件之外的shell支持。 
+            </li>
+          
+</ol>
+<a name="N10064"></a><a name="%E5%AE%89%E8%A3%85%E8%BD%AF%E4%BB%B6"></a>
+<h3 class="h4">安装软件</h3>
+<p>如果你的集群尚未安装所需软件，你得首先安装它们。</p>
+<p>以Ubuntu Linux为例:</p>
+<p>
+          
+<span class="codefrag">$ sudo apt-get install ssh</span>
+<br>
+          
+<span class="codefrag">$ sudo apt-get install rsync</span>
+        
+</p>
+<p>在Windows平台上，如果安装cygwin时未安装全部所需软件，则需启动cyqwin安装管理器安装如下软件包：</p>
+<ul>
+          
+<li>openssh - <em>Net</em> 类</li>
+        
+</ul>
+</div>
+    
+    
+<a name="N10088"></a><a name="%E4%B8%8B%E8%BD%BD"></a>
+<h2 class="h3">下载</h2>
+<div class="section">
+<p>
+        为了获取Hadoop的发行版，从Apache的某个镜像服务器上下载最近的
+        <a href="http://hadoop.apache.org/core/releases.html">稳定发行版</a>。</p>
+</div>
+
+    
+<a name="N10096"></a><a name="%E8%BF%90%E8%A1%8CHadoop%E9%9B%86%E7%BE%A4%E7%9A%84%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"></a>
+<h2 class="h3">运行Hadoop集群的准备工作</h2>
+<div class="section">
+<p>
+        解压所下载的Hadoop发行版。编辑
+        <span class="codefrag">conf/hadoop-env.sh</span>文件，至少需要将<span class="codefrag">JAVA_HOME</span>设置为Java安装根路径。
+      </p>
+<p>
+	    尝试如下命令：<br>
+        
+<span class="codefrag">$ bin/hadoop</span>
+<br>
+        将会显示<strong>hadoop</strong> 脚本的使用文档。
+      </p>
+<p>现在你可以用以下三种支持的模式中的一种启动Hadoop集群：
+      </p>
+<ul>
+        
+<li>单机模式</li>
+        
+<li>伪分布式模式</li>
+        
+<li>完全分布式模式</li>
+      
+</ul>
+</div>
+    
+    
+<a name="N100C1"></a><a name="Local"></a>
+<h2 class="h3">单机模式的操作方法</h2>
+<div class="section">
+<p>默认情况下，Hadoop被配置成以非分布式模式运行的一个独立Java进程。这对调试非常有帮助。</p>
+<p>
+        下面的实例将已解压的 <span class="codefrag">conf</span> 目录拷贝作为输入，查找并显示匹配给定正则表达式的条目。输出写入到指定的<span class="codefrag">output</span>目录。
+        <br>
+        
+<span class="codefrag">$ mkdir input</span>
+<br>
+        
+<span class="codefrag">$ cp conf/*.xml input</span>
+<br>
+        
+<span class="codefrag">
+          $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+        </span>
+<br>
+        
+<span class="codefrag">$ cat output/*</span>
+      
+</p>
+</div>
+    
+    
+<a name="N100E5"></a><a name="PseudoDistributed"></a>
+<h2 class="h3">伪分布式模式的操作方法</h2>
+<div class="section">
+<p>Hadoop可以在单节点上以所谓的伪分布式模式运行，此时每一个Hadoop守护进程都作为一个独立的Java进程运行。</p>
+<a name="N100EE"></a><a name="%E9%85%8D%E7%BD%AE"></a>
+<h3 class="h4">配置</h3>
+<p>使用如下的 <span class="codefrag">conf/hadoop-site.xml</span>:</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+        
+<tr>
+<td colspan="1" rowspan="1">&lt;configuration&gt;</td>
+</tr>
+
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;property&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;fs.default.name&lt;/name&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9000&lt;/value&gt;</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;/property&gt;</td>
+</tr>
+
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;property&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;mapred.job.tracker&lt;/name&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9001&lt;/value&gt;</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;/property&gt;</td>
+</tr>
+
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;property&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;dfs.replication&lt;/name&gt;</td>
+</tr>
+            
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">&nbsp;&nbsp;&lt;/property&gt;</td>
+</tr>
+
+        
+<tr>
+<td colspan="1" rowspan="1">&lt;/configuration&gt;</td>
+</tr>
+        
+</table>
+<a name="N10152"></a><a name="%E5%85%8D%E5%AF%86%E7%A0%81"></a>
+<h3 class="h4">免密码ssh设置</h3>
+<p>
+          现在确认能否不输入口令就用ssh登录localhost:<br>
+          
+<span class="codefrag">$ ssh localhost</span>
+        
+</p>
+<p>
+          如果不输入口令就无法用ssh登陆localhost，执行下面的命令：<br>
+   		  
+<span class="codefrag">$ ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa</span>
+<br>
+		  
+<span class="codefrag">$ cat ~/.ssh/id_dsa.pub &gt;&gt; ~/.ssh/authorized_keys</span>
+		
+</p>
+<a name="N10170"></a><a name="%E6%89%A7%E8%A1%8C"></a>
+<h3 class="h4">执行</h3>
+<p>
+          格式化一个新的分布式文件系统：<br>
+          
+<span class="codefrag">$ bin/hadoop namenode -format</span>
+        
+</p>
+<p>
+		  启动Hadoop守护进程：<br>
+          
+<span class="codefrag">$ bin/start-all.sh</span>
+        
+</p>
+<p>Hadoop守护进程的日志写入到 
+        <span class="codefrag">${HADOOP_LOG_DIR}</span> 目录 (默认是 
+        <span class="codefrag">${HADOOP_HOME}/logs</span>).</p>
+<p>浏览NameNode和JobTracker的网络接口，它们的地址默认为：</p>
+<ul>
+          
+<li>
+            
+<span class="codefrag">NameNode</span> - 
+            <a href="http://localhost:50070/">http://localhost:50070/</a>
+          
+</li>
+          
+<li>
+            
+<span class="codefrag">JobTracker</span> - 
+            <a href="http://localhost:50030/">http://localhost:50030/</a>
+          
+</li>
+        
+</ul>
+<p>
+          将输入文件拷贝到分布式文件系统：<br>
+		  
+<span class="codefrag">$ bin/hadoop fs -put conf input</span>
+		
+</p>
+<p>
+          运行发行版提供的示例程序：<br>
+          
+<span class="codefrag">
+            $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+          </span>
+        
+</p>
+<p>查看输出文件：</p>
+<p>
+          将输出文件从分布式文件系统拷贝到本地文件系统查看：<br>
+          
+<span class="codefrag">$ bin/hadoop fs -get output output</span>
+<br>
+          
+<span class="codefrag">$ cat output/*</span>
+        
+</p>
+<p> 或者 </p>
+<p>
+          在分布式文件系统上查看输出文件：<br>
+          
+<span class="codefrag">$ bin/hadoop fs -cat output/*</span>
+        
+</p>
+<p>
+		  完成全部操作后，停止守护进程：<br>
+		  
+<span class="codefrag">$ bin/stop-all.sh</span>
+		
+</p>
+</div>
+    
+    
+<a name="N101DD"></a><a name="FullyDistributed"></a>
+<h2 class="h3">完全分布式模式的操作方法</h2>
+<div class="section">
+<p>关于搭建完全分布式模式的，有实际意义的集群的资料可以在<a href="cluster_setup.html">这里</a>找到。</p>
+</div>
+    
+    
+<p>
+	    
+<em>Java与JNI是Sun Microsystems, Inc.在美国以及其他国家地区的商标或注册商标。</em>
+    
+</p>
+    
+  
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>

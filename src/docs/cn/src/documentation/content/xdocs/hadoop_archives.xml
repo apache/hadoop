@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+  
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+      
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+        <header>
+        <title>Hadoop Archives</title>
+        </header>
+        <body>
+        <section>
+        <title> 什么是Hadoop archives? </title>
+        <p>
+        Hadoop archives是特殊的档案格式。一个Hadoop archive对应一个文件系统目录。
+        Hadoop archive的扩展名是*.har。Hadoop archive包含元数据（形式是_index和_masterindx）和数据（part-*）文件。_index文件包含了档案中的文件的文件名和位置信息。
+        </p>
+        </section>
+        <section>
+        <title> 如何创建archive? </title>
+        <p>
+        <code>用法: hadoop archive -archiveName name &lt;src&gt;* &lt;dest&gt;</code>
+        </p>
+        <p>
+        由-archiveName选项指定你要创建的archive的名字。比如foo.har。archive的名字的扩展名应该是*.har。输入是文件系统的路径名，路径名的格式和平时的表达方式一样。创建的archive会保存到目标目录下。注意创建archives是一个Map/Reduce job。你应该在map reduce集群上运行这个命令。下面是一个例子：
+        </p>
+        <p>
+        <code>hadoop archive -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
+        </p><p>
+        在上面的例子中，
+        /user/hadoop/dir1 和 /user/hadoop/dir2 会被归档到这个文件系统目录下
+        -- /user/zoo/foo.har。当创建archive时，源文件不会被更改或删除。
+        </p>
+        </section>
+        <section>
+        <title> 如何查看archives中的文件? </title>
+        <p>
+        archive作为文件系统层暴露给外界。所以所有的fs shell命令都能在archive上运行，但是要使用不同的URI。
+        另外，archive是不可改变的。所以重命名，删除和创建都会返回错误。Hadoop Archives 的URI是
+        </p><p><code>har://scheme-hostname:port/archivepath/fileinarchive</code></p><p>
+        如果没提供scheme-hostname，它会使用默认的文件系统。这种情况下URI是这种形式
+        </p><p><code>
+        har:///archivepath/fileinarchive</code></p>
+        <p>
+        这是一个archive的例子。archive的输入是/dir。这个dir目录包含文件filea，fileb。
+        把/dir归档到/user/hadoop/foo.bar的命令是
+        </p>
+        <p><code>hadoop archive -archiveName foo.har /dir /user/hadoop</code>
+        </p><p>
+        获得创建的archive中的文件列表，使用命令
+        </p>
+        <p><code>hadoop dfs -lsr har:///user/hadoop/foo.har</code></p>
+        <p>查看archive中的filea文件的命令-
+        </p><p><code>hadoop dfs -cat har:///user/hadoop/foo.har/dir/filea</code></p>
+        </section>
+	</body>
+</document>

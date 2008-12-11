@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.17.2_-_2008-08-11_' && list.id != 'release_0.17.1_-_2008-06-23_') {
+        if (list.id != 'release_0.17.3_-_unreleased_' && list.id != 'release_0.17.2_-_2008-08-11_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,28 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('release_0.17.3_-_unreleased_')">Release 0.17.3 - Unreleased
+</a></h2>
+<ul id="release_0.17.3_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.17.3_-_unreleased_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4164">HADOOP-4164</a>. Chinese translation of the documentation.<br />(Xuebing Yan via
+omalley)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(4)
+    <ol id="release_0.17.3_-_unreleased_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4277">HADOOP-4277</a>. Checksum verification was mistakenly disabled for
+LocalFileSystem.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4271">HADOOP-4271</a>. Checksum input stream can sometimes return invalid
+data to the user.<br />(Ning Li via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4318">HADOOP-4318</a>. DistCp should use absolute paths for cleanup.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4326">HADOOP-4326</a>. ChecksumFileSystem does not override create(...) correctly.<br />(szetszwo)</li>
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.17.2_-_2008-08-11_')">Release 0.17.2 - 2008-08-11
 </a></h2>
 <ul id="release_0.17.2_-_2008-08-11_">
@@ -86,8 +108,10 @@ will also bypass the combiner incorrectly.<br />(cdouglas via omalley)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_')">Release 0.17.1 - 2008-06-23
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_')">Release 0.17.1 - 2008-06-23
+</a></h3>
 <ul id="release_0.17.1_-_2008-06-23_">
   <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(1)
@@ -128,8 +152,6 @@ Vijaya Renu via omalley)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
 </a></h3>
 <ul id="release_0.17.0_-_2008-05-18_">

@@ -1,0 +1,504 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title>
+      HDFS权限管理用户指南
+    </title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/core/">项目</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop">维基</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.18文档</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">文档</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">概述</a>
+</div>
+<div class="menuitem">
+<a href="quickstart.html">快速入门</a>
+</div>
+<div class="menuitem">
+<a href="cluster_setup.html">集群搭建</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS构架设计</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS使用指南</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HDFS权限指南</div>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS配额管理指南</a>
+</div>
+<div class="menuitem">
+<a href="commands_manual.html">命令手册</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_shell.html">FS Shell使用指南</a>
+</div>
+<div class="menuitem">
+<a href="distcp.html">DistCp使用指南</a>
+</div>
+<div class="menuitem">
+<a href="mapred_tutorial.html">Map-Reduce教程</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop本地库</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
+</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/index.html">API参考</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/">维基</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/FAQ">常见问题</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/mailing_lists.html">邮件列表</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html">发行说明</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html">变更日志</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="hdfs_permissions_guide.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1>
+      HDFS权限管理用户指南
+    </h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#%E6%A6%82%E8%BF%B0">概述</a>
+</li>
+<li>
+<a href="#%E7%94%A8%E6%88%B7%E8%BA%AB%E4%BB%BD">用户身份</a>
+</li>
+<li>
+<a href="#%E7%90%86%E8%A7%A3%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%AE%9E%E7%8E%B0">理解系统的实现</a>
+</li>
+<li>
+<a href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9FAPI%E5%8F%98%E6%9B%B4">文件系统API变更</a>
+</li>
+<li>
+<a href="#Shell%E5%91%BD%E4%BB%A4%E5%8F%98%E6%9B%B4">Shell命令变更</a>
+</li>
+<li>
+<a href="#%E8%B6%85%E7%BA%A7%E7%94%A8%E6%88%B7">超级用户</a>
+</li>
+<li>
+<a href="#Web%E6%9C%8D%E5%8A%A1%E5%99%A8">Web服务器</a>
+</li>
+<li>
+<a href="#%E5%9C%A8%E7%BA%BF%E5%8D%87%E7%BA%A7">在线升级</a>
+</li>
+<li>
+<a href="#%E9%85%8D%E7%BD%AE%E5%8F%82%E6%95%B0">配置参数</a>
+</li>
+</ul>
+</div>
+    
+<a name="N1000D"></a><a name="%E6%A6%82%E8%BF%B0"></a>
+<h2 class="h3">概述</h2>
+<div class="section">
+<p>
+		Hadoop分布式文件系统实现了一个和POSIX系统类似的文件和目录的权限模型。每个文件和目录有一个<em>所有者（owner）</em>和一个<em>组（group）</em>。文件或目录对其所有者、同组的其他用户以及所有其他用户分别有着不同的权限。对文件而言，当读取这个文件时需要有<em>r</em>权限，当写入或者追加到文件时需要有<em>w</em>权限。对目录而言，当列出目录内容时需要具有<em>r</em>权限，当新建或删除子文件或子目录时需要有<em>w</em>权限，当访问目录的子节点时需要有<em>x</em>权限。不同于POSIX模型，HDFS权限模型中的文件没有<em>sticky</em>，<em>setuid</em>或<em>setgid</em>位，因为这里没有可执行文件的概念。为了简单起见，这里也没有目录的<em>sticky</em>，<em>setuid</em>或<em>setgid</em>位。总的来说，文件或目录的权限就是它的<em>模式（mode）</em>。HDFS采用了Unix表示和显示模式的习惯，包括使用八进制数来表示权限。当新建一个文件或目录，它的所有者即客户进程的用户，它的所属组是父目录的组（BSD的规定）。
+	</p>
+<p>
+		每个访问HDFS的用户进程的标识分为两个部分，分别是<em>用户名</em>和<em>组名列表</em>。每次用户进程访问一个文件或目录<span class="codefrag">foo</span>，HDFS都要对其进行权限检查，
+	</p>
+<ul>
+		
+<li>
+		   如果用户即<span class="codefrag">foo</span>的所有者，则检查所有者的访问权限；
+		</li>
+		
+<li>
+		   如果<span class="codefrag">foo</span>关联的组在组名列表中出现，则检查组用户的访问权限；
+		</li>
+		
+<li>
+		   否则检查<span class="codefrag">foo</span>其他用户的访问权限。
+		</li>
+	
+</ul>
+<p>
+		如果权限检查失败，则客户的操作会失败。
+</p>
+</div>
+
+
+<a name="N10065"></a><a name="%E7%94%A8%E6%88%B7%E8%BA%AB%E4%BB%BD"></a>
+<h2 class="h3">用户身份</h2>
+<div class="section">
+<p>
+在这个版本的Hadoop中，客户端用户身份是通过宿主操作系统给出。对类Unix系统来说，
+</p>
+<ul>
+
+<li>
+   用户名等于<span class="codefrag">`whoami`</span>；
+</li>
+
+<li>
+   组列表等于<span class="codefrag">`bash -c groups`</span>。
+</li>
+
+</ul>
+<p>
+将来会增加其他的方式来确定用户身份（比如Kerberos、LDAP等）。期待用上文中提到的第一种方式来防止一个用户假冒另一个用户是不现实的。这种用户身份识别机制结合权限模型允许一个协作团体以一种有组织的形式共享文件系统中的资源。
+</p>
+<p>
+不管怎样，用户身份机制对HDFS本身来说只是外部特性。HDFS并不提供创建用户身份、创建组或处理用户凭证等功能。
+</p>
+</div>
+
+
+<a name="N10083"></a><a name="%E7%90%86%E8%A7%A3%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%AE%9E%E7%8E%B0"></a>
+<h2 class="h3">理解系统的实现</h2>
+<div class="section">
+<p>
+	每次文件或目录操作都传递完整的路径名给name node，每一个操作都会对此路径做权限检查。客户框架会隐式地将用户身份和与name node的连接关联起来，从而减少改变现有客户端API的需求。经常会有这种情况，当对一个文件的某一操作成功后，之后同样的操作却会失败，这是因为文件或路径上的某些目录已经不复存在了。比如，客户端首先开始读一个文件，它向name node发出一个请求以获取文件第一个数据块的位置。但接下去的获取其他数据块的第二个请求可能会失败。另一方面，删除一个文件并不会撤销客户端已经获得的对文件数据块的访问权限。而权限管理能使得客户端对一个文件的访问许可在两次请求之间被收回。重复一下，权限的改变并不会撤销当前客户端对文件数据块的访问许可。
+</p>
+<p>
+map-reduce框架通过传递字符串来指派用户身份，没有做其他特别的安全方面的考虑。文件或目录的所有者和组属性是以字符串的形式保存，而不是像传统的Unix方式转换为用户和组的数字ID。
+</p>
+<p>
+这个发行版本的权限管理特性并不需要改变data node的任何行为。Data node上的数据块上并没有任何<em>Hadoop</em>所有者或权限等关联属性。
+</p>
+</div>
+     
+
+<a name="N10096"></a><a name="%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9FAPI%E5%8F%98%E6%9B%B4"></a>
+<h2 class="h3">文件系统API变更</h2>
+<div class="section">
+<p>
+	如果权限检查失败，所有使用一个路径参数的方法都可能抛出<span class="codefrag">AccessControlException</span>异常。
+</p>
+<p>新增方法：</p>
+<ul>
+	
+<li>
+		
+<span class="codefrag">public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException；</span>
+	
+</li>
+	
+<li>
+		
+<span class="codefrag">public boolean mkdirs(Path f, FsPermission permission) throws IOException；</span>
+	
+</li>
+	
+<li>
+		
+<span class="codefrag">public void setPermission(Path p, FsPermission permission) throws IOException；</span>
+	
+</li>
+	
+<li>
+		
+<span class="codefrag">public void setOwner(Path p, String username, String groupname) throws IOException；</span>
+	
+</li>
+	
+<li>
+		
+<span class="codefrag">public FileStatus getFileStatus(Path f) throws IOException；</span> 也会返回路径关联的所有者、组和模式属性。
+	</li>
+
+
+</ul>
+<p>
+新建文件或目录的模式受配置参数<span class="codefrag">umask</span>的约束。当使用之前的 <span class="codefrag">create(path, &hellip;)</span> 方法（<em>没有指定</em>权限参数）时，新文件的模式是<span class="codefrag">666&thinsp;&amp;&thinsp;^umask</span>。当使用新的 <span class="codefrag">create(path, </span><em>permission</em><span class="codefrag">, &hellip;)</span> 方法（<em>指定了</em>权限参数<em>P</em>）时，新文件的模式是<span class="codefrag">P&thinsp;&amp;&thinsp;^umask&thinsp;&amp;&thinsp;666</span>。当使用先前的 <span class="codefrag">mkdirs(path)</span> 方法（<em>没有指定</em> 权限参数）新建一个目录时，新目录的模式是<span class="codefrag">777&thinsp;&amp;&thinsp;^umask</span>。当使用新的 <span class="codefrag">mkdirs(path, </span><em>permission</em> <span class="codefrag">)</span> 方法（<em>指定了</em>权限参数<em>P</em>）新建一个目录时，新目录的模式是<span class="codefrag">P&thinsp;&amp;&thinsp;^umask&thinsp;&amp;&thinsp;777</span>。
+</p>
+</div>
+
+     
+
+<a name="N10100"></a><a name="Shell%E5%91%BD%E4%BB%A4%E5%8F%98%E6%9B%B4"></a>
+<h2 class="h3">Shell命令变更</h2>
+<div class="section">
+<p>新增操作：</p>
+<dl>
+	
+<dt>
+<span class="codefrag">chmod [-R]</span> <em>mode file &hellip;</em>
+</dt>
+	
+<dd>
+		只有文件的所有者或者超级用户才有权限改变文件模式。
+	</dd>
+	
+<dt>
+<span class="codefrag">chgrp [-R]</span> <em>group file &hellip;</em>
+</dt>
+	
+<dd>
+		使用<span class="codefrag">chgrp</span>命令的用户必须属于特定的组且是文件的所有者，或者用户是超级用户。
+	</dd>
+	
+<dt>
+<span class="codefrag">chown [-R]</span> <em>[owner][:[group]] file &hellip;</em>
+</dt>
+	
+<dd>
+		文件的所有者的只能被超级用户更改。
+	</dd>
+	
+<dt>
+<span class="codefrag">ls </span> <em>file &hellip;</em>
+</dt>
+<dd></dd>
+	
+<dt>
+<span class="codefrag">lsr </span> <em>file &hellip;</em>
+</dt>
+	
+<dd>
+		输出格式做了调整以显示所有者、组和模式。
+	</dd>
+
+</dl>
+</div>
+
+     
+
+<a name="N1013F"></a><a name="%E8%B6%85%E7%BA%A7%E7%94%A8%E6%88%B7"></a>
+<h2 class="h3">超级用户</h2>
+<div class="section">
+<p>
+超级用户即运行name node进程的用户。宽泛的讲，如果你启动了name node，你就是超级用户。超级用户干任何事情，因为超级用户能够通过所有的权限检查。没有永久记号保留谁<em>过去</em>是超级用户；当name node开始运行时，进程自动判断谁<em>现在</em>是超级用户。HDFS的超级用户不一定非得是name node主机上的超级用户，也不需要所有的集群的超级用户都是一个。同样的，在个人工作站上运行HDFS的实验者，不需任何配置就已方便的成为了他的部署实例的超级用户。
+	</p>
+<p>
+	另外，管理员可以用配置参数指定一组特定的用户，如果做了设定，这个组的成员也会是超级用户。
+</p>
+</div>
+
+
+<a name="N10152"></a><a name="Web%E6%9C%8D%E5%8A%A1%E5%99%A8"></a>
+<h2 class="h3">Web服务器</h2>
+<div class="section">
+<p>
+Web服务器的身份是一个可配置参数。Name node并没有<em>真实</em>用户的概念，但是Web服务器表现地就像它具有管理员选定的用户的身份（用户名和组）一样。除非这个选定的身份是超级用户，否则会有名字空间中的一部分对Web服务器来说不可见。
+</p>
+</div>
+
+
+<a name="N1015F"></a><a name="%E5%9C%A8%E7%BA%BF%E5%8D%87%E7%BA%A7"></a>
+<h2 class="h3">在线升级</h2>
+<div class="section">
+<p>
+如果集群在0.15版本的数据集（<span class="codefrag">fsimage</span>）上启动，所有的文件和目录都有所有者<em>O</em>，组<em>G</em>，和模式<em>M</em>，这里 <em>O</em> 和 <em>G</em> 分别是超级用户的用户标识和组名，<em>M</em>是一个配置参数。</p>
+</div>
+
+
+<a name="N1017E"></a><a name="%E9%85%8D%E7%BD%AE%E5%8F%82%E6%95%B0"></a>
+<h2 class="h3">配置参数</h2>
+<div class="section">
+<dl>
+	
+<dt>
+<span class="codefrag">dfs.permissions = true </span>
+</dt>
+	
+<dd>
+		如果是 <span class="codefrag">true</span>，则打开前文所述的权限系统。如果是 <span class="codefrag">false</span>，权限<em>检查</em> 就是关闭的，但是其他的行为没有改变。这个配置参数的改变并不改变文件或目录的模式、所有者和组等信息。
+		<p>
+		
+</p>
+		不管权限模式是开还是关，<span class="codefrag">chmod</span>，<span class="codefrag">chgrp</span> 和 <span class="codefrag">chown</span> <em>总是</em> 会检查权限。这些命令只有在权限检查背景下才有用，所以不会有兼容性问题。这样，这就能让管理员在打开常规的权限检查之前可以可靠地设置文件的所有者和权限。
+	</dd>
+	
+<dt>
+<span class="codefrag">dfs.web.ugi = webuser,webgroup</span>
+</dt>
+	
+<dd>
+	Web服务器使用的用户名。如果将这个参数设置为超级用户的名称，则所有Web客户就可以看到所有的信息。如果将这个参数设置为一个不使用的用户，则Web客户就只能访问到&ldquo;other&rdquo;权限可访问的资源了。额外的组可以加在后面，形成一个用逗号分隔的列表。
+	</dd>
+	
+<dt>
+<span class="codefrag">dfs.permissions.supergroup = supergroup</span>
+</dt>
+	
+<dd>
+	超级用户的组名。
+	</dd>
+	
+<dt>
+<span class="codefrag">dfs.upgrade.permission = 777</span>
+</dt>
+	
+<dd>
+	升级时的初始模式。文件<em>永不会</em>被设置<em>x</em>权限。在配置文件中，可以使用十进制数<em>511<sub>10</sub></em>。
+	</dd>
+	
+<dt>
+<span class="codefrag">dfs.umask = 022</span>
+</dt>
+	
+<dd>
+		
+<span class="codefrag">umask</span>参数在创建文件和目录时使用。在配置文件中，可以使用十进制数<em>18<sub>10</sub></em>。
+	</dd>
+
+</dl>
+</div>
+
+     
+  
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>

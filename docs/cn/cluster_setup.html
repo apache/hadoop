@@ -1,0 +1,730 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title>Hadoop集群搭建</title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/core/">项目</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop">维基</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.18文档</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">文档</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">概述</a>
+</div>
+<div class="menuitem">
+<a href="quickstart.html">快速入门</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">集群搭建</div>
+</div>
+<div class="menuitem">
+<a href="hdfs_design.html">HDFS构架设计</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS使用指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_permissions_guide.html">HDFS权限指南</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_quota_admin_guide.html">HDFS配额管理指南</a>
+</div>
+<div class="menuitem">
+<a href="commands_manual.html">命令手册</a>
+</div>
+<div class="menuitem">
+<a href="hdfs_shell.html">FS Shell使用指南</a>
+</div>
+<div class="menuitem">
+<a href="distcp.html">DistCp使用指南</a>
+</div>
+<div class="menuitem">
+<a href="mapred_tutorial.html">Map-Reduce教程</a>
+</div>
+<div class="menuitem">
+<a href="native_libraries.html">Hadoop本地库</a>
+</div>
+<div class="menuitem">
+<a href="streaming.html">Streaming</a>
+</div>
+<div class="menuitem">
+<a href="hadoop_archives.html">Hadoop Archives</a>
+</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/index.html">API参考</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/jdiff/changes.html">API Changes</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/">维基</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/FAQ">常见问题</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/mailing_lists.html">邮件列表</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/releasenotes.html">发行说明</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/core/docs/r0.18.2/changes.html">变更日志</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="cluster_setup.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1>Hadoop集群搭建</h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#%E7%9B%AE%E7%9A%84">目的</a>
+</li>
+<li>
+<a href="#%E5%85%88%E5%86%B3%E6%9D%A1%E4%BB%B6">先决条件</a>
+</li>
+<li>
+<a href="#%E5%AE%89%E8%A3%85">安装</a>
+</li>
+<li>
+<a href="#%E9%85%8D%E7%BD%AE">配置</a>
+<ul class="minitoc">
+<li>
+<a href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6">配置文件</a>
+</li>
+<li>
+<a href="#%E9%9B%86%E7%BE%A4%E9%85%8D%E7%BD%AE">集群配置</a>
+<ul class="minitoc">
+<li>
+<a href="#%E9%85%8D%E7%BD%AEHadoop%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83">配置Hadoop守护进程的运行环境</a>
+</li>
+<li>
+<a href="#%E9%85%8D%E7%BD%AEHadoop%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%BF%90%E8%A1%8C%E5%8F%82%E6%95%B0">配置Hadoop守护进程的运行参数</a>
+</li>
+<li>
+<a href="#Slaves">Slaves</a>
+</li>
+<li>
+<a href="#%E6%97%A5%E5%BF%97">日志</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<a href="#Hadoop%E7%9A%84%E6%9C%BA%E6%9E%B6%E6%84%9F%E7%9F%A5">Hadoop的机架感知</a>
+</li>
+<li>
+<a href="#%E5%90%AF%E5%8A%A8Hadoop">启动Hadoop</a>
+</li>
+<li>
+<a href="#%E5%81%9C%E6%AD%A2Hadoop">停止Hadoop</a>
+</li>
+</ul>
+</div>
+  
+    
+<a name="N1000D"></a><a name="%E7%9B%AE%E7%9A%84"></a>
+<h2 class="h3">目的</h2>
+<div class="section">
+<p>本文描述了如何安装、配置和管理有实际意义的Hadoop集群，其规模可从几个节点的小集群到几千个节点的超大集群。</p>
+<p>如果你希望在单机上安装Hadoop玩玩，从<a href="quickstart.html">这里</a>能找到相关细节。</p>
+</div>
+    
+    
+<a name="N1001E"></a><a name="%E5%85%88%E5%86%B3%E6%9D%A1%E4%BB%B6"></a>
+<h2 class="h3">先决条件</h2>
+<div class="section">
+<ol>
+        
+<li>
+          确保在你集群中的每个节点上都安装了所有<a href="quickstart.html#PreReqs">必需</a>软件。
+        </li>
+        
+<li>
+          
+<a href="quickstart.html#%E4%B8%8B%E8%BD%BD">获取</a>Hadoop软件包。
+        </li>
+      
+</ol>
+</div>
+    
+    
+<a name="N10036"></a><a name="%E5%AE%89%E8%A3%85"></a>
+<h2 class="h3">安装</h2>
+<div class="section">
+<p>安装Hadoop集群通常要将安装软件解压到集群内的所有机器上。</p>
+<p>通常，集群里的一台机器被指定为 
+	 <span class="codefrag">NameNode</span>，另一台不同的机器被指定为<span class="codefrag">JobTracker</span>。这些机器是<em>masters</em>。余下的机器即作为<span class="codefrag">DataNode</span><em>也</em>作为<span class="codefrag">TaskTracker</span>。这些机器是<em>slaves</em>。</p>
+<p>我们用<span class="codefrag">HADOOP_HOME</span>指代安装的根路径。通常，集群里的所有机器的<span class="codefrag">HADOOP_HOME</span>路径相同。</p>
+</div>
+    
+    
+<a name="N10060"></a><a name="%E9%85%8D%E7%BD%AE"></a>
+<h2 class="h3">配置</h2>
+<div class="section">
+<p>接下来的几节描述了如何配置Hadoop集群。</p>
+<a name="N10069"></a><a name="%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"></a>
+<h3 class="h4">配置文件</h3>
+<p>对Hadoop的配置通过<span class="codefrag">conf/</span>目录下的两个重要配置文件完成：</p>
+<ol>
+          
+<li>
+            
+<a href="http://hadoop.apache.org/core/docs/current/hadoop-default.html">hadoop-default.xml</a> - 只读的默认配置。
+          </li>
+          
+<li>
+            
+<em>hadoop-site.xml</em> - 集群特有的配置。
+          </li>
+        
+</ol>
+<p>要了解更多关于这些配置文件如何影响Hadoop框架的细节，请看<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/org/apache/hadoop/conf/Configuration.html">这里</a>。</p>
+<p>此外，通过设置<span class="codefrag">conf/hadoop-env.sh</span>中的变量为集群特有的值，你可以对<span class="codefrag">bin/</span>目录下的Hadoop脚本进行控制。</p>
+<a name="N10096"></a><a name="%E9%9B%86%E7%BE%A4%E9%85%8D%E7%BD%AE"></a>
+<h3 class="h4">集群配置</h3>
+<p>要配置Hadoop集群，你需要设置Hadoop守护进程的<em>运行环境</em>和Hadoop守护进程的<em>运行参数</em>。</p>
+<p>Hadoop守护进程指<span class="codefrag">NameNode</span>/<span class="codefrag">DataNode</span> 
+        和<span class="codefrag">JobTracker</span>/<span class="codefrag">TaskTracker</span>。</p>
+<a name="N100B4"></a><a name="%E9%85%8D%E7%BD%AEHadoop%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83"></a>
+<h4>配置Hadoop守护进程的运行环境</h4>
+<p>管理员可在<span class="codefrag">conf/hadoop-env.sh</span>脚本内对Hadoop守护进程的运行环境做特别指定。</p>
+<p>至少，你得设定<span class="codefrag">JAVA_HOME</span>使之在每一远端节点上都被正确设置。</p>
+<p>管理员可以通过配置选项<span class="codefrag">HADOOP_*_OPTS</span>来分别配置各个守护进程。
+          下表是可以配置的选项。
+          </p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+          
+<tr>
+<th colspan="1" rowspan="1">守护进程</th><th colspan="1" rowspan="1">配置选项</th>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">NameNode</td><td colspan="1" rowspan="1">HADOOP_NAMENODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">DataNode</td><td colspan="1" rowspan="1">HADOOP_DATANODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">SecondaryNamenode</td>
+              <td colspan="1" rowspan="1">HADOOP_SECONDARYNAMENODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">JobTracker</td><td colspan="1" rowspan="1">HADOOP_JOBTRACKER_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">TaskTracker</td><td colspan="1" rowspan="1">HADOOP_TASKTRACKER_OPTS</td>
+</tr>
+          
+</table>
+<p>例如，配置Namenode时,为了使其能够并行回收垃圾（parallelGC），
+          要把下面的代码加入到<span class="codefrag">hadoop-env.sh</span> :
+          <br>
+<span class="codefrag">
+          export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC ${HADOOP_NAMENODE_OPTS}"
+          </span>
+<br>
+</p>
+<p>其它可定制的常用参数还包括：</p>
+<ul>
+            
+<li>
+              
+<span class="codefrag">HADOOP_LOG_DIR</span> - 守护进程日志文件的存放目录。如果不存在会被自动创建。
+            </li>
+            
+<li>
+              
+<span class="codefrag">HADOOP_HEAPSIZE</span> - 最大可用的堆大小，单位为MB。比如，<span class="codefrag">1000MB</span>。
+              这个参数用于设置hadoop守护进程的堆大小。缺省大小是<span class="codefrag">1000MB</span>。
+            </li>
+          
+</ul>
+<a name="N1012F"></a><a name="%E9%85%8D%E7%BD%AEHadoop%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%BF%90%E8%A1%8C%E5%8F%82%E6%95%B0"></a>
+<h4>配置Hadoop守护进程的运行参数</h4>
+<p>这部分涉及Hadoop集群的重要参数，这些参数在<span class="codefrag">conf/hadoop-site.xml</span>中指定。</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+  		    
+<tr>
+		      
+<th colspan="1" rowspan="1">参数</th>
+		      <th colspan="1" rowspan="1">取值</th> 
+		      <th colspan="1" rowspan="1">备注</th>
+		    
+</tr>
+  		    
+<tr>
+		      
+<td colspan="1" rowspan="1">fs.default.name</td>
+                       <td colspan="1" rowspan="1"><span class="codefrag">NameNode</span>的URI。</td>
+                       <td colspan="1" rowspan="1"><em>hdfs://主机名/</em></td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">mapred.job.tracker</td>
+		      <td colspan="1" rowspan="1"><span class="codefrag">JobTracker</span>的主机（或者IP）和端口。</td>
+		      <td colspan="1" rowspan="1"><em>主机:端口</em>。</td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">dfs.name.dir</td>
+		      <td colspan="1" rowspan="1">
+		        <span class="codefrag">NameNode</span>持久存储名字空间及事务日志的本地文件系统路径。</td>
+		      <td colspan="1" rowspan="1">当这个值是一个逗号分割的目录列表时，nametable数据将会被复制到所有目录中做冗余备份。
+		      </td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">dfs.data.dir</td>
+		      <td colspan="1" rowspan="1"> 
+		        <span class="codefrag">DataNode</span>存放块数据的本地文件系统路径，逗号分割的列表。
+		      </td>
+		      <td colspan="1" rowspan="1">
+		        当这个值是逗号分割的目录列表时，数据将被存储在所有目录下，通常分布在不同设备上。
+		      </td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">mapred.system.dir</td>
+		      <td colspan="1" rowspan="1">Map/Reduce框架存储系统文件的HDFS路径。比如<span class="codefrag">/hadoop/mapred/system/</span>。
+		      </td>
+		      <td colspan="1" rowspan="1">这个路径是默认文件系统（HDFS）下的路径， 须从服务器和客户端上均可访问。
+		      </td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">mapred.local.dir</td>
+		      <td colspan="1" rowspan="1">本地文件系统下逗号分割的路径列表，Map/Reduce临时数据存放的地方。
+		      </td>
+		      <td colspan="1" rowspan="1">多路径有助于利用磁盘i/o。</td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">mapred.tasktracker.{map|reduce}.tasks.maximum</td>
+		      <td colspan="1" rowspan="1">某一<span class="codefrag">TaskTracker</span>上可运行的最大Map/Reduce任务数，这些任务将同时各自运行。
+		      </td>
+		      <td colspan="1" rowspan="1">
+		        默认为2（2个map和2个reduce），可依据硬件情况更改。
+		      </td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">dfs.hosts/dfs.hosts.exclude</td>
+		      <td colspan="1" rowspan="1">许可/拒绝DataNode列表。</td>
+		      <td colspan="1" rowspan="1">
+		        如有必要，用这个文件控制许可的datanode列表。
+		      </td>
+		    
+</tr>
+		    
+<tr>
+		      
+<td colspan="1" rowspan="1">mapred.hosts/mapred.hosts.exclude</td>
+		      <td colspan="1" rowspan="1">许可/拒绝TaskTracker列表。</td>
+		      <td colspan="1" rowspan="1">
+		        如有必要，用这个文件控制许可的TaskTracker列表。
+		      </td>
+  		    
+</tr>
+		  
+</table>
+<p>通常，上述参数被标记为 
+          <a href="http://hadoop.apache.org/core/docs/r0.18.2/api/org/apache/hadoop/conf/Configuration.html#FinalParams">
+          final</a> 以确保它们不被用户应用更改。
+          </p>
+<a name="N1020C"></a><a name="%E7%8E%B0%E5%AE%9E%E4%B8%96%E7%95%8C%E7%9A%84%E9%9B%86%E7%BE%A4%E9%85%8D%E7%BD%AE"></a>
+<h5>现实世界的集群配置</h5>
+<p>这节罗列在大规模集群上运行<em>sort</em>基准测试(benchmark)时使用到的一些非缺省配置。</p>
+<ul>
+              
+<li>
+                
+<p>运行sort900的一些非缺省配置值，sort900即在900个节点的集群上对9TB的数据进行排序：</p>
+                
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+  		          
+<tr>
+		            
+<th colspan="1" rowspan="1">参数</th>
+		            <th colspan="1" rowspan="1">取值</th> 
+		            <th colspan="1" rowspan="1">备注</th>
+		          
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">dfs.block.size</td>
+                    <td colspan="1" rowspan="1">134217728</td>
+                    <td colspan="1" rowspan="1">针对大文件系统，HDFS的块大小取128MB。</td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">dfs.namenode.handler.count</td>
+                    <td colspan="1" rowspan="1">40</td>
+                    <td colspan="1" rowspan="1">
+                      启动更多的NameNode服务线程去处理来自大量DataNode的RPC请求。
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">mapred.reduce.parallel.copies</td>
+                    <td colspan="1" rowspan="1">20</td>
+                    <td colspan="1" rowspan="1">
+			reduce启动更多的并行拷贝器以获取大量map的输出。
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">mapred.child.java.opts</td>
+                    <td colspan="1" rowspan="1">-Xmx512M</td>
+                    <td colspan="1" rowspan="1">
+			为map/reduce子虚拟机使用更大的堆。 
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">fs.inmemory.size.mb</td>
+                    <td colspan="1" rowspan="1">200</td>
+                    <td colspan="1" rowspan="1">
+                      为reduce阶段合并map输出所需的内存文件系统分配更多的内存。
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">io.sort.factor</td>
+                    <td colspan="1" rowspan="1">100</td>
+                    <td colspan="1" rowspan="1">文件排序时更多的流将同时被归并。</td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">io.sort.mb</td>
+                    <td colspan="1" rowspan="1">200</td>
+                    <td colspan="1" rowspan="1">提高排序时的内存上限。</td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">io.file.buffer.size</td>
+                    <td colspan="1" rowspan="1">131072</td>
+                    <td colspan="1" rowspan="1">SequenceFile中用到的读/写缓存大小。</td>
+                  
+</tr>
+                
+</table>
+              
+</li>
+              
+<li>
+                
+<p>运行sort1400和sort2000时需要更新的配置，即在1400个节点上对14TB的数据进行排序和在2000个节点上对20TB的数据进行排序：</p>
+                
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+  		          
+<tr>
+		            
+<th colspan="1" rowspan="1">参数</th>
+		            <th colspan="1" rowspan="1">取值</th> 
+		            <th colspan="1" rowspan="1">备注</th>
+		          
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">mapred.job.tracker.handler.count</td>
+                    <td colspan="1" rowspan="1">60</td>
+                    <td colspan="1" rowspan="1">
+                      启用更多的JobTracker服务线程去处理来自大量TaskTracker的RPC请求。
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">mapred.reduce.parallel.copies</td>
+                    <td colspan="1" rowspan="1">50</td>
+                    <td colspan="1" rowspan="1"></td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">tasktracker.http.threads</td>
+                    <td colspan="1" rowspan="1">50</td>
+                    <td colspan="1" rowspan="1">
+                      为TaskTracker的Http服务启用更多的工作线程。reduce通过Http服务获取map的中间输出。
+                    </td>
+                  
+</tr>
+                  
+<tr>
+                    
+<td colspan="1" rowspan="1">mapred.child.java.opts</td>
+                    <td colspan="1" rowspan="1">-Xmx1024M</td>
+                    <td colspan="1" rowspan="1">使用更大的堆用于maps/reduces的子虚拟机</td>
+                  
+</tr>
+                
+</table>
+              
+</li>
+            
+</ul>
+<a name="N1032A"></a><a name="Slaves"></a>
+<h4>Slaves</h4>
+<p>通常，你选择集群中的一台机器作为<span class="codefrag">NameNode</span>，另外一台不同的机器作为<span class="codefrag">JobTracker</span>。余下的机器即作为<span class="codefrag">DataNode</span>又作为<span class="codefrag">TaskTracker</span>，这些被称之为<em>slaves</em>。</p>
+<p>在<span class="codefrag">conf/slaves</span>文件中列出所有slave的主机名或者IP地址，一行一个。</p>
+<a name="N10349"></a><a name="%E6%97%A5%E5%BF%97"></a>
+<h4>日志</h4>
+<p>Hadoop使用<a href="http://logging.apache.org/log4j/">Apache log4j</a>来记录日志，它由<a href="http://commons.apache.org/logging/">Apache Commons Logging</a>框架来实现。编辑<span class="codefrag">conf/log4j.properties</span>文件可以改变Hadoop守护进程的日志配置（日志格式等）。</p>
+<a name="N1035D"></a><a name="%E5%8E%86%E5%8F%B2%E6%97%A5%E5%BF%97"></a>
+<h5>历史日志</h5>
+<p>作业的历史文件集中存放在<span class="codefrag">hadoop.job.history.location</span>，这个也可以是在分布式文件系统下的路径，其默认值为<span class="codefrag">${HADOOP_LOG_DIR}/history</span>。jobtracker的web UI上有历史日志的web UI链接。</p>
+<p>历史文件在用户指定的目录<span class="codefrag">hadoop.job.history.user.location</span>也会记录一份，这个配置的缺省值为作业的输出目录。这些文件被存放在指定路径下的&ldquo;_logs/history/&rdquo;目录中。因此，默认情况下日志文件会在&ldquo;mapred.output.dir/_logs/history/&rdquo;下。如果将<span class="codefrag">hadoop.job.history.user.location</span>指定为值<span class="codefrag">none</span>，系统将不再记录此日志。</p>
+<p>用户可使用以下命令在指定路径下查看历史日志汇总<br>
+            
+<span class="codefrag">$ bin/hadoop job -history output-dir</span>
+<br> 
+            这条命令会显示作业的细节信息，失败和终止的任务细节。 <br>
+            关于作业的更多细节，比如成功的任务，以及对每个任务的所做的尝试次数等可以用下面的命令查看<br>
+            
+<span class="codefrag">$ bin/hadoop job -history all output-dir</span>
+<br>
+</p>
+<p>一但全部必要的配置完成，将这些文件分发到所有机器的<span class="codefrag">HADOOP_CONF_DIR</span>路径下，通常是<span class="codefrag">${HADOOP_HOME}/conf</span>。</p>
+</div>
+    
+    
+<a name="N10395"></a><a name="Hadoop%E7%9A%84%E6%9C%BA%E6%9E%B6%E6%84%9F%E7%9F%A5"></a>
+<h2 class="h3">Hadoop的机架感知</h2>
+<div class="section">
+<p>HDFS和Map/Reduce的组件是能够感知机架的。</p>
+<p>
+<span class="codefrag">NameNode</span>和<span class="codefrag">JobTracker</span>通过调用管理员配置模块中的API<a href="http://hadoop.apache.org/core/docs/r0.18.2/api/org/apache/hadoop/net/DNSToSwitchMapping.html#resolve(java.util.List)">resolve</a>来获取集群里每个slave的<span class="codefrag">机架id</span>。该API将slave的DNS名称（或者IP地址）转换成机架id。使用哪个模块是通过配置项<span class="codefrag">topology.node.switch.mapping.impl</span>来指定的。模块的默认实现会调用<span class="codefrag">topology.script.file.name</span>配置项指定的一个的脚本/命令。 如果topology.script.file.name未被设置，对于所有传入的IP地址，模块会返回<span class="codefrag">/default-rack</span>作为机架id。在Map/Reduce部分还有一个额外的配置项<span class="codefrag">mapred.cache.task.levels</span>，该参数决定cache的级数（在网络拓扑中）。例如，如果默认值是2，会建立两级的cache－ 一级针对主机（主机 -&gt; 任务的映射）另一级针对机架（机架 -&gt; 任务的映射）。
+      </p>
+</div>
+    
+    
+<a name="N103BA"></a><a name="%E5%90%AF%E5%8A%A8Hadoop"></a>
+<h2 class="h3">启动Hadoop</h2>
+<div class="section">
+<p>启动Hadoop集群需要启动HDFS集群和Map/Reduce集群。</p>
+<p>
+        格式化一个新的分布式文件系统：<br>
+        
+<span class="codefrag">$ bin/hadoop namenode -format</span>
+      
+</p>
+<p>
+	在分配的<span class="codefrag">NameNode</span>上，运行下面的命令启动HDFS：<br>
+        
+<span class="codefrag">$ bin/start-dfs.sh</span>
+      
+</p>
+<p>
+<span class="codefrag">bin/start-dfs.sh</span>脚本会参照<span class="codefrag">NameNode</span>上<span class="codefrag">${HADOOP_CONF_DIR}/slaves</span>文件的内容，在所有列出的slave上启动<span class="codefrag">DataNode</span>守护进程。</p>
+<p>
+	在分配的<span class="codefrag">JobTracker</span>上，运行下面的命令启动Map/Reduce：<br>
+        
+<span class="codefrag">$ bin/start-mapred.sh</span>
+      
+</p>
+<p>
+<span class="codefrag">bin/start-mapred.sh</span>脚本会参照<span class="codefrag">JobTracker</span>上<span class="codefrag">${HADOOP_CONF_DIR}/slaves</span>文件的内容，在所有列出的slave上启动<span class="codefrag">TaskTracker</span>守护进程。</p>
+</div>
+    
+    
+<a name="N103FE"></a><a name="%E5%81%9C%E6%AD%A2Hadoop"></a>
+<h2 class="h3">停止Hadoop</h2>
+<div class="section">
+<p>
+	在分配的<span class="codefrag">NameNode</span>上，执行下面的命令停止HDFS：<br>
+        
+<span class="codefrag">$ bin/stop-dfs.sh</span>
+      
+</p>
+<p>
+<span class="codefrag">bin/stop-dfs.sh</span>脚本会参照<span class="codefrag">NameNode</span>上<span class="codefrag">${HADOOP_CONF_DIR}/slaves</span>文件的内容，在所有列出的slave上停止<span class="codefrag">DataNode</span>守护进程。</p>
+<p>
+	在分配的<span class="codefrag">JobTracker</span>上，运行下面的命令停止Map/Reduce：<br>
+        
+<span class="codefrag">$ bin/stop-mapred.sh</span>
+<br>
+      
+</p>
+<p>
+<span class="codefrag">bin/stop-mapred.sh</span>脚本会参照<span class="codefrag">JobTracker</span>上<span class="codefrag">${HADOOP_CONF_DIR}/slaves</span>文件的内容，在所有列出的slave上停止<span class="codefrag">TaskTracker</span>守护进程。</p>
+</div>
+  
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>

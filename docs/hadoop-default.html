@@ -393,6 +393,141 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
+<<<<<<< .working
+=======
+<td><a name="mapred.tasktracker.instrumentation">mapred.tasktracker.instrumentation</a></td><td>org.apache.hadoop.mapred.TaskTrackerMetricsInst</td><td>Expert: The instrumentation class to associate with each TaskTracker.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.vmem.reserved">mapred.tasktracker.vmem.reserved</a></td><td>-1</td><td>Configuration property to specify the amount of virtual memory
+    that has to be reserved by the TaskTracker for system usage (OS, TT etc).
+    The reserved virtual memory should be a part of the total virtual memory
+    available on the TaskTracker.
+    
+    The reserved virtual memory and the total virtual memory values are
+    reported by the TaskTracker as part of heart-beat so that they can
+    considered by a scheduler. Please refer to the documentation of the
+    configured scheduler to see how this property is used.
+    
+    These two values are also used by a TaskTracker for tracking tasks' memory
+    usage. Memory management functionality on a TaskTracker is disabled if this
+    property is set to -1, if it more than the total virtual memory on the 
+    tasktracker, or if either of the values is negative.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.pmem.reserved">mapred.tasktracker.pmem.reserved</a></td><td>-1</td><td>Configuration property to specify the amount of physical memory
+    that has to be reserved by the TaskTracker for system usage (OS, TT etc).
+    The reserved physical memory should be a part of the total physical memory
+    available on the TaskTracker.
+
+    The reserved physical memory and the total physical memory values are
+    reported by the TaskTracker as part of heart-beat so that they can
+    considered by a scheduler. Please refer to the documentation of the
+    configured scheduler to see how this property is used.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.default.maxvmem">mapred.task.default.maxvmem</a></td><td>-1</td><td>
+    Cluster-wide configuration in bytes to be set by the administrators that
+    provides default amount of maximum virtual memory for job's tasks. This has
+    to be set on both the JobTracker node for the sake of scheduling decisions
+    and on the TaskTracker nodes for the sake of memory management.
+
+    If a job doesn't specify its virtual memory requirement by setting
+    mapred.task.maxvmem to -1, tasks are assured a memory limit set
+    to this property. This property is set to -1 by default.
+
+    This value should in general be less than the cluster-wide
+    configuration mapred.task.limit.maxvmem. If not or if it is not set,
+    TaskTracker's memory management will be disabled and a scheduler's memory
+    based scheduling decisions may be affected. Please refer to the
+    documentation of the configured scheduler to see how this property is used.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.limit.maxvmem">mapred.task.limit.maxvmem</a></td><td>-1</td><td>
+    Cluster-wide configuration in bytes to be set by the site administrators
+    that provides an upper limit on the maximum virtual memory that can be
+    specified by a job via mapred.task.maxvmem. This has to be set on both the
+    JobTracker node for the sake of scheduling decisions and on the TaskTracker
+    nodes for the sake of memory management.
+    
+    The job configuration mapred.task.maxvmem should not be more than this
+    value, otherwise depending on the scheduler being configured, the job may
+    be rejected or the job configuration may just be ignored. Please refer to
+    the documentation of the configured scheduler to see how this property is
+    used.
+
+    If it is not set a TaskTracker, TaskTracker's memory management will be
+    disabled.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.maxvmem">mapred.task.maxvmem</a></td><td>-1</td><td>
+    The maximum amount of virtual memory any task of a job will use, in bytes.
+
+    This value will be used by TaskTrackers for monitoring the memory usage of
+    tasks of this jobs. If a TaskTracker's memory management functionality is
+    enabled, each task of this job will be allowed to use a maximum virtual
+    memory specified by this property. If the task's memory usage goes over 
+    this value, the task will be failed by the TT. If not set, the
+    cluster-wide configuration mapred.task.default.maxvmem is used as the
+    default value for memory requirements. If this property cascaded with
+    mapred.task.default.maxvmem becomes equal to -1, the job's tasks will
+    not be assured any particular amount of virtual memory and may be killed by
+    a TT that intends to control the total memory usage of the tasks via memory
+    management functionality. If the memory management functionality is
+    disabled on a TT, this value is ignored.
+
+    This value should not be more than the cluster-wide configuration
+    mapred.task.limit.maxvmem.
+
+    This value may be used by schedulers that support scheduling based on job's
+    memory requirements. Please refer to the documentation of the scheduler
+    being configured to see if it does memory based scheduling and if it does,
+    how this property is used by that scheduler.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.maxpmem">mapred.task.maxpmem</a></td><td>-1</td><td>
+   The maximum amount of physical memory any task of a job will use in bytes.
+
+   This value may be used by schedulers that support scheduling based on job's
+   memory requirements. In general, a task of this job will be scheduled on a
+   TaskTracker, only if the amount of physical memory still unoccupied on the
+   TaskTracker is greater than or equal to this value. Different schedulers can
+   take different decisions, some might just ignore this value. Please refer to
+   the documentation of the scheduler being configured to see if it does
+   memory based scheduling and if it does, how this variable is used by that
+   scheduler.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.memory_calculator_plugin">mapred.tasktracker.memory_calculator_plugin</a></td><td></td><td>
+   Name of the class whose instance will be used to query memory information
+   on the tasktracker.
+   
+   The class must be an instance of 
+   org.apache.hadoop.util.MemoryCalculatorPlugin. If the value is null, the
+   tasktracker attempts to use a class appropriate to the platform. 
+   Currently, the only platform supported is Linux.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.taskmemorymanager.monitoring-interval">mapred.tasktracker.taskmemorymanager.monitoring-interval</a></td><td>5000</td><td>The interval, in milliseconds, for which the tasktracker waits
+   between two cycles of monitoring its tasks' memory usage. Used only if
+   tasks' memory management is enabled via mapred.tasktracker.tasks.maxmemory.
+   </td>
+</tr>
+<tr>
+<td><a name="mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill">mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill</a></td><td>5000</td><td>The time, in milliseconds, the tasktracker waits for sending a
+  SIGKILL to a process that has overrun memory limits, after it has been sent
+  a SIGTERM. Used only if tasks' memory management is enabled via
+  mapred.tasktracker.tasks.maxmemory.</td>
+</tr>
+<tr>
+>>>>>>> .merge-right.r725504
 <td><a name="mapred.map.tasks">mapred.map.tasks</a></td><td>2</td><td>The default number of map tasks per job.  Typically set
   to a prime several times greater than number of available hosts.
   Ignored when mapred.job.tracker is "local".  
@@ -597,6 +732,14 @@ creations/deletions), or "all".</td>
 <td><a name="mapred.hosts.exclude">mapred.hosts.exclude</a></td><td></td><td>Names a file that contains the list of hosts that
   should be excluded by the jobtracker.  If the value is empty, no
   hosts are excluded.</td>
+</tr>
+<tr>
+<td><a name="mapred.max.tracker.blacklists">mapred.max.tracker.blacklists</a></td><td>4</td><td>The number of blacklists for a taskTracker by various jobs 
+               after which the task tracker could be blacklisted across
+               all jobs. The tracker will be given a tasks later 
+               (after a day). The tracker will become a healthy 
+               tracker after a restart. 
+  </td>
 </tr>
 <tr>
 <td><a name="mapred.max.tracker.failures">mapred.max.tracker.failures</a></td><td>4</td><td>The number of task-failures on a tasktracker of a given job 
