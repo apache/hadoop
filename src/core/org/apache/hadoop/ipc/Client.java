@@ -44,7 +44,6 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -175,7 +174,10 @@ public class Client {
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
-    private ConnectionId remoteId;
+    private InetSocketAddress server;             // server ip:port
+    private ConnectionHeader header;              // connection header
+    private ConnectionId remoteId;                // connection id
+    
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
     private DataOutputStream out;
@@ -186,17 +188,19 @@ public class Client {
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
 
-    public Connection(InetSocketAddress address) throws IOException {
-      this(new ConnectionId(address, null));
-    }
-    
     public Connection(ConnectionId remoteId) throws IOException {
-      if (remoteId.getAddress().isUnresolved()) {
+      this.remoteId = remoteId;
+      this.server = remoteId.getAddress();
+      if (server.isUnresolved()) {
         throw new UnknownHostException("unknown host: " + 
                                        remoteId.getAddress().getHostName());
       }
-      this.remoteId = remoteId;
+      
       UserGroupInformation ticket = remoteId.getTicket();
+      Class<?> protocol = remoteId.getProtocol();
+      header = 
+        new ConnectionHeader(protocol == null ? null : protocol.getName(), ticket);
+      
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
           remoteId.getAddress().toString() +
           " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
@@ -290,7 +294,7 @@ public class Client {
       short timeoutFailures = 0;
       try {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Connecting to "+remoteId.getAddress());
+          LOG.debug("Connecting to "+server);
         }
         while (true) {
           try {
@@ -362,7 +366,7 @@ public class Client {
         Thread.sleep(1000);
       } catch (InterruptedException ignored) {}
       
-      LOG.info("Retrying connect to server: " + remoteId.getAddress() + 
+      LOG.info("Retrying connect to server: " + server + 
           ". Already tried " + curRetries + " time(s).");
     }
 
@@ -370,12 +374,15 @@ public class Client {
      * Out is not synchronized because only the first thread does this.
      */
     private void writeHeader() throws IOException {
+      // Write out the header and version
       out.write(Server.HEADER.array());
       out.write(Server.CURRENT_VERSION);
-      //When there are more fields we can have ConnectionHeader Writable.
+
+      // Write out the ConnectionHeader
       DataOutputBuffer buf = new DataOutputBuffer();
-      ObjectWritable.writeObject(buf, remoteId.getTicket(), 
-                                 UserGroupInformation.class, conf);
+      header.write(buf);
+      
+      // Write out the payload length
       int bufLen = buf.getLength();
       out.writeInt(bufLen);
       out.write(buf.getData(), 0, bufLen);
@@ -413,7 +420,7 @@ public class Client {
     }
 
     public InetSocketAddress getRemoteAddress() {
-      return remoteId.getAddress();
+      return server;
     }
 
     /* Send a ping to the server if the time elapsed 
@@ -498,14 +505,18 @@ public class Client {
 
         Call call = calls.remove(id);
 
-        boolean isError = in.readBoolean();     // read if error
-        if (isError) {
-          call.setException(new RemoteException( WritableUtils.readString(in),
-              WritableUtils.readString(in)));
-        } else {
+        int state = in.readInt();     // read call status
+        if (state == Status.SUCCESS.state) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setValue(value);
+        } else if (state == Status.ERROR.state) {
+          call.setException(new RemoteException(WritableUtils.readString(in),
+                                                WritableUtils.readString(in)));
+        } else if (state == Status.FATAL.state) {
+          // Close the connection
+          markClosed(new RemoteException(WritableUtils.readString(in), 
+                                         WritableUtils.readString(in)));
         }
       } catch (IOException e) {
         markClosed(e);
@@ -551,7 +562,7 @@ public class Client {
       } else {
         // log the info
         if (LOG.isDebugEnabled()) {
-          LOG.debug("closing ipc connection to " + remoteId.address + ": " +
+          LOG.debug("closing ipc connection to " + server + ": " +
               closeException.getMessage(),closeException);
         }
 
@@ -673,17 +684,39 @@ public class Client {
 
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
-   * network problems or if the remote code threw an exception. */
+   * network problems or if the remote code threw an exception.
+   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   */
+  @Deprecated
   public Writable call(Writable param, InetSocketAddress address)
   throws InterruptedException, IOException {
       return call(param, address, null);
   }
   
+  /** Make a call, passing <code>param</code>, to the IPC server running at
+   * <code>address</code> with the <code>ticket</code> credentials, returning 
+   * the value.  
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception.
+   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   */
+  @Deprecated
   public Writable call(Writable param, InetSocketAddress addr, 
-                       UserGroupInformation ticket)  
+      UserGroupInformation ticket)  
+      throws InterruptedException, IOException {
+    return call(param, addr, null, ticket);
+  }
+  
+  /** Make a call, passing <code>param</code>, to the IPC server running at
+   * <code>address</code> which is servicing the <code>protocol</code> protocol, 
+   * with the <code>ticket</code> credentials, returning the value.  
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception. */
+  public Writable call(Writable param, InetSocketAddress addr, 
+                       Class<?> protocol, UserGroupInformation ticket)  
                        throws InterruptedException, IOException {
     Call call = new Call(param);
-    Connection connection = getConnection(addr, ticket, call);
+    Connection connection = getConnection(addr, protocol, ticket, call);
     connection.sendParam(call);                 // send the parameter
     synchronized (call) {
       while (!call.done) {
@@ -736,11 +769,25 @@ public class Client {
     }
   }
 
+  /** 
+   * Makes a set of calls in parallel.  Each parameter is sent to the
+   * corresponding address.  When all values are available, or have timed out
+   * or errored, the collected results are returned in an array.  The array
+   * contains nulls for calls that timed out or errored.
+   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], Class, UserGroupInformation)} instead 
+   */
+  @Deprecated
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
+    throws IOException {
+    return call(params, addresses, null, null);
+  }
+  
   /** Makes a set of calls in parallel.  Each parameter is sent to the
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
    * contains nulls for calls that timed out or errored.  */
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses, 
+                         Class<?> protocol, UserGroupInformation ticket)
     throws IOException {
     if (addresses.length == 0) return new Writable[0];
 
@@ -749,7 +796,8 @@ public class Client {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
         try {
-          Connection connection = getConnection(addresses[i], null, call);
+          Connection connection = 
+            getConnection(addresses[i], protocol, ticket, call);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
@@ -770,7 +818,8 @@ public class Client {
 
   /** Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
-  private Connection getConnection(InetSocketAddress addr, 
+  private Connection getConnection(InetSocketAddress addr,
+                                   Class<?> protocol,
                                    UserGroupInformation ticket,
                                    Call call)
                                    throws IOException {
@@ -783,7 +832,7 @@ public class Client {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, ticket);
+    ConnectionId remoteId = new ConnectionId(addr, protocol, ticket);
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -804,13 +853,17 @@ public class Client {
 
   /**
    * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by <remoteAddress, ticket>
+   * to servers are uniquely identified by <remoteAddress, protocol, ticket>
    */
   private static class ConnectionId {
     InetSocketAddress address;
     UserGroupInformation ticket;
+    Class<?> protocol;
+    private static final int PRIME = 16777619;
     
-    ConnectionId(InetSocketAddress address, UserGroupInformation ticket) {
+    ConnectionId(InetSocketAddress address, Class<?> protocol, 
+                 UserGroupInformation ticket) {
+      this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
     }
@@ -818,15 +871,22 @@ public class Client {
     InetSocketAddress getAddress() {
       return address;
     }
+    
+    Class<?> getProtocol() {
+      return protocol;
+    }
+    
     UserGroupInformation getTicket() {
       return ticket;
     }
+    
     
     @Override
     public boolean equals(Object obj) {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
-       return address.equals(id.address) && ticket == id.ticket;
+       return address.equals(id.address) && protocol == id.protocol && 
+              ticket == id.ticket;
        //Note : ticket is a ref comparision.
      }
      return false;
@@ -834,7 +894,8 @@ public class Client {
     
     @Override
     public int hashCode() {
-      return address.hashCode() ^ System.identityHashCode(ticket);
+      return (address.hashCode() + PRIME * System.identityHashCode(protocol)) ^ 
+             System.identityHashCode(ticket);
     }
   }  
 }

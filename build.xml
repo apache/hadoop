@@ -96,6 +96,7 @@
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
   <property name="test.build.testshell" value="${test.build.dir}/testshell"/>
+  <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
   <property name="test.include" value="Test*"/>
@@ -168,6 +169,7 @@
 
   <!-- the unit test classpath: uses test.src.dir for configuration -->
   <path id="test.classpath">
+    <pathelement location="${test.build.extraconf}"/>
     <pathelement location="${test.build.classes}" />
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
@@ -226,6 +228,7 @@
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.testjar}"/>
     <mkdir dir="${test.build.testshell}"/>
+    <mkdir dir="${test.build.extraconf}"/>
     <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
     <touch millis="0" file="${touch.temp.file}">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
@@ -685,6 +688,8 @@
     <mkdir dir="${test.build.data}"/>
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
+  	<copy file="${test.src.dir}/hadoop-policy.xml" 
+  	  todir="${test.build.extraconf}" />
     <junit showoutput="${test.output}"
       printsummary="${test.junit.printsummary}"
       haltonfailure="${test.junit.haltonfailure}"
@@ -698,6 +703,8 @@
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+      <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
+      <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
       <sysproperty key="java.library.path"
        value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
       <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>

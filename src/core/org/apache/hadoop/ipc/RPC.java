@@ -30,15 +30,18 @@ import java.net.SocketTimeoutException;
 import java.io.*;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Collection;
 
 import javax.net.SocketFactory;
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
@@ -213,8 +216,10 @@ public class RPC {
       if (logDebug) {
         startTime = System.currentTimeMillis();
       }
+
       ObjectWritable value = (ObjectWritable)
-        client.call(new Invocation(method, args), address, ticket);
+        client.call(new Invocation(method, args), address, 
+                    method.getDeclaringClass(), ticket);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -332,7 +337,13 @@ public class RPC {
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
       SocketFactory factory) throws IOException {
-    return getProxy(protocol, clientVersion, addr, null, conf, factory);
+    UserGroupInformation ugi = null;
+    try {
+      ugi = UserGroupInformation.login(conf);
+    } catch (LoginException le) {
+      throw new RuntimeException("Couldn't login!");
+    }
+    return getProxy(protocol, clientVersion, addr, ugi, conf, factory);
   }
   
   /** Construct a client-side proxy object that implements the named protocol,
@@ -383,9 +394,20 @@ public class RPC {
     }
   }
 
-  /** Expert: Make multiple, parallel calls to a set of servers. */
+  /** 
+   * Expert: Make multiple, parallel calls to a set of servers.
+   * @deprecated Use {@link #call(Method, Object[][], InetSocketAddress[], UserGroupInformation, Configuration)} instead 
+   */
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, Configuration conf)
+    throws IOException {
+    return call(method, params, addrs, null, conf);
+  }
+  
+  /** Expert: Make multiple, parallel calls to a set of servers. */
+  public static Object[] call(Method method, Object[][] params,
+                              InetSocketAddress[] addrs, 
+                              UserGroupInformation ticket, Configuration conf)
     throws IOException {
 
     Invocation[] invocations = new Invocation[params.length];
@@ -393,7 +415,8 @@ public class RPC {
       invocations[i] = new Invocation(method, params[i]);
     Client client = CLIENTS.getClient(conf);
     try {
-    Writable[] wrappedValues = client.call(invocations, addrs);
+    Writable[] wrappedValues = 
+      client.call(invocations, addrs, method.getDeclaringClass(), ticket);
     
     if (method.getReturnType() == Void.TYPE) {
       return null;
@@ -430,8 +453,8 @@ public class RPC {
   /** An RPC Server. */
   public static class Server extends org.apache.hadoop.ipc.Server {
     private Object instance;
-    private Class<?> implementation;
     private boolean verbose;
+    private boolean authorize = false;
 
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -464,26 +487,32 @@ public class RPC {
                   int numHandlers, boolean verbose) throws IOException {
       super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
       this.instance = instance;
-      this.implementation = instance.getClass();
       this.verbose = verbose;
+      this.authorize = 
+        conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
+                        false);
     }
 
-    public Writable call(Writable param, long receivedTime) throws IOException {
+    public Writable call(Class<?> protocol, Writable param, long receivedTime) 
+    throws IOException {
       try {
         Invocation call = (Invocation)param;
         if (verbose) log("Call: " + call);
-        
+
         Method method =
-          implementation.getMethod(call.getMethodName(),
+          protocol.getMethod(call.getMethodName(),
                                    call.getParameterClasses());
+        method.setAccessible(true);
 
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime-receivedTime);
-        LOG.debug("Served: " + call.getMethodName() +
-            " queueTime= " + qTime +
-            " procesingTime= " + processingTime);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Served: " + call.getMethodName() +
+                    " queueTime= " + qTime +
+                    " procesingTime= " + processingTime);
+        }
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
 
@@ -515,6 +544,21 @@ public class RPC {
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
         throw ioe;
+      }
+    }
+
+    @Override
+    public void authorize(Subject user, ConnectionHeader connection) 
+    throws AuthorizationException {
+      if (authorize) {
+        Class<?> protocol = null;
+        try {
+          protocol = getProtocolClass(connection.getProtocol(), getConf());
+        } catch (ClassNotFoundException cfne) {
+          throw new AuthorizationException("Unknown protocol: " + 
+                                           connection.getProtocol());
+        }
+        ServiceAuthorizationManager.authorize(user, protocol);
       }
     }
   }

@@ -71,8 +71,8 @@ public class TestIPCServerResponder extends TestCase {
     }
 
     @Override
-    public Writable call(final Writable param, final long receivedTime) 
-                                               throws IOException {
+    public Writable call(Class<?> protocol, Writable param, long receiveTime)
+        throws IOException {
       if (sleep) {
         try {
           Thread.sleep(RANDOM.nextInt(20)); // sleep a bit

@@ -23,6 +23,7 @@ conf/masters
 conf/slaves
 conf/hadoop-env.sh
 conf/hadoop-site.xml
+conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 docs/api/
 logs/

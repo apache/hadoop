@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
@@ -29,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +39,9 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -387,6 +393,7 @@ public class DFSAdmin extends FsShell {
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
+      "\t[-refreshServiceAcl]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -429,6 +436,9 @@ public class DFSAdmin extends FsShell {
       "\t\t\t3. Blocks currrently being replicated\n" +
       "\t\t\t4. Blocks waiting to be deleted\n";
 
+    String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
+      "\t\tNamenode will reload the authorization policy file.\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -452,6 +462,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
     } else if (ClearSpaceQuotaCommand.matches(cmd)) {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
+    } else if ("refresh-auth-policy".equals(cmd)) {
+      System.out.println(refreshServiceAcl);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -466,6 +478,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(ClearQuotaCommand.DESCRIPTION);
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
+      System.out.println(refreshServiceAcl);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -549,6 +562,42 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
 
+  private static UnixUserGroupInformation getUGI(Configuration conf) 
+  throws IOException {
+    UnixUserGroupInformation ugi = null;
+    try {
+      ugi = UnixUserGroupInformation.login(conf, true);
+    } catch (LoginException e) {
+      throw (IOException)(new IOException(
+          "Failed to get the current user's information.").initCause(e));
+    }
+    return ugi;
+  }
+
+  /**
+   * Refresh the authorization policy on the {@link NameNode}.
+   * @return exitcode 0 on success, non-zero on failure
+   * @throws IOException
+   */
+  public int refreshServiceAcl() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // Create the client
+    RefreshAuthorizationPolicyProtocol refreshProtocol = 
+      (RefreshAuthorizationPolicyProtocol) 
+      RPC.getProxy(RefreshAuthorizationPolicyProtocol.class, 
+                   RefreshAuthorizationPolicyProtocol.versionID, 
+                   NameNode.getAddress(conf), getUGI(conf), conf,
+                   NetUtils.getSocketFactory(conf, 
+                                             RefreshAuthorizationPolicyProtocol.class));
+    
+    // Refresh the authorization policy in-effect
+    refreshProtocol.refreshServiceAcl();
+    
+    return 0;
+  }
+  
   /**
    * Displays format of commands.
    * @param cmd The command that is being executed.
@@ -571,7 +620,7 @@ public class DFSAdmin extends FsShell {
                          + " [-upgradeProgress status | details | force]");
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
-                         + " [-metasave filename]");
+          + " [-metasave filename]");
     } else if (SetQuotaCommand.matches(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [" + SetQuotaCommand.USAGE+"]");
@@ -584,6 +633,9 @@ public class DFSAdmin extends FsShell {
     } else if (ClearSpaceQuotaCommand.matches(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " ["+ClearSpaceQuotaCommand.USAGE+"]");
+    } else if ("-refreshServiceAcl".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshServiceAcl]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -592,6 +644,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-finalizeUpgrade]");
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
+      System.err.println("           [-refreshServiceAcl]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
@@ -652,6 +705,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-refreshServiceAcl".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -688,6 +746,8 @@ public class DFSAdmin extends FsShell {
         exitCode = new ClearSpaceQuotaCommand(argv, i, fs).runAll();
       } else if (SetSpaceQuotaCommand.matches(cmd)) {
         exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
+      } else if ("-refreshServiceAcl".equals(cmd)) {
+        exitCode = refreshServiceAcl();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

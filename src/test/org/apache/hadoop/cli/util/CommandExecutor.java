@@ -28,6 +28,7 @@ import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd.CommandType;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.mapred.tools.MRAdmin;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -40,8 +41,8 @@ public class CommandExecutor {
   private static Exception lastException = null;
   private static String cmdExecuted = null;
   
-  private static String[] getFSCommandAsArgs(final String cmd, 
-		  final String namenode) {
+  private static String[] getCommandAsArgs(final String cmd, final String masterKey,
+		                                       final String master) {
     StringTokenizer tokenizer = new StringTokenizer(cmd, " ");
     String[] args = new String[tokenizer.countTokens()];
     
@@ -49,7 +50,7 @@ public class CommandExecutor {
     while (tokenizer.hasMoreTokens()) {
       args[i] = tokenizer.nextToken();
 
-      args[i] = args[i].replaceAll("NAMENODE", namenode);
+      args[i] = args[i].replaceAll(masterKey, master);
       args[i] = args[i].replaceAll("CLITEST_DATA", 
         new File(TestCLI.TEST_CACHE_DATA_DIR).
         toURI().toString().replace(' ', '+'));
@@ -61,12 +62,16 @@ public class CommandExecutor {
     return args;
   }
   
-  public static int executeCommand(final TestCmd cmd, final String namenode) throws Exception {
+  public static int executeCommand(final TestCmd cmd, 
+                                   final String namenode, final String jobtracker) 
+  throws Exception {
     switch(cmd.getType()) {
-    case ADMIN:
-      return CommandExecutor.executeDFSAdminCommand(cmd.getCmd(),namenode);
+    case DFSADMIN:
+      return CommandExecutor.executeDFSAdminCommand(cmd.getCmd(), namenode);
+    case MRADMIN:
+      return CommandExecutor.executeMRAdminCommand(cmd.getCmd(), jobtracker);
     case FS:
-      return CommandExecutor.executeFSCommand(cmd.getCmd(),namenode);
+      return CommandExecutor.executeFSCommand(cmd.getCmd(), namenode);
     default:
       throw new Exception("Unknow type of Test command:"+ cmd.getType()); 
     }
@@ -83,7 +88,7 @@ public class CommandExecutor {
       System.setErr(new PrintStream(bao));
       
       DFSAdmin shell = new DFSAdmin();
-      String[] args = getFSCommandAsArgs(cmd, namenode);
+      String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
       cmdExecuted = cmd;
      
       try {
@@ -102,6 +107,37 @@ public class CommandExecutor {
       return exitCode;
   }
   
+  public static int executeMRAdminCommand(final String cmd, 
+                                          final String jobtracker) {
+    exitCode = 0;
+    
+    ByteArrayOutputStream bao = new ByteArrayOutputStream();
+    PrintStream origOut = System.out;
+    PrintStream origErr = System.err;
+    
+    System.setOut(new PrintStream(bao));
+    System.setErr(new PrintStream(bao));
+    
+    MRAdmin mradmin = new MRAdmin();
+    String[] args = getCommandAsArgs(cmd, "JOBTRACKER", jobtracker);
+    cmdExecuted = cmd;
+   
+    try {
+      ToolRunner.run(mradmin, args);
+    } catch (Exception e) {
+      e.printStackTrace();
+      lastException = e;
+      exitCode = -1;
+    } finally {
+      System.setOut(origOut);
+      System.setErr(origErr);
+    }
+    
+    commandOutput = bao.toString();
+    
+    return exitCode;
+  }
+
   public static int executeFSCommand(final String cmd, final String namenode) {
     exitCode = 0;
     
@@ -113,7 +149,7 @@ public class CommandExecutor {
     System.setErr(new PrintStream(bao));
     
     FsShell shell = new FsShell();
-    String[] args = getFSCommandAsArgs(cmd, namenode);
+    String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
     cmdExecuted = cmd;
     
     try {

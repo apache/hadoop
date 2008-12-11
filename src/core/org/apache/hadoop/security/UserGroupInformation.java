@@ -18,7 +18,11 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.security.AccessController;
+import java.security.Principal;
+import java.util.Set;
 
+import javax.security.auth.Subject;
 import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.Log;
@@ -28,26 +32,69 @@ import org.apache.hadoop.io.Writable;
 
 /** A {@link Writable} abstract class for storing user and groups information.
  */
-public abstract class UserGroupInformation implements Writable {
+public abstract class UserGroupInformation implements Writable, Principal {
   public static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
   private static UserGroupInformation LOGIN_UGI = null;
-
-  private static final ThreadLocal<UserGroupInformation> currentUGI
-    = new ThreadLocal<UserGroupInformation>();
-
+  
+  private static final ThreadLocal<Subject> currentUser =
+    new ThreadLocal<Subject>();
+  
   /** @return the {@link UserGroupInformation} for the current thread */ 
   public static UserGroupInformation getCurrentUGI() {
-    return currentUGI.get();
-  }
-
-  /** Set the {@link UserGroupInformation} for the current thread */ 
-  public static void setCurrentUGI(UserGroupInformation ugi) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(Thread.currentThread().getName() + ", ugi=" + ugi);
+    Subject user = getCurrentUser();
+    
+    if (user == null) {
+      user = currentUser.get();
+      if (user == null) {
+        return null;
+      }
     }
-    currentUGI.set(ugi);
+    
+    Set<UserGroupInformation> ugiPrincipals = 
+      user.getPrincipals(UserGroupInformation.class);
+    
+    UserGroupInformation ugi = null;
+    if (ugiPrincipals != null && ugiPrincipals.size() == 1) {
+      ugi = ugiPrincipals.iterator().next();
+      if (ugi == null) {
+        throw new RuntimeException("Cannot find _current user_ UGI in the Subject!");
+      }
+    } else {
+      throw new RuntimeException("Cannot resolve current user from subject, " +
+      		                       "which had " + ugiPrincipals.size() + 
+      		                       " UGI principals!");
+    }
+    return ugi;
   }
 
+  /** 
+   * Set the {@link UserGroupInformation} for the current thread
+   * @deprecated Use {@link #setCurrentUser(UserGroupInformation)} 
+   */ 
+  @Deprecated
+  public static void setCurrentUGI(UserGroupInformation ugi) {
+    setCurrentUser(ugi);
+  }
+
+  /**
+   * Return the current user <code>Subject</code>.
+   * @return the current user <code>Subject</code>
+   */
+  static Subject getCurrentUser() {
+    return Subject.getSubject(AccessController.getContext());
+  }
+  
+  /**
+   * Set the {@link UserGroupInformation} for the current thread
+   * WARNING - This method should be used only in test cases and other exceptional
+   * cases!
+   * @param ugi {@link UserGroupInformation} for the current thread
+   */
+  public static void setCurrentUser(UserGroupInformation ugi) {
+    Subject user = SecurityUtil.getSubject(ugi);
+    currentUser.set(user);
+  }
+  
   /** Get username
    * 
    * @return the user's name

@@ -3171,10 +3171,10 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /test </command>
         <command>-fs NAMENODE -touchz /test/file1 </command>
-        <admin-command>-fs NAMENODE -setQuota 1 /test/file1 </admin-command>
+        <dfs-admin-command>-fs NAMENODE -setQuota 1 /test/file1 </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
-      	<admin-command>-fs NAMENODE -setQuota 5 /test </admin-command>
+      	<dfs-admin-command>-fs NAMENODE -setQuota 5 /test </dfs-admin-command>
         <!-- Same directory will be used in the next test -->
       </cleanup-commands>
       <comparators>
@@ -3188,7 +3188,7 @@
     <test> <!--Tested -->
       <description>verifying error messages for quota commands - setting quota on non-existing file</description>
       <test-commands>
-        <admin-command>-fs NAMENODE -setSpaceQuota 1g /test1 </admin-command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1g /test1 </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
              <!-- Same directory will be used in the next test -->   
@@ -3204,7 +3204,7 @@
     <test> <!--Tested -->
       <description>verifying error messages for quota commands - exceeding quota</description>
       <test-commands>
-        <admin-command>-fs NAMENODE -setQuota 3 /test </admin-command>
+        <dfs-admin-command>-fs NAMENODE -setQuota 3 /test </dfs-admin-command>
         <command>-fs NAMENODE -touchz /test/file0 </command>
         <command>-fs NAMENODE -mkdir /test/test1 </command>
       </test-commands>
@@ -3222,7 +3222,7 @@
     <test> <!--Tested -->
       <description>verifying error messages for quota commands - setting not valid quota</description>
       <test-commands>
-        <admin-command>-fs NAMENODE -setQuota 0 /test </admin-command>
+        <dfs-admin-command>-fs NAMENODE -setQuota 0 /test </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
              <!-- Same directory will be used in the next test -->   
@@ -3238,7 +3238,7 @@
     <test> <!--Tested -->
       <description>verifying error messages for quota commands - setting not valid space quota</description>
       <test-commands>
-        <admin-command>-fs NAMENODE -setSpaceQuota a5 /test </admin-command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota a5 /test </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
              <!-- Same directory will be used in the next test -->   
@@ -3254,7 +3254,7 @@
     <test> <!--Tested -->
       <description>verifying error messages for quota commands - clearQuota on non existing file</description>
       <test-commands>
-        <admin-command>-fs NAMENODE -clrQuota /test1 </admin-command>
+        <dfs-admin-command>-fs NAMENODE -clrQuota /test1 </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
       	<command>-fs NAMENODE -rmr /test </command>
@@ -3266,5 +3266,74 @@
         </comparator>
       </comparators>
     </test>
+    
+    <test> <!--Tested -->
+      <description>refreshServiceAcl: refreshing security authorization policy for namenode</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -refreshServiceAcl </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>refreshServiceAcl: verifying error message while refreshing security authorization policy for namenode</description>
+      <test-commands>
+        <!-- hadoop-policy.xml for tests has 
+             security.refresh.policy.protocol.acl = ${user.name} -->
+        <dfs-admin-command>-fs NAMENODE -Dhadoop.job.ugi=blah,blah -refreshServiceAcl </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>access denied</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>refreshServiceAcl: refreshing security authorization policy for jobtracker</description>
+      <test-commands>
+        <mr-admin-command>-jt JOBTRACKER -refreshServiceAcl </mr-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!--Tested -->
+      <description>refreshServiceAcl: verifying error message while refreshing security authorization policy for jobtracker</description>
+      <test-commands>
+        <!-- hadoop-policy.xml for tests has 
+             security.refresh.policy.protocol.acl = ${user.name} -->
+        <mr-admin-command>-jt JOBTRACKER -Dhadoop.job.ugi=blah,blah -refreshServiceAcl </mr-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>access denied</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
   </tests>
 </configuration>

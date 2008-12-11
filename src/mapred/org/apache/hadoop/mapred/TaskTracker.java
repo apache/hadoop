@@ -75,6 +75,10 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authorize.ConfiguredPolicy;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
@@ -480,6 +484,17 @@ public class TaskTracker
     
     this.jvmManager = new JvmManager(this);
 
+    // Set service-level authorization security policy
+    if (this.fConf.getBoolean(
+          ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
+      PolicyProvider policyProvider = 
+        (PolicyProvider)(ReflectionUtils.newInstance(
+            this.fConf.getClass(PolicyProvider.POLICY_PROVIDER_CONFIG, 
+                MapReducePolicyProvider.class, PolicyProvider.class), 
+            this.fConf));
+      SecurityUtil.setPolicy(new ConfiguredPolicy(this.fConf, policyProvider));
+    }
+    
     // RPC initialization
     int max = maxCurrentMapTasks > maxCurrentReduceTasks ? 
                        maxCurrentMapTasks : maxCurrentReduceTasks;

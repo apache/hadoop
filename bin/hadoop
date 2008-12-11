@@ -60,6 +60,7 @@ if [ $# = 0 ]; then
   echo "  namenode             run the DFS namenode"
   echo "  datanode             run a DFS datanode"
   echo "  dfsadmin             run a DFS admin client"
+  echo "  mradmin              run a Map-Reduce admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
   echo "  balancer             run a cluster balancing utility"
@@ -166,6 +167,11 @@ if [ "$HADOOP_LOGFILE" = "" ]; then
   HADOOP_LOGFILE='hadoop.log'
 fi
 
+# default policy file for service-level authorization
+if [ "$HADOOP_POLICYFILE" = "" ]; then
+  HADOOP_POLICYFILE="hadoop-policy.xml"
+fi
+
 # restore ordinary behaviour
 unset IFS
 
@@ -187,6 +193,9 @@ elif [ "$COMMAND" = "dfs" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "mradmin" ] ; then
+  CLASS=org.apache.hadoop.mapred.tools.MRAdmin
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSck
@@ -268,6 +277,7 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,consol
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi  
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 
 # run it
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

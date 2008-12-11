@@ -59,7 +59,9 @@ public class TestIPC extends TestCase {
       this.sleep = sleep;
     }
 
-    public Writable call(Writable param, long receivedTime) throws IOException {
+    @Override
+    public Writable call(Class<?> protocol, Writable param, long receiveTime)
+        throws IOException {
       if (sleep) {
         try {
           Thread.sleep(RANDOM.nextInt(2*PING_INTERVAL));      // sleep a bit

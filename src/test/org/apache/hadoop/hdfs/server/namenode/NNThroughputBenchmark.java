@@ -87,7 +87,7 @@ public class NNThroughputBenchmark {
   NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
     ugi = UnixUserGroupInformation.login(config);
-    UserGroupInformation.setCurrentUGI(ugi);
+    UserGroupInformation.setCurrentUser(ugi);
 
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
@@ -337,7 +337,7 @@ public class NNThroughputBenchmark {
     }
 
     public void run() {
-      UserGroupInformation.setCurrentUGI(ugi);
+      UserGroupInformation.setCurrentUser(ugi);
       localNumOpsExecuted = 0;
       localCumulativeTime = 0;
       arg1 = statsOp.getExecutionArgument(daemonId);

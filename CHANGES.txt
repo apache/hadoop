@@ -82,6 +82,8 @@ Trunk (unreleased changes)
     move DataNode information to a separated page. (Boris Shkolnik via
     szetszwo)
 
+    HADOOP-4348. Add service-level authorization for Hadoop. (acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 

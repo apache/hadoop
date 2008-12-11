@@ -38,6 +38,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -73,9 +78,11 @@ public class TestCLI extends TestCase {
   static ComparatorData comparatorData = null;
   
   private static Configuration conf = null;
-  private static MiniDFSCluster cluster = null;
+  private static MiniDFSCluster dfsCluster = null;
   private static DistributedFileSystem dfs = null;
+  private static MiniMRCluster mrCluster = null;
   private static String namenode = null;
+  private static String jobtracker = null;
   private static String clitestDataDir = null;
   private static String username = null;
   
@@ -109,19 +116,31 @@ public class TestCLI extends TestCase {
     // Start up the mini dfs cluster
     boolean success = false;
     conf = new Configuration();
-    cluster = new MiniDFSCluster(conf, 1, true, null);
+    conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
+                  HadoopPolicyProvider.class, PolicyProvider.class);
+    conf.setBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
+                    true);
+
+    dfsCluster = new MiniDFSCluster(conf, 1, true, null);
     namenode = conf.get("fs.default.name", "file:///");
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
       toURI().toString().replace(' ', '+');
     username = System.getProperty("user.name");
 
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = dfsCluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
     dfs = (DistributedFileSystem) fs;
+    
+     // Start up mini mr cluster
+    JobConf mrConf = new JobConf(conf);
+    mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
+                           null, null, mrConf);
+    jobtracker = mrCluster.createJobConf().get("mapred.job.tracker", "local");
+
     success = true;
 
-    assertTrue("Error setting up Mini DFS cluster", success);
+    assertTrue("Error setting up Mini DFS & MR clusters", success);
   }
   
   /**
@@ -129,12 +148,14 @@ public class TestCLI extends TestCase {
    */
   public void tearDown() throws Exception {
     boolean success = false;
+    mrCluster.shutdown();
+    
     dfs.close();
-    cluster.shutdown();
+    dfsCluster.shutdown();
     success = true;
     Thread.sleep(2000);
 
-    assertTrue("Error tearing down Mini DFS cluster", success);
+    assertTrue("Error tearing down Mini DFS & MR clusters", success);
     
     displayResults();
   }
@@ -147,6 +168,7 @@ public class TestCLI extends TestCase {
   private String expandCommand(final String cmd) {
     String expCmd = cmd;
     expCmd = expCmd.replaceAll("NAMENODE", namenode);
+    expCmd = expCmd.replaceAll("JOBTRACKER", jobtracker);
     expCmd = expCmd.replaceAll("CLITEST_DATA", clitestDataDir);
     expCmd = expCmd.replaceAll("USERNAME", username);
     
@@ -173,30 +195,30 @@ public class TestCLI extends TestCase {
         LOG.info("");
 
         ArrayList<TestCmd> testCommands = td.getTestCommands();
-        for (int j = 0; j < testCommands.size(); j++) {
+        for (TestCmd cmd : testCommands) {
           LOG.info("              Test Commands: [" + 
-              expandCommand(testCommands.get(j).getCmd()) + "]");
+                   expandCommand(cmd.getCmd()) + "]");
         }
 
         LOG.info("");
         ArrayList<TestCmd> cleanupCommands = td.getCleanupCommands();
-        for (int j = 0; j < cleanupCommands.size(); j++) {
+        for (TestCmd cmd : cleanupCommands) {
           LOG.info("           Cleanup Commands: [" +
-              expandCommand(cleanupCommands.get(j).getCmd()) + "]");
+                   expandCommand(cmd.getCmd()) + "]");
         }
 
         LOG.info("");
         ArrayList<ComparatorData> compdata = td.getComparatorData();
-        for (int j = 0; j < compdata.size(); j++) {
-          boolean resultBoolean = compdata.get(j).getTestResult();
+        for (ComparatorData cd : compdata) {
+          boolean resultBoolean = cd.getTestResult();
           LOG.info("                 Comparator: [" + 
-              compdata.get(j).getComparatorType() + "]");
+                   cd.getComparatorType() + "]");
           LOG.info("         Comparision result:   [" + 
-              (resultBoolean ? "pass" : "fail") + "]");
+                   (resultBoolean ? "pass" : "fail") + "]");
           LOG.info("            Expected output:   [" + 
-              compdata.get(j).getExpectedOutput() + "]");
+                   cd.getExpectedOutput() + "]");
           LOG.info("              Actual output:   [" + 
-              compdata.get(j).getActualOutput() + "]");
+                   cd.getActualOutput() + "]");
         }
         LOG.info("");
       }
@@ -319,9 +341,9 @@ public class TestCLI extends TestCase {
    
       // Execute the test commands
       ArrayList<TestCmd> testCommands = testdata.getTestCommands();
-      for (int i = 0; i < testCommands.size(); i++) {
+      for (TestCmd cmd : testCommands) {
       try {
-        CommandExecutor.executeCommand(testCommands.get(i), namenode);
+        CommandExecutor.executeCommand(cmd, namenode, jobtracker);
       } catch (Exception e) {
         fail(StringUtils.stringifyException(e));
       }
@@ -330,28 +352,27 @@ public class TestCLI extends TestCase {
       boolean overallTCResult = true;
       // Run comparators
       ArrayList<ComparatorData> compdata = testdata.getComparatorData();
-      for (int i = 0; i < compdata.size(); i++) {
-        final String comptype = compdata.get(i).getComparatorType();
+      for (ComparatorData cd : compdata) {
+        final String comptype = cd.getComparatorType();
         
         boolean compareOutput = false;
         
         if (! comptype.equalsIgnoreCase("none")) {
-          compareOutput = compareTestOutput(compdata.get(i));
+          compareOutput = compareTestOutput(cd);
           overallTCResult &= compareOutput;
         }
         
-        compdata.get(i).setExitCode(CommandExecutor.getLastExitCode());
-        compdata.get(i).setActualOutput(
-          CommandExecutor.getLastCommandOutput());
-        compdata.get(i).setTestResult(compareOutput);
+        cd.setExitCode(CommandExecutor.getLastExitCode());
+        cd.setActualOutput(CommandExecutor.getLastCommandOutput());
+        cd.setTestResult(compareOutput);
       }
       testdata.setTestResult(overallTCResult);
       
       // Execute the cleanup commands
       ArrayList<TestCmd> cleanupCommands = testdata.getCleanupCommands();
-      for (int i = 0; i < cleanupCommands.size(); i++) {
+      for (TestCmd cmd : cleanupCommands) {
       try { 
-        CommandExecutor.executeCommand(cleanupCommands.get(i), namenode);
+        CommandExecutor.executeCommand(cmd, namenode, jobtracker);
       } catch (Exception e) {
         fail(StringUtils.stringifyException(e));
       }
@@ -410,12 +431,18 @@ public class TestCLI extends TestCase {
         } else if (cleanupCommands != null) {
           cleanupCommands.add(new TestCmd(charString, CommandType.FS));
         }
-      } else if (qName.equals("admin-command")) {
+      } else if (qName.equals("dfs-admin-command")) {
           if (testCommands != null) {
-              testCommands.add(new TestCmd(charString,CommandType.ADMIN));
+              testCommands.add(new TestCmd(charString,CommandType.DFSADMIN));
             } else if (cleanupCommands != null) {
-              cleanupCommands.add(new TestCmd(charString, CommandType.ADMIN));
+              cleanupCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
             } 
+      } else if (qName.equals("mr-admin-command")) {
+        if (testCommands != null) {
+            testCommands.add(new TestCmd(charString,CommandType.MRADMIN));
+          } else if (cleanupCommands != null) {
+            cleanupCommands.add(new TestCmd(charString, CommandType.MRADMIN));
+          } 
       } else if (qName.equals("comparators")) {
         td.setComparatorData(testComparators);
       } else if (qName.equals("comparator")) {

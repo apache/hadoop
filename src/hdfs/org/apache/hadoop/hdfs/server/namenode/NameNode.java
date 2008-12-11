@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
@@ -41,10 +42,17 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ConfiguredPolicy;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
 import java.io.*;
 import java.net.*;
@@ -86,7 +94,8 @@ import java.util.Iterator;
  * state, for example partial blocksMap etc.
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol,
-                                 NamenodeProtocol, FSConstants {
+                                 NamenodeProtocol, FSConstants,
+                                 RefreshAuthorizationPolicyProtocol {
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException { 
     if (protocol.equals(ClientProtocol.class.getName())) {
@@ -95,6 +104,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       return DatanodeProtocol.versionID;
     } else if (protocol.equals(NamenodeProtocol.class.getName())){
       return NamenodeProtocol.versionID;
+    } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
+      return RefreshAuthorizationPolicyProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
@@ -116,7 +127,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private Thread emptier;
   /** only used for testing purposes  */
   private boolean stopRequested = false;
-
+  /** Is service level authorization enabled? */
+  private boolean serviceAuthEnabled = false;
+  
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
@@ -155,6 +168,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private void initialize(Configuration conf) throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(conf);
     int handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
+    
+    // set service-level authorization security policy
+    if (serviceAuthEnabled = 
+          conf.getBoolean(
+            ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
+      PolicyProvider policyProvider = 
+        (PolicyProvider)(ReflectionUtils.newInstance(
+            conf.getClass(PolicyProvider.POLICY_PROVIDER_CONFIG, 
+                HDFSPolicyProvider.class, PolicyProvider.class), 
+            conf));
+      SecurityUtil.setPolicy(new ConfiguredPolicy(conf, policyProvider));
+    }
+
     // create rpc server 
     this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf);
@@ -839,6 +865,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
     nsys.dir.fsImage.finalizeUpgrade();
     return false;
+  }
+
+  @Override
+  public void refreshServiceAcl() throws IOException {
+    if (!serviceAuthEnabled) {
+      throw new AuthorizationException("Service Level Authorization not enabled!");
+    }
+
+    SecurityUtil.getPolicy().refresh();
   }
 
   private static void printUsage() {

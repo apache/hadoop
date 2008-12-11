@@ -66,7 +66,13 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ConfiguredPolicy;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -78,7 +84,7 @@ import org.apache.hadoop.util.VersionInfo;
  *
  *******************************************************/
 public class JobTracker implements MRConstants, InterTrackerProtocol,
-    JobSubmissionProtocol, TaskTrackerManager {
+    JobSubmissionProtocol, TaskTrackerManager, RefreshAuthorizationPolicyProtocol {
 
   static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
   static long RETIRE_JOB_INTERVAL;
@@ -186,10 +192,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return InterTrackerProtocol.versionID;
     } else if (protocol.equals(JobSubmissionProtocol.class.getName())){
       return JobSubmissionProtocol.versionID;
+    } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
+      return RefreshAuthorizationPolicyProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to job tracker: " + protocol);
     }
   }
+  
   /**
    * A thread to timeout tasks that have been assigned to task trackers,
    * but that haven't reported back yet.
@@ -1335,10 +1344,22 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           JobQueueTaskScheduler.class, TaskScheduler.class);
     taskScheduler = (TaskScheduler) ReflectionUtils.newInstance(schedulerClass, conf);
                                            
-    // Set ports, start RPC servers, etc.
+    // Set ports, start RPC servers, setup security policy etc.
     InetSocketAddress addr = getAddress(conf);
     this.localMachine = addr.getHostName();
     this.port = addr.getPort();
+    
+    // Set service-level authorization security policy
+    if (conf.getBoolean(
+          ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
+      PolicyProvider policyProvider = 
+        (PolicyProvider)(ReflectionUtils.newInstance(
+            conf.getClass(PolicyProvider.POLICY_PROVIDER_CONFIG, 
+                MapReducePolicyProvider.class, PolicyProvider.class), 
+            conf));
+      SecurityUtil.setPolicy(new ConfiguredPolicy(conf, policyProvider));
+    }
+    
     int handlerCount = conf.getInt("mapred.job.tracker.handler.count", 10);
     this.interTrackerServer = RPC.getServer(this, addr.getHostName(), addr.getPort(), handlerCount, false, conf);
     if (LOG.isDebugEnabled()) {
@@ -3163,4 +3184,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return conf.getInt("mapred.jobtracker.maxtasks.per.job", -1);
   }
   
+  @Override
+  public void refreshServiceAcl() throws IOException {
+    if (!conf.getBoolean(
+            ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
+      throw new AuthorizationException("Service Level Authorization not enabled!");
+    }
+    SecurityUtil.getPolicy().refresh();
+  }
 }

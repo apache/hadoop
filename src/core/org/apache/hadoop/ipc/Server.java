@@ -40,25 +40,31 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import javax.security.auth.Subject;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -74,18 +80,31 @@ public abstract class Server {
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
   
   // 1 : Introduce ping and server does not throw away RPCs
-  public static final byte CURRENT_VERSION = 2;
+  // 3 : Introduce the protocol into the RPC connection header
+  public static final byte CURRENT_VERSION = 3;
   
   /**
    * How many calls/handler are allowed in the queue.
    */
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
   
-  public static final Log LOG =
-    LogFactory.getLog(Server.class);
+  public static final Log LOG = LogFactory.getLog(Server.class);
 
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
+  private static final Map<String, Class<?>> PROTOCOL_CACHE = 
+    new ConcurrentHashMap<String, Class<?>>();
+  
+  static Class<?> getProtocolClass(String protocolName, Configuration conf) 
+  throws ClassNotFoundException {
+    Class<?> protocol = PROTOCOL_CACHE.get(protocolName);
+    if (protocol == null) {
+      protocol = conf.getClassByName(protocolName);
+      PROTOCOL_CACHE.put(protocolName, protocol);
+    }
+    return protocol;
+  }
+  
   /** Returns the server instance called under or null.  May be called under
    * {@link #call(Writable, long)} implementations, and under {@link Writable}
    * methods of paramters and return values.  Permits applications to access
@@ -191,7 +210,7 @@ public abstract class Server {
                                    // the time served when response is not null
     private ByteBuffer response;                      // the response for this call
 
-    public Call(int id, Writable param, Connection connection) {
+    public Call(int id, Writable param, Connection connection) { 
       this.id = id;
       this.param = param;
       this.connection = connection;
@@ -397,9 +416,10 @@ public abstract class Server {
       try {
         count = c.readAndProcess();
       } catch (InterruptedException ieo) {
+        LOG.info(getName() + ": readAndProcess caught InterruptedException", ieo);
         throw ieo;
       } catch (Exception e) {
-        LOG.debug(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count, e);
+        LOG.info(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count, e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {
@@ -679,6 +699,7 @@ public abstract class Server {
                                          //version are read
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
+
     private SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
@@ -691,8 +712,18 @@ public abstract class Server {
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
     private int remotePort;
-    private UserGroupInformation ticket = null;
+    
+    ConnectionHeader header = new ConnectionHeader();
+    Class<?> protocol;
+    
+    Subject user = null;
 
+    // Fake 'call' for failed authorization response
+    private final int AUTHROIZATION_FAILED_CALLID = -1;
+    private final Call authFailedCall = 
+      new Call(AUTHROIZATION_FAILED_CALLID, null, null);
+    private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
+    
     public Connection(SelectionKey key, SocketChannel channel, 
                       long lastContact) {
       this.channel = channel;
@@ -816,6 +847,25 @@ public abstract class Server {
             processHeader();
             headerRead = true;
             data = null;
+            
+            // Authorize the connection
+            try {
+              authorize(user, header);
+              
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully authorized " + header);
+              }
+            } catch (AuthorizationException ae) {
+              authFailedCall.connection = this;
+              setupResponse(authFailedResponse, authFailedCall, 
+                            Status.FATAL, null, 
+                            ae.getClass().getName(), ae.getMessage());
+              responder.doRespond(authFailedCall);
+              
+              // Close this connection
+              return -1;
+            }
+
             continue;
           }
         } 
@@ -823,14 +873,23 @@ public abstract class Server {
       }
     }
 
-    /// Reads the header following version
+    /// Reads the connection header following version
     private void processHeader() throws IOException {
-      /* In the current version, it is just a ticket.
-       * Later we could introduce a "ConnectionHeader" class.
-       */
       DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(data.array()));
-      ticket = (UserGroupInformation) ObjectWritable.readObject(in, conf);
+      header.readFields(in);
+      try {
+        String protocolClassName = header.getProtocol();
+        if (protocolClassName != null) {
+          protocol = getProtocolClass(header.getProtocol(), conf);
+        }
+      } catch (ClassNotFoundException cnfe) {
+        throw new IOException("Unknown protocol: " + header.getProtocol());
+      }
+      
+      // TODO: Get the user name from the GSS API for Kerberbos-based security
+      // Create the user subject
+      user = SecurityUtil.getSubject(header.getUgi());
     }
     
     private void processData() throws  IOException, InterruptedException {
@@ -840,7 +899,7 @@ public abstract class Server {
         
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
-            
+
       Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);        
         
@@ -875,7 +934,7 @@ public abstract class Server {
       ByteArrayOutputStream buf = new ByteArrayOutputStream(10240);
       while (running) {
         try {
-          Call call = callQueue.take(); // pop the queue; maybe blocked here
+          final Call call = callQueue.take(); // pop the queue; maybe blocked here
 
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
@@ -884,32 +943,39 @@ public abstract class Server {
           String errorClass = null;
           String error = null;
           Writable value = null;
-          
+
           CurCall.set(call);
-          UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
-          UserGroupInformation.setCurrentUGI(call.connection.ticket);
           try {
-            value = call(call.param, call.timestamp);             // make the call
+            // Make the call as the user via Subject.doAs, thus associating
+            // the call with the Subject
+            value = 
+              Subject.doAs(call.connection.user, 
+                           new PrivilegedExceptionAction<Writable>() {
+                              @Override
+                              public Writable run() throws Exception {
+                                // make the call
+                                return call(call.connection.protocol, 
+                                            call.param, call.timestamp);
+
+                              }
+                           }
+                          );
+              
+          } catch (PrivilegedActionException pae) {
+            Exception e = pae.getException();
+            LOG.info(getName()+", call "+call+": error: " + e, e);
+            errorClass = e.getClass().getName();
+            error = StringUtils.stringifyException(e);
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
-          UserGroupInformation.setCurrentUGI(previous);
           CurCall.set(null);
 
-          buf.reset();
-          DataOutputStream out = new DataOutputStream(buf);
-          out.writeInt(call.id);                // write call id
-          out.writeBoolean(error != null);      // write error flag
-
-          if (error == null) {
-            value.write(out);
-          } else {
-            WritableUtils.writeString(out, errorClass);
-            WritableUtils.writeString(out, error);
-          }
-          call.setResponse(ByteBuffer.wrap(buf.toByteArray()));
+          setupResponse(buf, call, 
+                        (error == null) ? Status.SUCCESS : Status.ERROR, 
+                        value, errorClass, error);
           responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
@@ -977,6 +1043,39 @@ public abstract class Server {
     }
   }
   
+  /**
+   * Setup response for the IPC Call.
+   * 
+   * @param response buffer to serialize the response into
+   * @param call {@link Call} to which we are setting up the response
+   * @param status {@link Status} of the IPC call
+   * @param rv return value for the IPC Call, if the call was successful
+   * @param errorClass error class, if the the call failed
+   * @param error error message, if the call failed
+   * @throws IOException
+   */
+  private void setupResponse(ByteArrayOutputStream response, 
+                             Call call, Status status, 
+                             Writable rv, String errorClass, String error) 
+  throws IOException {
+    response.reset();
+    DataOutputStream out = new DataOutputStream(response);
+    out.writeInt(call.id);                // write call id
+    out.writeInt(status.state);           // write status
+
+    if (status == Status.SUCCESS) {
+      rv.write(out);
+    } else {
+      WritableUtils.writeString(out, errorClass);
+      WritableUtils.writeString(out, error);
+    }
+    call.setResponse(ByteBuffer.wrap(response.toByteArray()));
+  }
+  
+  Configuration getConf() {
+    return conf;
+  }
+  
   /** Sets the socket buffer size used for responding to RPCs */
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
@@ -1030,10 +1129,29 @@ public abstract class Server {
     return listener.getAddress();
   }
   
-  /** Called for each call. */
-  public abstract Writable call(Writable param, long receiveTime)
-                                                throws IOException;
+  /** 
+   * Called for each call. 
+   * @deprecated Use {@link #call(Class, Writable, long)} instead
+   */
+  @Deprecated
+  public Writable call(Writable param, long receiveTime) throws IOException {
+    return call(null, param, receiveTime);
+  }
   
+  /** Called for each call. */
+  public abstract Writable call(Class<?> protocol,
+                               Writable param, long receiveTime)
+  throws IOException;
+  
+  /**
+   * Authorize the incoming client connection.
+   * 
+   * @param user client user
+   * @param connection incoming connection
+   * @throws AuthorizationException when the client isn't authorized to talk the protocol
+   */
+  public void authorize(Subject user, ConnectionHeader connection) 
+  throws AuthorizationException {}
   
   /**
    * The number of open RPC conections

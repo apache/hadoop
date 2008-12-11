@@ -34,6 +34,12 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ConfiguredPolicy;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -317,6 +323,64 @@ public class TestRPC extends TestCase {
     } catch (ConnectException ioe) {
       //this is what we expected
     }
+  }
+  
+  private static final String ACL_CONFIG = "test.protocol.acl";
+  
+  private static class TestPolicyProvider extends PolicyProvider {
+
+    @Override
+    public Service[] getServices() {
+      return new Service[] { new Service(ACL_CONFIG, TestProtocol.class) };
+    }
+    
+  }
+  
+  private void doRPCs(Configuration conf, boolean expectFailure) throws Exception {
+    SecurityUtil.setPolicy(new ConfiguredPolicy(conf, new TestPolicyProvider()));
+    
+    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, 5, true, conf);
+
+    TestProtocol proxy = null;
+
+    server.start();
+
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    
+    try {
+      proxy = (TestProtocol)RPC.getProxy(
+          TestProtocol.class, TestProtocol.versionID, addr, conf);
+      proxy.ping();
+
+      if (expectFailure) {
+        fail("Expect RPC.getProxy to fail with AuthorizationException!");
+      }
+    } catch (RemoteException e) {
+      if (expectFailure) {
+        assertTrue(e.unwrapRemoteException() instanceof AuthorizationException);
+      } else {
+        throw e;
+      }
+    } finally {
+      server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
+  }
+  
+  public void testAuthorization() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, true);
+    
+    // Expect to succeed
+    conf.set(ACL_CONFIG, "*");
+    doRPCs(conf, false);
+    
+    // Reset authorization to expect failure
+    conf.set(ACL_CONFIG, "invalid invalid");
+    doRPCs(conf, true);
   }
   
   public static void main(String[] args) throws Exception {

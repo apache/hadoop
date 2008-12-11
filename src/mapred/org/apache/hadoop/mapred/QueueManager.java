@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.SecurityUtil.AccessControlList;
 
 /**
  * Class that exposes information about queues maintained by the Hadoop
@@ -51,12 +52,10 @@ class QueueManager {
   // Prefix in configuration for queue related keys
   private static final String QUEUE_CONF_PROPERTY_NAME_PREFIX 
                                                         = "mapred.queue.";
-  // Indicates an ACL string that represents access to all users
-  private static final String ALL_ALLOWED_ACL_VALUE = "*";
   // Configured queues
   private Set<String> queueNames;
   // Map of a queue and ACL property name with an ACL
-  private HashMap<String, ACL> aclsMap;
+  private HashMap<String, AccessControlList> aclsMap;
   // Map of a queue name to any generic object that represents 
   // scheduler information 
   private HashMap<String, Object> schedulerInfoObjects;
@@ -92,69 +91,6 @@ class QueueManager {
   }
   
   /**
-   * Class representing an access control that is configured.
-   */
-  private static class ACL {
-    
-    // Set of users who are granted access.
-    private Set<String> users;
-    // Set of groups which are granted access
-    private Set<String> groups;
-    // Whether all users are granted access.
-    private boolean allAllowed;
-    
-    /**
-     * Construct a new ACL from a String representation of the same.
-     * 
-     * The String is a a comma separated list of users and groups.
-     * The user list comes first and is separated by a space followed 
-     * by the group list. For e.g. "user1,user2 group1,group2"
-     * 
-     * @param aclString String representation of the ACL
-     */
-    ACL (String aclString) {
-      users = new TreeSet<String>();
-      groups = new TreeSet<String>();
-      if (aclString.equals(ALL_ALLOWED_ACL_VALUE)) {
-        allAllowed = true;
-      } else {
-        String[] userGroupStrings = aclString.split(" ", 2);
-        
-        if (userGroupStrings.length >= 1) {
-          String[] usersStr = userGroupStrings[0].split(",");
-          if (usersStr.length >= 1) {
-            addToSet(users, usersStr);
-          }
-        }
-        
-        if (userGroupStrings.length == 2) {
-          String[] groupsStr = userGroupStrings[1].split(",");
-          if (groupsStr.length >= 1) {
-            addToSet(groups, groupsStr);
-          }
-        }
-      }
-    }
-    
-    boolean allUsersAllowed() {
-      return allAllowed;
-    }
-    
-    boolean isUserAllowed(String user) {
-      return users.contains(user);
-    }
-    
-    boolean isAnyGroupAllowed(String[] otherGroups) {
-      for (String g : otherGroups) {
-        if (groups.contains(g)) {
-          return true;
-        }
-      }
-      return false;
-    }
-  }
-  
-  /**
    * Construct a new QueueManager using configuration specified in the passed
    * in {@link org.apache.hadoop.conf.Configuration} object.
    * 
@@ -162,7 +98,7 @@ class QueueManager {
    */
   public QueueManager(Configuration conf) {
     queueNames = new TreeSet<String>();
-    aclsMap = new HashMap<String, ACL>();
+    aclsMap = new HashMap<String, AccessControlList>();
     schedulerInfoObjects = new HashMap<String, Object>();
     initialize(conf);
   }
@@ -237,13 +173,30 @@ class QueueManager {
       }
     }
     
-    ACL acl = aclsMap.get(toFullPropertyName(queueName, oper.getAclName()));
+    AccessControlList acl = aclsMap.get(toFullPropertyName(queueName, oper.getAclName()));
     if (acl == null) {
       return false;
     }
-    return ((acl.allUsersAllowed()) ||
-              (acl.isUserAllowed(ugi.getUserName())) ||
-              (acl.isAnyGroupAllowed(ugi.getGroupNames())));    
+    
+    // Check the ACL list
+    boolean allowed = acl.allAllowed();
+    if (!allowed) {
+      // Check the allowed users list
+      if (acl.getUsers().contains(ugi.getUserName())) {
+        allowed = true;
+      } else {
+        // Check the allowed groups list
+        Set<String> allowedGroups = acl.getGroups();
+        for (String group : ugi.getGroupNames()) {
+          if (allowedGroups.contains(group)) {
+            allowed = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    return allowed;    
   }
   
   /**
@@ -302,7 +255,7 @@ class QueueManager {
       for (QueueOperation oper : QueueOperation.values()) {
         String key = toFullPropertyName(queue, oper.getAclName());
         String aclString = conf.get(key, "*");
-        aclsMap.put(key, new ACL(aclString));
+        aclsMap.put(key, new AccessControlList(aclString));
       }
     }
   }
@@ -317,8 +270,7 @@ class QueueManager {
       set.add(elem);
     }
   }
-
-
+  
   synchronized JobQueueInfo[] getJobQueueInfos() {
     ArrayList<JobQueueInfo> queueInfoList = new ArrayList<JobQueueInfo>();
     for(String queue : queueNames) {

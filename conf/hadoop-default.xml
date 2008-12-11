@@ -31,6 +31,12 @@
   ordering of the filters.</description>
 </property>
 
+<property>
+  <name>hadoop.security.authorization</name>
+  <value>false</value>
+  <description>Is service-level authorization enabled?</description>
+</property>
+
 <!--- logging properties -->
 
 <property>

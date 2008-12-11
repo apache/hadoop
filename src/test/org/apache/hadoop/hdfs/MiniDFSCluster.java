@@ -233,7 +233,7 @@ public class MiniDFSCluster {
                         long[] simulatedCapacities) throws IOException {
     this.conf = conf;
     try {
-      UserGroupInformation.setCurrentUGI(UnixUserGroupInformation.login(conf));
+      UserGroupInformation.setCurrentUser(UnixUserGroupInformation.login(conf));
     } catch (LoginException e) {
       IOException ioe = new IOException();
       ioe.initCause(e);

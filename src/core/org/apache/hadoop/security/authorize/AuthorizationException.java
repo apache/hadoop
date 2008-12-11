@@ -15,30 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.permission;
+package org.apache.hadoop.security.authorize;
 
-import java.io.IOException;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 
-@Deprecated
-public class AccessControlException extends IOException {
-  //Required by {@link java.io.Serializable}.
+import org.apache.hadoop.security.AccessControlException;
+
+/**
+ * An exception class for authorization-related issues.
+ * 
+ * This class <em>does not</em> provide the stack trace for security purposes.
+ */
+public class AuthorizationException extends AccessControlException {
   private static final long serialVersionUID = 1L;
 
-  /**
-   * Default constructor is needed for unwrapping from 
-   * {@link org.apache.hadoop.ipc.RemoteException}.
-   */
-  public AccessControlException() {
-    super("Permission denied.");
+  public AuthorizationException() {
+    super();
   }
 
-  /**
-   * Constructs an {@link AccessControlException}
-   * with the specified detail message.
-   * @param s the detail message.
-   */
-  public AccessControlException(String s) {
-    super(s);
+  public AuthorizationException(String message) {
+    super(message);
   }
   
   /**
@@ -50,7 +47,30 @@ public class AccessControlException extends IOException {
    *         permitted, and indicates that the cause is nonexistent or
    *         unknown.)
    */
-  public AccessControlException(Throwable cause) {
+  public AuthorizationException(Throwable cause) {
     super(cause);
   }
+  
+  private static StackTraceElement[] stackTrace = new StackTraceElement[0];
+  @Override
+  public StackTraceElement[] getStackTrace() {
+    // Do not provide the stack-trace
+    return stackTrace;
+  }
+
+  @Override
+  public void printStackTrace() {
+    // Do not provide the stack-trace
+  }
+
+  @Override
+  public void printStackTrace(PrintStream s) {
+    // Do not provide the stack-trace
+  }
+
+  @Override
+  public void printStackTrace(PrintWriter s) {
+    // Do not provide the stack-trace
+  }
+  
 }

@@ -37,13 +37,13 @@ public class CLITestData {
 
   /**
    * Class to define Test Command. includes type of the command and command itself
-   * Valid types FS and Admin (for dfsadmin commands)
-   *
+   * Valid types FS, DFSADMIN and MRADMIN.
    */
   static public class TestCmd {
     public enum CommandType {
         FS,
-        ADMIN
+        DFSADMIN,
+        MRADMIN
     }
     private final CommandType type;
     private final String cmd;

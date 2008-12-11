@@ -170,7 +170,7 @@ public class TestMiniMRWithDFS extends TestCase {
     }
   }
 
-  static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
+  public static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
     LOG.info("runPI");
     double estimate = org.apache.hadoop.examples.PiEstimator.estimate(
         NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
@@ -179,7 +179,8 @@ public class TestMiniMRWithDFS extends TestCase {
     checkTaskDirectories(mr, new String[]{}, new String[]{});
   }
 
-  static void runWordCount(MiniMRCluster mr, JobConf jobConf) throws IOException {
+  public static void runWordCount(MiniMRCluster mr, JobConf jobConf) 
+  throws IOException {
     LOG.info("runWordCount");
     // Run a word count example
     // Keeping tasks that match this pattern
