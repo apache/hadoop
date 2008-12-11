@@ -94,7 +94,7 @@ yhemanth)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(5)
+</a>&nbsp;&nbsp;&nbsp;(6)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4575">HADOOP-4575</a>. Add a proxy service for relaying HsftpFileSystem requests.
 Includes client authentication via user certificates and config-based
@@ -115,11 +115,14 @@ problems.<br />(Suhas Gogate via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4029">HADOOP-4029</a>. Add NameNode storage information to the dfshealth page and
 move DataNode information to a separated page.<br />(Boris Shkolnik via
 szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4348">HADOOP-4348</a>. Add service-level authorization for Hadoop.<br />(acmurthy)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(42)
+</a>&nbsp;&nbsp;&nbsp;(44)
     <ol id="trunk_(unreleased_changes)_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4749">HADOOP-4749</a>. Added a new counter REDUCE_INPUT_BYTES.<br />(Yongqiang He via
+zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4234">HADOOP-4234</a>. Fix KFS "glue" layer to allow applications to interface
 with multiple KFS metaservers.<br />(Sriram Rao via lohit)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4245">HADOOP-4245</a>. Update to latest version of KFS "glue" library jar.<br />(Sriram Rao via lohit)</li>
@@ -199,6 +202,7 @@ Once in 24 hours, a TaskTracker blacklisted for all jobs is given a chance.
 Restarting the TaskTracker moves it out of the blacklist.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4688">HADOOP-4688</a>. Modify the MiniMRDFSSort unit test to spill multiple times,
 exercising the map-side merge code.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4737">HADOOP-4737</a>. Adds the KILLED notification when jobs get killed.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -209,7 +213,7 @@ based on the rack/host that has the most number of bytes.<br />(Jothi Padmanabha
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(37)
+</a>&nbsp;&nbsp;&nbsp;(39)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4204">HADOOP-4204</a>. Fix findbugs warnings related to unused variables, naive
 Number subclass instantiation, Map iteration, and badly scoped inner
@@ -277,6 +281,9 @@ Yang via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4708">HADOOP-4708</a>. Add binaries missed in the initial checkin for Chukwa.<br />(Eric
 Yang via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4805">HADOOP-4805</a>. Remove black list collector from Chukwa Agent HTTP Sender.<br />(Eric Yang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4837">HADOOP-4837</a>. Move HADOOP_CONF_DIR configuration to chukwa-env.sh<br />(Jerome
+Boulon via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4825">HADOOP-4825</a>. Use ps instead of jps for querying process status in Chukwa.<br />(Eric Yang via cdouglas)</li>
     </ol>
   </li>
 </ul>
@@ -291,7 +298,7 @@ mapred tutorial.<br />(Vivek Ratan via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.19.1_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(5)
+</a>&nbsp;&nbsp;&nbsp;(6)
     <ol id="release_0.19.1_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4697">HADOOP-4697</a>. Fix getBlockLocations in KosmosFileSystem to handle multiple
 blocks correctly.<br />(Sriram Rao via cdouglas)</li>
@@ -302,6 +309,8 @@ current workding directory for scratch space.<br />(Amar Kamat via cdouglas)</li
 szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4727">HADOOP-4727</a>. Fix a group checking bug in fill_stat_structure(...) in
 fuse-dfs.<br />(Brian Bockelman via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4836">HADOOP-4836</a>. Correct typos in mapred related documentation.<br />(Jordà Polo
+via szetszwo)</li>
     </ol>
   </li>
 </ul>
@@ -945,7 +954,7 @@ restrictions on combiners.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(26)
+</a>&nbsp;&nbsp;&nbsp;(27)
     <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
@@ -988,6 +997,8 @@ map/reduce job failed to prompt temporary output.<br />(hairong)</li>
 receiver's tmp data directory.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4613">HADOOP-4613</a>. Fix block browsing on Web UI.<br />(Johan Oskarsson via shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4806">HADOOP-4806</a>. HDFS rename should not use src path as a regular expression.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4795">HADOOP-4795</a>. Prevent lease monitor getting into an infinite loop when
+leases and the namespace tree does not match.<br />(szetszwo)</li>
     </ol>
   </li>
 </ul>
@@ -1603,6 +1614,13 @@ cdouglas)</li>
 <h3><a href="javascript:toggleList('release_0.17.3_-_unreleased_')">Release 0.17.3 - Unreleased
 </a></h3>
 <ul id="release_0.17.3_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.17.3_-_unreleased_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4164">HADOOP-4164</a>. Chinese translation of the documentation.<br />(Xuebing Yan via
+omalley)</li>
+    </ol>
+  </li>
   <li><a href="javascript:toggleList('release_0.17.3_-_unreleased_._bug_fixes_')">  BUG FIXES
 </a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="release_0.17.3_-_unreleased_._bug_fixes_">

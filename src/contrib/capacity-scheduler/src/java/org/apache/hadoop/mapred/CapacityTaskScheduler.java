@@ -79,7 +79,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     // This time is equal to the time when the object was created, plus
     // the reclaim-time SLA for the queue.  
     public long whenToExpire;
-    // we also keep track of when to kill tasks, im millisecs. This is a 
+    // we also keep track of when to kill tasks, in millisecs. This is a 
     // fraction of 'whenToExpire', but we store it here so we don't 
     // recompute it every time. 
     public long whenToKill;
@@ -149,7 +149,7 @@ class CapacityTaskScheduler extends TaskScheduler {
      * created, it is placed in one queue. Once we kill tasks to recover 
      * resources for that object, it is placed in an expiry queue. we need
      * to do this to prevent creating spurious ResourceReclaim objects. We 
-     * keep a count of total resources that are being reclaimed. Thsi count 
+     * keep a count of total resources that are being reclaimed. This count 
      * is decremented when an object expires. 
      */
     
@@ -824,13 +824,13 @@ class CapacityTaskScheduler extends TaskScheduler {
        * update all our QSI objects.
        * This involves updating each qsi structure. This operation depends
        * on the number of running jobs in a queue, and some waiting jobs. If it
-       * becomes expensive, do it once every few hearbeats only.
+       * becomes expensive, do it once every few heartbeats only.
        */ 
       updateQSIObjects();
       LOG.debug("After updating QSI objects in " + this.type + " scheduler :");
       printQSIs();
       /*
-       * sort list of qeues first, as we want queues that need the most to
+       * sort list of queues first, as we want queues that need the most to
        * get first access. If this is expensive, sort every few heartbeats.
        * We're only sorting a collection of queues - there shouldn't be many.
        */
