@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, 
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop文档</title>
+  </header>
+  
+  <body>
+    <p>
+	下面的文档是一些概念介绍和操作教程，可帮助你开始使用Hadoop。如果遇到了问题，你可以向<a href="ext:lists">邮件列表</a>求助或者浏览一下存档邮件。
+    </p>
+    <ul>
+      <li><a href="quickstart.html">Hadoop快速入门</a></li>
+      <li><a href="cluster_setup.html">Hadoop集群搭建</a></li>
+      <li><a href="hdfs_design.html">Hadoop分布式文件系统</a></li>
+      <li><a href="mapred_tutorial.html">Hadoop Map-Reduce教程</a></li>
+      <li><a href="native_libraries.html">Hadoop本地库</a></li>
+      <li><a href="ext:api/index">API参考</a></li>
+      <li><a href="ext:wiki">维基</a></li>
+      <li><a href="ext:faq">常见问题</a></li>
+    </ul>
+    <p>
+    </p>
+
+  </body>
+  
+</document>
