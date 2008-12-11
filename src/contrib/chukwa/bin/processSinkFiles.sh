@@ -27,7 +27,6 @@ fi
 trap 'remove_cron;rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid ${CHUKWA_HOME}/var/run/ProcessSinkFiles.pid; exit 0' 1 2 15
 echo "${pid}" > "$CHUKWA_HOME/var/run/ProcessSinkFiles.pid"
 
-HADOOP_CONF_DIR="${HADOOP_HOME}/conf/"
 HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "
 
 function remove_cron {

@@ -11,6 +11,7 @@ export JAVA_HOME=/usr/lib/j2sdk1.5-sun
 # The location of the Hadoop the collector should use. Default 
 # assumes that this chukwa is living in hadoop's src/contrib directory
 export HADOOP_HOME="/usr/lib/hadoop/current"
+export HADOOP_CONF_DIR="${HADOOP_HOME}/conf/"
 
 # The directory where pid files are stored. CHUKWA_HOME/var/run by default.
 #export CHUKWA_PID_DIR=

@@ -340,6 +340,9 @@ Trunk (unreleased changes)
     HADOOP-4805. Remove black list collector from Chukwa Agent HTTP Sender.
     (Eric Yang via cdouglas)
 
+    HADOOP-4837. Move HADOOP_CONF_DIR configuration to chukwa-env.sh (Jerome
+    Boulon via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
