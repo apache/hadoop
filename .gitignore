@@ -38,3 +38,4 @@ src/contrib/chukwa/conf/chukwa-agent-conf.xml
 src/contrib/chukwa/conf/chukwa-collector-conf.xml
 src/contrib/chukwa/conf/collectors
 src/docs/build
+src/docs/cn/build
