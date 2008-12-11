@@ -84,6 +84,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 
+    zshao)
+
     HADOOP-4234. Fix KFS "glue" layer to allow applications to interface
     with multiple KFS metaservers. (Sriram Rao via lohit)
 
