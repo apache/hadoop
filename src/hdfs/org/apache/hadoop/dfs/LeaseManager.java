@@ -332,43 +332,59 @@ class LeaseManager {
     this.hardLimit = hardLimit; 
   }
   
-  Monitor createMonitor() {return new Monitor();}
-
   /******************************************************
    * Monitor checks for leases that have expired,
    * and disposes of them.
    ******************************************************/
   class Monitor implements Runnable {
+    final String name = getClass().getSimpleName();
+
+    /** Check leases periodically. */
     public void run() {
-      try {
-        while (fsnamesystem.isRunning()) {
-          synchronized (fsnamesystem) {
-            synchronized (LeaseManager.this) {
-              Lease top;
-              while ((sortedLeases.size() > 0) &&
-                     ((top = sortedLeases.first()) != null)) {
-                if (top.expiredHardLimit()) {
-                  LOG.info("Lease Monitor: Removing lease " + top
-                      + ", sortedLeases.size()=: " + sortedLeases.size());
-                  for(StringBytesWritable s : top.paths) {
-                    fsnamesystem.internalReleaseLease(top, s.getString());
-                  }
-                } else {
-                  break;
-                }
-              }
-            }
-          }
-          try {
-            Thread.sleep(2000);
-          } catch(InterruptedException ie) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getClass().getName() + " is interrupted", ie);
-            }
+      for(; fsnamesystem.isRunning(); ) {
+        synchronized(fsnamesystem) {
+          checkLeases();
+        }
+
+        try {
+          Thread.sleep(2000);
+        } catch(InterruptedException ie) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(name + " is interrupted", ie);
           }
         }
-      } catch(Exception e) {
-        LOG.error("In " + getClass().getName(), e);
+      }
+    }
+
+    /** Check the leases beginning from the oldest. */
+    private synchronized void checkLeases() {
+      for(; sortedLeases.size() > 0; ) {
+        final Lease oldest = sortedLeases.first();
+        if (!oldest.expiredHardLimit()) {
+          return;
+        }
+
+        LOG.info(name + ": Lease " + oldest + " has expired hard limit");
+
+        final List<StringBytesWritable> removing = new ArrayList<StringBytesWritable>();
+        for(StringBytesWritable p : oldest.getPaths()) {
+          try {
+            fsnamesystem.internalReleaseLease(oldest, p.getString());
+          } catch (IOException e) {
+            LOG.error("In " + name + ", cannot release the path " + p
+                + " in the lease " + oldest, e);
+            removing.add(p);
+          }
+        }
+
+        for(StringBytesWritable p : removing) {
+          try {
+            removeLease(oldest, p.getString());
+          } catch (IOException e) {
+            LOG.error("In " + name + ", cannot removeLease: oldest="
+                + oldest + ", p=" + p, e);
+          }
+        }
       }
     }
   }
