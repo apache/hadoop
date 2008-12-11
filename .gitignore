@@ -30,3 +30,5 @@ src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/contrib/index/conf/index-config.xml
 src/docs/build
 src/docs/cn/build
+src/docs/cn/src/documentation/sitemap.xmap
+src/docs/cn/uming.conf
