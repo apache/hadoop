@@ -19,8 +19,8 @@ package org.apache.hadoop.util;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.NoSuchElementException;
+import java.util.SortedMap;
 
 /** Provide an cyclic {@link Iterator} for a {@link NavigableMap}.
  * The {@link Iterator} navigates the entries of the map
@@ -29,22 +29,24 @@ import java.util.NoSuchElementException;
  * it will then continue from the first entry.
  */
 public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
-  private final NavigableMap<K, V> navigablemap;
-  private final NavigableMap<K, V> tailmap;
+  private final SortedMap<K, V> navigablemap;
+  private final SortedMap<K, V> tailmap;
+  private final K startingkey;
 
   /** Construct an {@link Iterable} object,
    * so that an {@link Iterator} can be created  
    * for iterating the given {@link NavigableMap}.
    * The iteration begins from the starting key exclusively.
    */
-  public CyclicIteration(NavigableMap<K, V> navigablemap, K startingkey) {
+  public CyclicIteration(SortedMap<K, V> navigablemap, K startingkey) {
+    this.startingkey = startingkey;
     if (navigablemap == null || navigablemap.isEmpty()) {
       this.navigablemap = null;
       this.tailmap = null;
     }
     else {
       this.navigablemap = navigablemap;
-      this.tailmap = navigablemap.tailMap(startingkey, false); 
+      this.tailmap = navigablemap.tailMap(startingkey);
     }
   }
 
@@ -66,7 +68,13 @@ public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
       hasnext = navigablemap != null;
       if (hasnext) {
         i = tailmap.entrySet().iterator();
-        first = nextEntry();
+        
+        Map.Entry<K, V> e = nextEntry();
+        if (e.getKey().equals(startingkey)) {
+          e = nextEntry();
+        }
+
+        first = e; 
         next = first;
       }
       else {

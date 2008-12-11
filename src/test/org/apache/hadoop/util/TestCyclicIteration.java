@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 public class TestCyclicIteration extends junit.framework.TestCase {
@@ -33,7 +33,7 @@ public class TestCyclicIteration extends junit.framework.TestCase {
 
   private static void checkCyclicIteration(int numOfElements) {
     //create a tree map
-    final NavigableMap<Integer, Integer> map = new TreeMap<Integer, Integer>();
+    final SortedMap<Integer, Integer> map = new TreeMap<Integer, Integer>();
     final Integer[] integers = new Integer[numOfElements];
     for(int i = 0; i < integers.length; i++) {
       integers[i] = 2*i;

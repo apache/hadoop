@@ -94,6 +94,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4795. Prevent lease monitor getting into an infinite loop when
     leases and the namespace tree does not match. (szetszwo)
 
+    HADOOP-4823. Use SortedMap instead of NavigableMap in 0.18 due to the
+    Java 5 requirement.  (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

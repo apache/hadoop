@@ -113,7 +113,7 @@ class AppendTestUtil {
       TestCase.assertEquals(-1, in.read()); //EOF  
       in.close();
     } catch(IOException ioe) {
-      throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
+      throw (IOException)new IOException("p=" + p + ", length=" + length + ", i=" + i).initCause(ioe);
     }
   }
 }

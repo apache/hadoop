@@ -151,7 +151,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * <p>
    * Mapping: StorageID -> DatanodeDescriptor
    */
-  NavigableMap<String, DatanodeDescriptor> datanodeMap = 
+  SortedMap<String, DatanodeDescriptor> datanodeMap = 
     new TreeMap<String, DatanodeDescriptor>();
 
   //
