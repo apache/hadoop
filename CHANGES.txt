@@ -218,6 +218,9 @@ Trunk (unreleased changes)
     HADOOP-4688. Modify the MiniMRDFSSort unit test to spill multiple times,
     exercising the map-side merge code. (cdouglas)
 
+    HADOOP-4737. Adds the KILLED notification when jobs get killed.
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

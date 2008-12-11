@@ -105,7 +105,8 @@ public class JobEndNotifier {
       }
       if (uri.contains("$jobStatus")) {
         String statusStr =
-          (status.getRunState() == JobStatus.SUCCEEDED) ? "SUCCEEDED" : "FAILED";
+          (status.getRunState() == JobStatus.SUCCEEDED) ? "SUCCEEDED" : 
+            (status.getRunState() == JobStatus.FAILED) ? "FAILED" : "KILLED";
         uri = uri.replace("$jobStatus", statusStr);
       }
       notification = new JobEndStatusInfo(uri, retryAttempts, retryInterval);

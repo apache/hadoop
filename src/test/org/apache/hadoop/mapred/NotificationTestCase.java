@@ -100,7 +100,24 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
     protected void doGet(HttpServletRequest req, HttpServletResponse res)
       throws ServletException, IOException {
-      if (counter == 0) {
+      switch (counter) {
+        case 0:
+        {
+          assertTrue(req.getQueryString().contains("SUCCEEDED"));
+        }
+        break;
+        case 2:
+        {
+          assertTrue(req.getQueryString().contains("KILLED"));
+        }
+        break;
+        case 4:
+        {
+          assertTrue(req.getQueryString().contains("FAILED"));
+        }
+        break;
+      }
+      if (counter % 2 == 0) {
         stdPrintln((new Date()).toString() +
                    "Receiving First notification for [" + req.getQueryString() +
                    "], returning error");
@@ -148,6 +165,22 @@ public abstract class NotificationTestCase extends HadoopTestCase {
       Thread.currentThread().sleep(2000);
     }
     assertEquals(2, NotificationServlet.counter);
+    
+    // run a job with KILLED status
+    System.out.println(TestJobKillAndFail.runJobKill(this.createJobConf()));
+    synchronized(Thread.currentThread()) {
+      stdPrintln("Sleeping for 2 seconds to give time for retry");
+      Thread.currentThread().sleep(2000);
+    }
+    assertEquals(4, NotificationServlet.counter);
+    
+    // run a job with FAILED status
+    System.out.println(TestJobKillAndFail.runJobFail(this.createJobConf()));
+    synchronized(Thread.currentThread()) {
+      stdPrintln("Sleeping for 2 seconds to give time for retry");
+      Thread.currentThread().sleep(2000);
+    }
+    assertEquals(6, NotificationServlet.counter);
   }
 
   private String launchWordCount(JobConf conf,

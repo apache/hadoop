@@ -62,6 +62,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private JobProfile profile;
     private Path localFile;
     private FileSystem localFs;
+    boolean killed = false;
     
     // Counters summed over all the map/reduce tasks which
     // have successfully completed
@@ -100,6 +101,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
     
     @Override
     public void run() {
+      JobContext jContext = new JobContext(conf);
+      OutputCommitter outputCommitter = job.getOutputCommitter();
       try {
         // split input into minimum number of splits
         InputSplit[] splits;
@@ -112,33 +115,35 @@ class LocalJobRunner implements JobSubmissionProtocol {
           numReduceTasks = 1;
           job.setNumReduceTasks(1);
         }
-        JobContext jContext = new JobContext(conf);
-        OutputCommitter outputCommitter = job.getOutputCommitter();
         outputCommitter.setupJob(jContext);
         status.setSetupProgress(1.0f);
         
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
-          TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i),0);  
-          mapIds.add(mapId);
-          buffer.reset();
-          splits[i].write(buffer);
-          BytesWritable split = new BytesWritable();
-          split.set(buffer.getData(), 0, buffer.getLength());
-          MapTask map = new MapTask(file.toString(),  
-                                    mapId, i,
-                                    splits[i].getClass().getName(),
-                                    split);
-          JobConf localConf = new JobConf(job);
-          map.setJobFile(localFile.toString());
-          map.localizeConfiguration(localConf);
-          map.setConf(localConf);
-          map_tasks += 1;
-          myMetrics.launchMap(mapId);
-          map.run(localConf, this);
-          myMetrics.completeMap(mapId);
-          map_tasks -= 1;
-          updateCounters(map);
+          if (!this.isInterrupted()) {
+            TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i),0);  
+            mapIds.add(mapId);
+            buffer.reset();
+            splits[i].write(buffer);
+            BytesWritable split = new BytesWritable();
+            split.set(buffer.getData(), 0, buffer.getLength());
+            MapTask map = new MapTask(file.toString(),  
+                                      mapId, i,
+                                      splits[i].getClass().getName(),
+                                      split);
+            JobConf localConf = new JobConf(job);
+            map.setJobFile(localFile.toString());
+            map.localizeConfiguration(localConf);
+            map.setConf(localConf);
+            map_tasks += 1;
+            myMetrics.launchMap(mapId);
+            map.run(localConf, this);
+            myMetrics.completeMap(mapId);
+            map_tasks -= 1;
+            updateCounters(map);
+          } else {
+            throw new InterruptedException();
+          }
         }
         TaskAttemptID reduceId = 
           new TaskAttemptID(new TaskID(jobId, false, 0), 0);
@@ -146,19 +151,23 @@ class LocalJobRunner implements JobSubmissionProtocol {
           if (numReduceTasks > 0) {
             // move map output to reduce input  
             for (int i = 0; i < mapIds.size(); i++) {
-              TaskAttemptID mapId = mapIds.get(i);
-              Path mapOut = this.mapoutputFile.getOutputFile(mapId);
-              Path reduceIn = this.mapoutputFile.getInputFileForWrite(mapId.getTaskID(),reduceId,
-                  localFs.getLength(mapOut));
-              if (!localFs.mkdirs(reduceIn.getParent())) {
-                throw new IOException("Mkdirs failed to create "
-                    + reduceIn.getParent().toString());
+              if (!this.isInterrupted()) {
+                TaskAttemptID mapId = mapIds.get(i);
+                Path mapOut = this.mapoutputFile.getOutputFile(mapId);
+                Path reduceIn = this.mapoutputFile.getInputFileForWrite(
+                                  mapId.getTaskID(),reduceId,
+                                  localFs.getLength(mapOut));
+                if (!localFs.mkdirs(reduceIn.getParent())) {
+                  throw new IOException("Mkdirs failed to create "
+                      + reduceIn.getParent().toString());
+                }
+                if (!localFs.rename(mapOut, reduceIn))
+                  throw new IOException("Couldn't rename " + mapOut);
+              } else {
+                throw new InterruptedException();
               }
-              if (!localFs.rename(mapOut, reduceIn))
-                throw new IOException("Couldn't rename " + mapOut);
             }
-
-            {
+            if (!this.isInterrupted()) {
               ReduceTask reduce = new ReduceTask(file.toString(), 
                                                  reduceId, 0, mapIds.size());
               JobConf localConf = new JobConf(job);
@@ -171,6 +180,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
               myMetrics.completeReduce(reduce.getTaskID());
               reduce_tasks -= 1;
               updateCounters(reduce);
+            } else {
+              throw new InterruptedException();
             }
           }
         } finally {
@@ -185,12 +196,26 @@ class LocalJobRunner implements JobSubmissionProtocol {
         outputCommitter.cleanupJob(jContext);
         status.setCleanupProgress(1.0f);
 
-        this.status.setRunState(JobStatus.SUCCEEDED);
+        if (killed) {
+          this.status.setRunState(JobStatus.KILLED);
+        } else {
+          this.status.setRunState(JobStatus.SUCCEEDED);
+        }
 
         JobEndNotifier.localRunnerNotification(job, status);
 
       } catch (Throwable t) {
-        this.status.setRunState(JobStatus.FAILED);
+        try {
+          outputCommitter.cleanupJob(jContext);
+        } catch (IOException ioe) {
+          LOG.info("Error cleaning up job:" + id);
+        }
+        status.setCleanupProgress(1.0f);
+        if (killed) {
+          this.status.setRunState(JobStatus.KILLED);
+        } else {
+          this.status.setRunState(JobStatus.FAILED);
+        }
         LOG.warn(id, t);
 
         JobEndNotifier.localRunnerNotification(job, status);
@@ -307,7 +332,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public void killJob(JobID id) {
-    jobs.get(id).stop();
+    jobs.get(id).killed = true;
+    jobs.get(id).interrupt();
   }
 
   public void setJobPriority(JobID id, String jp) throws IOException {
