@@ -25,6 +25,8 @@ import java.net.Socket;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.dfs.DFSTestUtil;
 import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -43,15 +45,21 @@ public class TestDiskError extends TestCase {
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     final int dnIndex = 0;
-    File dataDir = new File(
+
+    FileSystem localFs = FileSystem.getLocal(conf);
+    Path dataDir = new Path(
       System.getProperty("test.build.data", "build/test/data"), "dfs");
-    dataDir = new File(dataDir, "data");
-    File dir1 = new File(new File(dataDir, "data"+(2*dnIndex+1)), "tmp");
-    File dir2 = new File(new File(dataDir, "data"+(2*dnIndex+2)), "tmp");
+    dataDir = new Path(dataDir, "data");
+    Path dir1 = new Path(new Path(dataDir, "data"+(2*dnIndex+1)), "tmp");
+    Path dir2 = new Path(new Path(dataDir, "data"+(2*dnIndex+2)), "tmp");
+    FsPermission oldPerm1 = localFs.getFileStatus(dir1).getPermission();
+    FsPermission oldPerm2 = localFs.getFileStatus(dir2).getPermission();
     try {
       // make the data directory of the first datanode to be readonly
-      assertTrue(dir1.setReadOnly());
-      assertTrue(dir2.setReadOnly());
+      final FsPermission readPermission =
+        new FsPermission(FsAction.READ, FsAction.READ, FsAction.READ);
+      localFs.setPermission(dir1, readPermission);
+      localFs.setPermission(dir2, readPermission);
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);
@@ -63,8 +71,8 @@ public class TestDiskError extends TestCase {
       }
     } finally {
       // restore its old permission
-      dir1.setWritable(true);
-      dir2.setWritable(true);
+      localFs.setPermission(dir1, oldPerm1);
+      localFs.setPermission(dir2, oldPerm2);
       cluster.shutdown();
     }
   }

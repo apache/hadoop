@@ -97,6 +97,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4823. Use SortedMap instead of NavigableMap in 0.18 due to the
     Java 5 requirement.  (szetszwo)
 
+    HADOOP-4824. Should not use File.setWritable() in 0.18. (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
