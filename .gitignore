@@ -39,3 +39,5 @@ src/contrib/chukwa/conf/chukwa-collector-conf.xml
 src/contrib/chukwa/conf/collectors
 src/docs/build
 src/docs/cn/build
+src/docs/cn/src/documentation/sitemap.xmap
+src/docs/cn/uming.conf
