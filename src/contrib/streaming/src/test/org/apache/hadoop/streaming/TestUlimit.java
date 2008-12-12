@@ -57,6 +57,7 @@ public class TestUlimit extends TestCase {
       "-mapper", map,
       "-reducer", "org.apache.hadoop.mapred.lib.IdentityReducer",
       "-numReduceTasks", "0",
+      "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "mapred.child.ulimit=" + memLimit,
       "-jobconf", "mapred.job.tracker=" + "localhost:" +
                                            mr.getJobTrackerPort(),
