@@ -230,6 +230,8 @@ Trunk (unreleased changes)
     HADOOP-4807. Adds JobClient commands to get the active/blacklisted tracker names.
     Also adds commands to display running/completed task attempt IDs. (ddas)
 
+    HADOOP-4699. Remove checksum validation from map output servlet. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
