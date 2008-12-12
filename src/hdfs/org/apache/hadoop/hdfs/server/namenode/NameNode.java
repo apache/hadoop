@@ -96,11 +96,6 @@ import java.util.Iterator;
 public class NameNode implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
                                  RefreshAuthorizationPolicyProtocol {
-  static{
-    Configuration.addDefaultResource("hdfs-default.xml");
-    Configuration.addDefaultResource("hdfs-site.xml");
-  }
-  
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException { 
     if (protocol.equals(ClientProtocol.class.getName())) {

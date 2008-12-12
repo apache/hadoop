@@ -606,7 +606,7 @@ public class MiniMRCluster {
       stopJobTracker();
     } finally {
       File configDir = new File("build", "minimr");
-      File siteFile = new File(configDir, "mapred-site.xml");
+      File siteFile = new File(configDir, "hadoop-site.xml");
       siteFile.delete();
     }
   }

@@ -41,7 +41,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -82,9 +81,9 @@ import org.xml.sax.SAXException;
  *
  * <p>Unless explicitly turned off, Hadoop by default specifies two 
  * resources, loaded in-order from the classpath: <ol>
- * <li><tt><a href="{@docRoot}/../core-default.html">core-default.xml</a>
+ * <li><tt><a href="{@docRoot}/../hadoop-default.html">hadoop-default.xml</a>
  * </tt>: Read-only defaults for hadoop.</li>
- * <li><tt>core-site.xml</tt>: Site-specific configuration for a given hadoop
+ * <li><tt>hadoop-site.xml</tt>: Site-specific configuration for a given hadoop
  * installation.</li>
  * </ol>
  * Applications may add additional resources, which are loaded
@@ -104,7 +103,7 @@ import org.xml.sax.SAXException;
  *  &lt;/property&gt;</pre></tt>
  *
  * Administrators typically define parameters as final in 
- * <tt>core-site.xml</tt> for values that user applications may not alter.
+ * <tt>hadoop-site.xml</tt> for values that user applications may not alter.
  *
  * <h4 id="VariableExpansion">Variable Expansion</h4>
  *
@@ -150,38 +149,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private Set<String> finalParameters = new HashSet<String>();
   
-  private boolean loadDefaults = true;
-  
-  /**
-   * Configurtion objects
-   */
-  private static final WeakHashMap<Configuration,Object> REGISTRY = 
-    new WeakHashMap<Configuration,Object>();
-  
-  /**
-   * List of default Resources. Resources are loaded in the order of the list 
-   * entries
-   */
-  private static final ArrayList<String> defaultResources = 
-    new ArrayList<String>();
-  
-  static{
-    //print deprecation warning if hadoop-site.xml is found in classpath
-    ClassLoader cL = Thread.currentThread().getContextClassLoader();
-    if (cL == null) {
-      cL = Configuration.class.getClassLoader();
-    }
-    if(cL.getResource("hadoop-site.xml")!=null) {
-      LOG.warn("DEPRECATED: hadoop-site.xml found in the classpath. " +
-          "Usage of hadoop-site.xml is deprecated. Instead use core-site.xml, "
-          + "mapred-site.xml and hdfs-site.xml to override properties of " +
-          "core-default.xml, mapred-default.xml and hdfs-default.xml " +
-          "respectively");
-    }
-    addDefaultResource("core-default.xml");
-    addDefaultResource("core-site.xml");
-  }
-  
   private Properties properties;
   private Properties overlay;
   private ClassLoader classLoader;
@@ -205,12 +172,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param loadDefaults specifies whether to load from the default files
    */
   public Configuration(boolean loadDefaults) {
-    this.loadDefaults = loadDefaults;
     if (LOG.isDebugEnabled()) {
       LOG.debug(StringUtils.stringifyException(new IOException("config()")));
     }
-    synchronized(Configuration.class) {
-      REGISTRY.put(this, null);
+    if (loadDefaults) {
+      resources.add("hadoop-default.xml");
+      resources.add("hadoop-site.xml");
     }
   }
   
@@ -238,25 +205,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    }
    
     this.finalParameters = new HashSet<String>(other.finalParameters);
-    synchronized(Configuration.class) {
-      REGISTRY.put(this, null);
-    }
-  }
-  
-  /**
-   * Add a default resource. Resources are loaded in the order of the resources 
-   * added.
-   * @param name file name. File should be present in the classpath.
-   */
-  public static synchronized void addDefaultResource(String name) {
-    if(!defaultResources.contains(name)) {
-      defaultResources.add(name);
-      for(Configuration conf : REGISTRY.keySet()) {
-        if(conf.loadDefaults) {
-          conf.reloadConfiguration();
-        }
-      }
-    }
   }
 
   /**
@@ -1004,17 +952,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private void loadResources(Properties properties,
                              ArrayList resources,
                              boolean quiet) {
-    if(loadDefaults) {
-      for (String resource : defaultResources) {
-        loadResource(properties, resource, quiet);
-      }
-    
-      //support the hadoop-site.xml as a deprecated case
-      if(getResource("hadoop-site.xml")!=null) {
-        loadResource(properties, "hadoop-site.xml", quiet);
-      }
-    }
-    
     for (Object resource : resources) {
       loadResource(properties, resource, quiet);
     }
@@ -1201,12 +1138,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append("Configuration: ");
-    if(loadDefaults) {
-      toString(defaultResources, sb);
-      if(resources.size()>0) {
-        sb.append(", ");
-      }
-    }
     toString(resources, sb);
     return sb.toString();
   }

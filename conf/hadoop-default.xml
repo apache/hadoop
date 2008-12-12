@@ -2,10 +2,54 @@
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 
 <!-- Do not modify this file directly.  Instead, copy entries that you -->
-<!-- wish to modify from this file into mapred-site.xml and change them -->
-<!-- there.  If mapred-site.xml does not already exist, create it.      -->
+<!-- wish to modify from this file into hadoop-site.xml and change them -->
+<!-- there.  If hadoop-site.xml does not already exist, create it.      -->
 
 <configuration>
+
+<!--- global properties -->
+
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/tmp/hadoop-${user.name}</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+<property>
+  <name>hadoop.native.lib</name>
+  <value>true</value>
+  <description>Should native hadoop libraries, if present, be used.</description>
+</property>
+
+<property>
+  <name>hadoop.http.filter.initializers</name>
+  <value></value>
+  <description>A comma separated list of class names. Each class in the list 
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
+  Filter will be initialized. Then, the Filter will be applied to all user 
+  facing jsp and servlet web pages.  The ordering of the list defines the 
+  ordering of the filters.</description>
+</property>
+
+<property>
+  <name>hadoop.security.authorization</name>
+  <value>false</value>
+  <description>Is service-level authorization enabled?</description>
+</property>
+
+<!--- logging properties -->
+
+<property>
+  <name>hadoop.logfile.size</name>
+  <value>10000000</value>
+  <description>The max size of each log file</description>
+</property>
+
+<property>
+  <name>hadoop.logfile.count</name>
+  <value>10</value>
+  <description>The max number of log files</description>
+</property>
 
 <property>
   <name>hadoop.job.history.location</name>
@@ -24,6 +68,14 @@
   output directory. The files are stored in "_logs/history/" in the directory.
   User can stop logging by giving the value "none". 
   </description>
+</property>
+
+<property>
+  <name>dfs.namenode.logging.level</name>
+  <value>info</value>
+  <description>The logging level for dfs namenode. Other values are "dir"(trac
+e namespace mutations), "block"(trace block under/over replications and block
+creations/deletions), or "all".</description>
 </property>
 
 <!-- i/o properties -->
@@ -62,12 +114,532 @@
 </property>
 
 <property>
+  <name>io.file.buffer.size</name>
+  <value>4096</value>
+  <description>The size of buffer for use in sequence files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+  
+<property>
+  <name>io.bytes.per.checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  io.file.buffer.size.</description>
+</property>
+
+<property>
+  <name>io.skip.checksum.errors</name>
+  <value>false</value>
+  <description>If true, when a checksum error is encountered while
+  reading a sequence file, entries are skipped, instead of throwing an
+  exception.</description>
+</property>
+  
+<property>
   <name>io.map.index.skip</name>
   <value>0</value>
   <description>Number of index entries to skip between each entry.
   Zero by default. Setting this to values larger than zero can
   facilitate opening large map files using less memory.</description>
 </property>
+
+<property>
+  <name>io.compression.codecs</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.BZip2Codec</value>
+  <description>A list of the compression codec classes that can be used 
+               for compression/decompression.</description>
+</property>
+
+<property>
+  <name>io.serializations</name>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization</value>
+  <description>A list of serialization classes that can be used for
+  obtaining serializers and deserializers.</description>
+</property>
+
+<!-- file system properties -->
+
+<property>
+  <name>fs.default.name</name>
+  <value>file:///</value>
+  <description>The name of the default file system.  A URI whose
+  scheme and authority determine the FileSystem implementation.  The
+  uri's scheme determines the config property (fs.SCHEME.impl) naming
+  the FileSystem implementation class.  The uri's authority is used to
+  determine the host, port, etc. for a filesystem.</description>
+</property>
+
+<property>
+  <name>fs.trash.interval</name>
+  <value>0</value>
+  <description>Number of minutes between trash checkpoints.
+  If zero, the trash feature is disabled.
+  </description>
+</property>
+
+<property>
+  <name>fs.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The FileSystem for file: uris.</description>
+</property>
+
+<property>
+  <name>fs.hdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.s3.impl</name>
+  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+  <description>The FileSystem for s3: uris.</description>
+</property>
+
+<property>
+  <name>fs.s3n.impl</name>
+  <value>org.apache.hadoop.fs.s3native.NativeS3FileSystem</value>
+  <description>The FileSystem for s3n: (Native S3) uris.</description>
+</property>
+
+<property>
+  <name>fs.kfs.impl</name>
+  <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
+  <description>The FileSystem for kfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.hftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.hsftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HsftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The FileSystem for ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.ramfs.impl</name>
+  <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
+  <description>The FileSystem for ramfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.har.impl</name>
+  <value>org.apache.hadoop.fs.HarFileSystem</value>
+  <description>The filesystem for Hadoop archives. </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary images to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.edits.dir</name>
+  <value>${fs.checkpoint.dir}</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as fs.checkpoint.dir
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.period</name>
+  <value>3600</value>
+  <description>The number of seconds between two periodic checkpoints.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.size</name>
+  <value>67108864</value>
+  <description>The size of the current edit log (in bytes) that triggers
+       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
+  </description>
+</property>
+
+<property>
+  <name>dfs.secondary.http.address</name>
+  <value>0.0.0.0:50090</value>
+  <description>
+    The secondary namenode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.address</name>
+  <value>0.0.0.0:50010</value>
+  <description>
+    The address where the datanode server will listen to.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.http.address</name>
+  <value>0.0.0.0:50075</value>
+  <description>
+    The datanode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ipc.address</name>
+  <value>0.0.0.0:50020</value>
+  <description>
+    The datanode ipc server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.handler.count</name>
+  <value>3</value>
+  <description>The number of server threads for the datanode.</description>
+</property>
+
+<property>
+  <name>dfs.http.address</name>
+  <value>0.0.0.0:50070</value>
+  <description>
+    The address and the base port where the dfs namenode web ui will listen on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.enable</name>
+  <value>false</value>
+  <description>Decide if HTTPS(SSL) is supported on HDFS
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.need.client.auth</name>
+  <value>false</value>
+  <description>Whether SSL client certificate authentication is required
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.server.keystore.resource</name>
+  <value>ssl-server.xml</value>
+  <description>Resource file from which ssl server keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.client.keystore.resource</name>
+  <value>ssl-client.xml</value>
+  <description>Resource file from which ssl client keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.https.address</name>
+  <value>0.0.0.0:50475</value>
+</property>
+
+<property>
+  <name>dfs.https.address</name>
+  <value>0.0.0.0:50470</value>
+</property>
+
+ <property>
+  <name>dfs.datanode.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a data node should 
+  report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.datanode.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a DataNode should use to determine the host name used by the
+  NameNode for communication and display purposes.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.replication.considerLoad</name>
+  <value>true</value>
+  <description>Decide if chooseTarget considers the target's load or not
+  </description>
+</property>
+<property>
+  <name>dfs.default.chunk.view.size</name>
+  <value>32768</value>
+  <description>The number of bytes to view for a file on the browser.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.du.reserved</name>
+  <value>0</value>
+  <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+  </description>
+</property>
+
+<property>
+  <name>dfs.name.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/name</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the name table(fsimage).  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
+</property>
+
+<property>
+  <name>dfs.name.edits.dir</name>
+  <value>${dfs.name.dir}</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </description>
+</property>
+<property>
+  <name>dfs.web.ugi</name>
+  <value>webuser,webgroup</value>
+  <description>The user account used by the web interface.
+    Syntax: USERNAME,GROUP1,GROUP2, ...
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions</name>
+  <value>true</value>
+  <description>
+    If "true", enable permission checking in HDFS.
+    If "false", permission checking is turned off,
+    but all other behavior is unchanged.
+    Switching from one parameter value to the other does not change the mode,
+    owner or group of files or directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.supergroup</name>
+  <value>supergroup</value>
+  <description>The name of the group of super-users.</description>
+</property>
+
+<property>
+  <name>dfs.data.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/data</value>
+  <description>Determines where on the local filesystem an DFS data node
+  should store its blocks.  If this is a comma-delimited
+  list of directories, then data will be stored in all named
+  directories, typically on different devices.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication</name>
+  <value>3</value>
+  <description>Default block replication. 
+  The actual number of replications can be specified when the file is created.
+  The default is used if replication is not specified in create time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication.max</name>
+  <value>512</value>
+  <description>Maximal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication.min</name>
+  <value>1</value>
+  <description>Minimal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.size</name>
+  <value>67108864</value>
+  <description>The default block size for new files.</description>
+</property>
+
+<property>
+  <name>dfs.df.interval</name>
+  <value>60000</value>
+  <description>Disk usage statistics refresh interval in msec.</description>
+</property>
+
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>3</value>
+  <description>The number of retries for writing blocks to the data nodes, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>dfs.blockreport.intervalMsec</name>
+  <value>3600000</value>
+  <description>Determines block reporting interval in milliseconds.</description>
+</property>
+
+<property>
+  <name>dfs.blockreport.initialDelay</name>  <value>0</value>
+  <description>Delay for first block report in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.heartbeat.interval</name>
+  <value>3</value>
+  <description>Determines datanode heartbeat interval in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.handler.count</name>
+  <value>10</value>
+  <description>The number of server threads for the namenode.</description>
+</property>
+
+<property>
+  <name>dfs.safemode.threshold.pct</name>
+  <value>0.999f</value>
+  <description>
+  	Specifies the percentage of blocks that should satisfy 
+  	the minimal replication requirement defined by dfs.replication.min.
+  	Values less than or equal to 0 mean not to start in safe mode.
+  	Values greater than 1 will make safe mode permanent.
+ 	</description>
+</property>
+
+<property>
+  <name>dfs.safemode.extension</name>
+  <value>30000</value>
+  <description>
+  	Determines extension of safe mode in milliseconds 
+  	after the threshold level is reached.
+ 	</description>
+</property>
+
+<property>
+  <name>dfs.balance.bandwidthPerSec</name>
+  <value>1048576</value>
+  <description>
+        Specifies the maximum amount of bandwidth that each datanode
+        can utilize for the balancing purpose in term of
+        the number of bytes per second.
+  </description>
+</property>
+
+<property>
+  <name>dfs.hosts</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  permitted to connect to the namenode. The full pathname of the file
+  must be specified.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  not permitted to connect to the namenode.  The full pathname of the
+  file must be specified.  If the value is empty, no hosts are
+  excluded.</description>
+</property> 
+
+<property>
+  <name>dfs.max.objects</name>
+  <value>0</value>
+  <description>The maximum number of files, directories and blocks
+  dfs supports. A value of zero indicates no limit to the number
+  of objects that dfs supports.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.interval</name>
+  <value>30</value>
+  <description>Namenode periodicity in seconds to check if decommission is 
+  complete.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.nodes.per.interval</name>
+  <value>5</value>
+  <description>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</description>
+</property>
+
+<property>
+  <name>dfs.replication.interval</name>
+  <value>3</value>
+  <description>The periodicity in seconds with which the namenode computes 
+  repliaction work for datanodes. </description>
+</property>
+
+<property>
+  <name>dfs.access.time.precision</name>
+  <value>3600000</value>
+  <description>The access time for HDFS file is precise upto this value. 
+               The default value is 1 hour. Setting a value of 0 disables
+               access times for HDFS.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.block.size</name>
+  <value>67108864</value>
+  <description>Block size to use when writing files to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3.buffer.dir</name>
+  <value>${hadoop.tmp.dir}/s3</value>
+  <description>Determines where on the local filesystem the S3 filesystem
+  should store files before sending them to S3
+  (or after retrieving them from S3).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.maxRetries</name>
+  <value>4</value>
+  <description>The maximum number of retries for reading or writing files to S3, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.sleepTimeSeconds</name>
+  <value>10</value>
+  <description>The number of seconds to sleep between each S3 retry.
+  </description>
+</property>
+
+<!-- map/reduce properties -->
 
 <property>
   <name>mapred.job.tracker</name>
@@ -116,6 +688,14 @@
 </property>
 
 <property>
+  <name>local.cache.size</name>
+  <value>10737418240</value>
+  <description>The limit on the size of cache you want to keep, set by default
+  to 10GB. This will act as a soft limit on the cache directory for out of band data.
+  </description>
+</property>
+            
+<property>
   <name>mapred.system.dir</name>
   <value>${hadoop.tmp.dir}/mapred/system</value>
   <description>The shared directory where MapReduce stores control files.
@@ -142,11 +722,11 @@
   <name>mapred.local.dir.minspacekill</name>
   <value>0</value>
   <description>If the space in mapred.local.dir drops under this, 
-    do not ask more tasks until all the current ones have finished and 
-    cleaned up. Also, to save the rest of the tasks we have running, 
-    kill one of them, to clean up some space. Start with the reduce tasks,
-    then go with the ones that have finished the least.
-    Value in bytes.
+  	do not ask more tasks until all the current ones have finished and 
+  	cleaned up. Also, to save the rest of the tasks we have running, 
+  	kill one of them, to clean up some space. Start with the reduce tasks,
+  	then go with the ones that have finished the least.
+  	Value in bytes.
   </description>
 </property>
 
@@ -612,7 +1192,6 @@
                from the reduce directory as they are consumed.</description>
 </property>
 
-
 <!-- 
   <property>
   <name>keep.task.files.pattern</name>
@@ -661,6 +1240,30 @@
 </property>
 
 <property>
+  <name>io.seqfile.compress.blocksize</name>
+  <value>1000000</value>
+  <description>The minimum block size for compression in block compressed 
+  				SequenceFiles.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.lazydecompress</name>
+  <value>true</value>
+  <description>Should values of block-compressed SequenceFiles be decompressed
+  				only when necessary.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.sorter.recordlimit</name>
+  <value>1000000</value>
+  <description>The limit on number of records to be kept in memory in a spill 
+  				in SequenceFiles.Sorter
+  </description>
+</property>
+
+<property>
   <name>map.sort.class</name>
   <value>org.apache.hadoop.util.QuickSort</value>
   <description>The default sort class for sorting keys.
@@ -678,7 +1281,7 @@
   <name>mapred.userlog.retain.hours</name>
   <value>24</value>
   <description>The maximum time, in hours, for which the user-logs are to be 
-          retained.
+  				retained.
   </description>
 </property>
 
@@ -696,18 +1299,18 @@
   <description>Names a file that contains the list of hosts that
   should be excluded by the jobtracker.  If the value is empty, no
   hosts are excluded.</description>
-</property>
+</property> 
 
 <property>
   <name>mapred.max.tracker.blacklists</name>
   <value>4</value>
-  <description>The number of blacklists for a taskTracker by various jobs
+  <description>The number of blacklists for a taskTracker by various jobs 
                after which the task tracker could be blacklisted across
-               all jobs. The tracker will be given a tasks later
-               (after a day). The tracker will become a healthy
-               tracker after a restart.
+               all jobs. The tracker will be given a tasks later 
+               (after a day). The tracker will become a healthy 
+               tracker after a restart. 
   </description>
-</property> 
+</property>
 
 <property>
   <name>mapred.max.tracker.failures</name>
@@ -860,7 +1463,66 @@
     acceptable.
     </description>
   </property>
-  
+
+<!-- ipc properties -->
+
+<property>
+  <name>ipc.client.idlethreshold</name>
+  <value>4000</value>
+  <description>Defines the threshold number of connections after which
+               connections will be inspected for idleness.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.kill.max</name>
+  <value>10</value>
+  <description>Defines the maximum number of clients to disconnect in one go.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connection.maxidletime</name>
+  <value>10000</value>
+  <description>The maximum time in msec after which a client will bring down the
+               connection to the server.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.max.retries</name>
+  <value>10</value>
+  <description>Indicates the number of retries a client will make to establish
+               a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.listen.queue.size</name>
+  <value>128</value>
+  <description>Indicates the length of the listen queue for servers accepting
+               client connections.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the server. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the client. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
 <!-- Job Notification Configuration -->
 
 <!--
@@ -889,13 +1551,81 @@
    <description>Indicates time in milliseconds between notification URL retry
                 calls</description>
 </property>
-  
+
+<!-- Web Interface Configuration -->
+
+<property>
+  <name>webinterface.private.actions</name>
+  <value>false</value>
+  <description> If set to true, the web interfaces of JT and NN may contain 
+                actions, such as kill job, delete file, etc., that should 
+                not be exposed to public. Enable this option if the interfaces 
+                are only reachable by those who have the right authorization.
+  </description>
+</property>
+
 <!-- Proxy Configuration -->
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.default</name>
+  <value>org.apache.hadoop.net.StandardSocketFactory</value>
+  <description> Default SocketFactory to use. This parameter is expected to be
+    formatted as "package.FactoryClassName".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.ClientProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a DFS. If null or empty, use
+    hadoop.rpc.socket.class.default. This socket factory is also used by
+    DFSClient to create sockets to DataNodes.
+  </description>
+</property>
+
 <property>
   <name>hadoop.rpc.socket.factory.class.JobSubmissionProtocol</name>
   <value></value>
   <description> SocketFactory to use to connect to a Map/Reduce master
     (JobTracker). If null or empty, then use hadoop.rpc.socket.class.default.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.socks.server</name>
+  <value></value>
+  <description> Address (host:port) of the SOCKS server to be used by the
+    SocksSocketFactory.
+  </description>
+</property>
+
+<!-- Rack Configuration -->
+
+<property>
+  <name>topology.node.switch.mapping.impl</name>
+  <value>org.apache.hadoop.net.ScriptBasedMapping</value>
+  <description> The default implementation of the DNSToSwitchMapping. It
+    invokes a script specified in topology.script.file.name to resolve
+    node names. If the value for topology.script.file.name is not set, the
+    default value of DEFAULT_RACK is returned for all node names.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.file.name</name>
+  <value></value>
+  <description> The script name that should be invoked to resolve DNS names to
+    NetworkTopology names. Example: the script would take host.foo.bar as an
+    argument, and return /rack1 as the output.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.number.args</name>
+  <value>100</value>
+  <description> The max number of args that the script configured with 
+    topology.script.file.name should be run with. Each arg is an
+    IP address.
   </description>
 </property>
 

@@ -224,7 +224,7 @@ public class TestConfiguration extends TestCase {
     conf.addResource(fileResource);
     
     String expectedOutput = 
-      "Configuration: core-default.xml, core-site.xml, " + 
+      "Configuration: hadoop-default.xml, hadoop-site.xml, " + 
       fileResource.toString();
     assertEquals(expectedOutput, conf.toString());
   }
