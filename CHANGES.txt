@@ -354,6 +354,9 @@ Trunk (unreleased changes)
     it's deprecated in favour of
     org.apache.hadoop.security.AccessControlException. (acmurthy) 
 
+    HADOOP-4706. Close the underlying output stream in
+    IFileOutputStream::close. (Jothi Padmanabhan via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

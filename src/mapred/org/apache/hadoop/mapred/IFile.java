@@ -131,22 +131,28 @@ class IFile {
       out.flush();
   
       if (compressOutput) {
-        // Flush & return the compressor
+        // Flush
         compressedOut.finish();
         compressedOut.resetState();
+      }
+      
+      // Close the underlying stream iff we own it...
+      if (ownOutputStream) {
+        out.close();
+      }
+      else {
+        // Write the checksum
+        checksumOut.finish();
+      }
+
+      compressedBytesWritten = rawOut.getPos() - start;
+
+      if (compressOutput) {
+        // Return back the compressor
         CodecPool.returnCompressor(compressor);
         compressor = null;
       }
-      
-      // Close the stream
-      checksumOut.close();
-      
-      compressedBytesWritten = rawOut.getPos() - start;
-    
-      // Close the underlying stream iff we own it...
-      if (ownOutputStream) {
-        rawOut.close();
-      }
+
       out = null;
       if(writtenRecordsCounter != null) {
         writtenRecordsCounter.increment(numRecordsWritten);

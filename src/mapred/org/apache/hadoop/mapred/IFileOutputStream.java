@@ -36,6 +36,7 @@ class IFileOutputStream extends FilterOutputStream {
   private final DataChecksum sum;
   private byte[] barray;
   private boolean closed = false;
+  private boolean finished = false;
 
   /**
    * Create a checksum output stream that writes
@@ -55,11 +56,25 @@ class IFileOutputStream extends FilterOutputStream {
       return;
     }
     closed = true;
+    finish();
+    out.close();
+  }
+
+  /**
+   * Finishes writing data to the output stream, by writing
+   * the checksum bytes to the end. The underlying stream is not closed.
+   * @throws IOException
+   */
+  public void finish() throws IOException {
+    if (finished) {
+      return;
+    }
+    finished = true;
     sum.writeValue(barray, 0, false);
     out.write (barray, 0, sum.getChecksumSize());
     out.flush();
   }
-  
+
   /**
    * Write bytes to the stream.
    */
