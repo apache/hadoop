@@ -346,6 +346,11 @@ Trunk (unreleased changes)
     HADOOP-4825. Use ps instead of jps for querying process status in Chukwa.
     (Eric Yang via cdouglas)
 
+    HADOOP-4844. Fixed javadoc for
+    org.apache.hadoop.fs.permission.AccessControlException to document that
+    it's deprecated in favour of
+    org.apache.hadoop.security.AccessControlException. (acmurthy) 
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

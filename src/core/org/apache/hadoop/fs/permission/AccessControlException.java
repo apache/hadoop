@@ -19,6 +19,11 @@ package org.apache.hadoop.fs.permission;
 
 import java.io.IOException;
 
+/**
+ * An exception class for access control related issues.
+ * @deprecated Use {@link org.apache.hadoop.security.AccessControlException} 
+ *             instead.
+ */
 @Deprecated
 public class AccessControlException extends IOException {
   //Required by {@link java.io.Serializable}.
