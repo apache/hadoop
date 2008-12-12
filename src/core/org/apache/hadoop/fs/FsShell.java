@@ -1256,9 +1256,8 @@ public class FsShell extends Configured implements Tool {
     String fs = "-fs [local | <file system URI>]: \tSpecify the file system to use.\n" + 
       "\t\tIf not specified, the current configuration is used, \n" +
       "\t\ttaken from the following, in increasing precedence: \n" + 
-      "\t\t\thadoop-default.xml inside the hadoop jar file \n" +
-      "\t\t\thadoop-default.xml in $HADOOP_CONF_DIR \n" +
-      "\t\t\thadoop-site.xml in $HADOOP_CONF_DIR \n" +
+      "\t\t\tcore-default.xml inside the hadoop jar file \n" +
+      "\t\t\tcore-site.xml in $HADOOP_CONF_DIR \n" +
       "\t\t'local' means use the local file system as your DFS. \n" +
       "\t\t<file system URI> specifies a particular file system to \n" +
       "\t\tcontact. This argument is optional but if used must appear\n" +

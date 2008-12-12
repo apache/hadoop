@@ -126,6 +126,11 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 public class DataNode extends Configured 
     implements InterDatanodeProtocol, ClientDatanodeProtocol, FSConstants, Runnable {
   public static final Log LOG = LogFactory.getLog(DataNode.class);
+  
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
 
   public static final String DN_CLIENTTRACE_FORMAT =
         "src: %s" +      // src IP

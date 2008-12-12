@@ -48,6 +48,11 @@ public class DistributedFileSystem extends FileSystem {
 
   DFSClient dfs;
   private boolean verifyChecksum = true;
+  
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
 
   public DistributedFileSystem() {
   }
@@ -439,4 +444,6 @@ public class DistributedFileSystem extends FileSystem {
       ) throws IOException {
     dfs.setTimes(getPathName(p), mtime, atime);
   }
+  
+  
 }

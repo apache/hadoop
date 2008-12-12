@@ -315,6 +315,7 @@
 
     <copy todir="${build.classes}">
       <fileset dir="${core.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${core.src.dir}" includes="core-default.xml"/>
     </copy>
      
   </target>
@@ -351,6 +352,7 @@
     
     <copy todir="${build.classes}">
       <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${mapred.src.dir}" includes="mapred-default.xml"/>
     </copy>
   </target>
 
@@ -386,6 +388,7 @@
 
     <copy todir="${build.classes}">
      <fileset dir="${hdfs.src.dir}" includes="**/*.properties"/>
+     <fileset dir="${hdfs.src.dir}" includes="hdfs-default.xml"/>
     </copy>
   </target>
 
@@ -520,7 +523,6 @@
           <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
       </manifest>
-      <fileset file="${conf.dir}/hadoop-default.xml"/>
       <fileset file="${conf.dir}/commons-logging.properties"/>
       <fileset file="${conf.dir}/log4j.properties"/>
       <fileset file="${conf.dir}/hadoop-metrics.properties"/>
@@ -837,8 +839,12 @@
     <copy todir="${docs.dir}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
-    <style basedir="${conf.dir}" destdir="${docs.dir}"
-           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${core.src.dir}" destdir="${docs.dir}"
+           includes="core-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${hdfs.src.dir}" destdir="${docs.dir}"
+           includes="hdfs-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${mapred.src.dir}" destdir="${docs.dir}"
+           includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
     <antcall target="cn-docs"/>
   </target>
@@ -853,8 +859,12 @@
     <copy todir="${cndocs.dir}">
       <fileset dir="${cndocs.src}/build/site/" />
     </copy>
-    <style basedir="${conf.dir}" destdir="${cndocs.dir}"
-          includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${core.src.dir}" destdir="${cndocs.dir}"
+           includes="core-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${hdfs.src.dir}" destdir="${cndocs.dir}"
+           includes="hdfs-default.xml" style="conf/configuration.xsl"/>
+    <style basedir="${mapred.src.dir}" destdir="${cndocs.dir}"
+           includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
   </target>
 

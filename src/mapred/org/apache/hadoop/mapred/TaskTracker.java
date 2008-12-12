@@ -102,6 +102,11 @@ public class TaskTracker
 
   static enum State {NORMAL, STALE, INTERRUPTED, DENIED}
 
+  static{
+    Configuration.addDefaultResource("mapred-default.xml");
+    Configuration.addDefaultResource("mapred-site.xml");
+  }
+
   public static final Log LOG =
     LogFactory.getLog(TaskTracker.class);
 
