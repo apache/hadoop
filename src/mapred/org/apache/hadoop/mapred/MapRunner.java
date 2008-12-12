@@ -58,4 +58,7 @@ public class MapRunner<K1, V1, K2, V2>
     }
   }
 
+  protected Mapper<K1, V1, K2, V2> getMapper() {
+    return mapper;
+  }
 }
