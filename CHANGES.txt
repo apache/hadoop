@@ -233,6 +233,9 @@ Trunk (unreleased changes)
     based on the rack/host that has the most number of bytes.
     (Jothi Padmanabhan via ddas)
 
+    HADOOP-4683. Fixes Reduce shuffle scheduler to invoke getMapCompletionEvents
+    in a separate thread. (Jothi Padmanabhan via ddas)
+
   BUG FIXES
 
     HADOOP-4204. Fix findbugs warnings related to unused variables, naive
