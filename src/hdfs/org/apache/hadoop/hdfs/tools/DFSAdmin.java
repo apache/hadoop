@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.security.auth.login.LoginException;
@@ -364,6 +363,27 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to ask the namenode to save the namespace.
+   * Usage: java DFSAdmin -saveNamespace
+   * @exception IOException 
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#saveNamespace()
+   */
+  public int saveNamespace() throws IOException {
+    int exitCode = -1;
+
+    if (!(fs instanceof DistributedFileSystem)) {
+      System.err.println("FileSystem is " + fs.getUri());
+      return exitCode;
+    }
+
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    dfs.saveNamespace();
+    exitCode = 0;
+   
+    return exitCode;
+  }
+
+  /**
    * Command to ask the namenode to reread the hosts and excluded hosts 
    * file.
    * Usage: java DFSAdmin -refreshNodes
@@ -373,7 +393,7 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getName());
+      System.err.println("FileSystem is " + fs.getUri());
       return exitCode;
     }
 
@@ -388,6 +408,7 @@ public class DFSAdmin extends FsShell {
     String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
+      "\t[-saveNamespace]\n" +
       "\t[-refreshNodes]\n" +
       "\t[" + SetQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
@@ -408,6 +429,10 @@ public class DFSAdmin extends FsShell {
       "\t\tcondition.  Safe mode can also be entered manually, but then\n" +
       "\t\tit can only be turned off manually as well.\n";
 
+    String saveNamespace = "-saveNamespace:\t" +
+    "Save current namespace into storage directories and reset edits log.\n" +
+    "\t\tRequires superuser permissions and safe mode.\n";
+
     String refreshNodes = "-refreshNodes: \tUpdates the set of hosts allowed " +
                           "to connect to namenode.\n\n" +
       "\t\tRe-reads the config file to update values defined by \n" +
@@ -419,7 +444,7 @@ public class DFSAdmin extends FsShell {
       "\t\tdecommissioning if it has aleady been marked for decommission.\n" + 
       "\t\tEntires not present in both the lists are decommissioned.\n";
 
-    String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of DFS.\n" +
+    String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of HDFS.\n" +
       "\t\tDatanodes delete their previous version working directories,\n" +
       "\t\tfollowed by Namenode doing the same.\n" + 
       "\t\tThis completes the upgrade process.\n";
@@ -446,6 +471,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(report);
     } else if ("safemode".equals(cmd)) {
       System.out.println(safemode);
+    } else if ("saveNamespace".equals(cmd)) {
+      System.out.println(saveNamespace);
     } else if ("refreshNodes".equals(cmd)) {
       System.out.println(refreshNodes);
     } else if ("finalizeUpgrade".equals(cmd)) {
@@ -470,6 +497,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(summary);
       System.out.println(report);
       System.out.println(safemode);
+      System.out.println(saveNamespace);
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
       System.out.println(upgradeProgress);
@@ -609,6 +637,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-safemode enter | leave | get | wait]");
+    } else if ("-saveNamespace".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-saveNamespace]");
     } else if ("-refreshNodes".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshNodes]");
@@ -640,6 +671,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
       System.err.println("           [-safemode enter | leave | get | wait]");
+      System.err.println("           [-saveNamespace]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
       System.err.println("           [-upgradeProgress status | details | force]");
@@ -681,6 +713,11 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-saveNamespace".equals(cmd)) {
       if (argv.length != 1) {
         printUsage(cmd);
         return exitCode;
@@ -730,6 +767,8 @@ public class DFSAdmin extends FsShell {
         report();
       } else if ("-safemode".equals(cmd)) {
         setSafeMode(argv, i);
+      } else if ("-saveNamespace".equals(cmd)) {
+        exitCode = saveNamespace();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {

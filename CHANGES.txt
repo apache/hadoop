@@ -84,6 +84,8 @@ Trunk (unreleased changes)
 
     HADOOP-4348. Add service-level authorization for Hadoop. (acmurthy) 
 
+    HADOOP-4826. Introduce admin command saveNamespace. (shv)
+
   IMPROVEMENTS
 
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 
@@ -395,7 +397,7 @@ Release 0.19.1 - Unreleased
     HADOOP-4727. Fix a group checking bug in fill_stat_structure(...) in
     fuse-dfs.  (Brian Bockelman via szetszwo)
 
-    HADOOP-4836. Correct typos in mapred related documentation.  (Jordà Polo
+    HADOOP-4836. Correct typos in mapred related documentation.  (Jord? Polo
     via szetszwo)
 
 Release 0.19.0 - 2008-11-18

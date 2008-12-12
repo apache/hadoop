@@ -24,7 +24,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -595,7 +596,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.isInSafeMode();
   }
 
-  /*
+  /**
+   * @inheritDoc
+   */
+  public void saveNamespace() throws IOException {
+    namesystem.saveNamespace();
+  }
+
+  /**
    * Refresh the list of datanodes that the namenode should allow to  
    * connect.  Re-reads conf by creating new Configuration object and 
    * uses the files list in the configuration to update the list. 

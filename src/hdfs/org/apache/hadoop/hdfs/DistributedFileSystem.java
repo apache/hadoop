@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.*;
 
 
@@ -329,7 +330,16 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.setSafeMode(action);
   }
 
-  /*
+  /**
+   * Save namespace image.
+   * 
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#saveNamespace()
+   */
+  public void saveNamespace() throws AccessControlException, IOException {
+    dfs.saveNamespace();
+  }
+
+  /**
    * Refreshes the list of hosts and excluded hosts from the configured 
    * files.  
    */

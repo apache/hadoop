@@ -40,9 +40,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 40: added disk space quotas.
+   * 41: saveNamespace introduced.
    */
-  public static final long versionID = 40L;
+  public static final long versionID = 41L;
   
   ///////////////////////////////////////
   // File contents
@@ -359,6 +359,17 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public boolean setSafeMode(FSConstants.SafeModeAction action) throws IOException;
+
+  /**
+   * Save namespace image.
+   * <p>
+   * Saves current namespace into storage directories and reset edits log.
+   * Requires superuser privilege and safe mode.
+   * 
+   * @throws AccessControlException if the superuser privilege is violated.
+   * @throws IOException if image creation failed.
+   */
+  public void saveNamespace() throws IOException;
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 

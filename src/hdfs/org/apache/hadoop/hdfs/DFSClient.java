@@ -471,7 +471,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param progress for reporting write-progress
    * @return an output stream for writing into the file
    * @throws IOException
-   * @see {@link ClientProtocol#append(String, String)}
+   * @see ClientProtocol#append(String, String)
    */
   OutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
@@ -770,6 +770,21 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     return namenode.setSafeMode(action);
+  }
+
+  /**
+   * Save namespace image.
+   * See {@link ClientProtocol#saveNamespace()} 
+   * for more details.
+   * 
+   * @see ClientProtocol#saveNamespace()
+   */
+  void saveNamespace() throws AccessControlException, IOException {
+    try {
+      namenode.saveNamespace();
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   /**

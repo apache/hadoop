@@ -23,15 +23,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -176,7 +179,6 @@ public class TestCheckpoint extends TestCase {
     // Also check that the edits file is empty here
     // and that temporary checkpoint files are gone.
     FSImage image = cluster.getNameNode().getFSImage();
-    int nrDirs = image.getNumStorageDirs();
     for (Iterator<StorageDirectory> it = 
              image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -558,7 +560,7 @@ public class TestCheckpoint extends TestCase {
   }
 
   /**
-   * Tests checkpoint in DFS.
+   * Tests checkpoint in HDFS.
    */
   public void testCheckpoint() throws IOException {
     Path file1 = new Path("checkpoint.dat");
@@ -650,5 +652,63 @@ public class TestCheckpoint extends TestCase {
     testNamedirError(conf, namedirs);
     testSecondaryFailsToReturnImage(conf);
     testStartup(conf);
+  }
+
+  /**
+   * Tests save namepsace.
+   */
+  public void testSaveNamespace() throws IOException {
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem fs = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster.waitActive();
+      fs = (DistributedFileSystem)(cluster.getFileSystem());
+
+      // Saving image without safe mode should fail
+      DFSAdmin admin = new DFSAdmin(conf);
+      String[] args = new String[]{"-saveNamespace"};
+      try {
+        admin.run(args);
+      } catch(IOException eIO) {
+        assertTrue(eIO.getLocalizedMessage().contains("Safe mode should be turned ON"));
+      } catch(Exception e) {
+        throw new IOException(e);
+      }
+      // create new file
+      Path file = new Path("namespace.dat");
+      writeFile(fs, file, replication);
+      checkFile(fs, file, replication);
+      // verify that the edits file is NOT empty
+      Collection<File> editsDirs = cluster.getNameEditsDirs();
+      for(File ed : editsDirs) {
+        assertTrue(new File(ed, "current/edits").length() > Integer.SIZE/Byte.SIZE);
+      }
+
+      // Saving image in safe mode should succeed
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      try {
+        admin.run(args);
+      } catch(Exception e) {
+        throw new IOException(e);
+      }
+      // verify that the edits file is empty
+      for(File ed : editsDirs) {
+        assertTrue(new File(ed, "current/edits").length() == Integer.SIZE/Byte.SIZE);
+      }
+
+      // restart cluster and verify file exists
+      cluster.shutdown();
+      cluster = null;
+
+      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster.waitActive();
+      fs = (DistributedFileSystem)(cluster.getFileSystem());
+      checkFile(fs, file, replication);
+    } finally {
+      if(fs != null) fs.close();
+      if(cluster!= null) cluster.shutdown();
+    }
   }
 }

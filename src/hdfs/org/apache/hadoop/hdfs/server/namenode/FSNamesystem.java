@@ -1384,7 +1384,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Allocate a block at the given pending filename
    * 
    * @param src path to the file
-   * @param indoes INode representing each of the components of src. 
+   * @param inodes INode representing each of the components of src. 
    *        <code>inodes[inodes.length-1]</code> is the INode for the file.
    */
   private Block allocateBlock(String src, INode[] inodes) throws IOException {
@@ -1764,7 +1764,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Move a file that is being written to be immutable.
    * @param src The filename
-   * @param holder The datanode that was creating the file
+   * @param lease The lease for the client creating the file
    */
   void internalReleaseLease(Lease lease, String src) throws IOException {
     LOG.info("Recovering lease=" + lease + ", src=" + src);
@@ -3372,7 +3372,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     return arr;
   }
-    
+
+  /**
+   * Save namespace image.
+   * This will save current namespace into fsimage file and empty edits file.
+   * Requires superuser privilege and safe mode.
+   * 
+   * @throws AccessControlException if superuser privilege is violated.
+   * @throws IOException if 
+   */
+  synchronized void saveNamespace() throws AccessControlException, IOException {
+    checkSuperuserPrivilege();
+    if(!isInSafeMode()) {
+      throw new IOException("Safe mode should be turned ON " +
+                            "in order to create namespace image.");
+    }
+    getFSImage().saveFSImage();
+    LOG.info("New namespace image has been created.");
+  }
+
   /**
    */
   public synchronized void DFSNodesStatus(ArrayList<DatanodeDescriptor> live, 
