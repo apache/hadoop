@@ -52,9 +52,12 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 17: getClusterStatus returns the amount of memory used by 
    *             the server. HADOOP-4435
    * Version 18: Added blacklisted trackers to the ClusterStatus 
-   *             for HADOOP-4305            
+   *             for HADOOP-4305
+   * Version 19: Modified TaskReport to have TIP status and modified the
+   *             method getClusterStatus() to take a boolean argument
+   *             for HADOOP-4807                     
    */
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
 
   /**
    * Allocate a name for the job.
@@ -72,9 +75,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
 
   /**
    * Get the current status of the cluster
+   * @param detailed if true then report tracker names as well
    * @return summary of the state of the cluster
    */
-  public ClusterStatus getClusterStatus() throws IOException;
+  public ClusterStatus getClusterStatus(boolean detailed) throws IOException;
+  
     
   /**
    * Kill the indicated job

@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -35,18 +37,54 @@ public class TaskReport implements Writable {
   private long startTime; 
   private long finishTime; 
   private Counters counters;
-
+  private TIPStatus currentStatus;
+  
+  private Collection<TaskAttemptID> runningAttempts = 
+    new ArrayList<TaskAttemptID>();
+  private TaskAttemptID successfulAttempt = new TaskAttemptID();
   public TaskReport() {
     taskid = new TaskID();
   }
-
+  
+  /**
+   * Creates a new TaskReport object
+   * @param taskid
+   * @param progress
+   * @param state
+   * @param diagnostics
+   * @param startTime
+   * @param finishTime
+   * @param counters
+   * @deprecated
+   */
+  @Deprecated
   TaskReport(TaskID taskid, float progress, String state,
-             String[] diagnostics, long startTime, long finishTime,
+      String[] diagnostics, long startTime, long finishTime,
+      Counters counters) {
+    this(taskid, progress, state, diagnostics, null, startTime, finishTime, 
+        counters);
+  }
+  
+  /**
+   * Creates a new TaskReport object
+   * @param taskid
+   * @param progress
+   * @param state
+   * @param diagnostics
+   * @param currentStatus
+   * @param startTime
+   * @param finishTime
+   * @param counters
+   */
+  TaskReport(TaskID taskid, float progress, String state,
+             String[] diagnostics, TIPStatus currentStatus, 
+             long startTime, long finishTime,
              Counters counters) {
     this.taskid = taskid;
     this.progress = progress;
     this.state = state;
     this.diagnostics = diagnostics;
+    this.currentStatus = currentStatus;
     this.startTime = startTime; 
     this.finishTime = finishTime;
     this.counters = counters;
@@ -65,6 +103,10 @@ public class TaskReport implements Writable {
   public String[] getDiagnostics() { return diagnostics; }
   /** A table of counters. */
   public Counters getCounters() { return counters; }
+  /** The current status */
+  public TIPStatus getCurrentStatus() {
+    return currentStatus;
+  }
   
   /**
    * Get finish time of task. 
@@ -96,6 +138,33 @@ public class TaskReport implements Writable {
   void setStartTime(long startTime) {
     this.startTime = startTime;
   }
+
+  /** 
+   * set successful attempt ID of the task. 
+   */ 
+  public void setSuccessfulAttempt(TaskAttemptID t) {
+    successfulAttempt = t;
+  }
+  /**
+   * Get the attempt ID that took this task to completion
+   */
+  public TaskAttemptID getSuccessfulTaskAttempt() {
+    return successfulAttempt;
+  }
+  /** 
+   * set running attempt(s) of the task. 
+   */ 
+  public void setRunningTaskAttempts(
+      Collection<TaskAttemptID> runningAttempts) {
+    this.runningAttempts = runningAttempts;
+  }
+  /**
+   * Get the running task attempt IDs for this task
+   */
+  public Collection<TaskAttemptID> getRunningTaskAttempts() {
+    return runningAttempts;
+  }
+
 
   @Override
   public boolean equals(Object o) {
@@ -132,6 +201,17 @@ public class TaskReport implements Writable {
     out.writeLong(finishTime);
     WritableUtils.writeStringArray(out, diagnostics);
     counters.write(out);
+    WritableUtils.writeEnum(out, currentStatus);
+    if (currentStatus == TIPStatus.RUNNING) {
+      WritableUtils.writeVInt(out, runningAttempts.size());
+      TaskAttemptID t[] = new TaskAttemptID[0];
+      t = runningAttempts.toArray(t);
+      for (int i = 0; i < t.length; i++) {
+        t[i].write(out);
+      }
+    } else if (currentStatus == TIPStatus.COMPLETE) {
+      successfulAttempt.write(out);
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -144,5 +224,16 @@ public class TaskReport implements Writable {
     diagnostics = WritableUtils.readStringArray(in);
     counters = new Counters();
     counters.readFields(in);
+    currentStatus = WritableUtils.readEnum(in, TIPStatus.class);
+    if (currentStatus == TIPStatus.RUNNING) {
+      int num = WritableUtils.readVInt(in);    
+      for (int i = 0; i < num; i++) {
+        TaskAttemptID t = new TaskAttemptID();
+        t.readFields(in);
+        runningAttempts.add(t);
+      }
+    } else if (currentStatus == TIPStatus.COMPLETE) {
+      successfulAttempt.readFields(in);
+    }
   }
 }

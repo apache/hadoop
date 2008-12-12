@@ -21,7 +21,10 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -32,6 +35,9 @@ import org.apache.hadoop.io.WritableUtils;
  * <ol>
  *   <li>
  *   Size of the cluster. 
+ *   </li>
+ *   <li>
+ *   Name of the trackers. 
  *   </li>
  *   <li>
  *   Task capacity of the cluster. 
@@ -51,8 +57,10 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class ClusterStatus implements Writable {
 
-  private int task_trackers;
-  private int blacklisted_trackers;
+  private int numActiveTrackers;
+  private Collection<String> activeTrackers = new ArrayList<String>();
+  private Collection<String> blacklistedTrackers = new ArrayList<String>();
+  private int numBlacklistedTrackers;
   private int map_tasks;
   private int reduce_tasks;
   private int max_map_tasks;
@@ -69,9 +77,12 @@ public class ClusterStatus implements Writable {
    * @param trackers no. of tasktrackers in the cluster
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
-   * @param max the maximum no. of tasks in the cluster
+   * @param maxMaps the maximum no. of map tasks in the cluster
+   * @param maxReduces the maximum no. of reduce tasks in the cluster
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   * @deprecated 
    */
+  @Deprecated
   ClusterStatus(int trackers, int maps, int reduces, int maxMaps,
                 int maxReduces, JobTracker.State state) {
     this(trackers, 0, maps, reduces, maxMaps, maxReduces, state);
@@ -90,8 +101,8 @@ public class ClusterStatus implements Writable {
    */
   ClusterStatus(int trackers, int blacklists, int maps, int reduces,
                 int maxMaps, int maxReduces, JobTracker.State state) {
-    task_trackers = trackers;
-    blacklisted_trackers = blacklists;
+    numActiveTrackers = trackers;
+    numBlacklistedTrackers = blacklists;
     map_tasks = maps;
     reduce_tasks = reduces;
     max_map_tasks = maxMaps;
@@ -102,12 +113,52 @@ public class ClusterStatus implements Writable {
   }
 
   /**
+   * Construct a new cluster status.
+   * 
+   * @param activeTrackers active tasktrackers in the cluster
+   * @param blacklistedTrackers blacklisted tasktrackers in the cluster
+   * @param maps no. of currently running map-tasks in the cluster
+   * @param reduces no. of currently running reduce-tasks in the cluster
+   * @param maxMaps the maximum no. of map tasks in the cluster
+   * @param maxReduces the maximum no. of reduce tasks in the cluster
+   * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   */
+  ClusterStatus(Collection<String> activeTrackers, 
+      Collection<String> blacklistedTrackers,
+      int maps, int reduces, int maxMaps, int maxReduces, 
+      JobTracker.State state) {
+    this(activeTrackers.size(), blacklistedTrackers.size(), maps, reduces,
+        maxMaps, maxReduces, state);
+    this.activeTrackers = activeTrackers;
+    this.blacklistedTrackers = blacklistedTrackers;
+  }
+
+
+  /**
    * Get the number of task trackers in the cluster.
    * 
    * @return the number of task trackers in the cluster.
    */
   public int getTaskTrackers() {
-    return task_trackers;
+    return numActiveTrackers;
+  }
+  
+  /**
+   * Get the names of task trackers in the cluster.
+   * 
+   * @return the active task trackers in the cluster.
+   */
+  public Collection<String> getActiveTrackerNames() {
+    return activeTrackers;
+  }
+
+  /**
+   * Get the names of task trackers in the cluster.
+   * 
+   * @return the blacklisted task trackers in the cluster.
+   */
+  public Collection<String> getBlacklistedTrackerNames() {
+    return blacklistedTrackers;
   }
   
   /**
@@ -116,7 +167,7 @@ public class ClusterStatus implements Writable {
    * @return the number of blacklisted task trackers in the cluster.
    */
   public int getBlacklistedTrackers() {
-    return blacklisted_trackers;
+    return numBlacklistedTrackers;
   }
   
   /**
@@ -184,8 +235,26 @@ public class ClusterStatus implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    out.writeInt(task_trackers);
-    out.writeInt(blacklisted_trackers);
+    if (activeTrackers.size() == 0) {
+      out.writeInt(numActiveTrackers);
+      out.writeInt(0);
+    } else {
+      out.writeInt(activeTrackers.size());
+      out.writeInt(activeTrackers.size());
+      for (String tracker : activeTrackers) {
+        Text.writeString(out, tracker);
+      }
+    }
+    if (blacklistedTrackers.size() == 0) {
+      out.writeInt(numBlacklistedTrackers);
+      out.writeInt(0);
+    } else {
+      out.writeInt(blacklistedTrackers.size());
+      out.writeInt(blacklistedTrackers.size());
+      for (String tracker : blacklistedTrackers) {
+        Text.writeString(out, tracker);
+      }
+    }
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
     out.writeInt(max_map_tasks);
@@ -196,8 +265,22 @@ public class ClusterStatus implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    task_trackers = in.readInt();
-    blacklisted_trackers = in.readInt();
+    numActiveTrackers = in.readInt();
+    int numTrackerNames = in.readInt();
+    if (numTrackerNames > 0) {
+      for (int i = 0; i < numTrackerNames; i++) {
+        String name = Text.readString(in);
+        activeTrackers.add(name);
+      }
+    }
+    numBlacklistedTrackers = in.readInt();
+    numTrackerNames = in.readInt();
+    if (numTrackerNames > 0) {
+      for (int i = 0; i < numTrackerNames; i++) {
+        String name = Text.readString(in);
+        blacklistedTrackers.add(name);
+      }
+    }
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
     max_map_tasks = in.readInt();

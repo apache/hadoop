@@ -431,11 +431,28 @@ class TaskInProgress {
     for (List<String> l : taskDiagnosticData.values()) {
       diagnostics.addAll(l);
     }
+    TIPStatus currentStatus = null;
+    if (isRunning() && !isComplete()) {
+      currentStatus = TIPStatus.RUNNING;
+    } else if (isComplete()) {
+      currentStatus = TIPStatus.COMPLETE;
+    } else if (wasKilled()) {
+      currentStatus = TIPStatus.KILLED;
+    } else if (isFailed()) {
+      currentStatus = TIPStatus.FAILED;
+    } else if (!(isComplete() || isRunning() || wasKilled())) {
+      currentStatus = TIPStatus.PENDING;
+    }
+    
     TaskReport report = new TaskReport
       (getTIPId(), (float)progress, state,
        diagnostics.toArray(new String[diagnostics.size()]),
-       execStartTime, execFinishTime, counters);
-      
+       currentStatus, execStartTime, execFinishTime, counters);
+    if (currentStatus == TIPStatus.RUNNING) {
+      report.setRunningTaskAttempts(activeTasks.keySet());
+    } else if (currentStatus == TIPStatus.COMPLETE) {
+      report.setSuccessfulAttempt(getSuccessfulTaskid());
+    }
     return report;
   }
 

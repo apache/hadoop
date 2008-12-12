@@ -1996,6 +1996,32 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   /**
+   * Get the active and blacklisted task tracker names in the cluster. The first
+   * element in the returned list contains the list of active tracker names.
+   * The second element in the returned list contains the list of blacklisted
+   * tracker names. 
+   */
+  public List<List<String>> taskTrackerNames() {
+    List<String> activeTrackers = 
+      new ArrayList<String>();
+    List<String> blacklistedTrackers = 
+      new ArrayList<String>();
+    synchronized (taskTrackers) {
+      for (TaskTrackerStatus status : taskTrackers.values()) {
+        if (!faultyTrackers.isBlacklisted(status.getHost())) {
+          activeTrackers.add(status.getTrackerName());
+        } else {
+          blacklistedTrackers.add(status.getTrackerName());
+        }
+      }
+    }
+    List<List<String>> result = new ArrayList<List<String>>(2);
+    result.add(activeTrackers);
+    result.add(blacklistedTrackers);
+    return result;
+  }
+  
+  /**
    * Get the blacklisted task tracker statuses in the cluster
    *  
    * @return {@link Collection} of blacklisted {@link TaskTrackerStatus} 
@@ -2652,16 +2678,33 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  /**@deprecated use {@link #getClusterStatus(boolean)}*/
+  @Deprecated
   public synchronized ClusterStatus getClusterStatus() {
+    return getClusterStatus(false);
+  }
+
+  public synchronized ClusterStatus getClusterStatus(boolean detailed) {
     synchronized (taskTrackers) {
-      return new ClusterStatus(taskTrackers.size() - 
-                                 getBlacklistedTrackerCount(),
-                               getBlacklistedTrackerCount(),
-                               totalMaps,
-                               totalReduces,
-                               totalMapTaskCapacity,
-                               totalReduceTaskCapacity, 
-                               state);          
+      if (detailed) {
+        List<List<String>> trackerNames = taskTrackerNames();
+        return new ClusterStatus(trackerNames.get(0),
+            trackerNames.get(1),
+            totalMaps,
+            totalReduces,
+            totalMapTaskCapacity,
+            totalReduceTaskCapacity, 
+            state);
+      } else {
+        return new ClusterStatus(taskTrackers.size() - 
+            getBlacklistedTrackerCount(),
+            getBlacklistedTrackerCount(),
+            totalMaps,
+            totalReduces,
+            totalMapTaskCapacity,
+            totalReduceTaskCapacity, 
+            state);          
+      }
     }
   }
     

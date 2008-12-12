@@ -385,8 +385,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return fs.getUri().toString();
   }
   
-  public ClusterStatus getClusterStatus() {
-    return new ClusterStatus(1, map_tasks, reduce_tasks, 1, 1, 
+  public ClusterStatus getClusterStatus(boolean detailed) {
+    return new ClusterStatus(1, 0, map_tasks, reduce_tasks, 1, 1, 
                              JobTracker.State.RUNNING);
   }
 

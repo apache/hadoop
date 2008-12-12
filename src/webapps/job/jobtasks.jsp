@@ -21,7 +21,6 @@
   }
   String type = request.getParameter("type");
   String pagenum = request.getParameter("pagenum");
-  TaskInProgress[] tasks = null;
   String state = request.getParameter("state");
   state = (state!=null) ? state : "all";
   int pnum = Integer.parseInt(pagenum);
@@ -35,19 +34,14 @@
   int start_index = (pnum - 1) * numperpage;
   int end_index = start_index + numperpage;
   int report_len = 0;
-  if ("map".equals(type)){
-     reports = (job != null) ? tracker.getMapTaskReports(jobidObj) : null;
-     tasks = (job != null) ? job.getMapTasks() : null;
-    }
-  else if ("reduce".equals(type)) {
+  if ("map".equals(type)) {
+    reports = (job != null) ? tracker.getMapTaskReports(jobidObj) : null;
+  } else if ("reduce".equals(type)) {
     reports = (job != null) ? tracker.getReduceTaskReports(jobidObj) : null;
-    tasks = (job != null) ? job.getReduceTasks() : null;
   } else if ("cleanup".equals(type)) {
     reports = (job != null) ? tracker.getCleanupTaskReports(jobidObj) : null;
-    tasks = (job != null) ? job.getCleanupTasks() : null;
   } else if ("setup".equals(type)) {
     reports = (job != null) ? tracker.getSetupTaskReports(jobidObj) : null;
-    tasks = (job != null) ? job.getSetupTasks() : null;
   }
 %>
 
@@ -67,27 +61,18 @@
   }
   // Filtering the reports if some filter is specified
   if (!"all".equals(state)) {
-    List<TaskID> filteredReportsTaskIds = new ArrayList<TaskID>();
     List<TaskReport> filteredReports = new ArrayList<TaskReport>();
-    for (int i = 0; i < tasks.length; ++i) {
-      if (("completed".equals(state) && tasks[i].isComplete()) 
-          || ("running".equals(state) && tasks[i].isRunning() 
-              && !tasks[i].isComplete()) 
-          || ("killed".equals(state) && tasks[i].wasKilled()) 
-          || ("pending".equals(state)  && !(tasks[i].isComplete() 
-                                            || tasks[i].isRunning() 
-                                            || tasks[i].wasKilled()))) {
-        filteredReportsTaskIds.add(tasks[i].getTIPId());
-      }
-    }
-    for (int i = 0 ; i < reports.length; ++i) {
-      if (filteredReportsTaskIds.contains(reports[i].getTaskID())) {
+    for (int i = 0; i < reports.length; ++i) {
+      if (("completed".equals(state) && reports[i].getCurrentStatus() == TIPStatus.COMPLETE) 
+          || ("running".equals(state) && reports[i].getCurrentStatus() == TIPStatus.RUNNING) 
+          || ("killed".equals(state) && reports[i].getCurrentStatus() == TIPStatus.KILLED) 
+          || ("pending".equals(state)  && reports[i].getCurrentStatus() == TIPStatus.PENDING)) {
         filteredReports.add(reports[i]);
       }
     }
-    tasks = null; // free the task memory
     // using filtered reports instead of all the reports
     reports = filteredReports.toArray(new TaskReport[0]);
+    filteredReports = null;
   }
   report_len = reports.length;
   
@@ -107,8 +92,8 @@
     for (int i = start_index ; i < end_index; i++) {
           TaskReport report = reports[i];
           out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + 
-                    "&tipid=" + report.getTaskId() + "\">"  + 
-                    report.getTaskId() + "</a></td>");
+                    "&tipid=" + report.getTaskID() + "\">"  + 
+                    report.getTaskID() + "</a></td>");
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) +
         		   ServletUtil.percentageGraph(report.getProgress() * 100f, 80) + "</td>");
          out.print("<td>"  + report.getState() + "<br/></td>");
@@ -123,7 +108,7 @@
          out.println("</pre><br/></td>");
          out.println("<td>" + 
              "<a href=\"taskstats.jsp?jobid=" + jobid + 
-             "&tipid=" + report.getTaskId() +
+             "&tipid=" + report.getTaskID() +
              "\">" + report.getCounters().size() +
              "</a></td></tr>");
     }

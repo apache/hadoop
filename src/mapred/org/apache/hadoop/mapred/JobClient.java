@@ -36,6 +36,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Random;
 
@@ -1011,6 +1012,48 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
   
   /**
+   * Display the information about a job's tasks, of a particular type and
+   * in a particular state
+   * 
+   * @param jobId the ID of the job
+   * @param type the type of the task (map/reduce/setup/cleanup)
+   * @param state the state of the task 
+   * (pending/running/completed/failed/killed)
+   */
+  public void displayTasks(JobID jobId, String type, String state) 
+  throws IOException {
+    TaskReport[] reports = new TaskReport[0];
+    if (type.equals("map")) {
+      reports = getMapTaskReports(jobId);
+    } else if (type.equals("reduce")) {
+      reports = getReduceTaskReports(jobId);
+    } else if (type.equals("setup")) {
+      reports = getSetupTaskReports(jobId);
+    } else if (type.equals("cleanup")) {
+      reports = getCleanupTaskReports(jobId);
+    }
+    for (TaskReport report : reports) {
+      TIPStatus status = report.getCurrentStatus();
+      if ((state.equals("pending") && status ==TIPStatus.PENDING) ||
+          (state.equals("running") && status ==TIPStatus.RUNNING) ||
+          (state.equals("completed") && status == TIPStatus.COMPLETE) ||
+          (state.equals("failed") && status == TIPStatus.FAILED) ||
+          (state.equals("killed") && status == TIPStatus.KILLED)) {
+        printTaskAttempts(report);
+      }
+    }
+  }
+  private void printTaskAttempts(TaskReport report) {
+    if (report.getCurrentStatus() == TIPStatus.COMPLETE) {
+      System.out.println(report.getSuccessfulTaskAttempt());
+    } else if (report.getCurrentStatus() == TIPStatus.RUNNING) {
+      for (TaskAttemptID t : 
+        report.getRunningTaskAttempts()) {
+        System.out.println(t);
+      }
+    }
+  }
+  /**
    * Get status information about the Map-Reduce cluster.
    *  
    * @return the status information about the Map-Reduce cluster as an object
@@ -1018,7 +1061,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @throws IOException
    */
   public ClusterStatus getClusterStatus() throws IOException {
-    return jobSubmitClient.getClusterStatus();
+    return jobSubmitClient.getClusterStatus(false);
   }
     
 
@@ -1295,6 +1338,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private void displayUsage(String cmd) {
     String prefix = "Usage: JobClient ";
     String jobPriorityValues = getJobPriorityNames();
+    String taskTypes = "map, reduce, setup, cleanup";
+    String taskStates = "running, completed";
     if("-submit".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-file>]");
     } else if ("-status".equals(cmd) || "-kill".equals(cmd)) {
@@ -1313,6 +1358,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.err.println(prefix + "[" + cmd + " <job-id> <priority>]. " +
           "Valid values for priorities are: " 
           + jobPriorityValues); 
+    } else if ("-list-active-trackers".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + "]");
+    } else if ("-list-blacklisted-trackers".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + "]");
+    } else if ("-list-attempt-ids".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + 
+          " <job-id> <task-type> <task-state>]. " +
+          "Valid values for <task-type> are " + taskTypes + ". " +
+          "Valid values for <task-state> are " + taskStates);
     } else {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-submit <job-file>]\n");
@@ -1325,6 +1379,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]\n");
       System.err.printf("\t[-history <jobOutputDir>]\n");
       System.err.printf("\t[-list [all]]\n");
+      System.err.printf("\t[-list-active-trackers]\n");
+      System.err.printf("\t[-list-blacklisted-trackers]\n");
+      System.err.println("\t[-list-attempt-ids <job-id> <task-type> " +
+      		"<task-state>]\n");
       System.err.printf("\t[-kill-task <task-id>]\n");
       System.err.printf("\t[-fail-task <task-id>]\n\n");
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1346,6 +1404,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     String counterGroupName = null;
     String counterName = null;
     String newPriority = null;
+    String taskType = null;
+    String taskState = null;
     int fromEvent = 0;
     int nEvents = 0;
     boolean getStatus = false;
@@ -1356,6 +1416,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     boolean viewAllHistory = false;
     boolean listJobs = false;
     boolean listAllJobs = false;
+    boolean listActiveTrackers = false;
+    boolean listBlacklistedTrackers = false;
+    boolean displayTasks = false;
     boolean killTask = false;
     boolean failTask = false;
     boolean setJobPriority = false;
@@ -1448,6 +1511,27 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
       failTask = true;
       taskid = argv[1];
+    } else if ("-list-active-trackers".equals(cmd)) {
+      if (argv.length != 1) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      listActiveTrackers = true;
+    } else if ("-list-blacklisted-trackers".equals(cmd)) {
+      if (argv.length != 1) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      listBlacklistedTrackers = true;
+    } else if ("-list-attempt-ids".equals(cmd)) {
+      if (argv.length != 4) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      jobid = argv[1];
+      taskType = argv[2];
+      taskState = argv[3];
+      displayTasks = true;
     } else {
       displayUsage(cmd);
       return exitCode;
@@ -1517,8 +1601,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         listJobs();
         exitCode = 0;
       } else if (listAllJobs) {
-          listAllJobs();
-          exitCode = 0;
+        listAllJobs();
+        exitCode = 0;
+      } else if (listActiveTrackers) {
+        listActiveTrackers();
+        exitCode = 0;
+      } else if (listBlacklistedTrackers) {
+        listBlacklistedTrackers();
+        exitCode = 0;
+      } else if (displayTasks) {
+        displayTasks(JobID.forName(jobid), taskType, taskState);
       } else if(killTask) {
         if(jobSubmitClient.killTask(TaskAttemptID.forName(taskid), false)) {
           System.out.println("Killed task " + taskid);
@@ -1593,6 +1685,28 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("States are:\n\tRunning : 1\tSucceded : 2" +
     "\tFailed : 3\tPrep : 4\n");
     displayJobList(jobs);
+  }
+  
+  /**
+   * Display the list of active trackers
+   */
+  private void listActiveTrackers() throws IOException {
+    ClusterStatus c = jobSubmitClient.getClusterStatus(true);
+    Collection<String> trackers = c.getActiveTrackerNames();
+    for (String trackerName : trackers) {
+      System.out.println(trackerName);
+    }
+  }
+
+  /**
+   * Display the list of blacklisted trackers
+   */
+  private void listBlacklistedTrackers() throws IOException {
+    ClusterStatus c = jobSubmitClient.getClusterStatus(true);
+    Collection<String> trackers = c.getBlacklistedTrackerNames();
+    for (String trackerName : trackers) {
+      System.out.println(trackerName);
+    }
   }
 
   void displayJobList(JobStatus[] jobs) {
