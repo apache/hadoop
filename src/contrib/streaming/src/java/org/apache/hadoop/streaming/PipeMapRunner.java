@@ -16,42 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.streaming;
+
+import org.apache.hadoop.mapred.MapRunner;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.OutputCollector;
 
 import java.io.IOException;
 
 import org.apache.hadoop.util.ReflectionUtils;
 
-/** Default {@link MapRunnable} implementation.*/
-public class MapRunner<K1, V1, K2, V2>
-    implements MapRunnable<K1, V1, K2, V2> {
-  
-  private Mapper<K1, V1, K2, V2> mapper;
-
-  @SuppressWarnings("unchecked")
-  public void configure(JobConf job) {
-    this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
-                                                      job);
-  }
-
+public class PipeMapRunner<K1, V1, K2, V2> extends MapRunner<K1, V1, K2, V2> {
   public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
                   Reporter reporter)
-    throws IOException {
-    try {
-      // allocate key & value instances that are re-used for all entries
-      K1 key = input.createKey();
-      V1 value = input.createValue();
-      
-      while (input.next(key, value)) {
-        // map pair to output
-        mapper.map(key, value, output, reporter);
-      }
-    } finally {
-      mapper.close();
-    }
-  }
-
-  protected Mapper<K1, V1, K2, V2> getMapper() {
-    return mapper;
+         throws IOException {
+    PipeMapper pipeMapper = (PipeMapper)getMapper();
+    pipeMapper.startOutputThreads(output, reporter);
+    super.run(input, output, reporter);
   }
 }

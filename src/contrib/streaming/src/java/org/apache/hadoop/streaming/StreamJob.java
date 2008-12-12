@@ -751,6 +751,7 @@ public class StreamJob {
         jobConf_.setMapperClass(c);
       } else {
         jobConf_.setMapperClass(PipeMapper.class);
+        jobConf_.setMapRunnerClass(PipeMapRunner.class);
         jobConf_.set("stream.map.streamprocessor", 
                      URLEncoder.encode(mapCmd_, "UTF-8"));
       }

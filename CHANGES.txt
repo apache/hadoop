@@ -99,6 +99,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4824. Should not use File.setWritable() in 0.18. (hairong)
 
+    HADOOP-4620. Fixes Streaming to handle well the cases of map/reduce with empty
+    input/output. (Ravi Gummadi via ddas)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

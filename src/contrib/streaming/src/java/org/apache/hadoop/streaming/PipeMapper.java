@@ -63,10 +63,6 @@ public class PipeMapper extends PipeMapRed implements Mapper {
   // (MapRed creates it reflectively)
 
   public void map(Object key, Object value, OutputCollector output, Reporter reporter) throws IOException {
-    // init
-    if (outThread_ == null) {
-      startOutputThreads(output, reporter);
-    }
     if (outerrThreadsThrowable != null) {
       mapRedFinished();
       throw new IOException ("MROutput/MRErrThread failed:"
