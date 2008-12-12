@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     HADOOP-4737. Adds the KILLED notification when jobs get killed.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4728. Add a test exercising different namenode configurations.
+    (Boris Shkolnik via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

@@ -269,7 +269,7 @@ public class MiniDFSCluster {
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
                      operation == StartupOption.REGULAR) ?
-      new String[] {} : new String[] {"-"+operation.toString()};
+      new String[] {} : new String[] {operation.getName()};
     conf.setClass("topology.node.switch.mapping.impl", 
                    StaticMapping.class, DNSToSwitchMapping.class);
     nameNode = NameNode.createNameNode(args, conf);
@@ -369,11 +369,11 @@ public class MiniDFSCluster {
     conf.set("dfs.datanode.http.address", "127.0.0.1:0");
     conf.set("dfs.datanode.ipc.address", "127.0.0.1:0");
     
-    String[] args = (operation == null ||
-                     operation == StartupOption.FORMAT ||
-                     operation == StartupOption.REGULAR) ?
-                    null : new String[] {"-"+operation.toString()};
-    String [] dnArgs = (operation == StartupOption.UPGRADE) ? null : args;
+
+    String [] dnArgs = (operation == null ||
+                        operation != StartupOption.ROLLBACK) ?
+        null : new String[] {operation.getName()};
+    
     
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
