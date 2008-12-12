@@ -363,6 +363,9 @@ Trunk (unreleased changes)
     HADOOP-4706. Close the underlying output stream in
     IFileOutputStream::close. (Jothi Padmanabhan via cdouglas)
 
+    HADOOP-4855. Fixed command-specific help messages for refreshServiceAcl in
+    DFSAdmin and MRAdmin. (acmurthy)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

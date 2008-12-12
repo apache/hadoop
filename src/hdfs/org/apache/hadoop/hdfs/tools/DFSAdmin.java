@@ -462,7 +462,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
     } else if (ClearSpaceQuotaCommand.matches(cmd)) {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
-    } else if ("refresh-auth-policy".equals(cmd)) {
+    } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
     } else if ("help".equals(cmd)) {
       System.out.println(help);

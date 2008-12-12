@@ -59,7 +59,7 @@ public class MRAdmin extends Configured implements Tool {
   String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
     "\t\tis specified.\n";
 
-  if ("refresh-auth-policy".equals(cmd)) {
+  if ("refreshServiceAcl".equals(cmd)) {
     System.out.println(refreshServiceAcl);
   } else if ("help".equals(cmd)) {
     System.out.println(help);
