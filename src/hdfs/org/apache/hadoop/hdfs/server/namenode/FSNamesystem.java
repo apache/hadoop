@@ -1622,7 +1622,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
-      boolean status = deleteInternal(src, true, true);
+      boolean status = deleteInternal(src, true);
       getEditLog().logSync();
       if (status && auditLog.isInfoEnabled()) {
         logAuditEvent(UserGroupInformation.getCurrentUGI(),
@@ -1633,23 +1633,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     
   /**
-   * An internal delete function that does not enforce safe mode
-   */
-  boolean deleteInSafeMode(String src) throws IOException {
-    boolean status = deleteInternal(src, false, false);
-    getEditLog().logSync();
-    return status;
-  }
-  /**
    * Remove the indicated filename from the namespace.  This may
    * invalidate some blocks that make up the file.
    */
   synchronized boolean deleteInternal(String src, 
-      boolean enforceSafeMode, boolean enforcePermission) throws IOException {
+      boolean enforcePermission) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     }
-    if (enforceSafeMode && isInSafeMode())
+    if (isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
     if (enforcePermission && isPermissionEnabled) {
       checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);

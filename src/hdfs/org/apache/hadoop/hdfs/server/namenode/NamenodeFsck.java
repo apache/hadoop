@@ -300,7 +300,7 @@ public class NamenodeFsck {
         break;
       case FIXING_DELETE:
         if (!isOpen)
-          nn.namesystem.deleteInternal(path, true, false);
+          nn.namesystem.deleteInternal(path, false);
       }
     }
     if (showFiles) {
