@@ -106,6 +106,7 @@ Release 0.19.0 - Unreleased
    HBASE-1054  Index NPE on scanning (Clint Morgan via Andrew Purtell)
    HBASE-1052  Stopping a HRegionServer with unflushed cache causes data loss
                from org.apache.hadoop.hbase.DroppedSnapshotException
+   HBASE-1059  ConcurrentModificationException in notifyChangedReadersObservers
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

@@ -122,8 +122,10 @@ public class HStore implements HConstants {
   private final Path compactionDir;
   private final Integer compactLock = new Integer(0);
   private final int compactionThreshold;
+  
+  // All access must be synchronized.
   private final Set<ChangedReadersObserver> changedReaderObservers =
-    Collections.synchronizedSet(new HashSet<ChangedReadersObserver>());
+    new HashSet<ChangedReadersObserver>();
 
   /**
    * An HStore is a set of zero or more MapFiles, which stretch backwards over 
@@ -740,15 +742,19 @@ public class HStore implements HConstants {
    * @param o Observer who wants to know about changes in set of Readers
    */
   void addChangedReaderObserver(ChangedReadersObserver o) {
-    this.changedReaderObservers.add(o);
+    synchronized(this.changedReaderObservers) {
+      this.changedReaderObservers.add(o);
+    }
   }
   
   /*
    * @param o Observer no longer interested in changes in set of Readers.
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
-    if (!this.changedReaderObservers.remove(o)) {
-      LOG.warn("Not in set" + o);
+    synchronized (this.changedReaderObservers) {
+      if (!this.changedReaderObservers.remove(o)) {
+        LOG.warn("Not in set" + o);
+      }
     }
   }
 
