@@ -35,11 +35,17 @@ import org.apache.hadoop.io.Writable;
  * a class per type because it makes the serialization easier.
  * @see BatchUpdate 
  */
-public class BatchOperation implements Writable {
+public class BatchOperation implements Writable, HeapSize {
+  /**
+   * Estimated size of this object.
+   */
+  // JHat says this is 32 bytes.
+  public final int ESTIMATED_HEAP_TAX = 36;
+  
   private byte [] column = null;
   
   // A null value defines DELETE operations.
-  private byte[] value = null;
+  private byte [] value = null;
   
   /**
    * Default constructor
@@ -131,5 +137,10 @@ public class BatchOperation implements Writable {
       out.writeInt(value.length);
       out.write(value);
     }
+  }
+  
+  public long heapSize() {
+    return Bytes.ESTIMATED_HEAP_TAX * 2 + this.column.length +
+      this.value.length + ESTIMATED_HEAP_TAX;
   }
 }

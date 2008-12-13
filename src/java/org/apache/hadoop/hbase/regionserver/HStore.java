@@ -634,8 +634,9 @@ public class HStore implements HConstants {
     return compactionNeeded;
   }
   
-  private boolean internalFlushCache(SortedMap<HStoreKey, byte []> cache,
-      long logCacheFlushId) throws IOException {
+  private boolean internalFlushCache(final SortedMap<HStoreKey, byte []> cache,
+    final long logCacheFlushId)
+  throws IOException {
     long flushed = 0;
     // Don't flush if there are no entries.
     if (cache.size() == 0) {
@@ -674,7 +675,7 @@ public class HStore implements HConstants {
             if (!isExpired(curkey, ttl, now)) {
               entries++;
               out.append(curkey, new ImmutableBytesWritable(bytes));
-              flushed += curkey.getSize() + (bytes == null ? 0 : bytes.length);
+              flushed += this.memcache.heapSize(curkey, bytes, null);
             }
           }
         }
@@ -693,7 +694,7 @@ public class HStore implements HConstants {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Added " + FSUtils.getPath(flushedFile.getMapFilePath()) +
           " with " + entries +
-          " entries, sequence id " + logCacheFlushId + ", data size " +
+          " entries, sequence id " + logCacheFlushId + ", data size ~" +
           StringUtils.humanReadableInt(flushed) + ", file size " +
           StringUtils.humanReadableInt(newStoreSize) + " to " +
           this.info.getRegionNameAsString());

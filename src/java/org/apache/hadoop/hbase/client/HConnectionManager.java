@@ -854,9 +854,6 @@ public class HConnectionManager implements HConstants {
             throw new RetriesExhaustedException(callable.getServerName(),
                 callable.getRegionName(), callable.getRow(), tries, exceptions);
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("reloading table servers because: " + t.getMessage());
-          }
         }
         try {
           Thread.sleep(getPauseTime(tries));

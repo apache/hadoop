@@ -113,7 +113,7 @@ public class HTable {
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.writeBuffer = new ArrayList<BatchUpdate>();
     this.writeBufferSize = 
-      this.configuration.getLong("hbase.client.write.buffer", 10485760);
+      this.configuration.getLong("hbase.client.write.buffer", 2097152);
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 30);
@@ -1233,8 +1233,8 @@ public class HTable {
       batchUpdate.setRowLock(rl.getLockId());
     }
     writeBuffer.add(batchUpdate);
-    currentWriteBufferSize += batchUpdate.getSize();
-    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+    currentWriteBufferSize += batchUpdate.heapSize();
+    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
   }
@@ -1247,12 +1247,12 @@ public class HTable {
    */ 
   public synchronized void commit(final List<BatchUpdate> batchUpdates)
       throws IOException {
-    for(BatchUpdate bu : batchUpdates) {
+    for (BatchUpdate bu : batchUpdates) {
       checkRowAndColumns(bu);
       writeBuffer.add(bu);
-      currentWriteBufferSize += bu.getSize();
+      currentWriteBufferSize += bu.heapSize();
     }
-    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
+    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
   }

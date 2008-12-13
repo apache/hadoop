@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -31,7 +32,7 @@ import org.apache.hadoop.io.WritableComparator;
 /**
  * A Key for a stored row.
  */
-public class HStoreKey implements WritableComparable<HStoreKey> {
+public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   /**
    * Colon character in UTF-8
    */
@@ -46,6 +47,14 @@ public class HStoreKey implements WritableComparable<HStoreKey> {
    * It is not serialized.  See https://issues.apache.org/jira/browse/HBASE-832
    */
   private HRegionInfo regionInfo = null;
+  
+  /**
+   * Estimated size tax paid for each instance of HSK.  Estimate based on
+   * study of jhat and jprofiler numbers.
+   */
+  // In jprofiler, says shallow size is 48 bytes.  Add to it cost of two
+  // byte arrays and then something for the HRI hosting.
+  public static final int ESTIMATED_HEAP_TAX = 48;
 
   /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
@@ -200,12 +209,7 @@ public class HStoreKey implements WritableComparable<HStoreKey> {
     this.timestamp = timestamp;
     this.regionInfo = regionInfo;
   }
-  
-  /** @return Approximate size in bytes of this key. */
-  public long getSize() {
-    return getRow().length + getColumn().length + Bytes.SIZEOF_LONG;
-  }
-  
+
   /**
    * Constructs a new HStoreKey from another
    * 
@@ -586,7 +590,13 @@ public class HStoreKey implements WritableComparable<HStoreKey> {
     this.column = Bytes.readByteArray(in);
     this.timestamp = in.readLong();
   }
-  
+
+  public long heapSize() {
+    return getRow().length + Bytes.ESTIMATED_HEAP_TAX +
+      getColumn().length + Bytes.ESTIMATED_HEAP_TAX +
+      ESTIMATED_HEAP_TAX;
+  }
+
   /**
    * Passed as comparator for memcache and for store files.  See HBASE-868.
    */
@@ -649,8 +659,8 @@ public class HStoreKey implements WritableComparable<HStoreKey> {
     }
 
     @Override
-    public long getSize() {
-      return this.beforeThisKey.getSize();
+    public long heapSize() {
+      return this.beforeThisKey.heapSize();
     }
 
     @Override

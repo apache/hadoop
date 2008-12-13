@@ -102,7 +102,7 @@ Release 0.19.0 - Unreleased
    HBASE-1000  Sleeper.sleep does not go back to sleep when interrupted
                and no stop flag given.
    HBASE-900   Regionserver memory leak causing OOME during relatively
-               modest bulk importing; part 1
+               modest bulk importing; part 1 and part 2
    HBASE-1054  Index NPE on scanning (Clint Morgan via Andrew Purtell)
    HBASE-1052  Stopping a HRegionServer with unflushed cache causes data loss
                from org.apache.hadoop.hbase.DroppedSnapshotException

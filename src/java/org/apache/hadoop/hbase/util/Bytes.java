@@ -37,6 +37,13 @@ public class Bytes {
    * Size of double in bytes
    */
   public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
+  
+  /**
+   * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
+   * Estimate based on study of jhat and jprofiler numbers.
+   */
+  // JHat says BU is 56 bytes.
+  public static final int ESTIMATED_HEAP_TAX = 16;
 
   /**
    * Pass this to TreeMaps where byte [] are keys.

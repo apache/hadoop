@@ -22,12 +22,15 @@ package org.apache.hadoop.hbase.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -38,8 +41,15 @@ import org.apache.hadoop.io.WritableComparable;
  * can result in multiple BatchUpdate objects if the batch contains rows that
  * are served by multiple region servers.
  */
-public class BatchUpdate implements WritableComparable<BatchUpdate>, 
-  Iterable<BatchOperation> {
+public class BatchUpdate
+implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
+  private static final Log LOG = LogFactory.getLog(BatchUpdate.class);
+  
+  /**
+   * Estimated 'shallow size' of this object not counting payload.
+   */
+  // Shallow size is 56.  Add 32 for the arraylist below.
+  public static final int ESTIMATED_HEAP_TAX = 56 + 32;
   
   // the row being updated
   private byte [] row = null;
@@ -142,13 +152,6 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
   }
 
   /**
-   * @return BatchUpdate size in bytes.
-   */
-  public long getSize() {
-    return size;
-  }
-
-  /**
    * @return the timestamp this BatchUpdate will be committed with.
    */
   public long getTimestamp() {
@@ -247,8 +250,9 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
       // If null, the PUT becomes a DELETE operation.
       throw new IllegalArgumentException("Passed value cannot be null");
     }
-    size += val.length + column.length;
-    operations.add(new BatchOperation(column, val));
+    BatchOperation bo = new BatchOperation(column, val);
+    this.size += bo.heapSize();
+    operations.add(bo);
   }
 
   /** 
@@ -335,5 +339,49 @@ public class BatchUpdate implements WritableComparable<BatchUpdate>,
 
   public int compareTo(BatchUpdate o) {
     return Bytes.compareTo(this.row, o.getRow());
+  }
+
+  public long heapSize() {
+    return this.row.length + Bytes.ESTIMATED_HEAP_TAX + this.size +
+      ESTIMATED_HEAP_TAX;
+  }
+  
+  /**
+   * Code to test sizes of BatchUpdate arrays.
+   * @param args
+   * @throws InterruptedException
+   */
+  public static void main(String[] args) throws InterruptedException {
+    RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+    LOG.info("vmName=" + runtime.getVmName() + ", vmVendor="
+        + runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
+    LOG.info("vmInputArguments=" + runtime.getInputArguments());
+    final int count = 10000;
+    BatchUpdate[] batch1 = new BatchUpdate[count];
+    // TODO: x32 vs x64
+    long size = 0;
+    for (int i = 0; i < count; i++) {
+      BatchUpdate bu = new BatchUpdate(HConstants.EMPTY_BYTE_ARRAY);
+      bu.put(HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+      batch1[i] = bu;
+      size += bu.heapSize();
+    }
+    LOG.info("batch1 estimated size=" + size);
+    // Make a variably sized memcache.
+    size = 0;
+    BatchUpdate[] batch2 = new BatchUpdate[count];
+    for (int i = 0; i < count; i++) {
+      BatchUpdate bu = new BatchUpdate(Bytes.toBytes(i));
+      bu.put(Bytes.toBytes(i), new byte[i]);
+      batch2[i] = bu;
+      size += bu.heapSize();
+    }
+    LOG.info("batch2 estimated size=" + size);
+    final int seconds = 30;
+    LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
+    for (int i = 0; i < seconds; i++) {
+      Thread.sleep(1000);
+    }
+    LOG.info("Exiting.");
   }
 }

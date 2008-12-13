@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,7 +54,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * this point we let the snapshot go.
  */
 class Memcache {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(Memcache.class);
   
   private final long ttl;
   
@@ -170,18 +172,48 @@ class Memcache {
    * Write an update
    * @param key
    * @param value
-   * @return memcache size delta
+   * @return memcache Approximate size of the passed key and value.  Includes
+   * cost of hosting HSK and byte arrays as well as the Map.Entry this addition
+   * costs when we insert into the backing TreeMap.
    */
   long add(final HStoreKey key, final byte[] value) {
+    long size = -1;
     this.lock.readLock().lock();
     try {
-      byte[] oldValue = this.memcache.remove(key);
+      byte [] oldValue = this.memcache.remove(key);
       this.memcache.put(key, value);
-      return key.getSize() + (value == null ? 0 : value.length) -
-          (oldValue == null ? 0 : oldValue.length);
+      size = heapSize(key, value, oldValue);
     } finally {
       this.lock.readLock().unlock();
     }
+    return size;
+  }
+  
+  /*
+   * Calcuate how the memcache size has changed, approximately.
+   * Add in tax of TreeMap.Entry.
+   * @param key
+   * @param value
+   * @param oldValue
+   * @return
+   */
+  long heapSize(final HStoreKey key, final byte [] value,
+      final byte [] oldValue) {
+    // First add value length.
+    long keySize = key.heapSize();
+    // Add value.
+    long size = value == null? 0: value.length;
+    if (oldValue == null) {
+      size += keySize;
+      // Add overhead for value byte array and for Map.Entry -- 57 bytes
+      // on x64 according to jprofiler.
+      size += Bytes.ESTIMATED_HEAP_TAX + 57;
+    } else {
+      // If old value, don't add overhead again nor key size. Just add
+      // difference in  value sizes.
+      size -= oldValue.length;
+    }
+    return size;
   }
 
   /**
@@ -834,5 +866,48 @@ class Memcache {
         scannerClosed = true;
       }
     }
+  }
+
+  /**
+   * Code to help figure if our approximation of object heap sizes is close
+   * enough.  See hbase-900.  Fills memcaches then waits so user can heap
+   * dump and bring up resultant hprof in something like jprofiler which
+   * allows you get 'deep size' on objects.
+   * @param args
+   * @throws InterruptedException
+   */
+  public static void main(String [] args) throws InterruptedException {
+    RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+    LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
+      runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
+    LOG.info("vmInputArguments=" + runtime.getInputArguments());
+    Memcache memcache1 = new Memcache();
+    // TODO: x32 vs x64
+    long size = 0;
+    final int count = 10000;
+    for (int i = 0; i < count; i++) {
+      size += memcache1.add(new HStoreKey(Bytes.toBytes(i)),
+        HConstants.EMPTY_BYTE_ARRAY);
+    }
+    LOG.info("memcache1 estimated size=" + size);
+    for (int i = 0; i < count; i++) {
+      size += memcache1.add(new HStoreKey(Bytes.toBytes(i)),
+        HConstants.EMPTY_BYTE_ARRAY);
+    }
+    LOG.info("memcache1 estimated size (2nd loading of same data)=" + size);
+    // Make a variably sized memcache.
+    Memcache memcache2 = new Memcache();
+    for (int i = 0; i < count; i++) {
+      byte [] b = Bytes.toBytes(i);
+      size += memcache2.add(new HStoreKey(b, b),
+        new byte [i]);
+    }
+    LOG.info("memcache2 estimated size=" + size);
+    final int seconds = 30;
+    LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
+    for (int i = 0; i < seconds; i++) {
+      Thread.sleep(1000);
+    }
+    LOG.info("Exiting.");
   }
 }
