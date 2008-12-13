@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -2094,6 +2095,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             LOG.warn("Not starting a distinct region server because " +
               "hbase.master is set to 'local' mode");
           } else {
+            RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+            if (runtime != null) {
+              LOG.info("vmInputArguments=" + runtime.getInputArguments());
+            }
             Constructor<? extends HRegionServer> c =
               regionServerClass.getConstructor(HBaseConfiguration.class);
             HRegionServer hrs = c.newInstance(conf);

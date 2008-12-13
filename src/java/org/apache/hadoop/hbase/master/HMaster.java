@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
@@ -898,6 +900,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       if (cmd.equals("start")) {
         try {
+          RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+          if (runtime != null) {
+            LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
+              runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
+            LOG.info("vmInputArguments=" + runtime.getInputArguments());
+          }
           // If 'local', defer to LocalHBaseCluster instance.
           if (LocalHBaseCluster.isLocal(conf)) {
             (new LocalHBaseCluster(conf)).startup();
