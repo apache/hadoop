@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 
@@ -101,12 +99,7 @@ public class InfoServer extends HttpServer {
   public static String getWebAppDir(final String webappName)
   throws IOException {
     String webappDir = null;
-    try {
-      webappDir = getWebAppsPath("webapps" + File.separator + webappName);
-    } catch (FileNotFoundException e) {
-      // Retry.  Resource may be inside jar on a windows machine.
-      webappDir = getWebAppsPath("webapps/" + webappName);
-    }
+    webappDir = getWebAppsPath("webapps/" + webappName);
     return webappDir;
   }
 }
