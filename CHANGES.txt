@@ -107,6 +107,9 @@ Trunk (unreleased changes)
          split size rather than min size and the desired number of maps.
       (omalley)
     
+    HADOOP-3305.  Use Ivy to manage dependencies.  (Giridharan Kesavan
+    and Steve Loughran via cutting)
+
   IMPROVEMENTS
 
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 

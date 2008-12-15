@@ -63,6 +63,12 @@ for f in $HADOOP_HOME/lib/jsp-2.0/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+if [ -d "$HADOOP_HOME/build/ivy/lib/Hadoop/common" ]; then
+for f in $HADOOP_HOME/build/ivy/lib/Hadoop/common/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+fi
+
 # restore ordinary behaviour
 unset IFS
 

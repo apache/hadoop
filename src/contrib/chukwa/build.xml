@@ -17,7 +17,8 @@
    limitations under the License.
 -->
 
-<project name="chukwa" default="main">
+<project name="chukwa" default="main" 
+	xmlns:ivy="antlib:org.apache.ivy.ant">
 
 	<property name="name" value="chukwa"/>
         <property name="chukwaVersion" value="0.1.1"/>
@@ -36,7 +37,7 @@
                 <and><available file="../build-contrib.xml" property="present"/></and>
         </condition>
 
-        <target name="init-standalone" if="standaloneMode">
+        <target name="init-standalone" depends="ivy-retrieve" if="standaloneMode">
           <echo>Standalone Mode</echo>
           <property environment="env"/>
 	  <property name="basedir" value="."/>
@@ -67,6 +68,7 @@
                   <fileset dir="${hadoop.home.jars.dir}">   <!-- ASR -->
                           <include name="**/*core*.jar" />
                   </fileset>
+                  <path refid="contrib-classpath"/>
           </path>
           <path id="testClasspath">
                   <pathelement location="${build.classes}"/>
@@ -82,6 +84,7 @@
                   <fileset dir="${hadoop.home.jars.dir}">   <!-- ASR -->
                           <include name="**/*core*.jar" />
                   </fileset>
+                  <path refid="contrib-classpath"/>
           </path>
           <path id="testDemuxClasspath">
                   <pathelement location="${build.classes}"/>
@@ -94,11 +97,80 @@
                           <include name="**/*.jar" />
                           <exclude name="**/excluded/" />
                   </fileset>
-
+                  <path refid="contrib-classpath"/>
           </path>
         </target>
+
+	<target name="ivy-init-properties-local" description="to initiate ivy properties">
+		<property name="ivy.dir" location="ivy" />
+	  	<property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml"/>
+	  	<loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+	  	<loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+	  	<property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
+                <property name="ivy_repo_url" 
+			  value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" />
+	  	<property name="build.dir" location="build" />
+	  	<property name="build.ivy.dir" location="${build.dir}/ivy" />
+	  	<property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
+		<property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
+	  	<property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/> 
+
+	  	<!--this is the naming policy for artifacts we want pulled down-->
+	  	<property name="ivy.artifact.retrieve.pattern"
+    			value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+	</target>  
+
+        <target name="ivy-download-local" description="To download ivy"
+		unless="offline">
+    		<get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
+	</target>
+
+	<target name="ivy-init-dirs-local" depends="ivy-init-properties-local">
+    		<mkdir dir="${build.ivy.dir}" />
+    		<mkdir dir="${build.ivy.lib.dir}" />
+    		<mkdir dir="${build.ivy.report.dir}" />
+	</target>
+
+  	<target name="ivy-probe-antlib-local" >
+    		<condition property="ivy.found.local">
+      			<typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+    		</condition>
+	</target>
+
+	<target name="ivy-init-antlib-local" depends="ivy-init-dirs-local,ivy-download-local,ivy-probe-antlib-local" unless="ivy.found.local">
+    		<typedef uri="antlib:org.apache.ivy.ant" onerror="fail" loaderRef="ivyLoader">
+			<classpath>
+        			<pathelement location="${ivy.jar}"/>
+		      	</classpath>
+    		</typedef>
+    		<fail>
+      		<condition>
+		        <not>
+          			<typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+		        </not>
+		</condition>
+			      You need Apache Ivy 2.0 or later from http://ant.apache.org/
+			      It could not be loaded from ${ivy_repo_url}
+		 </fail>
+	</target>
+
+  	<target name="ivy-init-local" depends="ivy-init-antlib-local">
+    		<ivy:configure settingsid="${ant.project.name}.ivy.settings" file="${ivysettings.xml}" override="true"/>
+	</target>
+
+	<target name="ivy-resolve" depends="ivy-init-local">
+    		<ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common"/>
+  	</target>
+
+	<target name="ivy-retrieve" depends="ivy-resolve"
+		    description="Retrieve Ivy-managed artifacts for the compile/test configurations">
+		<ivy:retrieve settingsRef="${ant.project.name}.ivy.settings" 
+		 pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+		<ivy:cachepath pathid="contrib-classpath" conf="common" />
+	</target>
         
         <target name="init-hadoop" if="hadoopMode">
+		<antcall target="ivy-retrieve-common"/>
                 <echo>Hadoop Mode</echo>
 	        <property name="build.dir" value="${basedir}/build"/>
 	        <property name="build.classes" value="${basedir}/build/classes"/>
@@ -116,10 +188,12 @@
 			        <exclude name="**/excluded/" />
 		        </fileset>
                         <pathelement location="${hadoop.root}/build/classes"/>
+ 			<path refid="contrib-classpath"/>
 	        </path>
                 <path id="testClasspath">
                         <pathelement location="${build.classes}"/>
                         <pathelement location="${test.build.classes}"/>
+ 			<path refid="contrib-classpath"/>
                         <fileset dir="${lib.dir}">
                                 <include name="**/*.jar" />
                                 <exclude name="**/excluded/" />
@@ -135,6 +209,7 @@
                 <path id="testDemuxClasspath">
                         <pathelement location="${build.classes}"/>
                         <pathelement location="${test.build.classes}"/>
+ 			<path refid="contrib-classpath"/>
                         <fileset dir="${hadoop.root}/lib">
                                 <include name="**/*.jar" />
                                 <exclude name="**/excluded/" />
@@ -146,7 +221,6 @@
                         <pathelement location="${hadoop.root}/build/classes"/>
                         <pathelement location="${hadoop.root}/build/test/classes"/>
                 </path>
-       
 
         </target>
 
@@ -173,7 +247,8 @@
                 <property name="test.include" value="Test*"/>
                 <property name="test.classpath.id" value="test.classpath"/>
                 <property name="test.output" value="yes"/>
-                <property name="test.timeout" value="900000"/>
+                <!--<property name="test.timeout" value="900000"/> -->
+                <property name="test.timeout" value="5000"/>
                 <property name="test.junit.output.format" value="plain"/>
                 <property name="test.junit.fork.mode" value="perTest" />
                 <property name="test.junit.printsummary" value="yes" />
@@ -220,13 +295,13 @@
             </javac>
         </target>
 
-
+            <!--printsummary="${test.junit.printsummary}" -->
 
 	<target name="test-chukwa" depends="compile,compile-test" description="Run Chukwa unit tests">
           <mkdir dir="${basedir}/var"/>
           <junit showoutput="yes"
             fork="yes"
-            printsummary="${test.junit.printsummary}"
+            printsummary="withOutAndErr"
             forkmode="${test.junit.fork.mode}"
             maxmemory="${test.junit.maxmemory}"
             dir="${test.build.dir}/classes/" timeout="${test.timeout}"
@@ -291,7 +366,7 @@
 
 		<copy todir="${build.dir}/collector/WEB-INF/lib">
 			<fileset dir="${basedir}/lib">
-				<include name="log4j-1.2.13.jar" />
+				<include name="log4j-${log4j.version}.jar" />
 				<include name="${build.dir}/${final.name}-core.jar" />
 			</fileset>
 		</copy>
@@ -485,6 +560,8 @@
         <!-- ================================================================== -->
         <target name="clean" depends="init" description="Clean.  Delete the build files, and their directories">
             <delete dir="${build.dir}"/>
+            <delete dir="${build.ivy.lib.dir}/${ant.project.home}"/>
+            <delete dir="build"/>
             <delete dir="${docs.src}/build"/>
         </target>
 	<!-- ====================================================== -->
@@ -513,16 +590,21 @@
                         <fileset dir="${hadoop.root}/build">
                                 <include name="hadoop-*-core.jar" />
                         </fileset>
-                        <fileset dir="${hadoop.root}/lib">
-                                <include name="commons-cli-*.jar" />
-                                <include name="commons-codec-*.jar" />
-                                <include name="commons-el.jar" />
+			<fileset dir="${build.ivy.lib.dir}\Hadoop\common">
+				
+                                <include name="jetty-*.jar" />
                                 <include name="commons-httpclient-*.jar" />
                                 <include name="commons-logging-*.jar" />
                                 <include name="commons-net-*.jar" />
                                 <include name="jasper-*.jar" />
-                                <include name="jetty-*.jar" />
-                                <include name="jsp-api.jar" />
+                                <include name="commons-el.jar" />
+                                <include name="commons-codec-*.jar" />
+			</fileset>
+			<fileset dir="lib">
+                                <include name="jsp-api.jar"/>
+			</fileset>
+                        <fileset dir="${hadoop.root}/lib">
+                                <include name="commons-cli-*.jar"/>
                         </fileset>
                 </copy>
         </target>
@@ -555,6 +637,9 @@
 		<copy todir="${build.dir}/${final.name}/lib" includeEmptyDirs="false">
 			<fileset dir="lib">
 				<exclude name="**/native/**"/>
+			</fileset>
+			<fileset dir="${common.ivy.lib.dir}">
+				<include name="*.jar"/>
 			</fileset>
 		</copy>
 

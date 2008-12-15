@@ -67,7 +67,6 @@
 	<target name="local-package" depends="jar" description="Package in local build directory">
 		<mkdir dir="${build.dir}/${final.name}"/>
 		<mkdir dir="${build.dir}/${final.name}/logs"/>
-
 		<copy todir="${build.dir}/${final.name}" includeEmptyDirs="false">
 			<fileset dir="${build.dir}">
 				<include name="*.jar" />
@@ -75,21 +74,21 @@
 			</fileset>
 		</copy>
 		<copy todir="${build.dir}/${final.name}/lib" includeEmptyDirs="false">
-			<fileset dir="${hadoop.root}/lib">
-        <include name="commons-logging-1.0.4.jar"/>
-        <include name="commons-logging-api-1.0.4.jar"/>
-        <include name="junit-3.8.1.jar"/>
-        <include name="log4j-1.2.15.jar"/>
-        <include name="slf4j-api-1.4.3.jar"/>
-        <include name="slf4j-log4j12-1.4.3.jar"/>
-        <include name="xmlenc-0.52.jar"/>
-        <include name="jetty-6.1.14.jar"/>
-        <include name="servlet-api-2.5-6.1.14.jar"/>
-			</fileset>
-			<fileset dir="${hadoop.root}/lib/jsp-2.1">
-        <include name="core-3.1.1.jar"/>
-        <include name="jsp-2.1.jar"/>
-        <include name="jsp-api-2.1.jar"/>
+			<fileset dir="${common.ivy.lib.dir}">
+        <include name="commons-logging-${commons-logging.version}"/>
+        <include name="commons-logging-api-${commons-logging-api.version}.jar"/>
+        <include name="junit-${junit.version}.jar"/>
+        <include name="log4j-${log4j.version}.jar"/>
+        <include name="slf4j-api-${slf4j-api.version}.jar"/>
+        <include name="slf4j-log4j${slf4j-log4j.version}.jar"/>
+        <include name="xmlenc-${xmlenc.version}.jar"/>
+        <include name="jetty-${jetty.version}.jar"/>
+        <include name="servlet-api-${servlet-api-2.5.version}.jar"/>
+        <include name="core-${core.vesion}"/> 
+                       </fileset>
+		       <fileset dir="${hadoop.root}/lib/jsp-${jsp.version}">
+        <include name="jsp-${jsp.version}"/> 
+        <include name="jsp-api-${jsp-api.vesion}"/> 
 			</fileset>
 		</copy>
 
@@ -176,7 +175,7 @@
     <pathelement location="${hadoop.root}/build/classes"/>
     <pathelement location="${hadoop.root}/build/tools"/>
     <pathelement location="${build.examples}"/>
-    <path refid="classpath"/>
+    <path refid="contrib-classpath"/>
   </path>
 
 

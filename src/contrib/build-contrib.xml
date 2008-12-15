@@ -19,7 +19,7 @@
 
 <!-- Imported by contrib/*/build.xml files to share generic targets. -->
 
-<project name="hadoopbuildcontrib">
+<project name="hadoopbuildcontrib" xmlns:ivy="antlib:org.apache.ivy.ant">
 
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
@@ -30,7 +30,6 @@
   <property file="${root}/build.properties" />
 
   <property name="hadoop.root" location="${root}/../../../"/>
-
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
   <property name="src.examples" location="${root}/src/examples"/>
@@ -50,6 +49,7 @@
   <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
+  <property name="build.ivy.lib.dir" value="${hadoop.root}/build/ivy/lib"/> 
 
   <property name="javadoc.link"
             value="http://java.sun.com/j2se/1.4/docs/api/"/>
@@ -58,14 +58,34 @@
 
   <fileset id="lib.jars" dir="${root}" includes="lib/*.jar"/>
 
+
+   <!-- IVY properties set here -->
+  <property name="ivy.dir" location="ivy" />
+  <property name="ivysettings.xml" location="${hadoop.root}/ivy/ivysettings.xml"/>
+  <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <loadproperties srcfile="${hadoop.root}/ivy/libraries.properties"/>
+  <property name="ivy.jar" location="${hadoop.root}/ivy/ivy-${ivy.version}.jar"/>
+  <property name="ivy_repo_url" 
+	value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" />
+  <property name="build.dir" location="build" />
+  <property name="build.ivy.dir" location="${build.dir}/ivy" />
+  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
+  <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/> 
+
+  <!--this is the naming policy for artifacts we want pulled down-->
+  <property name="ivy.artifact.retrieve.pattern"
+    			value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+
   <!-- the normal classpath -->
-  <path id="classpath">
+  <path id="contrib-classpath">
     <pathelement location="${build.classes}"/>
     <fileset refid="lib.jars"/>
     <pathelement location="${hadoop.root}/build/classes"/>
     <fileset dir="${hadoop.root}/lib">
       <include name="**/*.jar" />
     </fileset>
+    <path refid="${ant.project.name}.common-classpath"/>
   </path>
 
   <!-- the unit test classpath -->
@@ -76,7 +96,7 @@
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
     <pathelement location="${build.examples}"/>
-    <path refid="classpath"/>
+    <path refid="contrib-classpath"/>
   </path>
 
 
@@ -101,7 +121,7 @@
   <!-- ====================================================== -->
   <!-- Compile a Hadoop contrib's files                       -->
   <!-- ====================================================== -->
-  <target name="compile" depends="init" unless="skip.contrib">
+  <target name="compile" depends="init, ivy-retrieve-common" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -110,7 +130,7 @@
      destdir="${build.classes}"
      debug="${javac.debug}"
      deprecation="${javac.deprecation}">
-      <classpath refid="classpath"/>
+     <classpath refid="contrib-classpath"/>
     </javac>
   </target>
 
@@ -126,7 +146,7 @@
      includes="**/*.java"
      destdir="${build.examples}"
      debug="${javac.debug}">
-      <classpath refid="classpath"/>
+     <classpath refid="contrib-classpath"/>
     </javac>
   </target>
 
@@ -142,7 +162,7 @@
      includes="**/*.java"
      destdir="${build.test}"
      debug="${javac.debug}">
-      <classpath refid="test.classpath"/>
+    <classpath refid="test.classpath"/>
     </javac>
   </target>
   
@@ -222,9 +242,7 @@
       </batchtest>
     </junit>
     <fail if="tests.failed">Tests failed!</fail>
-
   </target>
-
 
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
@@ -234,4 +252,47 @@
     <delete dir="${build.dir}"/>
   </target>
 
+  <target name="ivy-probe-antlib" >
+    <condition property="ivy.found">
+      <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+    </condition>
+  </target>
+
+
+  <target name="ivy-download" description="To download ivy " unless="offline">
+    <get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="ivy-init-antlib" depends="ivy-download,ivy-probe-antlib" unless="ivy.found">
+    <typedef uri="antlib:org.apache.ivy.ant" onerror="fail"
+      loaderRef="ivyLoader">
+      <classpath>
+        <pathelement location="${ivy.jar}"/>
+      </classpath>
+    </typedef>
+    <fail >
+      <condition >
+        <not>
+          <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+        </not>
+      </condition>
+      You need Apache Ivy 2.0 or later from http://ant.apache.org/
+      It could not be loaded from ${ivy_repo_url}
+    </fail>
+  </target>
+
+  <target name="ivy-init" depends="ivy-init-antlib">
+    <ivy:configure settingsid="${ant.project.name}.ivy.settings" file="${ivysettings.xml}"/>
+  </target>
+
+  <target name="ivy-resolve-common" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common" />
+  </target>
+
+  <target name="ivy-retrieve-common" depends="ivy-resolve-common"
+    description="Retrieve Ivy-managed artifacts for the compile/test configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings" 
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${ant.project.name}.common-classpath" conf="common" />
+  </target>
 </project>
