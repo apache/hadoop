@@ -1264,6 +1264,34 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>io.mapfile.bloom.size</name>
+  <value>1048576</value>
+  <description>The size of BloomFilter-s used in BloomMapFile. Each time this many
+  keys is appended the next BloomFilter will be created (inside a DynamicBloomFilter).
+  Larger values minimize the number of filters, which slightly increases the performance,
+  but may waste too much space if the total number of keys is usually much smaller
+  than this number.
+  </description>
+</property>
+
+<property>
+  <name>io.mapfile.bloom.error.rate</name>
+  <value>0.005</value>
+  <description>The rate of false positives in BloomFilter-s used in BloomMapFile.
+  As this value decreases, the size of BloomFilter-s increases exponentially. This
+  value is the probability of encountering false positives (default is 0.5%).
+  </description>
+</property>
+
+<property>
+  <name>hadoop.util.hash.type</name>
+  <value>murmur</value>
+  <description>The default implementation of Hash. Currently this can take one of the
+  two values: 'murmur' to select MurmurHash and 'jenkins' to select JenkinsHash.
+  </description>
+</property>
+
+<property>
   <name>map.sort.class</name>
   <value>org.apache.hadoop.util.QuickSort</value>
   <description>The default sort class for sorting keys.

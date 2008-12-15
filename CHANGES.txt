@@ -86,6 +86,9 @@ Trunk (unreleased changes)
 
     HADOOP-4826. Introduce admin command saveNamespace. (shv)
 
+    HADOOP-3063  BloomMapFile - fail-fast version of MapFile for sparsely
+                 populated key space (Andrzej Bialecki via stack)
+
   IMPROVEMENTS
 
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 
