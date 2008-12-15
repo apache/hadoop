@@ -108,7 +108,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     for (TaskCompletionEvent tce : taskComplEvents) {
       String[] diagnostics =
-          jClient.jobSubmitClient.getTaskDiagnostics(tce.getTaskAttemptId());
+          rj.getTaskDiagnostics(tce.getTaskAttemptId());
 
       if (diagnostics != null) {
         for (String str : diagnostics) {
@@ -304,7 +304,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
           .getTaskStatus() == TaskCompletionEvent.Status.FAILED);
 
       String[] diagnostics =
-          jClient.jobSubmitClient.getTaskDiagnostics(tce.getTaskAttemptId());
+          rj.getTaskDiagnostics(tce.getTaskAttemptId());
 
       // Every task HAS to spit out the out-of-memory errors
       assert (diagnostics != null);

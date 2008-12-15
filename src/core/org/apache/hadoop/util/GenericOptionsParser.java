@@ -104,9 +104,26 @@ import org.apache.hadoop.fs.Path;
 public class GenericOptionsParser {
 
   private static final Log LOG = LogFactory.getLog(GenericOptionsParser.class);
-
+  private Configuration conf;
   private CommandLine commandLine;
 
+  /**
+   * Create an options parser with the given options to parse the args.
+   * @param opts the options
+   * @param args the command line arguments
+   */
+  public GenericOptionsParser(Options opts, String[] args) {
+    this(new Configuration(), new Options(), args);
+  }
+
+  /**
+   * Create an options parser to parse the args.
+   * @param args the command line arguments
+   */
+  public GenericOptionsParser(String[] args) {
+    this(new Configuration(), new Options(), args);
+  }
+  
   /** 
    * Create a <code>GenericOptionsParser<code> to parse only the generic Hadoop  
    * arguments. 
@@ -134,6 +151,7 @@ public class GenericOptionsParser {
    */
   public GenericOptionsParser(Configuration conf, Options options, String[] args) {
     parseGeneralOptions(options, conf, args);
+    this.conf = conf;
   }
 
   /**
@@ -144,6 +162,14 @@ public class GenericOptionsParser {
    */
   public String[] getRemainingArgs() {
     return (commandLine == null) ? new String[]{} : commandLine.getArgs();
+  }
+
+  /**
+   * Get the modified configuration
+   * @return the configuration that has the modified parameters.
+   */
+  public Configuration getConfiguration() {
+    return conf;
   }
 
   /**

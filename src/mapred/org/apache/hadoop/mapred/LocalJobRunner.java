@@ -101,13 +101,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
     
     @Override
     public void run() {
-      JobContext jContext = new JobContext(conf);
+      JobID jobId = profile.getJobID();
+      JobContext jContext = new JobContext(conf, jobId);
       OutputCommitter outputCommitter = job.getOutputCommitter();
       try {
         // split input into minimum number of splits
         InputSplit[] splits;
         splits = job.getInputFormat().getSplits(job, 1);
-        JobID jobId = profile.getJobID();
         
         int numReduceTasks = job.getNumReduceTasks();
         if (numReduceTasks > 1 || numReduceTasks < 0) {

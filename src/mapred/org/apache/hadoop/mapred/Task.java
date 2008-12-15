@@ -22,10 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,12 +107,11 @@ abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
-  private final TaskAttemptID taskId;             // unique, includes job id
+  private TaskAttemptID taskId;                   // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
   protected boolean cleanupJob = false;
   protected boolean setupJob = false;
-  private Thread pingProgressThread;
   
   //skip ranges based on failed ranges from previous attempts
   private SortedRanges skipRanges = new SortedRanges();
@@ -132,6 +129,8 @@ abstract class Task implements Writable, Configurable {
   private final static int MAX_RETRIES = 10;
   protected JobContext jobContext;
   protected TaskAttemptContext taskContext;
+  protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
+  protected org.apache.hadoop.mapreduce.OutputCommitter committer;
   private volatile boolean commitPending = false;
   protected final Counters.Counter spilledRecordsCounter;
 
@@ -168,7 +167,7 @@ abstract class Task implements Writable, Configurable {
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
   public TaskAttemptID getTaskID() { return taskId; }
-  public Counters getCounters() { return counters; }
+  Counters getCounters() { return counters; }
   
   /**
    * Get the job name for this task.
@@ -271,7 +270,7 @@ abstract class Task implements Writable, Configurable {
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
-    taskId.readFields(in);
+    taskId = TaskAttemptID.read(in);
     partition = in.readInt();
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 
@@ -315,7 +314,7 @@ abstract class Task implements Writable, Configurable {
    * @param umbilical for progress reports
    */
   public abstract void run(JobConf job, TaskUmbilicalProtocol umbilical)
-    throws IOException;
+    throws IOException, ClassNotFoundException, InterruptedException;
 
 
   /** Return an approprate thread runner for this task. 
@@ -330,160 +329,194 @@ abstract class Task implements Writable, Configurable {
 
   // Current counters
   private transient Counters counters = new Counters();
-  
-  /**
-   * flag that indicates whether progress update needs to be sent to parent.
-   * If true, it has been set. If false, it has been reset. 
-   * Using AtomicBoolean since we need an atomic read & reset method. 
-   */  
-  private AtomicBoolean progressFlag = new AtomicBoolean(false);
+
   /* flag to track whether task is done */
   private AtomicBoolean taskDone = new AtomicBoolean(false);
-  // getters and setters for flag
-  private void setProgressFlag() {
-    progressFlag.set(true);
-  }
-  private boolean resetProgressFlag() {
-    return progressFlag.getAndSet(false);
-  }
   
   public abstract boolean isMapTask();
 
   public Progress getProgress() { return taskProgress; }
 
-  InputSplit getInputSplit() throws UnsupportedOperationException {
-    throw new UnsupportedOperationException("Input only available on map");
-  }
-
-  /** 
-   * The communication thread handles communication with the parent (Task Tracker). 
-   * It sends progress updates if progress has been made or if the task needs to 
-   * let the parent know that it's alive. It also pings the parent to see if it's alive. 
-   */
-  protected void startCommunicationThread(final TaskUmbilicalProtocol umbilical) {
-    pingProgressThread = new Thread(new Runnable() {
-        public void run() {
-          final int MAX_RETRIES = 3;
-          int remainingRetries = MAX_RETRIES;
-          // get current flag value and reset it as well
-          boolean sendProgress = resetProgressFlag();
-          while (!taskDone.get()) {
-            try {
-              boolean taskFound = true; // whether TT knows about this task
-              // sleep for a bit
-              try {
-                Thread.sleep(PROGRESS_INTERVAL);
-              } 
-              catch (InterruptedException e) {
-                LOG.debug(getTaskID() + " Progress/ping thread exiting " +
-                                        "since it got interrupted");
-                break;
-              }
-              
-              if (sendProgress) {
-                // we need to send progress update
-                updateCounters();
-                if (commitPending) {
-                  taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
-                                          taskProgress.get(),
-                                          taskProgress.toString(), 
-                                          counters);
-                } else {
-                  taskStatus.statusUpdate(TaskStatus.State.RUNNING,
-                                          taskProgress.get(),
-                                          taskProgress.toString(), 
-                                          counters);
-                }
-                taskFound = umbilical.statusUpdate(taskId, taskStatus);
-                taskStatus.clearStatus();
-              }
-              else {
-                // send ping 
-                taskFound = umbilical.ping(taskId);
-              }
-              
-              // if Task Tracker is not aware of our task ID (probably because it died and 
-              // came back up), kill ourselves
-              if (!taskFound) {
-                LOG.warn("Parent died.  Exiting "+taskId);
-                System.exit(66);
-              }
-              
-              sendProgress = resetProgressFlag(); 
-              remainingRetries = MAX_RETRIES;
-            } 
-            catch (Throwable t) {
-              LOG.info("Communication exception: " + StringUtils.stringifyException(t));
-              remainingRetries -=1;
-              if (remainingRetries == 0) {
-                ReflectionUtils.logThreadInfo(LOG, "Communication exception", 0);
-                LOG.warn("Last retry, killing "+taskId);
-                System.exit(65);
-              }
-            }
-          }
-        }
-      }, "Comm thread for "+taskId);
-    pingProgressThread.setDaemon(true);
-    pingProgressThread.start();
-    LOG.debug(getTaskID() + " Progress/ping thread started");
-  }
-
-  public void initialize(JobConf job, Reporter reporter) 
-  throws IOException {
-    jobContext = new JobContext(job, reporter);
+  public void initialize(JobConf job, JobID id, 
+                         Reporter reporter,
+                         boolean useNewApi) throws IOException, 
+                                                   ClassNotFoundException,
+                                                   InterruptedException {
+    jobContext = new JobContext(job, id, reporter);
     taskContext = new TaskAttemptContext(job, taskId, reporter);
-    OutputCommitter committer = conf.getOutputCommitter();
+    if (useNewApi) {
+      LOG.debug("using new api for output committer");
+      outputFormat =
+        ReflectionUtils.newInstance(taskContext.getOutputFormatClass(), job);
+      committer = outputFormat.getOutputCommitter(taskContext);
+    } else {
+      committer = conf.getOutputCommitter();
+    }
     committer.setupTask(taskContext);
   }
   
-  protected Reporter getReporter(final TaskUmbilicalProtocol umbilical) 
-    throws IOException 
-  {
-    return new Reporter() {
-        public void setStatus(String status) {
-          taskProgress.setStatus(status);
-          // indicate that progress update needs to be sent
-          setProgressFlag();
+  protected class TaskReporter 
+      extends org.apache.hadoop.mapreduce.StatusReporter
+      implements Runnable, Reporter {
+    private TaskUmbilicalProtocol umbilical;
+    private InputSplit split = null;
+    private Progress taskProgress;
+    private Thread pingThread = null;
+    /**
+     * flag that indicates whether progress update needs to be sent to parent.
+     * If true, it has been set. If false, it has been reset. 
+     * Using AtomicBoolean since we need an atomic read & reset method. 
+     */  
+    private AtomicBoolean progressFlag = new AtomicBoolean(false);
+    
+    TaskReporter(Progress taskProgress,
+                 TaskUmbilicalProtocol umbilical) {
+      this.umbilical = umbilical;
+      this.taskProgress = taskProgress;
+    }
+    // getters and setters for flag
+    void setProgressFlag() {
+      progressFlag.set(true);
+    }
+    boolean resetProgressFlag() {
+      return progressFlag.getAndSet(false);
+    }
+    public void setStatus(String status) {
+      taskProgress.setStatus(status);
+      // indicate that progress update needs to be sent
+      setProgressFlag();
+    }
+    public void setProgress(float progress) {
+      taskProgress.set(progress);
+      // indicate that progress update needs to be sent
+      setProgressFlag();
+    }
+    public void progress() {
+      // indicate that progress update needs to be sent
+      setProgressFlag();
+    }
+    public Counters.Counter getCounter(String group, String name) {
+      Counters.Counter counter = null;
+      if (counters != null) {
+        counter = counters.findCounter(group, name);
+      }
+      return counter;
+    }
+    public Counters.Counter getCounter(Enum<?> name) {
+      return counters == null ? null : counters.findCounter(name);
+    }
+    public void incrCounter(Enum key, long amount) {
+      if (counters != null) {
+        counters.incrCounter(key, amount);
+      }
+      setProgressFlag();
+    }
+    public void incrCounter(String group, String counter, long amount) {
+      if (counters != null) {
+        counters.incrCounter(group, counter, amount);
+      }
+      if(skipping && SkipBadRecords.COUNTER_GROUP.equals(group) && (
+          SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS.equals(counter) ||
+          SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS.equals(counter))) {
+        //if application reports the processed records, move the 
+        //currentRecStartIndex to the next.
+        //currentRecStartIndex is the start index which has not yet been 
+        //finished and is still in task's stomach.
+        for(int i=0;i<amount;i++) {
+          currentRecStartIndex = currentRecIndexIterator.next();
         }
-        public void progress() {
-          // indicate that progress update needs to be sent
-          setProgressFlag();
-        }
-        public Counters.Counter getCounter(String group, String name) {
-          Counters.Counter counter = null;
-          if (counters != null) {
-            counter = counters.findCounter(group, name);
+      }
+      setProgressFlag();
+    }
+    public void setInputSplit(InputSplit split) {
+      this.split = split;
+    }
+    public InputSplit getInputSplit() throws UnsupportedOperationException {
+      if (split == null) {
+        throw new UnsupportedOperationException("Input only available on map");
+      } else {
+        return split;
+      }
+    }    
+    /** 
+     * The communication thread handles communication with the parent (Task Tracker). 
+     * It sends progress updates if progress has been made or if the task needs to 
+     * let the parent know that it's alive. It also pings the parent to see if it's alive. 
+     */
+    public void run() {
+      final int MAX_RETRIES = 3;
+      int remainingRetries = MAX_RETRIES;
+      // get current flag value and reset it as well
+      boolean sendProgress = resetProgressFlag();
+      while (!taskDone.get()) {
+        try {
+          boolean taskFound = true; // whether TT knows about this task
+          // sleep for a bit
+          try {
+            Thread.sleep(PROGRESS_INTERVAL);
+          } 
+          catch (InterruptedException e) {
+            LOG.debug(getTaskID() + " Progress/ping thread exiting " +
+            "since it got interrupted");
+            break;
           }
-          return counter;
-        }
-        public void incrCounter(Enum key, long amount) {
-          if (counters != null) {
-            counters.incrCounter(key, amount);
-          }
-          setProgressFlag();
-        }
-        public void incrCounter(String group, String counter, long amount) {
-          if (counters != null) {
-            counters.incrCounter(group, counter, amount);
-          }
-          if(skipping && SkipBadRecords.COUNTER_GROUP.equals(group) && (
-              SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS.equals(counter) ||
-              SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS.equals(counter))) {
-            //if application reports the processed records, move the 
-            //currentRecStartIndex to the next.
-            //currentRecStartIndex is the start index which has not yet been 
-            //finished and is still in task's stomach.
-            for(int i=0;i<amount;i++) {
-              currentRecStartIndex = currentRecIndexIterator.next();
+
+          if (sendProgress) {
+            // we need to send progress update
+            updateCounters();
+            if (commitPending) {
+              taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
+                                      taskProgress.get(),
+                                      taskProgress.toString(), 
+                                      counters);
+            } else {
+              taskStatus.statusUpdate(TaskStatus.State.RUNNING,
+                                      taskProgress.get(),
+                                      taskProgress.toString(), 
+                                      counters);
             }
+            taskFound = umbilical.statusUpdate(taskId, taskStatus);
+            taskStatus.clearStatus();
           }
-          setProgressFlag();
+          else {
+            // send ping 
+            taskFound = umbilical.ping(taskId);
+          }
+
+          // if Task Tracker is not aware of our task ID (probably because it died and 
+          // came back up), kill ourselves
+          if (!taskFound) {
+            LOG.warn("Parent died.  Exiting "+taskId);
+            System.exit(66);
+          }
+
+          sendProgress = resetProgressFlag(); 
+          remainingRetries = MAX_RETRIES;
+        } 
+        catch (Throwable t) {
+          LOG.info("Communication exception: " + StringUtils.stringifyException(t));
+          remainingRetries -=1;
+          if (remainingRetries == 0) {
+            ReflectionUtils.logThreadInfo(LOG, "Communication exception", 0);
+            LOG.warn("Last retry, killing "+taskId);
+            System.exit(65);
+          }
         }
-        public InputSplit getInputSplit() throws UnsupportedOperationException {
-          return Task.this.getInputSplit();
-        }
-      };
+      }
+    }
+    public void startCommunicationThread() {
+      if (pingThread == null) {
+        pingThread = new Thread(this, "communication thread");
+        pingThread.setDaemon(true);
+        pingThread.start();
+      }
+    }
+    public void stopCommunicationThread() throws InterruptedException {
+      if (pingThread != null) {
+        pingThread.interrupt();
+        pingThread.join();
+      }
+    }
   }
   
   /**
@@ -503,12 +536,6 @@ abstract class Task implements Writable, Configurable {
     taskStatus.setNextRecordRange(range);
     LOG.debug("sending reportNextRecordRange " + range);
     umbilical.reportNextRecordRange(taskId, range);
-  }
-
-  public void setProgress(float progress) {
-    taskProgress.set(progress);
-    // indicate that progress update needs to be sent
-    setProgressFlag();
   }
 
   /**
@@ -569,14 +596,15 @@ abstract class Task implements Writable, Configurable {
     }
   }
 
-  public void done(TaskUmbilicalProtocol umbilical) throws IOException {
+  public void done(TaskUmbilicalProtocol umbilical,
+                   TaskReporter reporter
+                   ) throws IOException, InterruptedException {
     LOG.info("Task:" + taskId + " is done."
              + " And is in the process of commiting");
     updateCounters();
 
-    OutputCommitter outputCommitter = conf.getOutputCommitter();
     // check whether the commit is required.
-    boolean commitRequired = outputCommitter.needsTaskCommit(taskContext);
+    boolean commitRequired = committer.needsTaskCommit(taskContext);
     if (commitRequired) {
       int retries = MAX_RETRIES;
       taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
@@ -597,13 +625,10 @@ abstract class Task implements Writable, Configurable {
         }
       }
       //wait for commit approval and commit
-      commit(umbilical, outputCommitter);
+      commit(umbilical, reporter, committer);
     }
     taskDone.set(true);
-    pingProgressThread.interrupt();
-    try {
-      pingProgressThread.join();
-    } catch (InterruptedException ie) {}
+    reporter.stopCommunicationThread();
     sendLastUpdate(umbilical);
     //signal the tasktracker that we are done
     sendDone(umbilical);
@@ -666,7 +691,9 @@ abstract class Task implements Writable, Configurable {
   }
 
   private void commit(TaskUmbilicalProtocol umbilical,
-                      OutputCommitter committer) throws IOException {
+                      TaskReporter reporter,
+                      org.apache.hadoop.mapreduce.OutputCommitter committer
+                      ) throws IOException {
     int retries = MAX_RETRIES;
     while (true) {
       try {
@@ -676,7 +703,7 @@ abstract class Task implements Writable, Configurable {
           } catch(InterruptedException ie) {
             //ignore
           }
-          setProgressFlag();
+          reporter.setProgressFlag();
         }
         // task can Commit now  
         try {
@@ -686,7 +713,7 @@ abstract class Task implements Writable, Configurable {
         } catch (IOException iee) {
           LOG.warn("Failure committing: " + 
                     StringUtils.stringifyException(iee));
-          discardOutput(taskContext, committer);
+          discardOutput(taskContext);
           throw iee;
         }
       } catch (IOException ie) {
@@ -694,15 +721,15 @@ abstract class Task implements Writable, Configurable {
             StringUtils.stringifyException(ie));
         if (--retries == 0) {
           //if it couldn't commit a successfully then delete the output
-          discardOutput(taskContext, committer);
+          discardOutput(taskContext);
           System.exit(68);
         }
       }
     }
   }
 
-  private void discardOutput(TaskAttemptContext taskContext,
-                             OutputCommitter committer) {
+  private 
+  void discardOutput(TaskAttemptContext taskContext) {
     try {
       committer.abortTask(taskContext);
     } catch (IOException ioe)  {
@@ -711,22 +738,24 @@ abstract class Task implements Writable, Configurable {
     }
   }
 
-  protected void runCleanup(TaskUmbilicalProtocol umbilical) 
-  throws IOException {
+  protected void runCleanup(TaskUmbilicalProtocol umbilical,
+                            TaskReporter reporter
+                            ) throws IOException, InterruptedException {
     // set phase for this task
     setPhase(TaskStatus.Phase.CLEANUP);
     getProgress().setStatus("cleanup");
     // do the cleanup
-    conf.getOutputCommitter().cleanupJob(jobContext);
-    done(umbilical);
+    committer.cleanupJob(jobContext);
+    done(umbilical, reporter);
   }
 
-  protected void runSetupJob(TaskUmbilicalProtocol umbilical) 
-  throws IOException {
+  protected void runSetupJob(TaskUmbilicalProtocol umbilical,
+                             TaskReporter reporter
+                             ) throws IOException, InterruptedException {
     // do the setup
     getProgress().setStatus("setup");
-    conf.getOutputCommitter().setupJob(jobContext);
-    done(umbilical);
+    committer.setupJob(jobContext);
+    done(umbilical, reporter);
   }
   
   public void setConf(Configuration conf) {

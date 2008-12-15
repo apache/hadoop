@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 /**
@@ -42,9 +41,8 @@ import java.io.IOException;
  * @see JobID
  * @see TaskID
  */
-public class TaskAttemptID extends ID {
-  private static final String ATTEMPT = "attempt";
-  private final TaskID taskId;
+@Deprecated
+public class TaskAttemptID extends org.apache.hadoop.mapreduce.TaskAttemptID {
   
   /**
    * Constructs a TaskAttemptID object from given {@link TaskID}.  
@@ -52,11 +50,7 @@ public class TaskAttemptID extends ID {
    * @param id the task attempt number
    */
   public TaskAttemptID(TaskID taskId, int id) {
-    super(id);
-    if(taskId == null) {
-      throw new IllegalArgumentException("taskId cannot be null");
-    }
-    this.taskId = taskId;
+    super(taskId, id);
   }
   
   /**
@@ -73,77 +67,31 @@ public class TaskAttemptID extends ID {
   }
   
   public TaskAttemptID() { 
-    taskId = new TaskID();
-  }
-  
-  /** Returns the {@link JobID} object that this task attempt belongs to */
-  public JobID getJobID() {
-    return taskId.getJobID();
-  }
-  
-  /** Returns the {@link TaskID} object that this task attempt belongs to */
-  public TaskID getTaskID() {
-    return taskId;
-  }
-  
-  /**Returns whether this TaskAttemptID is a map ID */
-  public boolean isMap() {
-    return taskId.isMap();
-  }
-  
-  @Override
-  public boolean equals(Object o) {
-    if (!super.equals(o))
-      return false;
-    if(o.getClass().equals(TaskAttemptID.class)) {
-      TaskAttemptID that = (TaskAttemptID)o;
-      return this.id==that.id
-             && this.taskId.equals(that.taskId);
-    }
-    else return false;
-  }
-  
-  /**Compare TaskIds by first tipIds, then by task numbers. */
-  @Override
-  public int compareTo(ID o) {
-    TaskAttemptID that = (TaskAttemptID)o;
-    int tipComp = this.taskId.compareTo(that.taskId);
-    if(tipComp == 0) {
-      return this.id - that.id;
-    }
-    else return tipComp;
-  }
-  @Override
-  public String toString() { 
-    return appendTo(new StringBuilder(ATTEMPT)).toString();
+    super(new TaskID(), 0);
   }
 
   /**
-   * Add the unique string to the StringBuilder
-   * @param builder the builder to append ot
-   * @return the builder that was passed in.
+   * Downgrade a new TaskAttemptID to an old one
+   * @param old the new id
+   * @return either old or a new TaskAttemptID constructed to match old
    */
-  protected StringBuilder appendTo(StringBuilder builder) {
-    return taskId.appendTo(builder).append(SEPARATOR).append(id);
-  }
-  
-  @Override
-  public int hashCode() {
-    return taskId.hashCode() * 5 + id;
-  }
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    taskId.readFields(in);
+  public static 
+  TaskAttemptID downgrade(org.apache.hadoop.mapreduce.TaskAttemptID old) {
+    if (old instanceof TaskAttemptID) {
+      return (TaskAttemptID) old;
+    } else {
+      return new TaskAttemptID(TaskID.downgrade(old.getTaskID()), old.getId());
+    }
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    taskId.write(out);
+  public TaskID getTaskID() {
+    return (TaskID) super.getTaskID();
   }
-  
+
+  public JobID getJobID() {
+    return (JobID) super.getJobID();
+  }
+
   @Deprecated
   public static TaskAttemptID read(DataInput in) throws IOException {
     TaskAttemptID taskId = new TaskAttemptID();
@@ -157,25 +105,8 @@ public class TaskAttemptID extends ID {
    */
   public static TaskAttemptID forName(String str
                                       ) throws IllegalArgumentException {
-    if(str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(SEPARATOR));
-      if(parts.length == 6) {
-        if(parts[0].equals(ATTEMPT)) {
-          boolean isMap = false;
-          if(parts[3].equals("m")) isMap = true;
-          else if(parts[3].equals("r")) isMap = false;
-          else throw new Exception();
-          return new TaskAttemptID(parts[1], Integer.parseInt(parts[2]),
-              isMap, Integer.parseInt(parts[4]), Integer.parseInt(parts[5]));
-        }
-      }
-    } catch (Exception ex) {
-      //fall below
-    }
-    throw new IllegalArgumentException("TaskAttemptId string : " + str 
-        + " is not properly formed");
+    return (TaskAttemptID) 
+             org.apache.hadoop.mapreduce.TaskAttemptID.forName(str);
   }
   
   /** 
@@ -215,5 +146,4 @@ public class TaskAttemptID extends ID {
         .append(attemptId != null ? attemptId : "[0-9]*");
     return builder;
   }
-  
 }

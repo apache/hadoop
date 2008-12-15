@@ -27,6 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 
 /**
  * General reflection utils
@@ -34,7 +40,9 @@ import org.apache.hadoop.conf.*;
 
 public class ReflectionUtils {
     
-  private static final Class[] emptyArray = new Class[]{};
+  private static final Class<?>[] EMPTY_ARRAY = new Class[]{};
+  private static SerializationFactory serialFactory = null;
+
   /** 
    * Cache of constructors for each class. Pins the classes so they
    * can't be garbage collected until ReflectionUtils can be collected.
@@ -98,7 +106,7 @@ public class ReflectionUtils {
     try {
       Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
-        meth = theClass.getDeclaredConstructor(emptyArray);
+        meth = theClass.getDeclaredConstructor(EMPTY_ARRAY);
         meth.setAccessible(true);
         CONSTRUCTOR_CACHE.put(theClass, meth);
       }
@@ -217,5 +225,67 @@ public class ReflectionUtils {
   static int getCacheSize() {
     return CONSTRUCTOR_CACHE.size();
   }
+  /**
+   * A pair of input/output buffers that we use to clone writables.
+   */
+  private static class CopyInCopyOutBuffer {
+    DataOutputBuffer outBuffer = new DataOutputBuffer();
+    DataInputBuffer inBuffer = new DataInputBuffer();
+    /**
+     * Move the data from the output buffer to the input buffer.
+     */
+    void moveData() {
+      inBuffer.reset(outBuffer.getData(), outBuffer.getLength());
+    }
+  }
+  
+  /**
+   * Allocate a buffer for each thread that tries to clone objects.
+   */
+  private static ThreadLocal<CopyInCopyOutBuffer> cloneBuffers
+      = new ThreadLocal<CopyInCopyOutBuffer>() {
+      protected synchronized CopyInCopyOutBuffer initialValue() {
+        return new CopyInCopyOutBuffer();
+      }
+    };
 
+  private static SerializationFactory getFactory(Configuration conf) {
+    if (serialFactory == null) {
+      serialFactory = new SerializationFactory(conf);
+    }
+    return serialFactory;
+  }
+  
+  /**
+   * Make a copy of the writable object using serialization to a buffer
+   * @param dst the object to copy from
+   * @param src the object to copy into, which is destroyed
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T copy(Configuration conf, 
+                                T src, T dst) throws IOException {
+    CopyInCopyOutBuffer buffer = cloneBuffers.get();
+    buffer.outBuffer.reset();
+    SerializationFactory factory = getFactory(conf);
+    Class<T> cls = (Class<T>) src.getClass();
+    Serializer<T> serializer = factory.getSerializer(cls);
+    serializer.open(buffer.outBuffer);
+    serializer.serialize(src);
+    buffer.moveData();
+    Deserializer<T> deserializer = factory.getDeserializer(cls);
+    deserializer.open(buffer.inBuffer);
+    dst = deserializer.deserialize(dst);
+    return dst;
+  }
+
+  @Deprecated
+  public static void cloneWritableInto(Writable dst, 
+                                       Writable src) throws IOException {
+    CopyInCopyOutBuffer buffer = cloneBuffers.get();
+    buffer.outBuffer.reset();
+    src.write(buffer.outBuffer);
+    buffer.moveData();
+    dst.readFields(buffer.inBuffer);
+  }
 }

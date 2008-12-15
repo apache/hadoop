@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
  * 
  * @see OutputFormat
  */
-public interface RecordWriter<K, V> {
+public abstract class RecordWriter<K, V> {
   /** 
    * Writes a key/value pair.
    *
@@ -39,7 +39,8 @@ public interface RecordWriter<K, V> {
    * @param value the value to write.
    * @throws IOException
    */      
-  void write(K key, V value) throws IOException, InterruptedException;
+  public abstract void write(K key, V value
+                             ) throws IOException, InterruptedException;
 
   /** 
    * Close this <code>RecordWriter</code> to future operations.
@@ -47,6 +48,6 @@ public interface RecordWriter<K, V> {
    * @param context the context of the task
    * @throws IOException
    */ 
-  void close(TaskAttemptContext context
-             ) throws IOException, InterruptedException;
+  public abstract void close(TaskAttemptContext context
+                             ) throws IOException, InterruptedException;
 }

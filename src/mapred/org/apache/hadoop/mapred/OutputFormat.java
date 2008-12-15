@@ -42,7 +42,9 @@ import org.apache.hadoop.util.Progressable;
  * 
  * @see RecordWriter
  * @see JobConf
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.OutputFormat} instead.
  */
+@Deprecated
 public interface OutputFormat<K, V> {
 
   /** 

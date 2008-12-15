@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 
@@ -50,14 +50,12 @@ import java.io.IOException;
  *   </li>
  * </ol>
  * 
- * @see FileOutputCommitter 
+ * @see org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter 
  * @see JobContext
  * @see TaskAttemptContext 
- * @deprecated Use {@link org.apache.hadoop.mapreduce.OutputCommitter} instead.
+ *
  */
-@Deprecated
-public abstract class OutputCommitter 
-                extends org.apache.hadoop.mapreduce.OutputCommitter {
+public abstract class OutputCommitter {
   /**
    * For the framework to setup the job output during initialization
    * 
@@ -112,74 +110,4 @@ public abstract class OutputCommitter
    */
   public abstract void abortTask(TaskAttemptContext taskContext)
   throws IOException;
-
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final void setupJob(org.apache.hadoop.mapreduce.JobContext jobContext
-                             ) throws IOException {
-    setupJob((JobContext) jobContext);
-  }
-
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final void cleanupJob(org.apache.hadoop.mapreduce.JobContext context
-                               ) throws IOException {
-    cleanupJob((JobContext) context);
-  }
-
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final 
-  void setupTask(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
-                 ) throws IOException {
-    setupTask((TaskAttemptContext) taskContext);
-  }
-  
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final boolean 
-    needsTaskCommit(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
-                    ) throws IOException {
-    return needsTaskCommit((TaskAttemptContext) taskContext);
-  }
-
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final 
-  void commitTask(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
-                  ) throws IOException {
-    commitTask((TaskAttemptContext) taskContext);
-  }
-  
-  /**
-   * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
-   */
-  @Override
-  public final 
-  void abortTask(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
-                 ) throws IOException {
-    abortTask((TaskAttemptContext) taskContext);
-  }
 }

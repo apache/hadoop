@@ -19,20 +19,23 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.util.Progressable;
 
-public class TaskAttemptContext extends JobContext {
+/**
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.TaskAttemptContext}
+ *   instead.
+ */
+@Deprecated
+public class TaskAttemptContext 
+       extends org.apache.hadoop.mapreduce.TaskAttemptContext {
+  private Progressable progress;
 
-  private JobConf conf;
-  private TaskAttemptID taskid;
-  
   TaskAttemptContext(JobConf conf, TaskAttemptID taskid) {
     this(conf, taskid, Reporter.NULL);
   }
   
   TaskAttemptContext(JobConf conf, TaskAttemptID taskid,
                      Progressable progress) {
-    super(conf, progress);
-    this.conf = conf;
-    this.taskid = taskid;
+    super(conf, taskid);
+    this.progress = progress;
   }
   
   /**
@@ -41,16 +44,19 @@ public class TaskAttemptContext extends JobContext {
    * @return TaskAttemptID
    */
   public TaskAttemptID getTaskAttemptID() {
-    return taskid;
+    return (TaskAttemptID) super.getTaskAttemptID();
   }
   
-  /**
-   * Get the job Configuration.
-   * 
-   * @return JobConf
-   */
+  public Progressable getProgressible() {
+    return progress;
+  }
+  
   public JobConf getJobConf() {
-    return conf;
+    return (JobConf) getConfiguration();
   }
 
+  @Override
+  public void progress() {
+    progress.progress();
+  }
 }

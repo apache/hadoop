@@ -47,7 +47,9 @@ import org.apache.hadoop.util.StringUtils;
  * 
  * <p><code>Counters</code> are bunched into {@link Group}s, each comprising of
  * counters from a particular <code>Enum</code> class. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Counters} instead.
  */
+@Deprecated
 public class Counters implements Writable, Iterable<Counters.Group> {
   private static final Log LOG = LogFactory.getLog(Counters.class);
   private static final char GROUP_OPEN = '{';
@@ -65,69 +67,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   /**
    * A counter record, comprising its name and value. 
    */
-  public static class Counter implements Writable {
-
-    private String name;
-    private String displayName;
-    private long value;
+  public static class Counter extends org.apache.hadoop.mapreduce.Counter {
     
     Counter() { 
-      value = 0L;
     }
 
     Counter(String name, String displayName, long value) {
-      this.name = name;
-      this.displayName = displayName;
-      this.value = value;
+      super(name, displayName);
+      increment(value);
     }
     
-    /**
-     * Read the binary representation of the counter
-     */
-    public synchronized void readFields(DataInput in) throws IOException {
-      name = Text.readString(in);
-      if (in.readBoolean()) {
-        displayName = Text.readString(in);
-      } else {
-        displayName = name;
-      }
-      value = WritableUtils.readVLong(in);
-    }
-    
-    /**
-     * Write the binary representation of the counter
-     */
-    public synchronized void write(DataOutput out) throws IOException {
-      Text.writeString(out, name);
-      boolean distinctDisplayName = (! name.equals(displayName));
-      out.writeBoolean(distinctDisplayName);
-      if (distinctDisplayName) {
-        Text.writeString(out, displayName);
-      }
-      WritableUtils.writeVLong(out, value);
-    }
-    
-    /**
-     * Get the internal name of the counter.
-     * @return the internal name of the counter
-     */
-    public synchronized String getName() {
-      return name;
-    }
-    
-    /**
-     * Get the name of the counter.
-     * @return the user facing name of the counter
-     */
-    public synchronized String getDisplayName() {
-      return displayName;
-    }
-    
-    /**
-     * Set the display name of the counter.
-     */
-    public synchronized void setDisplayName(String displayName) {
-      this.displayName = displayName;
+    public void setDisplayName(String newName) {
+      super.setDisplayName(newName);
     }
     
     /**
@@ -150,7 +101,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       
       // Add the value
       buf.append(UNIT_OPEN);
-      buf.append(this.value);
+      buf.append(this.getValue());
       buf.append(UNIT_CLOSE);
       
       buf.append(COUNTER_CLOSE);
@@ -159,10 +110,9 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     }
     
     // Checks for (content) equality of two (basic) counters
+    @Deprecated
     synchronized boolean contentEquals(Counter c) {
-      return name.equals(c.getName())
-             && displayName.equals(c.getDisplayName())
-             && value == c.getCounter();
+      return this.equals(c);
     }
     
     /**
@@ -170,16 +120,9 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @return the current value
      */
     public synchronized long getCounter() {
-      return value;
+      return getValue();
     }
     
-    /**
-     * Increment this counter by the given value
-     * @param incr the value to increase this counter by
-     */
-    public synchronized void increment(long incr) {
-      value += incr;
-    }
   }
   
   /**
@@ -297,8 +240,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      */
     public synchronized long getCounter(String counterName) {
       for(Counter counter: subcounters.values()) {
-        if (counter != null && counter.displayName.equals(counterName)) {
-          return counter.value;
+        if (counter != null && counter.getDisplayName().equals(counterName)) {
+          return counter.getValue();
         }
       }
       return 0L;
@@ -459,7 +402,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param amount amount by which counter is to be incremented
    */
   public synchronized void incrCounter(Enum key, long amount) {
-    findCounter(key).value += amount;
+    findCounter(key).increment(amount);
   }
   
   /**
@@ -470,7 +413,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param amount amount by which counter is to be incremented
    */
   public synchronized void incrCounter(String group, String counter, long amount) {
-    getGroup(group).getCounterForName(counter).value += amount;
+    getGroup(group).getCounterForName(counter).increment(amount);
   }
   
   /**
@@ -478,7 +421,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * does not exist.
    */
   public synchronized long getCounter(Enum key) {
-    return findCounter(key).value;
+    return findCounter(key).getValue();
   }
   
   /**
@@ -492,8 +435,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       group.displayName = otherGroup.displayName;
       for (Counter otherCounter : otherGroup) {
         Counter counter = group.getCounterForName(otherCounter.getName());
-        counter.displayName = otherCounter.displayName;
-        counter.value += otherCounter.value;
+        counter.setDisplayName(otherCounter.getDisplayName());
+        counter.increment(otherCounter.getValue());
       }
     }
   }

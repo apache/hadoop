@@ -27,22 +27,34 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
 /** A base class for {@link OutputFormat}s that read from {@link FileSystem}s.*/
 public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
 
-  private static final String TEMP_DIR_NAME = "_temp";
+  /** Construct output file names so that, when an output directory listing is
+   * sorted lexicographically, positions correspond to output partitions.*/
+  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
+  static {
+    NUMBER_FORMAT.setMinimumIntegerDigits(5);
+    NUMBER_FORMAT.setGroupingUsed(false);
+  }
+  private FileOutputCommitter committer = null;
+
   /**
    * Set whether the output of the job is compressed.
-   * @param conf the {@link Configuration} to modify
+   * @param job the job to modify
    * @param compress should the output of the job be compressed?
    */
-  public static void setCompressOutput(Configuration conf, boolean compress) {
-    conf.setBoolean("mapred.output.compress", compress);
+  public static void setCompressOutput(Job job, boolean compress) {
+    job.getConfiguration().setBoolean("mapred.output.compress", compress);
   }
   
   /**
@@ -57,16 +69,17 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   
   /**
    * Set the {@link CompressionCodec} to be used to compress job outputs.
-   * @param conf the {@link Configuration} to modify
+   * @param job the job to modify
    * @param codecClass the {@link CompressionCodec} to be used to
    *                   compress the job outputs
    */
   public static void 
-  setOutputCompressorClass(Configuration conf, 
+  setOutputCompressorClass(Job job, 
                            Class<? extends CompressionCodec> codecClass) {
-    setCompressOutput(conf, true);
-    conf.setClass("mapred.output.compression.codec", codecClass, 
-                  CompressionCodec.class);
+    setCompressOutput(job, true);
+    job.getConfiguration().setClass("mapred.output.compression.codec", 
+                                    codecClass, 
+                                    CompressionCodec.class);
   }
   
   /**
@@ -95,20 +108,19 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
     return codecClass;
   }
   
-  public abstract 
-    RecordWriter<K, V> getRecordWriter(TaskAttemptContext context
-                                       ) throws IOException;
+  public abstract RecordWriter<K, V> 
+     getRecordWriter(TaskAttemptContext context
+                     ) throws IOException, InterruptedException;
 
-  public void checkOutputSpecs(JobContext context) 
-    throws FileAlreadyExistsException, 
-           InvalidJobConfException, IOException {
+  public void checkOutputSpecs(JobContext context
+                               ) throws FileAlreadyExistsException, IOException{
     // Ensure that the output directory is set and not already there
     Configuration job = context.getConfiguration();
     Path outDir = getOutputPath(job);
-    if (outDir == null && context.getNumReduceTasks() != 0) {
-      throw new InvalidJobConfException("Output directory not set in JobConf.");
+    if (outDir == null) {
+      throw new InvalidJobConfException("Output directory not set.");
     }
-    if (outDir != null && outDir.getFileSystem(job).exists(outDir)) {
+    if (outDir.getFileSystem(job).exists(outDir)) {
       throw new FileAlreadyExistsException("Output directory " + outDir + 
                                            " already exists");
     }
@@ -117,19 +129,19 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   /**
    * Set the {@link Path} of the output directory for the map-reduce job.
    *
-   * @param conf The configuration of the job.
+   * @param job The job to modify
    * @param outputDir the {@link Path} of the output directory for 
    * the map-reduce job.
    */
-  public static void setOutputPath(Configuration conf, Path outputDir) {
-    conf.set("mapred.output.dir", outputDir.toString());
+  public static void setOutputPath(Job job, Path outputDir) {
+    job.getConfiguration().set("mapred.output.dir", outputDir.toString());
   }
 
   /**
    * Get the {@link Path} to the output directory for the map-reduce job.
    * 
    * @return the {@link Path} to the output directory for the map-reduce job.
-   * @see FileOutputFormat#getWorkOutputPath(Configuration)
+   * @see FileOutputFormat#getWorkOutputPath(TaskInputOutputContext)
    */
   public static Path getOutputPath(Configuration conf) {
     String name = conf.get("mapred.output.dir");
@@ -162,17 +174,11 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * is completely transparent to the application.</p>
    * 
    * <p>The application-writer can take advantage of this by creating any 
-   * side-files required in <tt>${mapred.work.output.dir}</tt> during execution 
-   * of his reduce-task i.e. via {@link #getWorkOutputPath(Configuration)}, and
+   * side-files required in a work directory during execution 
+   * of his task i.e. via 
+   * {@link #getWorkOutputPath(TaskInputOutputContext)}, and
    * the framework will move them out similarly - thus she doesn't have to pick 
    * unique paths per task-attempt.</p>
-   * 
-   * <p><i>Note</i>: the value of <tt>${mapred.work.output.dir}</tt> during 
-   * execution of a particular task-attempt is actually 
-   * <tt>${mapred.output.dir}/_temporary/_{$taskid}</tt>, and this value is 
-   * set by the map-reduce framework. So, just create any side-files in the 
-   * path  returned by {@link #getWorkOutputPath(Configuration)} from map/reduce 
-   * task to take advantage of this feature.</p>
    * 
    * <p>The entire discussion holds true for maps of jobs with 
    * reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
@@ -181,77 +187,12 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * @return the {@link Path} to the task's temporary output directory 
    * for the map-reduce job.
    */
-  public static Path getWorkOutputPath(Configuration conf) {
-    String name = conf.get("mapred.work.output.dir");
-    return name == null ? null: new Path(name);
-  }
-
-  /**
-   * Helper function to create the task's temporary output directory and 
-   * return the path to the task's output file.
-   * 
-   * @param context the task's context
-   * @return path to the task's temporary output file
-   * @throws IOException
-   */
-  protected static Path getTaskOutputPath(TaskAttemptContext context
-                                          ) throws IOException {
-    // ${mapred.job.dir}
-    Configuration conf = context.getConfiguration();
-    Path outputPath = getOutputPath(conf);
-    if (outputPath == null) {
-      throw new IOException("Undefined job output-path");
-    }
-
-    // ${mapred.out.dir}/_temporary
-    Path jobTmpDir = new Path(outputPath, TEMP_DIR_NAME);
-    FileSystem fs = jobTmpDir.getFileSystem(conf);
-    if (!fs.exists(jobTmpDir)) {
-      throw new IOException("The temporary job-output directory " + 
-          jobTmpDir.toString() + " doesn't exist!"); 
-    }
-
-    // ${mapred.out.dir}/_temporary/_${taskid}
-    Path taskTmpDir = getWorkOutputPath(conf);
-    if (!fs.mkdirs(taskTmpDir)) {
-      throw new IOException("Mkdirs failed to create " 
-          + taskTmpDir.toString());
-    }
-    
-    // ${mapred.out.dir}/_temporary/_${taskid}/${name}
-    return new Path(taskTmpDir, getOutputName(context));
-  } 
-
-  /**
-   * Helper function to generate a name that is unique for the task.
-   *
-   * <p>The generated name can be used to create custom files from within the
-   * different tasks for the job, the names for different tasks will not collide
-   * with each other.</p>
-   *
-   * <p>The given name is postfixed with the task type, 'm' for maps, 'r' for
-   * reduces and the task partition number. For example, give a name 'test'
-   * running on the first map o the job the generated name will be
-   * 'test-m-00000'.</p>
-   *
-   * @param conf the configuration for the job.
-   * @param name the name to make unique.
-   * @return a unique name accross all tasks of the job.
-   */
-  public static String getUniqueName(Configuration conf, String name) {
-    int partition = conf.getInt("mapred.task.partition", -1);
-    if (partition == -1) {
-      throw new IllegalArgumentException(
-        "This method can only be called from within a Job");
-    }
-
-    String taskType = (conf.getBoolean("mapred.task.is.map", true)) ? "m" : "r";
-
-    NumberFormat numberFormat = NumberFormat.getInstance();
-    numberFormat.setMinimumIntegerDigits(5);
-    numberFormat.setGroupingUsed(false);
-
-    return name + "-" + taskType + "-" + numberFormat.format(partition);
+  public static Path getWorkOutputPath(TaskInputOutputContext<?,?,?,?> context
+                                       ) throws IOException, 
+                                                InterruptedException {
+    FileOutputCommitter committer = (FileOutputCommitter) 
+      context.getOutputCommitter();
+    return committer.getWorkPath();
   }
 
   /**
@@ -262,28 +203,68 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * reduce tasks. The path name will be unique for each task. The path parent
    * will be the job output directory.</p>ls
    *
-   * <p>This method uses the {@link #getUniqueName} method to make the file name
+   * <p>This method uses the {@link #getUniqueFile} method to make the file name
    * unique for the task.</p>
    *
-   * @param conf the configuration for the job.
+   * @param context the context for the task.
    * @param name the name for the file.
+   * @param extension the extension for the file
    * @return a unique path accross all tasks of the job.
    */
-  public static Path getPathForCustomFile(Configuration conf, String name) {
-    return new Path(getWorkOutputPath(conf), getUniqueName(conf, name));
+  public 
+  static Path getPathForWorkFile(TaskInputOutputContext<?,?,?,?> context, 
+                                 String name,
+                                 String extension
+                                ) throws IOException, InterruptedException {
+    return new Path(getWorkOutputPath(context),
+                    getUniqueFile(context, name, extension));
   }
 
-  /** Construct output file names so that, when an output directory listing is
-   * sorted lexicographically, positions correspond to output partitions.*/
-  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
-  static {
-    NUMBER_FORMAT.setMinimumIntegerDigits(5);
-    NUMBER_FORMAT.setGroupingUsed(false);
+  /**
+   * Generate a unique filename, based on the task id, name, and extension
+   * @param context the task that is calling this
+   * @param name the base filename
+   * @param extension the filename extension
+   * @return a string like $name-[mr]-$id$extension
+   */
+  public synchronized static String getUniqueFile(TaskAttemptContext context,
+                                                  String name,
+                                                  String extension) {
+    TaskID taskId = context.getTaskAttemptID().getTaskID();
+    int partition = taskId.getId();
+    StringBuilder result = new StringBuilder();
+    result.append(name);
+    result.append('-');
+    result.append(taskId.isMap() ? 'm' : 'r');
+    result.append('-');
+    result.append(NUMBER_FORMAT.format(partition));
+    result.append(extension);
+    return result.toString();
   }
 
-  protected static synchronized 
-  String getOutputName(TaskAttemptContext context) {
-    return "part-" + NUMBER_FORMAT.format(context.getTaskAttemptId().getId());
+  /**
+   * Get the default path and filename for the output format.
+   * @param context the task context
+   * @param extension an extension to add to the filename
+   * @return a full path $output/_temporary/$taskid/part-[mr]-$id
+   * @throws IOException
+   */
+  public Path getDefaultWorkFile(TaskAttemptContext context,
+                                 String extension) throws IOException{
+    FileOutputCommitter committer = 
+      (FileOutputCommitter) getOutputCommitter(context);
+    return new Path(committer.getWorkPath(), getUniqueFile(context, "part", 
+                                                           extension));
+  }
+
+  public synchronized 
+     OutputCommitter getOutputCommitter(TaskAttemptContext context
+                                        ) throws IOException {
+    if (committer == null) {
+      Path output = getOutputPath(context.getConfiguration());
+      committer = new FileOutputCommitter(output, context);
+    }
+    return committer;
   }
 }
 

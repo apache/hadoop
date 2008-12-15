@@ -34,7 +34,7 @@ public class LongSumReducer<KEY> extends Reducer<KEY, LongWritable,
       sum += val.get();
     }
     result.set(sum);
-    context.collect(key, result);
+    context.write(key, result);
   }
 
 }

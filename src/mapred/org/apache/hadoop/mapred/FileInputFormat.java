@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
@@ -35,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.net.NetworkTopology;
@@ -53,7 +51,10 @@ import org.apache.hadoop.util.StringUtils;
  * Subclasses of <code>FileInputFormat</code> can also override the 
  * {@link #isSplitable(FileSystem, Path)} method to ensure input-files are
  * not split-up and are processed as a whole by {@link Mapper}s.
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.input.FileInputFormat}
+ *  instead.
  */
+@Deprecated
 public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final Log LOG =

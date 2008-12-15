@@ -27,6 +27,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -36,13 +37,11 @@ import org.apache.hadoop.conf.Configuration;
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
 public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
 
-  public RecordWriter<K, V> getRecordWriter(TaskAttemptContext context)
-    throws IOException {
-    // get the path of the temporary output file 
-    Path file = FileOutputFormat.getTaskOutputPath(context);
+  public RecordWriter<K, V> 
+         getRecordWriter(TaskAttemptContext context
+                         ) throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     
-    FileSystem fs = file.getFileSystem(conf);
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
     if (getCompressOutput(conf)) {
@@ -54,6 +53,9 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
       codec = (CompressionCodec) 
         ReflectionUtils.newInstance(codecClass, conf);
     }
+    // get the path of the temporary output file 
+    Path file = getDefaultWorkFile(context, "");
+    FileSystem fs = file.getFileSystem(conf);
     final SequenceFile.Writer out = 
       SequenceFile.createWriter(fs, conf, file,
                                 context.getOutputKeyClass(),
@@ -90,14 +92,15 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
   
   /**
    * Set the {@link CompressionType} for the output {@link SequenceFile}.
-   * @param conf the {@link Configuration} to modify
+   * @param job the {@link Job} to modify
    * @param style the {@link CompressionType} for the output
    *              {@link SequenceFile} 
    */
-  public static void setOutputCompressionType(Configuration conf, 
+  public static void setOutputCompressionType(Job job, 
 		                                          CompressionType style) {
-    setCompressOutput(conf, true);
-    conf.set("mapred.output.compression.type", style.toString());
+    setCompressOutput(job, true);
+    job.getConfiguration().set("mapred.output.compression.type", 
+                               style.toString());
   }
 
 }

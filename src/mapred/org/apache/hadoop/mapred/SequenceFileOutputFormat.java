@@ -32,7 +32,12 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.*;
 
-/** An {@link OutputFormat} that writes {@link SequenceFile}s. */
+/** An {@link OutputFormat} that writes {@link SequenceFile}s. 
+ * @deprecated Use 
+ *   {@link org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat} 
+ *   instead.
+ */
+@Deprecated
 public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
 
   public RecordWriter<K, V> getRecordWriter(

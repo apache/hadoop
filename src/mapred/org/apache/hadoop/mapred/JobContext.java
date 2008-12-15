@@ -19,18 +19,23 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.util.Progressable;
 
-public class JobContext {
-
-  JobConf job;
+/**
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.JobContext} instead.
+ */
+@Deprecated
+public class JobContext extends org.apache.hadoop.mapreduce.JobContext {
+  private JobConf job;
   private Progressable progress;
 
-  JobContext(JobConf conf, Progressable progress) {
-    job = conf;
+  JobContext(JobConf conf, org.apache.hadoop.mapreduce.JobID jobId, 
+             Progressable progress) {
+    super(conf, jobId);
+    this.job = conf;
     this.progress = progress;
   }
 
-  JobContext(JobConf conf) {
-    this(conf, Reporter.NULL);
+  JobContext(JobConf conf, org.apache.hadoop.mapreduce.JobID jobId) {
+    this(conf, jobId, Reporter.NULL);
   }
   
   /**

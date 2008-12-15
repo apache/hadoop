@@ -34,7 +34,7 @@ public class IntSumReducer<Key> extends Reducer<Key,IntWritable,
       sum += val.get();
     }
     result.set(sum);
-    context.collect(key, result);
+    context.write(key, result);
   }
 
 }

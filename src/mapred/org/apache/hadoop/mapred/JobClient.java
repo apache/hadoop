@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -38,7 +39,7 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Random;
+import java.util.List;
 
 import javax.security.auth.login.LoginException;
 
@@ -59,11 +60,14 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -155,7 +159,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final Log LOG = LogFactory.getLog(JobClient.class);
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
-  static long MAX_JOBPROFILE_AGE = 1000 * 2;
+  private static final long MAX_JOBPROFILE_AGE = 1000 * 2;
 
   /**
    * A NetworkedJob is an implementation of RunningJob.  It holds
@@ -371,14 +375,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public Counters getCounters() throws IOException {
       return jobSubmitClient.getJobCounters(getID());
     }
+    
+    @Override
+    public String[] getTaskDiagnostics(TaskAttemptID id) throws IOException {
+      return jobSubmitClient.getTaskDiagnostics(id);
+    }
   }
 
-  JobSubmissionProtocol jobSubmitClient;
-  Path sysDir = null;
+  private JobSubmissionProtocol jobSubmitClient;
+  private Path sysDir = null;
   
-  FileSystem fs = null;
-
-  static Random r = new Random();
+  private FileSystem fs = null;
 
   /**
    * Create a job client.
@@ -710,11 +717,34 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @return a handle to the {@link RunningJob} which can be used to track the
    *         running-job.
    * @throws FileNotFoundException
-   * @throws InvalidJobConfException
    * @throws IOException
    */
-  public RunningJob submitJob(JobConf job) throws FileNotFoundException, 
-                                  InvalidJobConfException, IOException {
+  public RunningJob submitJob(JobConf job) throws FileNotFoundException,
+                                                  IOException {
+    try {
+      return submitJobInternal(job);
+    } catch (InterruptedException ie) {
+      throw new IOException("interrupted", ie);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("class not found", cnfe);
+    }
+  }
+
+  /**
+   * Internal method for submitting jobs to the system.
+   * @param job the configuration to submit
+   * @return a proxy object for the running job
+   * @throws FileNotFoundException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public 
+  RunningJob submitJobInternal(JobConf job
+                               ) throws FileNotFoundException, 
+                                        ClassNotFoundException,
+                                        InterruptedException,
+                                        IOException {
     /*
      * configure the command line options correctly on the submitting dfs
      */
@@ -725,12 +755,53 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     Path submitSplitFile = new Path(submitJobDir, "job.split");
     configureCommandLineOptions(job, submitJobDir, submitJarFile);
     Path submitJobFile = new Path(submitJobDir, "job.xml");
+    int reduces = job.getNumReduceTasks();
+    JobContext context = new JobContext(job, jobId);
     
     // Check the output specification
-    job.getOutputFormat().checkOutputSpecs(fs, job);
+    if (reduces == 0 ? job.getUseNewMapper() : job.getUseNewReducer()) {
+      org.apache.hadoop.mapreduce.OutputFormat<?,?> output =
+        ReflectionUtils.newInstance(context.getOutputFormatClass(), job);
+      output.checkOutputSpecs(context);
+    } else {
+      job.getOutputFormat().checkOutputSpecs(fs, job);
+    }
 
     // Create the splits for the job
     LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
+    int maps;
+    if (job.getUseNewMapper()) {
+      maps = writeNewSplits(context, submitSplitFile);
+    } else {
+      maps = writeOldSplits(job, submitSplitFile);
+    }
+    job.set("mapred.job.split.file", submitSplitFile.toString());
+    job.setNumMapTasks(maps);
+        
+    // Write job file to JobTracker's fs        
+    FSDataOutputStream out = 
+      FileSystem.create(fs, submitJobFile,
+                        new FsPermission(JOB_FILE_PERMISSION));
+
+    try {
+      job.writeXml(out);
+    } finally {
+      out.close();
+    }
+
+    //
+    // Now, actually submit the job (using the submit name)
+    //
+    JobStatus status = jobSubmitClient.submitJob(jobId);
+    if (status != null) {
+      return new NetworkedJob(status);
+    } else {
+      throw new IOException("Could not launch job");
+    }
+  }
+
+  private int writeOldSplits(JobConf job, 
+                             Path submitSplitFile) throws IOException {
     InputSplit[] splits = 
       job.getInputFormat().getSplits(job, job.getNumMapTasks());
     // sort the splits into order based on size, so that the biggest
@@ -753,36 +824,91 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         }
       }
     });
-    // write the splits to a file for the job tracker
-    FSDataOutputStream out = FileSystem.create(fs,
-        submitSplitFile, new FsPermission(JOB_FILE_PERMISSION));
+    DataOutputStream out = writeSplitsFileHeader(job, submitSplitFile, splits.length);
+    
     try {
-      writeSplitsFile(splits, out);
+      DataOutputBuffer buffer = new DataOutputBuffer();
+      RawSplit rawSplit = new RawSplit();
+      for(InputSplit split: splits) {
+        rawSplit.setClassName(split.getClass().getName());
+        buffer.reset();
+        split.write(buffer);
+        rawSplit.setDataLength(split.getLength());
+        rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
+        rawSplit.setLocations(split.getLocations());
+        rawSplit.write(out);
+      }
     } finally {
       out.close();
     }
-    job.set("mapred.job.split.file", submitSplitFile.toString());
-    job.setNumMapTasks(splits.length);
-        
-    // Write job file to JobTracker's fs        
-    out = FileSystem.create(fs, submitJobFile,
-        new FsPermission(JOB_FILE_PERMISSION));
+    return splits.length;
+  }
 
+  private static class NewSplitComparator 
+    implements Comparator<org.apache.hadoop.mapreduce.InputSplit>{
+
+    @Override
+    public int compare(org.apache.hadoop.mapreduce.InputSplit o1,
+                       org.apache.hadoop.mapreduce.InputSplit o2) {
+      try {
+        long len1 = o1.getLength();
+        long len2 = o2.getLength();
+        if (len1 < len2) {
+          return 1;
+        } else if (len1 == len2) {
+          return 0;
+        } else {
+          return -1;
+        }
+      } catch (IOException ie) {
+        throw new RuntimeException("exception in compare", ie);
+      } catch (InterruptedException ie) {
+        throw new RuntimeException("exception in compare", ie);        
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T extends org.apache.hadoop.mapreduce.InputSplit> 
+  int writeNewSplits(JobContext job, Path submitSplitFile
+                     ) throws IOException, InterruptedException, 
+                              ClassNotFoundException {
+    JobConf conf = job.getJobConf();
+    org.apache.hadoop.mapreduce.InputFormat<?,?> input =
+      ReflectionUtils.newInstance(job.getInputFormatClass(), job.getJobConf());
+    
+    List<org.apache.hadoop.mapreduce.InputSplit> splits = input.getSplits(job);
+    T[] array = (T[])
+      splits.toArray(new org.apache.hadoop.mapreduce.InputSplit[splits.size()]);
+
+    // sort the splits into order based on size, so that the biggest
+    // go first
+    Arrays.sort(array, new NewSplitComparator());
+    DataOutputStream out = writeSplitsFileHeader(conf, submitSplitFile, 
+                                                 array.length);
     try {
-      job.writeXml(out);
+      if (array.length != 0) {
+        DataOutputBuffer buffer = new DataOutputBuffer();
+        RawSplit rawSplit = new RawSplit();
+        SerializationFactory factory = new SerializationFactory(conf);
+        Serializer<T> serializer = 
+          factory.getSerializer((Class<T>) array[0].getClass());
+        serializer.open(buffer);
+        for(T split: array) {
+          rawSplit.setClassName(split.getClass().getName());
+          buffer.reset();
+          serializer.serialize(split);
+          rawSplit.setDataLength(split.getLength());
+          rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
+          rawSplit.setLocations(split.getLocations());
+          rawSplit.write(out);
+        }
+        serializer.close();
+      }
     } finally {
       out.close();
     }
-
-    //
-    // Now, actually submit the job (using the submit name)
-    //
-    JobStatus status = jobSubmitClient.submitJob(jobId);
-    if (status != null) {
-      return new NetworkedJob(status);
-    } else {
-      throw new IOException("Could not launch job");
-    }
+    return array.length;
   }
 
   /** 
@@ -878,7 +1004,21 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
   private static final int CURRENT_SPLIT_FILE_VERSION = 0;
   private static final byte[] SPLIT_FILE_HEADER = "SPL".getBytes();
-    
+
+  private DataOutputStream writeSplitsFileHeader(Configuration conf,
+                                                 Path filename,
+                                                 int length
+                                                 ) throws IOException {
+    // write the splits to a file for the job tracker
+    FileSystem fs = filename.getFileSystem(conf);
+    FSDataOutputStream out = 
+      FileSystem.create(fs, filename, new FsPermission(JOB_FILE_PERMISSION));
+    out.write(SPLIT_FILE_HEADER);
+    WritableUtils.writeVInt(out, CURRENT_SPLIT_FILE_VERSION);
+    WritableUtils.writeVInt(out, length);
+    return out;
+  }
+
   /** Create the list of input splits and write them out in a file for
    *the JobTracker. The format is:
    * <format version>
@@ -888,21 +1028,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @param splits the input splits to write out
    * @param out the stream to write to
    */
-  private void writeSplitsFile(InputSplit[] splits, FSDataOutputStream out) throws IOException {
-    out.write(SPLIT_FILE_HEADER);
-    WritableUtils.writeVInt(out, CURRENT_SPLIT_FILE_VERSION);
-    WritableUtils.writeVInt(out, splits.length);
-    DataOutputBuffer buffer = new DataOutputBuffer();
-    RawSplit rawSplit = new RawSplit();
-    for(InputSplit split: splits) {
-      rawSplit.setClassName(split.getClass().getName());
-      buffer.reset();
-      split.write(buffer);
-      rawSplit.setDataLength(split.getLength());
-      rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-      rawSplit.setLocations(split.getLocations());
-      rawSplit.write(out);
-    }
+  private void writeOldSplitsFile(InputSplit[] splits, 
+                                  FSDataOutputStream out) throws IOException {
   }
 
   /**

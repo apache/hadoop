@@ -44,4 +44,5 @@ public abstract class Partitioner<KEY, VALUE> {
    * @return the partition number for the <code>key</code>.
    */
   public abstract int getPartition(KEY key, VALUE value, int numPartitions);
+  
 }

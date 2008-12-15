@@ -41,24 +41,31 @@ public abstract class RecordReader<KEYIN, VALUEIN> implements Closeable {
                                   ) throws IOException, InterruptedException;
 
   /**
-   * Read the next key.
-   * @param key the object to be read into, which may be null
-   * @return the object that was read
+   * Read the next key, value pair.
+   * @return true if a key/value pair was read
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract KEYIN nextKey(KEYIN key
-                                ) throws IOException, InterruptedException;
+  public abstract 
+  boolean nextKeyValue() throws IOException, InterruptedException;
 
   /**
-   * Read the next value. It must be called after {@link #nextKey(Object)}.
-   * @param value the object to read into, which may be null
+   * Get the current key
+   * @return the current key or null if there is no current key
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public abstract
+  KEYIN getCurrentKey() throws IOException, InterruptedException;
+  
+  /**
+   * Get the current value.
    * @return the object that was read
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract VALUEIN nextValue(VALUEIN value
-                                    ) throws IOException, InterruptedException;
+  public abstract 
+  VALUEIN getCurrentValue() throws IOException, InterruptedException;
   
   /**
    * The current progress of the record reader through its data.

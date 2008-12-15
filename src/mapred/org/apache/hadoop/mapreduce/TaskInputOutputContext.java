@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * A context object that allows input and output from the task. It is only
@@ -31,34 +32,73 @@ import org.apache.hadoop.conf.Configuration;
  * @param <VALUEOUT> the output value type for the task
  */
 public abstract class TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> 
-    extends TaskAttemptContext {
+       extends TaskAttemptContext implements Progressable {
+  private RecordWriter<KEYOUT,VALUEOUT> output;
+  private StatusReporter reporter;
+  private OutputCommitter committer;
 
-  public TaskInputOutputContext(Configuration conf, TaskAttemptID taskid) {
+  public TaskInputOutputContext(Configuration conf, TaskAttemptID taskid,
+                                RecordWriter<KEYOUT,VALUEOUT> output,
+                                OutputCommitter committer,
+                                StatusReporter reporter) {
     super(conf, taskid);
+    this.output = output;
+    this.reporter = reporter;
+    this.committer = committer;
   }
 
   /**
-   * Advance to the next key, returning null if at end.
-   * @param key the key object to read in to, which may be null
-   * @return the key object that was read into
+   * Advance to the next key, value pair, returning null if at end.
+   * @return the key object that was read into, or null if no more
    */
-  public abstract KEYIN nextKey(KEYIN key
-                                ) throws IOException, InterruptedException;
-  
+  public abstract 
+  boolean nextKeyValue() throws IOException, InterruptedException;
+ 
   /**
-   * Read the next value. Must be called after nextKey.
-   * @param value the value object to read in to, which may be null
+   * Get the current key.
+   * @return the current key object or null if there isn't one
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public abstract 
+  KEYIN getCurrentKey() throws IOException, InterruptedException;
+
+  /**
+   * Get the current value.
    * @return the value object that was read into
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract VALUEIN nextValue(VALUEIN value
-                                    ) throws IOException, InterruptedException;
+  public abstract VALUEIN getCurrentValue() throws IOException, 
+                                                   InterruptedException;
 
   /**
    * Generate an output key/value pair.
    */
-  public abstract void collect(KEYOUT key, VALUEOUT value
-                               ) throws IOException, InterruptedException;
+  public void write(KEYOUT key, VALUEOUT value
+                    ) throws IOException, InterruptedException {
+    output.write(key, value);
+  }
 
+  public Counter getCounter(Enum<?> counterName) {
+    return reporter.getCounter(counterName);
+  }
+
+  public Counter getCounter(String groupName, String counterName) {
+    return reporter.getCounter(groupName, counterName);
+  }
+
+  @Override
+  public void progress() {
+    reporter.progress();
+  }
+
+  @Override
+  public void setStatus(String status) {
+    reporter.setStatus(status);
+  }
+  
+  public OutputCommitter getOutputCommitter() {
+    return committer;
+  }
 }

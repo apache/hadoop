@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.text.NumberFormat;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobTracker;
 
 /**
  * JobID represents the immutable and unique identifier for 
@@ -42,15 +41,15 @@ import org.apache.hadoop.mapred.JobTracker;
  * 
  * @see TaskID
  * @see TaskAttemptID
- * @see JobTracker#getNewJobId()
- * @see JobTracker#getStartTime()
+ * @see org.apache.hadoop.mapred.JobTracker#getNewJobId()
+ * @see org.apache.hadoop.mapred.JobTracker#getStartTime()
  */
-public class JobID extends ID {
-  private static final String JOB = "job";
-  private String jtIdentifier;
-  private static char UNDERSCORE = '_';
+public class JobID extends org.apache.hadoop.mapred.ID 
+                   implements Comparable<ID> {
+  protected static final String JOB = "job";
+  private final Text jtIdentifier;
   
-  private static NumberFormat idFormat = NumberFormat.getInstance();
+  protected static final NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setGroupingUsed(false);
     idFormat.setMinimumIntegerDigits(4);
@@ -63,13 +62,15 @@ public class JobID extends ID {
    */
   public JobID(String jtIdentifier, int id) {
     super(id);
-    this.jtIdentifier = jtIdentifier;
+    this.jtIdentifier = new Text(jtIdentifier);
   }
   
-  private JobID() { }
+  public JobID() { 
+    jtIdentifier = new Text();
+  }
   
   public String getJtIdentifier() {
-    return jtIdentifier;
+    return jtIdentifier.toString();
   }
   
   @Override
@@ -92,42 +93,40 @@ public class JobID extends ID {
     else return jtComp;
   }
   
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    return builder.append(JOB).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
-  }
-  
-  /** Returns the string representation w/o prefix */
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(jtIdentifier).append(UNDERSCORE)
-    .append(idFormat.format(id)).toString();
+  /**
+   * Add the stuff after the "job" prefix to the given builder. This is useful,
+   * because the sub-ids use this substring at the start of their string.
+   * @param builder the builder to append to
+   * @return the builder that was passed in
+   */
+  public StringBuilder appendTo(StringBuilder builder) {
+    builder.append(SEPARATOR);
+    builder.append(jtIdentifier);
+    builder.append(SEPARATOR);
+    builder.append(idFormat.format(id));
     return builder;
   }
-  
+
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return jtIdentifier.hashCode() + id;
   }
-  
+
+  @Override
+  public String toString() {
+    return appendTo(new StringBuilder(JOB)).toString();
+  }
+
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.jtIdentifier = Text.readString(in);
+    this.jtIdentifier.readFields(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    Text.writeString(out, jtIdentifier);
-  }
-  
-  public static JobID read(DataInput in) throws IOException {
-    JobID jobId = new JobID();
-    jobId.readFields(in);
-    return jobId;
+    jtIdentifier.write(out);
   }
   
   /** Construct a JobId object from given string 
@@ -141,41 +140,14 @@ public class JobID extends ID {
       String[] parts = str.split("_");
       if(parts.length == 3) {
         if(parts[0].equals(JOB)) {
-          return new JobID(parts[1], Integer.parseInt(parts[2]));
+          return new org.apache.hadoop.mapred.JobID(parts[1], 
+                                                    Integer.parseInt(parts[2]));
         }
       }
     }catch (Exception ex) {//fall below
     }
     throw new IllegalArgumentException("JobId string : " + str 
         + " is not properly formed");
-  }
-  
-  /** 
-   * Returns a regex pattern which matches task IDs. Arguments can 
-   * be given null, in which case that part of the regex will be generic.  
-   * For example to obtain a regex matching <i>any job</i> 
-   * run on the jobtracker started at <i>200707121733</i>, we would use :
-   * <pre> 
-   * JobID.getTaskIDsPattern("200707121733", null);
-   * </pre>
-   * which will return :
-   * <pre> "job_200707121733_[0-9]*" </pre> 
-   * @param jtIdentifier jobTracker identifier, or null
-   * @param jobId job number, or null
-   * @return a regex pattern matching JobIDs
-   */
-  public static String getJobIDsPattern(String jtIdentifier, Integer jobId) {
-    StringBuilder builder = new StringBuilder(JOB).append(UNDERSCORE);
-    builder.append(getJobIDsPatternWOPrefix(jtIdentifier, jobId));
-    return builder.toString();
-  }
-  
-  static StringBuilder getJobIDsPatternWOPrefix(String jtIdentifier
-      , Integer jobId) {
-    StringBuilder builder = new StringBuilder()
-      .append(jtIdentifier != null ? jtIdentifier : "[^_]*").append(UNDERSCORE)
-      .append(jobId != null ? idFormat.format(jobId) : "[0-9]*");
-    return builder;
   }
   
 }

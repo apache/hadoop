@@ -197,30 +197,6 @@ public final class WritableUtils  {
   }
 
   /**
-   * A pair of input/output buffers that we use to clone writables.
-   */
-  private static class CopyInCopyOutBuffer {
-    DataOutputBuffer outBuffer = new DataOutputBuffer();
-    DataInputBuffer inBuffer = new DataInputBuffer();
-    /**
-     * Move the data from the output buffer to the input buffer.
-     */
-    void moveData() {
-      inBuffer.reset(outBuffer.getData(), outBuffer.getLength());
-    }
-  }
-  
-  /**
-   * Allocate a buffer for each thread that tries to clone objects.
-   */
-  private static ThreadLocal<CopyInCopyOutBuffer> cloneBuffers
-      = new ThreadLocal<CopyInCopyOutBuffer>() {
-      protected synchronized CopyInCopyOutBuffer initialValue() {
-        return new CopyInCopyOutBuffer();
-      }
-    };
-
-  /**
    * Make a copy of a writable object using serialization to a buffer.
    * @param orig The object to copy
    * @return The copied object
@@ -229,7 +205,7 @@ public final class WritableUtils  {
     try {
       @SuppressWarnings("unchecked") // Unchecked cast from Class to Class<T>
       T newInst = ReflectionUtils.newInstance((Class<T>) orig.getClass(), conf);
-      cloneInto(newInst, orig);
+      ReflectionUtils.copy(conf, orig, newInst);
       return newInst;
     } catch (IOException e) {
       throw new RuntimeException("Error writing/reading clone buffer", e);
@@ -241,14 +217,11 @@ public final class WritableUtils  {
    * @param dst the object to copy from
    * @param src the object to copy into, which is destroyed
    * @throws IOException
+   * @deprecated use ReflectionUtils.cloneInto instead.
    */
+  @Deprecated
   public static void cloneInto(Writable dst, Writable src) throws IOException {
-    CopyInCopyOutBuffer buffer = cloneBuffers.get();
-    buffer.outBuffer.reset();
-    src.write(buffer.outBuffer);
-    buffer.moveData();
-    dst.readFields(buffer.inBuffer);
-    return;
+    ReflectionUtils.cloneWritableInto(dst, src);
   }
 
   /**

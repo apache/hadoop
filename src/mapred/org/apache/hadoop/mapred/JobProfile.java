@@ -66,7 +66,8 @@ public class JobProfile implements Writable {
    * @param url link to the web-ui for details of the job.
    * @param name user-specified job name.
    */
-  public JobProfile(String user, JobID jobid, String jobFile, String url,
+  public JobProfile(String user, org.apache.hadoop.mapreduce.JobID jobid, 
+                    String jobFile, String url,
                     String name) {
     this(user, jobid, jobFile, url, name, JobConf.DEFAULT_QUEUE_NAME);
   }
@@ -82,10 +83,11 @@ public class JobProfile implements Writable {
    * @param name user-specified job name.
    * @param queueName name of the queue to which the job is submitted
    */
-  public JobProfile(String user, JobID jobid, String jobFile, String url,
-                      String name, String queueName) {
+  public JobProfile(String user, org.apache.hadoop.mapreduce.JobID jobid, 
+                    String jobFile, String url,
+                    String name, String queueName) {
     this.user = user;
-    this.jobid = jobid;
+    this.jobid = JobID.downgrade(jobid);
     this.jobFile = jobFile;
     this.url = url;
     this.name = name;

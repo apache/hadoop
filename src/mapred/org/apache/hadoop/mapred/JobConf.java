@@ -99,7 +99,9 @@ import org.apache.hadoop.util.Tool;
  * @see ClusterStatus
  * @see Tool
  * @see DistributedCache
+ * @deprecated Use {@link Configuration} instead
  */
+@Deprecated
 public class JobConf extends Configuration {
   
   private static final Log LOG = LogFactory.getLog(JobConf.class);
@@ -767,6 +769,40 @@ public class JobConf extends Configuration {
 		  Class<? extends RawComparator> theClass) {
     setClass("mapred.output.value.groupfn.class",
              theClass, RawComparator.class);
+  }
+
+  /**
+   * Should the framework use the new context-object code for running
+   * the mapper?
+   * @return true, if the new api should be used
+   */
+  public boolean getUseNewMapper() {
+    return getBoolean("mapred.mapper.new-api", false);
+  }
+  /**
+   * Set whether the framework should use the new api for the mapper.
+   * This is the default for jobs submitted with the new Job api.
+   * @param flag true, if the new api should be used
+   */
+  public void setUseNewMapper(boolean flag) {
+    setBoolean("mapred.mapper.new-api", flag);
+  }
+
+  /**
+   * Should the framework use the new context-object code for running
+   * the reducer?
+   * @return true, if the new api should be used
+   */
+  public boolean getUseNewReducer() {
+    return getBoolean("mapred.reducer.new-api", false);
+  }
+  /**
+   * Set whether the framework should use the new api for the reducer. 
+   * This is the default for jobs submitted with the new Job api.
+   * @param flag true, if the new api should be used
+   */
+  public void setUseNewReducer(boolean flag) {
+    setBoolean("mapred.reducer.new-api", flag);
   }
 
   /**

@@ -68,5 +68,17 @@ public abstract class OutputFormat<K, V> {
   public abstract void checkOutputSpecs(JobContext context
                                         ) throws IOException, 
                                                  InterruptedException;
+
+  /**
+   * Get the output committer for this output format. This is responsible
+   * for ensuring the output is committed correctly.
+   * @param context the task context
+   * @return an output committer
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public abstract 
+  OutputCommitter getOutputCommitter(TaskAttemptContext context
+                                     ) throws IOException, InterruptedException;
 }
 

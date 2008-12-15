@@ -23,10 +23,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.StatusReporter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Multithreaded implementation for @link org.apache.hadoop.mapreduce.Mapper.
@@ -50,7 +56,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
   private static final Log LOG = LogFactory.getLog(MultithreadedMapper.class);
   private Class<Mapper<K1,V1,K2,V2>> mapClass;
   private Context outer;
-  private MapRunner[] runners;
+  private List<MapRunner> runners;
 
   public static int getNumberOfThreads(Configuration conf) {
     return conf.getInt("mapred.map.multithreadedrunner.threads", 10);
@@ -78,6 +84,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     conf.setClass("mapred.map.multithreadedrunner.class", cls, Mapper.class);
   }
 
+  @Override
   public void run(Context context) throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     outer = context;
@@ -88,14 +95,16 @@ public class MultithreadedMapper<K1, V1, K2, V2>
                 " threads");
     }
     
-    runners = (MapRunner[]) new Object[numberOfThreads];
+    runners =  new ArrayList<MapRunner>(numberOfThreads);
     for(int i=0; i < numberOfThreads; ++i) {
-      runners[i] = new MapRunner();
-      runners[i].start();
+      MapRunner thread = new MapRunner(context);
+      thread.start();
+      runners.set(i, thread);
     }
     for(int i=0; i < numberOfThreads; ++i) {
-      runners[i].join();
-      Throwable th = runners[i].throwable;
+      MapRunner thread = runners.get(i);
+      thread.join();
+      Throwable th = thread.throwable;
       if (th != null) {
         if (th instanceof IOException) {
           throw (IOException) th;
@@ -108,85 +117,116 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     }
   }
 
-  private class SubMapContext extends Context {
+  private class SubMapRecordReader extends RecordReader<K1,V1> {
     private K1 key;
     private V1 value;
-    
-    SubMapContext() {
-      super(outer.getConfiguration(), outer.getTaskAttemptId());
+    private Configuration conf;
+
+    @Override
+    public void close() throws IOException {
     }
 
     @Override
-    public InputSplit getInputSplit() {
-      synchronized (outer) {
-        return outer.getInputSplit();
-      }
+    public float getProgress() throws IOException, InterruptedException {
+      return 0;
     }
 
     @Override
-    public Counter getCounter(Enum<?> counterName) {
+    public void initialize(InputSplit split, 
+                           TaskAttemptContext context
+                           ) throws IOException, InterruptedException {
+      conf = context.getConfiguration();
+    }
+
+
+    @Override
+    public boolean nextKeyValue() throws IOException, InterruptedException {
       synchronized (outer) {
-        return outer.getCounter(counterName);
+        if (!outer.nextKeyValue()) {
+          return false;
+        }
+        key = ReflectionUtils.copy(outer.getConfiguration(),
+                                   outer.getCurrentKey(), key);
+        value = ReflectionUtils.copy(conf, outer.getCurrentValue(), value);
+        return true;
       }
     }
 
+    public K1 getCurrentKey() {
+      return key;
+    }
+
     @Override
-    public Counter getCounter(String groupName, String counterName) {
+    public V1 getCurrentValue() {
+      return value;
+    }
+  }
+  
+  private class SubMapRecordWriter extends RecordWriter<K2,V2> {
+
+    @Override
+    public void close(TaskAttemptContext context) throws IOException,
+                                                 InterruptedException {
+    }
+
+    @Override
+    public void write(K2 key, V2 value) throws IOException,
+                                               InterruptedException {
       synchronized (outer) {
-        return outer.getCounter(groupName, counterName);
+        outer.write(key, value);
       }
+    }  
+  }
+
+  private class SubMapStatusReporter extends StatusReporter {
+
+    @Override
+    public Counter getCounter(Enum<?> name) {
+      return outer.getCounter(name);
+    }
+
+    @Override
+    public Counter getCounter(String group, String name) {
+      return outer.getCounter(group, name);
     }
 
     @Override
     public void progress() {
-      synchronized (outer) {
-        outer.progress();
-      }
+      outer.progress();
     }
 
     @Override
-    public void collect(K2 key, V2 value) throws IOException,
-                                         InterruptedException {
-      synchronized (outer) {
-        outer.collect(key, value);
-      }
-    }
-
-    @Override
-    public K1 nextKey(K1 k) throws IOException, InterruptedException {
-      synchronized (outer) {
-        key = outer.nextKey(key);
-        if (key != null) {
-          value = outer.nextValue(value);
-        }
-        return key;
-      }
+    public void setStatus(String status) {
+      outer.setStatus(status);
     }
     
-    public V1 nextValue(V1 v) throws IOException, InterruptedException {
-      return value;
-    }
   }
 
   private class MapRunner extends Thread {
     private Mapper<K1,V1,K2,V2> mapper;
-    private Context context;
+    private Context subcontext;
     private Throwable throwable;
 
-    @SuppressWarnings("unchecked")
-    MapRunner() {
-      mapper = (Mapper<K1,V1,K2,V2>) 
-        ReflectionUtils.newInstance(mapClass, context.getConfiguration());
-      context = new SubMapContext();
+    MapRunner(Context context) throws IOException, InterruptedException {
+      mapper = ReflectionUtils.newInstance(mapClass, 
+                                           context.getConfiguration());
+      subcontext = new Context(outer.getConfiguration(), 
+                            outer.getTaskAttemptID(),
+                            new SubMapRecordReader(),
+                            new SubMapRecordWriter(), 
+                            context.getOutputCommitter(),
+                            new SubMapStatusReporter(),
+                            outer.getInputSplit());
     }
 
     public Throwable getThrowable() {
       return throwable;
     }
 
+    @Override
     public void run() {
       try {
-        mapper.run(context);
+        mapper.run(subcontext);
       } catch (Throwable ie) {
         throwable = ie;
       }

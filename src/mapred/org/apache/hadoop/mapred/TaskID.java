@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.text.NumberFormat;
 
 /**
  * TaskID represents the immutable and unique identifier for 
@@ -45,16 +43,8 @@ import java.text.NumberFormat;
  * @see JobID
  * @see TaskAttemptID
  */
-public class TaskID extends ID {
-  private static final String TASK = "task";
-  private static final NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(6);
-  }
-  
-  private JobID jobId;
-  private boolean isMap;
+@Deprecated
+public class TaskID extends org.apache.hadoop.mapreduce.TaskID {
 
   /**
    * Constructs a TaskID object from given {@link JobID}.  
@@ -62,13 +52,8 @@ public class TaskID extends ID {
    * @param isMap whether the tip is a map 
    * @param id the tip number
    */
-  public TaskID(JobID jobId, boolean isMap, int id) {
-    super(id);
-    if(jobId == null) {
-      throw new IllegalArgumentException("jobId cannot be null");
-    }
-    this.jobId = jobId;
-    this.isMap = isMap;
+  public TaskID(org.apache.hadoop.mapreduce.JobID jobId, boolean isMap,int id) {
+    super(jobId, isMap, id);
   }
   
   /**
@@ -82,81 +67,22 @@ public class TaskID extends ID {
     this(new JobID(jtIdentifier, jobId), isMap, id);
   }
   
-  public TaskID() { 
-    jobId = new JobID();
+  public TaskID() {
+    super(new JobID(), false, 0);
   }
   
-  /** Returns the {@link JobID} object that this tip belongs to */
-  public JobID getJobID() {
-    return jobId;
-  }
-  
-  /**Returns whether this TaskID is a map ID */
-  public boolean isMap() {
-    return isMap;
-  }
-  
-  @Override
-  public boolean equals(Object o) {
-    if (!super.equals(o))
-      return false;
-
-    TaskID that = (TaskID)o;
-    return this.isMap == that.isMap && this.jobId.equals(that.jobId);
-  }
-
-  /**Compare TaskInProgressIds by first jobIds, then by tip numbers. Reduces are 
-   * defined as greater then maps.*/
-  @Override
-  public int compareTo(ID o) {
-    TaskID that = (TaskID)o;
-    int jobComp = this.jobId.compareTo(that.jobId);
-    if (jobComp == 0) {
-      if (this.isMap == that.isMap) {
-        return this.id - that.id;
-      } else {
-        return this.isMap ? -1 : 1;
-      }
-    } else {
-      return jobComp;
-    }
-  }
-  
-  @Override
-  public String toString() { 
-    return appendTo(new StringBuilder(TASK)).toString();
-  }
-
   /**
-   * Add the unique string to the given builder.
-   * @param builder the builder to append to
-   * @return the builder that was passed in
+   * Downgrade a new TaskID to an old one
+   * @param old a new or old TaskID
+   * @return either old or a new TaskID build to match old
    */
-  protected StringBuilder appendTo(StringBuilder builder) {
-    return jobId.appendTo(builder).
-                 append(SEPARATOR).
-                 append(isMap ? 'm' : 'r').
-                 append(SEPARATOR).
-                 append(idFormat.format(id));
-  }
-  
-  @Override
-  public int hashCode() {
-    return jobId.hashCode() * 524287 + id;
-  }
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    jobId.readFields(in);
-    isMap = in.readBoolean();
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    jobId.write(out);
-    out.writeBoolean(isMap);
+  public static TaskID downgrade(org.apache.hadoop.mapreduce.TaskID old) {
+    if (old instanceof TaskID) {
+      return (TaskID) old;
+    } else {
+      return new TaskID(JobID.downgrade(old.getJobID()), old.isMap(), 
+                        old.getId());
+    }
   }
 
   @Deprecated
@@ -166,32 +92,10 @@ public class TaskID extends ID {
     return tipId;
   }
   
-  /** Construct a TaskID object from given string 
-   * @return constructed TaskID object or null if the given String is null
-   * @throws IllegalArgumentException if the given string is malformed
-   */
-  public static TaskID forName(String str) 
-    throws IllegalArgumentException {
-    if(str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(SEPARATOR));
-      if(parts.length == 5) {
-        if(parts[0].equals(TASK)) {
-          boolean isMap = false;
-          if(parts[3].equals("m")) isMap = true;
-          else if(parts[3].equals("r")) isMap = false;
-          else throw new Exception();
-          return new TaskID(parts[1], Integer.parseInt(parts[2]),
-              isMap, Integer.parseInt(parts[4]));
-        }
-      }
-    }catch (Exception ex) {//fall below
-    }
-    throw new IllegalArgumentException("TaskId string : " + str 
-        + " is not properly formed");
+  public JobID getJobID() {
+    return (JobID) super.getJobID();
   }
-  
+
   /** 
    * Returns a regex pattern which matches task IDs. Arguments can 
    * be given null, in which case that part of the regex will be generic.  
@@ -226,5 +130,10 @@ public class TaskID extends ID {
       .append(taskId != null ? idFormat.format(taskId) : "[0-9]*");
     return builder;
   }
-  
+
+  public static TaskID forName(String str
+                               ) throws IllegalArgumentException {
+    return (TaskID) org.apache.hadoop.mapreduce.TaskID.forName(str);
+  }
+
 }

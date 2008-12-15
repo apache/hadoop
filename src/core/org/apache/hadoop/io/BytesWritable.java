@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /** 
  * A byte sequence that is usable as a key or value.
  * It is resizable and distinguishes between the size of the seqeunce and
@@ -30,6 +33,7 @@ import java.io.DataOutput;
  */
 public class BytesWritable extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
+  private static final Log LOG = LogFactory.getLog(BytesWritable.class);
   private static final int LENGTH_BYTES = 4;
   private static final byte[] EMPTY_BYTES = {};
 

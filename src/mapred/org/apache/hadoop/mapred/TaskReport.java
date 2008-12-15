@@ -30,7 +30,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 /** A report on the state of a task. */
 public class TaskReport implements Writable {
-  private final TaskID taskid;
+  private TaskID taskid;
   private float progress;
   private String state;
   private String[] diagnostics;
@@ -172,7 +172,7 @@ public class TaskReport implements Writable {
       return false;
     if(o.getClass().equals(TaskReport.class)) {
       TaskReport report = (TaskReport) o;
-      return counters.contentEquals(report.getCounters())
+      return counters.equals(report.getCounters())
              && Arrays.toString(this.diagnostics)
                       .equals(Arrays.toString(report.getDiagnostics()))
              && this.finishTime == report.getFinishTime()
@@ -215,11 +215,11 @@ public class TaskReport implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    taskid.readFields(in);
-    progress = in.readFloat();
-    state = Text.readString(in);
-    startTime = in.readLong(); 
-    finishTime = in.readLong();
+    this.taskid.readFields(in);
+    this.progress = in.readFloat();
+    this.state = Text.readString(in);
+    this.startTime = in.readLong(); 
+    this.finishTime = in.readLong();
     
     diagnostics = WritableUtils.readStringArray(in);
     counters = new Counters();

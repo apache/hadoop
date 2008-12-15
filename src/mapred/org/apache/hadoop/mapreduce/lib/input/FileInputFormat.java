@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -108,26 +109,37 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
 
   /**
    * Set a PathFilter to be applied to the input paths for the map-reduce job.
-   *
+   * @param job the job to modify
    * @param filter the PathFilter class use for filtering the input paths.
    */
-  public static void setInputPathFilter(Configuration conf,
+  public static void setInputPathFilter(Job job,
                                         Class<? extends PathFilter> filter) {
-    conf.setClass("mapred.input.pathFilter.class", filter, PathFilter.class);
+    job.getConfiguration().setClass("mapred.input.pathFilter.class", filter, 
+                                    PathFilter.class);
   }
 
-  public static void setMinInputSplitSize(Configuration conf,
+  /**
+   * Set the minimum input split size
+   * @param job the job to modify
+   * @param size the minimum size
+   */
+  public static void setMinInputSplitSize(Job job,
                                           long size) {
-    conf.setLong("mapred.min.split.size", size);
+    job.getConfiguration().setLong("mapred.min.split.size", size);
   }
 
   public static long getMinSplitSize(Configuration conf) {
     return conf.getLong("mapred.min.split.size", 1L);
   }
 
-  public static void setMaxInputSplitSize(Configuration conf,
+  /**
+   * Set the maximum split size
+   * @param job the job to modify
+   * @param size the maximum split size
+   */
+  public static void setMaxInputSplitSize(Job job,
                                           long size) {
-    conf.setLong("mapred.max.split.size", size);
+    job.getConfiguration().setLong("mapred.max.split.size", size);
   }
 
   public static long getMaxSplitSize(Configuration conf) {
@@ -271,14 +283,14 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * Sets the given comma separated paths as the list of inputs 
    * for the map-reduce job.
    * 
-   * @param conf Configuration of the job
+   * @param job the job
    * @param commaSeparatedPaths Comma separated paths to be set as 
    *        the list of inputs for the map-reduce job.
    */
-  public static void setInputPaths(Configuration conf, 
+  public static void setInputPaths(Job job, 
                                    String commaSeparatedPaths
                                    ) throws IOException {
-    setInputPaths(conf, StringUtils.stringToPath(
+    setInputPaths(job, StringUtils.stringToPath(
                         getPathStrings(commaSeparatedPaths)));
   }
 
@@ -286,15 +298,15 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * Add the given comma separated paths to the list of inputs for
    *  the map-reduce job.
    * 
-   * @param conf The configuration of the job 
+   * @param job The job to modify
    * @param commaSeparatedPaths Comma separated paths to be added to
    *        the list of inputs for the map-reduce job.
    */
-  public static void addInputPaths(Configuration conf, 
+  public static void addInputPaths(Job job, 
                                    String commaSeparatedPaths
                                    ) throws IOException {
     for (String str : getPathStrings(commaSeparatedPaths)) {
-      addInputPath(conf, new Path(str));
+      addInputPath(job, new Path(str));
     }
   }
 
@@ -302,12 +314,13 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * Set the array of {@link Path}s as the list of inputs
    * for the map-reduce job.
    * 
-   * @param conf Configuration of the job. 
+   * @param job The job to modify 
    * @param inputPaths the {@link Path}s of the input directories/files 
    * for the map-reduce job.
    */ 
-  public static void setInputPaths(Configuration conf, 
+  public static void setInputPaths(Job job, 
                                    Path... inputPaths) throws IOException {
+    Configuration conf = job.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     Path path = inputPaths[0].makeQualified(fs);
     StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
@@ -322,12 +335,13 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   /**
    * Add a {@link Path} to the list of inputs for the map-reduce job.
    * 
-   * @param conf The configuration of the job 
+   * @param job The {@link Job} to modify
    * @param path {@link Path} to be added to the list of inputs for 
    *            the map-reduce job.
    */
-  public static void addInputPath(Configuration conf, 
+  public static void addInputPath(Job job, 
                                   Path path) throws IOException {
+    Configuration conf = job.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     path = path.makeQualified(fs);
     String dirStr = StringUtils.escapeString(path.toString());

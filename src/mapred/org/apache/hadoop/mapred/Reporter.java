@@ -47,10 +47,13 @@ public interface Reporter extends Progressable {
       }
       public void progress() {
       }
+      public Counter getCounter(Enum<?> name) {
+        return null;
+      }
       public Counter getCounter(String group, String name) {
         return null;
       }
-      public void incrCounter(Enum key, long amount) {
+      public void incrCounter(Enum<?> key, long amount) {
       }
       public void incrCounter(String group, String counter, long amount) {
       }
@@ -69,6 +72,14 @@ public interface Reporter extends Progressable {
   /**
    * Get the {@link Counter} of the given group with the given name.
    * 
+   * @param name counter name
+   * @return the <code>Counter</code> of the given group/name.
+   */
+  public abstract Counter getCounter(Enum<?> name);
+
+  /**
+   * Get the {@link Counter} of the given group with the given name.
+   * 
    * @param group counter group
    * @param name counter name
    * @return the <code>Counter</code> of the given group/name.
@@ -84,7 +95,7 @@ public interface Reporter extends Progressable {
    * @param amount A non-negative amount by which the counter is to 
    *               be incremented.
    */
-  public abstract void incrCounter(Enum key, long amount);
+  public abstract void incrCounter(Enum<?> key, long amount);
   
   /**
    * Increments the counter identified by the group and counter name

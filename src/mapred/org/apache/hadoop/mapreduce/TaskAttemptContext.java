@@ -26,12 +26,12 @@ import org.apache.hadoop.util.Progressable;
 /**
  * The context for task attempts.
  */
-public abstract class TaskAttemptContext extends JobContext 
-    implements Progressable {
+public class TaskAttemptContext extends JobContext implements Progressable {
   private final TaskAttemptID taskId;
   private String status = "";
   
-  public TaskAttemptContext(Configuration conf, TaskAttemptID taskId) {
+  public TaskAttemptContext(Configuration conf, 
+                            TaskAttemptID taskId) {
     super(conf, taskId.getJobID());
     this.taskId = taskId;
   }
@@ -39,7 +39,7 @@ public abstract class TaskAttemptContext extends JobContext
   /**
    * Get the unique name for this task attempt.
    */
-  public TaskAttemptID getTaskAttemptId() {
+  public TaskAttemptID getTaskAttemptID() {
     return taskId;
   }
 
@@ -59,13 +59,8 @@ public abstract class TaskAttemptContext extends JobContext
   }
 
   /**
-   * Lookup a counter by an enum.
+   * Report progress. The subtypes actually do work in this method.
    */
-  public abstract Counter getCounter(Enum<?> counterName);
-
-  /**
-   * Lookup a counter by group and counter name. The enum-based interface is
-   * preferred.
-   */
-  public abstract Counter getCounter(String groupName, String counterName);
+  public void progress() { 
+  }
 }

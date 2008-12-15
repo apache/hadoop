@@ -21,15 +21,12 @@ package org.apache.hadoop.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
 
 /**
  * A read-only view of the job that is provided to the tasks while they
@@ -38,35 +35,21 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class JobContext {
   // Put all of the attribute names in here so that Job and JobContext are
   // consistent.
-  protected static final String INPUT_FORMAT_CLASS_ATTR = "mapreduce.map.class";
+  protected static final String INPUT_FORMAT_CLASS_ATTR = 
+    "mapreduce.inputformat.class";
   protected static final String MAP_CLASS_ATTR = "mapreduce.map.class";
   protected static final String COMBINE_CLASS_ATTR = "mapreduce.combine.class";
   protected static final String REDUCE_CLASS_ATTR = "mapreduce.reduce.class";
   protected static final String OUTPUT_FORMAT_CLASS_ATTR = 
     "mapreduce.outputformat.class";
-  protected static final String OUTPUT_KEY_CLASS_ATTR = 
-    "mapreduce.out.key.class";
-  protected static final String OUTPUT_VALUE_CLASS_ATTR = 
-    "mapreduce.out.value.class";
-  protected static final String MAP_OUTPUT_KEY_CLASS_ATTR = 
-    "mapreduce.map.out.key.class";
-  protected static final String MAP_OUTPUT_VALUE_CLASS_ATTR = 
-    "mapreduce.map.out.value.class";
-  protected static final String NUM_REDUCES_ATTR = "mapreduce.reduce.tasks";
-  protected static final String WORKING_DIR_ATTR = "mapreduce.work.dir";
-  protected static final String JOB_NAME_ATTR = "mapreduce.job.name";
-  protected static final String SORT_COMPARATOR_ATTR = 
-    "mapreduce.sort.comparator";
-  protected static final String GROUPING_COMPARATOR_ATTR = 
-    "mapreduce.grouping.comparator";
   protected static final String PARTITIONER_CLASS_ATTR = 
     "mapreduce.partitioner.class";
 
-  protected final Configuration conf;
+  protected final org.apache.hadoop.mapred.JobConf conf;
   private final JobID jobId;
   
   public JobContext(Configuration conf, JobID jobId) {
-    this.conf = conf;
+    this.conf = new org.apache.hadoop.mapred.JobConf(conf);
     this.jobId = jobId;
   }
 
@@ -92,7 +75,7 @@ public class JobContext {
    * @return the number of reduce tasks for this job.
    */
   public int getNumReduceTasks() {
-    return conf.getInt(NUM_REDUCES_ATTR, 1);
+    return conf.getNumReduceTasks();
   }
   
   /**
@@ -101,14 +84,7 @@ public class JobContext {
    * @return the directory name.
    */
   public Path getWorkingDirectory() throws IOException {
-    String name = conf.get(WORKING_DIR_ATTR);
-    if (name != null) {
-      return new Path(name);
-    } else {
-      Path dir = FileSystem.get(conf).getWorkingDirectory();
-      conf.set(WORKING_DIR_ATTR, dir.toString());
-      return dir;
-    }
+    return conf.getWorkingDirectory();
   }
 
   /**
@@ -116,8 +92,7 @@ public class JobContext {
    * @return the key class for the job output data.
    */
   public Class<?> getOutputKeyClass() {
-    return conf.getClass(OUTPUT_KEY_CLASS_ATTR,
-                         LongWritable.class, Object.class);
+    return conf.getOutputKeyClass();
   }
   
   /**
@@ -125,7 +100,7 @@ public class JobContext {
    * @return the value class for job outputs.
    */
   public Class<?> getOutputValueClass() {
-    return conf.getClass(OUTPUT_VALUE_CLASS_ATTR, Text.class, Object.class);
+    return conf.getOutputValueClass();
   }
 
   /**
@@ -135,12 +110,7 @@ public class JobContext {
    * @return the map output key class.
    */
   public Class<?> getMapOutputKeyClass() {
-    Class<?> retv = conf.getClass(MAP_OUTPUT_KEY_CLASS_ATTR, null, 
-                                  Object.class);
-    if (retv == null) {
-      retv = getOutputKeyClass();
-    }
-    return retv;
+    return conf.getMapOutputKeyClass();
   }
 
   /**
@@ -151,12 +121,7 @@ public class JobContext {
    * @return the map output value class.
    */
   public Class<?> getMapOutputValueClass() {
-    Class<?> retv = conf.getClass(MAP_OUTPUT_VALUE_CLASS_ATTR, null,
-        Object.class);
-    if (retv == null) {
-      retv = getOutputValueClass();
-    }
-    return retv;
+    return conf.getMapOutputValueClass();
   }
 
   /**
@@ -166,7 +131,7 @@ public class JobContext {
    * @return the job's name, defaulting to "".
    */
   public String getJobName() {
-    return conf.get(JOB_NAME_ATTR, "");
+    return conf.getJobName();
   }
 
   /**
@@ -178,7 +143,7 @@ public class JobContext {
   public Class<? extends InputFormat<?,?>> getInputFormatClass() 
      throws ClassNotFoundException {
     return (Class<? extends InputFormat<?,?>>) 
-      conf.getClass(INPUT_FORMAT_CLASS_ATTR, InputFormat.class);
+      conf.getClass(INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
   }
 
   /**
@@ -202,7 +167,7 @@ public class JobContext {
   public Class<? extends Reducer<?,?,?,?>> getCombinerClass() 
      throws ClassNotFoundException {
     return (Class<? extends Reducer<?,?,?,?>>) 
-      conf.getClass(COMBINE_CLASS_ATTR, Reducer.class);
+      conf.getClass(COMBINE_CLASS_ATTR, null);
   }
 
   /**
@@ -226,7 +191,7 @@ public class JobContext {
   public Class<? extends OutputFormat<?,?>> getOutputFormatClass() 
      throws ClassNotFoundException {
     return (Class<? extends OutputFormat<?,?>>) 
-      conf.getClass(OUTPUT_FORMAT_CLASS_ATTR, OutputFormat.class);
+      conf.getClass(OUTPUT_FORMAT_CLASS_ATTR, TextOutputFormat.class);
   }
 
   /**
@@ -238,7 +203,7 @@ public class JobContext {
   public Class<? extends Partitioner<?,?>> getPartitionerClass() 
      throws ClassNotFoundException {
     return (Class<? extends Partitioner<?,?>>) 
-      conf.getClass(PARTITIONER_CLASS_ATTR, Partitioner.class);
+      conf.getClass(PARTITIONER_CLASS_ATTR, HashPartitioner.class);
   }
 
   /**
@@ -246,14 +211,16 @@ public class JobContext {
    * 
    * @return the {@link RawComparator} comparator used to compare keys.
    */
-  @SuppressWarnings("unchecked")
   public RawComparator<?> getSortComparator() {
-    Class<?> theClass = conf.getClass(SORT_COMPARATOR_ATTR, null,
-                                   RawComparator.class);
-    if (theClass != null)
-      return (RawComparator<?>) ReflectionUtils.newInstance(theClass, conf);
-    return WritableComparator.get(
-        (Class<? extends WritableComparable>)getMapOutputKeyClass());
+    return conf.getOutputKeyComparator();
+  }
+
+  /**
+   * Get the pathname of the job's jar.
+   * @return the pathname
+   */
+  public String getJar() {
+    return conf.getJar();
   }
 
   /** 
@@ -264,12 +231,6 @@ public class JobContext {
    * @see Job#setGroupingComparatorClass(Class) for details.  
    */
   public RawComparator<?> getGroupingComparator() {
-    Class<?> theClass = conf.getClass(GROUPING_COMPARATOR_ATTR, null,
-                                   RawComparator.class);
-    if (theClass == null) {
-      return getSortComparator();
-    }
-    return (RawComparator<?>) ReflectionUtils.newInstance(theClass, conf);
+    return conf.getOutputValueGroupingComparator();
   }
-
 }

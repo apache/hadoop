@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.examples;
+
 import org.apache.hadoop.examples.dancing.DistributedPentomino;
 import org.apache.hadoop.examples.dancing.Sudoku;
 import org.apache.hadoop.examples.terasort.TeraGen;

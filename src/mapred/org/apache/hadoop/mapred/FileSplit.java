@@ -21,16 +21,19 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;                              // deprecated
 
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /** A section of an input file.  Returned by {@link
  * InputFormat#getSplits(JobConf, int)} and passed to
- * {@link InputFormat#getRecordReader(InputSplit,JobConf,Reporter)}. */
-public class FileSplit implements InputSplit {
+ * {@link InputFormat#getRecordReader(InputSplit,JobConf,Reporter)}. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.input.FileSplit}
+ *  instead.
+ */
+@Deprecated
+public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit 
+                       implements InputSplit {
   private Path file;
   private long start;
   private long length;

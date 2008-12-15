@@ -27,6 +27,7 @@ import java.util.Iterator;
  * by one.
  */
 public class InvalidInputException extends IOException {
+  private static final long serialVersionUID = -380668190578456802L;
   private List<IOException> problems;
   
   /**

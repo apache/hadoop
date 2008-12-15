@@ -68,7 +68,7 @@ class JVMId extends ID {
   /**Compare TaskInProgressIds by first jobIds, then by tip numbers. Reduces are 
    * defined as greater then maps.*/
   @Override
-  public int compareTo(ID o) {
+  public int compareTo(org.apache.hadoop.mapreduce.ID o) {
     JVMId that = (JVMId)o;
     int jobComp = this.jobId.compareTo(that.jobId);
     if(jobComp == 0) {

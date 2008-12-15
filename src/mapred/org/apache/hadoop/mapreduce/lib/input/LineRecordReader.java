@@ -46,7 +46,9 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private long pos;
   private long end;
   private LineReader in;
-  int maxLineLength;
+  private int maxLineLength;
+  private LongWritable key = null;
+  private Text value = null;
 
   public void initialize(InputSplit genericSplit,
                          TaskAttemptContext context) throws IOException {
@@ -82,25 +84,21 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     this.pos = start;
   }
   
-  public LongWritable nextKey(LongWritable key) throws IOException {
+  public boolean nextKeyValue() throws IOException {
     if (key == null) {
       key = new LongWritable();
     }
     key.set(pos);
-    return key;
-  }
-
-  public Text nextValue(Text value) throws IOException {
     if (value == null) {
       value = new Text();
     }
+    int newSize = 0;
     while (pos < end) {
-      int newSize = in.readLine(value, maxLineLength,
-                                Math.max((int)Math.min(Integer.MAX_VALUE, 
-                                                       end-pos),
-                                         maxLineLength));
+      newSize = in.readLine(value, maxLineLength,
+                            Math.max((int)Math.min(Integer.MAX_VALUE, end-pos),
+                                     maxLineLength));
       if (newSize == 0) {
-        return null;
+        break;
       }
       pos += newSize;
       if (newSize < maxLineLength) {
@@ -111,6 +109,22 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       LOG.info("Skipped line of size " + newSize + " at pos " + 
                (pos - newSize));
     }
+    if (newSize == 0) {
+      key = null;
+      value = null;
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  @Override
+  public LongWritable getCurrentKey() {
+    return key;
+  }
+
+  @Override
+  public Text getCurrentValue() {
     return value;
   }
 

@@ -159,7 +159,9 @@ public class IsolationRunner {
    * Run a single task
    * @param args the first argument is the task directory
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args
+                          ) throws ClassNotFoundException, IOException, 
+                                   InterruptedException {
     if (args.length != 1) {
       System.out.println("Usage: IsolationRunner <path>/job.xml");
       System.exit(1);

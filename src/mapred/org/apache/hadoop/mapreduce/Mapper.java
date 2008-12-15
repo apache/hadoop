@@ -94,10 +94,15 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  */
 public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 
-  public abstract class Context 
+  public class Context 
     extends MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
-    public Context(Configuration conf, TaskAttemptID taskid) {
-      super(conf, taskid);
+    public Context(Configuration conf, TaskAttemptID taskid,
+                   RecordReader<KEYIN,VALUEIN> reader,
+                   RecordWriter<KEYOUT,VALUEOUT> writer,
+                   OutputCommitter committer,
+                   StatusReporter reporter,
+                   InputSplit split) throws IOException, InterruptedException {
+      super(conf, taskid, reader, writer, committer, reporter, split);
     }
   }
   
@@ -116,7 +121,7 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
   @SuppressWarnings("unchecked")
   protected void map(KEYIN key, VALUEIN value, 
                      Context context) throws IOException, InterruptedException {
-    context.collect((KEYOUT) key, (VALUEOUT) value);
+    context.write((KEYOUT) key, (VALUEOUT) value);
   }
 
   /**
@@ -135,12 +140,8 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
    */
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
-    KEYIN key = context.nextKey(null);
-    VALUEIN value = null;
-    while (key != null) {
-      value = context.nextValue(value);
-      map(key, value, context);
-      key = context.nextKey(key);
+    while (context.nextKeyValue()) {
+      map(context.getCurrentKey(), context.getCurrentValue(), context);
     }
     cleanup(context);
   }

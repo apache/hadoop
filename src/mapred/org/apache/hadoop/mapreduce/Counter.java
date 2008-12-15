@@ -38,39 +38,60 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class Counter implements Writable {
 
+  private String name;
   private String displayName;
-  private long value;
+  private long value = 0;
     
-  Counter() { 
-    value = 0L;
+  protected Counter() { 
   }
 
-  Counter(String displayName, long value) {
+  protected Counter(String name, String displayName) {
+    this.name = name;
     this.displayName = displayName;
-    this.value = value;
+  }
+  
+  @Deprecated
+  protected synchronized void setDisplayName(String displayName) {
+    this.displayName = displayName;
   }
     
   /**
    * Read the binary representation of the counter
    */
+  @Override
   public synchronized void readFields(DataInput in) throws IOException {
-    displayName = Text.readString(in);
+    name = Text.readString(in);
+    if (in.readBoolean()) {
+      displayName = Text.readString(in);
+    } else {
+      displayName = name;
+    }
     value = WritableUtils.readVLong(in);
   }
     
   /**
    * Write the binary representation of the counter
    */
+  @Override
   public synchronized void write(DataOutput out) throws IOException {
-    Text.writeString(out, displayName);
+    Text.writeString(out, name);
+    boolean distinctDisplayName = ! name.equals(displayName);
+    out.writeBoolean(distinctDisplayName);
+    if (distinctDisplayName) {
+      Text.writeString(out, displayName);
+    }
     WritableUtils.writeVLong(out, value);
   }
-    
+
+  public synchronized String getName() {
+    return name;
+  }
+
   /**
    * Get the name of the counter.
    * @return the user facing name of the counter
    */
-  public String getDisplayName() {
+  public synchronized String getDisplayName() {
     return displayName;
   }
     
@@ -88,5 +109,23 @@ public class Counter implements Writable {
    */
   public synchronized void increment(long incr) {
     value += incr;
+  }
+
+  @Override
+  public synchronized boolean equals(Object genericRight) {
+    if (genericRight instanceof Counter) {
+      synchronized (genericRight) {
+        Counter right = (Counter) genericRight;
+        return name.equals(right.name) && 
+               displayName.equals(right.displayName) &&
+               value == right.value;
+      }
+    }
+    return false;
+  }
+  
+  @Override
+  public synchronized int hashCode() {
+    return name.hashCode() + displayName.hashCode();
   }
 }

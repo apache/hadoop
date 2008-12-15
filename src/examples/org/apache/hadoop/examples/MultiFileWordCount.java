@@ -45,6 +45,7 @@ import org.apache.hadoop.mapred.MultiFileSplit;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -234,7 +235,7 @@ public class MultiFileWordCount extends Configured implements Tool {
       return 1;
     }
 
-    JobConf job = new JobConf(getConf(), WordCount.class);
+    JobConf job = new JobConf(getConf(), MultiFileWordCount.class);
     job.setJobName("MultiFileWordCount");
 
     //set the InputFormat of the job to our InputFormat
@@ -248,8 +249,8 @@ public class MultiFileWordCount extends Configured implements Tool {
     //use the defined mapper
     job.setMapperClass(MapClass.class);
     //use the WordCount Reducer
-    job.setCombinerClass(WordCount.Reduce.class);
-    job.setReducerClass(WordCount.Reduce.class);
+    job.setCombinerClass(LongSumReducer.class);
+    job.setReducerClass(LongSumReducer.class);
 
     FileInputFormat.addInputPaths(job, args[0]);
     FileOutputFormat.setOutputPath(job, new Path(args[1]));

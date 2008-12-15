@@ -352,6 +352,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     getProps().setProperty(name, value);
   }
   
+  /**
+   * Sets a property if it is currently unset.
+   * @param name the property name
+   * @param value the new value
+   */
+  public void setIfUnset(String name, String value) {
+    if (get(name) == null) {
+      set(name, value);
+    }
+  }
+  
   private synchronized Properties getOverlay() {
     if (overlay==null){
       overlay=new Properties();
@@ -519,6 +530,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setBoolean(String name, boolean value) {
     set(name, Boolean.toString(value));
+  }
+
+  /**
+   * Set the given property, if it is currently unset.
+   * @param name property name
+   * @param value new value
+   */
+  public void setBooleanIfUnset(String name, boolean value) {
+    setIfUnset(name, Boolean.toString(value));
   }
 
   /**

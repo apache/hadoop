@@ -19,11 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.text.NumberFormat;
-
-import org.apache.hadoop.io.Text;
 
 /**
  * JobID represents the immutable and unique identifier for 
@@ -41,91 +37,33 @@ import org.apache.hadoop.io.Text;
  * 
  * @see TaskID
  * @see TaskAttemptID
- * @see JobTracker#getNewJobId()
- * @see JobTracker#getStartTime()
  */
-public class JobID extends ID {
-  protected static final String JOB = "job";
-  private Text jtIdentifier = new Text();
-  
-  private static NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(4);
-  }
-  
+@Deprecated
+public class JobID extends org.apache.hadoop.mapreduce.JobID {
   /**
    * Constructs a JobID object 
    * @param jtIdentifier jobTracker identifier
    * @param id job number
    */
   public JobID(String jtIdentifier, int id) {
-    super(id);
-    this.jtIdentifier.set(jtIdentifier);
+    super(jtIdentifier, id);
   }
   
   public JobID() { }
-  
-  public String getJtIdentifier() {
-    return jtIdentifier.toString();
-  }
-  
-  @Override
-  public boolean equals(Object o) {
-    if (!super.equals(o))
-      return false;
-
-    JobID that = (JobID)o;
-    return this.jtIdentifier.equals(that.jtIdentifier);
-  }
-  
-  /**Compare JobIds by first jtIdentifiers, then by job numbers*/
-  @Override
-  public int compareTo(ID o) {
-    JobID that = (JobID)o;
-    int jtComp = this.jtIdentifier.compareTo(that.jtIdentifier);
-    if(jtComp == 0) {
-      return this.id - that.id;
-    }
-    else return jtComp;
-  }
-  
-  @Override
-  public String toString() {
-    return appendTo(new StringBuilder(JOB)).toString();
-  }
 
   /**
-   * Add the stuff after the "job" prefix to the given builder. This is useful,
-   * because the sub-ids use this substring at the start of their string.
-   * @param builder the builder to append to
-   * @return the builder that was passed in
+   * Downgrade a new JobID to an old one
+   * @param old a new or old JobID
+   * @return either old or a new JobID build to match old
    */
-  protected StringBuilder appendTo(StringBuilder builder) {
-    builder.append(SEPARATOR);
-    builder.append(jtIdentifier);
-    builder.append(SEPARATOR);
-    builder.append(idFormat.format(id));
-    return builder;
+  public static JobID downgrade(org.apache.hadoop.mapreduce.JobID old) {
+    if (old instanceof JobID) {
+      return (JobID) old;
+    } else {
+      return new JobID(old.getJtIdentifier(), old.getId());
+    }
   }
 
-  @Override
-  public int hashCode() {
-    return jtIdentifier.hashCode() + id;
-  }
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    jtIdentifier.readFields(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    jtIdentifier.write(out);
-  }
-  
   @Deprecated
   public static JobID read(DataInput in) throws IOException {
     JobID jobId = new JobID();
@@ -138,19 +76,7 @@ public class JobID extends ID {
    * @throws IllegalArgumentException if the given string is malformed
    */
   public static JobID forName(String str) throws IllegalArgumentException {
-    if(str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(SEPARATOR));
-      if(parts.length == 3) {
-        if(parts[0].equals(JOB)) {
-          return new JobID(parts[1], Integer.parseInt(parts[2]));
-        }
-      }
-    }catch (Exception ex) {//fall below
-    }
-    throw new IllegalArgumentException("JobId string : " + str 
-        + " is not properly formed");
+    return (JobID) org.apache.hadoop.mapreduce.JobID.forName(str);
   }
   
   /** 
@@ -187,5 +113,5 @@ public class JobID extends ID {
       .append(jobId != null ? idFormat.format(jobId) : "[0-9]*");
     return builder;
   }
-  
+
 }

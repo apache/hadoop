@@ -35,6 +35,8 @@ public class SequenceFileRecordReader<K, V> extends RecordReader<K, V> {
   private long start;
   private long end;
   private boolean more = true;
+  private K key = null;
+  private V value = null;
   protected Configuration conf;
   
   @Override
@@ -58,23 +60,30 @@ public class SequenceFileRecordReader<K, V> extends RecordReader<K, V> {
 
   @Override
   @SuppressWarnings("unchecked")
-  public K nextKey(K key) throws IOException, InterruptedException {
+  public boolean nextKeyValue() throws IOException, InterruptedException {
     if (!more) {
-      return null;
+      return false;
     }
     long pos = in.getPosition();
-    K result = (K) in.next(key);
-    if (result == null || (pos >= end && in.syncSeen())) {
+    key = (K) in.next(key);
+    if (key == null || (pos >= end && in.syncSeen())) {
       more = false;
-      result = null;
+      key = null;
+      value = null;
+    } else {
+      value = (V) in.getCurrentValue(value);
     }
-    return result;
+    return more;
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public V nextValue(V value) throws IOException, InterruptedException {
-    return (V) in.getCurrentValue(value);
+  public K getCurrentKey() {
+    return key;
+  }
+  
+  @Override
+  public V getCurrentValue() {
+    return value;
   }
   
   /**

@@ -38,9 +38,8 @@ import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
-
   protected static class LineRecordWriter<K, V>
-    implements RecordWriter<K, V> {
+    extends RecordWriter<K, V> {
     private static final String utf8 = "UTF-8";
     private static final byte[] newline;
     static {
@@ -108,26 +107,26 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
     }
   }
 
-  public RecordWriter<K, V> getRecordWriter(TaskAttemptContext context)
-    throws IOException {
+  public RecordWriter<K, V> 
+         getRecordWriter(TaskAttemptContext context
+                         ) throws IOException, InterruptedException {
     Configuration job = context.getConfiguration();
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator = job.get("mapred.textoutputformat.separator", 
-                                       "\t");
-    Path file = FileOutputFormat.getTaskOutputPath(context);
+    String keyValueSeparator= job.get("mapred.textoutputformat.separator","\t");
+    CompressionCodec codec = null;
+    String extension = "";
+    if (isCompressed) {
+      Class<? extends CompressionCodec> codecClass = 
+        getOutputCompressorClass(job, GzipCodec.class);
+      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, job);
+      extension = codec.getDefaultExtension();
+    }
+    Path file = getDefaultWorkFile(context, extension);
+    FileSystem fs = file.getFileSystem(job);
     if (!isCompressed) {
-      FileSystem fs = file.getFileSystem(job);
       FSDataOutputStream fileOut = fs.create(file, context);
       return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
     } else {
-      Class<? extends CompressionCodec> codecClass =
-        getOutputCompressorClass(job, GzipCodec.class);
-      // create the named codec
-      CompressionCodec codec = (CompressionCodec)
-        ReflectionUtils.newInstance(codecClass, job);
-      // build the filename including the extension
-      file = new Path(file + codec.getDefaultExtension());
-      FileSystem fs = file.getFileSystem(job);
       FSDataOutputStream fileOut = fs.create(file, context);
       return new LineRecordWriter<K, V>(new DataOutputStream
                                         (codec.createOutputStream(fileOut)),

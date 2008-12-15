@@ -21,10 +21,12 @@ package org.apache.hadoop.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
 /**
@@ -34,18 +36,30 @@ import org.apache.hadoop.mapred.TaskCompletionEvent;
  * IllegalStateException.
  */
 public class Job extends JobContext {  
-  
-  public Job() {
+  public static enum JobState {DEFINE, RUNNING};
+  private JobState state = JobState.DEFINE;
+  private JobClient jobTracker;
+  private RunningJob info;
+
+  public Job() throws IOException {
     this(new Configuration());
   }
 
-  public Job(Configuration conf) {
+  public Job(Configuration conf) throws IOException {
     super(conf, null);
+    jobTracker = new JobClient((JobConf) getConfiguration());
   }
 
-  public Job(Configuration conf, String jobName) {
+  public Job(Configuration conf, String jobName) throws IOException {
     this(conf);
     setJobName(jobName);
+  }
+
+  private void ensureState(JobState state) throws IllegalStateException {
+    if (state != this.state) {
+      throw new IllegalStateException("Job in state "+ this.state + 
+                                      " instead of " + state);
+    }
   }
 
   /**
@@ -54,7 +68,8 @@ public class Job extends JobContext {
    * @throws IllegalStateException if the job is submitted
    */
   public void setNumReduceTasks(int tasks) throws IllegalStateException {
-    conf.setInt(NUM_REDUCES_ATTR, tasks);
+    ensureState(JobState.DEFINE);
+    conf.setNumReduceTasks(tasks);
   }
 
   /**
@@ -64,8 +79,8 @@ public class Job extends JobContext {
    * @throws IllegalStateException if the job is submitted
    */
   public void setWorkingDirectory(Path dir) throws IOException {
-    dir = dir.makeQualified(FileSystem.get(conf));
-    conf.set(WORKING_DIR_ATTR, dir.toString());
+    ensureState(JobState.DEFINE);
+    conf.setWorkingDirectory(dir);
   }
 
   /**
@@ -75,6 +90,7 @@ public class Job extends JobContext {
    */
   public void setInputFormatClass(Class<? extends InputFormat<?,?>> cls
                                   ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(INPUT_FORMAT_CLASS_ATTR, cls, InputFormat.class);
   }
 
@@ -85,6 +101,7 @@ public class Job extends JobContext {
    */
   public void setOutputFormatClass(Class<? extends OutputFormat<?,?>> cls
                                    ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(OUTPUT_FORMAT_CLASS_ATTR, cls, OutputFormat.class);
   }
 
@@ -95,7 +112,24 @@ public class Job extends JobContext {
    */
   public void setMapperClass(Class<? extends Mapper<?,?,?,?>> cls
                              ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(MAP_CLASS_ATTR, cls, Mapper.class);
+  }
+
+  /**
+   * Set the Jar by finding where a given class came from.
+   * @param cls the example class
+   */
+  public void setJarByClass(Class<?> cls) {
+    conf.setJarByClass(cls);
+  }
+  
+  /**
+   * Get the pathname of the job's jar.
+   * @return the pathname
+   */
+  public String getJar() {
+    return conf.getJar();
   }
 
   /**
@@ -105,6 +139,7 @@ public class Job extends JobContext {
    */
   public void setCombinerClass(Class<? extends Reducer<?,?,?,?>> cls
                                ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(COMBINE_CLASS_ATTR, cls, Reducer.class);
   }
 
@@ -115,6 +150,7 @@ public class Job extends JobContext {
    */
   public void setReducerClass(Class<? extends Reducer<?,?,?,?>> cls
                               ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(REDUCE_CLASS_ATTR, cls, Reducer.class);
   }
 
@@ -125,6 +161,7 @@ public class Job extends JobContext {
    */
   public void setPartitionerClass(Class<? extends Partitioner<?,?>> cls
                                   ) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
     conf.setClass(PARTITIONER_CLASS_ATTR, cls, Partitioner.class);
   }
 
@@ -138,7 +175,8 @@ public class Job extends JobContext {
    */
   public void setMapOutputKeyClass(Class<?> theClass
                                    ) throws IllegalStateException {
-    conf.setClass(MAP_OUTPUT_KEY_CLASS_ATTR, theClass, Object.class);
+    ensureState(JobState.DEFINE);
+    conf.setMapOutputKeyClass(theClass);
   }
 
   /**
@@ -151,7 +189,8 @@ public class Job extends JobContext {
    */
   public void setMapOutputValueClass(Class<?> theClass
                                      ) throws IllegalStateException {
-    conf.setClass(MAP_OUTPUT_VALUE_CLASS_ATTR, theClass, Object.class);
+    ensureState(JobState.DEFINE);
+    conf.setMapOutputValueClass(theClass);
   }
 
   /**
@@ -162,7 +201,8 @@ public class Job extends JobContext {
    */
   public void setOutputKeyClass(Class<?> theClass
                                 ) throws IllegalStateException {
-    conf.setClass(OUTPUT_KEY_CLASS_ATTR, theClass, Object.class);
+    ensureState(JobState.DEFINE);
+    conf.setOutputKeyClass(theClass);
   }
 
   /**
@@ -173,7 +213,8 @@ public class Job extends JobContext {
    */
   public void setOutputValueClass(Class<?> theClass
                                   ) throws IllegalStateException {
-    conf.setClass(OUTPUT_VALUE_CLASS_ATTR, theClass, Object.class);
+    ensureState(JobState.DEFINE);
+    conf.setOutputValueClass(theClass);
   }
 
   /**
@@ -184,19 +225,22 @@ public class Job extends JobContext {
    */
   public void setSortComparatorClass(Class<? extends RawComparator<?>> cls
                                      ) throws IllegalStateException {
-    conf.setClass(SORT_COMPARATOR_ATTR, cls, RawComparator.class);
+    ensureState(JobState.DEFINE);
+    conf.setOutputKeyComparatorClass(cls);
   }
 
   /**
    * Define the comparator that controls which keys are grouped together
    * for a single call to 
-   * {@link Reducer#reduce(Object, Iterable, org.apache.hadoop.mapreduce.Reducer.Context)}
+   * {@link Reducer#reduce(Object, Iterable, 
+   *                       org.apache.hadoop.mapreduce.Reducer.Context)}
    * @param cls the raw comparator to use
    * @throws IllegalStateException if the job is submitted
    */
   public void setGroupingComparatorClass(Class<? extends RawComparator<?>> cls
                                          ) throws IllegalStateException {
-    conf.setClass(GROUPING_COMPARATOR_ATTR, cls, RawComparator.class);
+    ensureState(JobState.DEFINE);
+    conf.setOutputValueGroupingComparator(cls);
   }
 
   /**
@@ -206,7 +250,8 @@ public class Job extends JobContext {
    * @throws IllegalStateException if the job is submitted
    */
   public void setJobName(String name) throws IllegalStateException {
-    conf.set(JOB_NAME_ATTR, name);
+    ensureState(JobState.DEFINE);
+    conf.setJobName(name);
   }
 
   /**
@@ -215,8 +260,8 @@ public class Job extends JobContext {
    * @return the URL where some job progress information will be displayed.
    */
   public String getTrackingURL() {
-    // TODO
-    return null;
+    ensureState(JobState.RUNNING);
+    return info.getTrackingURL();
   }
 
   /**
@@ -227,8 +272,8 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public float mapProgress() throws IOException {
-    // TODO
-    return 0.0f;
+    ensureState(JobState.RUNNING);
+    return info.mapProgress();
   }
 
   /**
@@ -239,8 +284,8 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public float reduceProgress() throws IOException {
-    // TODO
-    return 0.0f;
+    ensureState(JobState.RUNNING);
+    return info.reduceProgress();
   }
 
   /**
@@ -251,8 +296,8 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public boolean isComplete() throws IOException {
-    // TODO
-    return false;
+    ensureState(JobState.RUNNING);
+    return info.isComplete();
   }
 
   /**
@@ -262,8 +307,8 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public boolean isSuccessful() throws IOException {
-    // TODO
-    return false;
+    ensureState(JobState.RUNNING);
+    return info.isSuccessful();
   }
 
   /**
@@ -273,7 +318,8 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public void killJob() throws IOException {
-    // TODO
+    ensureState(JobState.RUNNING);
+    info.killJob();
   }
     
   /**
@@ -285,8 +331,8 @@ public class Job extends JobContext {
    */
   public TaskCompletionEvent[] getTaskCompletionEvents(int startFrom
                                                        ) throws IOException {
-    // TODO
-    return null;
+    ensureState(JobState.RUNNING);
+    return info.getTaskCompletionEvents(startFrom);
   }
   
   /**
@@ -296,7 +342,9 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public void killTask(TaskAttemptID taskId) throws IOException {
-    // TODO
+    ensureState(JobState.RUNNING);
+    info.killTask(org.apache.hadoop.mapred.TaskAttemptID.downgrade(taskId), 
+                  false);
   }
 
   /**
@@ -306,7 +354,9 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public void failTask(TaskAttemptID taskId) throws IOException {
-    // TODO
+    ensureState(JobState.RUNNING);
+    info.killTask(org.apache.hadoop.mapred.TaskAttemptID.downgrade(taskId), 
+                  true);
   }
 
   /**
@@ -316,17 +366,77 @@ public class Job extends JobContext {
    * @throws IOException
    */
   public Iterable<CounterGroup> getCounters() throws IOException {
-    // TODO
-    return null;
+    ensureState(JobState.RUNNING);
+    return new Counters(info.getCounters());
+  }
+
+  private void ensureNotSet(String attr, String msg) throws IOException {
+    if (conf.get(attr) != null) {
+      throw new IOException(attr + " is incompatible with " + msg + " mode.");
+    }    
+  }
+
+  /**
+   * Default to the new APIs unless they are explicitly set or the old mapper or
+   * reduce attributes are used.
+   * @throws IOException if the configuration is inconsistant
+   */
+  private void setUseNewAPI() throws IOException {
+    int numReduces = conf.getNumReduceTasks();
+    String oldMapperClass = "mapred.mapper.class";
+    String oldReduceClass = "mapred.reducer.class";
+    String oldCombineClass = "mapred.combiner.class";
+    conf.setBooleanIfUnset("mapred.mapper.new-api",
+                           conf.get(oldMapperClass) == null);
+    if (conf.getUseNewMapper()) {
+      String mode = "new map API";
+      ensureNotSet("mapred.input.format.class", mode);
+      ensureNotSet(oldMapperClass, mode);
+      if (numReduces != 0) {
+        ensureNotSet(oldCombineClass, mode);
+        ensureNotSet("mapred.partitioner.class", mode);
+       } else {
+        ensureNotSet("mapred.output.format.class", mode);
+      }      
+    } else {
+      String mode = "map compatability";
+      ensureNotSet(JobContext.INPUT_FORMAT_CLASS_ATTR, mode);
+      ensureNotSet(JobContext.MAP_CLASS_ATTR, mode);
+      if (numReduces != 0) {
+        ensureNotSet(JobContext.COMBINE_CLASS_ATTR, mode);
+        ensureNotSet(JobContext.PARTITIONER_CLASS_ATTR, mode);
+       } else {
+        ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
+      }
+    }
+    if (numReduces != 0) {
+      conf.setBooleanIfUnset("mapred.reducer.new-api",
+                             conf.get(oldReduceClass) == null);
+      if (conf.getUseNewReducer()) {
+        String mode = "new reduce API";
+        ensureNotSet("mapred.output.format.class", mode);
+        ensureNotSet(oldReduceClass, mode);   
+        ensureNotSet(oldCombineClass, mode);
+      } else {
+        String mode = "reduce compatability";
+        ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
+        ensureNotSet(JobContext.REDUCE_CLASS_ATTR, mode);   
+        ensureNotSet(JobContext.COMBINE_CLASS_ATTR, mode);        
+      }
+    }   
   }
 
   /**
    * Submit the job to the cluster and return immediately.
    * @throws IOException
    */
-  public void submit() throws IOException {
-    // TODO
-  }
+  public void submit() throws IOException, InterruptedException, 
+                              ClassNotFoundException {
+    ensureState(JobState.DEFINE);
+    setUseNewAPI();
+    info = jobTracker.submitJobInternal(conf);
+    state = JobState.RUNNING;
+   }
   
   /**
    * Submit the job to the cluster and wait for it to finish.
@@ -334,8 +444,12 @@ public class Job extends JobContext {
    * @throws IOException thrown if the communication with the 
    *         <code>JobTracker</code> is lost
    */
-  public boolean waitForCompletion() throws IOException {
-    // TODO
-    return false;
+  public boolean waitForCompletion() throws IOException, InterruptedException,
+                                            ClassNotFoundException {
+    if (state == JobState.DEFINE) {
+      submit();
+    }
+    info.waitForCompletion();
+    return isSuccessful();
   }
 }

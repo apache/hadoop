@@ -37,9 +37,9 @@ public class TestFileOutputCommitter extends TestCase {
     JobConf job = new JobConf();
     job.set("mapred.task.id", attempt);
     job.setOutputCommitter(FileOutputCommitter.class);
-    JobContext jContext = new JobContext(job);
-    TaskAttemptContext tContext = new TaskAttemptContext(job, taskID);
     FileOutputFormat.setOutputPath(job, outDir);
+    JobContext jContext = new JobContext(job, taskID.getJobID());
+    TaskAttemptContext tContext = new TaskAttemptContext(job, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
     FileOutputFormat.setWorkOutputPath(job, 
       committer.getTempTaskOutputPath(tContext));

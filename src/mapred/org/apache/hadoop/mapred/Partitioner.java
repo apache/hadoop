@@ -29,7 +29,9 @@ package org.apache.hadoop.mapred;
  * record) is sent for reduction.</p>
  * 
  * @see Reducer
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Partitioner} instead.
  */
+@Deprecated
 public interface Partitioner<K2, V2> extends JobConfigurable {
   
   /** 

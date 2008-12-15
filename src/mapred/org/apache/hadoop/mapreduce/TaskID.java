@@ -45,10 +45,9 @@ import java.text.NumberFormat;
  * @see JobID
  * @see TaskAttemptID
  */
-public class TaskID extends ID {
-  private static final String TASK = "task";
-  private static char UNDERSCORE = '_';  
-  private static NumberFormat idFormat = NumberFormat.getInstance();
+public class TaskID extends org.apache.hadoop.mapred.ID {
+  protected static final String TASK = "task";
+  protected static final NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setGroupingUsed(false);
     idFormat.setMinimumIntegerDigits(6);
@@ -83,7 +82,9 @@ public class TaskID extends ID {
     this(new JobID(jtIdentifier, jobId), isMap, id);
   }
   
-  private TaskID() { }
+  public TaskID() { 
+    jobId = new JobID();
+  }
   
   /** Returns the {@link JobID} object that this tip belongs to */
   public JobID getJobID() {
@@ -118,31 +119,34 @@ public class TaskID extends ID {
     }
     else return jobComp;
   }
-  
   @Override
   public String toString() { 
-    StringBuilder builder = new StringBuilder();
-    return builder.append(TASK).append(UNDERSCORE)
-      .append(toStringWOPrefix()).toString();
+    return appendTo(new StringBuilder(TASK)).toString();
   }
 
-  StringBuilder toStringWOPrefix() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(jobId.toStringWOPrefix())
-      .append(isMap ? "_m_" : "_r_");
-    return builder.append(idFormat.format(id));
+  /**
+   * Add the unique string to the given builder.
+   * @param builder the builder to append to
+   * @return the builder that was passed in
+   */
+  protected StringBuilder appendTo(StringBuilder builder) {
+    return jobId.appendTo(builder).
+                 append(SEPARATOR).
+                 append(isMap ? 'm' : 'r').
+                 append(SEPARATOR).
+                 append(idFormat.format(id));
   }
   
   @Override
   public int hashCode() {
-    return toStringWOPrefix().toString().hashCode();
+    return jobId.hashCode() * 524287 + id;
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    this.jobId = JobID.read(in);
-    this.isMap = in.readBoolean();
+    jobId.readFields(in);
+    isMap = in.readBoolean();
   }
 
   @Override
@@ -150,12 +154,6 @@ public class TaskID extends ID {
     super.write(out);
     jobId.write(out);
     out.writeBoolean(isMap);
-  }
-  
-  public static TaskID read(DataInput in) throws IOException {
-    TaskID tipId = new TaskID();
-    tipId.readFields(in);
-    return tipId;
   }
   
   /** Construct a TaskID object from given string 
@@ -174,47 +172,16 @@ public class TaskID extends ID {
           if(parts[3].equals("m")) isMap = true;
           else if(parts[3].equals("r")) isMap = false;
           else throw new Exception();
-          return new TaskID(parts[1], Integer.parseInt(parts[2]),
-              isMap, Integer.parseInt(parts[4]));
+          return new org.apache.hadoop.mapred.TaskID(parts[1], 
+                                                     Integer.parseInt(parts[2]),
+                                                     isMap, 
+                                                     Integer.parseInt(parts[4]));
         }
       }
     }catch (Exception ex) {//fall below
     }
     throw new IllegalArgumentException("TaskId string : " + str 
         + " is not properly formed");
-  }
-  
-  /** 
-   * Returns a regex pattern which matches task IDs. Arguments can 
-   * be given null, in which case that part of the regex will be generic.  
-   * For example to obtain a regex matching <i>the first map task</i> 
-   * of <i>any jobtracker</i>, of <i>any job</i>, we would use :
-   * <pre> 
-   * TaskID.getTaskIDsPattern(null, null, true, 1);
-   * </pre>
-   * which will return :
-   * <pre> "task_[^_]*_[0-9]*_m_000001*" </pre> 
-   * @param jtIdentifier jobTracker identifier, or null
-   * @param jobId job number, or null
-   * @param isMap whether the tip is a map, or null 
-   * @param taskId taskId number, or null
-   * @return a regex pattern matching TaskIDs
-   */
-  public static String getTaskIDsPattern(String jtIdentifier, Integer jobId
-      , Boolean isMap, Integer taskId) {
-    StringBuilder builder = new StringBuilder(TASK).append(UNDERSCORE)
-      .append(getTaskIDsPatternWOPrefix(jtIdentifier, jobId, isMap, taskId));
-    return builder.toString();
-  }
-  
-  static StringBuilder getTaskIDsPatternWOPrefix(String jtIdentifier
-      , Integer jobId, Boolean isMap, Integer taskId) {
-    StringBuilder builder = new StringBuilder();
-    builder.append(JobID.getJobIDsPatternWOPrefix(jtIdentifier, jobId))
-      .append(UNDERSCORE)
-      .append(isMap != null ? (isMap ? "m" : "r") : "(m|r)").append(UNDERSCORE)
-      .append(taskId != null ? idFormat.format(taskId) : "[0-9]*");
-    return builder;
   }
   
 }

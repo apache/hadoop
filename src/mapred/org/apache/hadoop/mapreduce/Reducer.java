@@ -21,8 +21,8 @@ package org.apache.hadoop.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.RawKeyValueIterator;
 
 /** 
  * Reduces a set of intermediate values which share a key to a smaller set of
@@ -88,7 +88,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
  *   the sorted inputs.</p>
  *   <p>The output of the reduce task is typically written to a 
  *   {@link RecordWriter} via 
- *   {@link Context#collect(Object, Object)}.</p>
+ *   {@link Context#write(Object, Object)}.</p>
  *   </li>
  * </ol>
  * 
@@ -117,10 +117,19 @@ import org.apache.hadoop.mapreduce.Partitioner;
  */
 public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 
-  protected abstract class Context 
+  public class Context 
     extends ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
-    public Context(Configuration conf, TaskAttemptID taskid) {
-      super(conf, taskid);
+    public Context(Configuration conf, TaskAttemptID taskid,
+                   RawKeyValueIterator input, 
+                   RecordWriter<KEYOUT,VALUEOUT> output,
+                   OutputCommitter committer,
+                   StatusReporter reporter,
+                   RawComparator<KEYIN> comparator,
+                   Class<KEYIN> keyClass,
+                   Class<VALUEIN> valueClass
+                   ) throws IOException, InterruptedException {
+      super(conf, taskid, input, output, committer, reporter, comparator, 
+            keyClass, valueClass);
     }
   }
 
@@ -141,7 +150,7 @@ public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
   protected void reduce(KEYIN key, Iterable<VALUEIN> values, Context context
                         ) throws IOException, InterruptedException {
     for(VALUEIN value: values) {
-      context.collect((KEYOUT) key, (VALUEOUT) value);
+      context.write((KEYOUT) key, (VALUEOUT) value);
     }
   }
 
@@ -160,10 +169,8 @@ public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
    */
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
-    KEYIN key = context.nextKey(null);
-    while(key != null) {
-      reduce(key, context.getValues(), context);
-      key = context.nextKey(key);
+    while (context.nextKey()) {
+      reduce(context.getCurrentKey(), context.getValues(), context);
     }
     cleanup(context);
   }

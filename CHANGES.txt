@@ -87,8 +87,26 @@ Trunk (unreleased changes)
     HADOOP-4826. Introduce admin command saveNamespace. (shv)
 
     HADOOP-3063  BloomMapFile - fail-fast version of MapFile for sparsely
-                 populated key space (Andrzej Bialecki via stack)
+    populated key space (Andrzej Bialecki via stack)
 
+    HADOOP-1230. Add new map/reduce API and deprecate the old one. Generally,
+    the old code should work without problem. The new api is in 
+    org.apache.hadoop.mapreduce and the old classes in org.apache.hadoop.mapred
+    are deprecated. Differences in the new API:
+      1. All of the methods take Context objects that allow us to add new
+         methods without breaking compatability.
+      2. Mapper and Reducer now have a "run" method that is called once and
+         contains the control loop for the task, which lets applications
+         replace it.
+      3. Mapper and Reducer by default are Identity Mapper and Reducer.
+      4. The FileOutputFormats use part-r-00000 for the output of reduce 0 and
+         part-m-00000 for the output of map 0.
+      5. The reduce grouping comparator now uses the raw compare instead of 
+         object compare.
+      6. The number of maps in FileInputFormat is controlled by min and max
+         split size rather than min size and the desired number of maps.
+      (omalley)
+    
   IMPROVEMENTS
 
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 
