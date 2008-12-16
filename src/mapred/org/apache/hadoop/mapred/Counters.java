@@ -211,13 +211,20 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       buf.append(GROUP_CLOSE); // group end
       return buf.toString();
     }
-        
+
+    @Override
+    public int hashCode() {
+      return subcounters.hashCode();
+    }
+
     /** 
      * Checks for (content) equality of Groups
      */
-    synchronized boolean contentEquals(Group g) {
+    @Override
+    public synchronized boolean equals(Object obj) {
       boolean isEqual = false;
-      if (g != null) {
+      if (obj != null && obj instanceof Group) {
+        Group g = (Group) obj;
         if (size() == g.size()) {
           isEqual = true;
           for (Map.Entry<String, Counter> entry : subcounters.entrySet()) {
@@ -671,17 +678,24 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     return StringUtils.unEscapeString(string, StringUtils.ESCAPE_CHAR, 
                                       charsToEscape);
   }
-  
-  synchronized boolean contentEquals(Counters counters) {
+
+  @Override 
+  public synchronized int hashCode() {
+    return counters.hashCode();
+  }
+
+  @Override
+  public synchronized boolean equals(Object obj) {
     boolean isEqual = false;
-    if (counters != null) {
-      if (size() == counters.size()) {
+    if (obj != null && obj instanceof Counters) {
+      Counters other = (Counters) obj;
+      if (size() == other.size()) {
         isEqual = true;
         for (Map.Entry<String, Group> entry : this.counters.entrySet()) {
           String key = entry.getKey();
           Group sourceGroup = entry.getValue();
-          Group targetGroup = counters.getGroup(key);
-          if (!sourceGroup.contentEquals(targetGroup)) {
+          Group targetGroup = other.getGroup(key);
+          if (!sourceGroup.equals(targetGroup)) {
             isEqual = false;
             break;
           }

@@ -61,9 +61,10 @@ public class TestCounters extends TestCase {
     Counters recoveredCounter = 
       Counters.fromEscapedCompactString(compactEscapedString);
     // Check for recovery from string
-    assertTrue("Recovered counter does not match on content", 
-               counter.contentEquals(recoveredCounter));
-    
+    assertEquals("Recovered counter does not match on content", 
+                 counter, recoveredCounter);
+    assertEquals("recovered counter has wrong hash code",
+                 counter.hashCode(), recoveredCounter.hashCode());
   }
   
   public void testCounters() throws IOException {
