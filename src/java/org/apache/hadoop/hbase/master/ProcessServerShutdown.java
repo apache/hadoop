@@ -109,11 +109,6 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
         
         byte [] row = values.getRow();
-        
-        if (LOG.isDebugEnabled() && row != null) {
-          LOG.debug("shutdown scanner looking at " + Bytes.toString(row));
-        }
-
         // Check server name.  If null, be conservative and treat as though
         // region had been on shutdown server (could be null because we
         // missed edits in hlog because hdfs does not do write-append).
@@ -124,7 +119,11 @@ class ProcessServerShutdown extends RegionServerOperation {
           continue;
         }
 
-        // Bingo! Found it.
+        if (LOG.isDebugEnabled() && row != null) {
+          LOG.debug("Shutdown scanner for " + serverName + " processing " +
+            Bytes.toString(row));
+        }
+
         HRegionInfo info = master.getHRegionInfo(row, values);
         if (info == null) {
           emptyRows.add(row);

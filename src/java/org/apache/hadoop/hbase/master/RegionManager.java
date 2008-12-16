@@ -424,9 +424,10 @@ class RegionManager implements HConstants {
     
     int regionIdx = 0;
     int regionsClosed = 0;
-    while (regionsClosed < numRegionsToClose && regionIdx < mostLoadedRegions.length) {
+    int skippedClosing = 0;
+    while (regionsClosed < numRegionsToClose &&
+        regionIdx < mostLoadedRegions.length) {
       HRegionInfo currentRegion = mostLoadedRegions[regionIdx];
-      
       regionIdx++;
       // skip the region if it's meta or root
       if (currentRegion.isRootRegion() || currentRegion.isMetaTable()) {
@@ -434,13 +435,12 @@ class RegionManager implements HConstants {
       }
       
       if (isClosing(currentRegion.getRegionName())) {
-        LOG.info("Skipping region " + currentRegion.getRegionNameAsString() 
-          + " because it is already closing.");
+        skippedClosing++;
         continue;
       }
       
-      LOG.debug("Going to close region " + currentRegion.getRegionNameAsString());
-      
+      LOG.debug("Going to close region " +
+        currentRegion.getRegionNameAsString());
       // make a message to close the region
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,
         OVERLOADED));
@@ -449,6 +449,7 @@ class RegionManager implements HConstants {
       // increment the count of regions we've marked
       regionsClosed++;
     }
+    LOG.info("Skipped " + skippedClosing + " region(s) as already closing");
   }
   
   /**
