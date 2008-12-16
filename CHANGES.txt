@@ -403,6 +403,9 @@ Trunk (unreleased changes)
     HADOOP-4698. Lower io.sort.mb to 10 in the tests and raise the junit memory
     limit to 512m from 256m. (Nigel Daley via cdouglas)
 
+    HADOOP-4860. Split TestFileTailingAdapters into three separate tests to
+    avoid contention. (Eric Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

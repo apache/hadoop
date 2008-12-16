@@ -30,14 +30,15 @@ import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
 import org.apache.hadoop.chukwa.datacollection.controller.ChukwaAgentController;
 import org.apache.hadoop.chukwa.datacollection.connector.ChunkCatcherConnector;
 
-public class TestFileTailingAdaptors extends TestCase {
+public class TestRawAdaptor extends TestCase {
   ChunkCatcherConnector chunks;
-  public TestFileTailingAdaptors() {
+  public TestRawAdaptor() {
     chunks = new ChunkCatcherConnector();
     chunks.start();
   }
+  
+  public void testRawAdaptor() throws IOException, InterruptedException, ChukwaAgent.AlreadyRunningException {
 
-  public void testCrSepAdaptor() throws IOException, InterruptedException, ChukwaAgent.AlreadyRunningException {
     ChukwaAgent  agent = new ChukwaAgent();
     // Remove any adaptor left over from previous run
     ChukwaConfiguration cc = new ChukwaConfiguration();
@@ -46,26 +47,17 @@ public class TestFileTailingAdaptors extends TestCase {
     cli.removeAll();
     // sleep for some time to make sure we don't get chunk from existing streams
     Thread.sleep(5000);
-    File testFile = makeTestFile("/tmp/chukwaCrSepTest",80);
-    long adaptorId = agent.processCommand("add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.CharFileTailingAdaptorUTF8" +
-        " lines " + testFile + " 0");
+    File testFile = makeTestFile("/tmp/chukwaRawTest",80);
+    long adaptorId = agent.processCommand("add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.FileTailingAdaptor" +
+        " raw " + testFile + " 0");
     assertTrue(adaptorId != -1);
-    System.out.println("getting a chunk...");
-    Chunk c = chunks.waitForAChunk(); 
-    System.out.println("got chunk");
-    while(!c.getDataType().equals("lines")) {
+    Chunk c = chunks.waitForAChunk();
+    while(!c.getDataType().equals("raw")) {
         c = chunks.waitForAChunk();
     }
-    assertTrue(c.getSeqID() == testFile.length());    
-    assertTrue(c.getRecordOffsets().length == 80);
-    int recStart = 0;
-    for(int rec = 0 ; rec < c.getRecordOffsets().length; ++rec) {
-      String record = new String(c.getData(), recStart, c.getRecordOffsets()[rec] - recStart+1);
-      System.out.println("record "+ rec+ " was: " + record);
-      assertTrue(record.equals(rec + " abcdefghijklmnopqrstuvwxyz\n"));
-      recStart = c.getRecordOffsets()[rec] +1;
-    }
-    assertTrue(c.getDataType().equals("lines"));    
+    assertTrue(c.getDataType().equals("raw"));
+    assertTrue(c.getRecordOffsets().length == 1);
+    assertTrue(c.getSeqID() == testFile.length());
     agent.stopAdaptor(adaptorId, false);
     agent.shutdown();
   }
@@ -86,8 +78,8 @@ public class TestFileTailingAdaptors extends TestCase {
   
   public static void main(String[] args) {
     try {
-      TestFileTailingAdaptors tests = new TestFileTailingAdaptors();
-      tests.testCrSepAdaptor();
+      TestRawAdaptor tests = new TestRawAdaptor();
+      tests.testRawAdaptor();
     } catch(Exception e) {
       e.printStackTrace();
     }
