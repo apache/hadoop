@@ -33,7 +33,7 @@ import org.apache.hadoop.mapred.JobConf;
 
 public class GenericMRLoadJobCreator extends GenericMRLoadGenerator {
 
-  public JobConf createJob(String[] argv, boolean mapoutputCompressed,
+  public static JobConf createJob(String[] argv, boolean mapoutputCompressed,
       boolean outputCompressed) throws Exception {
 
     JobConf job = new JobConf();
