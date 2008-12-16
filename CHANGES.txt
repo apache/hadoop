@@ -440,6 +440,9 @@ Release 0.20.0 - Unreleased
     HADOOP-3921. Fixed clover (code coverage) target to work with JDK 6.
     (tomwhite via nigel)
 
+    HADOOP-4845. Modify the reduce input byte counter to record only the
+    compressed size and add a human-readable label. (Yongqiang He via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
