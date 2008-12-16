@@ -176,7 +176,8 @@
   <property name="jdiff.jar" value="${jdiff.home}/jdiff-${jdiff.version}.jar"/>
   <property name="xerces.jar" value="${jdiff.home}/xerces-${xerces.version}.jar"/>
 
-  <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
+  <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
+  <available property="clover.present" file="${clover.jar}" />
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -205,6 +206,7 @@
     <pathelement location="${build.dir}"/>
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
+    <pathelement path="${clover.jar}"/>
     <fileset dir="${test.lib.dir}">
       <include name="**/*.jar" />
       <exclude name="**/excluded/" />
@@ -1417,10 +1419,10 @@
 
 
 
- <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  Requires a Clover license and clover.jar in the ANT classpath.  To use, specify -Drun.clover=true on the command line."/>
+ <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
 
 <target name="clover.setup" if="clover.enabled">
-   <taskdef resource="clovertasks"/>
+   <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
    <mkdir dir="${clover.db.dir}"/>
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
      <fileset dir="src" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
@@ -1437,8 +1439,8 @@
   <fail unless="clover.present">
   ##################################################################
    Clover not found.
-   Please make sure clover.jar is in ANT_HOME/lib, or made available
-   to Ant using other mechanisms like -lib or CLASSPATH.
+   Please specify -Dclover.home=&lt;base of clover installation&gt;
+   on the command line.
   ##################################################################
   </fail>
 </target>

@@ -409,6 +409,9 @@ Trunk (unreleased changes)
     HADOOP-4860. Split TestFileTailingAdapters into three separate tests to
     avoid contention. (Eric Yang via cdouglas)
 
+    HADOOP-3921. Fixed clover (code coverage) target to work with JDK 6.
+    (tomwhite via nigel)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
