@@ -60,21 +60,21 @@ each of such violations. Setting or removing a quota creates a journal entry. </
 
 <ul>
 
- <li> <code>dfsadmin -setquota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the name quota to be <code>N</code> for
+ <li> <code>dfsadmin -setQuota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the name quota to be <code>N</code> for
 each directory. Best effort for each directory, with faults reported if <code>N</code> is not a positive long integer, the
 directory does not exist or it is a file, or the directory would immediately exceed the new quota. </li>
 
- <li> <code>dfsadmin -clrquota &lt;directory>...&lt;director></code><br /> Remove any name quota for each directory. Best
+ <li> <code>dfsadmin -clrQuota &lt;directory>...&lt;director></code><br /> Remove any name quota for each directory. Best
 effort for each directory, with faults reported if the directory does not exist or it is a file. It is not a fault if the
 directory has no quota. </li>
 
- <li> <code>dfsadmin -setspacequota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the space quota to be
+ <li> <code>dfsadmin -setSpaceQuota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the space quota to be
 N bytes for each directory. N can also be specified with a binary prefix for convenience, for e.g. 50g for 50 gigabytes and 
 2t for 2 terabytes etc. Best effort for each directory, with faults reported if <code>N</code> is
 neither zero nor a positive integer, the directory does not exist or it is a file, or the directory would immediately exceed
 the new quota. </li>
 
- <li> <code>dfsadmin -clrspacequota &lt;directory>...&lt;director></code><br /> Remove any space quota for each directory. Best
+ <li> <code>dfsadmin -clrSpaceQuota &lt;directory>...&lt;director></code><br /> Remove any space quota for each directory. Best
 effort for each directory, with faults reported if the directory does not exist or it is a file. It is not a fault if the
 directory has no quota. </li>
 
