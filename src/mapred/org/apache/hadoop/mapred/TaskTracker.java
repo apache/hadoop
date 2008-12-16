@@ -187,7 +187,6 @@ public class TaskTracker
   private int maxCurrentMapTasks;
   private int maxCurrentReduceTasks;
   private int failures;
-  private int finishedCount[] = new int[1];
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
   private CleanupQueue directoryCleanupThread;
@@ -1014,13 +1013,8 @@ public class TaskTracker
 
         long waitTime = heartbeatInterval - (now - lastHeartbeat);
         if (waitTime > 0) {
-          // sleeps for the wait time, wakes up if a task is finished.
-          synchronized(finishedCount) {
-            if (finishedCount[0] == 0) {
-              finishedCount.wait(waitTime);
-            }
-            finishedCount[0] = 0;
-          }
+          // sleeps for the wait time
+          Thread.sleep(waitTime);
         }
 
         // If the TaskTracker is just starting up:
@@ -2585,10 +2579,6 @@ public class TaskTracker
           taskMemoryManager.removeTask(taskid);
         }
         tip.releaseSlot();
-      }
-      synchronized(finishedCount) {
-        finishedCount[0]++;
-        finishedCount.notify();
       }
     } else {
       LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");

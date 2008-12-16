@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -119,6 +120,8 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
     else {
       beginAtStep = 2;
     }
+    List<Task> assignedTasks = new ArrayList<Task>();
+    scheduleTasks:
     for (int step = beginAtStep; step <= 3; ++step) {
       /* If we reached the maximum load for this step, go to the next */
       if ((step == 0 || step == 2) && mapTasksNumber >= maximumMapLoad ||
@@ -146,12 +149,13 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
                 taskTrackerManager.getNumberOfUniqueHosts());
           }
           if (task != null) {
-            return Collections.singletonList(task);
+            assignedTasks.add(task);
+            break scheduleTasks;
           }
         }
       }
     }
-    return null;
+    return assignedTasks;
   }
 
   /**
