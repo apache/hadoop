@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'trunk_(unreleased_changes)_' && list.id != 'release_0.19.1_-_unreleased_') {
+        if (list.id != 'release_0.20.0_-_unreleased_' && list.id != 'release_0.19.1_-_unreleased_') {
           list.style.display = "none";
         }
       }
@@ -52,12 +52,12 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
-<h2><a href="javascript:toggleList('trunk_(unreleased_changes)_')">Trunk (unreleased changes)
+<h2><a href="javascript:toggleList('release_0.20.0_-_unreleased_')">Release 0.20.0 - Unreleased
 </a></h2>
-<ul id="trunk_(unreleased_changes)_">
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(13)
-    <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
+<ul id="release_0.20.0_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.20.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+</a>&nbsp;&nbsp;&nbsp;(15)
+    <ol id="release_0.20.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4210">HADOOP-4210</a>. Fix findbugs warnings for equals implementations of mapred ID
 classes. Removed public, static ID::read and ID::forName; made ID an
 abstract class.<br />(Suresh Srinivas via cdouglas)</li>
@@ -91,11 +91,16 @@ PathFilter.<br />(tomwhite)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4445">HADOOP-4445</a>. Replace running task counts with running task
 percentage in capacity scheduler UI.<br />(Sreekanth Ramakrishnan via
 yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4631">HADOOP-4631</a>. Splits the configuration into three parts - one for core,
+one for mapred and the last one for HDFS.<br />(Sharad Agarwal via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3344">HADOOP-3344</a>. Fix libhdfs build to use autoconf and build the same
+architecture (32 vs 64 bit) of the JVM running Ant.  The libraries for
+pipes, utils, and libhdfs are now all in c++/&lt;os_osarch_jvmdatamodel&gt;/lib.<br />(Giridharan Kesavan via nigel)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(6)
-    <ol id="trunk_(unreleased_changes)_._new_features_">
+  <li><a href="javascript:toggleList('release_0.20.0_-_unreleased_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(10)
+    <ol id="release_0.20.0_-_unreleased_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4575">HADOOP-4575</a>. Add a proxy service for relaying HsftpFileSystem requests.
 Includes client authentication via user certificates and config-based
 access control.<br />(Kan Zhang via cdouglas)</li>
@@ -116,11 +121,32 @@ problems.<br />(Suhas Gogate via omalley)</li>
 move DataNode information to a separated page.<br />(Boris Shkolnik via
 szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4348">HADOOP-4348</a>. Add service-level authorization for Hadoop.<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4826">HADOOP-4826</a>. Introduce admin command saveNamespace.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3063">HADOOP-3063</a>  BloomMapFile - fail-fast version of MapFile for sparsely
+populated key space<br />(Andrzej Bialecki via stack)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-1230">HADOOP-1230</a>. Add new map/reduce API and deprecate the old one. Generally,
+the old code should work without problem. The new api is in
+org.apache.hadoop.mapreduce and the old classes in org.apache.hadoop.mapred
+are deprecated. Differences in the new API:
+  1. All of the methods take Context objects that allow us to add new
+     methods without breaking compatability.
+  2. Mapper and Reducer now have a "run" method that is called once and
+     contains the control loop for the task, which lets applications
+     replace it.
+  3. Mapper and Reducer by default are Identity Mapper and Reducer.
+  4. The FileOutputFormats use part-r-00000 for the output of reduce 0 and
+     part-m-00000 for the output of map 0.
+  5. The reduce grouping comparator now uses the raw compare instead of
+     object compare.
+  6. The number of maps in FileInputFormat is controlled by min and max
+     split size rather than min size and the desired number of maps.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3305">HADOOP-3305</a>.  Use Ivy to manage dependencies.<br />(Giridharan Kesavan
+and Steve Loughran via cutting)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(44)
-    <ol id="trunk_(unreleased_changes)_._improvements_">
+  <li><a href="javascript:toggleList('release_0.20.0_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(48)
+    <ol id="release_0.20.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4749">HADOOP-4749</a>. Added a new counter REDUCE_INPUT_BYTES.<br />(Yongqiang He via
 zshao)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4234">HADOOP-4234</a>. Fix KFS "glue" layer to allow applications to interface
@@ -203,18 +229,25 @@ Restarting the TaskTracker moves it out of the blacklist.<br />(Amareshwari Srir
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4688">HADOOP-4688</a>. Modify the MiniMRDFSSort unit test to spill multiple times,
 exercising the map-side merge code.<br />(cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4737">HADOOP-4737</a>. Adds the KILLED notification when jobs get killed.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4728">HADOOP-4728</a>. Add a test exercising different namenode configurations.<br />(Boris Shkolnik via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4807">HADOOP-4807</a>. Adds JobClient commands to get the active/blacklisted tracker names.
+Also adds commands to display running/completed task attempt IDs.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4699">HADOOP-4699</a>. Remove checksum validation from map output servlet.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4838">HADOOP-4838</a>. Added a registry to automate metrics and mbeans management.<br />(Sanjay Radia via acmurthy)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
-</a>&nbsp;&nbsp;&nbsp;(1)
-    <ol id="trunk_(unreleased_changes)_._optimizations_">
+  <li><a href="javascript:toggleList('release_0.20.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
+</a>&nbsp;&nbsp;&nbsp;(2)
+    <ol id="release_0.20.0_-_unreleased_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3293">HADOOP-3293</a>. Fixes FileInputFormat to do provide locations for splits
 based on the rack/host that has the most number of bytes.<br />(Jothi Padmanabhan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4683">HADOOP-4683</a>. Fixes Reduce shuffle scheduler to invoke getMapCompletionEvents
+in a separate thread.<br />(Jothi Padmanabhan via ddas)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(39)
-    <ol id="trunk_(unreleased_changes)_._bug_fixes_">
+  <li><a href="javascript:toggleList('release_0.20.0_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(46)
+    <ol id="release_0.20.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4204">HADOOP-4204</a>. Fix findbugs warnings related to unused variables, naive
 Number subclass instantiation, Map iteration, and badly scoped inner
 classes.<br />(Suresh Srinivas via cdouglas)</li>
@@ -284,6 +317,21 @@ Yang via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4837">HADOOP-4837</a>. Move HADOOP_CONF_DIR configuration to chukwa-env.sh<br />(Jerome
 Boulon via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4825">HADOOP-4825</a>. Use ps instead of jps for querying process status in Chukwa.<br />(Eric Yang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4844">HADOOP-4844</a>. Fixed javadoc for
+org.apache.hadoop.fs.permission.AccessControlException to document that
+it's deprecated in favour of
+org.apache.hadoop.security.AccessControlException.<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4706">HADOOP-4706</a>. Close the underlying output stream in
+IFileOutputStream::close.<br />(Jothi Padmanabhan via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4855">HADOOP-4855</a>. Fixed command-specific help messages for refreshServiceAcl in
+DFSAdmin and MRAdmin.<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4820">HADOOP-4820</a>. Remove unused method FSNamesystem::deleteInSafeMode.<br />(Suresh
+Srinivas via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4698">HADOOP-4698</a>. Lower io.sort.mb to 10 in the tests and raise the junit memory
+limit to 512m from 256m.<br />(Nigel Daley via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4860">HADOOP-4860</a>. Split TestFileTailingAdapters into three separate tests to
+avoid contention.<br />(Eric Yang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3921">HADOOP-3921</a>. Fixed clover (code coverage) target to work with JDK 6.<br />(tomwhite via nigel)</li>
     </ol>
   </li>
 </ul>
@@ -309,7 +357,7 @@ current workding directory for scratch space.<br />(Amar Kamat via cdouglas)</li
 szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4727">HADOOP-4727</a>. Fix a group checking bug in fill_stat_structure(...) in
 fuse-dfs.<br />(Brian Bockelman via szetszwo)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4836">HADOOP-4836</a>. Correct typos in mapred related documentation.<br />(Jordà Polo
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4836">HADOOP-4836</a>. Correct typos in mapred related documentation.<br />(Jord? Polo
 via szetszwo)</li>
     </ol>
   </li>
@@ -954,7 +1002,7 @@ restrictions on combiners.<br />(omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(27)
+</a>&nbsp;&nbsp;&nbsp;(29)
     <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
@@ -999,6 +1047,9 @@ receiver's tmp data directory.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4806">HADOOP-4806</a>. HDFS rename should not use src path as a regular expression.<br />(szetszwo)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4795">HADOOP-4795</a>. Prevent lease monitor getting into an infinite loop when
 leases and the namespace tree does not match.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4620">HADOOP-4620</a>. Fixes Streaming to handle well the cases of map/reduce with empty
+input/output.<br />(Ravi Gummadi via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4857">HADOOP-4857</a>. Fixes TestUlimit to have exactly 1 map in the jobs spawned.<br />(Ravi Gummadi via ddas)</li>
     </ol>
   </li>
 </ul>
