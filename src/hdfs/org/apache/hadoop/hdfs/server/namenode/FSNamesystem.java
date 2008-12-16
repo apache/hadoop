@@ -1566,13 +1566,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     } else {
       INodeFile inode = blocksMap.getINode(blk);
       assert inode!=null : (blk + " in blocksMap must belongs to a file.");
+      // Add this replica to corruptReplicas Map 
+      corruptReplicas.addToCorruptReplicasMap(blk, node);
       if (countNodes(blk).liveReplicas()>inode.getReplication()) {
         // the block is over-replicated so invalidate the replicas immediately
         invalidateBlock(blk, node);
       } else {
-        // Add this replica to corruptReplicas Map and 
         // add the block to neededReplication 
-        corruptReplicas.addToCorruptReplicasMap(blk, node);
         updateNeededReplications(blk, -1, 0);
       }
     }
@@ -1586,9 +1586,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     NameNode.stateChangeLog.info("DIR* NameSystem.invalidateBlock: " 
                                  + blk + " on " 
                                  + dn.getName());
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot invalidate block " + blk, safeMode);
-    }
     DatanodeDescriptor node = getDatanode(dn);
     if (node == null) {
       throw new IOException("Cannot invalidate block " + blk +
@@ -2832,7 +2829,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     assert storedBlock != null : "Block must be stored by now";
 
     if (block != storedBlock) {
-      if (block.getNumBytes() > 0) {
+      if (block.getNumBytes() >= 0) {
         long cursize = storedBlock.getNumBytes();
         if (cursize == 0) {
           storedBlock.setNumBytes(block.getNumBytes());
@@ -2844,12 +2841,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           try {
             if (cursize > block.getNumBytes()) {
               // new replica is smaller in size than existing block.
-              // Delete new replica.
-              LOG.warn("Deleting block " + block + " from " + node.getName());
-              invalidateBlock(block, node);
+              // Mark the new replica as corrupt.
+              LOG.warn("Mark new replica " + block + " from " + node.getName() + 
+                  "as corrupt because its length is shorter than existing ones");
+              markBlockAsCorrupt(block, node);
             } else {
               // new replica is larger in size than existing block.
-              // Delete pre-existing replicas.
+              // Mark pre-existing replicas as corrupt.
               int numNodes = blocksMap.numNodes(block);
               int count = 0;
               DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
@@ -2861,9 +2859,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                 }
               }
               for (int j = 0; j < count; j++) {
-                LOG.warn("Deleting block " + block + " from " + 
-                         nodes[j].getName());
-                invalidateBlock(block, nodes[j]);
+                LOG.warn("Mark existing replica " + block + " from " + node.getName() + 
+                " as corrupt because its length is shorter than the new one");
+                markBlockAsCorrupt(block, nodes[j]);
               }
               //
               // change the size of block in blocksMap
