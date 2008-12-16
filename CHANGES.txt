@@ -54,6 +54,9 @@ Trunk (unreleased changes)
     percentage in capacity scheduler UI. (Sreekanth Ramakrishnan via
     yhemanth)
 
+    HADOOP-4631. Splits the configuration into three parts - one for core,
+    one for mapred and the last one for HDFS. (Sharad Agarwal via cdouglas)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

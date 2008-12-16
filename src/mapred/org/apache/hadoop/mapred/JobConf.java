@@ -106,6 +106,11 @@ public class JobConf extends Configuration {
   
   private static final Log LOG = LogFactory.getLog(JobConf.class);
 
+  static{
+    Configuration.addDefaultResource("mapred-default.xml");
+    Configuration.addDefaultResource("mapred-site.xml");
+  }
+
   /**
    * A value which if set for memory related configuration options,
    * indicates that the options are turned off.

@@ -23,6 +23,9 @@ conf/masters
 conf/slaves
 conf/hadoop-env.sh
 conf/hadoop-site.xml
+conf/core-site.xml
+conf/mapred-site.xml
+conf/hdfs-site.xml
 conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 docs/api/
