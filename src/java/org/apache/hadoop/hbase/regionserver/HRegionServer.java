@@ -847,7 +847,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memcacheSize += r.memcacheSize.get();
-        synchronized(r.stores) {
+        synchronized (r.stores) {
           stores += r.stores.size();
           for(Map.Entry<Integer, HStore> ee: r.stores.entrySet()) {
             HStore store = ee.getValue(); 

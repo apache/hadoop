@@ -839,13 +839,14 @@ public class HRegion implements HConstants {
     long sequenceId = -1L;
     long completeSequenceId = -1L;
     this.updatesLock.writeLock().lock();
+    // Get current size of memcaches.
+    final long currentMemcacheSize = this.memcacheSize.get();
     try {
       for (HStore s: stores.values()) {
         s.snapshot();
       }
       sequenceId = log.startCacheFlush();
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
-      this.memcacheSize.set(0);
     } finally {
       this.updatesLock.writeLock().unlock();
     }
@@ -865,6 +866,8 @@ public class HRegion implements HConstants {
           compactionRequested = true;
         }
       }
+      // Set down the memcache size by amount of flush.
+      this.memcacheSize.addAndGet(-currentMemcacheSize);
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memcache.
@@ -896,12 +899,12 @@ public class HRegion implements HConstants {
     }
     
     if (LOG.isDebugEnabled()) {
-      String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
-          startTime);
-      LOG.debug("Finished memcache flush for region " + this +
-        " in " +
-          (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
-          sequenceId + ", compaction requested=" + compactionRequested);
+      long now = System.currentTimeMillis();
+      String timeTaken = StringUtils.formatTimeDiff(now, startTime);
+      LOG.debug("Finished memcache flush of ~" +
+        StringUtils.humanReadableInt(currentMemcacheSize) + " for region " +
+        this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
+        ", compaction requested=" + compactionRequested);
       if (!regionInfo.isMetaRegion()) {
         this.historian.addRegionFlush(regionInfo, timeTaken);
       }
@@ -1273,8 +1276,6 @@ public class HRegion implements HConstants {
 
   /*
    * Check if resources to support an update.
-   * 
-   * For now, just checks memcache saturation.
    * 
    * Here we synchronize on HRegion, a broad scoped lock.  Its appropriate
    * given we're figuring in here whether this region is able to take on
