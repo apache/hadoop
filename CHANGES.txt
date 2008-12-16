@@ -431,6 +431,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4845. Modify the reduce input byte counter to record only the
     compressed size and add a human-readable label. (Yongqiang He via cdouglas)
 
+    HADOOP-4458. Add a test creating symlinks in the working directory.
+    (Amareshwari Sriramadasu via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
