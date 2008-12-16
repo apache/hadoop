@@ -57,6 +57,11 @@ Trunk (unreleased changes)
     HADOOP-4631. Splits the configuration into three parts - one for core,
     one for mapred and the last one for HDFS. (Sharad Agarwal via cdouglas)
 
+    HADOOP-3344. Fix libhdfs build to use autoconf and build the same
+    architecture (32 vs 64 bit) of the JVM running Ant.  The libraries for
+    pipes, utils, and libhdfs are now all in c++/<os_osarch_jvmdatamodel>/lib. 
+    (Giridharan Kesavan via nigel)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

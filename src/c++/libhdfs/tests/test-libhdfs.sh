@@ -21,6 +21,8 @@
 # c) HADOOP_CONF_DIR 
 # d) HADOOP_LOG_DIR 
 # e) LIBHDFS_BUILD_DIR
+# f) LIBHDFS_INSTALL_DIR
+# g) OS_NAME
 # All these are passed by build.xml.
 #
 
@@ -59,6 +61,9 @@ for f in $HADOOP_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+for ff in $HADOOP_HOME/*.jar; do 
+  CLASSPATH=${CLASSPATH}:$ff
+done
 for f in $HADOOP_HOME/lib/jsp-2.0/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
@@ -72,14 +77,49 @@ fi
 # restore ordinary behaviour
 unset IFS
 
+findlibjvm () {
+javabasedir=$JAVA_HOME
+case $OS_NAME in
+    cygwin* | mingw* | pw23* )
+    lib_jvm_dir=`find $javabasedir -follow \( \
+        \( -name client -type d -prune \) -o \
+        \( -name "jvm.dll" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`
+    ;;
+    aix*)
+    lib_jvm_dir=`find $javabasedir \( \
+        \( -name client -type d -prune \) -o \
+        \( -name "libjvm.*" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`
+    if test -z "$lib_jvm_dir"; then
+       lib_jvm_dir=`find $javabasedir \( \
+       \( -name client -type d -prune \) -o \
+       \( -name "libkaffevm.*" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`
+    fi
+    ;;
+    *)
+    lib_jvm_dir=`find $javabasedir -follow \( \
+       \( -name client -type d -prune \) -o \
+       \( -name "libjvm.*" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`
+    if test -z "$lib_jvm_dir"; then
+       lib_jvm_dir=`find $javabasedir -follow \( \
+       \( -name client -type d -prune \) -o \
+       \( -name "libkaffevm.*" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`
+    fi
+    ;;
+  esac
+  echo $lib_jvm_dir
+}
+LIB_JVM_DIR=`findlibjvm`
+echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+echo  LIB_JVM_DIR = $LIB_JVM_DIR
+echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 # Put delays to ensure hdfs is up and running and also shuts down 
 # after the tests are complete
 cd $HADOOP_HOME
 echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
 $HADOOP_BIN_DIR/hadoop-daemon.sh start namenode && sleep 2 && 
 $HADOOP_BIN_DIR/hadoop-daemon.sh start datanode && sleep 2 && 
-echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
-CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST
+echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_INSTALL_DIR/libhdfs.so:$LIB_JVM_DIR/libjvm.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
+CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
 BUILD_STATUS=$?
 sleep 3
 $HADOOP_BIN_DIR/hadoop-daemon.sh stop datanode && sleep 2 && 

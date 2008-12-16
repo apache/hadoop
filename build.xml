@@ -30,7 +30,6 @@
   <property name="version" value="0.20.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2008"/>
-  <property name="libhdfs.version" value="1"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="core.src.dir" value="${src.dir}/core"/>
@@ -51,7 +50,7 @@
   <property name="c++.utils.src" value="${c++.src}/utils"/>
   <property name="c++.pipes.src" value="${c++.src}/pipes"/>
   <property name="c++.examples.pipes.src" value="${examples.dir}/pipes"/>
-  <property name="libhdfs.src" value="${c++.src}/libhdfs"/>
+  <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
   <property name="librecordio.src" value="${c++.src}/librecordio"/>
   <property name="tools.src" value="${basedir}/src/tools"/>
 
@@ -63,7 +62,6 @@
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.anttasks" value="${build.dir}/ant"/>
-  <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
   <property name="build.librecordio" value="${build.dir}/librecordio"/>
   <!-- convert spaces to _ so that mac os doesn't break things -->
   <exec executable="sed" inputstring="${os.name}" 
@@ -72,10 +70,13 @@
   </exec>
   <property name="build.platform" 
             value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
+  <property name="jvm.arch" 
+            value="${sun.arch.data.model}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
   <property name="build.c++.utils" value="${build.c++}/utils"/>
   <property name="build.c++.pipes" value="${build.c++}/pipes"/>
+  <property name="build.c++.libhdfs" value="${build.c++}/libhdfs"/>
   <property name="build.c++.examples.pipes" 
             value="${build.c++}/examples/pipes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
@@ -110,8 +111,8 @@
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
 
-  <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
-  <property name="libhdfs.test.dir" value="${test.build.dir}/libhdfs"/>
+  <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
+  <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
 
   <property name="librecordio.test.dir" value="${test.build.dir}/librecordio"/>
   <property name="web.src.dir" value="${basedir}/src/web"/>
@@ -504,7 +505,7 @@
   	description="Compile core only">
   </target>
 
-  <target name="compile-contrib" depends="compile-core,compile-libhdfs">
+  <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
@@ -1053,7 +1054,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-libhdfs, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1206,65 +1207,28 @@
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>
-
-  <!-- ================================================================== -->
-  <!-- libhdfs targets.                                                   -->
-  <!-- ================================================================== -->
-  <target name="compile-libhdfs" depends="init" if="libhdfs">
-    <mkdir dir="${build.libhdfs}"/>
-    <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
-      <env key="OS_NAME" value="${os.name}"/>
-      <env key="OS_ARCH" value="${os.arch}"/>
-      <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
-      <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
-    </exec>
-  </target>
 	
-  <target name="test-libhdfs" depends="compile-libhdfs, compile-core">
-    <delete dir="${libhdfs.test.dir}"/>
-    <mkdir dir="${libhdfs.test.dir}"/>
-    <mkdir dir="${libhdfs.test.dir}/logs"/>
-    <mkdir dir="${libhdfs.test.dir}/hdfs/name"/>
+ <target name="test-c++-libhdfs" depends="compile-c++-libhdfs, compile-core" if="islibhdfs">
+    <delete dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}/logs"/>
+    <mkdir dir="${test.libhdfs.dir}/hdfs/name"/>
 
-    <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
+    <exec dir="${build.c++.libhdfs}" executable="${make.cmd}" failonerror="true">
         <env key="OS_NAME" value="${os.name}"/>
         <env key="OS_ARCH" value="${os.arch}"/>
-        <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
-        <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
+        <env key="JVM_ARCH" value="${jvm.arch}"/>
+        <env key="LIBHDFS_BUILD_DIR" value="${build.c++.libhdfs}"/>
         <env key="HADOOP_HOME" value="${basedir}"/>
-        <env key="HADOOP_CONF_DIR" value="${libhdfs.test.conf.dir}"/>
-        <env key="HADOOP_LOG_DIR" value="${libhdfs.test.dir}/logs"/>
+        <env key="HADOOP_CONF_DIR" value="${test.libhdfs.conf.dir}"/>
+        <env key="HADOOP_LOG_DIR" value="${test.libhdfs.dir}/logs"/>
+        <env key="LIBHDFS_SRC_DIR" value="${c++.libhdfs.src}"/>
+        <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
         <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
 		<arg value="test"/>
     </exec>
   </target>
 
-  <target name="doc-libhdfs" depends="compile-libhdfs">
-	<exec dir="${libhdfs.src}" executable="${make.cmd}">
-	  <arg value="doc"/>
-	</exec>
-  </target>
-	
-  <target name="package-libhdfs"
-	  depends="compile-libhdfs, doc-libhdfs"
-	  if="libhdfs">
-  	<mkdir dir="${dist.dir}/libhdfs"/>
-  	<copy todir="${dist.dir}/libhdfs">
-  	  <fileset dir="${build.libhdfs}" 
-  	  	casesensitive="yes" 
-  	  	followsymlinks="false">
-  	  	<exclude name="**/tests/**"/>
-  	  	<exclude name="*.so"/>
-  	  	<exclude name="*.o"/>
-  	  </fileset>
-  	</copy>
-  	<chmod perm="ugo+x" type="file">
-  	    <fileset dir="${dist.dir}/libhdfs"/>
-  	</chmod>
-  	<exec dir="${dist.dir}/libhdfs" executable="ln">
-  		<arg line="-sf libhdfs.so.${libhdfs.version} libhdfs.so"/>
-  	</exec>
-  </target>
 <!-- ================================================================== -->
 <!-- librecordio targets.                                               -->
 <!-- ================================================================== -->		
@@ -1316,6 +1280,14 @@
           searchpath="yes" failonerror="yes">
        <arg value="-if"/>
     </exec>
+    <antcall target="create-c++-configure-libhdfs"/>
+  </target>
+   
+  <target name="create-c++-configure-libhdfs" depends="check-c++-libhdfs" if="islibhdfs">
+    <exec executable="autoreconf" dir="${c++.libhdfs.src}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-if"/>
+    </exec>
   </target>
 
   <target name="check-c++-makefiles" depends="init" if="compile.c++">
@@ -1328,6 +1300,33 @@
     <condition property="need.c++.examples.pipes.makefile">
        <not> <available file="${build.c++.examples.pipes}/Makefile"/> </not>
     </condition>
+  </target>
+
+  <target name="check-c++-libhdfs">
+    <condition property="islibhdfs">
+      <and>
+        <isset property="compile.c++"/>
+        <isset property="libhdfs"/>
+      </and>
+    </condition>
+  </target>
+
+  <target name="check-c++-makefile-libhdfs" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.c++.libhdfs.makefile">
+       <not> <available file="${build.c++.libhdfs}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-c++-libhdfs-makefile" depends="check-c++-makefile-libhdfs" 
+                                           if="need.c++.libhdfs.makefile">
+    <mkdir dir="${build.c++.libhdfs}"/>
+    <chmod file="${c++.libhdfs.src}/configure" perm="ugo+x"/>
+    <exec executable="${c++.libhdfs.src}/configure" dir="${build.c++.libhdfs}"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="--prefix=${install.c++}"/>
+    </exec>
   </target>
 
   <target name="create-c++-utils-makefile" depends="check-c++-makefiles" 
@@ -1392,6 +1391,17 @@
 
   <target name="compile-c++-examples" 
           depends="compile-c++-examples-pipes"/>
+
+  <target name="compile-c++-libhdfs" depends="create-c++-libhdfs-makefile" if="islibhdfs">
+    <exec executable="${make.cmd}" dir="${build.c++.libhdfs}" searchpath="yes"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="install"/>
+    </exec>
+  </target>
+
+
 
   <target name="compile-ant-tasks" depends="compile-core">
     <javac
