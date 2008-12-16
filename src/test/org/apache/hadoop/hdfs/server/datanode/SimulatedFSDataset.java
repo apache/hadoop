@@ -606,26 +606,29 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
   
   private ObjectName mbeanName;
+
+
+  
   /**
-   * Register the FSDataset MBean
-   * @param storageId 
-   * 
-   * We use storage id for MBean name since a minicluster within a single
+   * Register the FSDataset MBean using the name
+   *        "hadoop:service=DataNode,name=FSDatasetState-<storageid>"
+   *  We use storage id for MBean name since a minicluster within a single
    * Java VM may have multiple Simulated Datanodes.
    */
-  void registerMBean(String storageId) {
-    // We wrap to bypass standard mbean naming convention.
-    // This wrapping can be removed in java 6 as Java6 is more flexible in 
+  void registerMBean(final String storageId) {
+    // We wrap to bypass standard mbean naming convetion.
+    // This wraping can be removed in java 6 as it is more flexible in 
     // package naming for mbeans and their impl.
     StandardMBean bean;
+
     try {
       bean = new StandardMBean(this,FSDatasetMBean.class);
-      mbeanName = MBeanUtil.registerMBean("DataNode-"+ storageId,
-                                          "FSDatasetStatus", bean);
+      mbeanName = MBeanUtil.registerMBean("DataNode",
+          "FSDatasetState-" + storageId, bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }
-
+ 
     DataNode.LOG.info("Registered FSDatasetStatusMBean");
   }
 

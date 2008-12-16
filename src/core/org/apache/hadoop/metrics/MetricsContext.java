@@ -98,5 +98,10 @@ public interface MetricsContext {
    * @param updater object to be removed from the callback list
    */
   public abstract void unregisterUpdater(Updater updater);
+  
+  /**
+   * Returns the timer period.
+   */
+  public abstract int getPeriod();
     
 }

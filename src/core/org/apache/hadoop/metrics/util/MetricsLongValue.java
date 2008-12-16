@@ -27,19 +27,30 @@ import org.apache.hadoop.metrics.MetricsRecord;
  * call.
  *
  */
-public class MetricsLongValue {  
-  private String name;
+public class MetricsLongValue extends MetricsBase{  
   private long value;
   private boolean changed;
   
   /**
    * Constructor - create a new metric
    * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
    */
-  public MetricsLongValue(final String nam) {
-    name = nam;
+  public MetricsLongValue(final String nam, final MetricsRegistry registry, final String description) {
+    super(nam, description);
     value = 0;
     changed = false;
+    registry.add(nam, this);
+  }
+  
+  /**
+   * Constructor - create a new metric
+   * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
+   * A description of {@link #NO_DESCRIPTION} is used
+   */
+  public MetricsLongValue(final String nam, MetricsRegistry registry) {
+    this(nam, registry, NO_DESCRIPTION);
   }
   
   /**
@@ -58,44 +69,7 @@ public class MetricsLongValue {
   public synchronized long get() { 
     return value;
   } 
-  
-  /**
-   * Inc metrics for incr vlaue
-   * @param incr - value to be added
-   */
-  public synchronized void inc(final long incr) {
-    value += incr;
-    changed = true;
-  }
-  
-  /**
-   * Inc metrics by one
-   */
-  public synchronized void inc() {
-    value++;
-    changed = true;
-  }
-
-  /**
-   * Inc metrics for incr vlaue
-   * @param decr - value to subtract
-   */
-  public synchronized void dec(final long decr) {
-    value -= decr;
-    if (value < 0)
-      value = 0;
-    changed = true;
-  }
-  
-  /**
-   * Dec metrics by one
-   */
-  public synchronized void dec() {
-    value--;
-    if (value < 0)
-      value = 0;
-    changed = true;
-  }
+ 
 
   /**
    * Push the metric to the mr.
@@ -108,7 +82,7 @@ public class MetricsLongValue {
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
     if (changed) 
-      mr.setMetric(name, value);
+      mr.setMetric(getName(), value);
     changed = false;
   }
 }

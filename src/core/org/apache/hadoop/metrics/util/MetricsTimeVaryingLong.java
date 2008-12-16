@@ -1,3 +1,5 @@
+package org.apache.hadoop.metrics.util;
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.util.StringUtils;
@@ -24,7 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * The MetricsTimeVaryingInt class is for a metric that naturally
+ * The MetricsTimeVaryingLong class is for a metric that naturally
  * varies over time (e.g. number of files created). The metrics is accumulated
  * over an interval (set in the metrics config file); the metrics is
  *  published at the end of each interval and then 
@@ -34,29 +35,26 @@ import org.apache.commons.logging.LogFactory;
  * @see org.apache.hadoop.metrics.util.MetricsTimeVaryingRate
  *
  */
-public class MetricsTimeVaryingInt extends MetricsBase {
+public class MetricsTimeVaryingLong extends MetricsBase{
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.metrics.util");
-  
-  private int currentValue;
-  private int previousIntervalValue;
-  
+ 
+  private long currentValue;
+  private long previousIntervalValue;
   
   /**
    * Constructor - create a new metric
    * @param nam the name of the metrics to be used to publish the metric
    * @param registry - where the metrics object will be registered
-   * @param description - the description
    */
-  public MetricsTimeVaryingInt(final String nam,
-                               final MetricsRegistry registry,
-                               final String description) {
+  public MetricsTimeVaryingLong(final String nam, MetricsRegistry registry, final String description) {
     super(nam, description);
     currentValue = 0;
     previousIntervalValue = 0;
     registry.add(nam, this);
   }
+  
   
   /**
    * Constructor - create a new metric
@@ -64,17 +62,15 @@ public class MetricsTimeVaryingInt extends MetricsBase {
    * @param registry - where the metrics object will be registered
    * A description of {@link #NO_DESCRIPTION} is used
    */
-  public MetricsTimeVaryingInt(final String nam, final MetricsRegistry registry) {
+  public MetricsTimeVaryingLong(final String nam, MetricsRegistry registry) {
     this(nam, registry, NO_DESCRIPTION);
   }
-  
-
   
   /**
    * Inc metrics for incr vlaue
    * @param incr - number of operations
    */
-  public synchronized void inc(final int incr) {
+  public synchronized void inc(final long incr) {
     currentValue += incr;
   }
   
@@ -114,15 +110,15 @@ public class MetricsTimeVaryingInt extends MetricsBase {
    * The Value at the Previous interval
    * @return prev interval value
    */
-  public synchronized int getPreviousIntervalValue() { 
+  public synchronized long getPreviousIntervalValue() { 
     return previousIntervalValue;
-  }
+  } 
   
   /**
    * The Value at the current interval
    * @return prev interval value
    */
-  public synchronized int getCurrentIntervalValue() { 
+  public synchronized long getCurrentIntervalValue() { 
     return currentValue;
   } 
 }

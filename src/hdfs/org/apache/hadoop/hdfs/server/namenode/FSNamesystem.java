@@ -4354,17 +4354,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   
   private ObjectName mbeanName;
   /**
-   * Register the FSNamesystem MBean
+   * Register the FSNamesystem MBean using the name
+   *        "hadoop:service=NameNode,name=FSNamesystemState"
    */
   void registerMBean(Configuration conf) {
-    // We wrap to bypass standard mbean naming convetion.
+    // We wrap to bypass standard mbean naming convention.
     // This wraping can be removed in java 6 as it is more flexible in 
     // package naming for mbeans and their impl.
     StandardMBean bean;
     try {
       myFSMetrics = new FSNamesystemMetrics(conf);
       bean = new StandardMBean(this,FSNamesystemMBean.class);
-      mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemStatus", bean);
+      mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemState", bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }

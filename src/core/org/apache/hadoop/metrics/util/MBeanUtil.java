@@ -35,8 +35,8 @@ import javax.management.InstanceAlreadyExistsException;
 public class MBeanUtil {
 	
   /**
-   * Register the mbean using out standard MBeanName format
-   * "hadoop.dfs:service=<serviceName>,name=<nameName>"
+   * Register the MBean using our standard MBeanName format
+   * "hadoop:service=<serviceName>,name=<nameName>"
    * Where the <serviceName> and <nameName> are the supplied parameters
    *    
    * @param serviceName
@@ -77,7 +77,7 @@ public class MBeanUtil {
 		  								 final String nameName) {
     ObjectName name = null;
     try {
-      name = new ObjectName("hadoop.dfs:" +
+      name = new ObjectName("hadoop:" +
                   "service=" + serviceName + ",name=" + nameName);
     } catch (MalformedObjectNameException e) {
       e.printStackTrace();

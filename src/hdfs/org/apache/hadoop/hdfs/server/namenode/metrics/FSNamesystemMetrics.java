@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.metrics.*;
+import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsLongValue;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /**
  * 
  * This class is for maintaining  the various FSNamesystem status metrics
  * and publishing them through the metrics interfaces.
- * This also registers the JMX MBean for RPC.
+ * The SNamesystem creates and registers the JMX MBean.
  * <p>
  * This class has a number of metrics variables that are publicly accessible;
  * these variables (objects) have methods to update their values;
@@ -39,16 +43,18 @@ import org.apache.hadoop.metrics.util.MetricsIntValue;
 public class FSNamesystemMetrics implements Updater {
   private static Log log = LogFactory.getLog(FSNamesystemMetrics.class);
   private final MetricsRecord metricsRecord;
+  public MetricsRegistry registry = new MetricsRegistry();
+
    
-  public MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal");
-  public MetricsIntValue blocksTotal = new MetricsIntValue("BlocksTotal");
-  public MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB");
-  public MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB");
-  public MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB");
-  public MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad");
-  public MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks");
-  public MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks");
-  public MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks");
+  public MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal", registry);
+  public MetricsLongValue blocksTotal = new MetricsLongValue("BlocksTotal", registry);
+  public MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB", registry);
+  public MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB", registry);
+  public MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB", registry);
+  public MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad", registry);
+  public MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
+  public MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
+  public MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
   public FSNamesystemMetrics(Configuration conf) {
     String sessionId = conf.get("session.id");
      
@@ -79,37 +85,29 @@ public class FSNamesystemMetrics implements Updater {
    * int, so they are rounded to GB
    */
   public void doUpdates(MetricsContext unused) {
+    /** 
+     * ToFix
+     * If the metrics counter were instead stored in the metrics objects themselves
+     * we could avoid copying the values on each update.
+     */
     synchronized (this) {
       FSNamesystem fsNameSystem = FSNamesystem.getFSNamesystem();
       filesTotal.set((int)fsNameSystem.getFilesTotal());
-      filesTotal.pushMetric(metricsRecord);
-
       blocksTotal.set((int)fsNameSystem.getBlocksTotal());
-      blocksTotal.pushMetric(metricsRecord);
-      
       capacityTotalGB.set(roundBytesToGBytes(fsNameSystem.getCapacityTotal()));
-      capacityTotalGB.pushMetric(metricsRecord);
-      
       capacityUsedGB.set(roundBytesToGBytes(fsNameSystem.getCapacityUsed()));
-      capacityUsedGB.pushMetric(metricsRecord);
-      
       capacityRemainingGB.set(roundBytesToGBytes(fsNameSystem.
                                                getCapacityRemaining()));
-      capacityRemainingGB.pushMetric(metricsRecord);
-      
       totalLoad.set(fsNameSystem.getTotalLoad());
-      totalLoad.pushMetric(metricsRecord);
-      
       pendingReplicationBlocks.set((int)fsNameSystem.
                                    getPendingReplicationBlocks());
-      pendingReplicationBlocks.pushMetric(metricsRecord);
-
       underReplicatedBlocks.set((int)fsNameSystem.getUnderReplicatedBlocks());
-      underReplicatedBlocks.pushMetric(metricsRecord);
-
       scheduledReplicationBlocks.set((int)fsNameSystem.
                                       getScheduledReplicationBlocks());
-      scheduledReplicationBlocks.pushMetric(metricsRecord);
+
+      for (MetricsBase m : registry.getMetricsList()) {
+        m.pushMetric(metricsRecord);
+      }
     }
     metricsRecord.update();
   }

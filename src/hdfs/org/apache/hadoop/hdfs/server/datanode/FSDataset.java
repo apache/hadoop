@@ -1383,23 +1383,25 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   private ObjectName mbeanName;
   private Random rand = new Random();
+  
   /**
-   * Register the FSDataset MBean
+   * Register the FSDataset MBean using the name
+   *        "hadoop:service=DataNode,name=FSDatasetState-<storageid>"
    */
   void registerMBean(final String storageId) {
     // We wrap to bypass standard mbean naming convetion.
     // This wraping can be removed in java 6 as it is more flexible in 
     // package naming for mbeans and their impl.
     StandardMBean bean;
-    String serverName;
-    if (storageId.equals("")) {// Temp fix for the uninitialized storage
-      serverName = "DataNode-UndefinedStorageId" + rand.nextInt();
+    String storageName;
+    if (storageId == null || storageId.equals("")) {// Temp fix for the uninitialized storage
+      storageName = "UndefinedStorageId" + rand.nextInt();
     } else {
-      serverName = "DataNode-" + storageId;
+      storageName = storageId;
     }
     try {
       bean = new StandardMBean(this,FSDatasetMBean.class);
-      mbeanName = MBeanUtil.registerMBean(serverName, "FSDatasetStatus", bean);
+      mbeanName = MBeanUtil.registerMBean("DataNode", "FSDatasetState-" + storageName, bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }

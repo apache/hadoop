@@ -516,16 +516,13 @@ public class RPC {
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
 
-	MetricsTimeVaryingRate m = rpcMetrics.metricsList.get(call.getMethodName());
-
-	if (m != null) {
-		m.inc(processingTime);
-	}
-	else {
-		rpcMetrics.metricsList.put(call.getMethodName(), new MetricsTimeVaryingRate(call.getMethodName()));
-		m = rpcMetrics.metricsList.get(call.getMethodName());
-		m.inc(processingTime);
-	}
+        MetricsTimeVaryingRate m =
+         (MetricsTimeVaryingRate) rpcMetrics.registry.get(call.getMethodName());
+      	if (m == null) {
+      	  m = new MetricsTimeVaryingRate(call.getMethodName(),
+      	                                        rpcMetrics.registry);
+      	}
+        m.inc(processingTime);
 
         if (verbose) log("Return: "+value);
 

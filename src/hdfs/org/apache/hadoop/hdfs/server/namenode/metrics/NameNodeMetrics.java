@@ -21,16 +21,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeStatistics;
 import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
  * 
- * This class is for maintaining  the various NameNode statistics
+ * This class is for maintaining  the various NameNode activity statistics
  * and publishing them through the metrics interfaces.
  * This also registers the JMX MBean for RPC.
  * <p>
@@ -43,29 +44,41 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 public class NameNodeMetrics implements Updater {
     private static Log log = LogFactory.getLog(NameNodeMetrics.class);
     private final MetricsRecord metricsRecord;
+    public MetricsRegistry registry = new MetricsRegistry();
     
-    private NameNodeStatistics namenodeStats;
+    private NameNodeActivtyMBean namenodeActivityMBean;
     
-    public MetricsTimeVaryingInt numFilesCreated = new MetricsTimeVaryingInt("FilesCreated");
-    public MetricsTimeVaryingInt numFilesAppended = new MetricsTimeVaryingInt("FilesAppended");
-    public MetricsTimeVaryingInt numGetBlockLocations = new MetricsTimeVaryingInt("GetBlockLocations");
-    public MetricsTimeVaryingInt numFilesRenamed = new MetricsTimeVaryingInt("FilesRenamed");
+    public MetricsTimeVaryingInt numFilesCreated =
+                          new MetricsTimeVaryingInt("FilesCreated", registry);
+    public MetricsTimeVaryingInt numFilesAppended =
+                          new MetricsTimeVaryingInt("FilesAppended", registry);
+    public MetricsTimeVaryingInt numGetBlockLocations = 
+                    new MetricsTimeVaryingInt("GetBlockLocations", registry);
+    public MetricsTimeVaryingInt numFilesRenamed =
+                    new MetricsTimeVaryingInt("FilesRenamed", registry);
     public MetricsTimeVaryingInt numGetListingOps = 
-                                   new MetricsTimeVaryingInt("GetListingOps");
+                    new MetricsTimeVaryingInt("GetListingOps", registry);
     public MetricsTimeVaryingInt numCreateFileOps = 
-                                   new MetricsTimeVaryingInt("CreateFileOps");
+                    new MetricsTimeVaryingInt("CreateFileOps", registry);
     public MetricsTimeVaryingInt numDeleteFileOps = 
-                                   new MetricsTimeVaryingInt("DeleteFileOps");
+                          new MetricsTimeVaryingInt("DeleteFileOps", registry);
     public MetricsTimeVaryingInt numAddBlockOps = 
-                                   new MetricsTimeVaryingInt("AddBlockOps");
+                          new MetricsTimeVaryingInt("AddBlockOps", registry);
 
-    public MetricsTimeVaryingRate transactions = new MetricsTimeVaryingRate("Transactions");
-    public MetricsTimeVaryingRate syncs = new MetricsTimeVaryingRate("Syncs");
-    public MetricsTimeVaryingRate blockReport = new MetricsTimeVaryingRate("blockReport");
-    public MetricsIntValue safeModeTime = new MetricsIntValue("SafemodeTime");
+    public MetricsTimeVaryingRate transactions =
+                    new MetricsTimeVaryingRate("Transactions", registry, "Journal Transaction");
+    public MetricsTimeVaryingRate syncs =
+                    new MetricsTimeVaryingRate("Syncs", registry, "Journal Sync");
+    public MetricsTimeVaryingInt transactionsBatchedInSync = 
+                    new MetricsTimeVaryingInt("JournalTransactionsBatchedInSync", registry, "Journal Transactions Batched In Sync");
+    public MetricsTimeVaryingRate blockReport =
+                    new MetricsTimeVaryingRate("blockReport", registry, "Block Report");
+    public MetricsIntValue safeModeTime =
+                    new MetricsIntValue("SafemodeTime", registry, "Duration in SafeMode at Startup");
     public MetricsIntValue fsImageLoadTime = 
-                                        new MetricsIntValue("fsImageLoadTime");
-    public MetricsIntValue numBlocksCorrupted = new MetricsIntValue("BlocksCorrupted");
+                    new MetricsIntValue("fsImageLoadTime", registry, "Time loading FS Image at Startup");
+    public MetricsIntValue numBlocksCorrupted =
+                    new MetricsIntValue("BlocksCorrupted", registry);
 
       
     public NameNodeMetrics(Configuration conf, NameNode nameNode) {
@@ -75,7 +88,7 @@ public class NameNodeMetrics implements Updater {
 
       
       // Now the Mbean for the name node - this alos registers the MBean
-      namenodeStats = new NameNodeStatistics(this);
+      namenodeActivityMBean = new NameNodeActivtyMBean(registry);
       
       // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");
@@ -89,8 +102,8 @@ public class NameNodeMetrics implements Updater {
 
     
     public void shutdown() {
-      if (namenodeStats != null) 
-        namenodeStats.shutdown();
+      if (namenodeActivityMBean != null) 
+        namenodeActivityMBean.shutdown();
     }
       
     /**
@@ -99,21 +112,9 @@ public class NameNodeMetrics implements Updater {
      */
     public void doUpdates(MetricsContext unused) {
       synchronized (this) {
-        numFilesCreated.pushMetric(metricsRecord);
-        numFilesAppended.pushMetric(metricsRecord);
-        numGetBlockLocations.pushMetric(metricsRecord);
-        numFilesRenamed.pushMetric(metricsRecord);
-        numGetListingOps.pushMetric(metricsRecord);
-        numCreateFileOps.pushMetric(metricsRecord);
-        numDeleteFileOps.pushMetric(metricsRecord);
-        numAddBlockOps.pushMetric(metricsRecord);
-
-        transactions.pushMetric(metricsRecord);
-        syncs.pushMetric(metricsRecord);
-        blockReport.pushMetric(metricsRecord);
-        safeModeTime.pushMetric(metricsRecord);
-        fsImageLoadTime.pushMetric(metricsRecord);
-        numBlocksCorrupted.pushMetric(metricsRecord);
+        for (MetricsBase m : registry.getMetricsList()) {
+          m.pushMetric(metricsRecord);
+        }
       }
       metricsRecord.update();
     }
@@ -123,5 +124,4 @@ public class NameNodeMetrics implements Updater {
       syncs.resetMinMax();
       blockReport.resetMinMax();
     }
-
 }

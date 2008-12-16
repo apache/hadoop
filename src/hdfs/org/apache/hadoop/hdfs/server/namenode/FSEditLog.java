@@ -87,6 +87,7 @@ public class FSEditLog {
 
   // these are statistics counters.
   private long numTransactions;        // number of transactions
+  private long numTransactionsBatchedInSync;
   private long totalTimeTransactions;  // total time for all transactions
   private NameNodeMetrics metrics;
 
@@ -326,7 +327,7 @@ public class FSEditLog {
    * @throws IOException
    */
   public synchronized void open() throws IOException {
-    numTransactions = totalTimeTransactions = 0;
+    numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
     if (editStreams == null)
       editStreams = new ArrayList<EditLogOutputStream>();
     for (Iterator<StorageDirectory> it = 
@@ -376,7 +377,7 @@ public class FSEditLog {
       return;
     }
     printStatistics(true);
-    numTransactions = totalTimeTransactions = 0;
+    numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
 
     for (int idx = 0; idx < editStreams.size(); idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
@@ -896,6 +897,9 @@ public class FSEditLog {
       // If this transaction was already flushed, then nothing to do
       //
       if (mytxid <= synctxid) {
+        numTransactionsBatchedInSync++;
+        if (metrics != null) // Metrics is non-null only when used inside name node
+          metrics.transactionsBatchedInSync.inc();
         return;
       }
    
@@ -957,6 +961,8 @@ public class FSEditLog {
     buf.append(numTransactions);
     buf.append(" Total time for transactions(ms): ");
     buf.append(totalTimeTransactions);
+    buf.append("Number of transactions batched in Syncs: ");
+    buf.append(numTransactionsBatchedInSync);
     buf.append(" Number of syncs: ");
     buf.append(editStreams.get(0).getNumSync());
     buf.append(" SyncTimes(ms): ");

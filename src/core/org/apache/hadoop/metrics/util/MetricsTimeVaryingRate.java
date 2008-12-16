@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  * a method to reset the min-max.
  *
  */
-public class MetricsTimeVaryingRate {
+public class MetricsTimeVaryingRate extends MetricsBase {
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.metrics.util");
@@ -71,7 +71,6 @@ public class MetricsTimeVaryingRate {
       maxTime = Math.max(maxTime, time);
     }
   }
-  private String name;
   private Metrics currentData;
   private Metrics previousIntervalData;
   private MinMax minMax;
@@ -79,13 +78,26 @@ public class MetricsTimeVaryingRate {
   
   /**
    * Constructor - create a new metric
-   * @param n the name of the metrics to be used to publish the metric
+   * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
    */
-  public MetricsTimeVaryingRate(final String n) {
-    name = n;
+  public MetricsTimeVaryingRate(final String nam, final MetricsRegistry registry, final String description) {
+    super(nam, description);
     currentData = new Metrics();
     previousIntervalData = new Metrics();
     minMax = new MinMax();
+    registry.add(nam, this);
+  }
+  
+  /**
+   * Constructor - create a new metric
+   * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
+   * A description of {@link #NO_DESCRIPTION} is used
+   */
+  public MetricsTimeVaryingRate(final String nam, MetricsRegistry registry) {
+    this(nam, registry, NO_DESCRIPTION);
+
   }
   
   
@@ -133,10 +145,10 @@ public class MetricsTimeVaryingRate {
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
     try {
-      mr.incrMetric(name + "_num_ops", getPreviousIntervalNumOps());
-      mr.setMetric(name + "_avg_time", getPreviousIntervalAverageTime());
+      mr.incrMetric(getName() + "_num_ops", getPreviousIntervalNumOps());
+      mr.setMetric(getName() + "_avg_time", getPreviousIntervalAverageTime());
     } catch (Exception e) {
-      LOG.info("pushMetric failed for " + name + "\n" +
+      LOG.info("pushMetric failed for " + getName() + "\n" +
           StringUtils.stringifyException(e));
     }
   }

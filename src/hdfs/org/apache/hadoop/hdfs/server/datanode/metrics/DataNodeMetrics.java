@@ -23,8 +23,10 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsBase;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsLongValue;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 
@@ -42,51 +44,52 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  */
 public class DataNodeMetrics implements Updater {
   private final MetricsRecord metricsRecord;
-  private DataNodeStatistics datanodeStats;
+  private DataNodeActivityMBean datanodeActivityMBean;
+  public MetricsRegistry registry = new MetricsRegistry();
   
   
-  public MetricsLongValue bytesWritten = 
-                      new MetricsLongValue("bytes_written");
-  public MetricsLongValue bytesRead = 
-                      new MetricsLongValue("bytes_read");
+  public MetricsTimeVaryingLong bytesWritten = 
+                      new MetricsTimeVaryingLong("bytes_written", registry);
+  public MetricsTimeVaryingLong bytesRead = 
+                      new MetricsTimeVaryingLong("bytes_read", registry);
   public MetricsTimeVaryingInt blocksWritten = 
-                      new MetricsTimeVaryingInt("blocks_written");
+                      new MetricsTimeVaryingInt("blocks_written", registry);
   public MetricsTimeVaryingInt blocksRead = 
-                      new MetricsTimeVaryingInt("blocks_read");
+                      new MetricsTimeVaryingInt("blocks_read", registry);
   public MetricsTimeVaryingInt blocksReplicated =
-                      new MetricsTimeVaryingInt("blocks_replicated");
+                      new MetricsTimeVaryingInt("blocks_replicated", registry);
   public MetricsTimeVaryingInt blocksRemoved =
-                       new MetricsTimeVaryingInt("blocks_removed");
+                       new MetricsTimeVaryingInt("blocks_removed", registry);
   public MetricsTimeVaryingInt blocksVerified = 
-                        new MetricsTimeVaryingInt("blocks_verified");
+                        new MetricsTimeVaryingInt("blocks_verified", registry);
   public MetricsTimeVaryingInt blockVerificationFailures =
-                       new MetricsTimeVaryingInt("block_verification_failures");
+                       new MetricsTimeVaryingInt("block_verification_failures", registry);
   
   public MetricsTimeVaryingInt readsFromLocalClient = 
-                new MetricsTimeVaryingInt("reads_from_local_client");
+                new MetricsTimeVaryingInt("reads_from_local_client", registry);
   public MetricsTimeVaryingInt readsFromRemoteClient = 
-                new MetricsTimeVaryingInt("reads_from_remote_client");
+                new MetricsTimeVaryingInt("reads_from_remote_client", registry);
   public MetricsTimeVaryingInt writesFromLocalClient = 
-              new MetricsTimeVaryingInt("writes_from_local_client");
+              new MetricsTimeVaryingInt("writes_from_local_client", registry);
   public MetricsTimeVaryingInt writesFromRemoteClient = 
-              new MetricsTimeVaryingInt("writes_from_remote_client");
+              new MetricsTimeVaryingInt("writes_from_remote_client", registry);
   
   public MetricsTimeVaryingRate readBlockOp = 
-                new MetricsTimeVaryingRate("readBlockOp");
+                new MetricsTimeVaryingRate("readBlockOp", registry);
   public MetricsTimeVaryingRate writeBlockOp = 
-                new MetricsTimeVaryingRate("writeBlockOp");
+                new MetricsTimeVaryingRate("writeBlockOp", registry);
   public MetricsTimeVaryingRate readMetadataOp = 
-                new MetricsTimeVaryingRate("readMetadataOp");
+                new MetricsTimeVaryingRate("readMetadataOp", registry);
   public MetricsTimeVaryingRate blockChecksumOp = 
-                new MetricsTimeVaryingRate("blockChecksumOp");
+                new MetricsTimeVaryingRate("blockChecksumOp", registry);
   public MetricsTimeVaryingRate copyBlockOp = 
-                new MetricsTimeVaryingRate("copyBlockOp");
+                new MetricsTimeVaryingRate("copyBlockOp", registry);
   public MetricsTimeVaryingRate replaceBlockOp = 
-                new MetricsTimeVaryingRate("replaceBlockOp");
+                new MetricsTimeVaryingRate("replaceBlockOp", registry);
   public MetricsTimeVaryingRate heartbeats = 
-                    new MetricsTimeVaryingRate("heartBeats");
+                    new MetricsTimeVaryingRate("heartBeats", registry);
   public MetricsTimeVaryingRate blockReports = 
-                    new MetricsTimeVaryingRate("blockReports");
+                    new MetricsTimeVaryingRate("blockReports", registry);
 
     
   public DataNodeMetrics(Configuration conf, String storageId) {
@@ -96,7 +99,7 @@ public class DataNodeMetrics implements Updater {
     
 
     // Now the MBean for the data node
-    datanodeStats = new DataNodeStatistics(this, storageId);
+    datanodeActivityMBean = new DataNodeActivityMBean(registry, storageId);
     
     // Create record for DataNode metrics
     MetricsContext context = MetricsUtil.getContext("dfs");
@@ -106,8 +109,8 @@ public class DataNodeMetrics implements Updater {
   }
   
   public void shutdown() {
-    if (datanodeStats != null) 
-      datanodeStats.shutdown();
+    if (datanodeActivityMBean != null) 
+      datanodeActivityMBean.shutdown();
   }
     
   /**
@@ -116,28 +119,9 @@ public class DataNodeMetrics implements Updater {
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
-            
-      bytesWritten.pushMetric(metricsRecord);
-      bytesRead.pushMetric(metricsRecord);
-      blocksWritten.pushMetric(metricsRecord);
-      blocksRead.pushMetric(metricsRecord);
-      blocksReplicated.pushMetric(metricsRecord);
-      blocksRemoved.pushMetric(metricsRecord);
-      blocksVerified.pushMetric(metricsRecord);
-      blockVerificationFailures.pushMetric(metricsRecord);
-      readsFromLocalClient.pushMetric(metricsRecord);
-      writesFromLocalClient.pushMetric(metricsRecord);
-      readsFromRemoteClient.pushMetric(metricsRecord);
-      writesFromRemoteClient.pushMetric(metricsRecord);
-      
-      readBlockOp.pushMetric(metricsRecord);
-      writeBlockOp.pushMetric(metricsRecord);
-      readMetadataOp.pushMetric(metricsRecord);
-      blockChecksumOp.pushMetric(metricsRecord);
-      copyBlockOp.pushMetric(metricsRecord);
-      replaceBlockOp.pushMetric(metricsRecord);
-      heartbeats.pushMetric(metricsRecord);
-      blockReports.pushMetric(metricsRecord);
+      for (MetricsBase m : registry.getMetricsList()) {
+        m.pushMetric(metricsRecord);
+      }
     }
     metricsRecord.update();
   }

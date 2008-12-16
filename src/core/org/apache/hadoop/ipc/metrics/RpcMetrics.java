@@ -24,11 +24,10 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsBase;
+import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
-
-import java.util.HashMap;
-import java.util.*;
 
 /**
  * 
@@ -43,11 +42,14 @@ import java.util.*;
  *
  */
 public class RpcMetrics implements Updater {
+  public MetricsRegistry registry = new MetricsRegistry();
   private MetricsRecord metricsRecord;
+  private Server myServer;
   private static Log LOG = LogFactory.getLog(RpcMetrics.class);
-  RpcMgt rpcMgt;
+  RpcActivityMBean rpcMBean;
   
   public RpcMetrics(String hostName, String port, Server server) {
+    myServer = server;
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
 
@@ -59,7 +61,7 @@ public class RpcMetrics implements Updater {
     context.registerUpdater(this);
     
     // Need to clean up the interface to RpcMgt - don't need both metrics and server params
-    rpcMgt = new RpcMgt(hostName, port, this, server);
+    rpcMBean = new RpcActivityMBean(registry, hostName, port);
   }
   
   
@@ -68,39 +70,35 @@ public class RpcMetrics implements Updater {
    *  - they can be set directly by calling their set/inc methods
    *  -they can also be read directly - e.g. JMX does this.
    */
-  
-  public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime");
-  public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime");
 
-  public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
-
-  
+  public MetricsTimeVaryingRate rpcQueueTime =
+          new MetricsTimeVaryingRate("RpcQueueTime", registry);
+  public MetricsTimeVaryingRate rpcProcessingTime =
+          new MetricsTimeVaryingRate("RpcProcessingTime", registry);
+  public MetricsIntValue numOpenConnections = 
+          new MetricsIntValue("NumOpenConnections", registry);
+  public MetricsIntValue callQueueLen = 
+          new MetricsIntValue("callQueueLen", registry);
   
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    */
   public void doUpdates(MetricsContext context) {
-    rpcQueueTime.pushMetric(metricsRecord);
-    rpcProcessingTime.pushMetric(metricsRecord);
-
-    synchronized (metricsList) {
-	// Iterate through the rpcMetrics hashmap to propogate the different rpc metrics.
-	Set keys = metricsList.keySet();
-
-	Iterator keyIter = keys.iterator();
-
-	while (keyIter.hasNext()) {
-		Object key = keyIter.next();
-		MetricsTimeVaryingRate value = metricsList.get(key);
-
-		value.pushMetric(metricsRecord);
-	}
+    
+    synchronized (this) {
+      // ToFix - fix server to use the following two metrics directly so
+      // the metrics do not have be copied here.
+      numOpenConnections.set(myServer.getNumOpenConnections());
+      callQueueLen.set(myServer.getCallQueueLen());
+      for (MetricsBase m : registry.getMetricsList()) {
+        m.pushMetric(metricsRecord);
+      }
     }
     metricsRecord.update();
   }
 
   public void shutdown() {
-    if (rpcMgt != null) 
-      rpcMgt.shutdown();
+    if (rpcMBean != null) 
+      rpcMBean.shutdown();
   }
 }

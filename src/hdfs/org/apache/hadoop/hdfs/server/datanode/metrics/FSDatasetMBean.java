@@ -25,6 +25,10 @@ import java.io.IOException;
  * a data node.
  * It is also used for publishing via JMX (hence we follow the JMX naming
  * convention.) 
+ *  * Note we have not used the MetricsDynamicMBeanBase to implement this
+ * because the interface for the FSDatasetMBean is stable and should
+ * be published as an interface.
+ * 
  * <p>
  * Data Node runtime statistic  info is report in another MBean
  * @see org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeStatisticsMBean

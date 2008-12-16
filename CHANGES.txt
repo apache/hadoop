@@ -258,6 +258,9 @@ Trunk (unreleased changes)
 
     HADOOP-4699. Remove checksum validation from map output servlet. (cdouglas)
 
+    HADOOP-4838. Added a registry to automate metrics and mbeans management.
+    (Sanjay Radia via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

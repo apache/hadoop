@@ -30,24 +30,38 @@ import org.apache.commons.logging.LogFactory;
  * call.
  *
  */
-public class MetricsIntValue {  
+public class MetricsIntValue extends MetricsBase {  
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.metrics.util");
 
-  private String name;
   private int value;
   private boolean changed;
+  
   
   /**
    * Constructor - create a new metric
    * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
    */
-  public MetricsIntValue(final String nam) {
-    name = nam;
+  public MetricsIntValue(final String nam, final MetricsRegistry registry, final String description) {
+    super(nam, description);
     value = 0;
     changed = false;
+    registry.add(nam, this);
   }
+  
+  /**
+   * Constructor - create a new metric
+   * @param nam the name of the metrics to be used to publish the metric
+   * @param registry - where the metrics object will be registered
+   * A description of {@link #NO_DESCRIPTION} is used
+   */
+  public MetricsIntValue(final String nam, MetricsRegistry registry) {
+    this(nam, registry, NO_DESCRIPTION);
+  }
+  
+  
   
   /**
    * Set the value
@@ -65,44 +79,7 @@ public class MetricsIntValue {
   public synchronized int get() { 
     return value;
   } 
-
-  /**
-   * Inc metrics for incr vlaue
-   * @param incr - value to be added
-   */
-  public synchronized void inc(final int incr) {
-    value += incr;
-    changed = true;
-  }
   
-  /**
-   * Inc metrics by one
-   */
-  public synchronized void inc() {
-    value++;
-    changed = true;
-  }
-
-  /**
-   * Inc metrics for incr vlaue
-   * @param decr - value to subtract
-   */
-  public synchronized void dec(final int decr) {
-    value -= decr;
-    if (value < 0)
-      value = 0;
-    changed = true;
-  }
-  
-  /**
-   * Dec metrics by one
-   */
-  public synchronized void dec() {
-    value--;
-    if (value < 0)
-      value = 0;
-    changed = true;
-  }
 
   /**
    * Push the metric to the mr.
@@ -116,9 +93,9 @@ public class MetricsIntValue {
   public synchronized void pushMetric(final MetricsRecord mr) {
     if (changed) {
       try {
-        mr.setMetric(name, value);
+        mr.setMetric(getName(), value);
       } catch (Exception e) {
-        LOG.info("pushMetric failed for " + name + "\n" +
+        LOG.info("pushMetric failed for " + getName() + "\n" +
             StringUtils.stringifyException(e));
       }
     }

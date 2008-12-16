@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class MetricsUtil {
     
-  private static final Log LOG =
+  public static final Log LOG =
     LogFactory.getLog(MetricsUtil.class);
 
   /**
