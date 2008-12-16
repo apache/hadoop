@@ -61,7 +61,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
   /**
    * Configure a job given argv.
    */
-  public boolean parseArgs(String[] argv, JobConf job) throws IOException {
+  public static boolean parseArgs(String[] argv, JobConf job) throws IOException {
     if (argv.length < 1) {
       return 0 == printUsage();
     }

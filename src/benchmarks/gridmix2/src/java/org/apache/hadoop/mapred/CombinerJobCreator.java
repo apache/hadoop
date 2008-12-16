@@ -25,7 +25,7 @@ import org.apache.hadoop.io.Text;
 
 public class CombinerJobCreator extends WordCount {
 
-  public JobConf createJob(String[] args) throws Exception {
+  public static JobConf createJob(String[] args) throws Exception {
     JobConf conf = new JobConf(WordCount.class);
     conf.setJobName("GridmixCombinerJob");
 

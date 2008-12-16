@@ -294,6 +294,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4545. Add example and test case of secondary sort for the reduce.
     (omalley)
 
+    HADOOP-4753. Refactor gridmix2 to reduce code duplication. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
