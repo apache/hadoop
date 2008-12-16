@@ -441,6 +441,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4458. Add a test creating symlinks in the working directory.
     (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-4879. Fix org.apache.hadoop.mapred.Counters to correctly define
+    Object.equals rather than depend on contentEquals api. (omalley via 
+    acmurthy)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
