@@ -51,6 +51,8 @@ public class ExampleDriver {
       pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
       pgd.addClass("pentomino", DistributedPentomino.class,
       "A map/reduce tile laying program to find solutions to pentomino problems.");
+      pgd.addClass("secondarysort", SecondarySort.class,
+                   "An example defining a secondary sort to the reduce.");
       pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
       pgd.addClass("sleep", SleepJob.class, "A job that sleeps at each map and reduce task.");
       pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");

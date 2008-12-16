@@ -270,8 +270,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4728. Add a test exercising different namenode configurations.
     (Boris Shkolnik via cdouglas)
 
-    HADOOP-4807. Adds JobClient commands to get the active/blacklisted tracker names.
-    Also adds commands to display running/completed task attempt IDs. (ddas)
+    HADOOP-4807. Adds JobClient commands to get the active/blacklisted tracker
+    names. Also adds commands to display running/completed task attempt IDs. 
+    (ddas)
 
     HADOOP-4699. Remove checksum validation from map output servlet. (cdouglas)
 
@@ -279,15 +280,19 @@ Release 0.20.0 - Unreleased
     (Sanjay Radia via acmurthy) 
 
     HADOOP-3136. Fixed the default scheduler to assign multiple tasks to each 
-    tasktracker per heartbeat, when feasible. To ensure locality isn't hurt too 
-    badly, the scheudler will not assign more than one off-switch task per 
+    tasktracker per heartbeat, when feasible. To ensure locality isn't hurt 
+    too badly, the scheudler will not assign more than one off-switch task per 
     heartbeat. The heartbeat interval is also halved since the task-tracker is 
-    fixed to no longer send out heartbeats on each task completion. A slow-start
-    for scheduling reduces is introduced to ensure that reduces aren't started 
-    till sufficient number of maps are done, else reduces of jobs whose maps 
-    aren't scheduled might swamp the cluster. (acmurthy)
+    fixed to no longer send out heartbeats on each task completion. A 
+    slow-start for scheduling reduces is introduced to ensure that reduces 
+    aren't started till sufficient number of maps are done, else reduces of 
+    jobs whose maps aren't scheduled might swamp the cluster.
     Configuration changes to mapred-default.xml:
       add mapred.reduce.slowstart.completed.maps 
+    (acmurthy)
+
+    HADOOP-4545. Add example and test case of secondary sort for the reduce.
+    (omalley)
 
   OPTIMIZATIONS
 
