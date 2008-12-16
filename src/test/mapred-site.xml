@@ -5,4 +5,9 @@
 
 <configuration>
 
+<property>
+  <name>io.sort.mb</name>
+  <value>10</value>
+</property>
+
 </configuration>

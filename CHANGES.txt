@@ -400,6 +400,9 @@ Trunk (unreleased changes)
     HADOOP-4820. Remove unused method FSNamesystem::deleteInSafeMode. (Suresh
     Srinivas via cdouglas)
 
+    HADOOP-4698. Lower io.sort.mb to 10 in the tests and raise the junit memory
+    limit to 512m from 256m. (Nigel Daley via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

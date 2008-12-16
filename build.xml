@@ -108,7 +108,7 @@
   <property name="test.junit.fork.mode" value="perTest" />
   <property name="test.junit.printsummary" value="yes" />
   <property name="test.junit.haltonfailure" value="no" />
-  <property name="test.junit.maxmemory" value="256m" />
+  <property name="test.junit.maxmemory" value="512m" />
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
   <property name="libhdfs.test.dir" value="${test.build.dir}/libhdfs"/>
