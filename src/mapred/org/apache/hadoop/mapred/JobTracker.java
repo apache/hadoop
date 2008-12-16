@@ -2333,7 +2333,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // get the no of task trackers
     int clusterSize = getClusterStatus().getTaskTrackers();
     int heartbeatInterval =  Math.max(
-                                1000 * (clusterSize / CLUSTER_INCREMENT + 1),
+                                (int)(1000 * Math.ceil((double)clusterSize / 
+                                                       CLUSTER_INCREMENT)),
                                 HEARTBEAT_INTERVAL_MIN) ;
     return heartbeatInterval;
   }

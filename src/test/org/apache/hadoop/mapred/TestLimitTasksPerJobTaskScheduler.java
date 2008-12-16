@@ -19,9 +19,35 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-public class TestLimitTasksPerJobTaskScheduler
-  extends TestJobQueueTaskScheduler{
+import junit.framework.TestCase;
+
+import org.apache.hadoop.mapred.TestJobQueueTaskScheduler.FakeTaskTrackerManager;
+
+public class TestLimitTasksPerJobTaskScheduler extends TestCase {
+  protected JobConf jobConf;
+  protected TaskScheduler scheduler;
+  private FakeTaskTrackerManager taskTrackerManager;
+
+  @Override
+  protected void setUp() throws Exception {
+    TestJobQueueTaskScheduler.resetCounters();
+    jobConf = new JobConf();
+    jobConf.setNumMapTasks(10);
+    jobConf.setNumReduceTasks(10);
+    taskTrackerManager = new FakeTaskTrackerManager();
+    scheduler = createTaskScheduler();
+    scheduler.setConf(jobConf);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    scheduler.start();
+  }
   
+  @Override
+  protected void tearDown() throws Exception {
+    if (scheduler != null) {
+      scheduler.terminate();
+    }
+  }
+
   protected TaskScheduler createTaskScheduler() {
     return new LimitTasksPerJobTaskScheduler();
   }
@@ -30,17 +56,34 @@ public class TestLimitTasksPerJobTaskScheduler
     jobConf.setLong(LimitTasksPerJobTaskScheduler.MAX_TASKS_PER_JOB_PROPERTY,
         4L);
     scheduler.setConf(jobConf);
-    submitJobs(2, JobStatus.RUNNING);
+    TestJobQueueTaskScheduler.submitJobs(taskTrackerManager, jobConf, 
+                                         2, JobStatus.RUNNING);
     
     // First 4 slots are filled with job 1, second 4 with job 2
-    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_m_000002_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_r_000003_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_r_000004_0 on tt1");
-    checkAssignment("tt2", "attempt_test_0002_m_000005_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0002_m_000006_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0002_r_000007_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0002_r_000008_0 on tt2");
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_m_000001_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_m_000002_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_r_000003_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_r_000004_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_m_000005_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_m_000006_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_r_000007_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_r_000008_0 on tt2"});
   }
   
   public void testMaxRunningTasksPerJobWithInterleavedTrackers()
@@ -48,18 +91,34 @@ public class TestLimitTasksPerJobTaskScheduler
     jobConf.setLong(LimitTasksPerJobTaskScheduler.MAX_TASKS_PER_JOB_PROPERTY,
         4L);
     scheduler.setConf(jobConf);
-    submitJobs(2, JobStatus.RUNNING);
+    TestJobQueueTaskScheduler.submitJobs(taskTrackerManager, jobConf, 2, JobStatus.RUNNING);
     
     // First 4 slots are filled with job 1, second 4 with job 2
     // even when tracker requests are interleaved
-    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_m_000002_0 on tt1");
-    checkAssignment("tt2", "attempt_test_0001_m_000003_0 on tt2");
-    checkAssignment("tt1", "attempt_test_0001_r_000004_0 on tt1");
-    checkAssignment("tt2", "attempt_test_0002_m_000005_0 on tt2");
-    checkAssignment("tt1", "attempt_test_0002_r_000006_0 on tt1");
-    checkAssignment("tt2", "attempt_test_0002_r_000007_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0002_r_000008_0 on tt2");
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_m_000001_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_m_000002_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0001_m_000003_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0001_r_000004_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_m_000005_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt1"), 
+        new String[] {"attempt_test_0002_r_000006_0 on tt1"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_r_000007_0 on tt2"});
+    TestJobQueueTaskScheduler.checkAssignment(
+        scheduler, TestJobQueueTaskScheduler.tracker(taskTrackerManager, "tt2"), 
+        new String[] {"attempt_test_0002_r_000008_0 on tt2"});
   }
   
 }

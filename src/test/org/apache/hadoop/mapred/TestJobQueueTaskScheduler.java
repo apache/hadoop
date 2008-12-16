@@ -33,6 +33,11 @@ public class TestJobQueueTaskScheduler extends TestCase {
   private static int jobCounter;
   private static int taskCounter;
   
+  static void resetCounters() {
+    jobCounter = 0;
+    taskCounter = 0;
+  }
+  
   static class FakeJobInProgress extends JobInProgress {
     
     private FakeTaskTrackerManager taskTrackerManager;
@@ -46,12 +51,26 @@ public class TestJobQueueTaskScheduler extends TestCase {
       this.status.setJobPriority(JobPriority.NORMAL);
       this.status.setStartTime(startTime);
     }
-    
+
     @Override
     public synchronized void initTasks() throws IOException {
       // do nothing
     }
 
+    @Override
+    public Task obtainNewLocalMapTask(TaskTrackerStatus tts, int clusterSize, 
+                                      int ignored) 
+    throws IOException {
+      return obtainNewMapTask(tts, clusterSize, ignored);
+    }
+    
+    @Override
+    public Task obtainNewNonLocalMapTask(TaskTrackerStatus tts, int clusterSize, 
+                                         int ignored) 
+    throws IOException {
+      return obtainNewMapTask(tts, clusterSize, ignored);
+    }
+    
     @Override
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
@@ -106,20 +125,20 @@ public class TestJobQueueTaskScheduler extends TestCase {
       JobConf conf = new JobConf();
       queueManager = new QueueManager(conf);
       trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapTasksPerTracker, maxReduceTasksPerTracker));
+                   new ArrayList<TaskStatus>(), 0,
+                   maxMapTasksPerTracker, maxReduceTasksPerTracker));
       trackers.put("tt2", new TaskTrackerStatus("tt2", "tt2.host", 2,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapTasksPerTracker, maxReduceTasksPerTracker));
+                   new ArrayList<TaskStatus>(), 0,
+                   maxMapTasksPerTracker, maxReduceTasksPerTracker));
     }
     
     @Override
     public ClusterStatus getClusterStatus() {
       int numTrackers = trackers.size();
-      return new ClusterStatus(numTrackers, maps, reduces,
-          numTrackers * maxMapTasksPerTracker,
-          numTrackers * maxReduceTasksPerTracker,
-          JobTracker.State.RUNNING);
+      return new ClusterStatus(numTrackers, 0, maps, reduces,
+                               numTrackers * maxMapTasksPerTracker,
+                               numTrackers * maxReduceTasksPerTracker,
+                               JobTracker.State.RUNNING);
     }
 
     @Override
@@ -199,8 +218,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
 
   @Override
   protected void setUp() throws Exception {
-    jobCounter = 0;
-    taskCounter = 0;
+    resetCounters();
     jobConf = new JobConf();
     jobConf.setNumMapTasks(10);
     jobConf.setNumReduceTasks(10);
@@ -222,9 +240,10 @@ public class TestJobQueueTaskScheduler extends TestCase {
     return new JobQueueTaskScheduler();
   }
   
-  protected void submitJobs(int number, int state)
+  static void submitJobs(FakeTaskTrackerManager taskTrackerManager, JobConf jobConf, 
+                         int numJobs, int state)
     throws IOException {
-    for (int i = 0; i < number; i++) {
+    for (int i = 0; i < numJobs; i++) {
       JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager);
       job.getStatus().setRunState(state);
       taskTrackerManager.submitJob(job);
@@ -232,41 +251,51 @@ public class TestJobQueueTaskScheduler extends TestCase {
   }
 
   public void testTaskNotAssignedWhenNoJobsArePresent() throws IOException {
-    assertNull(scheduler.assignTasks(tracker("tt1")));
+    assertEquals(0, scheduler.assignTasks(tracker(taskTrackerManager, "tt1")).size());
   }
 
   public void testNonRunningJobsAreIgnored() throws IOException {
-    submitJobs(1, JobStatus.PREP);
-    submitJobs(1, JobStatus.SUCCEEDED);
-    submitJobs(1, JobStatus.FAILED);
-    submitJobs(1, JobStatus.KILLED);
-    assertNull(scheduler.assignTasks(tracker("tt1")));
+    submitJobs(taskTrackerManager, jobConf, 1, JobStatus.PREP);
+    submitJobs(taskTrackerManager, jobConf, 1, JobStatus.SUCCEEDED);
+    submitJobs(taskTrackerManager, jobConf, 1, JobStatus.FAILED);
+    submitJobs(taskTrackerManager, jobConf, 1, JobStatus.KILLED);
+    assertEquals(0, scheduler.assignTasks(tracker(taskTrackerManager, "tt1")).size());
   }
   
   public void testDefaultTaskAssignment() throws IOException {
-    submitJobs(2, JobStatus.RUNNING);
-    
+    submitJobs(taskTrackerManager, jobConf, 2, JobStatus.RUNNING);
     // All slots are filled with job 1
-    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_m_000002_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_r_000003_0 on tt1");
-    checkAssignment("tt1", "attempt_test_0001_r_000004_0 on tt1");
-    checkAssignment("tt2", "attempt_test_0001_m_000005_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0001_m_000006_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0001_r_000007_0 on tt2");
-    checkAssignment("tt2", "attempt_test_0001_r_000008_0 on tt2");
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt1"), 
+                    new String[] {"attempt_test_0001_m_000001_0 on tt1", 
+                                  "attempt_test_0001_m_000002_0 on tt1", 
+                                  "attempt_test_0001_r_000003_0 on tt1"});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt1"), 
+                    new String[] {"attempt_test_0001_r_000004_0 on tt1"});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt1"), new String[] {});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt2"), 
+                    new String[] {"attempt_test_0001_m_000005_0 on tt2", 
+                                         "attempt_test_0001_m_000006_0 on tt2", 
+                                         "attempt_test_0001_r_000007_0 on tt2"});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt2"), 
+                    new String[] {"attempt_test_0001_r_000008_0 on tt2"});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt2"), new String[] {});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt1"), new String[] {});
+    checkAssignment(scheduler, tracker(taskTrackerManager, "tt2"), new String[] {});
   }
 
-  protected TaskTrackerStatus tracker(String taskTrackerName) {
+  static TaskTrackerStatus tracker(FakeTaskTrackerManager taskTrackerManager,
+                                      String taskTrackerName) {
     return taskTrackerManager.getTaskTracker(taskTrackerName);
   }
   
-  protected void checkAssignment(String taskTrackerName,
-      String expectedTaskString) throws IOException {
-    List<Task> tasks = scheduler.assignTasks(tracker(taskTrackerName));
-    assertNotNull(expectedTaskString, tasks);
-    assertEquals(expectedTaskString, 1, tasks.size());
-    assertEquals(expectedTaskString, tasks.get(0).toString());
+  static void checkAssignment(TaskScheduler scheduler, TaskTrackerStatus tts,
+      String[] expectedTaskStrings) throws IOException {
+    List<Task> tasks = scheduler.assignTasks(tts);
+    assertNotNull(tasks);
+    assertEquals(expectedTaskStrings.length, tasks.size());
+    for (int i=0; i < expectedTaskStrings.length; ++i) {
+      assertEquals(expectedTaskStrings[i], tasks.get(i).toString());
+    }
   }
   
 }

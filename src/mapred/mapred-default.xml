@@ -985,4 +985,12 @@
   </description>
 </property>
 
+<property>
+  <name>mapred.reduce.slowstart.completed.maps</name>
+  <value>0.05</value>
+  <description>Fraction of the number of maps in the job which should be 
+  complete before reduces are scheduled for the job. 
+  </description>
+</property>
+
 </configuration>

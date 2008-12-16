@@ -113,6 +113,10 @@ public class TestJobInProgress extends TestCase {
     job.set(UtilsForTests.getTaskSignalParameter(true), mapSignalFile.toString());
     job.set(UtilsForTests.getTaskSignalParameter(false), redSignalFile.toString());
     
+    // Disable slow-start for reduces since this maps don't complete 
+    // in these test-cases...
+    job.setFloat("mapred.reduce.slowstart.completed.maps", 0.0f);
+    
     // test jobs with speculation
     job.setSpeculativeExecution(speculation);
     JobClient jc = new JobClient(job);
