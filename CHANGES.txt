@@ -176,6 +176,7 @@ Release 0.19.0 - Unreleased
    HBASE-1055  Better vm stats on startup
    HBASE-1065  Minor logging improvements in the master
    HBASE-1053  bring recent rpc changes down from hadoop
+   HBASE-1056  [migration] enable blockcaching on .META. table
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

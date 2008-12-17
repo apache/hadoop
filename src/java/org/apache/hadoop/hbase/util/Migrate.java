@@ -191,8 +191,8 @@ public class Migrate extends Configured implements Tool {
         throw new IOException(msg);
       }
 
-      migrateTo5();
-      
+      migrate4To6();
+
       if (!readOnly) {
         // Set file system version
         LOG.info("Setting file system version.");
@@ -208,16 +208,19 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  // Move the fileystem version from 4 to 5.
+  // Move the fileystem version from 4 to 6.
   // In here we rewrite the catalog table regions so they keep 10 versions
   // instead of 1.
-  private void migrateTo5() throws IOException {
+  private void migrate4To6() throws IOException {
     if (this.readOnly && this.migrationNeeded) {
       return;
     }
     final MetaUtils utils = new MetaUtils(this.conf);
     try {
+      // These two operations are effectively useless.  -ROOT- is hardcode,
+      // at least until hbase 0.20.0 when we store it out in ZK.
       updateVersions(utils.getRootRegion().getRegionInfo());
+      enableBlockCache(utils.getRootRegion().getRegionInfo());
       // Scan the root region
       utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info)
@@ -227,6 +230,7 @@ public class Migrate extends Configured implements Tool {
             return false;
           }
           updateVersions(utils.getRootRegion(), info);
+          enableBlockCache(utils.getRootRegion(), info);
           return true;
         }
       });
@@ -236,8 +240,41 @@ public class Migrate extends Configured implements Tool {
   }
 
   /*
-   * Move from old pre-v5 hregioninfo to current HRegionInfo
-   * Persist back into <code>r</code>
+   * Enable blockcaching on catalog tables.
+   * @param mr
+   * @param oldHri
+   */
+  void enableBlockCache(HRegion mr, HRegionInfo oldHri)
+  throws IOException {
+    if (!enableBlockCache(oldHri)) {
+      return;
+    }
+    BatchUpdate b = new BatchUpdate(oldHri.getRegionName());
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(oldHri));
+    mr.batchUpdate(b);
+    LOG.info("Enabled blockcache on " + oldHri.getRegionNameAsString());
+  }
+
+  /*
+   * @param hri Update versions.
+   * @param true if we changed value
+   */
+  private boolean enableBlockCache(final HRegionInfo hri) {
+    boolean result = false;
+    HColumnDescriptor hcd =
+      hri.getTableDesc().getFamily(HConstants.COLUMN_FAMILY);
+    if (hcd == null) {
+      LOG.info("No info family in: " + hri.getRegionNameAsString());
+      return result;
+    }
+    // Set blockcache enabled.
+    hcd.setBlockCacheEnabled(true);
+    return true;
+  }
+
+
+  /*
+   * Update versions kept in historian.
    * @param mr
    * @param oldHri
    */
@@ -251,7 +288,7 @@ public class Migrate extends Configured implements Tool {
     mr.batchUpdate(b);
     LOG.info("Upped versions on " + oldHri.getRegionNameAsString());
   }
-  
+
   /*
    * @param hri Update versions.
    * @param true if we changed value

@@ -654,7 +654,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-          HColumnDescriptor.CompressionType.NONE, false, false,
+          HColumnDescriptor.CompressionType.NONE, false, true,
           Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
@@ -662,7 +662,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
-            HColumnDescriptor.CompressionType.NONE, false, false,
+            HColumnDescriptor.CompressionType.NONE, false, true,
             Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
             HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,

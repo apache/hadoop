@@ -43,11 +43,12 @@ public interface HConstants {
   static final String VERSION_FILE_NAME = "hbase.version";
   
   /**
-   * Current version of file system
+   * Current version of file system.
    * Version 4 supports only one kind of bloom filter.
    * Version 5 changes versions in catalog table regions.
+   * Version 6 enables blockcaching on catalog tables.
    */
-  public static final String FILE_SYSTEM_VERSION = "5";
+  public static final String FILE_SYSTEM_VERSION = "6";
   
   // Configuration parameters
   

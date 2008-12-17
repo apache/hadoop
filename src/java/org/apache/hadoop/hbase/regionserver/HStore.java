@@ -1006,7 +1006,7 @@ public class HStore implements HConstants {
   
   /*
    * Create readers for the passed in list of HStoreFiles and add them to
-   * <code>readers</code> list.
+   * <code>readers</code> list.  Used compacting.
    * @param readers Add Readers here.
    * @param files List of HSFs to make Readers for.
    * @return Count of rows for bloom filter sizing.  Returns -1 if no bloom
