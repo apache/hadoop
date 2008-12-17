@@ -22,12 +22,13 @@
 
 	<property name="name" value="chukwa"/>
         <property name="chukwaVersion" value="0.1.1"/>
-	<property name="rpm.prefix" value="/usr/local"/>
-	<property name="hadoop.conf" value="/usr/local/hadoop/conf"/>
 	<property name="final.name" value="${name}-${chukwaVersion}"/>
 
         <import file="../build-contrib.xml" optional="true"/>
         <available file="../build-contrib.xml" property="present"/>
+
+        <property file="build.properties"/>
+        <property file="default.properties"/>
 
         <condition property="standaloneMode">
                 <and><not><available file="../build-contrib.xml" property="present"/></not></and>
@@ -749,7 +750,6 @@
 
 %define _topdir         ${build.dir}
 %define _prefix         ${rpm.prefix}
-%define _conf           ${hadoop.conf}
 %define name            chukwa
 %define summary         Distributed Computing Monitoring Framework.
 %define version         ${chukwaVersion}
@@ -787,10 +787,10 @@ fi
 mv %{buildroot}/%{name}-%{version} %{buildroot}%{_prefix}/%{name}
 cd %{buildroot}%{_prefix}
 mkdir -p %{buildroot}/etc/init.d
-cp %{name}/tools/init.d/chukwa-data-processors %{buildroot}/etc/init.d
-cp %{name}/tools/init.d/chukwa-collector %{buildroot}/etc/init.d
-cp %{name}/tools/init.d/chukwa-agent %{buildroot}/etc/init.d
-cp %{name}/tools/init.d/chukwa-system-metrics %{buildroot}/etc/init.d
+cat %{name}/tools/init.d/chukwa-data-processors | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
+cat %{name}/tools/init.d/chukwa-collector | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
+cat %{name}/tools/init.d/chukwa-agent | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
+cat %{name}/tools/init.d/chukwa-system-metrics | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
 chmod a+x %{buildroot}/etc/init.d/chukwa-*
 rm -rf %{buildroot}%{_prefix}/%{name}/src
 rm -rf %{buildroot}%{_prefix}/%{name}/build.xml
