@@ -462,6 +462,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4771. Correct initialization of the file count for directories 
     with quotas. (Ruyue Ma via shv)
 
+    HADOOP-4878. Fix eclipse plugin classpath file to point to ivy's resolved
+    lib directory and added the same to test-patch.sh. (Giridharan Kesavan via
+    acmurthy)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

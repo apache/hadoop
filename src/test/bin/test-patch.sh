@@ -493,7 +493,7 @@ runCoreTests () {
 ### Tests parts of contrib specific to the eclipse files
 checkJarFilesDeclaredInEclipse () {
   export DECLARED_JARS=$(sed -n 's@.*kind="lib".*path="\(.*jar\)".*@\1@p' < .eclipse.templates/.classpath)
-  export PRESENT_JARS=$(find lib/ src/test/lib/ -name '*.jar' |sort)
+  export PRESENT_JARS=$(find build/ivy/lib/Hadoop/common/ lib/ src/test/lib/ -name '*.jar' |sort)
   # When run by Hudson, consider libs from ${SUPPORT_DIR} declared
   if [[ ${HUDSON} == "true" ]]; then
       DECLARED_JARS="${DECLARED_JARS} $(cd "${SUPPORT_DIR}"; find lib -name '*.jar')"
