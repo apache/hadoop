@@ -63,10 +63,12 @@ cluster):
 The PerformanceEvaluation class wil be found on the CLASSPATH because you
 added <code>$HBASE_HOME/build/test</code> to HADOOP_CLASSPATH
 </p>
-<p>NOTE: While previous it used to be possible to bundle the hbase.jar up inside the
-job jar you submit to hadoop, as of hbase 0.2.0RC2, this is no longer so.
-See <a href="https://issues.apache.org/jira/browse/HBASE-797">HBASE-797</a>
-for details. 
+
+<p>Another possibility, if for example you do not have access to hadoop-env.sh or
+are unable to restart the hadoop cluster, is bundling the hbase jar into a mapreduce
+job jar adding it and its dependencies under the job jar <code>lib/</code>
+directory and the hbase conf into a job jar <code>conf/</code> directory.
+</a>
 
 <h2><a name="sink">HBase as MapReduce job data source and sink</a></h2>
 
@@ -95,7 +97,8 @@ and collation that mapreduce does on the map emitted data; on insert,
 hbase 'sorts' so there is no point double-sorting (and shuffling data around
 your mapreduce cluster) unless you need to. If you do not need the reduce,
 you might just have your map emit counts of records processed just so the
-framework's report at the end of your job has meaning. See example code
+framework's report at the end of your job has meaning or set the number of
+reduces to zero and use TableOutputFormat. See example code
 below. If running the reduce step makes sense in your case, its usually better
 to have lots of reducers so load is spread across the hbase cluster.</p>
 
@@ -112,7 +115,9 @@ partitioner.
 <p>See {@link org.apache.hadoop.hbase.mapred.RowCounter}.  You should be able to run
 it by doing: <code>% ./bin/hadoop jar hbase-X.X.X.jar</code>.  This will invoke
 the hbase MapReduce Driver class.  Select 'rowcounter' from the choice of jobs
-offered.
+offered. You may need to add the hbase conf directory to <code>$HADOOP_HOME/conf/hadoop-env.sh#HADOOP_CLASSPATH</code>
+so the rowcounter gets pointed at the right hbase cluster (or, build a new jar
+with an appropriate hbase-site.xml built into your job jar).
 </p>
 <h3>PerformanceEvaluation</h3>
 <p>See org.apache.hadoop.hbase.PerformanceEvaluation from hbase src/test.  It runs
