@@ -50,6 +50,19 @@
     <echo message="eclipse.home unset: skipping eclipse plugin"/>
   </target>
 
+ <target name="compile" depends="init, ivy-retrieve-common" unless="skip.contrib">
+    <echo message="contrib: ${name}"/>
+    <javac
+     encoding="${build.encoding}"
+     srcdir="${src.dir}"
+     includes="**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     deprecation="${javac.deprecation}">
+     <classpath refid="classpath"/>
+    </javac>
+  </target>
+
   <!-- Override jar target to specify manifest -->
   <target name="jar" depends="compile" unless="skip.contrib">
     <mkdir dir="${build.dir}/lib"/>
