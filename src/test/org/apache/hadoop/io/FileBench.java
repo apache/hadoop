@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.LzoCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
@@ -46,12 +45,12 @@ public class FileBench extends Configured implements Tool {
     System.out.println(
 "Usage: Task list:           -[no]r -[no]w\n" +
 "       Format:              -[no]seq -[no]txt\n" +
-"       CompressionCodec:    -[no]lzo -[no]zip -[no]pln\n" +
+"       CompressionCodec:    -[no]zip -[no]pln\n" +
 "       CompressionType:     -[no]blk -[no]rec\n" +
 "       Required:            -dir <working dir>\n" +
 "All valid combinations are implicitly enabled, unless an option is enabled\n" +
-"explicitly. For example, specifying \"-lzo\" excludes -zip and -pln,\n" +
-"unless they are also explicitly included, as in \"-lzo -zip\"\n" +
+"explicitly. For example, specifying \"-zip\", excludes -pln,\n" +
+"unless they are also explicitly included, as in \"-pln -zip\"\n" +
 "Note that CompressionType params only apply to SequenceFiles\n\n" +
 "Useful options to set:\n" +
 "-D fs.default.name=\"file:///\" \\\n" +
@@ -243,7 +242,7 @@ public class FileBench extends Configured implements Tool {
 
   // overwrought argument processing and wordlist follow
   enum CCodec {
-    lzo(LzoCodec.class, ".lzo"), zip(GzipCodec.class, ".gz"), pln(null, "");
+    zip(GzipCodec.class, ".gz"), pln(null, "");
 
     Class<? extends CompressionCodec> inf;
     String ext;

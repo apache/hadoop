@@ -44,12 +44,11 @@
       <ul>
         <li><a href="ext:zlib">zlib</a></li>
         <li><a href="ext:gzip">gzip</a></li>
-        <li><a href="ext:lzo">lzo</a></li>
         <li><a href="ext:bzip">bzip2</a></li>
       </ul>
       
       <p>Of the above, the availability of native hadoop libraries is imperative 
-      for the lzo, gzip and bzip2 compression codecs to work.</p>
+      for the gzip and bzip2 compression codecs to work.</p>
     </section>
 
     <section>
@@ -70,8 +69,8 @@
         </li>
         <li>
           Make sure you have any of or all of <strong>&gt;zlib-1.2</strong>,
-          <strong>&gt;gzip-1.2</strong>, <strong>&gt;bzip2-1.0</strong> and 
-          <strong>&gt;lzo2.0</strong> packages for your platform installed; 
+          <strong>&gt;gzip-1.2</strong>, and <strong>&gt;bzip2-1.0</strong>
+          packages for your platform installed; 
           depending on your needs.
         </li>
       </ul>
@@ -147,9 +146,6 @@
         <li> 
           zlib-development package (stable version >= 1.2.0)
         </li>
-        <li> 
-          lzo-development package (stable version >= 2.0)
-        </li> 
       </ul>
 
       <p>Once you have the pre-requisites use the standard <code>build.xml</code> 
@@ -175,13 +171,13 @@
         <ul>
           <li>
             It is <strong>mandatory</strong> to have the 
-            zlib, gzip, bzip2 and lzo 
+            zlib, gzip, and bzip2
             development packages on the target platform for building the 
             native hadoop library; however for deployment it is sufficient to 
             install one of them if you wish to use only one of them.
           </li>
           <li>
-            It is necessary to have the correct 32/64 libraries of both zlib/lzo 
+            It is necessary to have the correct 32/64 libraries of both zlib 
             depending on the 32/64 bit jvm for the target platform for 
             building/deployment of the native hadoop library.
           </li>

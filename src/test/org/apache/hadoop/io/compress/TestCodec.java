@@ -52,18 +52,6 @@ public class TestCodec extends TestCase {
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
   
-  public void testLzoCodec() throws IOException {
-    if (LzoCodec.isNativeLzoLoaded(conf)) {
-      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzoCodec");
-    }
-  }
-  
-  public void testLzopCodec() throws IOException {
-    if (LzopCodec.isNativeLzoLoaded(conf)) {
-      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
-    }
-  }
-  
   public void testBZip2Codec() throws IOException {    
       codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");    
   }

@@ -1,8 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* The 'actual' dynamic-library for '-llzo2' */
-#undef HADOOP_LZO_LIBRARY
-
 /* The 'actual' dynamic-library for '-lz' */
 #undef HADOOP_ZLIB_LIBRARY
 
@@ -20,36 +17,6 @@
 
 /* Define to 1 if you have the `jvm' library (-ljvm). */
 #undef HAVE_LIBJVM
-
-/* Define to 1 if you have the <lzo/lzo1a.h> header file. */
-#undef HAVE_LZO_LZO1A_H
-
-/* Define to 1 if you have the <lzo/lzo1b.h> header file. */
-#undef HAVE_LZO_LZO1B_H
-
-/* Define to 1 if you have the <lzo/lzo1c.h> header file. */
-#undef HAVE_LZO_LZO1C_H
-
-/* Define to 1 if you have the <lzo/lzo1f.h> header file. */
-#undef HAVE_LZO_LZO1F_H
-
-/* Define to 1 if you have the <lzo/lzo1x.h> header file. */
-#undef HAVE_LZO_LZO1X_H
-
-/* Define to 1 if you have the <lzo/lzo1y.h> header file. */
-#undef HAVE_LZO_LZO1Y_H
-
-/* Define to 1 if you have the <lzo/lzo1z.h> header file. */
-#undef HAVE_LZO_LZO1Z_H
-
-/* Define to 1 if you have the <lzo/lzo1.h> header file. */
-#undef HAVE_LZO_LZO1_H
-
-/* Define to 1 if you have the <lzo/lzo2a.h> header file. */
-#undef HAVE_LZO_LZO2A_H
-
-/* Define to 1 if you have the <lzo/lzo_asm.h> header file. */
-#undef HAVE_LZO_LZO_ASM_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
