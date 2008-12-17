@@ -1542,6 +1542,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4857. Fixes TestUlimit to have exactly 1 map in the jobs spawned.
     (Ravi Gummadi via ddas)
 
+    HADOOP-4797. Improve how RPC server reads and writes large buffers. Avoids
+    soft-leak of direct buffers and excess copies in NIO layer. (Raghu Angadi)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
