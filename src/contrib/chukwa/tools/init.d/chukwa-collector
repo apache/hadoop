@@ -30,11 +30,7 @@ DAEMON=jettyCollector.sh
 prog=chukwa-collector
 
 config () {
-        if [ -f /grid/0/chukwa/bin/chukwa-daemon.sh ]; then
-                CHUKWA_HOME=/grid/0/chukwa
-        else
-                CHUKWA_HOME=/usr/local/chukwa
-        fi
+        CHUKWA_HOME=/usr/local/chukwa
 }
 
 start () {
