@@ -492,14 +492,15 @@ public class NamenodeFsck {
     lfInited = true;
     try {
       String lfName = "/lost+found";
-      // check that /lost+found exists
-      if (!dfs.exists(lfName)) {
+      
+      final FileStatus lfStatus = dfs.getFileInfo(lfName);
+      if (lfStatus == null) { // not exists
         lfInitedOk = dfs.mkdirs(lfName);
         lostFound = lfName;
-      } else        if (!dfs.isDirectory(lfName)) {
+      } else if (!lfStatus.isDir()) { // exists but not a directory
         LOG.warn("Cannot use /lost+found : a regular file with this name exists.");
         lfInitedOk = false;
-      }  else { // exists and isDirectory
+      }  else { // exists and is a directory
         lostFound = lfName;
         lfInitedOk = true;
       }

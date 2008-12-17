@@ -241,37 +241,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public short getDefaultReplication() {
     return defaultReplication;
   }
-    
-  /**
-   *  @deprecated Use getBlockLocations instead
-   *
-   * Get hints about the location of the indicated block(s).
-   * 
-   * getHints() returns a list of hostnames that store data for
-   * a specific file region.  It returns a set of hostnames for 
-   * every block within the indicated region.
-   *
-   * This function is very useful when writing code that considers
-   * data-placement when performing operations.  For example, the
-   * MapReduce system tries to schedule tasks on the same machines
-   * as the data-block the task processes. 
-   */
-  @Deprecated
-  public String[][] getHints(String src, long start, long length) 
-    throws IOException {
-    BlockLocation[] blkLocations = getBlockLocations(src, start, length);
-    if ((blkLocations == null) || (blkLocations.length == 0)) {
-      return new String[0][];
-    }
-    int blkCount = blkLocations.length;
-    String[][]hints = new String[blkCount][];
-    for (int i=0; i < blkCount ; i++) {
-      String[] hosts = blkLocations[i].getHosts();
-      hints[i] = new String[hosts.length];
-      hints[i] = hosts;
-    }
-    return hints;
-  }
 
   private static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
       String src, long start, long length) throws IOException {
@@ -556,18 +525,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return getFileInfo(src) != null;
   }
 
-  /** @deprecated Use getFileStatus() instead */
-  @Deprecated
-  public boolean isDirectory(String src) throws IOException {
-    FileStatus fs = getFileInfo(src);
-    if (fs != null)
-      return fs.isDir();
-    else
-      throw new FileNotFoundException("File does not exist: " + src);
-  }
-
-  /**
-   */
   public FileStatus[] listPaths(String src) throws IOException {
     checkOpen();
     try {

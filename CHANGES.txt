@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-4895. Removes deprecated methods DFSClient.getHints(..) and
+    DFSClient.isDirectory(..).  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS

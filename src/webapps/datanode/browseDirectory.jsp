@@ -36,12 +36,13 @@
     
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     String target = dir;
-    if (!dfs.exists(target)) {
+    final FileStatus targetStatus = dfs.getFileInfo(target);
+    if (targetStatus == null) { // not exists
       out.print("<h3>File or directory : " + target + " does not exist</h3>");
       JspHelper.printGotoForm(out, namenodeInfoPort, target);
     }
     else {
-      if( !dfs.isDirectory(target) ) { // a file
+      if( !targetStatus.isDir() ) { // a file
         List<LocatedBlock> blocks = 
           dfs.namenode.getBlockLocations(dir, 0, 1).getLocatedBlocks();
 	      
