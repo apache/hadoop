@@ -459,6 +459,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4791. Fix rpm build process for Chukwa. (Eric Yang via cdouglas)
 
+    HADOOP-4771. Correct initialization of the file count for directories 
+    with quotas. (Ruyue Ma via shv)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
@@ -483,7 +486,7 @@ Release 0.19.1 - Unreleased
     HADOOP-4727. Fix a group checking bug in fill_stat_structure(...) in
     fuse-dfs.  (Brian Bockelman via szetszwo)
 
-    HADOOP-4836. Correct typos in mapred related documentation.  (Jordà Polo
+    HADOOP-4836. Correct typos in mapred related documentation.  (Jord? Polo
     via szetszwo)
 
     HADOOP-4821. Usage description in the Quotas guide documentations are
