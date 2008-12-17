@@ -1514,8 +1514,8 @@
         TextInputFormat</a> is the default <code>InputFormat</code>.</p>
         
         <p>If <code>TextInputFormat</code> is the <code>InputFormat</code> for a 
-        given job, the framework detects input-files with the <em>.gz</em> and 
-        <em>.lzo</em> extensions and automatically decompresses them using the 
+        given job, the framework detects input-files with the <em>.gz</em>
+        extensions and automatically decompresses them using the 
         appropriate <code>CompressionCodec</code>. However, it must be noted that
         compressed files with the above extensions cannot be <em>split</em> and 
         each compressed file is processed in its entirety by a single mapper.</p>
@@ -1963,14 +1963,14 @@
           specify compression for both intermediate map-outputs and the
           job-outputs i.e. output of the reduces. It also comes bundled with
           <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
-          CompressionCodec</a> implementations for the 
-          <a href="ext:zlib">zlib</a> and <a href="ext:lzo">lzo</a> compression 
-          algorithms. The <a href="ext:gzip">gzip</a> file format is also
+          CompressionCodec</a> implementation for the 
+          <a href="ext:zlib">zlib</a> compression 
+          algorithm. The <a href="ext:gzip">gzip</a> file format is also
           supported.</p>
           
           <p>Hadoop also provides native implementations of the above compression
           codecs for reasons of both performance (zlib) and non-availability of
-          Java libraries (lzo). More details on their usage and availability are
+          Java libraries. More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
           
           <section>

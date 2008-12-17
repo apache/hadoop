@@ -62,6 +62,8 @@ Release 0.20.0 - Unreleased
     pipes, utils, and libhdfs are now all in c++/<os_osarch_jvmdatamodel>/lib. 
     (Giridharan Kesavan via nigel)
 
+    HADOOP-4874. Remove LZO codec because of licensing issues. (omalley)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

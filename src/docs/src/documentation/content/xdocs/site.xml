@@ -73,7 +73,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <faq       href="http://wiki.apache.org/hadoop/FAQ" />
     <hadoop-default href="http://hadoop.apache.org/core/docs/current/hadoop-default.html" />
     <zlib      href="http://www.zlib.net/" />
-    <lzo       href="http://www.oberhumer.com/opensource/lzo/" />
     <gzip      href="http://www.gzip.org/" />
     <bzip      href="http://www.bzip.org/" />
     <cygwin    href="http://www.cygwin.com/" />
