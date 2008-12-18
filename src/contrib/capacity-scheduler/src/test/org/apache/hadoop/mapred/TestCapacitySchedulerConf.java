@@ -323,6 +323,55 @@ public class TestCapacitySchedulerConf extends TestCase {
     }
   }
   
+  public void testInitializationPollerProperties() 
+    throws Exception {
+    /*
+     * Test case to check properties of poller when no configuration file
+     * is present.
+     */
+    testConf = new CapacitySchedulerConf();
+    long pollingInterval = testConf.getSleepInterval();
+    int maxWorker = testConf.getMaxWorkerThreads();
+    assertTrue("Invalid polling interval ",pollingInterval > 0);
+    assertTrue("Invalid working thread pool size" , maxWorker > 0);
+    
+    //test case for custom values configured for initialization 
+    //poller.
+    openFile();
+    startConfig();
+    writeProperty("mapred.capacity-scheduler.init-worker-threads", "1");
+    writeProperty("mapred.capacity-scheduler.init-poll-interval", "1");
+    endConfig();
+    
+    testConf = new CapacitySchedulerConf(new Path(testConfFile));
+    
+    pollingInterval = testConf.getSleepInterval();
+    
+    maxWorker = testConf.getMaxWorkerThreads();
+    
+    assertEquals("Invalid polling interval ",pollingInterval ,1);
+    assertEquals("Invalid working thread pool size" , maxWorker, 1);
+    
+    //Test case for invalid values configured for initialization
+    //poller
+    openFile();
+    startConfig();
+    writeProperty("mapred.capacity-scheduler.init-worker-threads", "0");
+    writeProperty("mapred.capacity-scheduler.init-poll-interval", "0");
+    endConfig();
+    
+    testConf = new CapacitySchedulerConf(new Path(testConfFile));
+    
+    try {
+      pollingInterval = testConf.getSleepInterval();
+      fail("Polling interval configured is illegal");
+    } catch (IllegalArgumentException e) {}
+    try {
+      maxWorker = testConf.getMaxWorkerThreads();
+      fail("Max worker thread configured is illegal");
+    } catch (IllegalArgumentException e) {}
+  }
+  
   private void checkQueueProperties(
                         CapacitySchedulerConf testConf,
                         Map<String, Map<String, String>> queueDetails) {
@@ -395,15 +444,6 @@ public class TestCapacitySchedulerConf extends TestCase {
         , "50"); 
   }
   
-  
-  private void writeUserDefinedDefaultConfigurationWithoutGC() {
-    writeProperty("mapred.capacity-scheduler.default-reclaim-time-limit"
-        , "800");
-    writeProperty("mapred.capacity-scheduler.default-supports-priority"
-        , "true");
-    writeProperty("mapred.capacity-scheduler.default-minimum-user-limit-percent"
-        , "50");    
-  }
   
   private void writeProperty(String name, String value) {
     writer.println("<property>");

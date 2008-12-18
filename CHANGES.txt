@@ -471,6 +471,10 @@ Release 0.20.0 - Unreleased
     lib directory and added the same to test-patch.sh. (Giridharan Kesavan via
     acmurthy)
 
+    HADOOP-4774. Fix default values of some capacity scheduler configuration
+    items which would otherwise not work on a fresh checkout.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

@@ -71,6 +71,18 @@ class CapacitySchedulerConf {
   static final String UPPER_LIMIT_ON_TASK_PMEM_PROPERTY =
       "mapred.capacity-scheduler.task.limit.maxpmem";
 
+  /**
+   * The constant which defines the default initialization thread
+   * polling interval, denoted in milliseconds.
+   */
+  private static final int INITIALIZATION_THREAD_POLLING_INTERVAL = 5000;
+
+  /**
+   * The constant which defines the maximum number of worker threads to be
+   * spawned off for job initialization
+   */
+  private static final int MAX_INITIALIZATION_WORKER_THREADS = 5;
+
   private Configuration rmConf;
 
   private int defaultMaxJobsPerUsersToInitialize;
@@ -312,15 +324,19 @@ class CapacitySchedulerConf {
   }
 
   /**
-   * Amount of time in miliseconds which poller thread and initialization
+   * Amount of time in milliseconds which poller thread and initialization
    * thread would sleep before looking at the queued jobs.
+   * 
+   * The default value if no corresponding configuration is present is
+   * 5000 Milliseconds.
    *  
-   * @return time in miliseconds.
+   * @return time in milliseconds.
    * @throws IllegalArgumentException if time is negative or zero.
    */
   public long getSleepInterval() {
     long sleepInterval = rmConf.getLong(
-        "mapred.capacity-scheduler.init-poll-interval", -1);
+        "mapred.capacity-scheduler.init-poll-interval", 
+        INITIALIZATION_THREAD_POLLING_INTERVAL);
     
     if(sleepInterval <= 0) {
       throw new IllegalArgumentException(
@@ -342,12 +358,15 @@ class CapacitySchedulerConf {
    * So a given thread can have responsibility of initializing jobs from more 
    * than one queue.
    * 
+   * The default value is 5
+   * 
    * @return maximum number of threads spawned to initialize jobs in job queue
    * in parallel.
    */
   public int getMaxWorkerThreads() {
     int maxWorkerThreads = rmConf.getInt(
-        "mapred.capacity-scheduler.init-worker-threads", 0);
+        "mapred.capacity-scheduler.init-worker-threads", 
+        MAX_INITIALIZATION_WORKER_THREADS);
     if(maxWorkerThreads <= 0) {
       throw new IllegalArgumentException(
           "Invalid initializater worker thread number " + maxWorkerThreads);
