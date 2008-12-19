@@ -385,4 +385,67 @@ public class TestDatanodeBlockScanner extends TestCase {
     assertTrue(blocks.get(0).isCorrupt() == false);
     cluster.shutdown();
   }
+  
+  /** Test if NameNode handles truncated blocks in block report */
+  public void testTruncatedBlockReport() throws Exception {
+    final Configuration conf = new Configuration();
+    final short REPLICATION_FACTOR = (short)2;
+
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
+    cluster.waitActive();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      final Path fileName = new Path("/file1");
+      DFSTestUtil.createFile(fs, fileName, 1, REPLICATION_FACTOR, 0);
+      DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
+
+      String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
+
+      // Truncate replica of block
+      truncateReplica(block, 0);
+
+      cluster.shutdown();
+
+      // restart the cluster
+      cluster = new MiniDFSCluster(
+          0, conf, REPLICATION_FACTOR, false, true, null, null, null);
+      cluster.startDataNodes(conf, 1, true, null, null);
+      cluster.waitActive();  // now we have 3 datanodes
+
+      // wait for truncated block be detected and the block to be replicated
+      DFSTestUtil.waitReplication(
+          cluster.getFileSystem(), fileName, REPLICATION_FACTOR);
+      
+      // Make sure that truncated block will be deleted
+      waitForBlockDeleted(block, 0);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  private void truncateReplica(String blockName, int dnIndex) throws IOException {
+    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
+      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
+                               blockName);
+      if (blockFile.exists()) {
+        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+        raFile.setLength(raFile.length()-1);
+        raFile.close();
+        break;
+      }
+    }
+  }
+  
+  private void waitForBlockDeleted(String blockName, int dnIndex) 
+  throws IOException, InterruptedException {
+    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1)+ "/current/" + 
+        blockName);
+    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2)+ "/current/" + 
+        blockName);
+    while (blockFile1.exists() || blockFile2.exists()) {
+      Thread.sleep(100);
+    }
+  }
 }
