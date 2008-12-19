@@ -113,7 +113,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     
     // kill a region server - total of 2
     LOG.debug("Killing the 3rd region server.");
-    cluster.stopRegionServer(2);
+    cluster.stopRegionServer(2, false);
     cluster.waitOnRegionServer(2);
     assertRegionsAreBalanced();
     

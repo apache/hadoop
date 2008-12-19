@@ -110,8 +110,28 @@ public class MiniHBaseCluster implements HConstants {
    * @return the region server that was stopped
    */
   public LocalHBaseCluster.RegionServerThread stopRegionServer(int serverNumber) {
-    LocalHBaseCluster.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
+    return stopRegionServer(serverNumber, true);
+  }
+
+  /**
+   * Shut down the specified region server cleanly
+   *
+   * @param serverNumber  Used as index into a list.
+   * @param shutdownFS True is we are to shutdown the filesystem as part of this
+   * regionserver's shutdown.  Usually we do but you do not want to do this if
+   * you are running multiple regionservers in a test and you shut down one
+   * before end of the test.
+   * @return the region server that was stopped
+   */
+  public LocalHBaseCluster.RegionServerThread stopRegionServer(int serverNumber,
+      final boolean shutdownFS) {
+    LocalHBaseCluster.RegionServerThread server =
+      hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
+    if (!shutdownFS) {
+      // Stop the running of the hdfs shutdown thread in tests.
+      server.getRegionServer().setHDFSShutdownThreadOnExit(null);
+    }
     server.getRegionServer().stop();
     return server;
   }

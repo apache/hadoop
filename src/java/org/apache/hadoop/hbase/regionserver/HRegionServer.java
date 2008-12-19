@@ -521,15 +521,32 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     join();
 
-    LOG.info("Running hdfs shutdown thread");
-    hdfsShutdownThread.start();
-    try {
-      hdfsShutdownThread.join();
-      LOG.info("Hdfs shutdown thread completed.");
-    } catch (InterruptedException e) {
-      LOG.warn("hdfsShutdownThread.join() was interrupted", e);
-    }
+    runThread(this.hdfsShutdownThread);
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /**
+   * Run and wait on passed thread in HRS context.
+   * @param t
+   */
+  public void runThread(final Thread t) {
+    if (t ==  null) {
+      return;
+    }
+    t.start();
+    Threads.shutdown(t);
+  }
+
+  /**
+   * Set the hdfs shutdown thread to run on exit.  Pass null to disable
+   * running of the shutdown test.  Needed by tests.
+   * @param t Thread to run.  Pass null to disable tests.
+   * @return Previous occupant of the shutdown thread position.
+   */
+  public Thread setHDFSShutdownThreadOnExit(final Thread t) {
+    Thread old = this.hdfsShutdownThread;
+    this.hdfsShutdownThread = t;
+    return old;
   }
 
   /*

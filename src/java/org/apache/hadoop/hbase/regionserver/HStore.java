@@ -1475,11 +1475,11 @@ public class HStore implements HConstants {
       // Returned array is sorted with the most recent addition last.
       for(int i = maparray.length - 1;
           i >= 0 && !hasEnoughVersions(versions, results); i--) {
-        MapFile.Reader map = maparray[i];
-        synchronized(map) {
+        MapFile.Reader r = maparray[i];
+        synchronized (r) {
           // Do the priming read
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
-          HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
+          HStoreKey readkey = (HStoreKey)r.getClosest(key, readval);
           if (readkey == null) {
             // map.getClosest returns null if the passed key is > than the
             // last key in the map file.  getClosest is a bit of a misnomer
@@ -1496,7 +1496,7 @@ public class HStore implements HConstants {
             break;
           }
           for (readval = new ImmutableBytesWritable();
-              map.next(readkey, readval) && readkey.matchesRowCol(key);
+              r.next(readkey, readval) && readkey.matchesRowCol(key);
               readval = new ImmutableBytesWritable()) {
             if (get(readkey, readval.get(), versions, results, deletes, now)) {
               break;

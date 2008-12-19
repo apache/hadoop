@@ -192,7 +192,7 @@ public class DisabledTestHLogRecovery extends HBaseClusterTestCase {
       this.cluster.abortRegionServer(server);
 
     } else {
-      this.cluster.stopRegionServer(server);
+      this.cluster.stopRegionServer(server, false);
     }
     LOG.info(this.cluster.waitOnRegionServer(server) + " has been "
         + (abort ? "aborted" : "shut down"));

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -117,7 +118,8 @@ public class LocalHBaseCluster implements HConstants {
     synchronized (regionThreads) {
       HRegionServer server; 
       try {
-        server = regionServerClass.getConstructor(HBaseConfiguration.class).newInstance(conf);
+        server = regionServerClass.getConstructor(HBaseConfiguration.class).
+          newInstance(conf);
       } catch (Exception e) {
         IOException ioe = new IOException();
         ioe.initCause(e);
@@ -252,6 +254,17 @@ public class LocalHBaseCluster implements HConstants {
    */
   public void shutdown() {
     LOG.debug("Shutting down HBase Cluster");
+    // Be careful how the hdfs shutdown thread runs in context where more than
+    // one regionserver in the mix.
+    Thread shutdownThread = null;
+    synchronized (this.regionThreads) {
+      for (RegionServerThread t: this.regionThreads) {
+        Thread tt = t.getRegionServer().setHDFSShutdownThreadOnExit(null);
+        if (shutdownThread == null && tt != null) {
+          shutdownThread = tt;
+        }
+      }
+    }
     if(this.master != null) {
       this.master.shutdown();
     }
@@ -280,6 +293,7 @@ public class LocalHBaseCluster implements HConstants {
         }
       }
     }
+    Threads.shutdown(shutdownThread);
     LOG.info("Shutdown " +
       ((this.regionThreads != null)? this.master.getName(): "0 masters") +
       " " + this.regionThreads.size() + " region server(s)");
