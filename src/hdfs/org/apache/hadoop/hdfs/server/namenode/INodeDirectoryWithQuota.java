@@ -53,6 +53,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     super(permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
+    this.nsCount = 1;
   }
   
   /** constructor with no quota verification */
@@ -62,6 +63,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     super(name, permissions);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
+    this.nsCount = 1;
   }
   
   /** Get this directory's namespace quota
