@@ -460,6 +460,9 @@ Release 0.20.0 - Unreleased
     items which would otherwise not work on a fresh checkout.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4876. Fix capacity scheduler reclamation by updating count of
+    pending tasks correctly. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
