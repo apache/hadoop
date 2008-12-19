@@ -553,6 +553,10 @@ class CapacityTaskScheduler extends TaskScheduler {
      * to make scheduling decisions. For example, we don't need an exact count
      * of numRunningTasks. Once we count upto the grid capacity (gcSum), any
      * number beyond that will make no difference.
+     * 
+     * The pending task count is only required in reclaim capacity. So 
+     * if the computation becomes expensive, we can add a boolean to 
+     * denote if pending task computation is required or not.
      * */
     private synchronized void updateQSIObjects() {
       // if # of slots have changed since last time, update. 
@@ -597,7 +601,29 @@ class CapacityTaskScheduler extends TaskScheduler {
            * consider the first few jobs per user.
            */ 
         }
-        //TODO do we need to update stats on waiting jobs
+        
+        //update stats on waiting jobs
+        for(JobInProgress j : 
+          scheduler.jobQueuesManager.getJobs(qsi.queueName)) {
+          // pending tasks
+          if(qsi.numPendingTasks > getClusterCapacity()) {
+            // that's plenty. no need for more computation
+            break;
+          }
+          /*
+           * Consider only the waiting jobs in the job queue. Job queue can
+           * contain:
+           * 1. Jobs which are in running state but not scheduled
+           * (these would also be present in running queue), the pending 
+           * task count of these jobs is computed when scheduler walks
+           * through running job queue.
+           * 2. Jobs which are killed by user, but waiting job initialization
+           * poller to walk through the job queue to clean up killed jobs.
+           */
+          if (j.getStatus().getRunState() == JobStatus.PREP) {
+            qsi.numPendingTasks += getPendingTasks(j);
+          }
+        }
       }
     }
 
