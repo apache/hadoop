@@ -86,7 +86,6 @@ public class InfoServer extends HttpServer {
     URL url = InfoServer.class.getClassLoader().getResource(path);
     if (url == null) 
       throw new IOException("webapps not found in CLASSPATH: " + path); 
-    System.out.println("URL " + url);
     return url.toString();
   }
 
