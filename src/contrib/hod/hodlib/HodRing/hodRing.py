@@ -329,13 +329,38 @@ class HadoopCommand:
     sitefile.close()
     self.log.debug('created %s' % (siteName))
 
+  def __createJTHistoryDir(self):
+    '''Creating JobTracker History Directory inside hadoop logdir'''
+    jobtrackerhistorydir = os.path.join(self.logdir,'history')
+    self.log.debug('Creating %s' % (jobtrackerhistorydir))
+    os.makedirs(jobtrackerhistorydir)
+    self.__setJTHistoryDirPermission(jobtrackerhistorydir)
+
+  def __setJTHistoryDirPermission(self,jobtrackerhistorydir):
+    '''Setting the permission 710 on JobTracker History Directory'''
+    self.log.debug('Setting the permission 710 on jobtracker history directory: %s' % (jobtrackerhistorydir))
+    childdir = jobtrackerhistorydir
+    while childdir != self.hadoopdir :
+      os.chmod(childdir,0710)
+      parentdir = os.path.dirname(childdir)
+      childdir = parentdir
+    os.chmod(self.hadoopdir,0710)
+
   def _createHadoopLogDir(self):
     if self.restart:
       if not os.path.exists(self.logdir):
-        os.makedirs(self.logdir)
+        if self.name == "jobtracker":
+          os.makedirs(self.logdir)
+          self.__createJTHistoryDir()
+        else:
+          os.makedirs(self.logdir)
     else:
       assert os.path.exists(self.logdir) == False
-      os.makedirs(self.logdir)
+      if self.name == "jobtracker":
+        os.makedirs(self.logdir)
+        self.__createJTHistoryDir()
+      else:
+        os.makedirs(self.logdir)
 
   def _createXmlElement(self, doc, name, value, description, final):
     prop = doc.createElement("property")

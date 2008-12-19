@@ -1,6 +1,14 @@
 HOD Change Log
 
-Release 0.18.2 - Unreleased 
+Release 0.18.3 - (unreleased changes)
+
+  IMPROVEMENTS
+
+    HADOOP-4919. Provide execute access on jobtracker history directory
+    path to allow monitoring programs to read the history logs.
+    (Peeyush Bishnoi via yhemanth)
+
+Release 0.18.2 - 2008-11-03
 
   BUG FIXES
 
