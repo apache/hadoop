@@ -700,7 +700,7 @@ public class HRegion implements HConstants {
               return midKey;
           }
         }
-        LOG.info("starting " (majorCompaction? : "major" : "") + 
+        LOG.info("starting " + (majorCompaction? "major" : "") + 
             " compaction on region " + this);
         long startTime = System.currentTimeMillis();
         doRegionCompactionPrep();
