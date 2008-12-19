@@ -27,7 +27,7 @@ Release 0.19.1 - Unreleased
     HADOOP-4731. Fix capacity scheduler to correctly remove job on completion 
     from waiting queue. (Amar Kamat via yhemanth)
 
-    HADOOP-4836. Correct typos in mapred related documentation.  (Jordà Polo
+    HADOOP-4836. Correct typos in mapred related documentation.  (Jord? Polo
     via szetszwo)
 
     HADOOP-4821. Usage description in the Quotas guide documentations are
@@ -1103,6 +1103,8 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4840. TestNodeCount sometimes fails with NullPointerException.
     (hairong)
+
+    HADOOP-4904. Fix deadlock while leaving safe mode. (shv)
 
 Release 0.18.2 - 2008-11-03
 
