@@ -4087,8 +4087,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       }
       // leave safe mode and stop the monitor
-      if(safeMode != null)
-        safeMode.leave(true);
+      try {
+        leaveSafeMode(true);
+      } catch(SafeModeException es) { // should never happen
+        String msg = "SafeModeMonitor may not run during distributed upgrade.";
+        assert false : msg;
+        throw new RuntimeException(msg, es);
+      }
       smmthread = null;
     }
   }
@@ -4177,7 +4182,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Leave safe mode.
    * @throws IOException
    */
-  synchronized void leaveSafeMode(boolean checkForUpgrades) throws IOException {
+  synchronized void leaveSafeMode(boolean checkForUpgrades) throws SafeModeException {
     if (!isInSafeMode()) {
       NameNode.stateChangeLog.info("STATE* Safe mode is already OFF."); 
       return;
