@@ -21,7 +21,10 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,18 +36,31 @@ import org.apache.hadoop.io.DataInputBuffer;
 
 /**
  * An implementation of {@link FSInputStream} that reads the stream in blocks
- * of a fixed, configurable size. The blocks are stored in a memory-sensitive cache.
+ * of a fixed, configurable size. The blocks are stored in a memory-sensitive
+ * cache.  Implements Runnable.  Run it on a period so we clean up soft
+ * references from the reference queue.
  */
 public class BlockFSInputStream extends FSInputStream {
-  
   static final Log LOG = LogFactory.getLog(BlockFSInputStream.class);
+  /*
+   * Set up scheduled execution of cleanup of soft references.  Run with one
+   * thread for now.  May need more when many files.  Should be an option but
+   * also want BlockFSInputStream to be self-contained.
+   */
+  private static final ScheduledExecutorService EXECUTOR =
+    Executors.newSingleThreadScheduledExecutor();
   
+  /*
+   * The registration of this object in EXECUTOR.
+   */
+  private final ScheduledFuture<?> registration;
+
   private final InputStream in;
 
   private final long fileLength;
 
   private final int blockSize;
-  private final Map<Long, byte[]> blocks;
+  private final SoftValueMap<Long, byte[]> blocks;
 
   private boolean closed;
 
@@ -84,6 +100,15 @@ public class BlockFSInputStream extends FSInputStream {
         return value;
       }
     };
+    // Register a Runnable that runs checkReferences on a period.
+    this.registration = EXECUTOR.scheduleAtFixedRate(new Runnable() {
+      public void run() {
+        int cleared = checkReferences();
+        if (LOG.isDebugEnabled() && cleared > 0) {
+          LOG.debug("Cleared " + cleared);
+        }
+      }
+    }, 10, 10, TimeUnit.SECONDS);
   }
 
   @Override
@@ -176,6 +201,9 @@ public class BlockFSInputStream extends FSInputStream {
     if (closed) {
       throw new IOException("Stream closed");
     }
+    if (!this.registration.cancel(false)) {
+      LOG.warn("Failed cancel of " + this.registration);
+    }
     if (blockStream != null) {
       blockStream.close();
       blockStream = null;
@@ -203,4 +231,14 @@ public class BlockFSInputStream extends FSInputStream {
     throw new IOException("Mark not supported");
   }
 
+  /**
+   * Call frequently to clear Soft Reference Reference Queue.
+   * @return Count of references cleared.
+   */
+  public synchronized int checkReferences() {
+    if (closed || this.blocks == null) {
+      return 0;
+    }
+    return this.blocks.checkReferences();
+  }
 }

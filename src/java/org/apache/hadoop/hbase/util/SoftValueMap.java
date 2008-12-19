@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,13 +36,34 @@ import java.util.Set;
 public class SoftValueMap<K,V> implements Map<K,V> {
   private final Map<K, SoftValue<K,V>> internalMap =
     new HashMap<K, SoftValue<K,V>>();
-  private final ReferenceQueueUtil<K,SoftValue<K,V>> rq =
-    new ReferenceQueueUtil<K,SoftValue<K,V>>(this.internalMap);
+  private final ReferenceQueue<?> rq;
   
+  public SoftValueMap() {
+    this(new ReferenceQueue());
+  }
+  
+  public SoftValueMap(final ReferenceQueue<?> rq) {
+    this.rq = rq;
+  }
+
+  /**
+   * Checks soft references and cleans any that have been placed on
+   * ReferenceQueue.
+   * @return How many references cleared.
+   */
+  public int checkReferences() {
+    int i = 0;
+    for (Object obj = null; (obj = this.rq.poll()) != null;) {
+      i++;
+      this.internalMap.remove(((SoftValue<K,V>)obj).getKey());
+    }
+    return i;
+  }
+
   public V put(K key, V value) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> oldValue = this.internalMap.put(key,
-      new SoftValue<K,V>(key, value, this.rq.getReferenceQueue()));
+      new SoftValue<K,V>(key, value, this.rq));
     return oldValue == null ? null : oldValue.get();
   }
   
@@ -51,7 +73,7 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
   
   public V get(Object key) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> value = this.internalMap.get(key);
     if (value == null) {
       return null;
@@ -64,13 +86,13 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
 
   public V remove(Object key) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> value = this.internalMap.remove(key);
     return value == null ? null : value.get();
   }
 
   public boolean containsKey(Object key) {
-    this.rq.checkReferences(); 
+    checkReferences(); 
     return this.internalMap.containsKey(key);
   }
   
@@ -81,27 +103,27 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
   
   public boolean isEmpty() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.isEmpty();
   }
 
   public int size() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.size();
   }
 
   public void clear() {
-    this.rq.checkReferences();
+    checkReferences();
     this.internalMap.clear();
   }
 
   public Set<K> keySet() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.keySet();
   }
 
   public Set<Map.Entry<K,V>> entrySet() {
-    this.rq.checkReferences();
+    checkReferences();
     Set<Map.Entry<K, SoftValue<K,V>>> entries = this.internalMap.entrySet();
     Set<Map.Entry<K, V>> real_entries = new HashSet<Map.Entry<K,V>>();
     for(Map.Entry<K, SoftValue<K,V>> entry : entries) {
@@ -111,7 +133,7 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
 
   public Collection<V> values() {
-    this.rq.checkReferences();
+    checkReferences();
     Collection<SoftValue<K,V>> softValues = this.internalMap.values();
     ArrayList<V> hardValues = new ArrayList<V>();
     for(SoftValue<K,V> softValue : softValues) {

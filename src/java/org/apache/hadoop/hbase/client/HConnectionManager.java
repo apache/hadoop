@@ -924,15 +924,17 @@ public class HConnectionManager implements HConstants {
                   currentRegion, batchUpdate.getRow(), 
                   tries, new ArrayList<Throwable>());
             }
+            long sleepTime = getPauseTime(tries);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("reloading table servers because region " +
-                  "server didn't accept updates ");
+              LOG.debug("Eeloading table servers because region " +
+                "server didn't accept updates; tries=" + tries +
+                " of max=" + this.numRetries + ", waiting=" + sleepTime + "ms");
             }
             // Basic waiting time. If many updates are flushed, tests have shown
             // that this is barely needed but when commiting 1 update this may
             // get retried hundreds of times.
             try {
-              Thread.sleep(getPauseTime(tries));
+              Thread.sleep(sleepTime);
               tries++;
             } catch (InterruptedException e) {
               // continue

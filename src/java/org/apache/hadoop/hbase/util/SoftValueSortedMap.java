@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -38,7 +39,7 @@ import java.util.TreeSet;
  */
 public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   private final SortedMap<K, SoftValue<K,V>> internalMap;
-  private final ReferenceQueueUtil<K,SoftValue<K,V>> rq;
+  private final ReferenceQueue rq = new ReferenceQueue();
   
   /** Constructor */
   public SoftValueSortedMap() {
@@ -56,13 +57,27 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   /** For headMap and tailMap support */
   private SoftValueSortedMap(SortedMap<K,SoftValue<K,V>> original) {
     this.internalMap = original;
-    this.rq = new ReferenceQueueUtil<K,SoftValue<K,V>>(this.internalMap);
   }
-  
+
+  /**
+   * Checks soft references and cleans any that have been placed on
+   * ReferenceQueue.  Call if get/put etc. are not called regularly.
+   * Internally these call checkReferences on each access.
+   * @return How many references cleared.
+   */
+  public int checkReferences() {
+    int i = 0;
+    for (Object obj = null; (obj = this.rq.poll()) != null;) {
+      i++;
+      this.internalMap.remove(((SoftValue<K,V>)obj).getKey());
+    }
+    return i;
+  }
+
   public V put(K key, V value) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> oldValue = this.internalMap.put(key,
-      new SoftValue<K,V>(key, value, this.rq.getReferenceQueue()));
+      new SoftValue<K,V>(key, value, this.rq));
     return oldValue == null ? null : oldValue.get();
   }
   
@@ -72,7 +87,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
   
   public V get(Object key) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> value = this.internalMap.get(key);
     if (value == null) {
       return null;
@@ -85,13 +100,13 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public V remove(Object key) {
-    this.rq.checkReferences();
+    checkReferences();
     SoftValue<K,V> value = this.internalMap.remove(key);
     return value == null ? null : value.get();
   }
 
   public boolean containsKey(Object key) {
-    this.rq.checkReferences(); 
+    checkReferences(); 
     return this.internalMap.containsKey(key);
   }
   
@@ -102,47 +117,47 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public K firstKey() {
-    this.rq.checkReferences();
+    checkReferences();
     return internalMap.firstKey();
   }
 
   public K lastKey() {
-    this.rq.checkReferences();
+    checkReferences();
     return internalMap.lastKey();
   }
   
   public SoftValueSortedMap<K,V> headMap(K key) {
-    this.rq.checkReferences();
+    checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.headMap(key));
   }
   
   public SoftValueSortedMap<K,V> tailMap(K key) {
-    this.rq.checkReferences();
+    checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.tailMap(key));
   }
   
   public SoftValueSortedMap<K,V> subMap(K fromKey, K toKey) {
-    this.rq.checkReferences();
+    checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.subMap(fromKey, toKey));
   }
   
   public boolean isEmpty() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.isEmpty();
   }
 
   public int size() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.size();
   }
 
   public void clear() {
-    this.rq.checkReferences();
+    checkReferences();
     this.internalMap.clear();
   }
 
   public Set<K> keySet() {
-    this.rq.checkReferences();
+    checkReferences();
     return this.internalMap.keySet();
   }
 
@@ -152,7 +167,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public Set<Map.Entry<K,V>> entrySet() {
-    this.rq.checkReferences();
+    checkReferences();
     Set<Map.Entry<K, SoftValue<K,V>>> entries = this.internalMap.entrySet();
     Set<Map.Entry<K, V>> real_entries = new TreeSet<Map.Entry<K,V>>();
     for(Map.Entry<K, SoftValue<K,V>> entry : entries) {
@@ -162,7 +177,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public Collection<V> values() {
-    this.rq.checkReferences();
+    checkReferences();
     Collection<SoftValue<K,V>> softValues = this.internalMap.values();
     ArrayList<V> hardValues = new ArrayList<V>();
     for(SoftValue<K,V> softValue : softValues) {

@@ -34,7 +34,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Hbase customizations of MapFile.
+ * HBase customizations of MapFile.
  */
 public class HBaseMapFile extends MapFile {
   private static final Log LOG = LogFactory.getLog(HBaseMapFile.class);
