@@ -110,6 +110,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4797. Improve how RPC server reads and writes large buffers. Avoids
     soft-leak of direct buffers and excess copies in NIO layer. (Raghu Angadi)
 
+    HADOOP-4840. TestNodeCount sometimes fails with NullPointerException.
+    (hairong)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

@@ -61,7 +61,9 @@ public class TestNodeCount extends TestCase {
       // check if excessive replica is detected
       NumberReplicas num = null;
       do {
-       num = namesystem.countNodes(block);
+       synchronized (namesystem) {
+         num = namesystem.countNodes(block);
+       }
       } while (num.excessReplicas() == 0);
       
       // find out a non-excess node
