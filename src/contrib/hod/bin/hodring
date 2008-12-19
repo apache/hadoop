@@ -141,12 +141,6 @@ defList = { 'hodring' : (
 
 if __name__ == '__main__':
 
-  # pbsdsh sets the umask of the process it launches to 0077. This prevents 
-  # read access to other processes, like chukwa, to read files created by the
-  # hadoop processes, like the job history files. Resetting the umask to
-  # address this issue
-  os.umask(0022)
-
   confDef = definition()
   confDef.add_defs(defList)
   hodRingOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)

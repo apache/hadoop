@@ -8,12 +8,28 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.20.0 - (unreleased changes)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
     HADOOP-4705. Grant read permissions for files/directories
     created by HOD. (Peeyush Bishnoi via yhemanth)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-4782. Revert umask changes in HADOOP-4705 so that
+    files are still securely created. (Peeyush Bishnoi via
+    yhemanth)
 
 Release 0.19.0 - 2008-11-18
 
