@@ -1574,6 +1574,9 @@ Release 0.18.3 - Unreleased
 
     HADOOP-4904. Fix deadlock while leaving safe mode. (shv)
 
+    HADOOP-1980. 'dfsadmin -safemode enter' should prevent the namenode from
+    leaving safemode automatically. (shv)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES

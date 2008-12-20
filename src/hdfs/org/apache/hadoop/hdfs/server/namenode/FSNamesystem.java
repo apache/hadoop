@@ -3811,6 +3811,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     /** time of the last status printout */
     private long lastStatusReport = 0;
       
+    private boolean isManual = false;
+    
     /**
      * Creates SafeModeInfo when the name node enters
      * automatic safe mode at startup.
@@ -3840,6 +3842,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       this.blockTotal = -1;
       this.blockSafe = -1;
       this.reached = -1;
+      this.isManual = true;
       enter();
       reportStatus("STATE* Safe mode is ON.", true);
     }
@@ -3898,6 +3901,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         NameNode.stateChangeLog.info("STATE* Safe mode is OFF."); 
       }
       reached = -1;
+      unsetManual();
       safeMode = null;
       NameNode.stateChangeLog.info("STATE* Network topology has "
                                    +clusterMap.getNumOfRacks()+" racks and "
@@ -3915,7 +3919,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     synchronized boolean canLeave() {
       if (reached == 0)
         return false;
-      if (now() - reached < extension) {
+      if (now() - reached < extension || isManual()) {
         reportStatus("STATE* Safe mode ON.", false);
         return false;
       }
@@ -3935,14 +3939,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * to be compared with the threshold.
      */
     private float getSafeBlockRatio() {
-      return (blockTotal == 0 ? 1 : (float)blockSafe/blockTotal);
+      return (blockTotal <= 0 ? 1 : (float)blockSafe/blockTotal);
     }
       
     /**
      * Check and trigger safe mode if needed. 
      */
     private void checkMode() {
-      if (needEnter()) {
+      if (isManual() || needEnter()) {
         enter();
         reportStatus("STATE* Safe mode ON.", false);
         return;
@@ -3997,10 +4001,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     /**
      * Check if safe mode was entered manually or at startup.
      */
-    boolean isManual() {
-      return blockTotal == -1;
+    private boolean isManual() {
+      return isManual;
     }
       
+    private synchronized void setManual() {
+      isManual = true;
+    }
+
+    private synchronized void unsetManual() {
+      isManual = false;
+    }
+    
     /**
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
@@ -4008,17 +4020,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       final String autoOffMsg = "Safe mode will be turned off automatically";
       if(reached < 0)
         return "Safe mode is OFF.";
+      float ratio = getSafeBlockRatio();
+      String safeBlockRatioMsg = 
+        String.format("The ratio of reported blocks %.4f has " +
+          (ratio < threshold ? "not " : "") + "reached the threshold %.4f. ",
+          ratio, threshold);
+      
       if(isManual()) {
         if(getDistributedUpgradeState())
           return autoOffMsg + " upon completion of " + 
             "the distributed upgrade: upgrade progress = " + 
             getDistributedUpgradeStatus() + "%";
-        return "Use \"hadoop dfs -safemode leave\" to turn safe mode off.";
+        // add block ratio message if it is relevant
+        return ((blockTotal >= 0) ? safeBlockRatioMsg : "") + 
+               "Use \"hadoop dfs -safemode leave\" to turn safe mode off.";             
       }
-      String safeBlockRatioMsg = 
-        String.format("The ratio of reported blocks %.4f has " +
-          (reached == 0 ? "not " : "") + "reached the threshold %.4f. ",
-          getSafeBlockRatio(), threshold) + autoOffMsg;
+
+      safeBlockRatioMsg += autoOffMsg;
       if(reached == 0)  // threshold is not reached 
         return safeBlockRatioMsg + ".";
       // extension period is in progress
@@ -4172,6 +4190,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   synchronized void enterSafeMode() throws IOException {
     if (isInSafeMode()) {
+      safeMode.setManual();
       NameNode.stateChangeLog.info("STATE* Safe mode is already ON."); 
       return;
     }
@@ -4190,6 +4209,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if(getDistributedUpgradeState())
       throw new SafeModeException("Distributed upgrade is in progress",
                                   safeMode);
+    safeMode.unsetManual();
     safeMode.leave(checkForUpgrades);
   }
     
