@@ -1,0 +1,233 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop Service Level Authorization</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>Purpose</title>
+      
+      <p>This document describes how to configure and manage <em>Service Level
+      Authorization</em> for Hadoop.</p>
+    </section>
+    
+    <section>
+      <title>Pre-requisites</title>
+      
+      <p>Ensure that Hadoop is installed, configured and setup correctly. More
+      details:</p> 
+      <ul>
+        <li>
+          <a href="quickstart.html">Hadoop Quick Start</a> for first-time users.
+        </li>
+        <li>
+          <a href="cluster_setup.html">Hadoop Cluster Setup</a> for large, 
+          distributed clusters.
+        </li>
+      </ul>
+    </section>
+    
+    <section>
+      <title>Overview</title>
+      
+      <p>Service Level Authorization is the initial authorization mechanism to
+      ensure clients connecting to a particular Hadoop <em>service</em> have the
+      necessary, pre-configured, permissions and are authorized to access the given
+      service. For e.g. a Map/Reduce cluster can use this mechanism to allow a
+      configured list of users/groups to submit jobs.</p>
+      
+      <p>The <code>${HADOOP_CONF_DIR}/hadoop-policy.xml</code> configuration file 
+      is used to define the access control lists for various Hadoop services.</p>
+      
+      <p>Service Level Authorization is performed much before to other access 
+      control checks such as file-permission checks, access control on job queues
+      etc.</p>
+    </section>
+    
+    <section>
+      <title>Configuration</title>
+      
+      <p>This section describes how to configure service-level authorization
+      via the configuration file <code>{HADOOP_CONF_DIR}/hadoop-policy.xml</code>.
+      </p>
+      
+      <section>
+        <title>Enable Service Level Authorization</title>
+        
+        <p>By default, service-level authorization is disabled for Hadoop. To
+        enable it set the configuration property 
+        <code>hadoop.security.authorization</code> to <strong>true</strong>
+        in <code>${HADOOP_CONF_DIR}/core-site.xml</code>.</p>
+      </section>
+
+      <section>
+        <title>Hadoop Services and Configuration Properties</title>
+        
+        <p>This section lists the various Hadoop services and their configuration
+        knobs:</p>
+        
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Service</th>
+          </tr>
+          <tr>
+            <td><code>security.client.protocol.acl</code></td>
+            <td>ACL for ClientProtocol, which is used by user code via the 
+            DistributedFileSystem.</td>
+          </tr>
+          <tr>
+            <td><code>security.client.datanode.protocol.acl</code></td>
+            <td>ACL for ClientDatanodeProtocol, the client-to-datanode protocol
+            for block recovery.</td>
+          </tr>
+          <tr>
+            <td><code>security.datanode.protocol.acl</code></td>
+            <td>ACL for DatanodeProtocol, which is used by datanodes to 
+            communicate with the namenode.</td>
+          </tr>
+          <tr>
+            <td><code>security.inter.datanode.protocol.acl</code></td>
+            <td>ACL for InterDatanodeProtocol, the inter-datanode protocol
+            for updating generation timestamp.</td>
+          </tr>
+          <tr>
+            <td><code>security.namenode.protocol.acl</code></td>
+            <td>ACL for NamenodeProtocol, the protocol used by the secondary
+            namenode to communicate with the namenode.</td>
+          </tr>
+          <tr>
+            <td><code>security.inter.tracker.protocol.acl</code></td>
+            <td>ACL for InterTrackerProtocol, used by the tasktrackers to 
+            communicate with the jobtracker.</td>
+          </tr>
+          <tr>
+            <td><code>security.job.submission.protocol.acl</code></td>
+            <td>ACL for JobSubmissionProtocol, used by job clients to 
+            communciate with the jobtracker for job submission, querying job status 
+            etc.</td>
+          </tr>
+          <tr>
+            <td><code>security.task.umbilical.protocol.acl</code></td>
+            <td>ACL for TaskUmbilicalProtocol, used by the map and reduce 
+            tasks to communicate with the parent tasktracker.</td>
+          </tr>
+          <tr>
+            <td><code>security.refresh.policy.protocol.acl</code></td>
+            <td>ACL for RefreshAuthorizationPolicyProtocol, used by the 
+            dfsadmin and mradmin commands to refresh the security policy in-effect.
+            </td>
+          </tr>
+        </table>
+      </section>
+      
+      <section>
+        <title>Access Control Lists</title>
+        
+        <p><code>${HADOOP_CONF_DIR}/hadoop-policy.xml</code> defines an access 
+        control list for each Hadoop service. Every access control list has a 
+        simple format:</p>
+        
+        <p>The list of users and groups are both comma separated list of names. 
+        The two lists are separated by a space.</p> 
+        
+        <p>Example: <code>user1,user2 group1,group2</code>.</p> 
+        
+        <p>Add a blank at the beginning of the line if only a list of groups
+        is to be provided, equivalently a comman-separated list of users followed
+        by a space or nothing implies only a set of given users.</p>
+        
+        <p>A special value of <strong>*</strong> implies that all users are
+        allowed to access the service.</p>
+      </section>
+      
+      <section>
+        <title>Refreshing Service Level Authorization Configuration</title>
+        
+        <p>The service-level authorization configuration for the NameNode and 
+        JobTracker can be changed without restarting either of the Hadoop master
+        daemons. The cluster administrator can change 
+        <code>${HADOOP_CONF_DIR}/hadoop-policy.xml</code> on the master nodes and 
+        instruct the NameNode and JobTracker to reload their respective 
+        configurations via the <em>-refreshServiceAcl</em> switch to 
+        <em>dfsadmin</em> and <em>mradmin</em> commands respectively.</p>
+        
+        <p>Refresh the service-level authorization configuration for the
+        NameNode:</p>
+        <p>
+          <code>$ bin/hadoop dfsadmin -refreshServiceAcl</code>
+        </p>
+
+        <p>Refresh the service-level authorization configuration for the 
+        JobTracker:</p>
+        <p>  
+          <code>$ bin/hadoop mradmin -refreshServiceAcl</code>
+        </p>
+        
+        <p>Of course, one can use the 
+        <code>security.refresh.policy.protocol.acl</code> property in 
+        <code>${HADOOP_CONF_DIR}/hadoop-policy.xml</code> to restrict access to
+        the ability to refresh the service-level authorization configuration to
+        certain users/groups.</p>
+         
+      </section>
+      
+      <section>
+        <title>Examples</title>
+        
+        <p>Allow only users <code>alice</code>, <code>bob</code> and users in the 
+        <code>mapreduce</code> group to submit jobs to the Map/Reduce cluster:</p>
+        
+        <table>
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.job.submission.protocol.acl&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;alice,bob mapreduce&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+        </table>
+        
+        <p></p><p>Allow only DataNodes running as the users who belong to the 
+        group <code>datanodes</code> to communicate with the NameNode:</p> 
+        
+        <table>
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.datanode.protocol.acl&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt; datanodes&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+        </table>
+        
+        <p></p><p>Allow any user to talk to the HDFS cluster as a DFSClient:</p>
+        
+        <table>
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.client.protocol.acl&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;*&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+        </table>
+        
+      </section>
+    </section>
+    
+  </body>
+  
+</document>
