@@ -3746,7 +3746,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
      */
     private SafeModeInfo() {
       this.threshold = 1.5f;  // this threshold can never be riched
-      this.extension = 0;
+      this.extension = Integer.MAX_VALUE;
       this.safeReplication = Short.MAX_VALUE + 1; // more than maxReplication
       this.blockTotal = -1;
       this.blockSafe = -1;
@@ -3904,33 +3904,42 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         this.blockSafe--;
       checkMode();
     }
-      
+
     /**
      * Check if safe mode was entered manually or at startup.
      */
     boolean isManual() {
-      return blockTotal == -1;
+      return extension == Integer.MAX_VALUE;
     }
-      
+
+    /**
+     * Set manual safe mode.
+     */
+    void setManual() {
+      extension = Integer.MAX_VALUE;
+    }
+
     /**
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      final String autoOffMsg = "Safe mode will be turned off automatically";
+      String leaveMsg = "Safe mode will be turned off automatically";
       if(reached < 0)
         return "Safe mode is OFF.";
       if(isManual()) {
         if(getDistributedUpgradeState())
-          return autoOffMsg + " upon completion of " + 
+          return leaveMsg + " upon completion of " + 
             "the distributed upgrade: upgrade progress = " + 
             getDistributedUpgradeStatus() + "%";
-        return "Use \"hadoop dfs -safemode leave\" to turn safe mode off.";
+        leaveMsg = "Use \"hadoop dfs -safemode leave\" to turn safe mode off";
       }
+      if(blockTotal < 0)
+        return leaveMsg + ".";
       String safeBlockRatioMsg = 
         String.format("The ratio of reported blocks %.4f has " +
           (reached == 0 ? "not " : "") + "reached the threshold %.4f. ",
-          getSafeBlockRatio(), threshold) + autoOffMsg;
-      if(reached == 0)  // threshold is not reached 
+          getSafeBlockRatio(), threshold) + leaveMsg;
+      if(reached == 0 || isManual())  // threshold is not reached or manual
         return safeBlockRatioMsg + ".";
       // extension period is in progress
       return safeBlockRatioMsg + " in " 
@@ -4082,13 +4091,15 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @throws IOException
    */
   synchronized void enterSafeMode() throws IOException {
-    if (isInSafeMode()) {
-      NameNode.stateChangeLog.info("STATE* Safe mode is already ON."); 
+    if (!isInSafeMode()) {
+      safeMode = new SafeModeInfo();
       return;
     }
-    safeMode = new SafeModeInfo();
+    safeMode.setManual();
+    NameNode.stateChangeLog.info("STATE* Safe mode is ON. " 
+                                + safeMode.getTurnOffTip());
   }
-    
+
   /**
    * Leave safe mode.
    * @throws IOException
