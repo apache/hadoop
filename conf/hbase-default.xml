@@ -291,12 +291,13 @@
   </property>
   <property>
     <name>hbase.io.index.interval</name>
-    <value>32</value>
+    <value>128</value>
     <description>The interval at which we record offsets in hbase
     store files/mapfiles.  Default for stock mapfiles is 128.  Index
     files are read into memory.  If there are many of them, could prove
     a burden.  If so play with the hadoop io.map.index.skip property and
     skip every nth index member when reading back the index into memory.
+    Downside to high index interval is lowered access times.
     </description>
   </property>
   <property>

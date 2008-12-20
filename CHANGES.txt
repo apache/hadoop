@@ -110,6 +110,7 @@ Release 0.19.0 - Unreleased
    HBASE-1063  "File separator problem on Windows" (Max Lehn via Stack)
    HBASE-1068  TestCompaction broken on hudson
    HBASE-1067  TestRegionRebalancing broken by running of hdfs shutdown thread
+   HBASE-1070  Up default index interval in TRUNK and branch
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side
