@@ -466,6 +466,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4849. Documentation for Service Level Authorization implemented in
     HADOOP-4348. (acmurthy)
 
+    HADOOP-4827. Replace Consolidator with Aggregator macros in Chukwa (Eric
+    Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

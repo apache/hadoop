@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.chukwa.inputtools.mdl.DataConfig;
 
 public class DatabaseWriter {
     private static Log log = LogFactory.getLog(DatabaseWriter.class);
@@ -35,26 +36,25 @@ public class DatabaseWriter {
     private ResultSet rs = null;
 
     public DatabaseWriter(String host, String user, String password) {
-    	String jdbc_url = System.getenv("JDBC_URL_PREFIX")+host+"/";
-    	
-		if(user!=null) {
+    	DataConfig mdlConfig = new DataConfig();
+    	String jdbc_url = "jdbc:mysql://"+host+"/";
+        if(user!=null) {
             jdbc_url = jdbc_url + "?user=" + user;
             if(password!=null) {
                 jdbc_url = jdbc_url + "&password=" + password;
             }
-		}
+        }
         try {
             // The newInstance() call is a work around for some
             // broken Java implementations
-            String jdbcDriver = System.getenv("JDBC_DRIVER");
-            Class.forName(jdbcDriver).newInstance();
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
         } catch (Exception ex) {
             // handle the error
             log.error(ex,ex);
         }
         try {
             conn = DriverManager.getConnection(jdbc_url);
-            log.info("Initialized JDBC URL: "+jdbc_url);
+            log.debug("Initialized JDBC URL: "+jdbc_url);
         } catch (SQLException ex) {
             log.error(ex,ex);
         }
@@ -66,20 +66,43 @@ public class DatabaseWriter {
         try {
             // The newInstance() call is a work around for some
             // broken Java implementations
-        	String jdbcDriver = System.getenv("JDBC_DRIVER");
-            Class.forName(jdbcDriver).newInstance();
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
         } catch (Exception ex) {
             // handle the error
             log.error(ex,ex);
         }
         try {
             conn = DriverManager.getConnection(jdbc_url);
-            log.info("Initialized JDBC URL: "+jdbc_url);
+            log.debug("Initialized JDBC URL: "+jdbc_url);
         } catch (SQLException ex) {
             log.error(ex,ex);
         }
     }
     
+    public DatabaseWriter() {
+    	DataConfig mdlConfig = new DataConfig();
+    	String jdbc_url = "jdbc:mysql://"+mdlConfig.get("jdbc.host")+"/"+mdlConfig.get("jdbc.db");
+        if(mdlConfig.get("jdbc.user")!=null) {
+            jdbc_url = jdbc_url + "?user=" + mdlConfig.get("jdbc.user");
+            if(mdlConfig.get("jdbc.password")!=null) {
+                jdbc_url = jdbc_url + "&password=" + mdlConfig.get("jdbc.password");
+            }
+        }
+        try {
+            // The newInstance() call is a work around for some
+            // broken Java implementations
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+        } catch (Exception ex) {
+            // handle the error
+            log.error(ex,ex);
+        }
+        try {
+            conn = DriverManager.getConnection(jdbc_url);
+            log.debug("Initialized JDBC URL: "+jdbc_url);
+        } catch (SQLException ex) {
+            log.error(ex,ex);
+        }
+    }
     public void execute(String query) {
         try {
             stmt = conn.createStatement(); 
@@ -101,6 +124,9 @@ public class DatabaseWriter {
                 stmt = null;
             }
         }
+    }
+    public Connection getConnection() {
+    	return conn;
     }
     public ResultSet query(String query) throws SQLException {
         try {
