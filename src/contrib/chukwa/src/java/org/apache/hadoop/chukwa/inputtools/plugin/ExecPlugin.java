@@ -134,6 +134,7 @@ class OutputReader extends Thread
 		    	 //System.out.println("========>>>>>>>["+line+"]");	
 		    	 output.append(line).append("\n");
 		    }
+        br.close();
 		}
 		catch (IOException e)
 		{
