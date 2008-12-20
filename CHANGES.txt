@@ -474,6 +474,8 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4892. Close fds out of Chukwa ExecPlugin. (Ari Rabkin via cdouglas)
 
+    HADOOP-4889. Fix permissions in RPM packaging. (Eric Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
