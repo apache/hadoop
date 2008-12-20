@@ -52,6 +52,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hod-admin-guide label="HOD Admin Guide" href="hod_admin_guide.html"/>
     <hod-config-guide label="HOD Config Guide" href="hod_config_guide.html"/>
     <capacity_scheduler label="Capacity Scheduler" href="capacity_scheduler.html"/>
+    <service_level_auth label="Service Level Authorization" href="service_level_auth.html"/>
     <vaidya    label="Hadoop Vaidya" href="vaidya.html"/>
     <api       label="API Docs"           href="ext:api/index" />
     <jdiff     label="API Changes"        href="ext:jdiff/changes" />

@@ -478,6 +478,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4876. Fix capacity scheduler reclamation by updating count of
     pending tasks correctly. (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4849. Documentation for Service Level Authorization implemented in
+    HADOOP-4348. (acmurthy)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
