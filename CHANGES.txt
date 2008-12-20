@@ -472,6 +472,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4894. Correctly parse ps output in Chukwa jettyCollector.sh. (Ari
     Rabkin via cdouglas)
 
+    HADOOP-4892. Close fds out of Chukwa ExecPlugin. (Ari Rabkin via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
