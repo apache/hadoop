@@ -40,6 +40,11 @@ public class TestForceSplit extends HBaseClusterTestCase {
   private static final byte[] key_mmi = Bytes.toBytes("mmi");
   private static final byte[] key_ssm = Bytes.toBytes("ssm");
 
+  protected void setUp() throws Exception {
+    super.setUp();
+    this.conf.setInt("hbase.io.index.interval", 32);
+  }
+
   /**
    * the test
    * @throws IOException
