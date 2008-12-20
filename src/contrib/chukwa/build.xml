@@ -750,6 +750,8 @@
 
 %define _topdir         ${build.dir}
 %define _prefix         ${rpm.prefix}
+%define uid             ${rpm.uid}
+%define gid             ${rpm.gid}
 %define name            chukwa
 %define summary         Distributed Computing Monitoring Framework.
 %define version         ${chukwaVersion}
@@ -796,7 +798,6 @@ rm -rf %{buildroot}%{_prefix}/%{name}/src
 rm -rf %{buildroot}%{_prefix}/%{name}/build.xml
 %post
 mkdir -p %{_prefix}/%{name}
-chown -R gmon:users %{_prefix}/%{name}
 echo "Congratulation!  You have successfully installed Chukwa."
 echo ""
 echo "To collect Data             : /etc/init.d/chukwa-system-metrics start"
@@ -811,8 +812,9 @@ echo "To run Chukwa Data Processor: /etc/init.d/chukwa-data-processors start"
 echo
 %postun
 %files
-%defattr(-,root,root)
+%defattr(-,%{uid},%{gid})
 %{_prefix}/%{name}/*
+%defattr(-,root,root)
 /etc/init.d/chukwa-data-processors
 /etc/init.d/chukwa-collector
 /etc/init.d/chukwa-agent
