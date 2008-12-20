@@ -160,7 +160,7 @@ create table if not exists cluster_system_metrics_template (
     sdc_busy_pcnt float,
     sdd_busy_pcnt float,
     swap_used_pcnt float,
-    primary key(host, timestamp),
+    primary key(timestamp),
     index (timestamp)
 );
 
@@ -571,7 +571,7 @@ create table if not exists hod_job_digest_template (
     sdd_busy_pcnt float,
     swap_used_pcnt float,
     primary key(HodId, timestamp),
-    index(timeStamp)
+    index(timestamp)
 ); 
 
 create table if not exists user_util_template (
@@ -589,7 +589,9 @@ create table if not exists user_util_template (
     network_used_pcnt float,
     memory_unused double,
     memory_used double,
-    memory_used_pcnt float
+    memory_used_pcnt float,
+    primary key(user, timestamp),
+    index(timestamp)
 );
 
 create table if not exists QueueInfo(
@@ -598,5 +600,5 @@ create table if not exists QueueInfo(
     Queue VARCHAR(20),
     NumOfMachine smallint unsigned,
     status varchar(1),
-    index(TimeStamp)
+    index(Timestamp)
 );
