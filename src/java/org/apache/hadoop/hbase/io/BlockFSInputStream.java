@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -48,7 +49,15 @@ public class BlockFSInputStream extends FSInputStream {
    * also want BlockFSInputStream to be self-contained.
    */
   private static final ScheduledExecutorService EXECUTOR =
-    Executors.newSingleThreadScheduledExecutor();
+    Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+      public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("BlockFSInputStream referenceQueue Checker");
+        return t;
+      }
+
+    });
   
   /*
    * The registration of this object in EXECUTOR.
@@ -101,11 +110,12 @@ public class BlockFSInputStream extends FSInputStream {
       }
     };
     // Register a Runnable that runs checkReferences on a period.
+    final int hashcode = hashCode();
     this.registration = EXECUTOR.scheduleAtFixedRate(new Runnable() {
       public void run() {
         int cleared = checkReferences();
         if (LOG.isDebugEnabled() && cleared > 0) {
-          LOG.debug("Cleared " + cleared);
+          LOG.debug("Cleared " + cleared + " in " + hashcode);
         }
       }
     }, 10, 10, TimeUnit.SECONDS);

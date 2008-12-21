@@ -1524,7 +1524,6 @@ public class HTable {
           } catch (IOException e) {
             if (e instanceof UnknownScannerException &&
                 lastNext + scannerTimeout < System.currentTimeMillis()) {
-              
               ScannerTimeoutException ex = new ScannerTimeoutException();
               ex.initCause(e);
               throw ex;
@@ -1538,7 +1537,6 @@ public class HTable {
               countdown--;
             }
           }
-
         } while (countdown > 0 && nextScanner(countdown));
       }
 
