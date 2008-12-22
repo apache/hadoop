@@ -68,6 +68,9 @@ public abstract class ServerCallable<T> implements Callable<T> {
   
   /** @return the region name */
   public byte[] getRegionName() {
+    if (location == null) {
+      return null;
+    }
     return location.getRegionInfo().getRegionName();
   }
   
