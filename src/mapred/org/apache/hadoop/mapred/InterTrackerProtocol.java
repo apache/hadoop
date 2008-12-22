@@ -30,7 +30,7 @@ interface InterTrackerProtocol extends VersionedProtocol {
   /**
    * version 3 introduced to replace 
    * emitHearbeat/pollForNewTask/pollForTaskWithClosedJob with
-   * {@link #heartbeat(TaskTrackerStatus, boolean, boolean, short)}
+   * {@link #heartbeat(TaskTrackerStatus, boolean, boolean, boolean, short)}
    * version 4 changed TaskReport for HADOOP-549.
    * version 5 introduced that removes locateMapOutputs and instead uses
    * getTaskCompletionEvents to figure finished maps and fetch the outputs
@@ -57,8 +57,10 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *             (HADOOP-4035)
    * Version 22: Replaced parameter 'initialContact' with 'restarted' 
    *             in heartbeat method (HADOOP-4305) 
+   * Version 23: Added parameter 'initialContact' again in heartbeat method
+   *            (HADOOP-4869) 
    */
-  public static final long versionID = 22L;
+  public static final long versionID = 23L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -77,6 +79,8 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * @param status the status update
    * @param restarted <code>true</code> if the process has just started or 
    *                   restarted, <code>false</code> otherwise
+   * @param initialContact <code>true</code> if this is first interaction since
+   *                       'refresh', <code>false</code> otherwise.
    * @param acceptNewTasks <code>true</code> if the {@link TaskTracker} is
    *                       ready to accept new tasks to run.                 
    * @param responseId the last responseId successfully acted upon by the
@@ -86,6 +90,7 @@ interface InterTrackerProtocol extends VersionedProtocol {
    */
   HeartbeatResponse heartbeat(TaskTrackerStatus status, 
                               boolean restarted, 
+                              boolean initialContact,
                               boolean acceptNewTasks,
                               short responseId)
     throws IOException;

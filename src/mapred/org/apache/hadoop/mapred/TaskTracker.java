@@ -162,6 +162,7 @@ public class TaskTracker
   volatile int mapTotal = 0;
   volatile int reduceTotal = 0;
   boolean justStarted = true;
+  boolean justInited = true;
   // Mark reduce tasks that are shuffling to rollback their events index
   Set<TaskAttemptID> shouldReset = new HashSet<TaskAttemptID>();
     
@@ -524,6 +525,7 @@ public class TaskTracker
       RPC.waitForProxy(InterTrackerProtocol.class,
                        InterTrackerProtocol.versionID, 
                        jobTrackAddr, this.fConf);
+    this.justInited = true;
     this.running = true;    
     // start the thread that will fetch map task completion events
     this.mapEventsFetcher = new MapEventsFetcherThread();
@@ -1020,7 +1022,7 @@ public class TaskTracker
         // If the TaskTracker is just starting up:
         // 1. Verify the buildVersion
         // 2. Get the system directory & filesystem
-        if(justStarted){
+        if(justInited) {
           String jobTrackerBV = jobClient.getBuildVersion();
           if(!VersionInfo.getBuildVersion().equals(jobTrackerBV)) {
             String msg = "Shutting down. Incompatible buildVersion." +
@@ -1096,6 +1098,7 @@ public class TaskTracker
         // resetting heartbeat interval from the response.
         heartbeatInterval = heartbeatResponse.getHeartbeatInterval();
         justStarted = false;
+        justInited = false;
         if (actions != null){ 
           for(TaskTrackerAction action: actions) {
             if (action instanceof LaunchTaskAction) {
@@ -1217,7 +1220,9 @@ public class TaskTracker
     // Xmit the heartbeat
     //
     HeartbeatResponse heartbeatResponse = jobClient.heartbeat(status, 
-                                                              justStarted, askForNewTask, 
+                                                              justStarted,
+                                                              justInited,
+                                                              askForNewTask, 
                                                               heartbeatResponseId);
       
     //
