@@ -495,6 +495,9 @@ Release 0.20.0 - Unreleased
     restart apart from the initialContact flag that there was earlier.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4716. Fixes ReduceTask.java to clear out the mapping between
+    hosts and MapOutputLocation upon a JT restart (Amar Kamat via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
