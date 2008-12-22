@@ -113,6 +113,8 @@ Release 0.19.0 - Unreleased
    HBASE-1070  Up default index interval in TRUNK and branch
    HBASE-1045  Hangup by regionserver causes write to fail
    HBASE-1079  Dumb NPE in ServerCallable hides the RetriesExhausted exception
+   HBASE-782   The DELETE key in the hbase shell deletes the wrong character
+               (Tim Sell via Stack)
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

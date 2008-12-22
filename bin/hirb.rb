@@ -333,7 +333,7 @@ module IRB
       # Suppress output if last_value is 'nil'
       # Otherwise, when user types help, get ugly 'nil'
       # after all output.
-      if @context.last_value
+      if @context.last_value != nil
         super
       end
     end
