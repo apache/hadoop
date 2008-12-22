@@ -476,6 +476,10 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4889. Fix permissions in RPM packaging. (Eric Yang via cdouglas)
 
+    HADOOP-4869. Fixes the TT-JT heartbeat to have an explicit flag for 
+    restart apart from the initialContact flag that there was earlier.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
