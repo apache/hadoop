@@ -871,21 +871,7 @@ public class TaskTracker
     for (TaskInProgress tip : tasksToClose.values()) {
       tip.jobHasFinished(false);
     }
-
-    // Shutdown local RPC servers.  Do them
-    // in parallel, as RPC servers can take a long
-    // time to shutdown.  (They need to wait a full
-    // RPC timeout, which might be 10-30 seconds.)
-    new Thread("RPC shutdown") {
-      @Override
-      public void run() {
-        if (taskReportServer != null) {
-          taskReportServer.stop();
-          taskReportServer = null;
-        }
-      }
-    }.start();
-
+    
     this.running = false;
         
     // Clear local storage
@@ -910,6 +896,11 @@ public class TaskTracker
         done = true;
       } catch (InterruptedException e) {
       }
+    }
+    
+    if (taskReportServer != null) {
+      taskReportServer.stop();
+      taskReportServer = null;
     }
   }
 
