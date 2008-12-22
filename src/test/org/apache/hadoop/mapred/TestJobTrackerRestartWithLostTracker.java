@@ -148,6 +148,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
       jtConf.set("mapred.jobtracker.job.history.buffer.size", "1024");
       jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
       jtConf.setLong("mapred.tasktracker.expiry.interval", 25 * 1000);
+      jtConf.setInt("mapred.reduce.copy.backoff", 4);
       
       mr = new MiniMRCluster(2, namenode, 1, null, null, jtConf);
       

@@ -1803,10 +1803,18 @@ class ReduceTask extends Task {
             MapOutputLocation loc = locItr.next(); 
             List<MapOutputLocation> locList = 
               mapLocations.get(loc.getHost());
-            //Add to the beginning of the list so that this map is 
-            //tried again before the others and we can hasten the 
-            //re-execution of this map should there be a problem
-            locList.add(0, loc);
+            
+            // Check if the list exists. Map output location mapping is cleared 
+            // once the jobtracker restarts and is rebuilt from scratch.
+            // Note that map-output-location mapping will be recreated and hence
+            // we continue with the hope that we might find some locations
+            // from the rebuild map.
+            if (locList != null) {
+              // Add to the beginning of the list so that this map is 
+              //tried again before the others and we can hasten the 
+              //re-execution of this map should there be a problem
+              locList.add(0, loc);
+            }
           }
 
           if (retryFetches.size() > 0) {
@@ -1839,7 +1847,13 @@ class ReduceTask extends Task {
               List<MapOutputLocation> knownOutputsByLoc = 
                 mapLocations.get(host);
 
-              if (knownOutputsByLoc.size() == 0) {
+              // Check if the list exists. Map output location mapping is 
+              // cleared once the jobtracker restarts and is rebuilt from 
+              // scratch.
+              // Note that map-output-location mapping will be recreated and 
+              // hence we continue with the hope that we might find some 
+              // locations from the rebuild map and add then for fetching.
+              if (knownOutputsByLoc == null || knownOutputsByLoc.size() == 0) {
                 continue;
               }
               
@@ -2598,6 +2612,7 @@ class ReduceTask extends Task {
         if (update.shouldReset()) {
           fromEventId.set(0);
           obsoleteMapIds.clear(); // clear the obsolete map
+          mapLocations.clear(); // clear the map locations mapping
         }
         
         // Update the last seen event ID
