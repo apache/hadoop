@@ -501,6 +501,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4880. Removes an unnecessary testcase from TestJobTrackerRestart.
     (Amar Kamat via ddas)
 
+    HADOOP-4924. Fixes a race condition in TaskTracker re-init. (ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
