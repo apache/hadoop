@@ -176,7 +176,7 @@ public class KosmosFileSystem extends FileSystem {
 
         if (exists(file)) {
             if (overwrite) {
-                delete(file);
+                delete(file, true);
             } else {
                 throw new IOException("File already exists: " + file);
             }
@@ -233,25 +233,6 @@ public class KosmosFileSystem extends FileSystem {
         }
       }
       return kfsImpl.rmdir(srep) == 0;
-    }
-    
-    @Deprecated
-    public boolean delete(Path path) throws IOException {
-      return delete(path, true);
-    }
-    
-    @Deprecated
-    public long getLength(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-        return kfsImpl.filesize(srep);
-    }
-
-    @Deprecated
-    public short getReplication(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-        return kfsImpl.getReplication(srep);
     }
 
     public short getDefaultReplication() {

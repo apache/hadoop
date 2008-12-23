@@ -264,13 +264,6 @@ public class FTPFileSystem extends FileSystem {
     }
   }
 
-  /** @deprecated Use delete(Path, boolean) instead */
-  @Override
-  @Deprecated
-  public boolean delete(Path file) throws IOException {
-    return delete(file, false);
-  }
-
   @Override
   public boolean delete(Path file, boolean recursive) throws IOException {
     FTPClient client = connect();

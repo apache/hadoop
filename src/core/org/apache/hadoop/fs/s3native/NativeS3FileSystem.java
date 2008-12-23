@@ -280,12 +280,6 @@ public class NativeS3FileSystem extends FileSystem {
   }
   
   @Override
-  @Deprecated
-  public boolean delete(Path path) throws IOException {
-    return delete(path, true);
-  }
-
-  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     FileStatus status;
     try {

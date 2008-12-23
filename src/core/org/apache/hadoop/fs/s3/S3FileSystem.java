@@ -212,7 +212,7 @@ public class S3FileSystem extends FileSystem {
     INode inode = store.retrieveINode(makeAbsolute(file));
     if (inode != null) {
       if (overwrite) {
-        delete(file);
+        delete(file, true);
       } else {
         throw new IOException("File already exists: " + file);
       }
@@ -317,12 +317,6 @@ public class S3FileSystem extends FileSystem {
    return true;
   }
   
-  @Override
-  @Deprecated
-  public boolean delete(Path path) throws IOException {
-    return delete(path, true);
-  }
-
   /**
    * FileStatus for S3 file systems. 
    */

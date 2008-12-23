@@ -66,7 +66,7 @@ public class TestLocalDirAllocator extends TestCase {
 
   private static void rmBufferDirs() throws IOException {
     assertTrue(!localFs.exists(BUFFER_PATH_ROOT) ||
-        localFs.delete(BUFFER_PATH_ROOT));
+        localFs.delete(BUFFER_PATH_ROOT, true));
   }
   
   private void validateTempDirCreation(int i) throws IOException {
