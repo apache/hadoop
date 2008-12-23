@@ -1163,16 +1163,15 @@ class CapacityTaskScheduler extends TaskScheduler {
   public synchronized void start() throws IOException {
     if (started) return;
     super.start();
-    RECLAIM_CAPACITY_INTERVAL = 
-      conf.getLong("mapred.capacity-scheduler.reclaimCapacity.interval", 5);
-    RECLAIM_CAPACITY_INTERVAL *= 1000;
-
     // initialize our queues from the config settings
     if (null == rmConf) {
       rmConf = new CapacitySchedulerConf();
     }
 
     initializeMemoryRelatedConf();
+    
+    RECLAIM_CAPACITY_INTERVAL = rmConf.getReclaimCapacityInterval();
+    RECLAIM_CAPACITY_INTERVAL *= 1000;
 
     // read queue info from config file
     QueueManager queueManager = taskTrackerManager.getQueueManager();

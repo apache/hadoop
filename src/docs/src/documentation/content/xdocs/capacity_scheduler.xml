@@ -234,6 +234,26 @@
           </tr>
         </table>
       </section>
+      
+      <section>
+        <title>Configuring the capacity scheduler</title>
+        <p>The capacity scheduler's behavior can be controlled through the 
+          following properties. 
+        </p>
+        <table>
+          <tr>
+          <th>Name</th><th>Description</th>
+          </tr>
+          <tr>
+          <td>mapred.capacity-scheduler.reclaimCapacity.interval</td>
+          <td>The time interval, in seconds, between which the scheduler 
+          periodically determines whether capacity needs to be reclaimed for 
+          any queue. The default value is 5 seconds.
+          </td>
+          </tr>
+        </table>
+        
+      </section>
 
       <section>
         <title>Reviewing the configuration of the capacity scheduler</title>
