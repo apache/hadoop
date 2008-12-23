@@ -165,7 +165,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public HTableDescriptor(final byte [] name) {
     super();
     setMetaFlags(this.name);
-    this.name = this.isMetaRegion() ? name: isLegalTableName(name);
+    this.name = this.isMetaRegion()? name: isLegalTableName(name);
     this.nameAsString = Bytes.toString(this.name);
   }
 

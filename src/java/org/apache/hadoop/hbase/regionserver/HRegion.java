@@ -2157,6 +2157,25 @@ public class HRegion implements HConstants {
     // server.
     srvr.batchUpdate(metaRegionName, b, -1L);
   }
+  
+  /**
+   * Clean COL_SERVER and COL_STARTCODE for passed <code>info</code> in
+   * <code>.META.</code>
+   * @param srvr
+   * @param metaRegionName
+   * @param info
+   * @throws IOException
+   */
+  public static void cleanRegionInMETA(final HRegionInterface srvr,
+    final byte [] metaRegionName, final HRegionInfo info)
+  throws IOException {
+    BatchUpdate b = new BatchUpdate(info.getRegionName());
+    b.delete(COL_SERVER);
+    b.delete(COL_STARTCODE);
+    // If carrying splits, they'll be in place when we show up on new
+    // server.
+    srvr.batchUpdate(metaRegionName, b, LATEST_TIMESTAMP);
+  }
 
   /**
    * Deletes all the files for a HRegion

@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -506,6 +508,39 @@ public class HBaseAdmin {
   }
 
   /**
+   * Close a region. For expert-admins.
+   * @param regionname
+   * @param args Optional server name.  Otherwise, we'll send close to the
+   * server registered in .META.
+   * @throws IOException
+   */
+  public void closeRegion(final String regionname, final Object... args)
+  throws IOException {
+    closeRegion(Bytes.toBytes(regionname), args);
+  }
+
+  /**
+   * Close a region.  For expert-admins.
+   * @param regionname
+   * @param args Optional server name.  Otherwise, we'll send close to the
+   * server registered in .META.
+   * @throws IOException
+   */
+  public void closeRegion(final byte [] regionname, final Object... args)
+  throws IOException {
+    // Be careful. Must match the handler over in HMaster at MODIFY_CLOSE_REGION
+    int len = (args == null)? 0: args.length;
+    int xtraArgsCount = 1;
+    Object [] newargs = new Object[len + xtraArgsCount];
+    newargs[0] = regionname;
+    for (int i = 0; i < len; i++) {
+      newargs[i + xtraArgsCount] = args[i];
+    }
+    modifyTable(HConstants.META_TABLE_NAME, HConstants.MODIFY_CLOSE_REGION,
+      newargs);
+  }
+
+  /**
    * Modify an existing table
    * 
    * @param tableName name of table
@@ -518,20 +553,26 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    HTableDescriptor.isLegalTableName(tableName);
+    // Let pass if its a catalog table.  Used by admins.
+    if (!MetaUtils.isMetaTableName(tableName)) {
+      // This will throw exception
+      HTableDescriptor.isLegalTableName(tableName);
+    }
+    Writable[] arr = null;
     try {
       switch (op) {
-      case HConstants.MODIFY_TABLE_SET_HTD: {
+      case HConstants.MODIFY_TABLE_SET_HTD:
         if (args == null || args.length < 1 || 
-            !(args[0] instanceof HTableDescriptor))
-          throw new IOException("SET_HTD requires a HTableDescriptor");
-        Writable[] arr = new Writable[1];
+            !(args[0] instanceof HTableDescriptor)) {
+          throw new IllegalArgumentException("SET_HTD requires a HTableDescriptor");
+        }
+        arr = new Writable[1];
         arr[0] = (HTableDescriptor)args[0];
         this.master.modifyTable(tableName, op, arr);
-      } break;
+        break;
+
       case HConstants.MODIFY_TABLE_COMPACT:
-      case HConstants.MODIFY_TABLE_SPLIT: {
-        Writable[] arr = null;
+      case HConstants.MODIFY_TABLE_SPLIT:
         if (args != null && args.length > 0) {
           arr = new Writable[1];
           if (args[0] instanceof byte[]) {
@@ -539,12 +580,35 @@ public class HBaseAdmin {
           } else if (args[0] instanceof ImmutableBytesWritable) {
             arr[0] = (ImmutableBytesWritable)args[0];
           } else {
-            throw new IOException("SPLIT or COMPACT with arg requires byte[] or ImmutableBytesWritable");
+            throw new IllegalArgumentException("SPLIT or COMPACT with arg " +
+              "requires byte[] or ImmutableBytesWritable");
           }
         }
         this.master.modifyTable(tableName, op, arr);
         break;
-      }
+
+      case HConstants.MODIFY_CLOSE_REGION:
+        if (args == null || args.length < 1) {
+          throw new IllegalArgumentException("Requires at least a region name");
+        }
+        arr = new Writable[args.length];
+        for (int i = 0; i < args.length; i++) {
+          if (args[i] instanceof byte[]) {
+            arr[i] = new ImmutableBytesWritable((byte[])args[i]);
+          } else if (args[i] instanceof ImmutableBytesWritable) {
+            arr[i] = (ImmutableBytesWritable)args[i];
+          } else if (args[i] instanceof String) {
+            arr[i] = new ImmutableBytesWritable(Bytes.toBytes((String)args[i]));
+          } else if (args[i] instanceof Boolean) {
+            arr[i] = new BooleanWritable(((Boolean)args[i]).booleanValue());
+          } else {
+            throw new IllegalArgumentException("Requires byte [] or " +
+              "ImmutableBytesWritable, not " + args[i]);
+          }
+        }
+        this.master.modifyTable(tableName, op, arr);
+        break;
+
       default:
         throw new IOException("unknown modifyTable op " + op);
       }

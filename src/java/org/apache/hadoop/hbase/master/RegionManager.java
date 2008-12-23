@@ -29,12 +29,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Collections;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,9 +75,8 @@ class RegionManager implements HConstants {
   private final AtomicInteger numberOfMetaRegions = new AtomicInteger();
 
   /** These are the online meta regions */
-  private final SortedMap<byte [], MetaRegion> onlineMetaRegions =
-    Collections.synchronizedSortedMap(new TreeMap<byte [],
-      MetaRegion>(Bytes.BYTES_COMPARATOR));
+  private final NavigableMap<byte [], MetaRegion> onlineMetaRegions =
+    new ConcurrentSkipListMap<byte [], MetaRegion>(Bytes.BYTES_COMPARATOR);
 
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
@@ -542,7 +543,6 @@ class RegionManager implements HConstants {
   throws NotAllMetaRegionsOnlineException {
     byte [] firstMetaRegion = null;
     Set<MetaRegion> metaRegions = new HashSet<MetaRegion>();
-    
     if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       if (rootRegionLocation.get() == null) {
         throw new NotAllMetaRegionsOnlineException(
@@ -550,7 +550,6 @@ class RegionManager implements HConstants {
       }
       metaRegions.add(new MetaRegion(rootRegionLocation.get(),
           HRegionInfo.ROOT_REGIONINFO.getRegionName()));
-      
     } else {
       if (!areAllMetaRegionsOnline()) {
         throw new NotAllMetaRegionsOnlineException();
@@ -568,7 +567,21 @@ class RegionManager implements HConstants {
     }
     return metaRegions;
   }
-  
+
+  /**
+   * Get metaregion that would host passed in row.
+   * @param row Row need to know all the meta regions for
+   * @return set of MetaRegion objects that contain the table
+   * @throws NotAllMetaRegionsOnlineException
+   */
+  public MetaRegion getMetaRegionForRow(final byte [] row)
+  throws NotAllMetaRegionsOnlineException {
+    if (!areAllMetaRegionsOnline()) {
+      throw new NotAllMetaRegionsOnlineException();
+    }
+    return this.onlineMetaRegions.floorEntry(row).getValue();
+  }
+
   /**
    * Create a new HRegion, put a row for it into META (or ROOT), and mark the
    * new region unassigned so that it will get assigned to a region server.
@@ -724,13 +737,11 @@ class RegionManager implements HConstants {
    * @param serverName address info of server
    * @param info region to close
    */
-  public void markToClose(String serverName, HRegionInfo info) {
-    synchronized (regionsToClose) {
-      Map<byte [], HRegionInfo> serverToClose = regionsToClose.get(serverName);
-      if (serverToClose != null) {
-        serverToClose.put(info.getRegionName(), info);
-      }
-    }
+  public void markToClose(final String serverName, final HRegionInfo info) {
+    Map<byte [], HRegionInfo> toclose =
+      new TreeMap<byte [], HRegionInfo>(Bytes.BYTES_COMPARATOR);
+    toclose.put(info.getRegionName(), info);
+    markToCloseBulk(serverName, toclose);
   }
   
   /**
@@ -738,8 +749,8 @@ class RegionManager implements HConstants {
    * @param serverName address info of server
    * @param map map of region names to region infos of regions to close
    */
-  public void markToCloseBulk(String serverName,
-      Map<byte [], HRegionInfo> map) {
+  public void markToCloseBulk(final String serverName,
+      final Map<byte [], HRegionInfo> map) {
     synchronized (regionsToClose) {
       Map<byte [], HRegionInfo> regions = regionsToClose.get(serverName);
       if (regions != null) {

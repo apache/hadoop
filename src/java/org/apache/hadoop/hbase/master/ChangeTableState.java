@@ -68,7 +68,6 @@ class ChangeTableState extends TableOperation {
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
     // Process regions not being served
-    
     if (LOG.isDebugEnabled()) {
       LOG.debug("processing unserved regions");
     }
@@ -80,20 +79,15 @@ class ChangeTableState extends TableOperation {
         }
         continue;
       }
-      
-      // Update meta table
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("updating columns in row: " + i.getRegionNameAsString());
-      }
 
+      // Update meta table
       BatchUpdate b = new BatchUpdate(i.getRegionName());
       updateRegionInfo(b, i);
       b.delete(COL_SERVER);
       b.delete(COL_STARTCODE);
       server.batchUpdate(m.getRegionName(), b, -1L);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + i.getRegionNameAsString());
+        LOG.debug("Updated columns in row: " + i.getRegionNameAsString());
       }
 
       if (online) {
@@ -109,7 +103,6 @@ class ChangeTableState extends TableOperation {
     }
 
     // Process regions currently being served
-
     if (LOG.isDebugEnabled()) {
       LOG.debug("processing regions currently being served");
     }

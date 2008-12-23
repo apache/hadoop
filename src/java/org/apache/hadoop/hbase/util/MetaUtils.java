@@ -442,4 +442,13 @@ public class MetaUtils {
       }});
     return result;
   }
+  
+  /**
+   * @param n Table name.
+   * @return True if a catalog table, -ROOT- or .META.
+   */
+  public static boolean isMetaTableName(final byte [] n) {
+    return Bytes.equals(n, HConstants.ROOT_TABLE_NAME) ||
+      Bytes.equals(n, HConstants.META_TABLE_NAME);
+  }
 }

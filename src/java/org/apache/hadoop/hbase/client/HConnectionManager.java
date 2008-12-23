@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
@@ -270,8 +271,7 @@ public class HConnectionManager implements HConstants {
      * of a catalog table.
      */
     private static boolean isMetaTableName(final byte [] n) {
-      return Bytes.equals(n, ROOT_TABLE_NAME) ||
-        Bytes.equals(n, META_TABLE_NAME);
+      return MetaUtils.isMetaTableName(n);
     }
 
     public HRegionLocation getRegionLocation(final byte [] name,

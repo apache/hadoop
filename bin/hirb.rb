@@ -101,6 +101,27 @@ promoteConstants(HBase.constants)
 
 # General shell methods
 
+def tools
+  # Help for hbase shell surgery tools
+  h  = <<HERE
+HBASE SURGERY TOOLS:
+ enable_region   Enable a single region. For example,
+  
+                 hbase> enable_region 'REGIONNAME'
+ 
+ disable_region  Disable a single region
+
+ close_region    Close a single region. Optionally specify regionserver.
+                 Examples:
+                 
+                 hbase> close_region 'REGIONNAME'
+                 hbase> close_region 'REGIONNAME', 'REGIONSERVER_IP:PORT'
+
+Above commands are for 'experts'-only as misuse can damage an install
+HERE
+  puts h
+end
+
 def help
   # Output help.  Help used to be a dictionary of name to short and long
   # descriptions emitted using Formatters but awkward getting it to show
@@ -178,6 +199,8 @@ HBASE SHELL COMMANDS:
            row 'r1' under column 'c1' marked with the time 'ts1', do:
 
            hbase> put 't1', 'r1', 'c1', 'value', ts1
+
+ tools     Listing of hbase surgery tools
 
  scan      Scan a table; pass table name and optionally a dictionary of scanner 
            specifications.  Scanner specifications may include one or more of 
@@ -263,12 +286,24 @@ def disable(table)
   admin().disable(table)
 end
 
+def enable_region(regionName)
+  admin().enable_region(regionName)
+end
+
+def disable_region(regionName)
+  admin().disable_region(regionName)
+end
+
 def exists(table)
   admin().exists(table)
 end
 
 def truncate(table)
   admin().truncate(table)
+end
+
+def close_region(regionName, server = nil)
+  admin().close_region(regionName, server)
 end
   
 # CRUD

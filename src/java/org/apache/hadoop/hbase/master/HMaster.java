@@ -36,8 +36,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -61,12 +59,12 @@ import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,6 +73,8 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -756,6 +756,31 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return null;
   }
 
+  /**
+   * Get row from meta table.
+   * @param row
+   * @param columns
+   * @return RowResult
+   * @throws IOException
+   */
+  protected RowResult getFromMETA(final byte [] row, final byte [][] columns)
+  throws IOException {
+    MetaRegion meta = this.regionManager.getMetaRegionForRow(row);
+    HRegionInterface srvr = getMETAServer(meta);
+    return srvr.getRow(meta.getRegionName(), row, columns,
+      HConstants.LATEST_TIMESTAMP, 1, -1);
+  }
+  
+  /*
+   * @param meta
+   * @return Server connection to <code>meta</code> .META. region.
+   * @throws IOException
+   */
+  private HRegionInterface getMETAServer(final MetaRegion meta)
+  throws IOException {
+    return this.connection.getHRegionConnection(meta.getServer());
+  }
+
   public void modifyTable(final byte[] tableName, int op, Writable[] args)
     throws IOException {
     switch (op) {
@@ -786,6 +811,34 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             pair.getFirst(), pair.getSecond(), op);
       }
       break;
+
+    case MODIFY_CLOSE_REGION:
+      if (args == null || args.length < 1 || args.length > 2) {
+        throw new IOException("Requires at least a region name; " +
+          "or cannot have more than region name and servername");
+      }
+      // Arguments are regionname and an optional server name.
+      byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
+      String servername = null;
+      if (args.length == 2) {
+        servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
+      }
+      // Need hri
+      RowResult rr = getFromMETA(regionname, HConstants.COLUMN_FAMILY_ARRAY);
+      HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
+      if (servername == null) {
+        // Get server from the .META. if it wasn't passed as argument
+        servername = Writables.cellToString(rr.get(COL_SERVER));
+      }
+      LOG.info("Marking " + hri.getRegionNameAsString() +
+        " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
+          "master will tell regionserver to close region on next heartbeat");
+      this.regionManager.markToClose(servername, hri);
+      MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
+      HRegionInterface srvr = getMETAServer(meta);
+      HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);
+      break;
+
     default:
       throw new IOException("unsupported modifyTable op " + op);
     }

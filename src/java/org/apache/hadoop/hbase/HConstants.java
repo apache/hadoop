@@ -265,5 +265,7 @@ public interface HConstants {
   public static final int MODIFY_TABLE_SPLIT = 2;
   /** modifyTable op for forcing a compaction */
   public static final int MODIFY_TABLE_COMPACT = 3;
-
+  
+  // Messages client can send master.
+  public static final int MODIFY_CLOSE_REGION = MODIFY_TABLE_COMPACT + 1;
 }

@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.HTableDescriptor
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.util.Writables
+import org.apache.hadoop.hbase.HRegionInfo
 
 module HBase
   COLUMN = "COLUMN"
@@ -93,6 +94,29 @@ module HBase
       @formatter.footer(now)
     end
 
+    def enable_region(regionName)
+      online(regionName, false)
+    end
+
+    def disable_region(regionName)
+      online(regionName, true)
+    end
+   
+    def online(regionName, onOrOff)
+      now = Time.now 
+      meta = HTable.new(HConstants::META_TABLE_NAME)
+      bytes = Bytes.toBytes(regionName)
+      hriBytes = meta.get(bytes, HConstants::COL_REGIONINFO).getValue()
+      hri = Writables.getWritable(hriBytes, HRegionInfo.new());
+      hri.setOffline(onOrOff)
+      p hri
+      bu = BatchUpdate.new(bytes)
+      bu.put(HConstants::COL_REGIONINFO, Writables.getBytes(hri))
+      meta.commit(bu);
+      @formatter.header()
+      @formatter.footer(now)
+    end
+
     def drop(tableName)
       now = Time.now 
       @formatter.header()
@@ -160,6 +184,15 @@ module HBase
           @admin.addColumn(tableName, descriptor);
         end
       end
+      @formatter.header()
+      @formatter.footer(now)
+    end
+
+    def close_region(regionName, server)
+      now = Time.now
+      s = nil
+      s = [server].to_java if server
+      @admin.closeRegion(regionName, s)
       @formatter.header()
       @formatter.footer(now)
     end
