@@ -40,11 +40,9 @@
   <property name="anttasks.dir" value="${basedir}/src/ant"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
-  <property name="docs.dir" value="${basedir}/docs"/>
-  <property name="cndocs.dir" value="${basedir}/docs/cn"/>
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
-  <property name="cndocs.src" value="${basedir}/src/docs/cn"/>
+  <property name="src.docs.cn" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
   <property name="c++.src" value="${basedir}/src/c++"/>
   <property name="c++.utils.src" value="${c++.src}/utils"/>
@@ -80,6 +78,7 @@
   <property name="build.c++.examples.pipes" 
             value="${build.c++}/examples/pipes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.docs.cn" value="${build.dir}/docs/cn"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -137,7 +136,7 @@
   <property name="rat.reporting.classname" value="rat.Report"/>
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
-  <property name="jdiff.xml.dir" value="${docs.dir}/jdiff"/>
+  <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
   <property name="jdiff.stable" value="0.19.0"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
@@ -290,7 +289,7 @@
     </exec>
 	
    <exec executable="sh">
-       <arg line="src/fixFontsPath.sh ${cndocs.src}"/>
+       <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
    </exec>
   </target>
 
@@ -862,14 +861,14 @@
 	  failonerror="true">
       <env key="JAVA_HOME" value="${java5.home}"/>
     </exec>
-    <copy todir="${docs.dir}">
+    <copy todir="${build.docs}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
-    <style basedir="${core.src.dir}" destdir="${docs.dir}"
+    <style basedir="${core.src.dir}" destdir="${build.docs}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
-    <style basedir="${hdfs.src.dir}" destdir="${docs.dir}"
+    <style basedir="${hdfs.src.dir}" destdir="${build.docs}"
            includes="hdfs-default.xml" style="conf/configuration.xsl"/>
-    <style basedir="${mapred.src.dir}" destdir="${docs.dir}"
+    <style basedir="${mapred.src.dir}" destdir="${build.docs}"
            includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
     <antcall target="cn-docs"/>
@@ -878,18 +877,18 @@
   <target name="cn-docs" depends="forrest.check, init" 
        description="Generate forrest-based Chinese documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
         if="forrest.home">
-    <exec dir="${cndocs.src}" executable="${forrest.home}/bin/forrest" failonerror="true">
+    <exec dir="${src.docs.cn}" executable="${forrest.home}/bin/forrest" failonerror="true">
       <env key="LANG" value="en_US.utf8"/>
       <env key="JAVA_HOME" value="${java5.home}"/>
     </exec>
-    <copy todir="${cndocs.dir}">
-      <fileset dir="${cndocs.src}/build/site/" />
+    <copy todir="${build.docs.cn}">
+      <fileset dir="${src.docs.cn}/build/site/" />
     </copy>
-    <style basedir="${core.src.dir}" destdir="${cndocs.dir}"
+    <style basedir="${core.src.dir}" destdir="${build.docs.cn}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
-    <style basedir="${hdfs.src.dir}" destdir="${cndocs.dir}"
+    <style basedir="${hdfs.src.dir}" destdir="${build.docs.cn}"
            includes="hdfs-default.xml" style="conf/configuration.xsl"/>
-    <style basedir="${mapred.src.dir}" destdir="${cndocs.dir}"
+    <style basedir="${mapred.src.dir}" destdir="${build.docs.cn}"
            includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
   </target>
@@ -987,15 +986,11 @@
        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
     </javadoc>
   </target>	
-<!--
-  <target name="jdiff.check" unless="jdiff.home">
-    <fail message="'jdiff.home' is not defined. Please pass -Djdiff.home=&lt;base of jdiff installation&gt; to Ant on the command-line." />
-  </target>
--->
-  <target name="api-xml" depends="javadoc,write-null">
+
+  <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
     <javadoc>
        <doclet name="jdiff.JDiff"
-               path="${jdiff..jar}:${xerces.jar}">
+               path="${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop ${version}"/>
        </doclet>
@@ -1040,11 +1035,11 @@
   </target>
 	
   <target name="changes-to-html" description="Convert CHANGES.txt into an html file">
-    <mkdir dir="${docs.dir}"/>
-    <exec executable="perl" input="CHANGES.txt" output="${docs.dir}/changes.html" failonerror="true">
+    <mkdir dir="${build.docs}"/>
+    <exec executable="perl" input="CHANGES.txt" output="${build.docs}/changes.html" failonerror="true">
       <arg value="${changes.src}/changes2html.pl"/>
     </exec>
-    <copy todir="${docs.dir}">
+    <copy todir="${build.docs}">
       <fileset dir="${changes.src}" includes="*.css"/>
     </copy>
   </target>
@@ -1054,7 +1049,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1106,7 +1101,6 @@
     </copy>
 
     <copy todir="${dist.dir}/docs">
-      <fileset dir="${docs.dir}" />
       <fileset dir="${build.docs}"/>
     </copy>
 
@@ -1195,7 +1189,7 @@
   <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
-    <delete dir="${cndocs.src}/build"/>
+    <delete dir="${src.docs.cn}/build"/>
   </target>
 
   <!-- ================================================================== -->
