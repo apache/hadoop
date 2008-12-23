@@ -59,12 +59,12 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   
   /**
    * Is the job output compressed?
-   * @param conf the {@link Configuration} to look in
+   * @param job the Job to look in
    * @return <code>true</code> if the job output should be compressed,
    *         <code>false</code> otherwise
    */
-  public static boolean getCompressOutput(Configuration conf) {
-    return conf.getBoolean("mapred.output.compress", false);
+  public static boolean getCompressOutput(JobContext job) {
+    return job.getConfiguration().getBoolean("mapred.output.compress", false);
   }
   
   /**
@@ -84,17 +84,17 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   
   /**
    * Get the {@link CompressionCodec} for compressing the job outputs.
-   * @param conf the {@link Configuration} to look in
+   * @param job the {@link Job} to look in
    * @param defaultValue the {@link CompressionCodec} to return if not set
    * @return the {@link CompressionCodec} to be used to compress the 
    *         job outputs
    * @throws IllegalArgumentException if the class was specified, but not found
    */
   public static Class<? extends CompressionCodec> 
-  getOutputCompressorClass(Configuration conf, 
+  getOutputCompressorClass(JobContext job, 
 		                       Class<? extends CompressionCodec> defaultValue) {
     Class<? extends CompressionCodec> codecClass = defaultValue;
-    
+    Configuration conf = job.getConfiguration();
     String name = conf.get("mapred.output.compression.codec");
     if (name != null) {
       try {
@@ -109,18 +109,17 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   }
   
   public abstract RecordWriter<K, V> 
-     getRecordWriter(TaskAttemptContext context
+     getRecordWriter(TaskAttemptContext job
                      ) throws IOException, InterruptedException;
 
-  public void checkOutputSpecs(JobContext context
+  public void checkOutputSpecs(JobContext job
                                ) throws FileAlreadyExistsException, IOException{
     // Ensure that the output directory is set and not already there
-    Configuration job = context.getConfiguration();
     Path outDir = getOutputPath(job);
     if (outDir == null) {
       throw new InvalidJobConfException("Output directory not set.");
     }
-    if (outDir.getFileSystem(job).exists(outDir)) {
+    if (outDir.getFileSystem(job.getConfiguration()).exists(outDir)) {
       throw new FileAlreadyExistsException("Output directory " + outDir + 
                                            " already exists");
     }
@@ -143,8 +142,8 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * @return the {@link Path} to the output directory for the map-reduce job.
    * @see FileOutputFormat#getWorkOutputPath(TaskInputOutputContext)
    */
-  public static Path getOutputPath(Configuration conf) {
-    String name = conf.get("mapred.output.dir");
+  public static Path getOutputPath(JobContext job) {
+    String name = job.getConfiguration().get("mapred.output.dir");
     return name == null ? null: new Path(name);
   }
   
@@ -261,7 +260,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
      OutputCommitter getOutputCommitter(TaskAttemptContext context
                                         ) throws IOException {
     if (committer == null) {
-      Path output = getOutputPath(context.getConfiguration());
+      Path output = getOutputPath(context);
       committer = new FileOutputCommitter(output, context);
     }
     return committer;

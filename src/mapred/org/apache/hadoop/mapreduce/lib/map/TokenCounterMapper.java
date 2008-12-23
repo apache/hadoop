@@ -25,6 +25,9 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
+/**
+ * Tokenize the input values and emit each word with a count of 1.
+ */
 public class TokenCounterMapper extends Mapper<Object, Text, Text, IntWritable>{
     
   private final static IntWritable one = new IntWritable(1);

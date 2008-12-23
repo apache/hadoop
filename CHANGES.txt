@@ -301,14 +301,18 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4753. Refactor gridmix2 to reduce code duplication. (cdouglas)
 
+    HADOOP-4909. Fix Javadoc and make some of the API more consistent in their
+    use of the JobContext instead of Configuration. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
     based on the rack/host that has the most number of bytes.
     (Jothi Padmanabhan via ddas)
 
-    HADOOP-4683. Fixes Reduce shuffle scheduler to invoke getMapCompletionEvents
-    in a separate thread. (Jothi Padmanabhan via ddas)
+    HADOOP-4683. Fixes Reduce shuffle scheduler to invoke
+    getMapCompletionEvents in a separate thread. (Jothi Padmanabhan
+    via ddas)
 
   BUG FIXES
 

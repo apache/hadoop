@@ -28,6 +28,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -44,12 +45,13 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
     
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
-    if (getCompressOutput(conf)) {
+    if (getCompressOutput(context)) {
       // find the kind of compression to do
-      compressionType = getOutputCompressionType(conf);
+      compressionType = getOutputCompressionType(context);
 
       // find the right codec
-      Class<?> codecClass = getOutputCompressorClass(conf, DefaultCodec.class);
+      Class<?> codecClass = getOutputCompressorClass(context, 
+                                                     DefaultCodec.class);
       codec = (CompressionCodec) 
         ReflectionUtils.newInstance(codecClass, conf);
     }
@@ -80,13 +82,13 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
 
   /**
    * Get the {@link CompressionType} for the output {@link SequenceFile}.
-   * @param conf the {@link Configuration}
+   * @param job the {@link Job}
    * @return the {@link CompressionType} for the output {@link SequenceFile}, 
    *         defaulting to {@link CompressionType#RECORD}
    */
-  public static CompressionType getOutputCompressionType(Configuration conf) {
-    String val = conf.get("mapred.output.compression.type", 
-                          CompressionType.RECORD.toString());
+  public static CompressionType getOutputCompressionType(JobContext job) {
+    String val = job.getConfiguration().get("mapred.output.compression.type", 
+                                            CompressionType.RECORD.toString());
     return CompressionType.valueOf(val);
   }
   

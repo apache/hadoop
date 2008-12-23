@@ -41,6 +41,7 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text> {
     return new LineRecordReader();
   }
 
+  @Override
   protected boolean isSplitable(JobContext context, Path file) {
     CompressionCodec codec = 
       new CompressionCodecFactory(context.getConfiguration()).getCodec(file);

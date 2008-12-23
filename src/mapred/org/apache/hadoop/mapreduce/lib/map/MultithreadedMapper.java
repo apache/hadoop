@@ -22,6 +22,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -58,38 +60,71 @@ public class MultithreadedMapper<K1, V1, K2, V2>
   private Context outer;
   private List<MapRunner> runners;
 
-  public static int getNumberOfThreads(Configuration conf) {
-    return conf.getInt("mapred.map.multithreadedrunner.threads", 10);
+  /**
+   * The number of threads in the thread pool that will run the map function.
+   * @param job the job
+   * @return the number of threads
+   */
+  public static int getNumberOfThreads(JobContext job) {
+    return job.getConfiguration().
+            getInt("mapred.map.multithreadedrunner.threads", 10);
   }
 
-  public static void setNumberOfThreads(Configuration conf, int threads) {
-    conf.setInt("mapred.map.multithreadedrunner.threads", threads);
+  /**
+   * Set the number of threads in the pool for running maps.
+   * @param job the job to modify
+   * @param threads the new number of threads
+   */
+  public static void setNumberOfThreads(Job job, int threads) {
+    job.getConfiguration().setInt("mapred.map.multithreadedrunner.threads", 
+                                  threads);
   }
 
+  /**
+   * Get the application's mapper class.
+   * @param <K1> the map's input key type
+   * @param <V1> the map's input value type
+   * @param <K2> the map's output key type
+   * @param <V2> the map's output value type
+   * @param job the job
+   * @return the mapper class to run
+   */
   @SuppressWarnings("unchecked")
   public static <K1,V1,K2,V2>
-  Class<Mapper<K1,V1,K2,V2>> getMapperClass(Configuration conf) {
+  Class<Mapper<K1,V1,K2,V2>> getMapperClass(JobContext job) {
     return (Class<Mapper<K1,V1,K2,V2>>) 
-           conf.getClass("mapred.map.multithreadedrunner.class",
-                         Mapper.class);
+         job.getConfiguration().getClass("mapred.map.multithreadedrunner.class",
+                                         Mapper.class);
   }
   
+  /**
+   * Set the application's mapper class.
+   * @param <K1> the map input key type
+   * @param <V1> the map input value type
+   * @param <K2> the map output key type
+   * @param <V2> the map output value type
+   * @param job the job to modify
+   * @param cls the class to use as the mapper
+   */
   public static <K1,V1,K2,V2> 
-  void setMapperClass(Configuration conf, 
+  void setMapperClass(Job job, 
                       Class<Mapper<K1,V1,K2,V2>> cls) {
     if (MultithreadedMapper.class.isAssignableFrom(cls)) {
       throw new IllegalArgumentException("Can't have recursive " + 
                                          "MultithreadedMapper instances.");
     }
-    conf.setClass("mapred.map.multithreadedrunner.class", cls, Mapper.class);
+    job.getConfiguration().setClass("mapred.map.multithreadedrunner.class",
+                                    cls, Mapper.class);
   }
 
+  /**
+   * Run the application's maps using a thread pool.
+   */
   @Override
   public void run(Context context) throws IOException, InterruptedException {
-    Configuration conf = context.getConfiguration();
     outer = context;
-    int numberOfThreads = getNumberOfThreads(conf);
-    mapClass = getMapperClass(conf);
+    int numberOfThreads = getNumberOfThreads(context);
+    mapClass = getMapperClass(context);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Configuring multithread runner to use " + numberOfThreads + 
                 " threads");
