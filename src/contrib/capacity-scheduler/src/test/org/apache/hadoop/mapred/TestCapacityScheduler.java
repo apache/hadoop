@@ -511,6 +511,8 @@ public class TestCapacityScheduler extends TestCase {
       new LinkedHashMap<String, FakeQueueInfo>();
     String firstQueue;
     
+    private long reclaimCapacityInterval = 1000;
+    
     void setFakeQueues(List<FakeQueueInfo> queues) {
       for (FakeQueueInfo q: queues) {
         queueMap.put(q.queueName, q);
@@ -554,6 +556,16 @@ public class TestCapacityScheduler extends TestCase {
     public int getMaxWorkerThreads() {
       return 1;
     }
+    
+    @Override
+    public long getReclaimCapacityInterval() {
+      return reclaimCapacityInterval ;
+    }
+    
+    @Override
+    public void setReclaimCapacityInterval(long value) {
+      this.reclaimCapacityInterval = value;
+    }
   }
 
   protected class FakeClock extends CapacityTaskScheduler.Clock {
@@ -592,8 +604,6 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.setTaskTrackerManager(taskTrackerManager);
 
     conf = new JobConf();
-    // set interval to a large number so thread doesn't interfere with us
-    conf.setLong("mapred.capacity-scheduler.reclaimCapacity.interval", 500);
     scheduler.setConf(conf);
     
   }
@@ -1174,6 +1184,7 @@ public class TestCapacityScheduler extends TestCase {
     queues.add(new FakeQueueInfo("q2", 25.0f, 1000, true, 25));
     queues.add(new FakeQueueInfo("q3", 25.0f, 1000, true, 25));
     resConf.setFakeQueues(queues);
+    resConf.setReclaimCapacityInterval(500);
     scheduler.setResourceManagerConf(resConf);
     scheduler.start();
 
@@ -1216,6 +1227,7 @@ public class TestCapacityScheduler extends TestCase {
     queues.add(new FakeQueueInfo("q3", 20.0f, 1000, true, 25));
     queues.add(new FakeQueueInfo("q4", 10.0f, 1000, true, 25));
     resConf.setFakeQueues(queues);
+    resConf.setReclaimCapacityInterval(500);
     scheduler.setResourceManagerConf(resConf);
     scheduler.start();
     
@@ -1272,6 +1284,7 @@ public class TestCapacityScheduler extends TestCase {
     queues.add(new FakeQueueInfo("default", 50.0f, 1000, true, 25));
     queues.add(new FakeQueueInfo("queue", 50.0f, 1000, true, 25));
     resConf.setFakeQueues(queues);
+    resConf.setReclaimCapacityInterval(500);
     scheduler.setResourceManagerConf(resConf);
     scheduler.start();
     
@@ -1306,6 +1319,7 @@ public class TestCapacityScheduler extends TestCase {
     queues.add(new FakeQueueInfo("default", 50.0f, 1000, true, 25));
     queues.add(new FakeQueueInfo("q2", 50.0f, 1000, true, 25));
     resConf.setFakeQueues(queues);
+    resConf.setReclaimCapacityInterval(500);
     scheduler.setResourceManagerConf(resConf);
     scheduler.start();
 

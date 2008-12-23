@@ -372,6 +372,31 @@ public class TestCapacitySchedulerConf extends TestCase {
     } catch (IllegalArgumentException e) {}
   }
   
+  public void testInvalidReclaimCapacityInterval() throws IOException {
+    openFile();
+    startConfig();
+    Map<String, String> q1Props = setupQueueProperties(
+        new String[] { "guaranteed-capacity", 
+                       "reclaim-time-limit",
+                       "supports-priority",
+                       "minimum-user-limit-percent" }, 
+        new String[] { "-1", 
+                        "-800",
+                        "true", 
+                        "50" }
+                      );
+    writeQueueDetails("default", q1Props);
+    writeProperty("mapred.capacity-scheduler.reclaimCapacity.interval", "0");
+    endConfig();
+    try {
+      testConf = new CapacitySchedulerConf(new Path(testConfFile));
+      testConf.getReclaimCapacityInterval();
+      fail("Expect Invalid reclaim capacity interval raise Exception");
+    }catch(IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+  
   private void checkQueueProperties(
                         CapacitySchedulerConf testConf,
                         Map<String, Map<String, String>> queueDetails) {

@@ -435,4 +435,30 @@ class CapacitySchedulerConf {
   public void setDefaultPercentOfPmemInVmem(float value) {
     rmConf.setFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY, value);
   }
+  
+  /**
+   * Gets the reclaim capacity thread interval.
+   * 
+   * @return reclaim capacity interval
+   */
+
+  public long getReclaimCapacityInterval() {
+    long reclaimCapacityInterval = 
+      rmConf.getLong("mapred.capacity-scheduler.reclaimCapacity.interval", 5);
+    
+    if(reclaimCapacityInterval <= 0) {
+      throw new IllegalArgumentException("Invalid reclaim capacity " +
+      		"interval, should be greater than zero");
+    }
+    return reclaimCapacityInterval;
+  }
+  /**
+   * Sets the reclaim capacity thread interval.
+   * 
+   * @param value
+   */
+  public void setReclaimCapacityInterval(long value) {
+    rmConf.setLong("mapred.capacity-scheduler.reclaimCapacity.interval", 
+        value);
+  }
 }

@@ -54,6 +54,16 @@
     </description>
   </property>
   
+  
+  <property>
+    <name>mapred.capacity-scheduler.reclaimCapacity.interval</name>
+    <value>5</value>
+    <description>The time interval, in seconds, between which the scheduler
+     periodically determines whether capacity needs to be reclaimed for 
+     any queue.
+    </description>
+  </property>
+  
   <!-- The default configuration settings for the capacity task scheduler -->
   <!-- The default values would be applied to all the queues which don't have -->
   <!-- the appropriate property for the particular queue -->
