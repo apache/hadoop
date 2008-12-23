@@ -108,26 +108,27 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
   }
 
   public RecordWriter<K, V> 
-         getRecordWriter(TaskAttemptContext context
+         getRecordWriter(TaskAttemptContext job
                          ) throws IOException, InterruptedException {
-    Configuration job = context.getConfiguration();
+    Configuration conf = job.getConfiguration();
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator= job.get("mapred.textoutputformat.separator","\t");
+    String keyValueSeparator= conf.get("mapred.textoutputformat.separator",
+                                       "\t");
     CompressionCodec codec = null;
     String extension = "";
     if (isCompressed) {
       Class<? extends CompressionCodec> codecClass = 
         getOutputCompressorClass(job, GzipCodec.class);
-      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, job);
+      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, conf);
       extension = codec.getDefaultExtension();
     }
-    Path file = getDefaultWorkFile(context, extension);
-    FileSystem fs = file.getFileSystem(job);
+    Path file = getDefaultWorkFile(job, extension);
+    FileSystem fs = file.getFileSystem(conf);
     if (!isCompressed) {
-      FSDataOutputStream fileOut = fs.create(file, context);
+      FSDataOutputStream fileOut = fs.create(file, false);
       return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
     } else {
-      FSDataOutputStream fileOut = fs.create(file, context);
+      FSDataOutputStream fileOut = fs.create(file, false);
       return new LineRecordWriter<K, V>(new DataOutputStream
                                         (codec.createOutputStream(fileOut)),
                                         keyValueSeparator);

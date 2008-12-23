@@ -47,6 +47,12 @@ public class FileOutputCommitter extends OutputCommitter {
   private Path outputPath = null;
   private Path workPath = null;
 
+  /**
+   * Create a file output committer
+   * @param outputPath the job's output path
+   * @param context the task's context
+   * @throws IOException
+   */
   public FileOutputCommitter(Path outputPath, 
                              TaskAttemptContext context) throws IOException {
     if (outputPath != null) {
@@ -59,6 +65,11 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * Create the temporary directory that is the root of all of the task 
+   * work directories.
+   * @param context the job's context
+   */
   public void setupJob(JobContext context) throws IOException {
     if (outputPath != null) {
       Path tmpDir = new Path(outputPath, FileOutputCommitter.TEMP_DIR_NAME);
@@ -69,6 +80,10 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * Delete the temporary directory, including all of the work directories.
+   * @param context the job's context
+   */
   public void cleanupJob(JobContext context) throws IOException {
     if (outputPath != null) {
       Path tmpDir = new Path(outputPath, FileOutputCommitter.TEMP_DIR_NAME);
@@ -79,12 +94,20 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * No task setup required.
+   */
+  @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     // FileOutputCommitter's setupTask doesn't do anything. Because the
     // temporary task directory is created on demand when the 
     // task is writing.
   }
-		  
+
+  /**
+   * Move the files from the work directory to the job output directory
+   * @param context the task context
+   */
   public void commitTask(TaskAttemptContext context) 
   throws IOException {
     TaskAttemptID attemptId = context.getTaskAttemptID();
@@ -103,7 +126,15 @@ public class FileOutputCommitter extends OutputCommitter {
       }
     }
   }
-		  
+
+  /**
+   * Move all of the files from the work directory to the final output
+   * @param context the task context
+   * @param fs the output file system
+   * @param jobOutputDir the final output direcotry
+   * @param taskOutput the work path
+   * @throws IOException
+   */
   private void moveTaskOutputs(TaskAttemptContext context,
                                FileSystem fs,
                                Path jobOutputDir,
@@ -137,6 +168,10 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * Delete the work directory
+   */
+  @Override
   public void abortTask(TaskAttemptContext context) {
     try {
       context.progress();
@@ -146,11 +181,20 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * Find the final name of a given output file, given the job output directory
+   * and the work directory.
+   * @param jobOutputDir the job's output directory
+   * @param taskOutput the specific task output file
+   * @param taskOutputPath the job's work directory
+   * @return the final path for the specific output file
+   * @throws IOException
+   */
   private Path getFinalPath(Path jobOutputDir, Path taskOutput, 
                             Path taskOutputPath) throws IOException {
     URI taskOutputUri = taskOutput.toUri();
     URI relativePath = taskOutputPath.toUri().relativize(taskOutputUri);
-    if (taskOutputUri == relativePath) {//taskOutputPath is not a parent of taskOutput
+    if (taskOutputUri == relativePath) {
       throw new IOException("Can not get the relative path: base = " + 
           taskOutputPath + " child = " + taskOutput);
     }
@@ -161,6 +205,11 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  /**
+   * Did this task write any files in the work directory?
+   * @param context the task's context
+   */
+  @Override
   public boolean needsTaskCommit(TaskAttemptContext context
                                  ) throws IOException {
     return workPath != null && outputFileSystem.exists(workPath);
