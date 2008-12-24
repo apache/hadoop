@@ -71,11 +71,11 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
             // back on the toDoQueue
 
             if (metaRegionAvailable()) {
-              // offline the region in meta and then note that we've offlined
-              // the region. 
+              // offline the region in meta and then remove it from the
+              // set of regions in transition
               HRegion.offlineRegionInMETA(server, metaRegionName,
                   regionInfo);
-              master.regionManager.regionOfflined(regionInfo.getRegionName());
+              master.regionManager.removeRegion(regionInfo);
             }
             return true;
           }
@@ -84,7 +84,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
     } else if (reassignRegion) {
       // we are reassigning the region eventually, so set it unassigned
-      master.regionManager.setUnassigned(regionInfo);
+      master.regionManager.setUnassigned(regionInfo, false);
     }
 
     return result == null ? true : result;

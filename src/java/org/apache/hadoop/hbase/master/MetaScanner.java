@@ -154,10 +154,12 @@ class MetaScanner extends BaseScanner {
    */
   synchronized boolean waitForMetaRegionsOrClose() {
     while (!master.closed.get()) {
-      if (regionManager.isInitialRootScanComplete() &&
-          regionManager.numMetaRegions() ==
-            regionManager.numOnlineMetaRegions()) {
-        break;
+      synchronized (master.regionManager) {
+        if (regionManager.isInitialRootScanComplete() &&
+            regionManager.numMetaRegions() ==
+              regionManager.numOnlineMetaRegions()) {
+          break;
+        }
       }
       try {
         wait(master.threadWakeFrequency);

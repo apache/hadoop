@@ -23,14 +23,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /** Instantiated to enable or disable a table */
@@ -90,15 +88,18 @@ class ChangeTableState extends TableOperation {
         LOG.debug("Updated columns in row: " + i.getRegionNameAsString());
       }
 
-      if (online) {
-        // Bring offline regions on-line
-        master.regionManager.noLongerClosing(i.getRegionName());
-        if (!master.regionManager.isUnassigned(i)) {
-          master.regionManager.setUnassigned(i);
+      synchronized (master.regionManager) {
+        if (online) {
+          // Bring offline regions on-line
+          if (!master.regionManager.isUnassigned(i) &&
+              !master.regionManager.isAssigned(i.getRegionName()) &&
+              !master.regionManager.isPending(i.getRegionName())) {
+            master.regionManager.setUnassigned(i, false);
+          }
+        } else {
+          // Prevent region from getting assigned.
+          master.regionManager.removeRegion(i);
         }
-      } else {
-        // Prevent region from getting assigned.
-        master.regionManager.noLongerUnassigned(i);
       }
     }
 
@@ -106,37 +107,23 @@ class ChangeTableState extends TableOperation {
     if (LOG.isDebugEnabled()) {
       LOG.debug("processing regions currently being served");
     }
-    for (Map.Entry<String, HashSet<HRegionInfo>> e: servedRegions.entrySet()) {
-      String serverName = e.getKey();
-      if (online) {
-        LOG.debug("Already online");
-        continue;                             // Already being served
-      }
-
-      // Cause regions being served to be taken off-line and disabled
-
-      Map<byte [], HRegionInfo> localKillList =
-        new TreeMap<byte [], HRegionInfo>(Bytes.BYTES_COMPARATOR);
-      for (HRegionInfo i: e.getValue()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
+    synchronized (master.regionManager) {
+      for (Map.Entry<String, HashSet<HRegionInfo>> e: servedRegions.entrySet()) {
+        String serverName = e.getKey();
+        if (online) {
+          LOG.debug("Already online");
+          continue;                             // Already being served
         }
-        // this marks the regions to be closed
-        localKillList.put(i.getRegionName(), i);
-        // this marks the regions to be offlined once they are closed
-        master.regionManager.markRegionForOffline(i.getRegionName());
-      }
-      Map<byte [], HRegionInfo> killedRegions = 
-        master.regionManager.removeMarkedToClose(serverName);
-      if (killedRegions != null) {
-        localKillList.putAll(killedRegions);
-      }
-      if (localKillList.size() > 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("inserted local kill list into kill list for server " +
-              serverName);
+
+        // Cause regions being served to be taken off-line and disabled
+
+        for (HRegionInfo i: e.getValue()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
+          }
+          // this marks the regions to be closed
+          master.regionManager.setClosing(serverName, i, true);
         }
-        master.regionManager.markToCloseBulk(serverName, localKillList);
       }
     }
     servedRegions.clear();

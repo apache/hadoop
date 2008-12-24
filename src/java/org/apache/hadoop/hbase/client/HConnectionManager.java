@@ -177,7 +177,15 @@ public class HConnectionManager implements HConstants {
       return this.pause * HConstants.RETRY_BACKOFF[ntries];
     }
 
+    public void unsetRootRegionLocation() {
+      this.rootRegionLocation = null;
+    }
+    
     public void setRootRegionLocation(HRegionLocation rootRegion) {
+      if (rootRegion == null) {
+        throw new IllegalArgumentException(
+            "Cannot set root region location to null.");
+      }
       this.rootRegionLocation = rootRegion;
     }
     

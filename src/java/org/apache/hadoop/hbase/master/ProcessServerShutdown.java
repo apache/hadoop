@@ -113,7 +113,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         // region had been on shutdown server (could be null because we
         // missed edits in hlog because hdfs does not do write-append).
         String serverName = Writables.cellToString(values.get(COL_SERVER));
-        if (serverName.length() > 0 &&
+        if (serverName != null && serverName.length() > 0 &&
             deadServerName.compareTo(serverName) != 0) {
           // This isn't the server you're looking for - move along
           continue;
@@ -130,31 +130,33 @@ class ProcessServerShutdown extends RegionServerOperation {
           continue;
         }
 
-        if (info.isMetaTable()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("removing meta region " +
-              Bytes.toString(info.getRegionName()) +
+        synchronized (master.regionManager) {
+          if (info.isMetaTable()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("removing meta region " +
+                  Bytes.toString(info.getRegionName()) +
               " from online meta regions");
+            }
+            master.regionManager.offlineMetaRegion(info.getStartKey());
           }
-          master.regionManager.offlineMetaRegion(info.getStartKey());
-        }
 
-        ToDoEntry todo = new ToDoEntry(row, info);
-        toDoList.add(todo);
+          ToDoEntry todo = new ToDoEntry(row, info);
+          toDoList.add(todo);
 
-        if (master.regionManager.isMarkedToClose(deadServerName, info.getRegionName())) {
-          master.regionManager.noLongerMarkedToClose(deadServerName, info.getRegionName());
-          master.regionManager.noLongerUnassigned(info);
-          // Mark region offline
-          todo.regionOffline = true;
-        } else {
-          if (!info.isOffline() && !info.isSplit()) {
-            // Get region reassigned
-            regions.add(info);
+          if (master.regionManager.isOfflined(info.getRegionName()) ||
+              info.isOffline()) {
+            master.regionManager.removeRegion(info);
+            // Mark region offline
+            if (!info.isOffline()) {
+              todo.regionOffline = true;
+            }
+          } else {
+            if (!info.isOffline() && !info.isSplit()) {
+              // Get region reassigned
+              regions.add(info);
+            }
           }
         }
-        // If it was pending, remove.
-        master.regionManager.noLongerPending(info.getRegionName());
       }
     } finally {
       if(scannerId != -1L) {
@@ -184,7 +186,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     // Get regions reassigned
     for (HRegionInfo info: regions) {
-      master.regionManager.setUnassigned(info);
+      master.regionManager.setUnassigned(info, true);
     }
   }
 
@@ -252,11 +254,11 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
     
     if (this.rootRegionServer && !this.rootRegionReassigned) {
+      // avoid multiple root region reassignment 
+      this.rootRegionReassigned = true;
       // The server that died was serving the root region. Now that the log
       // has been split, get it reassigned.
       master.regionManager.reassignRootRegion();
-      // avoid multiple root region reassignment 
-      this.rootRegionReassigned = true;
       // When we call rootAvailable below, it will put us on the delayed
       // to do queue to allow some time to pass during which the root 
       // region will hopefully get reassigned.
@@ -307,7 +309,6 @@ class ProcessServerShutdown extends RegionServerOperation {
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
     }
-    master.regionManager.allRegionsClosed(deadServerName);
     master.serverManager.removeDeadServer(deadServerName);
     return true;
   }

@@ -93,7 +93,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  public long getProtocolVersion(String protocol, long clientVersion) {
+  public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
+      @SuppressWarnings("unused") long clientVersion) {
     return HBaseRPCProtocolVersion.versionID;
   }
 
@@ -531,8 +532,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * HMasterRegionInterface
    */
-  public MapWritable regionServerStartup(HServerInfo serverInfo)
-  throws IOException {
+  public MapWritable regionServerStartup(HServerInfo serverInfo) {
     // Set the address for now even tho it will not be persisted on
     // the HRS side.
     String rsAddress = HBaseServer.getRemoteAddress();
@@ -833,7 +833,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
-      this.regionManager.markToClose(servername, hri);
+      this.regionManager.setClosing(servername, hri, false);
       MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
       HRegionInterface srvr = getMETAServer(meta);
       HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);

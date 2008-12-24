@@ -337,79 +337,85 @@ abstract class BaseScanner extends Chore implements HConstants {
     final String serverName, final long startCode) 
   throws IOException {
     
-    // Skip region - if ...
-    if(info.isOffline()                                 // offline
-      || regionManager.isClosing(info.getRegionName())) { // queued for offline
+    synchronized (regionManager) {
+      // Skip region - if ...
+      if(info.isOffline()                                 // offline
+          || regionManager.isOfflined(info.getRegionName())) { // queued for offline
 
-      regionManager.noLongerUnassigned(info);
-      regionManager.noLongerPending(info.getRegionName());
-      return;
-    }
-    HServerInfo storedInfo = null;
-    boolean deadServer = false;
-    if (serverName.length() != 0) {
-      
-      if (regionManager.isMarkedToClose(serverName, info.getRegionName())) {
-        // Skip if region is on kill list
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("not assigning region (on kill list): " +
-            info.getRegionNameAsString());
-        }
+        regionManager.removeRegion(info);
         return;
       }
-      
-      storedInfo = master.serverManager.getServerInfo(serverName);
-      deadServer = master.serverManager.isDead(serverName);
-    }
+      HServerInfo storedInfo = null;
+      boolean deadServer = false;
+      if (serverName.length() != 0) {
 
-    /*
-     * If the server is a dead server or its startcode is off -- either null
-     * or doesn't match the start code for the address -- then add it to the
-     * list of unassigned regions IF not already there (or pending open).
-     */ 
-    if (!deadServer && !regionManager.isUnassigned(info) &&
-          !regionManager.isPending(info.getRegionName())
-        && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
-      // The current assignment is invalid
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Current assignment of " +
-          info.getRegionNameAsString() +
-          " is not valid: serverInfo: " + storedInfo + ", passed startCode: " +
-          startCode + ", storedInfo.startCode: " +
-          ((storedInfo != null)? storedInfo.getStartCode(): -1) +
-          ", unassignedRegions: " + 
-          regionManager.isUnassigned(info) +
-          ", pendingRegions: " +
-          regionManager.isPending(info.getRegionName()));
-      }
-      // Recover the region server's log if there is one.
-      // This is only done from here if we are restarting and there is stale
-      // data in the meta region. Once we are on-line, dead server log
-      // recovery is handled by lease expiration and ProcessServerShutdown
-      if (!regionManager.isInitialMetaScanComplete() && serverName.length() != 0) {
-        StringBuilder dirName = new StringBuilder("log_");
-        dirName.append(serverName.replace(":", "_"));
-        Path logDir = new Path(master.rootdir, dirName.toString());
-        try {
-          if (master.fs.exists(logDir)) {
-            regionManager.splitLogLock.lock();
-            try {
-              HLog.splitLog(master.rootdir, logDir, master.fs,
-                master.getConfiguration());
-            } finally {
-              regionManager.splitLogLock.unlock();
-            }
+        if (regionManager.isOfflined(info.getRegionName())) {
+          // Skip if region is on kill list
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("not assigning region (on kill list): " +
+                info.getRegionNameAsString());
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Split " + logDir.toString());
-          }
-        } catch (IOException e) {
-          LOG.warn("unable to split region server log because: ", e);
-          throw e;
+          return;
         }
+
+        storedInfo = master.serverManager.getServerInfo(serverName);
+        deadServer = master.serverManager.isDead(serverName);
       }
-      // Now get the region assigned
-      regionManager.setUnassigned(info);
+
+      /*
+       * If the server is a dead server or its startcode is off -- either null
+       * or doesn't match the start code for the address -- then add it to the
+       * list of unassigned regions IF not already there (or pending open).
+       */ 
+      if ((deadServer || 
+          (storedInfo == null || storedInfo.getStartCode() != startCode)) &&
+          (!regionManager.isUnassigned(info) &&
+              !regionManager.isPending(info.getRegionName()) &&
+              !regionManager.isAssigned(info.getRegionName()))) {
+
+        // The current assignment is invalid
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Current assignment of " +
+              info.getRegionNameAsString() +
+              " is not valid." +
+              (storedInfo == null ? " Server '" + serverName + "' unknown." :
+                " serverInfo: " + storedInfo + ", passed startCode: " +
+                startCode + ", storedInfo.startCode: " + storedInfo.getStartCode()) +
+          " Region is not unassigned, assigned or pending");
+        }
+
+        // Recover the region server's log if there is one.
+        // This is only done from here if we are restarting and there is stale
+        // data in the meta region. Once we are on-line, dead server log
+        // recovery is handled by lease expiration and ProcessServerShutdown
+
+        if (!regionManager.isInitialMetaScanComplete() &&
+            serverName.length() != 0) {
+          StringBuilder dirName = new StringBuilder("log_");
+          dirName.append(serverName.replace(":", "_"));
+          Path logDir = new Path(master.rootdir, dirName.toString());
+          try {
+            if (master.fs.exists(logDir)) {
+              regionManager.splitLogLock.lock();
+              try {
+                HLog.splitLog(master.rootdir, logDir, master.fs,
+                    master.getConfiguration());
+              } finally {
+                regionManager.splitLogLock.unlock();
+              }
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Split " + logDir.toString());
+            }
+          } catch (IOException e) {
+            LOG.warn("unable to split region server log because: ", e);
+            throw e;
+          }
+        }
+        // Now get the region assigned
+        regionManager.setUnassigned(info, true);
+      }
     }
   }
   

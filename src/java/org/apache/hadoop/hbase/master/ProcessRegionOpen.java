@@ -94,26 +94,28 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
             this.historian.online(this.master.getConfiguration());
           }
           this.historian.addRegionOpen(regionInfo, serverAddress);
-          if (isMetaTable) {
-            // It's a meta region.
-            MetaRegion m = new MetaRegion(new HServerAddress(serverAddress),
-                regionInfo.getRegionName(), regionInfo.getStartKey());
-            if (!master.regionManager.isInitialMetaScanComplete()) {
-              // Put it on the queue to be scanned for the first time.
-              LOG.debug("Adding " + m.toString() + " to regions to scan");
-              master.regionManager.addMetaRegionToScan(m);
-            } else {
-              // Add it to the online meta regions
-              LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-              master.regionManager.putMetaRegionOnline(m);
-              // Interrupting the Meta Scanner sleep so that it can
-              // process regions right away
-              master.regionManager.metaScannerThread.interrupt();
+          synchronized (master.regionManager) {
+            if (isMetaTable) {
+              // It's a meta region.
+              MetaRegion m = new MetaRegion(new HServerAddress(serverAddress),
+                  regionInfo.getRegionName(), regionInfo.getStartKey());
+              if (!master.regionManager.isInitialMetaScanComplete()) {
+                // Put it on the queue to be scanned for the first time.
+                LOG.debug("Adding " + m.toString() + " to regions to scan");
+                master.regionManager.addMetaRegionToScan(m);
+              } else {
+                // Add it to the online meta regions
+                LOG.debug("Adding to onlineMetaRegions: " + m.toString());
+                master.regionManager.putMetaRegionOnline(m);
+                // Interrupting the Meta Scanner sleep so that it can
+                // process regions right away
+                master.regionManager.metaScannerThread.interrupt();
+              }
             }
+            // If updated successfully, remove from pending list.
+            master.regionManager.removeRegion(regionInfo);
+            return true;
           }
-          // If updated successfully, remove from pending list.
-          master.regionManager.noLongerPending(regionInfo.getRegionName());
-          return true;
         }
     }.doWithRetries();
     return result == null ? true : result;
