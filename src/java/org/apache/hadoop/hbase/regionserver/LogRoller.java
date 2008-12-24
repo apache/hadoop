@@ -69,6 +69,9 @@ class LogRoller extends Thread implements LogRollListener {
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);
         server.abort();
+      } catch (java.net.ConnectException e) {
+        LOG.fatal("Forcing server shutdown", e);
+        server.abort();
       } catch (IOException ex) {
         LOG.error("Log rolling failed with ioe: ",
             RemoteExceptionHandler.checkIOException(ex));
