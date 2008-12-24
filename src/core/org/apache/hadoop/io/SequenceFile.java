@@ -1414,7 +1414,7 @@ public class SequenceFile {
 
     private Reader(FileSystem fs, Path file, int bufferSize,
                    Configuration conf, boolean tempReader) throws IOException {
-      this(fs, file, bufferSize, 0, fs.getFileStatus(file).getLen(), conf, tempReader);
+      this(fs, file, bufferSize, 0, fs.getLength(file), conf, tempReader);
     }
     
     private Reader(FileSystem fs, Path file, int bufferSize, long start,
@@ -2605,8 +2605,8 @@ public class SequenceFile {
       //get the segments from inNames
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
       for (int i = 0; i < inNames.length; i++) {
-        SegmentDescriptor s = new SegmentDescriptor(0,
-            fs.getFileStatus(inNames[i]).getLen(), inNames[i]);
+        SegmentDescriptor s = new SegmentDescriptor(0, 
+                                                    fs.getLength(inNames[i]), inNames[i]);
         s.preserveInput(!deleteInputs);
         s.doSync();
         a.add(s);
@@ -2634,8 +2634,8 @@ public class SequenceFile {
       //get the segments from inNames
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
       for (int i = 0; i < inNames.length; i++) {
-        SegmentDescriptor s = new SegmentDescriptor(0,
-            fs.getFileStatus(inNames[i]).getLen(), inNames[i]);
+        SegmentDescriptor s = new SegmentDescriptor(0, 
+                                                    fs.getLength(inNames[i]), inNames[i]);
         s.preserveInput(!deleteInputs);
         s.doSync();
         a.add(s);
@@ -2951,8 +2951,7 @@ public class SequenceFile {
             this.close();
             
             SegmentDescriptor tempSegment = 
-              new SegmentDescriptor(0,
-                  fs.getFileStatus(outputFile).getLen(), outputFile);
+              new SegmentDescriptor(0, fs.getLength(outputFile), outputFile);
             //put the segment back in the TreeMap
             sortedSegmentSizes.put(tempSegment, null);
             numSegments = sortedSegmentSizes.size();
@@ -3169,7 +3168,7 @@ public class SequenceFile {
       public SegmentContainer(Path inName, Path indexIn) throws IOException {
         //get the segments from indexIn
         FSDataInputStream fsIndexIn = fs.open(indexIn);
-        long end = fs.getFileStatus(indexIn).getLen();
+        long end = fs.getLength(indexIn);
         while (fsIndexIn.getPos() < end) {
           long segmentOffset = WritableUtils.readVLong(fsIndexIn);
           long segmentLength = WritableUtils.readVLong(fsIndexIn);

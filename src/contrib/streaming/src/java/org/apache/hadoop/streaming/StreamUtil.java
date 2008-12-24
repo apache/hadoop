@@ -319,7 +319,7 @@ public class StreamUtil {
   }
 
   static String slurpHadoop(Path p, FileSystem fs) throws IOException {
-    int len = (int) fs.getFileStatus(p).getLen();
+    int len = (int) fs.getLength(p);
     byte[] buf = new byte[len];
     FSDataInputStream in = fs.open(p);
     String contents = null;

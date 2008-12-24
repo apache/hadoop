@@ -17,33 +17,22 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.Closeable;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import javax.security.auth.login.LoginException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+import org.apache.commons.logging.*;
+
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -540,6 +529,19 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
+  
+  /**
+   * Get replication.
+   * 
+   * @deprecated Use getFileStatus() instead
+   * @param src file name
+   * @return file replication
+   * @throws IOException
+   */ 
+  @Deprecated
+  public short getReplication(Path src) throws IOException {
+    return getFileStatus(src).getReplication();
+  }
 
   /**
    * Set replication for an existing file.
@@ -561,6 +563,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract boolean rename(Path src, Path dst) throws IOException;
     
+  /** Delete a file. */
+  /** @deprecated Use delete(Path, boolean) instead */ @Deprecated 
+  public abstract boolean delete(Path f) throws IOException;
+  
   /** Delete a file.
    *
    * @param f the path to delete.
@@ -642,6 +648,12 @@ public abstract class FileSystem extends Configured implements Closeable {
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
+  }
+    
+  /** The number of bytes in a file. */
+  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  public long getLength(Path f) throws IOException {
+    return getFileStatus(f).getLen();
   }
     
   /** Return the {@link ContentSummary} of a given {@link Path}. */
@@ -1212,6 +1224,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     return used;
   }
 
+  /**
+   * Get the block size for a particular file.
+   * @param f the filename
+   * @return the number of bytes in a block
+   */
+  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  public long getBlockSize(Path f) throws IOException {
+    return getFileStatus(f).getBlockSize();
+  }
+    
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
   public long getDefaultBlockSize() {

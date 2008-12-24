@@ -22,7 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import junit.framework.Test;
 import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import junit.extensions.TestSetup;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -114,7 +117,7 @@ public class TestTotalOrderPartitioner extends TestCase {
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(job).delete(p);
     }
   }
 
@@ -134,7 +137,7 @@ public class TestTotalOrderPartitioner extends TestCase {
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(job).delete(p);
     }
   }
 
@@ -181,7 +184,7 @@ public class TestTotalOrderPartitioner extends TestCase {
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(job).delete(p);
     }
   }
 

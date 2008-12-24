@@ -18,23 +18,17 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.BufferedOutputStream;
-import java.io.DataOutput;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.StringTokenizer;
+import java.nio.channels.FileLock;
+import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -256,6 +250,11 @@ public class RawLocalFileSystem extends FileSystem {
       return true;
     }
     return FileUtil.copy(this, src, this, dst, true, getConf());
+  }
+  
+  @Deprecated
+  public boolean delete(Path p) throws IOException {
+    return delete(p, true);
   }
   
   public boolean delete(Path p, boolean recursive) throws IOException {

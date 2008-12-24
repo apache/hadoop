@@ -18,18 +18,15 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.text.DecimalFormat;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.RandomWriter;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -39,6 +36,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 
@@ -157,7 +155,7 @@ public class UtilsForTests {
   }
 
   static String slurpHadoop(Path p, FileSystem fs) throws IOException {
-    int len = (int) fs.getFileStatus(p).getLen();
+    int len = (int) fs.getLength(p);
     byte[] buf = new byte[len];
     InputStream in = fs.open(p);
     String contents = null;
