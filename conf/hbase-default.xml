@@ -225,6 +225,12 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.safemode.period</name>
+    <value>120000</value>
+    <description>Time to wait on regionserver startup before beginning
+    compactions and memcache flushes.</description>
+  </property>
+  <property>
     <name>hbase.hregion.memcache.flush.size</name>
     <value>67108864</value>
     <description>

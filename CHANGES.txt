@@ -190,6 +190,7 @@ Release 0.19.0 - Unreleased
    HBASE-1069  Show whether HRegion major compacts or not in INFO level
    HBASE-1066  Master should support close/open/reassignment/enable/disable
                operations on individual regions
+   HBASE-1062  Compactions at (re)start on a large table can overwhelm DFS
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]
