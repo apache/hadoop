@@ -521,7 +521,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     join();
 
-    runThread(this.hdfsShutdownThread);
+    runThread(this.hdfsShutdownThread,
+      this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
@@ -529,12 +530,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run and wait on passed thread in HRS context.
    * @param t
    */
-  public void runThread(final Thread t) {
+  public void runThread(final Thread t, final long dfsShutdownWait) {
     if (t ==  null) {
       return;
     }
     t.start();
-    Threads.shutdown(t);
+    Threads.shutdown(t, dfsShutdownWait);
   }
 
   /**

@@ -63,11 +63,24 @@ public class Threads {
    * @param t Thread to shutdown
    */
   public static void shutdown(final Thread t) {
+    shutdown(t, -1);
+  }
+
+  /**
+   * Shutdown passed thread using isAlive and join.
+   * @param joinwait Pass -1 if we're to wait forever.
+   * @param t Thread to shutdown
+   */
+  public static void shutdown(final Thread t, final long joinwait) {
     while (t.isAlive()) {
       try {
-        t.join();
+        if (joinwait == -1) {
+          t.join();
+        } else {
+          t.join(joinwait);
+        }
       } catch (InterruptedException e) {
-        LOG.warn(t.getName(), e);
+        LOG.warn(t.getName() + "; joinwait=" + joinwait, e);
       }
     }
   }
