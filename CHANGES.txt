@@ -4,7 +4,7 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-4895. Removes deprecated methods DFSClient.getHints(..) and
+    HADOOP-4895. Remove deprecated methods DFSClient.getHints(..) and
     DFSClient.isDirectory(..).  (szetszwo)
 
   NEW FEATURES
@@ -305,6 +305,9 @@ Release 0.20.0 - Unreleased
     use of the JobContext instead of Configuration. (omalley)
 
     HADOOP-4920.  Stop storing Forrest output in Subversion. (cutting)
+
+    HADOOP-4948. Add parameters java5.home and forrest.home to the ant commands
+    in test-patch.sh.  (Giridharan Kesavan via szetszwo)
 
   OPTIMIZATIONS
 
