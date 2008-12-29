@@ -801,8 +801,8 @@ class RegionManager implements HConstants {
         return;
       }
       s = new RegionState(regionInfo);
-      regionsInTransition.put(regionInfo.getRegionName(), s);
       s.setClosing(serverName, setOffline);
+      regionsInTransition.put(regionInfo.getRegionName(), s);
     }
   }
   
@@ -1004,18 +1004,23 @@ class RegionManager implements HConstants {
     }
   }
   
+  /*
+   * State of a Region.
+   * Used while regions are making transitions from unassigned to assigned to
+   * opened, etc.
+   */
   private static class RegionState implements Comparable<RegionState> {
-    private final byte[] regionName;
+    private final byte [] regionName;
     private HRegionInfo regionInfo = null;
-    private boolean unassigned = false;
-    private boolean assigned = false;
-    private boolean pending = false;
-    private boolean closing = false;
-    private boolean closed = false;
-    private boolean offlined = false;
+    private volatile boolean unassigned = false;
+    private volatile boolean assigned = false;
+    private volatile boolean pending = false;
+    private volatile boolean closing = false;
+    private volatile boolean closed = false;
+    private volatile boolean offlined = false;
     private String serverName = null;
     
-    RegionState(byte[] regionName) {
+    RegionState(byte [] regionName) {
       this.regionName = regionName;
     }
     
