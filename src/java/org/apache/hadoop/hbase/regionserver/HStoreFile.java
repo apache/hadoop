@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.io.BloomFilterMapFile;
 import org.apache.hadoop.hbase.io.HalfMapFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.hbase.io.MapFile;
+import org.apache.hadoop.hbase.io.SequenceFile;
 
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They

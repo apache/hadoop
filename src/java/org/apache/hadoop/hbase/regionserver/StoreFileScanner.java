@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.hbase.io.MapFile;
 
 /**
  * A scanner that iterates through HStore files

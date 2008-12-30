@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.hbase.io.MapFile;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

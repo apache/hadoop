@@ -125,6 +125,8 @@ Release 0.19.0 - Unreleased
    HBASE-1191  shell tools -> close_region does not work for regions that did
                not deploy properly on startup
    HBASE-1093  NPE in HStore#compact
+   HBASE-1097  SequenceFile.Reader keeps around buffer whose size is that of
+               largest item read -> results in lots of dead heap
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

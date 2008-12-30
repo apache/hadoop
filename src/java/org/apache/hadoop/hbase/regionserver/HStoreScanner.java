@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.hbase.io.MapFile;
 
 /**
  * Scanner scans both the memcache and the HStore

@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.hbase.io.MapFile;
+import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
