@@ -497,6 +497,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4896. HDFS Fsck does not load HDFS configuration. (Raghu Angadi)
 
+    HADOOP-4956. Creates TaskStatus for failed tasks with an empty Counters 
+    object instead of null. (ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

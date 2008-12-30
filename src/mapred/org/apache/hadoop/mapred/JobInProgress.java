@@ -2340,7 +2340,7 @@ class JobInProgress {
                                                     reason,
                                                     reason,
                                                     trackerName, phase,
-                                                    null);
+                                                    new Counters());
     status.setFinishTime(System.currentTimeMillis());
     updateTaskStatus(tip, status, metrics);
     JobHistory.Task.logFailed(tip.getTIPId(), 
