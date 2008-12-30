@@ -1628,6 +1628,9 @@ Release 0.18.3 - Unreleased
     HADOOP-1980. 'dfsadmin -safemode enter' should prevent the namenode from
     leaving safemode automatically. (shv & Raghu Angadi)
 
+    HADOOP-4951. Lease monitor should acquire the LeaseManager lock but not the
+    Monitor lock. (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
