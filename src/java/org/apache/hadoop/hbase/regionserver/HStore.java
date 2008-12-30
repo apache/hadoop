@@ -866,6 +866,10 @@ public class HStore implements HConstants {
       for (int i = 0; i < countOfFiles; i++) {
         HStoreFile file = filesToCompact.get(i);
         Path path = file.getMapFilePath();
+        if (path == null) {
+          LOG.warn("Path is null for " + file);
+          return null;
+        }
         int len = 0;
         for (FileStatus fstatus:fs.listStatus(path)) {
           len += fstatus.getLen();
