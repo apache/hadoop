@@ -111,4 +111,11 @@
     <name>hadoop.log.dir</name>
     <value>${user.dir}/../logs</value>
   </property>
+  <property>
+    <name>hbase.regionserver.safemode.period</name>
+    <value>0</value>
+    <description>Time to wait on regionserver startup before beginning
+    compactions and memcache flushes.
+    </description>
+  </property>
 </configuration>
