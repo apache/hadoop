@@ -558,8 +558,7 @@ public class HStore implements HConstants {
    */
   private boolean isEmptyFile(final Path f)
   throws IOException {
-    return this.fs.exists(f) &&
-      this.fs.getFileStatus(f).getLen() == 0;
+    return !this.fs.exists(f) || this.fs.getFileStatus(f).getLen() == 0;
   }
 
   /**
