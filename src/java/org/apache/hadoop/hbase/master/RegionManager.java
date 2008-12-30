@@ -405,12 +405,10 @@ class RegionManager implements HConstants {
   private void unassignSomeRegions(final String serverName,
       final HServerLoad load, final double avgLoad,
       final HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
-    
     int numRegionsToClose = load.getNumberOfRegions() - (int)Math.ceil(avgLoad);
     LOG.debug("Choosing to reassign " + numRegionsToClose 
       + " regions. mostLoadedRegions has " + mostLoadedRegions.length 
       + " regions in it.");
-    
     int regionIdx = 0;
     int regionsClosed = 0;
     int skipped = 0;
@@ -422,14 +420,12 @@ class RegionManager implements HConstants {
       if (currentRegion.isRootRegion() || currentRegion.isMetaTable()) {
         continue;
       }
-      
       byte[] regionName = currentRegion.getRegionName();
       if (isClosing(regionName) || isUnassigned(currentRegion) ||
           isAssigned(regionName) || isPending(regionName)) {
         skipped++;
         continue;
       }
-      
       LOG.debug("Going to close region " +
         currentRegion.getRegionNameAsString());
       // make a message to close the region
@@ -788,21 +784,33 @@ class RegionManager implements HConstants {
    * @param regionInfo
    * @param setOffline
    */
-  public void setClosing(String serverName, HRegionInfo regionInfo,
-      boolean setOffline) {
-    synchronized (regionsInTransition) {
-      RegionState s = regionsInTransition.get(regionInfo.getRegionName());
-      if (s != null) {
+  public void setClosing(final String serverName, final HRegionInfo regionInfo,
+      final boolean setOffline) {
+    setClosing(serverName, regionInfo, setOffline, true);
+  }
+
+  /**
+   * Mark a region as closing 
+   * @param serverName
+   * @param regionInfo
+   * @param setOffline
+   * @param check False if we are to skip state transition check.
+   */
+  void setClosing(final String serverName, final HRegionInfo regionInfo,
+      final boolean setOffline, final boolean check) {
+    synchronized (this.regionsInTransition) {
+      RegionState s = this.regionsInTransition.get(regionInfo.getRegionName());
+      if (check && s != null) {
         if (!s.isClosing()) {
           throw new IllegalStateException(
-              "Cannot transition to closing from any other state. Region: " +
-              Bytes.toString(regionInfo.getRegionName()));
+            "Cannot transition to closing from any other state. Region: " +
+            Bytes.toString(regionInfo.getRegionName()));
         }
         return;
       }
       s = new RegionState(regionInfo);
       s.setClosing(serverName, setOffline);
-      regionsInTransition.put(regionInfo.getRegionName(), s);
+      this.regionsInTransition.put(regionInfo.getRegionName(), s);
     }
   }
   

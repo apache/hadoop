@@ -116,7 +116,6 @@ class ChangeTableState extends TableOperation {
         }
 
         // Cause regions being served to be taken off-line and disabled
-
         for (HRegionInfo i: e.getValue()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");

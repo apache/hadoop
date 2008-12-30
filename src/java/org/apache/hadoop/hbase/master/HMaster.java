@@ -792,6 +792,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("modifyTable(SET_HTD): " + htd);
       new ModifyTableMeta(this, tableName, htd).process();
       break;
+
     case MODIFY_TABLE_SPLIT:
     case MODIFY_TABLE_COMPACT:
       if (args != null && args.length > 0) {
@@ -833,7 +834,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
-      this.regionManager.setClosing(servername, hri, false);
+      this.regionManager.setClosing(servername, hri, hri.isOffline(), false);
       MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
       HRegionInterface srvr = getMETAServer(meta);
       HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);
