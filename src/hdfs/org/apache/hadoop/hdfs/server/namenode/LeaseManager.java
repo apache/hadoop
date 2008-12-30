@@ -354,37 +354,36 @@ public class LeaseManager {
         }
       }
     }
-    
-    /** Check the leases beginning from the oldest. */
-    private synchronized void checkLeases() {
-      for(; sortedLeases.size() > 0; ) {
-        final Lease oldest = sortedLeases.first();
-        if (!oldest.expiredHardLimit()) {
-          return;
-        }
+  }
 
-        LOG.info(name + ": Lease " + oldest + " has expired hard limit");
+  /** Check the leases beginning from the oldest. */
+  private synchronized void checkLeases() {
+    for(; sortedLeases.size() > 0; ) {
+      final Lease oldest = sortedLeases.first();
+      if (!oldest.expiredHardLimit()) {
+        return;
+      }
 
-        final List<String> removing = new ArrayList<String>();
-        for(String p : oldest.getPaths()) {
-          try {
-            fsnamesystem.internalReleaseLease(oldest, p);
-          } catch (IOException e) {
-            LOG.error("In " + name + ", cannot release the path " + p
-                + " in the lease " + oldest, e);
-            removing.add(p);
-          }
-        }
+      LOG.info("Lease " + oldest + " has expired hard limit");
 
-        for(String p : removing) {
-          removeLease(oldest, p);
+      final List<String> removing = new ArrayList<String>();
+      for(String p : oldest.getPaths()) {
+        try {
+          fsnamesystem.internalReleaseLease(oldest, p);
+        } catch (IOException e) {
+          LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
+          removing.add(p);
         }
+      }
+
+      for(String p : removing) {
+        removeLease(oldest, p);
       }
     }
   }
 
   /** {@inheritDoc} */
-  public String toString() {
+  public synchronized String toString() {
     return getClass().getSimpleName() + "= {"
         + "\n leases=" + leases
         + "\n sortedLeases=" + sortedLeases
