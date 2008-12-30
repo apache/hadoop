@@ -355,42 +355,40 @@ class LeaseManager {
         }
       }
     }
+  }
 
-    /** Check the leases beginning from the oldest. */
-    private synchronized void checkLeases() {
-      for(; sortedLeases.size() > 0; ) {
-        final Lease oldest = sortedLeases.first();
-        if (!oldest.expiredHardLimit()) {
-          return;
+  /** Check the leases beginning from the oldest. */
+  private synchronized void checkLeases() {
+    for(; sortedLeases.size() > 0; ) {
+      final Lease oldest = sortedLeases.first();
+      if (!oldest.expiredHardLimit()) {
+        return;
+      }
+
+      LOG.info("Lease " + oldest + " has expired hard limit");
+
+      final List<StringBytesWritable> removing = new ArrayList<StringBytesWritable>();
+      for(StringBytesWritable p : oldest.getPaths()) {
+        try {
+          fsnamesystem.internalReleaseLease(oldest, p.getString());
+        } catch (IOException e) {
+          LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
+          removing.add(p);
         }
+      }
 
-        LOG.info(name + ": Lease " + oldest + " has expired hard limit");
-
-        final List<StringBytesWritable> removing = new ArrayList<StringBytesWritable>();
-        for(StringBytesWritable p : oldest.getPaths()) {
-          try {
-            fsnamesystem.internalReleaseLease(oldest, p.getString());
-          } catch (IOException e) {
-            LOG.error("In " + name + ", cannot release the path " + p
-                + " in the lease " + oldest, e);
-            removing.add(p);
-          }
-        }
-
-        for(StringBytesWritable p : removing) {
-          try {
-            removeLease(oldest, p.getString());
-          } catch (IOException e) {
-            LOG.error("In " + name + ", cannot removeLease: oldest="
-                + oldest + ", p=" + p, e);
-          }
+      for(StringBytesWritable p : removing) {
+        try {
+          removeLease(oldest, p.getString());
+        } catch (IOException e) {
+          LOG.error("Cannot removeLease: oldest=" + oldest + ", p=" + p, e);
         }
       }
     }
   }
 
   /** {@inheritDoc} */
-  public String toString() {
+  public synchronized String toString() {
     return getClass().getSimpleName() + "= {"
         + "\n leases=" + leases
         + "\n sortedLeases=" + sortedLeases
