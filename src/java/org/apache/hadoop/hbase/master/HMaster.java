@@ -420,7 +420,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Main processing loop: " + op.toString());
+        LOG.debug("Processing todo: " + op.toString());
       }
       
       // perform the operation. 

@@ -1073,8 +1073,8 @@ class RegionManager implements HConstants {
     synchronized void setAssigned(String serverName) {
       if (!this.unassigned) {
         throw new IllegalStateException(
-            "Cannot assign a region that is not currently unassigned. Region: " +
-            Bytes.toString(regionName));
+            "Cannot assign a region that is not currently unassigned. " +
+            "State: " + toString());
       }
       this.unassigned = false;
       this.assigned = true;
@@ -1090,8 +1090,8 @@ class RegionManager implements HConstants {
     synchronized void setPending() {
       if (!assigned) {
         throw new IllegalStateException(
-            "Cannot set a region as pending if it has not been assigned. Region: " +
-            Bytes.toString(regionName));
+            "Cannot set a region as pending if it has not been assigned. " +
+            "State: " + toString());
       }
       this.unassigned = false;
       this.assigned = false;
@@ -1120,8 +1120,9 @@ class RegionManager implements HConstants {
       if (!closing) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
-            " closing. Region: " + Bytes.toString(regionName));
+            " closing. State: " + toString());
       }
+      this.closing = false;
       this.closed = true;
     }
     
@@ -1131,10 +1132,10 @@ class RegionManager implements HConstants {
 
     @Override
     public synchronized String toString() {
-      return "region name: " + Bytes.toString(this.regionName) +
-          ", isUnassigned: " + this.unassigned + ", isAssigned: " +
-          this.assigned + ", isPending: " + this.pending + ", isClosing: " +
-          this.closing + ", isClosed: " + this.closed + ", isOfflined: " +
+      return "name=" + Bytes.toString(this.regionName) +
+          ", isUnassigned=" + this.unassigned + ", isAssigned=" +
+          this.assigned + ", isPending=" + this.pending + ", isClosing=" +
+          this.closing + ", isClosed=" + this.closed + ", isOfflined=" +
           this.offlined;
     }
     
