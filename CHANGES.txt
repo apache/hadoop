@@ -124,6 +124,9 @@ Release 0.18.3 - Unreleased
     HADOOP-3780. Fixes a problem to do with NPE due to nodes not being
     resolved by the resolution thread in time. (Ravia Gummadi via ddas)
 
+    HADOOP-4935. processMisReplicatedBlocks() should not clear 
+    excessReplicateMap. (shv)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
