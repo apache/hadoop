@@ -38,7 +38,6 @@ public class TestForceSplit extends HBaseClusterTestCase {
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] columnName = Bytes.toBytes("a:");
   private static final byte[] key_mmi = Bytes.toBytes("mmi");
-  private static final byte[] key_ssm = Bytes.toBytes("ssm");
 
   protected void setUp() throws Exception {
     super.setUp();
@@ -95,30 +94,6 @@ public class TestForceSplit extends HBaseClusterTestCase {
         assertTrue(Bytes.equals(end, key_mmi));
       if (Bytes.equals(end, key_mmi))
         assertTrue(Bytes.equals(start, HConstants.EMPTY_BYTE_ARRAY));
-    }
-
-    // tell the master to split the table again, the second half
-    admin.modifyTable(tableName, HConstants.MODIFY_TABLE_SPLIT, key_mmi);
-
-    // give some time for the split to happen
-    Thread.sleep(15 * 1000);
-
-    // check again
-    table = new HTable(conf, tableName);
-    m = table.getRegionsInfo();
-    System.out.println("Regions after split (" + m.size() + "): " + m);
-    // should have three regions now
-    assertTrue(m.size() == 3);
-    // and "mmi" and "ssm" should be the midpoints
-    for (HRegionInfo hri: m.keySet()) {
-      byte[] start = hri.getStartKey();
-      byte[] end = hri.getEndKey();
-      if (Bytes.equals(start, HConstants.EMPTY_BYTE_ARRAY))
-        assertTrue(Bytes.equals(end, key_mmi));
-      if (Bytes.equals(start, key_mmi))
-        assertTrue(Bytes.equals(end, key_ssm));
-      if (Bytes.equals(start, key_ssm))
-        assertTrue(Bytes.equals(end, HConstants.EMPTY_BYTE_ARRAY));
     }
   }
 }
