@@ -228,7 +228,11 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
         batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
       
       table.commit(batchUpdate);
-      
+
+      assertTrue(table.exists(row));
+      for(int i = 0; i < 5; i++)
+        assertTrue(table.exists(row, Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+
       RowResult result = null;
       result = table.getRow(row,  new byte[][] {COLUMN_FAMILY});
       for(int i = 0; i < 5; i++)

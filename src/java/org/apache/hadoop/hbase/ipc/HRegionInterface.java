@@ -191,7 +191,21 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
     long timestamp, long lockId) 
   throws IOException;
 
-  
+  /**
+   * Returns true if any cells exist for the given coordinate.
+   * 
+   * @param regionName The name of the region
+   * @param row The row
+   * @param column The column, or null for any
+   * @param timestamp The timestamp, or LATEST_TIMESTAMP for any
+   * @param lockId lock id
+   * @return true if the row exists, false otherwise
+   * @throws IOException
+   */
+  public boolean exists(byte [] regionName, byte [] row, byte [] column, 
+    long timestamp, long lockID)
+  throws IOException;
+
   //
   // remote scanner interface
   //

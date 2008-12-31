@@ -1774,6 +1774,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         getLockFromId(lockId));
   }
 
+  public boolean exists(byte[] regionName, byte[] row, byte[] column,
+      long timestamp, long lockId)
+  throws IOException {
+    return getRegion(regionName).exists(row, column, timestamp, 
+      getLockFromId(lockId));
+  }
+
   public long lockRow(byte [] regionName, byte [] row)
   throws IOException {
     checkOpen();

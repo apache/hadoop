@@ -1501,7 +1501,36 @@ public class HRegion implements HConstants {
       update(edits);
     }
   }
-    
+
+  /**
+   * Tests for the existence of any cells for a given coordinate.
+   * 
+   * @param row the row
+   * @param column the column, or null
+   * @param timestamp the timestamp, or HConstants.LATEST_VERSION for any
+   * @param lockid the existing lock, or null 
+   * @return true if cells exist for the row, false otherwise
+   * @throws IOException
+   */
+  public boolean exists(final byte[] row, final byte[] column, 
+    final long timestamp, final Integer lockid) 
+  throws IOException {
+    checkRow(row);
+    Integer lid = getLock(lockid, row);
+    try {
+      HStoreKey origin;
+      if (column != null) {
+        origin = new HStoreKey(row, column, timestamp);
+      } else {
+        origin = new HStoreKey(row, timestamp);
+      }
+      return !getKeys(origin, 1).isEmpty();
+    } finally {
+      if (lockid == null)
+        releaseRowLock(lid);
+    }
+  }
+
   /**
    * @throws IOException Throws exception if region is in read-only mode.
    */

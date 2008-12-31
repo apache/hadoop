@@ -1208,6 +1208,70 @@ public class HTable {
   }
 
   /**
+   * Test for the existence of a row in the table.
+   * 
+   * @param row The row
+   * @return true if the row exists, false otherwise
+   * @throws IOException
+   */
+  public boolean exists(final byte [] row) throws IOException {
+    return exists(row, null, HConstants.LATEST_TIMESTAMP, null);
+  }
+
+  /**
+   * Test for the existence of a row and column in the table.
+   * 
+   * @param row The row
+   * @param column The column
+   * @return true if the row exists, false otherwise
+   * @throws IOException
+   */
+  public boolean exists(final byte [] row, final byte[] column)
+  throws IOException {
+    return exists(row, column, HConstants.LATEST_TIMESTAMP, null);
+  }
+
+  /**
+   * Test for the existence of a coordinate in the table.
+   * 
+   * @param row The row
+   * @param column The column
+   * @param timestamp The timestamp
+   * @return true if the specified coordinate exists
+   * @throws IOException
+   */
+  public boolean exists(final byte [] row, final byte [] column,
+      long timestamp) throws IOException {
+    return exists(row, column, timestamp, null);
+  }
+
+  /**
+   * Test for the existence of a coordinate in the table.
+   * 
+   * @param row The row
+   * @param column The column
+   * @param timestamp The timestamp
+   * @param rl Existing row lock
+   * @return true if the specified coordinate exists
+   * @throws IOException
+   */
+  public boolean exists(final byte [] row, final byte [] column,
+      final long timestamp, final RowLock rl) throws IOException {
+    return connection.getRegionServerWithRetries(
+      new ServerCallable<Boolean>(connection, tableName, row) {
+        public Boolean call() throws IOException {
+          long lockId = -1L;
+          if (rl != null) {
+            lockId = rl.getLockId();
+          }
+          return server.exists(location.getRegionInfo().getRegionName(), row,
+            column, timestamp, lockId);
+        }
+      }
+    );
+  }
+
+  /**
    * Commit a BatchUpdate to the table.
    * If autoFlush is false, the update is buffered
    * @param batchUpdate
