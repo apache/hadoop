@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -124,8 +125,8 @@ public class HStore implements HConstants {
   private final int compactionThreshold;
   
   // All access must be synchronized.
-  private final Set<ChangedReadersObserver> changedReaderObservers =
-    new HashSet<ChangedReadersObserver>();
+  private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
+    new CopyOnWriteArraySet<ChangedReadersObserver>();
 
   /**
    * An HStore is a set of zero or more MapFiles, which stretch backwards over 
@@ -725,36 +726,30 @@ public class HStore implements HConstants {
       this.lock.writeLock().unlock();
     }
   }
-  
+
   /*
    * Notify all observers that set of Readers has changed.
    * @throws IOException
    */
   private void notifyChangedReadersObservers() throws IOException {
-    synchronized (this.changedReaderObservers) {
-      for (ChangedReadersObserver o: this.changedReaderObservers) {
-        o.updateReaders();
-      }
+    for (ChangedReadersObserver o: this.changedReaderObservers) {
+      o.updateReaders();
     }
   }
-  
+
   /*
    * @param o Observer who wants to know about changes in set of Readers
    */
   void addChangedReaderObserver(ChangedReadersObserver o) {
-    synchronized(this.changedReaderObservers) {
-      this.changedReaderObservers.add(o);
-    }
+    this.changedReaderObservers.add(o);
   }
   
   /*
    * @param o Observer no longer interested in changes in set of Readers.
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
-    synchronized (this.changedReaderObservers) {
-      if (!this.changedReaderObservers.remove(o)) {
-        LOG.warn("Not in set" + o);
-      }
+    if (!this.changedReaderObservers.remove(o)) {
+      LOG.warn("Not in set" + o);
     }
   }
 
