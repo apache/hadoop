@@ -371,7 +371,13 @@ public class LeaseManager {
       LOG.info("Lease " + oldest + " has expired hard limit");
 
       final List<StringBytesWritable> removing = new ArrayList<StringBytesWritable>();
-      for(StringBytesWritable p : oldest.getPaths()) {
+      // need to create a copy of the oldest lease paths, becuase 
+      // internalReleaseLease() removes paths corresponding to empty files,
+      // i.e. it needs to modify the collection being iterated over
+      // causing ConcurrentModificationException
+      StringBytesWritable[] leasePaths = new StringBytesWritable[oldest.getPaths().size()];
+      oldest.getPaths().toArray(leasePaths);
+      for(StringBytesWritable p : leasePaths) {
         try {
           fsnamesystem.internalReleaseLease(oldest, p.getString());
         } catch (IOException e) {

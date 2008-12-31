@@ -1117,6 +1117,9 @@ Release 0.18.3 - Unreleased
     HADOOP-4935. processMisReplicatedBlocks() should not clear 
     excessReplicateMap. (shv)
 
+    HADOOP-4961. Fix ConcurrentModificationException in lease recovery 
+    of empty files. (shv)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
