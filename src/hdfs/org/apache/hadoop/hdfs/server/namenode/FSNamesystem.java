@@ -2954,7 +2954,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private synchronized void processMisReplicatedBlocks() {
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     neededReplications.clear();
-    excessReplicateMap.clear();
     for(BlocksMap.BlockInfo block : blocksMap.getBlocks()) {
       INodeFile fileINode = block.getINode();
       if(fileINode == null) {
