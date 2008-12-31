@@ -457,14 +457,15 @@ public class HStore implements HConstants {
           "Cleaned up info file.  Continuing...Probable DATA LOSS!!!");
         continue;
       }
-      if (isEmptyDataFile(mapfile)) {
+      // References don't have data or index components under mapfile.
+      if (!isReference && isEmptyDataFile(mapfile)) {
         curfile.delete();
         // We can have empty data file if data loss in hdfs.
         LOG.warn("Mapfile " + mapfile.toString() + " has empty data. " +
           "Deleting.  Continuing...Probable DATA LOSS!!!  See HBASE-646.");
         continue;
       }
-      if (isEmptyIndexFile(mapfile)) {
+      if (!isReference && isEmptyIndexFile(mapfile)) {
         try {
           // Try fixing this file.. if we can.  Use the hbase version of fix.
           // Need to remove the old index file first else fix won't go ahead.
@@ -552,8 +553,8 @@ public class HStore implements HConstants {
   }
 
   /* 
-   * @param mapfile
-   * @return True if the passed mapfile has a zero-length index component (its
+   * @param f
+   * @return True if the passed file does not exist or is zero-length (its
    * broken).
    * @throws IOException
    */
