@@ -113,7 +113,7 @@
   </property>
   <property>
     <name>hbase.regionserver.safemode.period</name>
-    <value>-1</value>
+    <value>0</value>
     <description>Time to wait on regionserver startup before beginning
     compactions and memcache flushes.
     </description>
