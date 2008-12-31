@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4936. Improvements to TestSafeMode. (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
