@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import junit.framework.TestCase;
-import java.io.*;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * test for the input truncation bug when mark/reset is used.
@@ -65,7 +63,7 @@ public class TestTruncatedInputBug extends TestCase {
       Path testFile = new Path(TEST_ROOT_DIR, "HADOOP-1489");
       writeFile(fileSys, testFile, fileSize);
       assertTrue(fileSys.exists(testFile));
-      assertTrue(fileSys.getLength(testFile) == fileSize);
+      assertTrue(fileSys.getFileStatus(testFile).getLen() == fileSize);
 
       // Now read the file for ioBufSize bytes
       FSDataInputStream in = fileSys.open(testFile, ioBufSize);

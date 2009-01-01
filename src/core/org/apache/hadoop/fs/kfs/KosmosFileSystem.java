@@ -240,20 +240,6 @@ public class KosmosFileSystem extends FileSystem {
       return delete(path, true);
     }
     
-    @Deprecated
-    public long getLength(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-        return kfsImpl.filesize(srep);
-    }
-
-    @Deprecated
-    public short getReplication(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-        return kfsImpl.getReplication(srep);
-    }
-
     public short getDefaultReplication() {
 	return 3;
     }

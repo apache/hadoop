@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     HADOOP-4895. Remove deprecated methods DFSClient.getHints(..) and
     DFSClient.isDirectory(..).  (szetszwo)
 
+    HADOOP-4941. Remove deprecated FileSystem methods: getBlockSize(Path f),
+    getLength(Path f) and getReplication(Path src).  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS
