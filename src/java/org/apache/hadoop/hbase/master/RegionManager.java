@@ -90,6 +90,7 @@ class RegionManager implements HConstants {
    * 
    * Note: Needs to be SortedMap so we can specify a comparator
    * 
+   * @see RegionState inner-class below
    */
   private final SortedMap<byte[], RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(
@@ -427,7 +428,7 @@ class RegionManager implements HConstants {
         continue;
       }
       LOG.debug("Going to close region " +
-        currentRegion.getRegionNameAsString());
+          currentRegion.getRegionNameAsString());
       // make a message to close the region
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,
         OVERLOADED));
@@ -1013,38 +1014,38 @@ class RegionManager implements HConstants {
   }
   
   /*
-   * State of a Region.
-   * Used while regions are making transitions from unassigned to assigned to
-   * opened, etc.
+   * State of a Region as it transitions from closed to open, etc.  See
+   * note on regionsInTransition data member above for listing of state
+   * transitions.
    */
   private static class RegionState implements Comparable<RegionState> {
-    private final byte [] regionName;
-    private HRegionInfo regionInfo = null;
+    private final HRegionInfo regionInfo;
     private volatile boolean unassigned = false;
     private volatile boolean assigned = false;
     private volatile boolean pending = false;
     private volatile boolean closing = false;
     private volatile boolean closed = false;
     private volatile boolean offlined = false;
+    
+    /* Set when region is assigned.
+     */
     private String serverName = null;
-    
-    RegionState(byte [] regionName) {
-      this.regionName = regionName;
-    }
-    
+
     RegionState(HRegionInfo info) {
-      this.regionName = info.getRegionName();
       this.regionInfo = info;
     }
     
-    byte[] getRegionName() {
-      return regionName;
+    byte [] getRegionName() {
+      return this.regionInfo.getRegionName();
     }
 
     synchronized HRegionInfo getRegionInfo() {
       return this.regionInfo;
     }
-    
+
+    /*
+     * @return Server this region was assigned to
+     */
     synchronized String getServerName() {
       return this.serverName;
     }
@@ -1070,7 +1071,10 @@ class RegionManager implements HConstants {
       return assigned;
     }
 
-    synchronized void setAssigned(String serverName) {
+    /*
+     * @param serverName Server region was assigned to.
+     */
+    synchronized void setAssigned(final String serverName) {
       if (!this.unassigned) {
         throw new IllegalStateException(
             "Cannot assign a region that is not currently unassigned. " +
@@ -1132,7 +1136,7 @@ class RegionManager implements HConstants {
 
     @Override
     public synchronized String toString() {
-      return "name=" + Bytes.toString(this.regionName) +
+      return "name=" + Bytes.toString(getRegionName()) +
           ", isUnassigned=" + this.unassigned + ", isAssigned=" +
           this.assigned + ", isPending=" + this.pending + ", isClosing=" +
           this.closing + ", isClosed=" + this.closed + ", isOfflined=" +
@@ -1146,7 +1150,7 @@ class RegionManager implements HConstants {
     
     @Override
     public int hashCode() {
-      return Bytes.toString(regionName).hashCode();
+      return Bytes.toString(getRegionName()).hashCode();
     }
     
     @Override
@@ -1154,7 +1158,7 @@ class RegionManager implements HConstants {
       if (o == null) {
         return 1;
       }
-      return Bytes.compareTo(this.regionName, o.getRegionName());
+      return Bytes.compareTo(getRegionName(), o.getRegionName());
     }
   }
 }

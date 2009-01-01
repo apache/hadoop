@@ -137,8 +137,8 @@ public class HConnectionManager implements HConstants {
     private volatile HRegionLocation rootRegionLocation; 
     
     private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
-      cachedRegionLocations = Collections.synchronizedMap(
-         new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>());
+      cachedRegionLocations =
+        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
     
     /** 
      * constructor
@@ -431,7 +431,7 @@ public class HConnectionManager implements HConstants {
     }
 
     private HRegionLocation locateRegion(final byte [] tableName,
-        final byte [] row, boolean useCache)
+      final byte [] row, boolean useCache)
     throws IOException{
       if (tableName == null || tableName.length == 0) {
         throw new IllegalArgumentException(
@@ -454,7 +454,6 @@ public class HConnectionManager implements HConstants {
           // This block guards against two threads trying to load the meta 
           // region at the same time. The first will load the meta region and
           // the second will use the value that the first one found.
-
           return locateRegionInMeta(ROOT_TABLE_NAME, tableName, row, useCache);
         }
       } else {
@@ -464,7 +463,7 @@ public class HConnectionManager implements HConstants {
       }
     }
 
-    /**
+    /*
       * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
@@ -472,9 +471,8 @@ public class HConnectionManager implements HConstants {
       final byte [] tableName, final byte [] row, boolean useCache)
     throws IOException{
       HRegionLocation location = null;
-      // if we're supposed to be using the cache, then check it for a possible
-      // hit. otherwise, delete any existing cached location so it won't 
-      // interfere.
+      // If supposed to be using the cache, then check it for a possible hit.
+      // Otherwise, delete any existing cached location so it won't interfere.
       if (useCache) {
         location = getCachedLocation(tableName, row);
         if (location != null) {
@@ -495,38 +493,33 @@ public class HConnectionManager implements HConstants {
             + Bytes.toString(row) + " after " + numRetries + " tries.");
         }
 
-        try{
+        try {
           // locate the root region
           HRegionLocation metaLocation = locateRegion(parentTable, metaKey);
-          HRegionInterface server = 
+          HRegionInterface server =
             getHRegionConnection(metaLocation.getServerAddress());
 
           // Query the root region for the location of the meta region
           RowResult regionInfoRow = server.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
             HConstants.COLUMN_FAMILY);
-
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
 
           Cell value = regionInfoRow.get(COL_REGIONINFO);
-
           if (value == null || value.getValue().length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
               Bytes.toString(parentTable));
           }
-
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
               value.getValue(), new HRegionInfo());
-
           // possible we got a region of a different table...
           if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
             throw new TableNotFoundException(
               "Table '" + Bytes.toString(tableName) + "' was not found.");
           }
-
           if (regionInfo.isOffline()) {
             throw new RegionOfflineException("region offline: " + 
               regionInfo.getRegionNameAsString());
@@ -534,7 +527,6 @@ public class HConnectionManager implements HConstants {
           
           String serverAddress = 
             Writables.cellToString(regionInfoRow.get(COL_SERVER));
-        
           if (serverAddress.equals("")) { 
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
@@ -542,11 +534,9 @@ public class HConnectionManager implements HConstants {
           }
         
           // instantiate the location
-          location = new HRegionLocation(regionInfo, 
-            new HServerAddress(serverAddress));
-      
+          location = new HRegionLocation(regionInfo,
+              new HServerAddress(serverAddress));
           cacheLocation(tableName, location);
-
           return location;
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
@@ -591,17 +581,8 @@ public class HConnectionManager implements HConstants {
      */
     private HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
-      // find the map of cached locations for this table
-      Integer key = Bytes.mapKey(tableName);
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
-        cachedRegionLocations.get(key);
-
-      // if tableLocations for this table isn't built yet, make one
-      if (tableLocations == null) {
-        tableLocations = new SoftValueSortedMap<byte [],
-          HRegionLocation>(Bytes.BYTES_COMPARATOR);
-        cachedRegionLocations.put(key, tableLocations);
-      }
+        getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
       // if there's something in the cache for this table.
@@ -612,9 +593,9 @@ public class HConnectionManager implements HConstants {
       HRegionLocation rl = tableLocations.get(row);
       if (rl != null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Cache hit in table locations for row <" +
+          LOG.debug("Cache hit for row <" +
             Bytes.toString(row) +
-            "> and tableName " + Bytes.toString(tableName) +
+            "> in tableName " + Bytes.toString(tableName) +
             ": location server " + rl.getServerAddress() +
             ", location region name " +
             rl.getRegionInfo().getRegionNameAsString());
@@ -657,23 +638,14 @@ public class HConnectionManager implements HConstants {
       return null;
     }
 
-    /**
+    /*
      * Delete a cached location, if it satisfies the table name and row
      * requirements.
      */
     private void deleteCachedLocation(final byte [] tableName,
         final byte [] row) {
-      // find the map of cached locations for this table
-      Integer key = Bytes.mapKey(tableName);
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations = 
-        cachedRegionLocations.get(key);
-
-      // if tableLocations for this table isn't built yet, make one
-      if (tableLocations == null) {
-        tableLocations = new SoftValueSortedMap<byte [],
-          HRegionLocation>(Bytes.BYTES_COMPARATOR);
-        cachedRegionLocations.put(key, tableLocations);
-      }
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+        getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
       // if there's something in the cache for this table.
@@ -687,47 +659,56 @@ public class HConnectionManager implements HConstants {
         // we need to examine the cached location to verify that it is 
         // a match by end key as well.
         if (!matchingRegions.isEmpty()) {
-          HRegionLocation possibleRegion = 
+          HRegionLocation possibleRegion =
             matchingRegions.get(matchingRegions.lastKey());
-          
           byte [] endKey = possibleRegion.getRegionInfo().getEndKey();
-          
+
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
           if (HStoreKey.compareTwoRowKeys(possibleRegion.getRegionInfo(),
               endKey, row) <= 0) {
             // delete any matching entry
-            HRegionLocation rl = 
+            HRegionLocation rl =
               tableLocations.remove(matchingRegions.lastKey());
             if (rl != null && LOG.isDebugEnabled()) {
               LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
-                " from cache because of " + Bytes.toString(row));
+                " for tableName=" + Bytes.toString(tableName) + " from cache " +
+                "because of " + Bytes.toString(row));
             }
           }
         }
       }
     }
-
-    /**
-      * Put a newly discovered HRegionLocation into the cache.
-      */
-    private void cacheLocation(final byte [] tableName,
-        final HRegionLocation location){
-      byte [] startKey = location.getRegionInfo().getStartKey();
-      
+    
+    /*
+     * @param tableName
+     * @return Map of cached locations for passed <code>tableName</code>
+     */
+    private SoftValueSortedMap<byte [], HRegionLocation> getTableLocations(
+        final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations = 
-        cachedRegionLocations.get(key);
-
-      // if tableLocations for this table isn't built yet, make one
-      if (tableLocations == null) {
-        tableLocations = new SoftValueSortedMap<byte [],
-          HRegionLocation>(Bytes.BYTES_COMPARATOR);
-        cachedRegionLocations.put(key, tableLocations);
+      SoftValueSortedMap<byte [], HRegionLocation> result = null;
+      synchronized (this.cachedRegionLocations) {
+        result = this.cachedRegionLocations.get(key);
+        // if tableLocations for this table isn't built yet, make one
+        if (result == null) {
+          result = new SoftValueSortedMap<byte [], HRegionLocation>(
+              Bytes.BYTES_COMPARATOR);
+          this.cachedRegionLocations.put(key, result);
+        }
       }
-      
-      // save the HRegionLocation under the startKey
+      return result;
+    }
+
+    /*
+     * Put a newly discovered HRegionLocation into the cache.
+     */
+    private void cacheLocation(final byte [] tableName,
+        final HRegionLocation location) {
+      byte [] startKey = location.getRegionInfo().getStartKey();
+      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+        getTableLocations(tableName);
       tableLocations.put(startKey, location);
     }
     
@@ -901,9 +882,9 @@ public class HConnectionManager implements HConstants {
       boolean retryOnlyOne = false;
       Collections.sort(list);
       List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
-      byte[] currentRegion = getRegionLocation(tableName, list.get(0).getRow(),
-          false).getRegionInfo().getRegionName();
-      byte[] region = currentRegion;
+      byte [] currentRegion = getRegionLocation(tableName, list.get(0).getRow(),
+        false).getRegionInfo().getRegionName();
+      byte [] region = currentRegion;
       boolean isLastRow = false;
       int tries = 0;
       for (int i = 0; i < list.size() && tries < numRetries; i++) {
@@ -932,8 +913,9 @@ public class HConnectionManager implements HConstants {
             }
             long sleepTime = getPauseTime(tries);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Reloading table servers because region " +
-                "server didn't accept updates; tries=" + tries +
+              LOG.debug("Reloading region " + Bytes.toString(currentRegion) +
+                " location because regionserver didn't accept updates; " +
+                "tries=" + tries +
                 " of max=" + this.numRetries + ", waiting=" + sleepTime + "ms");
             }
             try {
@@ -946,7 +928,6 @@ public class HConnectionManager implements HConstants {
             retryOnlyOne = true;
             region = getRegionLocation(tableName, list.get(i + 1).getRow(),
                 true).getRegionInfo().getRegionName();
-            
           }
           else {
             retryOnlyOne = false;

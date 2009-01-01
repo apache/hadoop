@@ -418,7 +418,7 @@ module HBase
       s = @table.getScanner(cs)
       count = 0
       i = s.iterator()
-      @formatter.header("Count may take a long time to complete!")
+      @formatter.header()
       while i.hasNext()
         r = i.next()
         count += 1
