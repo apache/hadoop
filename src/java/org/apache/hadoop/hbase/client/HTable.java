@@ -618,6 +618,19 @@ public class HTable {
     );
   }
 
+  public RowResult getClosestRowBefore(final byte[] row, final byte[] columnFamily)
+  throws IOException {
+    return connection.getRegionServerWithRetries(
+      new ServerCallable<RowResult>(connection,tableName,row) {
+        public RowResult call() throws IOException {
+          return server.getClosestRowBefore(
+              location.getRegionInfo().getRegionName(), row, columnFamily
+            );
+          }
+        }
+      );
+    }
+
   /** 
    * Get a scanner on the current table starting at first row.
    * Return the specified columns.

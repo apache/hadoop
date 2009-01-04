@@ -202,6 +202,8 @@ Release 0.19.0 - Unreleased
    HBASE-1062  Compactions at (re)start on a large table can overwhelm DFS
    HBASE-1102  boolean HTable.exists()
    HBASE-1105  Remove duplicated code in HCM, add javadoc to RegionState, etc.
+   HBASE-1106  Expose getClosestRowBefore in HTable
+               (Michael Gottesman via Stack)
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

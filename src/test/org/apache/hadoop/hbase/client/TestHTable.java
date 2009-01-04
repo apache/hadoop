@@ -259,4 +259,57 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     }
   }
   
+  public void testGetClosestRowBefore() throws IOException {
+    HColumnDescriptor column2 =
+      new HColumnDescriptor(Bytes.toBytes("info2:"));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor testTableADesc =
+      new HTableDescriptor(tableAname);
+    testTableADesc.addFamily(column);
+    testTableADesc.addFamily(column2);
+    admin.createTable(testTableADesc);
+    
+    byte[] firstRow = Bytes.toBytes("ro");
+    byte[] beforeFirstRow = Bytes.toBytes("rn");
+    byte[] beforeSecondRow = Bytes.toBytes("rov");
+    
+    HTable table = new HTable(conf, tableAname);
+    BatchUpdate batchUpdate = new BatchUpdate(firstRow);
+    BatchUpdate batchUpdate2 = new BatchUpdate(row);
+    byte[] zero = new byte[]{0};
+    byte[] one = new byte[]{1};
+    byte[] columnFamilyBytes = Bytes.toBytes(COLUMN_FAMILY_STR);
+    
+    batchUpdate.put(COLUMN_FAMILY_STR,zero);
+    batchUpdate2.put(COLUMN_FAMILY_STR,one);
+    
+    table.commit(batchUpdate);
+    table.commit(batchUpdate2);
+    
+    RowResult result = null;
+    
+    // Test before first that null is returned
+    result = table.getClosestRowBefore(beforeFirstRow, columnFamilyBytes);
+    assertTrue(result == null);
+    
+    // Test at first that first is returned
+    result = table.getClosestRowBefore(firstRow, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    
+    // Test inbetween first and second that first is returned
+    result = table.getClosestRowBefore(beforeSecondRow, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    
+    // Test at second make sure second is returned
+    result = table.getClosestRowBefore(row, columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+    
+    // Test after second, make sure second is returned
+    result = table.getClosestRowBefore(Bytes.add(row,one), columnFamilyBytes);
+    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
+    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+  }
 }
