@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -59,6 +60,9 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   
   // Used around transition from no storefile to the first.
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+  // Used to indicate that the scanner has closed (see HBASE-1107)
+  private final AtomicBoolean closing = new AtomicBoolean(false);
   
   /** Create an Scanner with a handle on the memcache and HStore files. */
   @SuppressWarnings("unchecked")
@@ -294,6 +298,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   }
 
   public void close() {
+    this.closing.set(true);
     this.store.deleteChangedReaderObserver(this);
     doClose();
   }
@@ -309,6 +314,9 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   // Implementation of ChangedReadersObserver
   
   public void updateReaders() throws IOException {
+    if (this.closing.get()) {
+      return;
+    }
     this.lock.writeLock().lock();
     try {
       MapFile.Reader [] readers = this.store.getReaders();
