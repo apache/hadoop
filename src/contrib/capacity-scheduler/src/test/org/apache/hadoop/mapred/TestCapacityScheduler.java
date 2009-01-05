@@ -1826,6 +1826,77 @@ public class TestCapacityScheduler extends TestCase {
   }
 
   /**
+   * Test HADOOP-4979. 
+   * Bug fix for making sure we always return null to TT if there is a 
+   * high-mem job, and not look at reduce jobs (if map tasks are high-mem)
+   * or vice-versa.
+   * @throws IOException
+   */
+  public void testHighMemoryBlocking()
+      throws IOException {
+
+    // 2 map and 1 reduce slots
+    taskTrackerManager = new FakeTaskTrackerManager(1, 2, 1);
+
+    TaskTrackerStatus.ResourceStatus ttStatus =
+        taskTrackerManager.getTaskTracker("tt1").getResourceStatus();
+    ttStatus.setTotalVirtualMemory(3 * 1024 * 1024 * 1024L);
+    ttStatus.setReservedVirtualMemory(0);
+    ttStatus.setTotalPhysicalMemory(1536 * 1024 * 1024L);
+    ttStatus.setReservedPhysicalMemory(0);
+    // Normal job on this TT would be 1GB vmem, 0.5GB pmem
+
+    taskTrackerManager.addQueues(new String[] { "default" });
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, 1000000, true, 25));
+    resConf.setFakeQueues(queues);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    // enabled memory-based scheduling
+    scheduler.getConf().setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        1 * 1024 * 1024 * 1024L);
+    scheduler.getConf().setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+        3 * 1024 * 1024 * 1024L);
+    resConf.setDefaultPercentOfPmemInVmem(33.3f);
+    resConf.setLimitMaxPmemForTasks(1536 * 1024 * 1024L);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    // We need a situation where the scheduler needs to run a map task, 
+    // but the available one has a high-mem requirement. There should
+    // be another job whose maps or reduces can run, but they shouldn't 
+    // be scheduled.
+    
+    LOG.debug("Submit one high memory(2GB vmem, 400MB pmem) job of "
+        + "2 map tasks");
+    JobConf jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(2 * 1024 * 1024 * 1024L); // 2GB vmem
+    jConf.setMaxPhysicalMemoryForTask(400 * 1024 * 1024L); // 400MB pmem
+    jConf.setNumMapTasks(2);
+    jConf.setNumReduceTasks(0);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    FakeJobInProgress job1 = submitJobAndInit(JobStatus.PREP, jConf);
+    LOG.debug("Submit another regular memory(900MB vmem, 200MB pmem) job of "
+        + "2 map/red tasks");
+    jConf = new JobConf();
+    jConf.setMaxVirtualMemoryForTask(900 * 1024 * 1024L); // 900MB vmem
+    jConf.setMaxPhysicalMemoryForTask(200 * 1024 * 1024L); // 200MB pmem
+    jConf.setNumMapTasks(2);
+    jConf.setNumReduceTasks(2);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    FakeJobInProgress job2 = submitJobAndInit(JobStatus.PREP, jConf);
+    
+    // first, a map from j1 will run
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    // at this point, the scheduler tries to schedule another map from j1. 
+    // there isn't enough space. There is space to run the second job's
+    // map or reduce task, but they shouldn't be scheduled
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+  }
+  
+  /**
    * test invalid highMemoryJobs
    * @throws IOException
    */
