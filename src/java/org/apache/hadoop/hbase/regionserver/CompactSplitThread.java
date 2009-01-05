@@ -143,7 +143,8 @@ class CompactSplitThread extends Thread implements HConstants {
       return;
     }
     LOG.debug("Compaction requested for region " +
-      Bytes.toString(r.getRegionName()) +
+      Bytes.toString(r.getRegionName()) + "/" +
+      r.getRegionInfo().getEncodedName() +
       (why != null && !why.isEmpty()? " because: " + why: ""));
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {

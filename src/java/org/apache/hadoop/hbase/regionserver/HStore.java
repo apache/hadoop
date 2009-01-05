@@ -786,7 +786,7 @@ public class HStore implements HConstants {
     if (stats == null || stats.length == 0) {
       return 0l;
     }
-    long lowTimestamp = Long.MAX_VALUE;   
+    long lowTimestamp = Long.MAX_VALUE;
     for (int i = 0; i < stats.length; i++) {
       long timestamp = stats[i].getModificationTime();
       if (timestamp < lowTimestamp){
@@ -966,7 +966,12 @@ public class HStore implements HConstants {
    * @return True if we should run a major compaction.
    */
   boolean isMajorCompaction() throws IOException {
-    return isMajorCompaction(null);
+    List<HStoreFile> filesToCompact = null;
+    synchronized (storefiles) {
+      // filesToCompact are sorted oldest to newest.
+      filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
+    }
+    return isMajorCompaction(filesToCompact);
   }
 
   /*
@@ -977,25 +982,24 @@ public class HStore implements HConstants {
   throws IOException {
     boolean result = false;
     Path mapdir = HStoreFile.getMapDir(this.basedir, this.info.getEncodedName(),
-        this.family.getName());
+      this.family.getName());
     long lowTimestamp = getLowestTimestamp(fs, mapdir);
-    if (lowTimestamp < (System.currentTimeMillis() - this.majorCompactionTime) &&
-        lowTimestamp > 0l) {
+    long now = System.currentTimeMillis();
+    if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
       // Major compaction time has elapsed.
-      long elapsedTime = System.currentTimeMillis() - lowTimestamp;
+      long elapsedTime = now - lowTimestamp;
       if (filesToCompact != null && filesToCompact.size() == 1 &&
           filesToCompact.get(0).isMajorCompaction() &&
           (this.ttl == HConstants.FOREVER || elapsedTime < this.ttl)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping major compaction because only one (major) " +
-            "compacted file only and elapsedTime " + elapsedTime +
-            " is < ttl=" + this.ttl);
+          LOG.debug("Skipping major compaction of " + this.storeNameStr +
+            " because one (major) compacted file only and elapsedTime " +
+            elapsedTime + "ms is < ttl=" + this.ttl);
         }
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Major compaction triggered on store: " +
-              this.storeNameStr + ". Time since last major compaction: " +
-              ((System.currentTimeMillis() - lowTimestamp)/1000) + " seconds");
+          LOG.debug("Major compaction triggered on store " + this.storeNameStr +
+            "; time since last major compaction " + (now - lowTimestamp) + "ms");
         }
         result = true;
       }
