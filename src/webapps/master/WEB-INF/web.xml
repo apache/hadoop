@@ -15,13 +15,13 @@ Automatically created by Tomcat JspC.
     </servlet>
 
     <servlet>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
-        <servlet-class>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-class>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-class>
     </servlet>
 
     <servlet>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
-        <servlet-class>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-class>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-class>
     </servlet>
 
     <servlet-mapping>
@@ -30,13 +30,13 @@ Automatically created by Tomcat JspC.
     </servlet-mapping>
 
     <servlet-mapping>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
-        <url-pattern>/table.jsp</url-pattern>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
+        <url-pattern>/regionhistorian.jsp</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
-        <url-pattern>/regionhistorian.jsp</url-pattern>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
+        <url-pattern>/table.jsp</url-pattern>
     </servlet-mapping>
 
 </web-app>
