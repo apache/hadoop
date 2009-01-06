@@ -137,6 +137,12 @@ public class HRegion implements HConstants {
   final HRegionInfo regionInfo;
   final Path regiondir;
   private final Path regionCompactionDir;
+  
+  /*
+   * Set this when scheduling compaction if want the next compaction to be a
+   * major compaction.  Cleared each time through compaction code.
+   */
+  private volatile boolean forceMajorCompaction = false;
 
   /*
    * Data structure of write state flags used coordinating flushes,
@@ -648,6 +654,14 @@ public class HRegion implements HConstants {
     }
   }
 
+  void setForceMajorCompaction(final boolean b) {
+    this.forceMajorCompaction = b;
+  }
+  
+  boolean getForceMajorCompaction() {
+    return this.forceMajorCompaction;
+  }
+
   /**
    * Called by compaction thread and after region is opened to compact the
    * HStores if necessary.
@@ -663,7 +677,9 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public byte [] compactStores() throws IOException {
-    return compactStores(false);
+    boolean majorCompaction = this.forceMajorCompaction;
+    this.forceMajorCompaction = false;
+    return compactStores(majorCompaction);
   }
 
   /*

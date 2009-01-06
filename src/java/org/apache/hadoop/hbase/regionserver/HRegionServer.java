@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.ValueOverMaxLengthException;
+import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
@@ -727,7 +728,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Thread for toggling safemode after some configurable interval.
    */
   private class SafeModeThread extends Thread {
-
     public void run() {
       // first, wait the required interval before turning off safemode
       int safemodeInterval =
@@ -761,7 +761,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         -1
       };
       for (int i = 0; i < limitSteps.length; i++) {
-        if (LOG.isDebugEnabled()) {
+        // Just log changes.
+        if (compactSplitThread.getLimit() != limitSteps[i] &&
+            LOG.isDebugEnabled()) {
           LOG.debug("setting compaction limit to " + limitSteps[i]);
         }
         compactSplitThread.setLimit(limitSteps[i]);
@@ -1224,6 +1226,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               continue;
             }
             LOG.info("Worker: " + e.msg);
+            HRegion region = null;
             HRegionInfo info = e.msg.getRegionInfo();
             switch(e.msg.getType()) {
 
@@ -1257,28 +1260,29 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               closeRegion(e.msg.getRegionInfo(), false);
               break;
 
-            case MSG_REGION_SPLIT: {
-              // Force split a region
-              HRegion region = getRegion(info.getRegionName());
-              // flush the memcache for the region
+            case MSG_REGION_SPLIT:
+              region = getRegion(info.getRegionName());
               region.flushcache();
-              // flag that the region should be split
               region.regionInfo.shouldSplit(true);
-              // force a compaction
+              // force a compaction; split will be side-effect.
               compactSplitThread.compactionRequested(region,
-                "MSG_REGION_SPLIT");
-            } break;
+                e.msg.getType().name());
+              break;
 
-            case MSG_REGION_COMPACT: {
+            case MSG_REGION_MAJOR_COMPACT:
+            case MSG_REGION_COMPACT:
               // Compact a region
-              HRegion region = getRegion(info.getRegionName());
-              // flush the memcache for the region
-              region.flushcache();
-              // force a compaction
+              region = getRegion(info.getRegionName());
               compactSplitThread.compactionRequested(region,
-                "MSG_REGION_COMPACT");
-            } break;
-
+                e.msg.isType(Type.MSG_REGION_MAJOR_COMPACT),
+                e.msg.getType().name());
+              break;
+              
+            case MSG_REGION_FLUSH:
+              region = getRegion(info.getRegionName());
+              region.flushcache();
+              break;
+              
             default:
               throw new AssertionError(
                   "Impossible state during msg processing.  Instruction: "

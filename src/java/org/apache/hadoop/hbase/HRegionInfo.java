@@ -404,5 +404,4 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.splitRequest = b;
     return old;
   }
-
 }

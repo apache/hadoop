@@ -132,20 +132,33 @@ class CompactSplitThread extends Thread implements HConstants {
     compactionQueue.clear();
     LOG.info(getName() + " exiting");
   }
-  
+
   /**
    * @param r HRegion store belongs to
    * @param why Why compaction requested -- used in debug messages
    */
   public synchronized void compactionRequested(final HRegion r,
       final String why) {
+    compactionRequested(r, false, why);
+  }
+
+  /**
+   * @param r HRegion store belongs to
+   * @param force Whether next compaction should be major
+   * @param why Why compaction requested -- used in debug messages
+   */
+  public synchronized void compactionRequested(final HRegion r,
+      final boolean force, final String why) {
     if (this.server.stopRequested.get()) {
       return;
     }
-    LOG.debug("Compaction requested for region " +
-      Bytes.toString(r.getRegionName()) + "/" +
-      r.getRegionInfo().getEncodedName() +
-      (why != null && !why.isEmpty()? " because: " + why: ""));
+    r.setForceMajorCompaction(force);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Compaction " + (force? "(major) ": "") +
+        "requested for region " + Bytes.toString(r.getRegionName()) +
+        "/" + r.getRegionInfo().getEncodedName() +
+        (why != null && !why.isEmpty()? " because: " + why: ""));
+    }
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
         compactionQueue.add(r);
@@ -221,6 +234,10 @@ class CompactSplitThread extends Thread implements HConstants {
    */
   void setLimit(int limit) {
     this.limit = limit;
+  }
+
+  int getLimit() {
+    return this.limit;
   }
 
   /**

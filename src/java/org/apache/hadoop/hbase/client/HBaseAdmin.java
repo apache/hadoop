@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
  * Provides administrative functions for HBase
@@ -539,11 +540,69 @@ public class HBaseAdmin {
     modifyTable(HConstants.META_TABLE_NAME, HConstants.MODIFY_CLOSE_REGION,
       newargs);
   }
+  
+  /**
+   * Flush a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void flush(final String tableNameOrRegionName) throws IOException {
+    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_FLUSH);
+  }
+  
+  /**
+   * Compact a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void compact(final String tableNameOrRegionName) throws IOException {
+    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_COMPACT);
+  }
+  
+  /**
+   * Major compact a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void majorCompact(final String tableNameOrRegionName)
+  throws IOException {
+    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_MAJOR_COMPACT);
+  }
+
+  /**
+   * Split a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void split(final String tableNameOrRegionName) throws IOException {
+    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_SPLIT);
+  }
+
+  
+  /*
+   * Call modifyTable using passed tableName or region name String.  If no
+   * such table, presume we have been passed a region name.
+   * @param tableNameOrRegionName
+   * @param op
+   * @throws IOException
+   */
+  private void modifyTable(final String tableNameOrRegionName, final int op)
+  throws IOException {
+    if (tableNameOrRegionName == null) {
+      throw new IllegalArgumentException("Pass a table name or region name");
+    }
+    String tableName = tableExists(tableNameOrRegionName)?
+      tableNameOrRegionName: null;
+    String regionName = tableName == null? tableNameOrRegionName: null;
+    Object [] args = regionName == null? null: new String [] {regionName};
+    modifyTable(tableName == null? null: Bytes.toBytes(tableName), op, args);
+  }
 
   /**
    * Modify an existing table
    * 
-   * @param tableName name of table
+   * @param tableName name of table.  May be null if we are operating on a
+   * region.
    * @param op table modification operation
    * @param args operation specific arguments
    * @throws IOException
@@ -554,7 +613,7 @@ public class HBaseAdmin {
       throw new MasterNotRunningException("master has been shut down");
     }
     // Let pass if its a catalog table.  Used by admins.
-    if (!MetaUtils.isMetaTableName(tableName)) {
+    if (tableName != null && !MetaUtils.isMetaTableName(tableName)) {
       // This will throw exception
       HTableDescriptor.isLegalTableName(tableName);
     }
@@ -573,15 +632,19 @@ public class HBaseAdmin {
 
       case HConstants.MODIFY_TABLE_COMPACT:
       case HConstants.MODIFY_TABLE_SPLIT:
+      case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
+      case HConstants.MODIFY_TABLE_FLUSH:
         if (args != null && args.length > 0) {
           arr = new Writable[1];
           if (args[0] instanceof byte[]) {
             arr[0] = new ImmutableBytesWritable((byte[])args[0]);
           } else if (args[0] instanceof ImmutableBytesWritable) {
             arr[0] = (ImmutableBytesWritable)args[0];
+          } else if (args[0] instanceof String) {
+            arr[0] = new ImmutableBytesWritable(Bytes.toBytes((String)args[0]));
           } else {
-            throw new IllegalArgumentException("SPLIT or COMPACT with arg " +
-              "requires byte[] or ImmutableBytesWritable");
+            throw new IllegalArgumentException("Requires byte[], String, or" +
+              "ImmutableBytesWritable");
           }
         }
         this.master.modifyTable(tableName, op, arr);

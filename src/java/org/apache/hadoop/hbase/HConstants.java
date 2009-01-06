@@ -268,4 +268,7 @@ public interface HConstants {
   
   // Messages client can send master.
   public static final int MODIFY_CLOSE_REGION = MODIFY_TABLE_COMPACT + 1;
+  
+  public static final int MODIFY_TABLE_FLUSH = MODIFY_CLOSE_REGION + 1;
+  public static final int MODIFY_TABLE_MAJOR_COMPACT = MODIFY_TABLE_FLUSH + 1;
 }

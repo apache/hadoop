@@ -75,7 +75,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
     assertTrue(m.size() == 1);
 
     // tell the master to split the table
-    admin.modifyTable(tableName, HConstants.MODIFY_TABLE_SPLIT);
+    admin.split(Bytes.toString(tableName));
 
     // give some time for the split to happen
     Thread.sleep(15 * 1000);

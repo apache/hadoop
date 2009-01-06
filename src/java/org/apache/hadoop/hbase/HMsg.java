@@ -34,7 +34,6 @@ import org.apache.hadoop.io.Writable;
  * Most of the time the messages are simple but some messages are accompanied
  * by the region affected.  HMsg may also carry optional message.
  */
-@SuppressWarnings("serial")
 public class HMsg implements Writable {
   /**
    * Message types sent between master and regionservers
@@ -100,6 +99,16 @@ public class HMsg implements Writable {
      * regions
      */
     MSG_REPORT_QUIESCED,
+    
+    /**
+     * Flush
+     */
+    MSG_REGION_FLUSH,
+    
+    /**
+     * Run Major Compaction
+     */
+    MSG_REGION_MAJOR_COMPACT,
   }
 
   private Type type = null;

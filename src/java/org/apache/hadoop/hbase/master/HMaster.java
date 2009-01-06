@@ -795,20 +795,22 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     case MODIFY_TABLE_SPLIT:
     case MODIFY_TABLE_COMPACT:
+    case MODIFY_TABLE_MAJOR_COMPACT:
+    case MODIFY_TABLE_FLUSH:
       if (args != null && args.length > 0) {
         if (!(args[0] instanceof ImmutableBytesWritable))
           throw new IOException(
             "request argument must be ImmutableBytesWritable");
-        byte[] rowKey = ((ImmutableBytesWritable)args[0]).get();
+        byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
         Pair<HRegionInfo,HServerAddress> pair =
           getTableRegionClosest(tableName, rowKey);
         if (pair != null) {
-          regionManager.startAction(pair.getFirst().getRegionName(),
+          this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
         }
       } else {
         for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName))
-          regionManager.startAction(pair.getFirst().getRegionName(),
+          this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
       }
       break;

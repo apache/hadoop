@@ -78,6 +78,34 @@ module HBase
       @formatter.footer(now)
     end
 
+    def flush(tableNameOrRegionName)
+      now = Time.now 
+      @formatter.header()
+      @admin.flush(tableNameOrRegionName)
+      @formatter.footer(now)
+    end
+
+    def compact(tableNameOrRegionName)
+      now = Time.now 
+      @formatter.header()
+      @admin.compact(tableNameOrRegionName)
+      @formatter.footer(now)
+    end
+
+    def major_compact(tableNameOrRegionName)
+      now = Time.now 
+      @formatter.header()
+      @admin.majorCompact(tableNameOrRegionName)
+      @formatter.footer(now)
+    end
+
+    def split(tableNameOrRegionName)
+      now = Time.now 
+      @formatter.header()
+      @admin.split(tableNameOrRegionName)
+      @formatter.footer(now)
+    end
+
     def enable(tableName)
       # TODO: Need an isEnabled method
       now = Time.now 

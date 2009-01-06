@@ -104,12 +104,22 @@ class RegionManager implements HConstants {
   private final float slop;
 
   /** Set of regions to split. */
-  private final SortedMap<byte[],Pair<HRegionInfo,HServerAddress>> regionsToSplit = 
+  private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> regionsToSplit = 
     Collections.synchronizedSortedMap(
       new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
       (Bytes.BYTES_COMPARATOR));
   /** Set of regions to compact. */
-  private final SortedMap<byte[],Pair<HRegionInfo,HServerAddress>> regionsToCompact =
+  private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> regionsToCompact =
+    Collections.synchronizedSortedMap(
+      new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
+      (Bytes.BYTES_COMPARATOR));
+  /** Set of regions to major compact. */
+  private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> regionsToMajorCompact =
+    Collections.synchronizedSortedMap(
+      new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
+      (Bytes.BYTES_COMPARATOR));
+  /** Set of regions to flush. */
+  private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> regionsToFlush =
     Collections.synchronizedSortedMap(
       new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
       (Bytes.BYTES_COMPARATOR));
@@ -937,16 +947,26 @@ class RegionManager implements HConstants {
       HServerAddress server, int op) {
     switch (op) {
       case HConstants.MODIFY_TABLE_SPLIT:
-        regionsToSplit.put(regionName, 
-          new Pair<HRegionInfo,HServerAddress>(info, server));
+        startAction(regionName, info, server, this.regionsToSplit);
         break;
       case HConstants.MODIFY_TABLE_COMPACT:
-        regionsToCompact.put(regionName,
-          new Pair<HRegionInfo,HServerAddress>(info, server));
+        startAction(regionName, info, server, this.regionsToCompact);
+        break;
+      case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
+        startAction(regionName, info, server, this.regionsToMajorCompact);
+        break;
+      case HConstants.MODIFY_TABLE_FLUSH:
+        startAction(regionName, info, server, this.regionsToFlush);
         break;
       default:
         throw new IllegalArgumentException("illegal table action " + op);
     }
+  }
+
+  private void startAction(final byte[] regionName, final HRegionInfo info,
+      final HServerAddress server,
+      final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> map) {
+    map.put(regionName, new Pair<HRegionInfo,HServerAddress>(info, server));
   }
 
   /**
@@ -956,10 +976,16 @@ class RegionManager implements HConstants {
   public void endAction(byte[] regionName, int op) {
     switch (op) {
     case HConstants.MODIFY_TABLE_SPLIT:
-      regionsToSplit.remove(regionName);
+      this.regionsToSplit.remove(regionName);
       break;
     case HConstants.MODIFY_TABLE_COMPACT:
-      regionsToCompact.remove(regionName);
+      this.regionsToCompact.remove(regionName);
+      break;
+    case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
+      this.regionsToMajorCompact.remove(regionName);
+      break;
+    case HConstants.MODIFY_TABLE_FLUSH:
+      this.regionsToFlush.remove(regionName);
       break;
     default:
       throw new IllegalArgumentException("illegal table action " + op);
@@ -976,43 +1002,42 @@ class RegionManager implements HConstants {
 
   /**
    * Send messages to the given region server asking it to split any
-   * regions in 'regionsToSplit'
+   * regions in 'regionsToSplit', etc.
    * @param serverInfo
    * @param returnMsgs
    */
   public void applyActions(HServerInfo serverInfo, ArrayList<HMsg> returnMsgs) {
+    applyActions(serverInfo, returnMsgs, this.regionsToCompact,
+        HMsg.Type.MSG_REGION_COMPACT);
+    applyActions(serverInfo, returnMsgs, this.regionsToSplit,
+      HMsg.Type.MSG_REGION_SPLIT);
+    applyActions(serverInfo, returnMsgs, this.regionsToFlush,
+        HMsg.Type.MSG_REGION_FLUSH);
+    applyActions(serverInfo, returnMsgs, this.regionsToMajorCompact,
+        HMsg.Type.MSG_REGION_MAJOR_COMPACT);
+  }
+  
+  private void applyActions(final HServerInfo serverInfo,
+      final ArrayList<HMsg> returnMsgs,
+      SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> map,
+      final HMsg.Type msg) {
     HServerAddress addr = serverInfo.getServerAddress();
     Iterator<Pair<HRegionInfo, HServerAddress>> i =
-      regionsToCompact.values().iterator();
-    synchronized (regionsToCompact) {
+      map.values().iterator();
+    synchronized (map) {
       while (i.hasNext()) {
         Pair<HRegionInfo,HServerAddress> pair = i.next();
         if (addr.equals(pair.getSecond())) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("sending MSG_REGION_COMPACT " + pair.getFirst() + " to " +
-                addr);
+            LOG.debug("Sending " + msg + " " + pair.getFirst() + " to " + addr);
           }
-          returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_COMPACT, pair.getFirst()));
-          i.remove();
-        }
-      }
-    }
-    i = regionsToSplit.values().iterator();
-    synchronized (regionsToSplit) {
-      while (i.hasNext()) {
-        Pair<HRegionInfo,HServerAddress> pair = i.next();
-        if (addr.equals(pair.getSecond())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("sending MSG_REGION_SPLIT " + pair.getFirst() + " to " +
-                addr);
-          }
-          returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_SPLIT, pair.getFirst()));
+          returnMsgs.add(new HMsg(msg, pair.getFirst()));
           i.remove();
         }
       }
     }
   }
-  
+
   /*
    * State of a Region as it transitions from closed to open, etc.  See
    * note on regionsInTransition data member above for listing of state

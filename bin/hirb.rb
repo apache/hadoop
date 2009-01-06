@@ -105,17 +105,31 @@ def tools
   # Help for hbase shell surgery tools
   h  = <<HERE
 HBASE SURGERY TOOLS:
- enable_region   Enable a single region. For example,
-  
-                 hbase> enable_region 'REGIONNAME'
- 
- disable_region  Disable a single region
-
  close_region    Close a single region. Optionally specify regionserver.
                  Examples:
                  
                  hbase> close_region 'REGIONNAME'
                  hbase> close_region 'REGIONNAME', 'REGIONSERVER_IP:PORT'
+
+ compact         Compact all regions in passed table or pass a region row
+                 to compact an individual region
+
+ disable_region  Disable a single region
+
+ enable_region   Enable a single region. For example:
+  
+                 hbase> enable_region 'REGIONNAME'
+ 
+ flush           Flush all regions in passed table or pass a region row to
+                 flush an individual region.  For example:
+
+                 hbase> flush 'TABLENAME'
+                 hbase> flush 'REGIONNAME'
+
+ major_compact   Run major compaction on passed table or pass a region row
+                 to major compact an individual region
+
+ split           Split table or pass a region row to split individual region
 
 Above commands are for 'experts'-only as misuse can damage an install
 HERE
@@ -332,6 +346,22 @@ end
 
 def count(table, interval = 1000)
   table(table).count(interval)
+end
+
+def flush(tableNameOrRegionName)
+  admin().flush(tableNameOrRegionName)
+end
+
+def compact(tableNameOrRegionName)
+  admin().compact(tableNameOrRegionName)
+end
+
+def major_compact(tableNameOrRegionName)
+  admin().major_compact(tableNameOrRegionName)
+end
+
+def split(tableNameOrRegionName)
+  admin().split(tableNameOrRegionName)
 end
 
 # Output a banner message that tells users where to go for help
