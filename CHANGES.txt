@@ -12,6 +12,10 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-4268. Change fsck to use ClientProtocol methods so that the
+    corresponding permission requirement for running the ClientProtocol
+    methods will be enforced.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4936. Improvements to TestSafeMode. (shv)

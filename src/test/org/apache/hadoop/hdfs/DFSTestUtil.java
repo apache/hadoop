@@ -23,19 +23,21 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Random;
-import junit.framework.TestCase;
-import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.io.IOUtils;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
-/**
- */
-public class DFSTestUtil extends TestCase {
+/** Utilities for HDFS tests */
+public class DFSTestUtil {
   
   private static Random gen = new Random();
   private static String[] dirNames = {
@@ -255,5 +257,17 @@ public class DFSTestUtil extends TestCase {
     for(int c; (c = in.read()) != -1; b.append((char)c));
     in.close();      
     return b.toString();
+  }
+
+  static public Configuration getConfigurationWithDifferentUsername(Configuration conf
+      ) throws IOException {
+    final Configuration c = new Configuration(conf);
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    final String username = ugi.getUserName()+"_XXX";
+    final String[] groups = {ugi.getGroupNames()[0] + "_XXX"};
+    UnixUserGroupInformation.saveToConf(c,
+        UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        new UnixUserGroupInformation(username, groups));
+    return c;
   }
 }

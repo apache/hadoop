@@ -24,24 +24,25 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeSet;
-import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -81,7 +82,11 @@ public class NamenodeFsck {
   /** Delete corrupted files. */
   public static final int FIXING_DELETE = 2;
   
-  private NameNode nn;
+  private final ClientProtocol namenode;
+  private final NetworkTopology networktopology;
+  private final int totalDatanodes;
+  private final short minReplication;
+
   private String lostFound = null;
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
@@ -93,8 +98,8 @@ public class NamenodeFsck {
   private int fixing = FIXING_NONE;
   private String path = "/";
   
-  private Configuration conf;
-  private PrintWriter out;
+  private final Configuration conf;
+  private final PrintWriter out;
   
   /**
    * Filesystem checker.
@@ -104,13 +109,17 @@ public class NamenodeFsck {
    * @param response the object into which  this servelet writes the url contents
    * @throws IOException
    */
-  public NamenodeFsck(Configuration conf,
-                      NameNode nn,
-                      Map<String,String[]> pmap,
-                      HttpServletResponse response) throws IOException {
+  NamenodeFsck(Configuration conf, ClientProtocol namenode,
+      NetworkTopology networktopology, 
+      Map<String,String[]> pmap, PrintWriter out,
+      int totalDatanodes, short minReplication) {
     this.conf = conf;
-    this.nn = nn;
-    this.out = response.getWriter();
+    this.namenode = namenode;
+    this.networktopology = networktopology;
+    this.out = out;
+    this.totalDatanodes = totalDatanodes;
+    this.minReplication = minReplication;
+
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
       if (key.equals("path")) { this.path = pmap.get("path")[0]; }
@@ -126,21 +135,20 @@ public class NamenodeFsck {
   
   /**
    * Check files on DFS, starting from the indicated path.
-   * @throws Exception
    */
-  public void fsck() throws IOException {
+  public void fsck() {
     try {
-      FileStatus[] files = nn.namesystem.dir.getListing(path);
-      FsckResult res = new FsckResult();
-      res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
-      res.totalDatanodes = nn.namesystem.getNumberOfDatanodes(
-          DatanodeReportType.LIVE);
-      res.setReplication((short) conf.getInt("dfs.replication", 3));
+      Result res = new Result(conf);
+
+      final FileStatus[] files = namenode.getListing(path);
       if (files != null) {
         for (int i = 0; i < files.length; i++) {
           check(files[i], res);
         }
         out.println(res);
+        out.println(" Number of data-nodes:\t\t" + totalDatanodes);
+        out.println(" Number of racks:\t\t" + networktopology.getNumOfRacks());
+
         // DFSck client scans for the string HEALTHY/CORRUPT to check the status
         // of file system and return appropriate code. Changing the output string
         // might break testcases. 
@@ -162,13 +170,12 @@ public class NamenodeFsck {
     }
   }
   
-  private void check(FileStatus file, FsckResult res) throws IOException {
-    int minReplication = nn.namesystem.getMinReplication();
+  private void check(FileStatus file, Result res) throws IOException {
     String path = file.getPath().toString();
     boolean isOpen = false;
 
     if (file.isDir()) {
-      FileStatus[] files = nn.namesystem.dir.getListing(path);
+      final FileStatus[] files = namenode.getListing(path);
       if (files == null) {
         return;
       }
@@ -182,7 +189,7 @@ public class NamenodeFsck {
       return;
     }
     long fileLen = file.getLen();
-    LocatedBlocks blocks = nn.namesystem.getBlockLocations(path, 0, fileLen);
+    LocatedBlocks blocks = namenode.getBlockLocations(path, 0, fileLen);
     if (blocks == null) { // the file is deleted
       return;
     }
@@ -247,7 +254,7 @@ public class NamenodeFsck {
       }
       // verify block placement policy
       int missingRacks = ReplicationTargetChooser.verifyBlockPlacement(
-                    lBlk, targetFileReplication, nn.getNetworkTopology());
+                    lBlk, targetFileReplication, networktopology);
       if (missingRacks > 0) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;
@@ -300,7 +307,7 @@ public class NamenodeFsck {
         break;
       case FIXING_DELETE:
         if (!isOpen)
-          nn.namesystem.deleteInternal(path, false);
+          namenode.delete(path, true);
       }
     }
     if (showFiles) {
@@ -328,9 +335,7 @@ public class NamenodeFsck {
     String target = lostFound + file.getPath();
     String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
     try {
-      PermissionStatus ps = new PermissionStatus(
-          file.getOwner(), file.getGroup(), file.getPermission()); 
-      if (!nn.namesystem.dir.mkdirs(target, ps, false, FSNamesystem.now())) {
+      if (!namenode.mkdirs(target, file.getPermission())) {
         LOG.warn(errmsg);
         return;
       }
@@ -513,21 +518,12 @@ public class NamenodeFsck {
       lfInitedOk = false;
     }
   }
-  
-  /**
-   * @param args
-   */
-  public int run(String[] args) throws Exception {
-    
-    return 0;
-  }
-  
+
   /**
    * FsckResult of checking, plus overall DFS statistics.
-   *
    */
-  public static class FsckResult {
-    private ArrayList<String> missingIds = new ArrayList<String>();
+  private static class Result {
+    private List<String> missingIds = new ArrayList<String>();
     private long missingSize = 0L;
     private long corruptFiles = 0L;
     private long corruptBlocks = 0L;
@@ -537,7 +533,6 @@ public class NamenodeFsck {
     private long numUnderReplicatedBlocks = 0L;
     private long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
     private long numMinReplicatedBlocks = 0L;  // minimally replicatedblocks
-    private int replication = 0;
     private long totalBlocks = 0L;
     private long totalOpenFilesBlocks = 0L;
     private long totalFiles = 0L;
@@ -546,138 +541,34 @@ public class NamenodeFsck {
     private long totalSize = 0L;
     private long totalOpenFilesSize = 0L;
     private long totalReplicas = 0L;
-    private int totalDatanodes = 0;
-    private int totalRacks = 0;
+
+    final short replication;
+    
+    private Result(Configuration conf) {
+      this.replication = (short)conf.getInt("dfs.replication", 3);
+    }
     
     /**
      * DFS is considered healthy if there are no missing blocks.
      */
-    public boolean isHealthy() {
+    boolean isHealthy() {
       return ((missingIds.size() == 0) && (corruptBlocks == 0));
     }
     
     /** Add a missing block name, plus its size. */
-    public void addMissing(String id, long size) {
+    void addMissing(String id, long size) {
       missingIds.add(id);
       missingSize += size;
     }
     
-    /** Return a list of missing block names (as list of Strings). */
-    public ArrayList<String> getMissingIds() {
-      return missingIds;
-    }
-    
-    /** Return total size of missing data, in bytes. */
-    public long getMissingSize() {
-      return missingSize;
-    }
-
-    public void setMissingSize(long missingSize) {
-      this.missingSize = missingSize;
-    }
-    
-    /** Return the number of over-replicated blocks. */
-    public long getExcessiveReplicas() {
-      return excessiveReplicas;
-    }
-    
-    public void setExcessiveReplicas(long overReplicatedBlocks) {
-      this.excessiveReplicas = overReplicatedBlocks;
-    }
-    
     /** Return the actual replication factor. */
-    public float getReplicationFactor() {
+    float getReplicationFactor() {
       if (totalBlocks == 0)
         return 0.0f;
       return (float) (totalReplicas) / (float) totalBlocks;
     }
     
-    /** Return the number of under-replicated blocks. Note: missing blocks are not counted here.*/
-    public long getMissingReplicas() {
-      return missingReplicas;
-    }
-    
-    public void setMissingReplicas(long underReplicatedBlocks) {
-      this.missingReplicas = underReplicatedBlocks;
-    }
-    
-    /** Return total number of directories encountered during this scan. */
-    public long getTotalDirs() {
-      return totalDirs;
-    }
-    
-    public void setTotalDirs(long totalDirs) {
-      this.totalDirs = totalDirs;
-    }
-    
-    /** Return total number of files encountered during this scan. */
-    public long getTotalFiles() {
-      return totalFiles;
-    }
-    
-    public void setTotalFiles(long totalFiles) {
-      this.totalFiles = totalFiles;
-    }
-    
-    /** Return total number of files opened for write encountered during this scan. */
-    public long getTotalOpenFiles() {
-      return totalOpenFiles;
-    }
-
-    /** Set total number of open files encountered during this scan. */
-    public void setTotalOpenFiles(long totalOpenFiles) {
-      this.totalOpenFiles = totalOpenFiles;
-    }
-    
-    /** Return total size of scanned data, in bytes. */
-    public long getTotalSize() {
-      return totalSize;
-    }
-    
-    public void setTotalSize(long totalSize) {
-      this.totalSize = totalSize;
-    }
-    
-    /** Return total size of open files data, in bytes. */
-    public long getTotalOpenFilesSize() {
-      return totalOpenFilesSize;
-    }
-    
-    public void setTotalOpenFilesSize(long totalOpenFilesSize) {
-      this.totalOpenFilesSize = totalOpenFilesSize;
-    }
-    
-    /** Return the intended replication factor, against which the over/under-
-     * replicated blocks are counted. Note: this values comes from the current
-     * Configuration supplied for the tool, so it may be different from the
-     * value in DFS Configuration.
-     */
-    public int getReplication() {
-      return replication;
-    }
-    
-    public void setReplication(int replication) {
-      this.replication = replication;
-    }
-    
-    /** Return the total number of blocks in the scanned area. */
-    public long getTotalBlocks() {
-      return totalBlocks;
-    }
-    
-    public void setTotalBlocks(long totalBlocks) {
-      this.totalBlocks = totalBlocks;
-    }
-    
-    /** Return the total number of blocks held by open files. */
-    public long getTotalOpenFilesBlocks() {
-      return totalOpenFilesBlocks;
-    }
-    
-    public void setTotalOpenFilesBlocks(long totalOpenFilesBlocks) {
-      this.totalOpenFilesBlocks = totalOpenFilesBlocks;
-    }
-    
+    /** {@inheritDoc} */
     public String toString() {
       StringBuffer res = new StringBuffer();
       res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
@@ -720,18 +611,7 @@ public class NamenodeFsck {
       res.append("\n Corrupt blocks:\t\t" + corruptBlocks);
       res.append("\n Missing replicas:\t\t" + missingReplicas);
       if (totalReplicas > 0)        res.append(" (" + ((float) (missingReplicas * 100) / (float) totalReplicas) + " %)");
-      res.append("\n Number of data-nodes:\t\t" + totalDatanodes);
-      res.append("\n Number of racks:\t\t" + totalRacks);
       return res.toString();
-    }
-    
-    /** Return the number of currupted files. */
-    public long getCorruptFiles() {
-      return corruptFiles;
-    }
-    
-    public void setCorruptFiles(long corruptFiles) {
-      this.corruptFiles = corruptFiles;
     }
   }
 }

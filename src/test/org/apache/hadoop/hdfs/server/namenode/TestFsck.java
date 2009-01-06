@@ -19,30 +19,30 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.io.File;
-import java.io.RandomAccessFile;
-import java.lang.Exception;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.RandomAccessFile;
+import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.util.Random;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
 
 /**
  * A JUnit test for doing fsck
@@ -118,6 +118,39 @@ public class TestFsck extends TestCase {
       util.cleanup(fs, "/srcdat");
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  /** Test fsck with permission set on inodes */
+  public void testFsckPermission() throws Exception {
+    final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(), 20, 3, 8*1024);
+    final Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 4, true, null);
+
+      final FileSystem fs = cluster.getFileSystem();
+      final String dir = "/dfsck";
+      final Path dirpath = new Path(dir);
+      util.createFiles(fs, dir);
+      util.waitReplication(fs, dir, (short)3);
+      fs.setPermission(dirpath, new FsPermission((short)0700));
+
+      //run DFSck as another user
+      final Configuration c2 = DFSTestUtil.getConfigurationWithDifferentUsername(conf);
+      System.out.println(runFsck(c2, -1, true, dir));
+
+      //set permission and try DFSck again
+      fs.setPermission(dirpath, new FsPermission((short)0777));
+      final String outStr = runFsck(c2, 0, true, dir);
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      util.cleanup(fs, dir);
+    } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
