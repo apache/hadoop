@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+<!--
+Automatically created by Tomcat JspC.
+-->
+<web-app>
+
+
+    <servlet>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
+        <servlet-class>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-name>
+        <url-pattern>/master.jsp</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
+        <url-pattern>/table.jsp</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>org.apache.hadoop.hbase.generated.master.regionhistorian_jsp</servlet-name>
+        <url-pattern>/regionhistorian.jsp</url-pattern>
+    </servlet-mapping>
+
+</web-app>
+
