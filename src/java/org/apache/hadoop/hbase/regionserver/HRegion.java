@@ -1291,6 +1291,96 @@ public class HRegion implements HConstants {
     }
   }
 
+
+  /**
+   * Performs an atomic check and save operation. Checks if
+   * the specified expected values have changed, and if not
+   * applies the update.
+   * 
+   * @param b the update to apply
+   * @param expectedValues the expected values to check
+   * @param writeToWAL whether or not to write to the write ahead log
+   */
+  public boolean checkAndSave(BatchUpdate b,
+    HbaseMapWritable<byte[], byte[]> expectedValues, Integer lockid,
+    boolean writeToWAL)
+  throws IOException {
+    // This is basically a copy of batchUpdate with the atomic check and save
+    // added in. So you should read this method with batchUpdate. I will
+    // comment the areas that I have changed where I have not changed, you
+    // should read the comments from the batchUpdate method
+    boolean success = true;
+    checkReadOnly();
+    checkResources();
+    splitsAndClosesLock.readLock().lock();
+    try {
+      byte[] row = b.getRow();
+      Integer lid = getLock(lockid,row);
+      try {
+        Set<byte[]> keySet = expectedValues.keySet();
+        Map<byte[],Cell> actualValues = this.getFull(row,keySet,
+        HConstants.LATEST_TIMESTAMP, 1,lid);
+        for (byte[] key : keySet) {
+          // If test fails exit
+          if(!Bytes.equals(actualValues.get(key).getValue(),
+            expectedValues.get(key))) {
+            success = false;
+            break;
+          }
+        }
+        
+        if (success) {
+          long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP)?
+            System.currentTimeMillis(): b.getTimestamp();
+          List<byte []> deletes = null;
+          for (BatchOperation op: b) {
+            HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
+                this.regionInfo);
+            byte[] val = null;
+            if (op.isPut()) {
+              val = op.getValue();
+              if (HLogEdit.isDeleted(val)) {
+                throw new IOException("Cannot insert value: " + val);
+              }
+            } else {
+              if (b.getTimestamp() == LATEST_TIMESTAMP) {
+                // Save off these deletes
+                if (deletes == null) {
+                  deletes = new ArrayList<byte []>();
+                }
+                deletes.add(op.getColumn());
+              } else {
+                val = HLogEdit.deleteBytes.get();
+              }
+            }
+            if (val != null) {
+              localput(lid, key, val);
+            }
+          }
+          TreeMap<HStoreKey, byte[]> edits =
+            this.targetColumns.remove(lid);
+          if (edits != null && edits.size() > 0) {
+            update(edits, writeToWAL);
+          }
+          if (deletes != null && deletes.size() > 0) {
+            // We have some LATEST_TIMESTAMP deletes to run.
+            for (byte [] column: deletes) {
+              deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+            }
+          }
+        }
+      } catch (IOException e) {
+        this.targetColumns.remove(Long.valueOf(lid));
+        throw e;
+      } finally {
+        if(lockid == null) releaseRowLock(lid);
+      }
+    } finally {
+      splitsAndClosesLock.readLock().unlock();
+    }
+    return success;
+  }
+
   /*
    * Check if resources to support an update.
    * 

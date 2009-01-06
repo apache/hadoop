@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -1332,6 +1333,33 @@ public class HTable {
     if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
+  }
+  
+  /**
+   * Atomically checks if a row's values match
+   * the expectedValues. If it does, it uses the
+   * batchUpdate to update the row.
+   * @param batchUpdate batchupdate to apply if check is successful
+   * @param expectedValues values to check
+   * @param rl rowlock
+   * @throws IOException
+   */
+  public synchronized boolean checkAndSave(final BatchUpdate batchUpdate,
+    final HbaseMapWritable<byte[],byte[]> expectedValues, final RowLock rl)
+  throws IOException {
+    checkRowAndColumns(batchUpdate);
+    if(rl != null) {
+      batchUpdate.setRowLock(rl.getLockId());
+    }
+    return connection.getRegionServerWithRetries(
+      new ServerCallable<Boolean>(connection, tableName, batchUpdate.getRow()) {
+        public Boolean call() throws IOException {
+          return server.checkAndSave(location.getRegionInfo().getRegionName(),
+            batchUpdate, expectedValues)?
+              Boolean.TRUE: Boolean.FALSE;
+        }
+      }
+    ).booleanValue();
   }
   
   /**

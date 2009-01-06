@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -117,6 +118,21 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   public int batchUpdates(final byte[] regionName, final BatchUpdate[] b)
   throws IOException;
   
+  /**
+   * Applies a batch of updates to one row atomically via one RPC
+   * if the columns specified in expectedValues match
+   * the given values in expectedValues
+   * 
+   * @param regionName name of the region to update
+   * @param b BatchUpdate
+   * @param expectedValues map of column names to expected data values.
+   * @throws IOException
+   */
+  public boolean checkAndSave(final byte [] regionName, final BatchUpdate b,
+      final HbaseMapWritable<byte[],byte[]> expectedValues)
+  throws IOException;
+  
+
   /**
    * Delete all cells that match the passed row and column and whose timestamp
    * is equal-to or older than the passed timestamp.

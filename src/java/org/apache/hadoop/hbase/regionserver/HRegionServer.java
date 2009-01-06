@@ -1626,6 +1626,26 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return -1;
   }
   
+  public boolean checkAndSave(final byte [] regionName, final BatchUpdate b,
+      final HbaseMapWritable<byte[],byte[]> expectedValues)
+  throws IOException {
+    if (b.getRow() == null)
+      throw new IllegalArgumentException("update has null row");
+    checkOpen();
+    this.requestCount.incrementAndGet();
+    HRegion region = getRegion(regionName);
+    validateValuesLength(b, region);
+    try {
+      cacheFlusher.reclaimMemcacheMemory();
+      boolean result = region.checkAndSave(b,
+        expectedValues,getLockFromId(b.getRowLock()), false);
+      return result;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+  
+  
   /**
    * Utility method to verify values length
    * @param batchUpdate The update to verify
