@@ -874,13 +874,12 @@ public class HConnectionManager implements HConstants {
     }
 
     private HRegionLocation
-    getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey)
-        throws IOException {
+    getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey, 
+        boolean reload) throws IOException {
       getMaster();
       List<Throwable> exceptions = new ArrayList<Throwable>();
       HRegionLocation location = null;
       int tries = 0;
-      boolean reload = false;
       while (tries < numRetries) {
         try {
           location = getRegionLocation(tableName, rowKey, reload);
@@ -915,7 +914,8 @@ public class HConnectionManager implements HConstants {
       Collections.sort(list);
       List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
       HRegionLocation location =
-        getRegionLocationForRowWithRetries(tableName, list.get(0).getRow());
+        getRegionLocationForRowWithRetries(tableName, list.get(0).getRow(),
+            false);
       byte [] currentRegion = location.getRegionInfo().getRegionName();
       byte [] region = currentRegion;
       boolean isLastRow = false;
@@ -925,7 +925,7 @@ public class HConnectionManager implements HConstants {
         isLastRow = (i + 1) == list.size();
         if (!isLastRow) {
           location = getRegionLocationForRowWithRetries(tableName,
-            list.get(i+1).getRow());
+            list.get(i+1).getRow(), false);
           region = location.getRegionInfo().getRegionName();
         }
         if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
@@ -960,7 +960,7 @@ public class HConnectionManager implements HConstants {
             i = i - updates.length + index;
             retryOnlyOne = true;
             location = getRegionLocationForRowWithRetries(tableName, 
-              list.get(i + 1).getRow());
+              list.get(i + 1).getRow(), true);
             region = location.getRegionInfo().getRegionName();
           }
           else {
