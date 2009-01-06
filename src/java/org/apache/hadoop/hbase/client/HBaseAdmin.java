@@ -547,15 +547,33 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void flush(final String tableNameOrRegionName) throws IOException {
+    flush(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Flush a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void flush(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_FLUSH);
   }
-  
+
   /**
    * Compact a table or an individual region
    * @param tableNameOrRegionName
    * @throws IOException
    */
   public void compact(final String tableNameOrRegionName) throws IOException {
+    compact(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Compact a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void compact(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_COMPACT);
   }
   
@@ -566,6 +584,16 @@ public class HBaseAdmin {
    */
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException {
+    majorCompact(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Major compact a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void majorCompact(final byte [] tableNameOrRegionName)
+  throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_MAJOR_COMPACT);
   }
 
@@ -575,10 +603,18 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void split(final String tableNameOrRegionName) throws IOException {
+    split(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Split a table or an individual region
+   * @param tableNameOrRegionName
+   * @throws IOException
+   */
+  public void split(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_SPLIT);
   }
 
-  
   /*
    * Call modifyTable using passed tableName or region name String.  If no
    * such table, presume we have been passed a region name.
@@ -586,16 +622,16 @@ public class HBaseAdmin {
    * @param op
    * @throws IOException
    */
-  private void modifyTable(final String tableNameOrRegionName, final int op)
+  private void modifyTable(final byte [] tableNameOrRegionName, final int op)
   throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
-    String tableName = tableExists(tableNameOrRegionName)?
+    byte [] tableName = tableExists(tableNameOrRegionName)?
       tableNameOrRegionName: null;
-    String regionName = tableName == null? tableNameOrRegionName: null;
-    Object [] args = regionName == null? null: new String [] {regionName};
-    modifyTable(tableName == null? null: Bytes.toBytes(tableName), op, args);
+    byte [] regionName = tableName == null? tableNameOrRegionName: null;
+    Object [] args = regionName == null? null: new byte [][] {regionName};
+    modifyTable(tableName == null? null: tableName, op, args);
   }
 
   /**
