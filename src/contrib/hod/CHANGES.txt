@@ -23,6 +23,9 @@ Release 0.20.0 - (unreleased changes)
     HADOOP-4705. Grant read permissions for files/directories
     created by HOD. (Peeyush Bishnoi via yhemanth)
 
+    HADOOP-4937. Include ringmaster RPC port in the notes
+    attribute. (Peeyush Bishnoi via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES
