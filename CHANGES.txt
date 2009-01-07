@@ -532,8 +532,6 @@ Release 0.20.0 - Unreleased
     HADOOP-4956. Creates TaskStatus for failed tasks with an empty Counters 
     object instead of null. (ddas)
 
-    HADOOP-4949. Fix native compilation. (Chris Douglas via rangadi)
-
     HADOOP-4979. Fix capacity scheduler to block cluster for failed high
     RAM requirements across task types. (Vivek Ratan via yhemanth)
 
