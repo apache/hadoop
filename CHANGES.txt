@@ -535,6 +535,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4979. Fix capacity scheduler to block cluster for failed high
     RAM requirements across task types. (Vivek Ratan via yhemanth)
 
+    HADOOP-4949. Fix native compilation. (Chris Douglas via acmurthy) 
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
