@@ -564,6 +564,8 @@ class hadoopCluster:
                     workerInfoMap = {}
                     workerInfoMap['HDFS UI'] = 'http://%s' % self.hdfsInfo
                     workerInfoMap['Mapred UI'] = 'http://%s' % self.mapredInfo
+                    # Ringmaster URL sample format : http://hostname:port/
+                    workerInfoMap['RM RPC Port'] = '%s' % self.ringmasterXRS.split(":")[2].strip("/")
                     if mapredAddr.find(':') != -1:
                       workerInfoMap['Mapred RPC Port'] = mapredAddr.split(':')[1]
                     ret = self.__nodePool.updateWorkerInfo(workerInfoMap, self.jobId)
