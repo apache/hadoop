@@ -318,6 +318,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4948. Add parameters java5.home and forrest.home to the ant commands
     in test-patch.sh.  (Giridharan Kesavan via szetszwo)
 
+    HADOOP-4830. Add end-to-end test cases for testing queue capacities.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
