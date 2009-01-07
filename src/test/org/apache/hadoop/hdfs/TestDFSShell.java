@@ -581,15 +581,11 @@ public class TestDFSShell extends TestCase {
 
   public void testCopyToLocal() throws IOException {
     Configuration conf = new Configuration();
-    /* This tests some properties of ChecksumFileSystem as well.
-     * Make sure that we create ChecksumDFS */
-    conf.set("fs.hdfs.impl",
-             "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
-               fs instanceof ChecksumDistributedFileSystem);
-    ChecksumDistributedFileSystem dfs = (ChecksumDistributedFileSystem)fs;
+               fs instanceof DistributedFileSystem);
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -872,13 +868,11 @@ public class TestDFSShell extends TestCase {
     Configuration conf = new Configuration();
     /* This tests some properties of ChecksumFileSystem as well.
      * Make sure that we create ChecksumDFS */
-    conf.set("fs.hdfs.impl",
-             "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
-            fs instanceof ChecksumDistributedFileSystem);
-    ChecksumDistributedFileSystem fileSys = (ChecksumDistributedFileSystem)fs;
+            fs instanceof DistributedFileSystem);
+    DistributedFileSystem fileSys = (DistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -937,56 +931,6 @@ public class TestDFSShell extends TestCase {
       }
       fileSys.delete(myFile2, true);
 
-      // Verify that we can get with and without crc
-      {
-        File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
-        File checksumFile = new File(fileSys.getChecksumFile(
-                                                             new Path(testFile.getAbsolutePath())).toString());
-        testFile.delete();
-        checksumFile.delete();
-          
-        String[] args = new String[3];
-        args[0] = "-get";
-        args[1] = "/test/mkdirs";
-        args[2] = TEST_ROOT_DIR;
-        int val = -1;
-        try {
-          val = shell.run(args);
-        } catch (Exception e) {
-          System.err.println("Exception raised from DFSShell.run " +
-                             e.getLocalizedMessage()); 
-        }
-        assertTrue(val == 0);
-        assertTrue("Copying failed.", testFile.exists());
-        assertTrue("Checksum file " + checksumFile+" is copied.", !checksumFile.exists());
-        testFile.delete();
-      }
-      {
-        File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
-        File checksumFile = new File(fileSys.getChecksumFile(
-                                                             new Path(testFile.getAbsolutePath())).toString());
-        testFile.delete();
-        checksumFile.delete();
-          
-        String[] args = new String[4];
-        args[0] = "-get";
-        args[1] = "-crc";
-        args[2] = "/test/mkdirs";
-        args[3] = TEST_ROOT_DIR;
-        int val = -1;
-        try {
-          val = shell.run(args);
-        } catch (Exception e) {
-          System.err.println("Exception raised from DFSShell.run " +
-                             e.getLocalizedMessage()); 
-        }
-        assertTrue(val == 0);
-          
-        assertTrue("Copying data file failed.", testFile.exists());
-        assertTrue("Checksum file " + checksumFile+" not copied.", checksumFile.exists());
-        testFile.delete();
-        checksumFile.delete();
-      }
       // Verify that we get an error while trying to read an nonexistent file
       {
         String[] args = new String[2];

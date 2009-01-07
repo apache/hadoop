@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HADOOP-4941. Remove deprecated FileSystem methods: getBlockSize(Path f),
     getLength(Path f) and getReplication(Path src).  (szetszwo)
 
+    HADOOP-4648. Remove obsolete, deprecated InMemoryFileSystem and
+    ChecksumDistributedFileSystem.  (cdouglas via szetszwo)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

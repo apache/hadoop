@@ -37,8 +37,6 @@ public class TestDelegatingInputFormat extends TestCase {
 
   public void testSplitting() throws Exception {
     JobConf conf = new JobConf();
-    conf.set("fs.hdfs.impl",
-       "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");
     MiniDFSCluster dfs = null;
     try {
       dfs = new MiniDFSCluster(conf, 4, true, new String[] { "/rack0",

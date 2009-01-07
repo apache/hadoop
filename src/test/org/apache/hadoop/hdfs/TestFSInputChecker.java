@@ -22,7 +22,6 @@ import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -203,13 +202,13 @@ public class TestFSInputChecker extends TestCase {
   /**
    * Tests read/seek/getPos/skipped opeation for input stream.
    */
-  private void testChecker(ChecksumFileSystem fileSys, boolean readCS)
+  private void testChecker(FileSystem fileSys, boolean readCS)
   throws Exception {
     Path file = new Path("try.dat");
     if( readCS ) {
       writeFile(fileSys, file);
     } else {
-      writeFile(fileSys.getRawFileSystem(), file);
+      writeFile(fileSys, file);
     }
     stm = fileSys.open(file);
     checkReadAndGetPos();
@@ -283,13 +282,11 @@ public class TestFSInputChecker extends TestCase {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BYTES_PER_SUM);
-    conf.set("fs.hdfs.impl",
-             "org.apache.hadoop.hdfs.ChecksumDistributedFileSystem");
     rand.nextBytes(expected);
 
     // test DFS
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
-    ChecksumFileSystem fileSys = (ChecksumFileSystem)cluster.getFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     try {
       testChecker(fileSys, true);
       testChecker(fileSys, false);
@@ -312,7 +309,7 @@ public class TestFSInputChecker extends TestCase {
     }
   }
 
-  private void testSeekAndRead(ChecksumFileSystem fileSys)
+  private void testSeekAndRead(FileSystem fileSys)
   throws IOException {
     Path file = new Path("try.dat");
     writeFile(fileSys, file);
