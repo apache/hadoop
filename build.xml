@@ -456,7 +456,6 @@
   	
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
-    <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/lzo"/>
 
   	<javah
   	  classpath="${build.classes}"
@@ -466,16 +465,6 @@
   	  >
   	  <class name="org.apache.hadoop.io.compress.zlib.ZlibCompressor" />
       <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
-  	</javah>
-
-  	<javah
-  	  classpath="${build.classes}"
-  	  destdir="${build.native}/src/org/apache/hadoop/io/compress/lzo"
-      force="yes"
-  	  verbose="yes"
-  	  >
-  	  <class name="org.apache.hadoop.io.compress.lzo.LzoCompressor" />
-      <class name="org.apache.hadoop.io.compress.lzo.LzoDecompressor" />
   	</javah>
 
 	<exec dir="${build.native}" executable="sh" failonerror="true">

@@ -36,7 +36,7 @@
 export PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
 
 # List the sub-directories here
-SUBDIRS = src/org/apache/hadoop/io/compress/zlib
+SUBDIRS = src/org/apache/hadoop/io/compress/zlib lib
 
 # The following export is needed to build libhadoop.so in the 'lib' directory
 export SUBDIRS
