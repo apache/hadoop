@@ -91,9 +91,7 @@ class ChangeTableState extends TableOperation {
       synchronized (master.regionManager) {
         if (online) {
           // Bring offline regions on-line
-          if (!master.regionManager.isUnassigned(i) &&
-              !master.regionManager.isAssigned(i.getRegionName()) &&
-              !master.regionManager.isPending(i.getRegionName())) {
+          if (!master.regionManager.assignable(i)) {
             master.regionManager.setUnassigned(i, false);
           }
         } else {

@@ -694,6 +694,17 @@ class RegionManager implements HConstants {
     }
     return false;
   }
+
+  /**
+   * @param hri
+   * @return True if the passed region is assignable: i.e. not assigned, not
+   * pending and not unassigned.
+   */
+  public boolean assignable(final HRegionInfo hri) {
+    return !isUnassigned(hri) &&
+    !isPending(hri.getRegionName()) &&
+    !isAssigned(hri.getRegionName());
+  }
   
   /**
    * @param regionName

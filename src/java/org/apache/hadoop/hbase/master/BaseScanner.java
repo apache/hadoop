@@ -338,17 +338,16 @@ abstract class BaseScanner extends Chore implements HConstants {
   throws IOException {
     
     synchronized (regionManager) {
-      // Skip region - if ...
-      if(info.isOffline()                                 // offline
-          || regionManager.isOfflined(info.getRegionName())) { // queued for offline
-
+      // Skip region - if
+      if(info.isOffline() ||
+          regionManager.isOfflined(info.getRegionName())) { // queued for offline
         regionManager.removeRegion(info);
         return;
       }
       HServerInfo storedInfo = null;
+      boolean deadServerAndLogsSplit = false;
       boolean deadServer = false;
       if (serverName.length() != 0) {
-
         if (regionManager.isOfflined(info.getRegionName())) {
           // Skip if region is on kill list
           if(LOG.isDebugEnabled()) {
@@ -357,31 +356,31 @@ abstract class BaseScanner extends Chore implements HConstants {
           }
           return;
         }
-
-        storedInfo = master.serverManager.getServerInfo(serverName);
-        deadServer = master.serverManager.isDead(serverName);
+        storedInfo = this.master.serverManager.getServerInfo(serverName);
+        deadServer = this.master.serverManager.isDead(serverName);
+        deadServerAndLogsSplit =
+          this.master.serverManager.isDeadServerLogsSplit(serverName);
       }
 
       /*
-       * If the server is a dead server or its startcode is off -- either null
+       * If the server is a dead server and its logs have been split or its
+       * not on the dead server lists and its startcode is off -- either null
        * or doesn't match the start code for the address -- then add it to the
        * list of unassigned regions IF not already there (or pending open).
        */ 
-      if ((deadServer || 
-          (storedInfo == null || storedInfo.getStartCode() != startCode)) &&
-          (!regionManager.isUnassigned(info) &&
-              !regionManager.isPending(info.getRegionName()) &&
-              !regionManager.isAssigned(info.getRegionName()))) {
-
+      if ((deadServerAndLogsSplit ||
+          (!deadServer && (storedInfo == null ||
+            (storedInfo.getStartCode() != startCode)))) &&
+          this.regionManager.assignable(info)) {
         // The current assignment is invalid
-
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Current assignment of " +
-              info.getRegionNameAsString() +
-              " is not valid." +
-              (storedInfo == null ? " Server '" + serverName + "' unknown." :
+          LOG.debug("Current assignment of " + info.getRegionNameAsString() +
+            " is not valid; deadServerAndLogsSplit=" + deadServerAndLogsSplit +
+            ", deadServer=" + deadServer + ". " +
+            (storedInfo == null ? " Server '" + serverName + "' unknown." :
                 " serverInfo: " + storedInfo + ", passed startCode: " +
-                startCode + ", storedInfo.startCode: " + storedInfo.getStartCode()) +
+                startCode + ", storedInfo.startCode: " +
+                storedInfo.getStartCode()) +
           " Region is not unassigned, assigned or pending");
         }
 
@@ -389,7 +388,6 @@ abstract class BaseScanner extends Chore implements HConstants {
         // This is only done from here if we are restarting and there is stale
         // data in the meta region. Once we are on-line, dead server log
         // recovery is handled by lease expiration and ProcessServerShutdown
-
         if (!regionManager.isInitialMetaScanComplete() &&
             serverName.length() != 0) {
           StringBuilder dirName = new StringBuilder("log_");
@@ -418,7 +416,7 @@ abstract class BaseScanner extends Chore implements HConstants {
       }
     }
   }
-  
+
   /**
    * Notify the thread to die at the end of its next run
    */

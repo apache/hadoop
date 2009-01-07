@@ -55,7 +55,6 @@ public class Leases extends Thread {
   private final int leasePeriod;
   private final int leaseCheckFrequency;
   private volatile DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
-
   protected final Map<String, Lease> leases = new HashMap<String, Lease>();
   private volatile boolean stopRequested = false;
 
@@ -88,15 +87,16 @@ public class Leases extends Thread {
       if (lease == null) {
         continue;
       }
-      // A lease expired
+      // A lease expired.  Run the expired code before removing from queue
+      // since its presence in queue is used to see if lease exists still.
+      if (lease.getListener() == null) {
+        LOG.error("lease listener is null for lease " + lease.getLeaseName());
+      } else {
+        lease.getListener().leaseExpired();
+      }
       synchronized (leaseQueue) {
         leases.remove(lease.getLeaseName());
-        if (lease.getListener() == null) {
-          LOG.error("lease listener is null for lease " + lease.getLeaseName());
-          continue;
-        }
       }
-      lease.getListener().leaseExpired();
     }
     close();
   }
