@@ -286,7 +286,7 @@ class CapacitySchedulerConf {
     initializeDefaults();
   }
   
-  private static final String toFullPropertyName(String queue, 
+  static final String toFullPropertyName(String queue, 
                                                   String property) {
       return QUEUE_CONF_PROPERTY_NAME_PREFIX + queue + "." + property;
   }

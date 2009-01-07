@@ -154,6 +154,10 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     return dfsCluster.getFileSystem();
   }
 
+  protected MiniMRCluster getMRCluster() {
+    return mrCluster;
+  }
+
   /**
    * Returns the path to the root directory for the testcase.
    *

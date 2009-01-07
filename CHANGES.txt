@@ -289,6 +289,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4909. Fix Javadoc and make some of the API more consistent in their
     use of the JobContext instead of Configuration. (omalley)
 
+    HADOOP-4830. Add end-to-end test cases for testing queue capacities.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
