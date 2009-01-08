@@ -330,6 +330,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4980. Improve code layout of capacity scheduler to make it 
     easier to fix some blocker bugs. (Vivek Ratan via yhemanth)
 
+    HADOOP-4916. Make user/location of Chukwa installation configurable by an
+    external properties file. (Eric Yang via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
@@ -555,11 +558,11 @@ Release 0.20.0 - Unreleased
     HADOOP-4884. Make tool tip date format match standard HICC format. (Eric
     Yang via cdouglas)
 
-    HADOOP-4916. Make user/location of Chukwa installation configurable by an
-    external properties file. (Eric Yang via cdouglas)
-
     HADOOP-4925. Make Chukwa sender properties configurable. (Ari Rabkin via
     cdouglas)
+
+    HADOOP-4947. Make Chukwa command parsing more forgiving of whitespace. (Ari
+    Rabkin via cdouglas)
 
 Release 0.19.1 - Unreleased
 
