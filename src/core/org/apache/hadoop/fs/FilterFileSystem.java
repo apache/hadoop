@@ -138,11 +138,6 @@ public class FilterFileSystem extends FileSystem {
     return fs.rename(src, dst);
   }
   
-  /** Delete a file */@Deprecated
-  public boolean delete(Path f) throws IOException {
-    return delete(f, true);
-  }
-  
   /** Delete a file */
   public boolean delete(Path f, boolean recursive) throws IOException {
     return fs.delete(f, recursive);

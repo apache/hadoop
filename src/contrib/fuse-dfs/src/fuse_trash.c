@@ -116,7 +116,7 @@ int hdfsDeleteWithTrash(hdfsFS userFS, const char *path, int useTrash) {
     return ret;
   }
 
-  if (hdfsDelete(userFS, path)) {
+  if (hdfsDelete(userFS, path, 1)) {
     syslog(LOG_ERR,"ERROR: hdfs trying to delete the file %s",path);
     return -EIO;
   }

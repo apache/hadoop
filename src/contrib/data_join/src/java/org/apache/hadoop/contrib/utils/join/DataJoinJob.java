@@ -93,7 +93,7 @@ public class DataJoinJob {
     job.setJobName("DataJoinJob: " + jobName);
 
     FileSystem fs = FileSystem.get(defaults);
-    fs.delete(new Path(outputDir));
+    fs.delete(new Path(outputDir), true);
     FileInputFormat.setInputPaths(job, inputDir);
 
     job.setInputFormat(inputFormat);

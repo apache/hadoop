@@ -31,10 +31,10 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ToolRunner;
@@ -71,7 +71,7 @@ public class TestStreamedMerge extends TestCase {
   }
 
   String createInputs(boolean tag) throws IOException {
-    fs_.delete(new Path("/input/"));
+    fs_.delete(new Path("/input/"), true);
 
     // i18n() replaces some ASCII with multibyte UTF-8 chars
     addInput("/input/part-00", i18n("k1\tv1\n" + "k3\tv5\n"));
@@ -192,7 +192,7 @@ public class TestStreamedMerge extends TestCase {
     public void run() {
       try {
         in_ = connectInputStream();
-        LineReader lineReader = new LineReader((InputStream)in_, conf_);
+        LineReader lineReader = new LineReader(in_, conf_);
         Text line = new Text();
         while (lineReader.readLine(line) > 0) {
           buf_.append(line.toString());

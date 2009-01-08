@@ -268,10 +268,12 @@ extern  "C" {
      * hdfsDelete - Delete file. 
      * @param fs The configured filesystem handle.
      * @param path The path of the file. 
+     * @param recursive if path is a directory and set to 
+     * non-zero, the directory is deleted else throws an exception. In
+     * case of a file the recursive argument is irrelevant.
      * @return Returns 0 on success, -1 on error. 
      */
-    int hdfsDelete(hdfsFS fs, const char* path);
-
+    int hdfsDelete(hdfsFS fs, const char* path, int recursive);
 
     /**
      * hdfsRename - Rename file. 

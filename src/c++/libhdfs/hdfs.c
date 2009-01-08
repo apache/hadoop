@@ -1090,7 +1090,7 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 
 
 
-int hdfsDelete(hdfsFS fs, const char* path)
+int hdfsDelete(hdfsFS fs, const char* path, int recursive)
 {
     // JAVA EQUIVALENT:
     //  File f = new File(path);
@@ -1114,9 +1114,10 @@ int hdfsDelete(hdfsFS fs, const char* path)
     //Delete the file
     jvalue jVal;
     jthrowable jExc = NULL;
+    jboolean jRecursive = recursive;
     if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
-                     "delete", "(Lorg/apache/hadoop/fs/Path;)Z",
-                     jPath) != 0) {
+                     "delete", "(Lorg/apache/hadoop/fs/Path;Z)Z",
+                     jPath, jRecursive) != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FileSystem::delete");
         return -1;

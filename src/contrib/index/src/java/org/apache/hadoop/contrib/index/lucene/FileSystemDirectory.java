@@ -98,7 +98,7 @@ public class FileSystemDirectory extends Directory {
     FileStatus[] fileStatus =
         fs.listStatus(directory, LuceneIndexFileNameFilter.getFilter());
     for (int i = 0; i < fileStatus.length; i++) {
-      if (!fs.delete(fileStatus[i].getPath())) {
+      if (!fs.delete(fileStatus[i].getPath(), true)) {
         throw new IOException("Cannot delete index file "
             + fileStatus[i].getPath());
       }
@@ -150,7 +150,7 @@ public class FileSystemDirectory extends Directory {
    * @see org.apache.lucene.store.Directory#deleteFile(java.lang.String)
    */
   public void deleteFile(String name) throws IOException {
-    if (!fs.delete(new Path(directory, name))) {
+    if (!fs.delete(new Path(directory, name), true)) {
       throw new IOException("Cannot delete index file " + name);
     }
   }
@@ -167,7 +167,7 @@ public class FileSystemDirectory extends Directory {
    */
   public IndexOutput createOutput(String name) throws IOException {
     Path file = new Path(directory, name);
-    if (fs.exists(file) && !fs.delete(file)) {
+    if (fs.exists(file) && !fs.delete(file, true)) {
       // delete the existing one if applicable
       throw new IOException("Cannot overwrite index file " + file);
     }

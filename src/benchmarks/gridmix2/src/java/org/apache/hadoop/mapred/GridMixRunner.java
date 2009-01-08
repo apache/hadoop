@@ -255,7 +255,7 @@ public class GridMixRunner {
           String[] args = sb.toString().split(" ");
 
           try {
-            fs.delete(outfile);
+            fs.delete(outfile, true);
           } catch (IOException ex) {
             System.out.println(ex.toString());
           }
@@ -377,7 +377,7 @@ public class GridMixRunner {
   private static void clearDir(String dir) {
     try {
       Path outfile = new Path(dir);
-      fs.delete(outfile);
+      fs.delete(outfile, true);
     } catch (IOException ex) {
       ex.printStackTrace();
       System.out.println("delete file error:");

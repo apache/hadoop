@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.AccessControlException;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -78,7 +79,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * The name-node does not have a notion of "current" directory for a client.
    * <p>
    * Once created, the file is visible and available for read to other clients.
-   * Although, other clients cannot {@link #delete(String)}, re-create or 
+   * Although, other clients cannot {@link #delete(String, boolean)}, re-create or 
    * {@link #rename(String, String)} it until the file is completed
    * or explicitly as a result of lease expiration.
    * <p>
@@ -220,7 +221,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param src existing name.
    * @return true only if the existing file or directory was actually removed 
    * from the file system. 
+   * @deprecated use {@link #delete(String, boolean)} istead.
    */
+  @Deprecated
   public boolean delete(String src) throws IOException;
 
   /**

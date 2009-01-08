@@ -88,17 +88,17 @@ public class TestIndexUpdater extends TestCase {
 
       fs = dfsCluster.getFileSystem();
       if (fs.exists(inputPath)) {
-        fs.delete(inputPath);
+        fs.delete(inputPath, true);
       }
       fs.copyFromLocalFile(localInputPath, inputPath);
 
       if (fs.exists(outputPath)) {
         // do not create, mapred will create
-        fs.delete(outputPath);
+        fs.delete(outputPath, true);
       }
 
       if (fs.exists(indexPath)) {
-        fs.delete(indexPath);
+        fs.delete(indexPath, true);
       }
 
       mrCluster =
@@ -157,7 +157,7 @@ public class TestIndexUpdater extends TestCase {
 
     for (int i = 0; i < numRuns; i++) {
       if (fs.exists(outputPath)) {
-        fs.delete(outputPath);
+        fs.delete(outputPath, true);
       }
 
       Shard[] shards = new Shard[initNumShards + i];

@@ -176,7 +176,7 @@ public class ShardWriter {
     for (int i = 0; i < fileStatus.length; i++) {
       Path path = fileStatus[i].getPath();
       if (startGen < LuceneUtil.generationFromSegmentsFileName(path.getName())) {
-        fs.delete(path);
+        fs.delete(path, true);
       }
     }
 
@@ -184,7 +184,7 @@ public class ShardWriter {
     // but not segments.gen, and segments.gen will be overwritten anyway.
     Path segmentsGenFile = new Path(LuceneUtil.IndexFileNames.SEGMENTS_GEN);
     if (fs.exists(segmentsGenFile)) {
-      fs.delete(segmentsGenFile);
+      fs.delete(segmentsGenFile, true);
     }
   }
 
@@ -226,7 +226,7 @@ public class ShardWriter {
       }
     } finally {
       // finally delete the temp dir (files should have been deleted)
-      localFs.delete(temp);
+      localFs.delete(temp, true);
     }
   }
 

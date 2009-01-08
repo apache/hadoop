@@ -105,7 +105,7 @@ public class HDFSMerger {
     
     for (FileStatus fstatus : inputFiles) {
       appendFile(fstatus.getPath());
-      hdfs.delete(fstatus.getPath());
+      hdfs.delete(fstatus.getPath(), true);
     }
 
     outputFile.close();

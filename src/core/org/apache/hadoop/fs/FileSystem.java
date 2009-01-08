@@ -561,10 +561,6 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract boolean rename(Path src, Path dst) throws IOException;
     
-  /** Delete a file. */
-  /** @deprecated Use delete(Path, boolean) instead */ @Deprecated 
-  public abstract boolean delete(Path f) throws IOException;
-  
   /** Delete a file.
    *
    * @param f the path to delete.

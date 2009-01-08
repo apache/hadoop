@@ -305,13 +305,13 @@ int main(int argc, char **argv) {
         hdfsFreeFileInfo(finfo, 1);
 
         // Clean up
-        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, newDirectory)) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, newDirectory, 1)) ? "Failed!" : "Success!"));
         totalResult += result;
-        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, srcPath)) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, srcPath, 1)) ? "Failed!" : "Success!"));
         totalResult += result;
-        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, srcPath)) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, srcPath, 1)) ? "Failed!" : "Success!"));
         totalResult += result;
-        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, dstPath)) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, dstPath, 1)) ? "Failed!" : "Success!"));
         totalResult += result;
         fprintf(stderr, "hdfsExists: %s\n", ((result = hdfsExists(fs, newDirectory)) ? "Success!" : "Failed!"));
         totalResult += (result ? 0 : 1);

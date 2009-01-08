@@ -20,19 +20,20 @@
 
 package org.apache.hadoop.fs.kfs;
 
-import java.io.*;
-import java.net.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * A FileSystem backed by KFS.
@@ -54,10 +55,12 @@ public class KosmosFileSystem extends FileSystem {
         this.kfsImpl = fsimpl;
     }
 
+    @Override
     public URI getUri() {
 	return uri;
     }
 
+    @Override
     public void initialize(URI uri, Configuration conf) throws IOException {
         try {
 	    if (kfsImpl == null) {
@@ -82,15 +85,18 @@ public class KosmosFileSystem extends FileSystem {
         }
     }
 
+    @Override
     @Deprecated
     public String getName() {
 	return getUri().toString();
     }
 
+    @Override
     public Path getWorkingDirectory() {
 	return workingDir;
     }
 
+    @Override
     public void setWorkingDirectory(Path dir) {
 	workingDir = makeAbsolute(dir);
     }
@@ -102,6 +108,7 @@ public class KosmosFileSystem extends FileSystem {
 	return new Path(workingDir, path);
     }
 
+    @Override
     public boolean mkdirs(Path path, FsPermission permission
         ) throws IOException {
 	Path absolute = makeAbsolute(path);
@@ -116,6 +123,7 @@ public class KosmosFileSystem extends FileSystem {
 	return res == 0;
     }
 
+    @Override
     @Deprecated
     public boolean isDirectory(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
@@ -126,6 +134,7 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.isDirectory(srep);
     }
 
+    @Override
     @Deprecated
     public boolean isFile(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
@@ -133,6 +142,7 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.isFile(srep);
     }
 
+    @Override
     public FileStatus[] listStatus(Path path) throws IOException {
         Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
@@ -143,6 +153,7 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.readdirplus(absolute);
     }
 
+    @Override
     public FileStatus getFileStatus(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
@@ -164,11 +175,13 @@ public class KosmosFileSystem extends FileSystem {
     }
     
     /** This optional operation is not yet supported. */
+    @Override
     public FSDataOutputStream append(Path f, int bufferSize,
         Progressable progress) throws IOException {
       throw new IOException("Not supported");
     }
 
+    @Override
     public FSDataOutputStream create(Path file, FsPermission permission,
                                      boolean overwrite, int bufferSize,
 				     short replication, long blockSize, Progressable progress)
@@ -176,7 +189,7 @@ public class KosmosFileSystem extends FileSystem {
 
         if (exists(file)) {
             if (overwrite) {
-                delete(file);
+                delete(file, true);
             } else {
                 throw new IOException("File already exists: " + file);
             }
@@ -193,6 +206,7 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.create(srep, replication, bufferSize);
     }
 
+    @Override
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
         if (!exists(path))
             throw new IOException("File does not exist: " + path);
@@ -203,6 +217,7 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.open(srep, bufferSize);
     }
 
+    @Override
     public boolean rename(Path src, Path dst) throws IOException {
 	Path absoluteS = makeAbsolute(src);
         String srepS = absoluteS.toUri().getPath();
@@ -215,6 +230,7 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     // recursively delete the directory and its contents
+    @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
       Path absolute = makeAbsolute(path);
       String srep = absolute.toUri().getPath();
@@ -235,15 +251,12 @@ public class KosmosFileSystem extends FileSystem {
       return kfsImpl.rmdir(srep) == 0;
     }
     
-    @Deprecated
-    public boolean delete(Path path) throws IOException {
-      return delete(path, true);
-    }
-    
+    @Override
     public short getDefaultReplication() {
 	return 3;
     }
 
+    @Override
     public boolean setReplication(Path path, short replication)
 	throws IOException {
 
@@ -256,6 +269,7 @@ public class KosmosFileSystem extends FileSystem {
 
     // 64MB is the KFS block size
 
+    @Override
     public long getDefaultBlockSize() {
 	return 1 << 26;
     }
@@ -296,19 +310,23 @@ public class KosmosFileSystem extends FileSystem {
       return result;
     }
 
+    @Override
     public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
 	FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
     }
 
+    @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
 	FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
     }
 
+    @Override
     public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
 	throws IOException {
 	return tmpLocalFile;
     }
 
+    @Override
     public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
 	throws IOException {
 	moveFromLocalFile(tmpLocalFile, fsOutputFile);

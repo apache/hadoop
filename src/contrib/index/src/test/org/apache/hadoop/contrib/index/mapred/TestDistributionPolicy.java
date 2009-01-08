@@ -88,21 +88,21 @@ public class TestDistributionPolicy extends TestCase {
 
       fs = dfsCluster.getFileSystem();
       if (fs.exists(inputPath)) {
-        fs.delete(inputPath);
+        fs.delete(inputPath, true);
       }
       fs.copyFromLocalFile(localInputPath, inputPath);
       if (fs.exists(updatePath)) {
-        fs.delete(updatePath);
+        fs.delete(updatePath, true);
       }
       fs.copyFromLocalFile(localUpdatePath, updatePath);
 
       if (fs.exists(outputPath)) {
         // do not create, mapred will create
-        fs.delete(outputPath);
+        fs.delete(outputPath, true);
       }
 
       if (fs.exists(indexPath)) {
-        fs.delete(indexPath);
+        fs.delete(indexPath, true);
       }
 
       mrCluster =
@@ -156,7 +156,7 @@ public class TestDistributionPolicy extends TestCase {
     onetest();
 
     if (fs.exists(indexPath)) {
-      fs.delete(indexPath);
+      fs.delete(indexPath, true);
     }
 
     // test round-robin distribution policy
@@ -177,7 +177,7 @@ public class TestDistributionPolicy extends TestCase {
     }
 
     if (fs.exists(outputPath)) {
-      fs.delete(outputPath);
+      fs.delete(outputPath, true);
     }
 
     IIndexUpdater updater = new IndexUpdater();
@@ -185,7 +185,7 @@ public class TestDistributionPolicy extends TestCase {
         shards);
 
     if (fs.exists(outputPath)) {
-      fs.delete(outputPath);
+      fs.delete(outputPath, true);
     }
 
     // delete docs w/ even docids, update docs w/ odd docids

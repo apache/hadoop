@@ -328,15 +328,6 @@ public class HftpFileSystem extends FileSystem {
     throw new IOException("Not supported");
   }
 
-  @Override
-  /*
-   * @deprecated Use delete(path, boolean)
-   */
-  @Deprecated
-  public boolean delete(Path f) throws IOException {
-    throw new IOException("Not supported");
-  }
-  
   @Override 
   public boolean delete(Path f, boolean recursive) throws IOException {
     throw new IOException("Not supported");

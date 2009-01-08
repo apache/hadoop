@@ -13,6 +13,9 @@ Trunk (unreleased changes)
     HADOOP-4648. Remove obsolete, deprecated InMemoryFileSystem and
     ChecksumDistributedFileSystem.  (cdouglas via szetszwo)
 
+    HADOOP-4940. Remove a deprecated method FileSystem.delete(Path f).  (Enis
+    Soztutar via szetszwo)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
