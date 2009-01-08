@@ -144,7 +144,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     cluster.shutdown();
   }
 
-  boolean corruptReplica(String blockName, int replica) throws IOException {
+  public static boolean corruptReplica(String blockName, int replica) throws IOException {
     Random random = new Random();
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     boolean corrupted = false;
@@ -423,7 +423,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     }
   }
   
-  private void truncateReplica(String blockName, int dnIndex) throws IOException {
+  private static void truncateReplica(String blockName, int dnIndex) throws IOException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
@@ -437,7 +437,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     }
   }
   
-  private void waitForBlockDeleted(String blockName, int dnIndex) 
+  private static void waitForBlockDeleted(String blockName, int dnIndex) 
   throws IOException, InterruptedException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1)+ "/current/" + 
