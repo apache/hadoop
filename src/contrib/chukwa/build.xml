@@ -789,10 +789,22 @@ fi
 mv %{buildroot}/%{name}-%{version} %{buildroot}%{_prefix}/%{name}
 cd %{buildroot}%{_prefix}
 mkdir -p %{buildroot}/etc/init.d
-cat %{name}/tools/init.d/chukwa-data-processors | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
-cat %{name}/tools/init.d/chukwa-collector | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
-cat %{name}/tools/init.d/chukwa-agent | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
-cat %{name}/tools/init.d/chukwa-system-metrics | sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' > %{buildroot}/etc/init.d
+cat %{name}/tools/init.d/chukwa-data-processors | \
+sed 's:- chukwa -c:- %{uid} -c:' | \
+sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-data-processors
+cat %{name}/tools/init.d/chukwa-collector | \
+sed 's:- chukwa -c:- %{uid} -c:' | \
+sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-collector
+cat %{name}/tools/init.d/chukwa-agent | \
+sed 's:- chukwa -c:- %{uid} -c:' | \
+sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-agent
+cat %{name}/tools/init.d/chukwa-system-metrics | \
+sed 's:- chukwa -c:- %{uid} -c:' | \
+sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-system-metrics
 chmod a+x %{buildroot}/etc/init.d/chukwa-*
 rm -rf %{buildroot}%{_prefix}/%{name}/src
 rm -rf %{buildroot}%{_prefix}/%{name}/build.xml

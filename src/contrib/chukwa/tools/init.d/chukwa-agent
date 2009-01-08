@@ -32,13 +32,14 @@ prog=chukwa-agent
 
 config () {
         CHUKWA_HOME=/usr/local/chukwa
+        CHUKWA_CONF_DIR=/usr/local/chukwa/conf
 }
 
 start () {
         echo -n $"Starting $prog: "
         config
         # start daemon
-	sudo -u gmon ${CHUKWA_HOME}/bin/chukwa-daemon.sh --watchdog start agent.sh
+	su - chukwa -c "${CHUKWA_HOME}/bin/chukwa-daemon.sh --config=${CHUKWA_CONF_DIR} --watchdog start agent.sh"
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/$prog
@@ -49,7 +50,7 @@ stop () {
         # stop daemon
         echo -n $"Stopping $prog: "
         config
-	sudo -u gmon ${CHUKWA_HOME}/bin/chukwa-daemon.sh --watchdog stop agent.sh
+	su - chukwa -c "${CHUKWA_HOME}/bin/chukwa-daemon.sh --config=${CHUKWA_CONF_DIR} --watchdog stop agent.sh"
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && rm -f /var/lock/subsys/$prog
