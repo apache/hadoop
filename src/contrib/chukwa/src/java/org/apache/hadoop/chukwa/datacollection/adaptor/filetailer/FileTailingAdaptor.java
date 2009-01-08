@@ -29,6 +29,8 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.Timer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An adaptor that repeatedly tails a specified file, sending the new bytes.
@@ -81,11 +83,12 @@ public class FileTailingAdaptor implements Adaptor
 	    this.type = type;
 	    this.dest = dest;
 	    this.attempts = 0;
-			  
-	    String[] words = params.split(" ");
-	    if(words.length > 1) {
-	        offsetOfFirstByte = Long.parseLong(words[0]);
-	        toWatch = new File(params.substring(words[0].length() + 1));
+			
+	    Pattern cmd = Pattern.compile("(\\d+)\\s+(.+)");
+	    Matcher m = cmd.matcher(params);
+	    if(m.matches()) {
+	        offsetOfFirstByte = Long.parseLong(m.group(1));
+	        toWatch = new File(m.group(2));
 	    } else {
 	        toWatch = new File(params);
 	    }

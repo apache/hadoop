@@ -80,7 +80,7 @@ public class AgentControlSocketListener extends Thread {
      * @throws IOException
      */
     public void processCommand(String cmd, PrintStream out) throws IOException  {
-      String[] words = cmd.split(" ");
+      String[] words = cmd.split("\\s+");
       if (log.isDebugEnabled())
   		{ log.debug("command from " + connection.getRemoteSocketAddress() + ":"+ cmd);}
       
