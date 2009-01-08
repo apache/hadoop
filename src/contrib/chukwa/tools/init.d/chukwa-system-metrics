@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # chkconfig:	- 90 90
+# description: chukwa system metrics
 
 if [ -f /etc/init.d/functions ] ; then
         . /etc/init.d/functions

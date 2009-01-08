@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # chkconfig:	- 90 89
+# description: chukwa agent
 
 if [ -f /etc/init.d/functions ] ; then
         . /etc/init.d/functions

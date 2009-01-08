@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # chkconfig:	- 90 92
+# description: chukwa data processors
 
 if [ -f /etc/init.d/functions ] ; then
         . /etc/init.d/functions
