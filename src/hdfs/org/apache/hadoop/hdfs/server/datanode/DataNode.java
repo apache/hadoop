@@ -738,7 +738,14 @@ public class DataNode extends Configured
             lastBlockReport = startTime - R.nextInt((int)(blockReportInterval));
             resetBlockReportTime = false;
           } else {
-            lastBlockReport = startTime;
+            /* say the last block report was at 8:20:14. The current report 
+             * should have started around 9:20:14 (default 1 hour interval). 
+             * If current time is :
+             *   1) normal like 9:20:18, next report should be at 10:20:14
+             *   2) unexpected like 11:35:43, next report should be at 12:20:14
+             */
+            lastBlockReport += (now() - lastBlockReport) / 
+                               blockReportInterval * blockReportInterval;
           }
           processCommand(cmd);
         }
