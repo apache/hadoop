@@ -26,7 +26,7 @@ wholePeriod=function () {
 
 options={
         points: { show: true },
-        xaxis: {                timeformat: "%D/%O/%y<br/>%H:%M:%S",
+        xaxis: {                timeformat: "%y/%O/%D<br/>%H:%M:%S",
                 mode: "time"
         },
         selection: { mode: "xy" },
@@ -52,10 +52,9 @@ options={
                     $("#tooltip").remove();
                     var x = item.datapoint[0].toFixed(2),
                          y = item.stackValue.toFixed(2);
-//item.datapoint[1].toFixed(2);
                     var dnow=new Date();
                     dnow.setTime(x);
-	            var dita=leftPad(dnow.getUTCDate())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCFullYear()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
+	            var dita=leftPad(dnow.getUTCFullYear())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCDate()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
  
                     showTooltip(item.pageX, item.pageY,
                                 item.series.label + ": " + y + "<br>Time: " + dita);
@@ -79,7 +78,7 @@ options={
                          y = item.datapoint[1].toFixed(2);
                     var dnow=new Date();
                     dnow.setTime(x);
-	            var dita=leftPad(dnow.getUTCDate())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCFullYear()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
+	            var dita=leftPad(dnow.getUTCFullYear())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCDate()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
  
                     showTooltip(item.pageX, item.pageY,
                                 item.series.label + ": " + y + "<br>Time: " + dita);
