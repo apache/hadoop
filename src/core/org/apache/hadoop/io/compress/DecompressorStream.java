@@ -24,11 +24,11 @@ import java.io.InputStream;
 
 import org.apache.hadoop.io.compress.Decompressor;
 
-class DecompressorStream extends CompressionInputStream {
-  Decompressor decompressor = null;
-  byte[] buffer;
-  boolean eof = false;
-  boolean closed = false;
+public class DecompressorStream extends CompressionInputStream {
+  protected Decompressor decompressor = null;
+  protected byte[] buffer;
+  protected boolean eof = false;
+  protected boolean closed = false;
   
   public DecompressorStream(InputStream in, Decompressor decompressor, int bufferSize) {
     super(in);
@@ -56,7 +56,7 @@ class DecompressorStream extends CompressionInputStream {
     super(in);
   }
   
-  byte[] oneByte = new byte[1];
+  private byte[] oneByte = new byte[1];
   public int read() throws IOException {
     checkStream();
     return (read(oneByte, 0, oneByte.length) == -1) ? -1 : (oneByte[0] & 0xff);
@@ -74,7 +74,7 @@ class DecompressorStream extends CompressionInputStream {
     return decompress(b, off, len);
   }
 
-  int decompress(byte[] b, int off, int len) throws IOException {
+  protected int decompress(byte[] b, int off, int len) throws IOException {
     int n = 0;
     
     while ((n = decompressor.decompress(b, off, len)) == 0) {
@@ -90,7 +90,7 @@ class DecompressorStream extends CompressionInputStream {
     return n;
   }
   
-  void getCompressedData() throws IOException {
+  protected void getCompressedData() throws IOException {
     checkStream();
   
     int n = in.read(buffer, 0, buffer.length);
@@ -101,7 +101,7 @@ class DecompressorStream extends CompressionInputStream {
     decompressor.setInput(buffer, 0, n);
   }
   
-  void checkStream() throws IOException {
+  protected void checkStream() throws IOException {
     if (closed) {
       throw new IOException("Stream closed");
     }
@@ -111,7 +111,7 @@ class DecompressorStream extends CompressionInputStream {
     decompressor.reset();
   }
 
-  byte[] skipBytes = new byte[512];
+  private byte[] skipBytes = new byte[512];
   public long skip(long n) throws IOException {
     // Sanity checks
     if (n < 0) {

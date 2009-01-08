@@ -24,10 +24,10 @@ import java.io.OutputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
-class CompressorStream extends CompressionOutputStream {
-  Compressor compressor;
-  byte[] buffer;
-  boolean closed = false;
+public class CompressorStream extends CompressionOutputStream {
+  protected Compressor compressor;
+  protected byte[] buffer;
+  protected boolean closed = false;
   
   public CompressorStream(OutputStream out, Compressor compressor, int bufferSize) {
     super(out);
@@ -72,7 +72,7 @@ class CompressorStream extends CompressionOutputStream {
     }
   }
 
-  void compress() throws IOException {
+  protected void compress() throws IOException {
     int len = compressor.compress(buffer, 0, buffer.length);
     if (len > 0) {
       out.write(buffer, 0, len);
@@ -100,7 +100,7 @@ class CompressorStream extends CompressionOutputStream {
     }
   }
 
-  byte[] oneByte = new byte[1];
+  private byte[] oneByte = new byte[1];
   public void write(int b) throws IOException {
     oneByte[0] = (byte)(b & 0xff);
     write(oneByte, 0, oneByte.length);
