@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # chkconfig:	- 90 91
+# description: chukwa collector
 
 if [ -f /etc/init.d/functions ] ; then
         . /etc/init.d/functions

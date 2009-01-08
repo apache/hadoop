@@ -549,6 +549,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4787. Fixes the testcase TestTrackerBlacklistAcrossJobs which was
     earlier failing randomly. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4914. Add description fields to Chukwa init.d scripts (Eric Yang via
+    cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
