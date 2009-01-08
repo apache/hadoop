@@ -624,7 +624,7 @@ public class MiniDFSCluster {
   /*
    * Restart a particular datanode
    */
-  synchronized boolean restartDataNode(int i) throws IOException {
+  public synchronized boolean restartDataNode(int i) throws IOException {
     DataNodeProperties dnprop = stopDataNode(i);
     if (dnprop == null) {
       return false;
