@@ -28,7 +28,7 @@ import java.io.InputStream;
  * 'stream-based' compression algorithms.
  *  
  */
-class BlockDecompressorStream extends DecompressorStream {
+public class BlockDecompressorStream extends DecompressorStream {
   private int originalBlockSize = 0;
   private int noUncompressedBytes = 0;
 
@@ -58,7 +58,7 @@ class BlockDecompressorStream extends DecompressorStream {
     super(in);
   }
 
-  int decompress(byte[] b, int off, int len) throws IOException {
+  protected int decompress(byte[] b, int off, int len) throws IOException {
     // Check if we are the beginning of a block
     if (noUncompressedBytes == originalBlockSize) {
       // Get original data size
@@ -89,7 +89,7 @@ class BlockDecompressorStream extends DecompressorStream {
     return n;
   }
 
-  void getCompressedData() throws IOException {
+  protected void getCompressedData() throws IOException {
     checkStream();
 
     // Get the size of the compressed chunk

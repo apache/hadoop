@@ -298,6 +298,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4916. Make user/location of Chukwa installation configurable by an
     external properties file. (Eric Yang via cdouglas)
 
+    HADOOP-4950. Make the CompressorStream, DecompressorStream, 
+    BlockCompressorStream, and BlockDecompressorStream public to facilitate 
+    non-Hadoop codecs. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
