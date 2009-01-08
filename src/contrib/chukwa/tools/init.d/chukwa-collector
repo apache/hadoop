@@ -31,14 +31,15 @@ DAEMON=jettyCollector.sh
 prog=chukwa-collector
 
 config () {
-        CHUKWA_HOME=/usr/local/chukwa
+                CHUKWA_HOME=/usr/local/chukwa
+                CHUKWA_CONF_DIR=/usr/local/chukwa/conf
 }
 
 start () {
         echo -n $"Starting $prog: "
         config
         # start daemon
-	sudo -u gmon ${CHUKWA_HOME}/bin/chukwa-daemon.sh --watchdog start jettyCollector.sh
+	su - chukwa -c "${CHUKWA_HOME}/bin/chukwa-daemon.sh  --config=${CHUKWA_CONF_DIR} --watchdog start jettyCollector.sh"
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/$prog
@@ -49,7 +50,7 @@ stop () {
         # stop daemon
         config
         echo -n $"Stopping $prog: "
-	sudo -u gmon ${CHUKWA_HOME}/bin/chukwa-daemon.sh --watchdog stop jettyCollector.sh
+	su - chukwa -c "${CHUKWA_HOME}/bin/chukwa-daemon.sh  --config=${CHUKWA_CONF_DIR} --watchdog stop jettyCollector.sh"
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && rm -f /var/lock/subsys/$prog

@@ -22,11 +22,11 @@ bin=`cd "$bin"; pwd`
 . "$bin"/chukwa-config.sh
 
 echo "hadoop jar for agent is " ${HADOOP_JAR}
-trap '${JPS} | grep ChukwaAgent | grep -v grep | cut -f 1 -d" " | xargs kill -TERM ; exit 0' 1 2 15
+trap '${JPS} | grep ChukwaAgent | grep -v grep | grep -o "[^ ].*" | cut -f 1 -d" " | xargs kill -TERM ; exit 0' 1 2 15
 
 if [ "X$1" = "Xstop" ]; then
   echo -n "Shutting down agent..."
-  JETTY_PID=`${JPS} | grep ChukwaAgent | grep -v grep | cut -f 1 -d" "`
+  JETTY_PID=`${JPS} | grep ChukwaAgent | grep -v grep | grep -o "[^ ].*" | cut -f 1 -d" "`
   kill -TERM ${JETTY_PID} >&/dev/null
   echo "done"
   exit 0
