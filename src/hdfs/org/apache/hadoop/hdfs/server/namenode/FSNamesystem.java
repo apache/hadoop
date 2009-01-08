@@ -2997,13 +2997,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       delNodeHint = null;
     }
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
+    Collection<DatanodeDescriptor> corruptNodes = corruptReplicas.getNodes(block);
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block); 
          it.hasNext();) {
       DatanodeDescriptor cur = it.next();
       Collection<Block> excessBlocks = excessReplicateMap.get(cur.getStorageID());
       if (excessBlocks == null || !excessBlocks.contains(block)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-          nonExcess.add(cur);
+          // exclude corrupt replicas
+          if (corruptNodes == null || !corruptNodes.contains(cur)) {
+            nonExcess.add(cur);
+          }
         }
       }
     }
