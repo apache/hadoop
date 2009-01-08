@@ -26,6 +26,9 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+    
+    HADOOP-4963. Fixes a logging to do with getting the location of
+    map output file. (Amareshwari Sriramadasu via ddas)
 
 Release 0.20.0 - Unreleased
 
