@@ -517,6 +517,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4914. Add description fields to Chukwa init.d scripts (Eric Yang via
     cdouglas)
 
+    HADOOP-4884. Make tool tip date format match standard HICC format. (Eric
+    Yang via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
