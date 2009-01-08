@@ -112,7 +112,7 @@ public class HttpConnector implements Connector, Runnable  {
 					"conf/collectors file", e);
 		}
 
-		connectorClient = new ChukwaHttpSender();
+		connectorClient = new ChukwaHttpSender(agent.getConfiguration());
 
 		if (argDestination != null) 
 		{
