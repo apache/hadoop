@@ -579,6 +579,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4847. Moves the loading of OutputCommitter to the Task.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4966. Marks completed setup tasks for removal. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
