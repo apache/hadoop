@@ -287,18 +287,6 @@ abstract class Task implements Writable, Configurable {
     conf.setBoolean("mapred.task.is.map", isMapTask());
     conf.setInt("mapred.task.partition", partition);
     conf.set("mapred.job.id", taskId.getJobID().toString());
-    Path outputPath = FileOutputFormat.getOutputPath(conf);
-    if (outputPath != null) {
-      OutputCommitter committer = conf.getOutputCommitter();
-      if ((committer instanceof FileOutputCommitter)) {
-        TaskAttemptContext context = new TaskAttemptContext(conf, taskId);
-        FileOutputFormat.setWorkOutputPath(conf, 
-          ((FileOutputCommitter)committer).getTempTaskOutputPath(context));
-      } else {
-        FileOutputFormat.setWorkOutputPath(conf, outputPath);
-      }
-    }
-
   }
   
   /** Run this task as a part of the named job.  This method is executed in the
@@ -425,6 +413,15 @@ abstract class Task implements Writable, Configurable {
     jobContext = new JobContext(job, reporter);
     taskContext = new TaskAttemptContext(job, taskId, reporter);
     OutputCommitter committer = conf.getOutputCommitter();
+    Path outputPath = FileOutputFormat.getOutputPath(conf);
+    if (outputPath != null) {
+      if ((committer instanceof FileOutputCommitter)) {
+        FileOutputFormat.setWorkOutputPath(conf, 
+          ((FileOutputCommitter)committer).getTempTaskOutputPath(taskContext));
+      } else {
+        FileOutputFormat.setWorkOutputPath(conf, outputPath);
+      }
+    }
     committer.setupTask(taskContext);
   }
   
