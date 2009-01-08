@@ -8,7 +8,8 @@
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
 
-This package implements fair scheduling for MapReduce jobs.
+This package implements a fair scheduler for MapReduce jobs with additional
+support for guaranteed shares and job limits.
 
 Fair scheduling is a method of assigning resources to jobs such that all jobs
 get, on average, an equal share of resources over time. When there is a single
@@ -21,18 +22,24 @@ number of users. Finally, fair sharing can also work with job priorities - the
 priorities are used as weights to determine the fraction of total compute time
 that each job should get.
 
-In addition to providing fair sharing, the Fair Scheduler allows assigning
-jobs to "pools" with guaranteed minimum shares. When a pool contains jobs,
-it gets at least its minimum share, but when a pool does not need its full
-capacity, the excess is shared between other running jobs. Thus pools are
-a way to guarantee capacity for particular user groups while utilizing the
-cluster efficiently when these users are not submitting any jobs. Within each
-pool, fair sharing is used to share capacity between the running jobs. By
-default the pool is set based on the queue.name property in the jobconf which
-will be introduced with the Hadoop Resource Manager (JIRA 3445), but it's
-possible to also have a pool per user or per Unix user group.
+The scheduler actually organizes jobs further into "pools", and shares resources
+fairly between these pools. By default, there is a separate pool for each user,
+so that each user gets the same share of the cluster no matter how many jobs
+they submit. However, it is also possible to set a job's pool based on the
+user's Unix group or any other jobconf property, such as the queue name
+property used by the Capacity Scheduler (JIRA HADOOP-3445). Within each pool,
+fair sharing is used to share capacity between the running jobs. Pools can also
+be given weights to share the cluster non-proportionally in the config file.
 
-The fair scheduler lets all jobs run by default, but it is also possible to
+In addition to providing fair sharing, the Fair Scheduler allows assigning
+guaranteed minimum shares to pools, which is useful for ensuring that certain
+users, groups or production applications always get sufficient resources.
+When a pool contains jobs, it gets at least its minimum share, but when the pool
+does not need its full guaranteed share, the excess is split between other
+running jobs. This lets the scheduler guarantee capacity for pools while
+utilizing resources efficiently when these pools don't contain jobs.
+
+The Fair Scheduler lets all jobs run by default, but it is also possible to
 limit the number of running jobs per user and per pool through the config
 file. This can be useful when a user must submit hundreds of jobs at once,
 or in general to improve performance if running too many jobs at once would
@@ -45,8 +52,7 @@ time, as in the default FIFO scheduler in Hadoop.
 Finally, the fair scheduler provides several extension points where the basic
 functionality can be extended. For example, the weight calculation can be
 modified to give a priority boost to new jobs, implementing a "shortest job
-first" like policy which will reduce response times for interactive jobs even
-further. 
+first" policy which reduces response times for interactive jobs even further. 
 
 --------------------------------------------------------------------------------
 
@@ -88,17 +94,22 @@ mapred.fairscheduler.allocation.file:
     for each pool, as well as the per-pool and per-user limits on number of
     running jobs. If this property is not provided, allocations are not used.
     This file must be in XML format, and can contain three types of elements:
-    - pool elements, which may contain elements for minMaps, minReduces and
-      maxRunningJobs (limit the number of jobs from the pool to run at once).
-    - user elements, which may contain a maxRunningJobs to limit jobs.
-    - A userMaxJobsDefault element, which sets the running job limit for any
-      users that do not have their own elements.
+    - pool elements, which may contain elements for minMaps, minReduces,
+      maxRunningJobs (limit the number of jobs from the pool to run at once),
+      and weight (to share the cluster non-proportionally with other pools).
+    - user elements, which may contain a maxRunningJobs to limit jobs. Note
+      that by default, there is a separate pool for each user, so these may not
+      be necessary; they are useful, however, if you create a pool per user
+      group or manually assign jobs to pools.
+    - A userMaxJobsDefault element, which sets the default running job limit
+      for any users whose limit is not specified.
     The following example file shows how to create each type of element:
         <?xml version="1.0"?>
         <allocations>
           <pool name="sample_pool">
             <minMaps>5</minMaps>
             <minReduces>5</minReduces>
+            <weight>2.0</weight>
           </pool>
           <user name="sample_user">
             <maxRunningJobs>6</maxRunningJobs>
@@ -106,11 +117,13 @@ mapred.fairscheduler.allocation.file:
           <userMaxJobsDefault>3</userMaxJobsDefault>
         </allocations>
     This example creates a pool sample_pool with a guarantee of 5 map slots
-    and 5 reduce slots. It also limits the number of running jobs per user
+    and 5 reduce slots. The pool also has a weight of 2.0, meaning it has a 2x
+    higher share of the cluster than other pools (the default weight is 1).
+    Finally, the example limits the number of running jobs per user
     to 3, except for sample_user, who can run 6 jobs concurrently.
     Any pool not defined in the allocations file will have no guaranteed
-    capacity. Also, any pool or user with no max running jobs set in the file
-    will be allowed to run an unlimited number of jobs.
+    capacity and a weight of 1.0. Also, any pool or user with no max running
+    jobs set in the file will be allowed to run an unlimited number of jobs.
 
 mapred.fairscheduler.assignmultiple:
     Allows the scheduler to assign both a map task and a reduce task on each
@@ -128,9 +141,11 @@ mapred.fairscheduler.sizebasedweight:
 
 mapred.fairscheduler.poolnameproperty:
     Specify which jobconf property is used to determine the pool that a job
-    belongs in. String, default: queue.name (the same property as the queue
-    name in the Hadoop Resource Manager, JIRA 3445). You can use user.name
-    or group.name to base it on the Unix user or Unix group for example.
+    belongs in. String, default: user.name (i.e. one pool for each user).
+    Some other useful values to set this to are:
+    - group.name (to create a pool per Unix group).
+    - mapred.job.queue.name (the same property as the queue name in the
+    Capacity Scheduler, JIRA HADOOP-3445).
 
 mapred.fairscheduler.weightadjuster:
     An extensibility point that lets you specify a class to adjust the weights

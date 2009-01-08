@@ -60,6 +60,9 @@ public class PoolManager {
   // Map and reduce minimum allocations for each pool
   private Map<String, Integer> mapAllocs = new HashMap<String, Integer>();
   private Map<String, Integer> reduceAllocs = new HashMap<String, Integer>();
+
+  // Sharing weights for each pool
+  private Map<String, Double> poolWeights = new HashMap<String, Double>();
   
   // Max concurrent running jobs for each pool and for each user; in addition,
   // for users that have no max specified, we use the userMaxJobsDefault.
@@ -80,7 +83,7 @@ public class PoolManager {
   public PoolManager(Configuration conf) throws IOException, SAXException,
       AllocationConfigurationException, ParserConfigurationException {
     this.poolNameProperty = conf.get(
-        "mapred.fairscheduler.poolnameproperty", "mapred.job.queue.name");
+        "mapred.fairscheduler.poolnameproperty", "user.name");
     this.allocFile = conf.get("mapred.fairscheduler.allocation.file");
     if (allocFile == null) {
       LOG.warn("No mapred.fairscheduler.allocation.file given in jobconf - " +
@@ -162,6 +165,7 @@ public class PoolManager {
     Map<String, Integer> reduceAllocs = new HashMap<String, Integer>();
     Map<String, Integer> poolMaxJobs = new HashMap<String, Integer>();
     Map<String, Integer> userMaxJobs = new HashMap<String, Integer>();
+    Map<String, Double> poolWeights = new HashMap<String, Double>();
     int userMaxJobsDefault = Integer.MAX_VALUE;
     
     // Remember all pool names so we can display them on web UI, etc.
@@ -204,6 +208,10 @@ public class PoolManager {
             String text = ((Text)field.getFirstChild()).getData().trim();
             int val = Integer.parseInt(text);
             poolMaxJobs.put(poolName, val);
+          } else if ("weight".equals(field.getTagName())) {
+            String text = ((Text)field.getFirstChild()).getData().trim();
+            double val = Double.parseDouble(text);
+            poolWeights.put(poolName, val);
           }
         }
       } else if ("user".equals(element.getTagName())) {
@@ -237,6 +245,7 @@ public class PoolManager {
       this.poolMaxJobs = poolMaxJobs;
       this.userMaxJobs = userMaxJobs;
       this.userMaxJobsDefault = userMaxJobsDefault;
+      this.poolWeights = poolWeights;
       for (String name: poolNamesInAllocFile) {
         getPool(name);
       }
@@ -319,6 +328,14 @@ public class PoolManager {
       return poolMaxJobs.get(pool);
     } else {
       return Integer.MAX_VALUE;
+    }
+  }
+
+  public double getPoolWeight(String pool) {
+    if (poolWeights.containsKey(pool)) {
+      return poolWeights.get(pool);
+    } else {
+      return 1.0;
     }
   }
 }

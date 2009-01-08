@@ -759,25 +759,25 @@ public class TestFairScheduler extends TestCase {
     // Check that minimum and fair shares have been allocated
     assertEquals(0,    info1.minMaps);
     assertEquals(0,    info1.minReduces);
-    assertEquals(1.33, info1.mapFairShare, 0.1);
-    assertEquals(1.33, info1.reduceFairShare, 0.1);
+    assertEquals(2,    info1.mapFairShare, 0.1);
+    assertEquals(2,    info1.reduceFairShare, 0.1);
     assertEquals(1,    info2.minMaps);
     assertEquals(1,    info2.minReduces);
-    assertEquals(1.33, info2.mapFairShare, 0.1);
-    assertEquals(1.33, info2.reduceFairShare, 0.1);
+    assertEquals(1,    info2.mapFairShare, 0.1);
+    assertEquals(1,    info2.reduceFairShare, 0.1);
     assertEquals(1,    info3.minMaps);
     assertEquals(1,    info3.minReduces);
-    assertEquals(1.33, info3.mapFairShare, 0.1);
-    assertEquals(1.33, info3.reduceFairShare, 0.1);
+    assertEquals(1,    info3.mapFairShare, 0.1);
+    assertEquals(1,    info3.reduceFairShare, 0.1);
     
     // Advance time 100ms and check deficits
     advanceTime(100);
-    assertEquals(1133, info1.mapDeficit, 1.0);
-    assertEquals(1133, info1.reduceDeficit, 1.0);
-    assertEquals(333,  info2.mapDeficit, 1.0);
-    assertEquals(333,  info2.reduceDeficit, 1.0);
-    assertEquals(133,  info3.mapDeficit, 1.0);
-    assertEquals(133,  info3.reduceDeficit, 1.0);
+    assertEquals(1200, info1.mapDeficit, 1.0);
+    assertEquals(1200, info1.reduceDeficit, 1.0);
+    assertEquals(300,  info2.mapDeficit, 1.0);
+    assertEquals(300,  info2.reduceDeficit, 1.0);
+    assertEquals(100,  info3.mapDeficit, 1.0);
+    assertEquals(100,  info3.reduceDeficit, 1.0);
     
     // Assign tasks and check that slots are first given to needy jobs, but
     // that job 1 gets two tasks after due to having a larger deficit.
@@ -1036,26 +1036,29 @@ public class TestFairScheduler extends TestCase {
     JobInfo info10 = scheduler.infos.get(job10);
     advanceTime(10);
     
-    // Check scheduler variables
-    double SHARE = 4.0 / 7.0; // We have 4 slots and 7 runnable jobs
-    assertEquals(SHARE,  info1.mapFairShare, 0.1);
-    assertEquals(SHARE,  info1.reduceFairShare, 0.1);
+    // Check scheduler variables. The jobs in poolA should get half
+    // the total share, while those in the default pool should get
+    // the other half. This works out to 2 slots each for the jobs
+    // in poolA and 1/3 each for the jobs in the default pool because
+    // there are 2 runnable jobs in poolA and 6 jobs in the default pool.
+    assertEquals(0.33,   info1.mapFairShare, 0.1);
+    assertEquals(0.33,   info1.reduceFairShare, 0.1);
     assertEquals(0.0,    info2.mapFairShare);
     assertEquals(0.0,    info2.reduceFairShare);
-    assertEquals(SHARE,  info3.mapFairShare, 0.1);
-    assertEquals(SHARE,  info3.reduceFairShare, 0.1);
-    assertEquals(SHARE,  info4.mapFairShare, 0.1);
-    assertEquals(SHARE,  info4.reduceFairShare, 0.1);
-    assertEquals(SHARE,  info5.mapFairShare, 0.1);
-    assertEquals(SHARE,  info5.reduceFairShare, 0.1);
-    assertEquals(SHARE,  info6.mapFairShare, 0.1);
-    assertEquals(SHARE,  info6.reduceFairShare, 0.1);
-    assertEquals(SHARE,  info7.mapFairShare, 0.1);
-    assertEquals(SHARE,  info7.reduceFairShare, 0.1);
+    assertEquals(0.33,   info3.mapFairShare, 0.1);
+    assertEquals(0.33,   info3.reduceFairShare, 0.1);
+    assertEquals(0.33,   info4.mapFairShare, 0.1);
+    assertEquals(0.33,   info4.reduceFairShare, 0.1);
+    assertEquals(0.33,   info5.mapFairShare, 0.1);
+    assertEquals(0.33,   info5.reduceFairShare, 0.1);
+    assertEquals(0.33,   info6.mapFairShare, 0.1);
+    assertEquals(0.33,   info6.reduceFairShare, 0.1);
+    assertEquals(0.33,   info7.mapFairShare, 0.1);
+    assertEquals(0.33,   info7.reduceFairShare, 0.1);
     assertEquals(0.0,    info8.mapFairShare);
     assertEquals(0.0,    info8.reduceFairShare);
-    assertEquals(SHARE,  info9.mapFairShare, 0.1);
-    assertEquals(SHARE,  info9.reduceFairShare, 0.1);
+    assertEquals(2.0,    info9.mapFairShare, 0.1);
+    assertEquals(2.0,    info9.reduceFairShare, 0.1);
     assertEquals(0.0,    info10.mapFairShare);
     assertEquals(0.0,    info10.reduceFairShare);
   }
@@ -1092,6 +1095,60 @@ public class TestFairScheduler extends TestCase {
     assertTrue(scheduler.enoughMapsFinishedToRunReduces(1, 5));
     assertFalse(scheduler.enoughMapsFinishedToRunReduces(0, 1));
     assertTrue(scheduler.enoughMapsFinishedToRunReduces(1, 1));
+  }
+  
+
+  /**
+   * This test submits jobs in three pools: poolA, which has a weight
+   * of 2.0; poolB, which has a weight of 0.5; and the default pool, which
+   * should have a weight of 1.0. It then checks that the map and reduce
+   * fair shares are given out accordingly. We then submit a second job to
+   * pool B and check that each gets half of the pool (weight of 0.25).
+   */
+  public void testPoolWeights() throws Exception {
+    // Set up pools file
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<pool name=\"poolA\">");
+    out.println("<weight>2.0</weight>");
+    out.println("</pool>");
+    out.println("<pool name=\"poolB\">");
+    out.println("<weight>0.5</weight>");
+    out.println("</pool>");
+    out.println("</allocations>");
+    out.close();
+    scheduler.getPoolManager().reloadAllocs();
+    
+    // Submit jobs, advancing time in-between to make sure that they are
+    // all submitted at distinct times.
+    JobInProgress job1 = submitJob(JobStatus.RUNNING, 10, 10);
+    JobInfo info1 = scheduler.infos.get(job1);
+    JobInProgress job2 = submitJob(JobStatus.RUNNING, 10, 10, "poolA");
+    JobInfo info2 = scheduler.infos.get(job2);
+    JobInProgress job3 = submitJob(JobStatus.RUNNING, 10, 10, "poolB");
+    JobInfo info3 = scheduler.infos.get(job3);
+    advanceTime(10);
+    
+    assertEquals(1.14,  info1.mapFairShare, 0.01);
+    assertEquals(1.14,  info1.reduceFairShare, 0.01);
+    assertEquals(2.28,  info2.mapFairShare, 0.01);
+    assertEquals(2.28,  info2.reduceFairShare, 0.01);
+    assertEquals(0.57,  info3.mapFairShare, 0.01);
+    assertEquals(0.57,  info3.reduceFairShare, 0.01);
+    
+    JobInProgress job4 = submitJob(JobStatus.RUNNING, 10, 10, "poolB");
+    JobInfo info4 = scheduler.infos.get(job4);
+    advanceTime(10);
+    
+    assertEquals(1.14,  info1.mapFairShare, 0.01);
+    assertEquals(1.14,  info1.reduceFairShare, 0.01);
+    assertEquals(2.28,  info2.mapFairShare, 0.01);
+    assertEquals(2.28,  info2.reduceFairShare, 0.01);
+    assertEquals(0.28,  info3.mapFairShare, 0.01);
+    assertEquals(0.28,  info3.reduceFairShare, 0.01);
+    assertEquals(0.28,  info4.mapFairShare, 0.01);
+    assertEquals(0.28,  info4.reduceFairShare, 0.01);
   }
   
   private void advanceTime(long time) {

@@ -450,11 +450,41 @@ public class FairScheduler extends TaskScheduler {
   }
 
   private void updateWeights() {
+    // First, calculate raw weights for each job
     for (Map.Entry<JobInProgress, JobInfo> entry: infos.entrySet()) {
       JobInProgress job = entry.getKey();
       JobInfo info = entry.getValue();
-      info.mapWeight = calculateWeight(job, TaskType.MAP);
-      info.reduceWeight = calculateWeight(job, TaskType.REDUCE);
+      info.mapWeight = calculateRawWeight(job, TaskType.MAP);
+      info.reduceWeight = calculateRawWeight(job, TaskType.REDUCE);
+    }
+    // Now calculate job weight sums for each pool
+    Map<String, Double> mapWeightSums = new HashMap<String, Double>();
+    Map<String, Double> reduceWeightSums = new HashMap<String, Double>();
+    for (Pool pool: poolMgr.getPools()) {
+      double mapWeightSum = 0;
+      double reduceWeightSum = 0;
+      for (JobInProgress job: pool.getJobs()) {
+        if (isRunnable(job)) {
+          if (runnableTasks(job, TaskType.MAP) > 0) {
+            mapWeightSum += infos.get(job).mapWeight;
+          }
+          if (runnableTasks(job, TaskType.REDUCE) > 0) {
+            reduceWeightSum += infos.get(job).reduceWeight;
+          }
+        }
+      }
+      mapWeightSums.put(pool.getName(), mapWeightSum);
+      reduceWeightSums.put(pool.getName(), mapWeightSum);
+    }
+    // And normalize the weights based on pool sums and pool weights
+    // to share fairly across pools (proportional to their weights)
+    for (Map.Entry<JobInProgress, JobInfo> entry: infos.entrySet()) {
+      JobInProgress job = entry.getKey();
+      JobInfo info = entry.getValue();
+      String pool = poolMgr.getPoolName(job);
+      double poolWeight = poolMgr.getPoolWeight(pool);
+      info.mapWeight *= (poolWeight / mapWeightSums.get(pool)); 
+      info.reduceWeight *= (poolWeight / reduceWeightSums.get(pool));
     }
   }
   
@@ -615,7 +645,7 @@ public class FairScheduler extends TaskScheduler {
     }
   }
 
-  private double calculateWeight(JobInProgress job, TaskType taskType) {
+  private double calculateRawWeight(JobInProgress job, TaskType taskType) {
     if (!isRunnable(job)) {
       return 0;
     } else {
