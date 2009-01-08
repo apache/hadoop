@@ -1660,6 +1660,10 @@ Release 0.18.3 - Unreleased
     HADOOP-4961. Fix ConcurrentModificationException in lease recovery 
     of empty files. (shv)
 
+    HADOOP-4971. A long (unexpected) delay at datanodes could make subsequent
+    block reports from many datanode at the same time. (Raghu Angadi)
+    
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
