@@ -278,4 +278,8 @@ class JobQueuesManager extends JobInProgressListener {
     QueueInfo qi = jobQueues.get(queue);
     return qi.getWaitingJobCount();
   }
+
+  boolean doesQueueSupportPriorities(String queueName) {
+    return jobQueues.get(queueName).supportsPriorities;
+  }
 }

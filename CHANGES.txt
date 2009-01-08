@@ -292,6 +292,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4830. Add end-to-end test cases for testing queue capacities.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-4980. Improve code layout of capacity scheduler to make it 
+    easier to fix some blocker bugs. (Vivek Ratan via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
