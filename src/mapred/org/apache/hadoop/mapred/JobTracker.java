@@ -1440,6 +1440,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @param job the completed job
    */
   void markCompletedJob(JobInProgress job) {
+    for (TaskInProgress tip : job.getSetupTasks()) {
+      for (TaskStatus taskStatus : tip.getTaskStatuses()) {
+        if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
+            taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
+            taskStatus.getRunState() != TaskStatus.State.UNASSIGNED) {
+          markCompletedTaskAttempt(taskStatus.getTaskTracker(), 
+                                   taskStatus.getTaskID());
+        }
+      }
+    }
     for (TaskInProgress tip : job.getMapTasks()) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
