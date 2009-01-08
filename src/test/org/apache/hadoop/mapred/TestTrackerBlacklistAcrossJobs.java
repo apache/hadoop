@@ -71,7 +71,6 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
                                  new Path(inDir + "/file"), (short) 1);
     // start mr cluster
     JobConf jtConf = new JobConf();
-    jtConf.setInt("mapred.max.tracker.failures", 1);
     jtConf.setInt("mapred.max.tracker.blacklists", 1);
     mr = new MiniMRCluster(3, fileSys.getUri().toString(),
                            1, null, hosts, jtConf);
@@ -79,6 +78,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     // setup job configuration
     JobConf mrConf = mr.createJobConf();
     JobConf job = new JobConf(mrConf);
+    job.setInt("mapred.max.tracker.failures", 1);
     job.setNumMapTasks(30);
     job.setNumReduceTasks(0);
     job.setMapperClass(SleepJobFailOnHost.class);
