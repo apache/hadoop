@@ -40,6 +40,7 @@ import org.apache.commons.httpclient.methods.RequestEntity;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.datacollection.adaptor.Adaptor;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.log4j.Logger;
 
@@ -52,9 +53,9 @@ import org.apache.log4j.Logger;
  * <p> Will wait forever for collectors to come up. </p>
  */
 public class ChukwaHttpSender implements ChukwaSender{
-  static final int MAX_RETRIES_PER_COLLECTOR = 4; //fast retries, in http client
-  static final int SENDER_RETRIES = 14440; 
-  static final int WAIT_FOR_COLLECTOR_REBOOT = 20 * 1000; 
+  final int MAX_RETRIES_PER_COLLECTOR ; //fast retries, in http client
+  final int SENDER_RETRIES; 
+  final int WAIT_FOR_COLLECTOR_REBOOT; 
     //FIXME: this should really correspond to the timer in RetryListOfCollectors
   
   static Logger log = Logger.getLogger(ChukwaHttpSender.class);
@@ -114,12 +115,15 @@ public class ChukwaHttpSender implements ChukwaSender{
     }
   }
 
-  public ChukwaHttpSender(){
+  public ChukwaHttpSender(Configuration c){
     //setup default collector
     ArrayList<String> tmp = new ArrayList<String>();
     this.collectors = tmp.iterator();
     log.info("added a single collector to collector list in ConnectorClient constructor, it's hasNext is now: " + collectors.hasNext());
 
+    MAX_RETRIES_PER_COLLECTOR = c.getInt("chukwaAgent.sender.fastRetries", 4);
+    SENDER_RETRIES= c.getInt("chukwaAgent.sender.retries", 144000);
+    WAIT_FOR_COLLECTOR_REBOOT= c.getInt("chukwaAgent.sender.retryInterval", 20*1000);
   }
   
   /**
