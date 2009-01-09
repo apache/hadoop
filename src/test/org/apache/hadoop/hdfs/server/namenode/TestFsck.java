@@ -178,7 +178,8 @@ public class TestFsck extends TestCase {
       String block = dfsClient.namenode.
                       getBlockLocations(fileNames[0], 0, Long.MAX_VALUE).
                       get(0).getBlock().getBlockName();
-      File baseDir = new File(System.getProperty("test.build.data"),"dfs/data");
+      File baseDir = new File(System.getProperty("test.build.data",
+                                                 "build/test/data"),"dfs/data");
       for (int i=0; i<8; i++) {
         File blockFile = new File(baseDir, "data" +(i+1)+ "/current/" + block);
         if(blockFile.exists()) {
@@ -289,7 +290,8 @@ public class TestFsck extends TestCase {
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas 
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(System.getProperty("test.build.data",
+                                               "build/test/data"),"dfs/data");
     for (int i=0; i < 6; i++) {
       File blockFile = new File(baseDir, "data" + (i+1) + "/current/" +
                                 block);
