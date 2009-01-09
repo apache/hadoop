@@ -835,7 +835,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
-      this.regionManager.setClosing(servername, hri, hri.isOffline(), false);
+      this.regionManager.setClosing(servername, hri, hri.isOffline());
       MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
       HRegionInterface srvr = getMETAServer(meta);
       HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);

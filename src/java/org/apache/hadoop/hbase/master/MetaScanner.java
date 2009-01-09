@@ -49,21 +49,21 @@ class MetaScanner extends BaseScanner {
    * Constructor
    * 
    * @param master
-   * @param regionManager
    */
-  public MetaScanner(HMaster master, RegionManager regionManager) {
-    super(master, regionManager, false, master.metaRescanInterval, master.closed);
+  public MetaScanner(HMaster master) {
+    super(master, false, master.metaRescanInterval, master.closed);
   }
 
   // Don't retry if we get an error while scanning. Errors are most often
   // caused by the server going away. Wait until next rescan interval when
   // things should be back to normal.
   private boolean scanOneMetaRegion(MetaRegion region) {
-    while (!master.closed.get() && !regionManager.isInitialRootScanComplete() &&
-      regionManager.getRootRegionLocation() == null) {
+    while (!this.master.closed.get() &&
+        !this.master.regionManager.isInitialRootScanComplete() &&
+        this.master.regionManager.getRootRegionLocation() == null) {
       sleep();
     }
-    if (master.closed.get()) {
+    if (this.master.closed.get()) {
       return false;
     }
 
@@ -71,7 +71,7 @@ class MetaScanner extends BaseScanner {
       // Don't interrupt us while we're working
       synchronized (scannerLock) {
         scanRegion(region);
-        regionManager.putMetaRegionOnline(region);
+        this.master.regionManager.putMetaRegionOnline(region);
       }
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
@@ -80,13 +80,13 @@ class MetaScanner extends BaseScanner {
       // so, either it won't be in the onlineMetaRegions list or its host
       // address has changed and the containsValue will fail. If not
       // found, best thing to do here is probably return.
-      if (!regionManager.isMetaRegionOnline(region.getStartKey())) {
+      if (!this.master.regionManager.isMetaRegionOnline(region.getStartKey())) {
         LOG.debug("Scanned region is no longer in map of online " +
         "regions or its value has changed");
         return false;
       }
       // Make sure the file system is still available
-      master.checkFileSystem();
+      this.master.checkFileSystem();
     } catch (Exception e) {
       // If for some reason we get some other kind of exception, 
       // at least log it rather than go out silently.
@@ -98,11 +98,11 @@ class MetaScanner extends BaseScanner {
   @Override
   protected boolean initialScan() {
     MetaRegion region = null;
-    while (!master.closed.get() &&
+    while (!this.master.closed.get() &&
         (region == null && metaRegionsToScan.size() > 0) &&
           !metaRegionsScanned()) {
       try {
-        region = metaRegionsToScan.poll(master.threadWakeFrequency, 
+        region = metaRegionsToScan.poll(this.master.threadWakeFrequency, 
           TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         // continue
@@ -122,7 +122,8 @@ class MetaScanner extends BaseScanner {
 
   @Override
   protected void maintenanceScan() {
-    List<MetaRegion> regions = regionManager.getListOfOnlineMetaRegions();
+    List<MetaRegion> regions =
+      this.master.regionManager.getListOfOnlineMetaRegions();
     int regionCount = 0;
     for (MetaRegion r: regions) {
       scanOneMetaRegion(r);
@@ -140,8 +141,9 @@ class MetaScanner extends BaseScanner {
    * @return False if number of meta regions matches count of online regions.
    */
   private synchronized boolean metaRegionsScanned() {
-    if (!regionManager.isInitialRootScanComplete() ||
-      regionManager.numMetaRegions() != regionManager.numOnlineMetaRegions()) {
+    if (!this.master.regionManager.isInitialRootScanComplete() ||
+        this.master.regionManager.numMetaRegions() !=
+          this.master.regionManager.numOnlineMetaRegions()) {
       return false;
     }
     notifyAll();
@@ -153,21 +155,21 @@ class MetaScanner extends BaseScanner {
    * been scanned.
    */
   synchronized boolean waitForMetaRegionsOrClose() {
-    while (!master.closed.get()) {
+    while (!this.master.closed.get()) {
       synchronized (master.regionManager) {
-        if (regionManager.isInitialRootScanComplete() &&
-            regionManager.numMetaRegions() ==
-              regionManager.numOnlineMetaRegions()) {
+        if (this.master.regionManager.isInitialRootScanComplete() &&
+            this.master.regionManager.numMetaRegions() ==
+              this.master.regionManager.numOnlineMetaRegions()) {
           break;
         }
       }
       try {
-        wait(master.threadWakeFrequency);
+        wait(this.master.threadWakeFrequency);
       } catch (InterruptedException e) {
         // continue
       }
     }
-    return master.closed.get();
+    return this.master.closed.get();
   }
   
   /**

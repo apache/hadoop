@@ -126,7 +126,7 @@ class ServerManager implements HConstants {
       }
       // May be on list of dead servers.  If so, wait till we've cleared it.
       String addr = serverInfo.getServerAddress().toString();
-      if (isDead(addr) && !isDeadServerLogsSplit(addr)) {
+      if (isDead(addr)) {
         LOG.debug("Waiting on " + addr + " removal from dead list before " +
           "processing report-for-duty request");
         sleepTime = this.master.threadWakeFrequency;
@@ -308,13 +308,15 @@ class ServerManager implements HConstants {
               synchronized (master.regionManager) {
                 if (info.isRootRegion()) {
                   master.regionManager.reassignRootRegion();
-                } else if (info.isMetaTable()) {
-                  master.regionManager.offlineMetaRegion(info.getStartKey());
-                }
-                if (!master.regionManager.isOfflined(info.getRegionName())) {
-                  master.regionManager.setUnassigned(info, true);
                 } else {
-                  master.regionManager.removeRegion(info);
+                  if (info.isMetaTable()) {
+                    master.regionManager.offlineMetaRegion(info.getStartKey());
+                  }
+                  if (!master.regionManager.isOfflined(info.getRegionName())) {
+                    master.regionManager.setUnassigned(info, true);
+                  } else {
+                    master.regionManager.removeRegion(info);
+                  }
                 }
               }
             }
@@ -419,7 +421,7 @@ class ServerManager implements HConstants {
       for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
         // Transition the region from toClose to closing state
-        master.regionManager.setClosed(i.getRegionName());
+        master.regionManager.setPendingClose(i.getRegionName());
       }
 
       // Figure out what the RegionServer ought to do, and write back.
@@ -472,7 +474,7 @@ class ServerManager implements HConstants {
     boolean duplicateAssignment = false;
     synchronized (master.regionManager) {
       if (!master.regionManager.isUnassigned(region) &&
-          !master.regionManager.isAssigned(region.getRegionName())) {
+          !master.regionManager.isPendingOpen(region.getRegionName())) {
         if (region.isRootRegion()) {
           // Root region
           HServerAddress rootServer = master.getRootRegionLocation();
@@ -489,7 +491,7 @@ class ServerManager implements HConstants {
           // Not root region. If it is not a pending region, then we are
           // going to treat it as a duplicate assignment, although we can't 
           // tell for certain that's the case.
-          if (master.regionManager.isPending(region.getRegionName())) {
+          if (master.regionManager.isPendingOpen(region.getRegionName())) {
             // A duplicate report from the correct server
             return;
           }
@@ -523,7 +525,7 @@ class ServerManager implements HConstants {
         } else {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
-          master.regionManager.setPending(region.getRegionName());
+          master.regionManager.setOpen(region.getRegionName());
           // Queue up an update to note the region location.
           try {
             master.toDoQueue.put(
@@ -564,9 +566,10 @@ class ServerManager implements HConstants {
       //       the messages we've received. In this case, a close could be
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
+      master.regionManager.setClosed(region.getRegionName());
       try {
-        master.toDoQueue.put(new ProcessRegionClose(master, region, offlineRegion,
-            reassignRegion));
+        master.toDoQueue.put(new ProcessRegionClose(master, region,
+            offlineRegion, reassignRegion));
       } catch (InterruptedException e) {
         throw new RuntimeException("Putting into toDoQueue was interrupted.", e);
       }
@@ -580,11 +583,11 @@ class ServerManager implements HConstants {
     // Only cancel lease and update load information once.
     // This method can be called a couple of times during shutdown.
     if (info != null) {
+      LOG.info("Cancelling lease for " + serverName);
       if (master.getRootRegionLocation() != null &&
         info.getServerAddress().equals(master.getRootRegionLocation())) {
-        master.regionManager.reassignRootRegion();
+        master.regionManager.unsetRootRegion();
       }
-      LOG.info("Cancelling lease for " + serverName);
       try {
         serverLeases.cancelLease(serverName);
       } catch (LeaseException e) {
@@ -788,22 +791,5 @@ class ServerManager implements HConstants {
    */
   public boolean isDead(String serverName) {
     return deadServers.containsKey(serverName);
-  }
-
-  /**
-   * @param serverName
-   * @return True if this is a dead server and it has had its logs split.
-   */
-  public boolean isDeadServerLogsSplit(final String serverName) {
-    Boolean b = this.deadServers.get(serverName);
-    return b == null? false: b.booleanValue();
-  }
-
-  /**
-   * Set that this deadserver has had its log split.
-   * @param serverName
-   */
-  public void setDeadServerLogsSplit(final String serverName) {
-    this.deadServers.put(serverName, Boolean.TRUE);
   }
 }

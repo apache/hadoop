@@ -30,10 +30,9 @@ class RootScanner extends BaseScanner {
    * Constructor
    * 
    * @param master
-   * @param regionManager
    */
-  public RootScanner(HMaster master, RegionManager regionManager) {
-    super(master, regionManager, true, master.metaRescanInterval, master.closed);
+  public RootScanner(HMaster master) {
+    super(master, true, master.metaRescanInterval, master.closed);
   }
 
   /*

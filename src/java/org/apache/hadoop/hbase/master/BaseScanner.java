@@ -104,7 +104,6 @@ abstract class BaseScanner extends Chore implements HConstants {
     
   private final boolean rootRegion;
   protected final HMaster master;
-  protected final RegionManager regionManager;
   
   protected boolean initialScanComplete;
   
@@ -115,12 +114,11 @@ abstract class BaseScanner extends Chore implements HConstants {
   // mid-scan
   final Integer scannerLock = new Integer(0);
   
-  BaseScanner(final HMaster master, final RegionManager regionManager, 
-    final boolean rootRegion, final int period, final AtomicBoolean stop) {
+  BaseScanner(final HMaster master, final boolean rootRegion, final int period,
+      final AtomicBoolean stop) {
     super(period, stop);
     this.rootRegion = rootRegion;
     this.master = master;
-    this.regionManager = regionManager;
     this.initialScanComplete = false;
   }
   
@@ -180,7 +178,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         rows += 1;
       }
       if (rootRegion) {
-        regionManager.setNumMetaRegions(rows);
+        this.master.regionManager.setNumMetaRegions(rows);
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
@@ -210,7 +208,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
         "while scanning meta region " + Bytes.toString(region.getRegionName()));
-      master.deleteEmptyMetaRows(regionServer, region.getRegionName(),
+      this.master.deleteEmptyMetaRows(regionServer, region.getRegionName(),
           emptyRows);
     }
 
@@ -264,7 +262,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-      HRegion.deleteRegion(master.fs, master.rootdir, parent);
+      HRegion.deleteRegion(this.master.fs, this.master.rootdir, parent);
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());
       result = true;
@@ -294,8 +292,8 @@ abstract class BaseScanner extends Chore implements HConstants {
     if (split == null) {
       return result;
     }
-    Path tabledir =
-      HTableDescriptor.getTableDir(master.rootdir, split.getTableDesc().getName());
+    Path tabledir = HTableDescriptor.getTableDir(this.master.rootdir,
+        split.getTableDesc().getName());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = HStoreFile.getMapDir(tabledir, split.getEncodedName(),
         family.getName());
@@ -303,7 +301,7 @@ abstract class BaseScanner extends Chore implements HConstants {
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
 
-      FileStatus [] ps = master.fs.listStatus(p,
+      FileStatus [] ps = this.master.fs.listStatus(p,
           new PathFilter () {
             public boolean accept(Path path) {
               return HStore.isReference(path);
@@ -337,70 +335,56 @@ abstract class BaseScanner extends Chore implements HConstants {
     final String serverName, final long startCode) 
   throws IOException {
     
-    synchronized (regionManager) {
-      // Skip region - if
+    synchronized (this.master.regionManager) {
+      /*
+       * We don't assign regions that are offline, in transition or were on
+       * a dead server. Regions that were on a dead server will get reassigned
+       * by ProcessServerShutdown
+       */
       if(info.isOffline() ||
-          regionManager.isOfflined(info.getRegionName())) { // queued for offline
-        regionManager.removeRegion(info);
+          this.master.regionManager.regionIsInTransition(info.getRegionName()) ||
+          this.master.serverManager.isDead(serverName)) {
+
         return;
       }
       HServerInfo storedInfo = null;
-      boolean deadServerAndLogsSplit = false;
-      boolean deadServer = false;
       if (serverName.length() != 0) {
-        if (regionManager.isOfflined(info.getRegionName())) {
-          // Skip if region is on kill list
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("not assigning region (on kill list): " +
-                info.getRegionNameAsString());
-          }
-          return;
-        }
         storedInfo = this.master.serverManager.getServerInfo(serverName);
-        deadServer = this.master.serverManager.isDead(serverName);
-        deadServerAndLogsSplit =
-          this.master.serverManager.isDeadServerLogsSplit(serverName);
       }
 
       /*
-       * If the server is a dead server and its logs have been split or its
-       * not on the dead server lists and its startcode is off -- either null
-       * or doesn't match the start code for the address -- then add it to the
-       * list of unassigned regions IF not already there (or pending open).
+       * If the startcode is off -- either null or doesn't match the start code
+       * for the address -- then add it to the list of unassigned regions.
        */ 
-      if ((deadServerAndLogsSplit ||
-          (!deadServer && (storedInfo == null ||
-            (storedInfo.getStartCode() != startCode)))) &&
-          this.regionManager.assignable(info)) {
+      if (storedInfo == null || storedInfo.getStartCode() != startCode) {
+
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; deadServerAndLogsSplit=" + deadServerAndLogsSplit +
-            ", deadServer=" + deadServer + ". " +
+            " is not valid; " +
             (storedInfo == null ? " Server '" + serverName + "' unknown." :
                 " serverInfo: " + storedInfo + ", passed startCode: " +
                 startCode + ", storedInfo.startCode: " +
-                storedInfo.getStartCode()) +
-          " Region is not unassigned, assigned or pending");
+                storedInfo.getStartCode()));
         }
 
         // Recover the region server's log if there is one.
         // This is only done from here if we are restarting and there is stale
         // data in the meta region. Once we are on-line, dead server log
         // recovery is handled by lease expiration and ProcessServerShutdown
-        if (!regionManager.isInitialMetaScanComplete() &&
+        if (!this.master.regionManager.isInitialMetaScanComplete() &&
             serverName.length() != 0) {
           StringBuilder dirName = new StringBuilder("log_");
           dirName.append(serverName.replace(":", "_"));
-          Path logDir = new Path(master.rootdir, dirName.toString());
+          Path logDir = new Path(this.master.rootdir, dirName.toString());
           try {
             if (master.fs.exists(logDir)) {
-              regionManager.splitLogLock.lock();
+              this.master.regionManager.splitLogLock.lock();
               try {
                 HLog.splitLog(master.rootdir, logDir, master.fs,
                     master.getConfiguration());
               } finally {
-                regionManager.splitLogLock.unlock();
+                this.master.regionManager.splitLogLock.unlock();
               }
             }
             if (LOG.isDebugEnabled()) {
@@ -412,7 +396,7 @@ abstract class BaseScanner extends Chore implements HConstants {
           }
         }
         // Now get the region assigned
-        regionManager.setUnassigned(info, true);
+        this.master.regionManager.setUnassigned(info, true);
       }
     }
   }

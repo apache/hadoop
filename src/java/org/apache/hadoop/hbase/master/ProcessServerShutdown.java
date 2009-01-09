@@ -52,6 +52,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private final boolean rootRegionServer;
   private boolean rootRegionReassigned = false;
   private Path oldLogDir;
+  private boolean logSplit;
   private boolean rootRescanned;
   
 
@@ -78,6 +79,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.deadServer = serverInfo.getServerAddress();
     this.deadServerStr = this.deadServer.toString();
     this.rootRegionServer = rootRegionServer;
+    this.logSplit = false;
     this.rootRescanned = false;
     this.oldLogDir =
       new Path(master.rootdir, HLog.getHLogDirectoryName(serverInfo));
@@ -230,8 +232,6 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   @Override
   protected boolean process() throws IOException {
-    boolean logSplit =
-      this.master.serverManager.isDeadServerLogsSplit(this.deadServerStr);
     LOG.info("process shutdown of server " + this.deadServerStr +
       ": logSplit: " +
       logSplit + ", rootRescanned: " + rootRescanned +
@@ -252,7 +252,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           master.regionManager.splitLogLock.unlock();
         }
       }
-      this.master.serverManager.setDeadServerLogsSplit(this.deadServerStr);
+      logSplit = true;
     }
 
     if (this.rootRegionServer && !this.rootRegionReassigned) {

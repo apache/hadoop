@@ -1075,7 +1075,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public RowResult getClosestRowBefore(final byte [] row,
-    final byte [] columnFamily)
+      final byte [] columnFamily)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1084,20 +1084,22 @@ public class HRegion implements HConstants {
     splitsAndClosesLock.readLock().lock();
     try {
       HStore store = getStore(columnFamily);
-      // get the closest key
+      // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
       byte [] closestKey = store.getRowKeyAtOrBefore(row);
-      // If it happens to be an exact match, we can stop looping.
+      // If it happens to be an exact match, we can stop.
       // Otherwise, we need to check if it's the max and move to the next
-      if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
-        key = new HStoreKey(closestKey, this.regionInfo);
-      } else if (closestKey != null &&
-          (key == null || HStoreKey.compareTwoRowKeys(
-              regionInfo,closestKey, key.getRow()) > 0) ) {
-        key = new HStoreKey(closestKey, this.regionInfo);
-      } else {
+      if (closestKey != null) {
+        if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
+          key = new HStoreKey(closestKey, this.regionInfo);
+        }
+        if (key == null) {
+          key = new HStoreKey(closestKey, this.regionInfo);
+        }
+      }
+      if (key == null) {
         return null;
       }
-      
+
       // Now that we've found our key, get the values
       HbaseMapWritable<byte [], Cell> cells =
         new HbaseMapWritable<byte [], Cell>();
@@ -1299,7 +1301,10 @@ public class HRegion implements HConstants {
    * 
    * @param b the update to apply
    * @param expectedValues the expected values to check
+   * @param lockid
    * @param writeToWAL whether or not to write to the write ahead log
+   * @return true if update was applied
+   * @throws IOException
    */
   public boolean checkAndSave(BatchUpdate b,
     HbaseMapWritable<byte[], byte[]> expectedValues, Integer lockid,
@@ -1979,7 +1984,7 @@ public class HRegion implements HConstants {
             // Need to replicate filters.
             // At least WhileMatchRowFilter will mess up the scan if only
             // one shared across many rows. See HADOOP-2467.
-            f = (RowFilterInterface)WritableUtils.clone(filter, conf);
+            f = WritableUtils.clone(filter, conf);
           }
           scanners[i] = stores[i].getScanner(timestamp,
               columns.toArray(new byte[columns.size()][]), firstRow, f);

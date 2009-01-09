@@ -535,6 +535,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * Run and wait on passed thread in HRS context.
    * @param t
+   * @param dfsShutdownWait
    */
   public void runThread(final Thread t, final long dfsShutdownWait) {
     if (t ==  null) {
@@ -728,6 +729,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Thread for toggling safemode after some configurable interval.
    */
   private class SafeModeThread extends Thread {
+    @Override
     public void run() {
       // first, wait the required interval before turning off safemode
       int safemodeInterval =

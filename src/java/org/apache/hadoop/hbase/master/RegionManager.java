@@ -78,12 +78,11 @@ class RegionManager implements HConstants {
 
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
 
-  /*
+  /**
    * Map of region name to RegionState for regions that are in transition such as
    * 
-   * unassigned -> assigned -> pending -> open
-   * closing -> closed -> offline
-   * closing -> closed -> unassigned -> assigned -> pending -> open
+   * unassigned -> pendingOpen -> open
+   * closing -> pendingClose -> closed; if (closed && !offline) -> unassigned
    * 
    * At the end of a transition, removeRegion is used to remove the region from
    * the map (since it is no longer in transition)
@@ -133,10 +132,10 @@ class RegionManager implements HConstants {
       (float)0.1);
 
     // The root region
-    rootScannerThread = new RootScanner(master, this);
+    rootScannerThread = new RootScanner(master);
 
     // Scans the meta table
-    metaScannerThread = new MetaScanner(master, this);
+    metaScannerThread = new MetaScanner(master);
     
     reassignRootRegion();
   }
@@ -272,7 +271,7 @@ class RegionManager implements HConstants {
       for (RegionState s: regionsToAssign) {
         LOG.info("assigning region " + Bytes.toString(s.getRegionName())+
           " to server " + serverName);
-        s.setAssigned(serverName);
+        s.setPendingOpen(serverName);
         this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
         if (--nregions <= 0) {
@@ -323,7 +322,8 @@ class RegionManager implements HConstants {
    * Get the set of regions that should be assignable in this pass.
    * 
    * Note that no synchronization on regionsInTransition is needed because the
-   * only caller (assignRegions) whose caller owns the monitor for RegionManager
+   * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
+   * the monitor for RegionManager
    */ 
   private Set<RegionState> regionsAwaitingAssignment() {
     // set of regions we want to assign to this server
@@ -342,8 +342,7 @@ class RegionManager implements HConstants {
         // and are on-line
         continue;
       }
-      if (!s.isAssigned() && !s.isClosing() && !s.isPending()) {
-        s.setUnassigned();
+      if (s.isUnassigned()) {
         regionsToAssign.add(s);
       }
     }
@@ -399,7 +398,7 @@ class RegionManager implements HConstants {
     for (RegionState s: regionsToAssign) {
       LOG.info("assigning region " + Bytes.toString(s.getRegionName()) +
           " to the only server " + serverName);
-      s.setAssigned(serverName);
+      s.setPendingOpen(serverName);
       this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
     }
@@ -432,8 +431,7 @@ class RegionManager implements HConstants {
         continue;
       }
       byte[] regionName = currentRegion.getRegionName();
-      if (isClosing(regionName) || isUnassigned(currentRegion) ||
-          isAssigned(regionName) || isPending(regionName)) {
+      if (regionIsInTransition(regionName)) {
         skipped++;
         continue;
       }
@@ -444,6 +442,7 @@ class RegionManager implements HConstants {
         OVERLOADED));
       // mark the region as closing
       setClosing(serverName, currentRegion, false);
+      setPendingClose(currentRegion.getRegionName());
       // increment the count of regions we've marked
       regionsClosed++;
     }
@@ -564,15 +563,6 @@ class RegionManager implements HConstants {
   }
 
   /**
-   * Remove a region from the region state map.
-   * 
-   * @param info
-   */
-  public void removeRegion(HRegionInfo info) {
-    regionsInTransition.remove(info.getRegionName());
-  }
-  
-  /**
    * Get metaregion that would host passed in row.
    * @param row Row need to know all the meta regions for
    * @return set of MetaRegion objects that contain the table
@@ -663,6 +653,53 @@ class RegionManager implements HConstants {
     onlineMetaRegions.remove(startKey); 
   }
   
+  /**
+   * Remove a region from the region state map.
+   * 
+   * @param info
+   */
+  public void removeRegion(HRegionInfo info) {
+    regionsInTransition.remove(info.getRegionName());
+  }
+  
+  /**
+   * @param regionName
+   * @return true if the named region is in a transition state
+   */
+  public boolean regionIsInTransition(byte[] regionName) {
+    return regionsInTransition.containsKey(regionName);
+  }
+
+  /**
+   * @param regionName
+   * @return true if the region is unassigned, pendingOpen or open
+   */
+  public boolean regionIsOpening(byte[] regionName) {
+    RegionState state = regionsInTransition.get(regionName);
+    if (state != null) {
+      return state.isOpening();
+    }
+    return false;
+  }
+
+  /** 
+   * Set a region to unassigned 
+   * @param info Region to set unassigned
+   * @param force if true mark region unassigned whatever its current state
+   */
+  public void setUnassigned(HRegionInfo info, boolean force) {
+    synchronized(this.regionsInTransition) {
+      RegionState s = regionsInTransition.get(info.getRegionName());
+      if (s == null) {
+        s = new RegionState(info);
+        regionsInTransition.put(info.getRegionName(), s);
+      }
+      if (force || (!s.isPendingOpen() && !s.isOpen())) {
+        s.setUnassigned();
+      }
+    }
+  }
+  
   /** 
    * Check if a region is on the unassigned list
    * @param info HRegionInfo to check for
@@ -681,45 +718,35 @@ class RegionManager implements HConstants {
   }
   
   /**
-   * Check if a region is pending 
+   * Check if a region has been assigned and we're waiting for a response from
+   * the region server.
+   * 
    * @param regionName name of the region
-   * @return true if pending, false otherwise
+   * @return true if open, false otherwise
    */
-  public boolean isPending(byte [] regionName) {
+  public boolean isPendingOpen(byte [] regionName) {
     synchronized (regionsInTransition) {
       RegionState s = regionsInTransition.get(regionName);
       if (s != null) {
-        return s.isPending();
+        return s.isPendingOpen();
       }
     }
     return false;
   }
 
   /**
-   * @param hri
-   * @return True if the passed region is assignable: i.e. not assigned, not
-   * pending and not unassigned.
+   * Region has been assigned to a server and the server has told us it is open
+   * @param regionName
    */
-  public boolean assignable(final HRegionInfo hri) {
-    return !isUnassigned(hri) &&
-    !isPending(hri.getRegionName()) &&
-    !isAssigned(hri.getRegionName());
+  public void setOpen(byte [] regionName) {
+    synchronized (regionsInTransition) {
+      RegionState s = regionsInTransition.get(regionName);
+      if (s != null) {
+        s.setOpen();
+      }
+    }
   }
   
-  /**
-   * @param regionName
-   * @return true if region has been assigned
-   */
-  public boolean isAssigned(byte[] regionName) {
-    synchronized (regionsInTransition) {
-      RegionState s = regionsInTransition.get(regionName);
-      if (s != null) {
-        return s.isAssigned() || s.isPending();
-      }
-    }
-    return false;
-  }
-
   /**
    * @param regionName
    * @return true if region is marked to be offlined.
@@ -735,33 +762,20 @@ class RegionManager implements HConstants {
   }
 
   /** 
-   * Set a region to unassigned 
-   * @param info Region to set unassigned
-   * @param force if true mark region unassigned whatever its current state
+   * Mark a region as closing 
+   * @param serverName
+   * @param regionInfo
+   * @param setOffline
    */
-  public void setUnassigned(HRegionInfo info, boolean force) {
-    synchronized(this.regionsInTransition) {
-      RegionState s = regionsInTransition.get(info.getRegionName());
+  public void setClosing(final String serverName, final HRegionInfo regionInfo,
+      final boolean setOffline) {
+    synchronized (this.regionsInTransition) {
+      RegionState s = this.regionsInTransition.get(regionInfo.getRegionName());
       if (s == null) {
-        s = new RegionState(info);
-        regionsInTransition.put(info.getRegionName(), s);
+        s = new RegionState(regionInfo);
       }
-      if (force || (!s.isAssigned() && !s.isPending())) {
-        s.setUnassigned();
-      }
-    }
-  }
-  
-  /**
-   * Set a region to pending assignment 
-   * @param regionName
-   */
-  public void setPending(byte [] regionName) {
-    synchronized (regionsInTransition) {
-      RegionState s = regionsInTransition.get(regionName);
-      if (s != null) {
-        s.setPending();
-      }
+      s.setClosing(serverName, setOffline);
+      this.regionsInTransition.put(regionInfo.getRegionName(), s);
     }
   }
   
@@ -776,7 +790,7 @@ class RegionManager implements HConstants {
     Set<HRegionInfo> result = new HashSet<HRegionInfo>();
     synchronized (regionsInTransition) {
       for (RegionState s: regionsInTransition.values()) {
-        if (s.isClosing() && !s.isClosed() &&
+        if (s.isClosing() && !s.isPendingClose() && !s.isClosed() &&
             s.getServerName().compareTo(serverName) == 0) {
           result.add(s.getRegionInfo());
         }
@@ -785,54 +799,17 @@ class RegionManager implements HConstants {
     return result;
   }
   
-  /** 
-   * Check if a region is closing 
-   * @param regionName 
-   * @return true if the region is marked as closing, false otherwise
+  /**
+   * Called when we have told a region server to close the region
+   * 
+   * @param regionName
    */
-  public boolean isClosing(byte [] regionName) {
+  public void setPendingClose(byte[] regionName) {
     synchronized (regionsInTransition) {
       RegionState s = regionsInTransition.get(regionName);
       if (s != null) {
-        return s.isClosing();
+        s.setPendingClose();
       }
-    }
-    return false;
-  }
-
-  /** 
-   * Mark a region as closing 
-   * @param serverName
-   * @param regionInfo
-   * @param setOffline
-   */
-  public void setClosing(final String serverName, final HRegionInfo regionInfo,
-      final boolean setOffline) {
-    setClosing(serverName, regionInfo, setOffline, true);
-  }
-
-  /**
-   * Mark a region as closing 
-   * @param serverName
-   * @param regionInfo
-   * @param setOffline
-   * @param check False if we are to skip state transition check.
-   */
-  void setClosing(final String serverName, final HRegionInfo regionInfo,
-      final boolean setOffline, final boolean check) {
-    synchronized (this.regionsInTransition) {
-      RegionState s = this.regionsInTransition.get(regionInfo.getRegionName());
-      if (check && s != null) {
-        if (!s.isClosing()) {
-          throw new IllegalStateException(
-            "Cannot transition to closing from any other state. Region: " +
-            Bytes.toString(regionInfo.getRegionName()));
-        }
-        return;
-      }
-      s = new RegionState(regionInfo);
-      s.setClosing(serverName, setOffline);
-      this.regionsInTransition.put(regionInfo.getRegionName(), s);
     }
   }
   
@@ -1057,26 +1034,27 @@ class RegionManager implements HConstants {
   private static class RegionState implements Comparable<RegionState> {
     private final HRegionInfo regionInfo;
     private volatile boolean unassigned = false;
-    private volatile boolean assigned = false;
-    private volatile boolean pending = false;
+    private volatile boolean pendingOpen = false;
+    private volatile boolean open = false;
     private volatile boolean closing = false;
+    private volatile boolean pendingClose = false;
     private volatile boolean closed = false;
     private volatile boolean offlined = false;
     
-    /* Set when region is assigned.
-     */
-    private String serverName = null;
+    /* Set when region is assigned or closing */
+    private volatile String serverName = null;
 
+    /* Constructor */
     RegionState(HRegionInfo info) {
       this.regionInfo = info;
     }
     
-    byte [] getRegionName() {
-      return this.regionInfo.getRegionName();
-    }
-
     synchronized HRegionInfo getRegionInfo() {
       return this.regionInfo;
+    }
+    
+    synchronized byte [] getRegionName() {
+      return this.regionInfo.getRegionName();
     }
 
     /*
@@ -1085,7 +1063,17 @@ class RegionManager implements HConstants {
     synchronized String getServerName() {
       return this.serverName;
     }
-    
+
+    /*
+     * @return true if the region is being opened
+     */
+    synchronized boolean isOpening() {
+      return this.unassigned || this.pendingOpen || this.open;
+    }
+
+    /*
+     * @return true if region is unassigned
+     */
     synchronized boolean isUnassigned() {
       return unassigned;
     }
@@ -1097,46 +1085,55 @@ class RegionManager implements HConstants {
      */
     synchronized void setUnassigned() {
       this.unassigned = true;
-      this.assigned = false;
-      this.pending = false;
+      this.pendingOpen = false;
+      this.open = false;
       this.closing = false;
+      this.pendingClose = false;
+      this.closed = false;
+      this.offlined = false;
       this.serverName = null;
     }
 
-    synchronized boolean isAssigned() {
-      return assigned;
+    synchronized boolean isPendingOpen() {
+      return pendingOpen;
     }
 
     /*
      * @param serverName Server region was assigned to.
      */
-    synchronized void setAssigned(final String serverName) {
+    synchronized void setPendingOpen(final String serverName) {
       if (!this.unassigned) {
         throw new IllegalStateException(
-            "Cannot assign a region that is not currently unassigned. " +
-            "State: " + toString());
+            "Cannot assign a region that is not currently unassigned. State: " +
+            toString());
       }
       this.unassigned = false;
-      this.assigned = true;
-      this.pending = false;
+      this.pendingOpen = true;
+      this.open = false;
       this.closing = false;
+      this.pendingClose = false;
+      this.closed = false;
+      this.offlined = false;
       this.serverName = serverName;
     }
 
-    synchronized boolean isPending() {
-      return pending;
+    synchronized boolean isOpen() {
+      return open;
     }
 
-    synchronized void setPending() {
-      if (!assigned) {
+    synchronized void setOpen() {
+      if (!pendingOpen) {
         throw new IllegalStateException(
-            "Cannot set a region as pending if it has not been assigned. " +
-            "State: " + toString());
+            "Cannot set a region as open if it has not been pending. State: " +
+            toString());
       }
       this.unassigned = false;
-      this.assigned = false;
-      this.pending = true;
+      this.pendingOpen = false;
+      this.open = true;
       this.closing = false;
+      this.pendingClose = false;
+      this.closed = false;
+      this.offlined = false;
     }
 
     synchronized boolean isClosing() {
@@ -1145,24 +1142,48 @@ class RegionManager implements HConstants {
 
     synchronized void setClosing(String serverName, boolean setOffline) {
       this.unassigned = false;
-      this.assigned = false;
-      this.pending = false;
+      this.pendingOpen = false;
+      this.open = false;
       this.closing = true;
+      this.pendingClose = false;
+      this.closed = false;
       this.offlined = setOffline;
       this.serverName = serverName;
     }
     
+    synchronized boolean isPendingClose() {
+      return this.pendingClose;
+    }
+
+    synchronized void setPendingClose() {
+      if (!closing) {
+        throw new IllegalStateException(
+            "Cannot set a region as pending close if it has not been closing. " +
+            "State: " + toString());
+      }
+      this.unassigned = false;
+      this.pendingOpen = false;
+      this.open = false;
+      this.closing = false;
+      this.pendingClose = true;
+      this.closed = false;
+    }
+
     synchronized boolean isClosed() {
       return this.closed;
     }
     
     synchronized void setClosed() {
-      if (!closing) {
+      if (!pendingClose) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
-            " closing. State: " + toString());
+            " pending close. State: " + toString());
       }
+      this.unassigned = false;
+      this.pendingOpen = false;
+      this.open = false;
       this.closing = false;
+      this.pendingClose = false;
       this.closed = true;
     }
     
@@ -1172,11 +1193,14 @@ class RegionManager implements HConstants {
 
     @Override
     public synchronized String toString() {
-      return "name=" + Bytes.toString(getRegionName()) +
-          ", isUnassigned=" + this.unassigned + ", isAssigned=" +
-          this.assigned + ", isPending=" + this.pending + ", isClosing=" +
-          this.closing + ", isClosed=" + this.closed + ", isOfflined=" +
-          this.offlined;
+      return ("name=" + Bytes.toString(getRegionName()) +
+          ", unassigned=" + this.unassigned +
+          ", pendingOpen=" + this.pendingOpen +
+          ", open=" + this.open +
+          ", closing=" + this.closing +
+          ", pendingClose=" + this.pendingClose +
+          ", closed=" + this.closed +
+          ", offlined=" + this.offlined);
     }
     
     @Override
