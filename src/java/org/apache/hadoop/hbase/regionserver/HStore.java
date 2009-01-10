@@ -866,8 +866,10 @@ public class HStore implements HConstants {
           return null;
         }
         int len = 0;
-        for (FileStatus fstatus:fs.listStatus(path)) {
-          len += fstatus.getLen();
+        // listStatus can come back null.
+        FileStatus [] fss = this.fs.listStatus(path);
+        for (int ii = 0; fss != null && i < fss.length; ii++) {
+          len += fss[ii].getLen();
         }
         fileSizes[i] = len;
         totalSize += len;

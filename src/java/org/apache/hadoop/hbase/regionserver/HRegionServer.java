@@ -696,8 +696,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private boolean checkOOME(final Throwable e) {
     boolean stop = false;
     if (e instanceof OutOfMemoryError ||
-        (e.getCause()!= null && e.getCause() instanceof OutOfMemoryError) ||
-        e.getMessage().contains("java.lang.OutOfMemoryError")) {
+      (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
+      (e.getMessage() != null &&
+        e.getMessage().contains("java.lang.OutOfMemoryError"))) {
       LOG.fatal("OutOfMemoryError, aborting.", e);
       abort();
       stop = true;
