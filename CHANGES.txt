@@ -571,6 +571,9 @@ Release 0.19.1 - Unreleased
 
     HADOOP-4982. TestFsck should run in Eclipse. (shv)
 
+    HADOOP-5008. TestReplication#testPendingReplicationRetry leaves an opened
+    fd unclosed. (hairong)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

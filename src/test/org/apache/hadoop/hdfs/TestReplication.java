@@ -350,8 +350,12 @@ public class TestReplication extends TestCase {
             long len = blockFile.length();
             assertTrue(len > 50);
             RandomAccessFile blockOut = new RandomAccessFile(blockFile, "rw");
-            blockOut.seek(len/3);
-            blockOut.write(buffer, 0, 25);
+            try {
+              blockOut.seek(len/3);
+              blockOut.write(buffer, 0, 25);
+            } finally {
+              blockOut.close();
+            }
           }
           fileCount++;
         }
