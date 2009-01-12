@@ -748,8 +748,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                                        long offset, 
                                                        long length,
                                                        int nrBlocksToReturn,
-                                                       boolean doAccessTime) 
-                                                       throws IOException {
+                                                       boolean doAccessTime) {
     if(inode == null) {
       return null;
     }
@@ -1647,7 +1646,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return dir.delete(src) != null;
   }
 
-  void removePathAndBlocks(String src, List<Block> blocks) throws IOException {
+  void removePathAndBlocks(String src, List<Block> blocks) {
     leaseManager.removeLeaseWithPrefixPath(src);
     for(Block b : blocks) {
       blocksMap.removeINode(b);

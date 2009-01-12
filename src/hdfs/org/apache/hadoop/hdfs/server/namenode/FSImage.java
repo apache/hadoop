@@ -144,8 +144,7 @@ public class FSImage extends Storage {
 
   /**
    */
-  FSImage(Collection<File> fsDirs, Collection<File> fsEditsDirs) 
-    throws IOException {
+  FSImage(Collection<File> fsDirs, Collection<File> fsEditsDirs) {
     this();
     setStorageDirectories(fsDirs, fsEditsDirs);
   }
@@ -157,7 +156,7 @@ public class FSImage extends Storage {
   /**
    * Represents an Image (image and edit file).
    */
-  public FSImage(File imageDir) throws IOException {
+  FSImage(File imageDir) {
     this();
     ArrayList<File> dirs = new ArrayList<File>(1);
     ArrayList<File> editsDirs = new ArrayList<File>(1);
@@ -167,8 +166,7 @@ public class FSImage extends Storage {
   }
   
   void setStorageDirectories(Collection<File> fsNameDirs,
-                        Collection<File> fsEditsDirs
-                             ) throws IOException {
+                             Collection<File> fsEditsDirs) {
     this.storageDirs = new ArrayList<StorageDirectory>();
     this.removedStorageDirs = new ArrayList<StorageDirectory>();
    // Add all name dirs with appropriate NameNodeDirType 

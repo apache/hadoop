@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
  * and logged to disk.
  * 
  *************************************************/
-class FSDirectory implements FSConstants, Closeable {
+class FSDirectory implements Closeable {
 
   final FSNamesystem namesystem;
   final INodeDirectoryWithQuota rootDir;
@@ -53,13 +53,13 @@ class FSDirectory implements FSConstants, Closeable {
   private MetricsRecord directoryMetrics = null;
 
   /** Access an existing dfs name directory. */
-  public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
+  public FSDirectory(FSNamesystem ns, Configuration conf) {
     this(new FSImage(), ns, conf);
     fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null),
                                 FSImage.getCheckpointEditsDirs(conf, null));
   }
 
-  public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) throws IOException {
+  public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, -1);
@@ -255,7 +255,8 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Add a block to the file. Returns a reference to the added block.
    */
-  Block addBlock(String path, INode[] inodes, Block block) throws IOException {
+  Block addBlock(String path, INode[] inodes, Block block
+      ) throws QuotaExceededException  {
     waitForReady();
 
     synchronized (rootDir) {
@@ -281,8 +282,7 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Persist the block list for the inode.
    */
-  void persistBlocks(String path, INodeFileUnderConstruction file) 
-                     throws IOException {
+  void persistBlocks(String path, INodeFileUnderConstruction file) {
     waitForReady();
 
     synchronized (rootDir) {
@@ -296,7 +296,7 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Close file.
    */
-  void closeFile(String path, INodeFile file) throws IOException {
+  void closeFile(String path, INodeFile file) {
     waitForReady();
     synchronized (rootDir) {
       // file is closed
@@ -449,12 +449,12 @@ class FSDirectory implements FSConstants, Closeable {
    * @param replication new replication
    * @param oldReplication old replication - output parameter
    * @return array of file blocks
-   * @throws IOException
+   * @throws QuotaExceededException
    */
   Block[] setReplication(String src, 
                          short replication,
                          int[] oldReplication
-                         ) throws IOException {
+                         ) throws QuotaExceededException {
     waitForReady();
     Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
     if (fileBlocks != null)  // log replication change
@@ -465,7 +465,7 @@ class FSDirectory implements FSConstants, Closeable {
   Block[] unprotectedSetReplication( String src, 
                                      short replication,
                                      int[] oldReplication
-                                     ) throws IOException {
+                                     ) throws QuotaExceededException {
     if (oldReplication == null)
       oldReplication = new int[1];
     oldReplication[0] = -1;
@@ -501,7 +501,7 @@ class FSDirectory implements FSConstants, Closeable {
     synchronized (rootDir) {
       INode fileNode = rootDir.getNode(filename);
       if (fileNode == null) {
-        throw new IOException("Unknown file: " + filename);
+        throw new FileNotFoundException("File does not exist: " + filename);
       }
       if (fileNode.isDirectory()) {
         throw new IOException("Getting block size of a directory: " + 
@@ -523,12 +523,13 @@ class FSDirectory implements FSConstants, Closeable {
   }
 
   void setPermission(String src, FsPermission permission
-      ) throws IOException {
+      ) throws FileNotFoundException {
     unprotectedSetPermission(src, permission);
     fsImage.getEditLog().logSetPermissions(src, permission);
   }
 
-  void unprotectedSetPermission(String src, FsPermission permissions) throws FileNotFoundException {
+  void unprotectedSetPermission(String src, FsPermission permissions
+      ) throws FileNotFoundException {
     synchronized(rootDir) {
         INode inode = rootDir.getNode(src);
         if(inode == null)
@@ -538,12 +539,13 @@ class FSDirectory implements FSConstants, Closeable {
   }
 
   void setOwner(String src, String username, String groupname
-      ) throws IOException {
+      ) throws FileNotFoundException {
     unprotectedSetOwner(src, username, groupname);
     fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
-  void unprotectedSetOwner(String src, String username, String groupname) throws FileNotFoundException {
+  void unprotectedSetOwner(String src, String username, String groupname
+      ) throws FileNotFoundException {
     synchronized(rootDir) {
       INode inode = rootDir.getNode(src);
       if(inode == null)
@@ -629,7 +631,7 @@ class FSDirectory implements FSConstants, Closeable {
               +src+" is removed");
           }
           return targetNode;
-        } catch (IOException e) {
+        } catch(QuotaExceededException e) {
           NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
               "failed to remove " + src + " because " + e.getMessage());
           return null;
@@ -1039,7 +1041,7 @@ class FSDirectory implements FSConstants, Closeable {
     return src;
   }
 
-  ContentSummary getContentSummary(String src) throws IOException {
+  ContentSummary getContentSummary(String src) throws FileNotFoundException {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
@@ -1208,21 +1210,19 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Sets the access time on the file. Logs it in the transaction log
    */
-  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) 
-                                                        throws IOException {
+  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) {
     if (unprotectedSetTimes(src, inode, mtime, atime, force)) {
       fsImage.getEditLog().logTimes(src, mtime, atime);
     }
   }
 
-  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
-                              throws IOException {
+  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) {
     INodeFile inode = getFileINode(src);
     return unprotectedSetTimes(src, inode, mtime, atime, force);
   }
 
   private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
-                                      long atime, boolean force) throws IOException {
+                                      long atime, boolean force) {
     boolean status = false;
     if (mtime != -1) {
       inode.setModificationTimeForce(mtime);

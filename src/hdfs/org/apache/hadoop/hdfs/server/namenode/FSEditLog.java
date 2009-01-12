@@ -366,7 +366,7 @@ public class FSEditLog {
   /**
    * Shutdown the file store.
    */
-  public synchronized void close() throws IOException {
+  public synchronized void close() {
     while (isSyncRunning) {
       try {
         wait(1000);
@@ -470,7 +470,7 @@ public class FSEditLog {
   /**
    * check if ANY edits.new log exists
    */
-  boolean existsNew() throws IOException {
+  boolean existsNew() {
     for (Iterator<StorageDirectory> it = 
            fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
       if (getEditNewFile(it.next()).exists()) { 
@@ -980,8 +980,7 @@ public class FSEditLog {
    * Add open lease record to edit log. 
    * Records the block locations of the last block.
    */
-  public void logOpenFile(String path, INodeFileUnderConstruction newNode) 
-                   throws IOException {
+  public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
 
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(path), 
@@ -1202,7 +1201,7 @@ public class FSEditLog {
   /**
    * Return the name of the edit file
    */
-  synchronized File getFsEditName() throws IOException {
+  synchronized File getFsEditName() {
     StorageDirectory sd = null;
     for (Iterator<StorageDirectory> it = 
            fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();)

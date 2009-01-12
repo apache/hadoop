@@ -26,6 +26,9 @@ Trunk (unreleased changes)
 
     HADOOP-4936. Improvements to TestSafeMode. (shv)
 
+    HADOOP-4985. Remove unnecessary "throw IOException" declarations in
+    FSDirectory related methods.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
