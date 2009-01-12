@@ -8,7 +8,7 @@ Release 0.19.0 - Unreleased
    HBASE-852   Cannot scan all families in a row with a LIMIT, STARTROW, etc.
                (Izaak Rubin via Stack)
    HBASE-953   Enable BLOCKCACHE by default [WAS -> Reevaluate HBASE-288 block
-               caching work....?] -- Update your hbad-default.xml file!
+               caching work....?] -- Update your hbase-default.xml file!
    HBASE-636   java6 as a requirement
    HBASE-994   IPC interfaces with different versions can cause problems
    HBASE-1028  If key does not exist, return null in getRow rather than an
@@ -45,7 +45,6 @@ Release 0.19.0 - Unreleased
    HBASE-945   Be consistent in use of qualified/unqualified mapfile paths
    HBASE-946   Row with 55k deletes timesout scanner lease
    HBASE-950   HTable.commit no longer works with existing RowLocks though it's still in API
-   HBASE-728   Support for HLog appends
    HBASE-952   Deadlock in HRegion.batchUpdate
    HBASE-954   Don't reassign root region until ProcessServerShutdown has split
                the former region server's log
@@ -63,12 +62,12 @@ Release 0.19.0 - Unreleased
    HBASE-976   HADOOP 0.19.0 RC0 is broke; replace with HEAD of branch-0.19
    HBASE-977   Arcane HStoreKey comparator bug
    HBASE-979   REST web app is not started automatically
-   HBASE-964   Startup stuck "waiting for root region"
    HBASE-980   Undo core of HBASE-975, caching of start and end row
    HBASE-982   Deleting a column in MapReduce fails (Doğacan Güney via Stack)
    HBASE-984   Fix javadoc warnings
    HBASE-985   Fix javadoc warnings
    HBASE-951   Either shut down master or let it finish cleanup
+   HBASE-964   Startup stuck "waiting for root region"
    HBASE-964, HBASE-678 provide for safe-mode without locking up HBase "waiting
                for root region"
    HBASE-990   NoSuchElementException in flushSomeRegions; took two attempts.
@@ -80,7 +79,7 @@ Release 0.19.0 - Unreleased
                major compaction
    HBASE-1005  Regex and string comparison operators for ColumnValueFilter
    HBASE-910   Scanner misses columns / rows when the scanner is obtained
-               durring a memcache flush
+               during a memcache flush
    HBASE-1009  Master stuck in loop wanting to assign but regions are closing
    HBASE-1016  Fix example in javadoc overvie
    HBASE-1021  hbase metrics FileContext not working
@@ -182,7 +181,7 @@ Release 0.19.0 - Unreleased
    HBASE-983   Declare Perl namespace in Hbase.thrift
    HBASE-987   We need a Hbase Partitioner for TableMapReduceUtil.initTableReduceJob
                MR Jobs (Billy Pearson via Stack)
-   HBASE-993   Turn of logging of every catalog table row entry on every scan
+   HBASE-993   Turn off logging of every catalog table row entry on every scan
    HBASE-992   Up the versions kept by catalog tables; currently 1. Make it 10?
    HBASE-998   Narrow getClosestRowBefore by passing column family
    HBASE-999   Up versions on historian and keep history of deleted regions for a
@@ -225,6 +224,7 @@ Release 0.19.0 - Unreleased
                (Andrzej Bialecki via Stack)
    HBASE-625   Metrics support for cluster load history: emissions and graphs
    HBASE-883   Secondary indexes (Clint Morgan via Andrew Purtell)
+   HBASE-728   Support for HLog appends
 
   OPTIMIZATIONS
    HBASE-748   Add an efficient way to batch update many rows
