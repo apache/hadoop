@@ -776,8 +776,7 @@ public class HConnectionManager implements HConstants {
           // so we can stop doing retries and return the result.
           server.getRegionInfo(HRegionInfo.ROOT_REGIONINFO.getRegionName());
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Found ROOT at " + rootRegionAddress +
-              " (server=" + server + ")");
+            LOG.debug("Found ROOT at " + rootRegionAddress);
           }
           break;
         } catch (IOException e) {
