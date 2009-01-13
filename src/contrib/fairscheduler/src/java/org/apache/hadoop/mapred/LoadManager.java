@@ -63,17 +63,19 @@ public abstract class LoadManager implements Configurable {
    * Can a given {@link TaskTracker} run another map task?
    * @param tracker The machine we wish to run a new map on
    * @param totalRunnableMaps Set of running jobs in the cluster
+   * @param totalMapSlots The total number of map slots in the cluster
    * @return true if another map can be launched on <code>tracker</code>
    */
   public abstract boolean canAssignMap(TaskTrackerStatus tracker,
-      int totalRunnableMaps);
+      int totalRunnableMaps, int totalMapSlots);
 
   /**
    * Can a given {@link TaskTracker} run another reduce task?
    * @param tracker The machine we wish to run a new map on
-   * @param totalReducesNeeded Set of running jobs in the cluster
+   * @param totalRunnableReduces Set of running jobs in the cluster
+   * @param totalReduceSlots The total number of reduce slots in the cluster
    * @return true if another reduce can be launched on <code>tracker</code>
    */
   public abstract boolean canAssignReduce(TaskTrackerStatus tracker,
-      int totalRunnableReduces);
+      int totalRunnableReduces, int totalReduceSlots);
 }

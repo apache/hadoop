@@ -1075,5 +1075,23 @@ public class TestFairScheduler extends TestCase {
     assertEquals(expectedTaskString, 1, tasks.size());
     assertEquals(expectedTaskString, tasks.get(0).toString());
   }
+
+  /**
+   * Tests that max-running-tasks per node are set by assigning load
+   * equally accross the cluster in CapBasedLoadManager.
+   */
+  public void testCapBasedLoadManager() {
+    CapBasedLoadManager loadMgr = new CapBasedLoadManager();
+    // Arguments to getCap: totalRunnableTasks, nodeCap, totalSlots
+    // Desired behavior: return ceil(nodeCap * min(1, runnableTasks/totalSlots))
+    assertEquals(1, loadMgr.getCap(1, 1, 100));
+    assertEquals(1, loadMgr.getCap(1, 2, 100));
+    assertEquals(1, loadMgr.getCap(1, 10, 100));
+    assertEquals(1, loadMgr.getCap(200, 1, 100));
+    assertEquals(1, loadMgr.getCap(1, 5, 100));
+    assertEquals(3, loadMgr.getCap(50, 5, 100));
+    assertEquals(5, loadMgr.getCap(100, 5, 100));
+    assertEquals(5, loadMgr.getCap(200, 5, 100));
+  }
   
 }

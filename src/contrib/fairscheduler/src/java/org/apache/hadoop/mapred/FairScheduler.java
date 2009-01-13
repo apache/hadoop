@@ -231,14 +231,20 @@ public class FairScheduler extends TaskScheduler {
       runnableMaps += runnableTasks(job, TaskType.MAP);
       runnableReduces += runnableTasks(job, TaskType.REDUCE);
     }
+
+    // Compute total map/reduce slots
+    // In the future we can precompute this if the Scheduler becomes a 
+    // listener of tracker join/leave events.
+    int totalMapSlots = getTotalSlots(TaskType.MAP);
+    int totalReduceSlots = getTotalSlots(TaskType.REDUCE);
     
     // Scan to see whether any job needs to run a map, then a reduce
     ArrayList<Task> tasks = new ArrayList<Task>();
     TaskType[] types = new TaskType[] {TaskType.MAP, TaskType.REDUCE};
     for (TaskType taskType: types) {
       boolean canAssign = (taskType == TaskType.MAP) ? 
-          loadMgr.canAssignMap(tracker, runnableMaps) :
-          loadMgr.canAssignReduce(tracker, runnableReduces);
+          loadMgr.canAssignMap(tracker, runnableMaps, totalMapSlots) :
+          loadMgr.canAssignReduce(tracker, runnableReduces, totalReduceSlots);
       if (canAssign) {
         // Figure out the jobs that need this type of task
         List<JobInProgress> candidates = new ArrayList<JobInProgress>();
