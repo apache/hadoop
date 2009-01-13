@@ -31,24 +31,22 @@ public class CapBasedLoadManager extends LoadManager {
    * out uniformly across the nodes rather than being clumped up on whichever
    * machines sent out heartbeats earliest.
    */
-  int getCap(TaskTrackerStatus tracker,
-      int totalRunnableTasks, int localMaxTasks) {
-    int numTaskTrackers = taskTrackerManager.taskTrackers().size();
-    return Math.min(localMaxTasks,
-        (int) Math.ceil((double) totalRunnableTasks / numTaskTrackers));
+  int getCap(int totalRunnableTasks, int localMaxTasks, int totalSlots) {
+    double load = ((double)totalRunnableTasks) / totalSlots;
+    return (int) Math.ceil(localMaxTasks * Math.min(1.0, load));
   }
 
   @Override
   public boolean canAssignMap(TaskTrackerStatus tracker,
-      int totalRunnableMaps) {
-    return tracker.countMapTasks() < getCap(tracker, totalRunnableMaps,
-        tracker.getMaxMapTasks());
+      int totalRunnableMaps, int totalMapSlots) {
+    return tracker.countMapTasks() < getCap(totalRunnableMaps,
+        tracker.getMaxMapTasks(), totalMapSlots);
   }
 
   @Override
   public boolean canAssignReduce(TaskTrackerStatus tracker,
-      int totalRunnableReduces) {
-    return tracker.countReduceTasks() < getCap(tracker, totalRunnableReduces,
-        tracker.getMaxReduceTasks());
+      int totalRunnableReduces, int totalReduceSlots) {
+    return tracker.countReduceTasks() < getCap(totalRunnableReduces,
+        tracker.getMaxReduceTasks(), totalReduceSlots);
   }
 }
