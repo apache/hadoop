@@ -140,6 +140,8 @@ Release 0.19.0 - Unreleased
    HBASE-1116  generated web.xml and svn don't play nice together
    HBASE-1119  ArrayOutOfBoundsException in HStore.compact
    HBASE-1121  Cluster confused about where -ROOT- is
+   HBASE-1125  IllegalStateException: Cannot set a region to be closed if it was
+               not already marked as pending close
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

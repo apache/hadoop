@@ -1174,10 +1174,10 @@ class RegionManager implements HConstants {
     }
     
     synchronized void setClosed() {
-      if (!pendingClose) {
+      if (!pendingClose && !pendingOpen) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
-            " pending close. State: " + toString());
+            " pending close or pending open. State: " + toString());
       }
       this.unassigned = false;
       this.pendingOpen = false;
