@@ -211,13 +211,13 @@ public class HConnectionManager implements HConstants {
             }
             
           } catch (IOException e) {
-            if(tries == numRetries - 1) {
+            if (tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
               break;
             }
-            LOG.info("Attempt " + tries + " of " + this.numRetries +
-              " failed with <" + e + ">. Retrying after sleep of " +
-              getPauseTime(tries));
+            LOG.info("getMaster attempt " + tries + " of " + this.numRetries +
+              " failed; retrying after sleep of " +
+              getPauseTime(tries), e);
           }
 
           // Cannot connect to master or it is not running. Sleep & retry
@@ -550,9 +550,9 @@ public class HConnectionManager implements HConstants {
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Attempt " + tries + " of " + this.numRetries +
-                " failed with <" + e + ">. Retrying after sleep of " +
-                getPauseTime(tries));
+              LOG.debug("locateRegionInMeta attempt " + tries + " of " +
+                this.numRetries + " failed; retrying after sleep of " +
+                getPauseTime(tries), e);
             }
             relocateRegion(parentTable, metaKey);
           } else {
@@ -747,7 +747,6 @@ public class HConnectionManager implements HConstants {
       HServerAddress rootRegionAddress = null;
       for (int tries = 0; tries < numRetries; tries++) {
         int localTimeouts = 0;
-        
         // ask the master which server has the root region
         while (rootRegionAddress == null && localTimeouts < numRetries) {
           rootRegionAddress = master.findRootRegion();
@@ -772,13 +771,13 @@ public class HConnectionManager implements HConstants {
 
         // get a connection to the region server
         HRegionInterface server = getHRegionConnection(rootRegionAddress);
-
         try {
           // if this works, then we're good, and we have an acceptable address,
           // so we can stop doing retries and return the result.
           server.getRegionInfo(HRegionInfo.ROOT_REGIONINFO.getRegionName());
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Found ROOT " + HRegionInfo.ROOT_REGIONINFO);
+            LOG.debug("Found ROOT at " + rootRegionAddress +
+              " (server=" + server + ")");
           }
           break;
         } catch (IOException e) {
@@ -875,7 +874,8 @@ public class HConnectionManager implements HConstants {
 
     private HRegionLocation
     getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey, 
-        boolean reload) throws IOException {
+      boolean reload)
+    throws IOException {
       getMaster();
       List<Throwable> exceptions = new ArrayList<Throwable>();
       HRegionLocation location = null;
