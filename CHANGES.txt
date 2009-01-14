@@ -574,6 +574,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4947. Make Chukwa command parsing more forgiving of whitespace. (Ari
     Rabkin via cdouglas)
 
+    HADOOP-5026. Make chukwa/bin scripts executable in repository. (Andy
+    Konwinski via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
