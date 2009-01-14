@@ -81,6 +81,11 @@ class ServerManager implements HConstants {
   // Last time we logged average load.
   private volatile long lastLogOfAverageLaod = 0;
   private final long loggingPeriodForAverageLoad;
+  
+  /* The regionserver will not be assigned or asked close regions if it
+   * is currently opening >= this many regions.
+   */
+  private final int nobalancingCount;
 
   /**
    * @param master
@@ -92,6 +97,8 @@ class ServerManager implements HConstants {
         15 * 1000));
     this.loggingPeriodForAverageLoad = master.getConfiguration().
       getLong("hbase.master.avgload.logging.period", 60000);
+    this.nobalancingCount = master.getConfiguration().
+      getInt("hbase.regions.nobalancing.count", 4);
   }
  
   /*
@@ -330,7 +337,14 @@ class ServerManager implements HConstants {
     }    
   }
 
-  /** RegionServer is checking in, no exceptional circumstances */
+  /* RegionServer is checking in, no exceptional circumstances
+   * @param serverName
+   * @param serverInfo
+   * @param mostLoadedRegions
+   * @param msgs
+   * @return
+   * @throws IOException
+   */
   private HMsg[] processRegionServerAllsWell(String serverName, 
     HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
@@ -350,7 +364,6 @@ class ServerManager implements HConstants {
         // and the load on this server has changed
         synchronized (loadToServers) {
           Set<String> servers = loadToServers.get(load);
-
           // Note that servers should never be null because loadToServers
           // and serversToLoad are manipulated in pairs
           servers.remove(serverName);
@@ -370,6 +383,7 @@ class ServerManager implements HConstants {
       servers.add(serverName);
       loadToServers.put(load, servers);
     }
+
     // Next, process messages for this server
     return processMsgs(serverName, serverInfo, mostLoadedRegions, msgs);
   }
@@ -389,11 +403,13 @@ class ServerManager implements HConstants {
         "hbase-958 debugging");
     }
     // Get reports on what the RegionServer did.
+    int openingCount = 0;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
       LOG.info("Received " + incomingMsgs[i] + " from " + serverName);
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
+          openingCount++;
           break;
         
         case MSG_REPORT_OPEN:
@@ -425,11 +441,15 @@ class ServerManager implements HConstants {
       }
 
       // Figure out what the RegionServer ought to do, and write back.
-      master.regionManager.assignRegions(serverInfo, serverName, 
+      
+      // Should we tell it close regions because its overloaded?  If its
+      // currently opening regions, leave it alone till all are open.
+      if (openingCount < this.nobalancingCount) {
+        this.master.regionManager.assignRegions(serverInfo, serverName, 
           mostLoadedRegions, returnMsgs);
-
+      }
       // Send any pending table actions.
-      master.regionManager.applyActions(serverInfo, returnMsgs);
+      this.master.regionManager.applyActions(serverInfo, returnMsgs);
     }
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }

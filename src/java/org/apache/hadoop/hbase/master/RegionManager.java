@@ -167,9 +167,7 @@ class RegionManager implements HConstants {
   
   /*
    * Assigns regions to region servers attempting to balance the load across
-   * all region servers
-   *
-   * Note that no synchronization is necessary as the caller 
+   * all region servers. Note that no synchronization is necessary as the caller 
    * (ServerManager.processMsgs) already owns the monitor for the RegionManager.
    * 
    * @param info
