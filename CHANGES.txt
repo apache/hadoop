@@ -585,6 +585,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5026. Make chukwa/bin scripts executable in repository. (Andy
     Konwinski via cdouglas)
 
+    HADOOP-4977. Fix a deadlock between the reclaimCapacity and assignTasks
+    in capacity scheduler. (Vivek Ratan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
