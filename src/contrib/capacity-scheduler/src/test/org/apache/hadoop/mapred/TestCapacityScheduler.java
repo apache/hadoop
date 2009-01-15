@@ -1525,7 +1525,7 @@ public class TestCapacityScheduler extends TestCase {
     //Get scheduling information, now the number of waiting job should have
     //changed to 4 as one is scheduled and has become running.
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1537,7 +1537,7 @@ public class TestCapacityScheduler extends TestCase {
     //assign a reduce task
     Task t2 = checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1553,7 +1553,7 @@ public class TestCapacityScheduler extends TestCase {
     taskTrackerManager.finalizeJob(u1j1);
     
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1570,7 +1570,7 @@ public class TestCapacityScheduler extends TestCase {
     //Run initializer to clean up failed jobs
     p.selectJobsToInitialize();
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1588,7 +1588,7 @@ public class TestCapacityScheduler extends TestCase {
     //run initializer to clean up failed job
     p.selectJobsToInitialize();
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1613,7 +1613,7 @@ public class TestCapacityScheduler extends TestCase {
     //one. run the poller as it is responsible for waiting count
     p.selectJobsToInitialize();
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
@@ -1625,7 +1625,7 @@ public class TestCapacityScheduler extends TestCase {
     //Fail the executing job
     taskTrackerManager.finalizeJob(u1j3, JobStatus.FAILED);
     // make sure we update our stats
-    scheduler.updateQSIInfo();
+    scheduler.updateQSIInfoForTests();
     //Now running counts should become zero
     schedulingInfo = 
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
