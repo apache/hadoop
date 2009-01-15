@@ -508,6 +508,14 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Return the {@link FSNamesystem} object.
+   * @return {@link FSNamesystem} object.
+   */
+  public FSNamesystem getNamesystem() {
+    return nameNode.getNamesystem();
+  }
+
+  /**
    * Gets a list of the started DataNodes.  May be empty.
    */
   public ArrayList<DataNode> getDataNodes() {
@@ -814,8 +822,9 @@ public class MiniDFSCluster {
    * Set the softLimit and hardLimit of client lease periods
    */
   void setLeasePeriod(long soft, long hard) {
-    nameNode.namesystem.leaseManager.setLeasePeriod(soft, hard);
-    nameNode.namesystem.lmthread.interrupt();
+    final FSNamesystem namesystem = nameNode.getNamesystem();
+    namesystem.leaseManager.setLeasePeriod(soft, hard);
+    namesystem.lmthread.interrupt();
   }
 
   /**

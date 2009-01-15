@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 
-import junit.framework.*;
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -37,17 +39,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
  * A JUnit test for corrupted file handling.
  */
 public class TestFileCorruption extends TestCase {
-  
-  public TestFileCorruption(String testName) {
-    super(testName);
-  }
-
-  protected void setUp() throws Exception {
-  }
-
-  protected void tearDown() throws Exception {
-  }
-  
   /** check if DFS can handle corrupted blocks properly */
   public void testFileCorruption() throws Exception {
     MiniDFSCluster cluster = null;
@@ -134,7 +125,7 @@ public class TestFileCorruption extends TestCase {
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
-      cluster.getNameNode().namesystem.markBlockAsCorrupt(blk, 
+      cluster.getNamesystem().markBlockAsCorrupt(blk, 
           new DatanodeInfo(dataNode.dnRegistration ));
       
       // open the file

@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.Path;
 
 public class TestDFSRename extends junit.framework.TestCase {
   static int countLease(MiniDFSCluster cluster) {
-    return cluster.getNameNode().namesystem.leaseManager.countLease();
+    return cluster.getNamesystem().leaseManager.countLease();
   }
   
   final Path dir = new Path("/test/rename/");

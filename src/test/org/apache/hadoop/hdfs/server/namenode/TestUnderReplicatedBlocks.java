@@ -25,7 +25,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
       
       // remove one replica from the blocksMap so block becomes under-replicated
       // but the block does not get put into the under-replicated blocks queue
-      FSNamesystem namesystem = cluster.getNameNode().namesystem;
+      final FSNamesystem namesystem = cluster.getNamesystem();
       Block b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = namesystem.blocksMap.nodeIterator(b).next();
       namesystem.addToInvalidates(b, dn);

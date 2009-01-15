@@ -282,12 +282,10 @@ public class TestDatanodeBlockScanner extends TestCase {
     conf.setLong("dfs.replication.interval", 30);
     conf.setLong("dfs.heartbeat.interval", 30L);
     conf.setBoolean("dfs.replication.considerLoad", false);
-    Random random = new Random();
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
     int replicaCount = 0;
-    int rand = random.nextInt(numDataNodes);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
     cluster.waitActive();
@@ -330,7 +328,7 @@ public class TestDatanodeBlockScanner extends TestCase {
      cluster.restartDataNode(corruptReplicasDNIDs[i]);
 
     // Loop until all corrupt replicas are reported
-    int corruptReplicaSize = cluster.getNameNode().namesystem.
+    int corruptReplicaSize = cluster.getNamesystem().
                               corruptReplicas.numCorruptReplicas(blk);
     while (corruptReplicaSize != numCorruptReplicas) {
       try {
@@ -344,7 +342,7 @@ public class TestDatanodeBlockScanner extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
-      corruptReplicaSize = cluster.getNameNode().namesystem.
+      corruptReplicaSize = cluster.getNamesystem().
                               corruptReplicas.numCorruptReplicas(blk);
     }
     
@@ -365,7 +363,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     // Make sure the corrupt replica is invalidated and removed from
     // corruptReplicasMap
-    corruptReplicaSize = cluster.getNameNode().namesystem.
+    corruptReplicaSize = cluster.getNamesystem().
                           corruptReplicas.numCorruptReplicas(blk);
     while (corruptReplicaSize != 0 || replicaCount != numReplicas) {
       try {
@@ -373,7 +371,7 @@ public class TestDatanodeBlockScanner extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
-      corruptReplicaSize = cluster.getNameNode().namesystem.
+      corruptReplicaSize = cluster.getNamesystem().
                             corruptReplicas.numCorruptReplicas(blk);
       blocks = dfsClient.namenode.
                  getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);

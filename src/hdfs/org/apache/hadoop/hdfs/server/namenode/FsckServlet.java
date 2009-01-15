@@ -53,8 +53,9 @@ public class FsckServlet extends DfsServlet {
         UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
 
     final NameNode nn = (NameNode) context.getAttribute("name.node");
-    final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-    final short minReplication = nn.namesystem.getMinReplication();
+    final FSNamesystem namesystem = nn.getNamesystem();
+    final int totalDatanodes = namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
+    final short minReplication = namesystem.getMinReplication();
 
     new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
         totalDatanodes, minReplication).fsck();

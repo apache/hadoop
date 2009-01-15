@@ -183,7 +183,7 @@ public class TestDecommission extends TestCase {
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(nodename);
     writeConfigFile(localFileSys, excludeFile, nodes);
-    namenode.namesystem.refreshNodes(conf);
+    namenode.getNamesystem().refreshNodes(conf);
     return nodename;
   }
 

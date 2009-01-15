@@ -55,7 +55,7 @@ public class TestNamenodeCapacityReport extends TestCase {
       cluster = new MiniDFSCluster(conf, 1, true, null);
       cluster.waitActive();
       
-      FSNamesystem namesystem = cluster.getNameNode().namesystem;
+      final FSNamesystem namesystem = cluster.getNamesystem();
       
       // Ensure the data reported for each data node is right
       ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();

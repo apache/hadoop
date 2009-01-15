@@ -32,6 +32,8 @@ Trunk (unreleased changes)
     HADOOP-4985. Remove unnecessary "throw IOException" declarations in
     FSDirectory related methods.  (szetszwo)
 
+    HADOOP-5017. Change NameNode.namesystem declaration to private.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

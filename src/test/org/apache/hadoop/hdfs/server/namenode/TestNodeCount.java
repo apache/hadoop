@@ -26,7 +26,7 @@ public class TestNodeCount extends TestCase {
     final MiniDFSCluster cluster = 
       new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
     try {
-      final FSNamesystem namesystem = cluster.getNameNode().namesystem;
+      final FSNamesystem namesystem = cluster.getNamesystem();
       final FileSystem fs = cluster.getFileSystem();
       
       // populate the cluster with a one block file

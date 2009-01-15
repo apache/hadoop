@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ipc.RemoteException;
@@ -55,7 +54,7 @@ public class FileChecksumServlets {
       final UserGroupInformation ugi = getUGI(request);
       final ServletContext context = getServletContext();
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
-      final DatanodeID datanode = namenode.namesystem.getRandomDatanode();
+      final DatanodeID datanode = namenode.getNamesystem().getRandomDatanode();
       try {
         final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, request); 
         response.sendRedirect(uri.toURL().toString());
