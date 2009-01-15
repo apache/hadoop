@@ -22,6 +22,9 @@ Trunk (unreleased changes)
     corresponding permission requirement for running the ClientProtocol
     methods will be enforced.  (szetszwo)
 
+    HADOOP-3953. Implement sticky bit for directories in HDFS. (Jakob Homan
+    via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4936. Improvements to TestSafeMode. (shv)

@@ -80,7 +80,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -18;
+  public static final int LAYOUT_VERSION = -19;
   // Current version: 
-  // Support disk space quotas
+  // -19: Sticky bit
 }

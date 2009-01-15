@@ -27,31 +27,40 @@ import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * This class is the home for file permissions related commands.
- * Moved to this seperate class since FsShell is getting too large.
+ * Moved to this separate class since FsShell is getting too large.
  */
 class FsShellPermissions {
   
   /*========== chmod ==========*/
-   
-  /* The pattern is alsmost as flexible as mode allowed by 
-   * chmod shell command. The main restriction is that we recognize only rwxX.
-   * To reduce errors we also enforce 3 digits for octal mode.
-   */  
-  private static Pattern chmodNormalPattern = 
-             Pattern.compile("\\G\\s*([ugoa]*)([+=-]+)([rwxX]+)([,\\s]*)\\s*");
+
+  /*
+   * The pattern is almost as flexible as mode allowed by chmod shell command.
+   * The main restriction is that we recognize only rwxXt. To reduce errors we
+   * also enforce octal mode specifications of either 3 digits without a sticky
+   * bit setting or four digits with a sticky bit setting.
+   */
+  private static Pattern chmodNormalPattern =
+   Pattern.compile("\\G\\s*([ugoa]*)([+=-]+)([rwxXt]+)([,\\s]*)\\s*");
   private static Pattern chmodOctalPattern =
-            Pattern.compile("^\\s*[+]?([0-7]{3})\\s*$");
-  
-  static String CHMOD_USAGE = 
+            Pattern.compile("^\\s*[+]?([01]?)([0-7]{3})\\s*$");
+
+  static String CHMOD_USAGE =
                             "-chmod [-R] <MODE[,MODE]... | OCTALMODE> PATH...";
 
   private static class ChmodHandler extends CmdHandler {
 
-    private short userMode, groupMode, othersMode;
-    private char userType = '+', groupType = '+', othersType='+';
+    private short userMode;
+    private short groupMode;
+    private short othersMode;
+    private short stickyMode;
+    private char userType = '+';
+    private char groupType = '+';
+    private char othersType = '+';
+    private char stickyBitType = '+';
 
     private void applyNormalPattern(String modeStr, Matcher matcher)
                                     throws IOException {
+      // Are there multiple permissions stored in one chmod?
       boolean commaSeperated = false;
 
       for(int i=0; i < 1 || matcher.end() < modeStr.length(); i++) {
@@ -61,15 +70,15 @@ class FsShellPermissions {
 
         /* groups : 1 : [ugoa]*
          *          2 : [+-=]
-         *          3 : [rwxX]+
+         *          3 : [rwxXt]+
          *          4 : [,\s]*
          */
 
         String str = matcher.group(2);
         char type = str.charAt(str.length() - 1);
 
-        boolean user, group, others;
-        user = group = others = false;
+        boolean user, group, others, stickyBit;
+        user = group = others = stickyBit = false;
 
         for(char c : matcher.group(1).toCharArray()) {
           switch (c) {
@@ -85,13 +94,15 @@ class FsShellPermissions {
           user = group = others = true;
         }
 
-        short  mode = 0;
+        short mode = 0;
+
         for(char c : matcher.group(3).toCharArray()) {
           switch (c) {
           case 'r' : mode |= 4; break;
           case 'w' : mode |= 2; break;
           case 'x' : mode |= 1; break;
           case 'X' : mode |= 8; break;
+          case 't' : stickyBit = true; break;
           default  : throw new RuntimeException("Unexpected");
           }
         }
@@ -109,6 +120,9 @@ class FsShellPermissions {
         if ( others ) {
           othersMode = mode;
           othersType = type;
+          
+          stickyMode = (short) (stickyBit ? 1 : 0);
+          stickyBitType = type;
         }
 
         commaSeperated = matcher.group(4).contains(",");
@@ -117,7 +131,15 @@ class FsShellPermissions {
 
     private void applyOctalPattern(String modeStr, Matcher matcher) {
       userType = groupType = othersType = '=';
-      String str = matcher.group(1);
+
+      // Check if sticky bit is specified
+      String sb = matcher.group(1);
+      if(!sb.isEmpty()) {
+        stickyMode = Short.valueOf(sb.substring(0, 1));
+        stickyBitType = '=';
+      }
+
+      String str = matcher.group(2);
       userMode = Short.valueOf(str.substring(0, 1));
       groupMode = Short.valueOf(str.substring(1, 2));
       othersMode = Short.valueOf(str.substring(2, 3));      
@@ -170,11 +192,13 @@ class FsShellPermissions {
       FsPermission perms = file.getPermission();
       int existing = perms.toShort();
       boolean exeOk = file.isDir() || (existing & 0111) != 0;
-      int newperms = ( applyChmod(userType, userMode, 
-                                  (existing>>>6)&7, exeOk) << 6 |
-                       applyChmod(groupType, groupMode, 
-                                  (existing>>>3)&7, exeOk) << 3 |
-                       applyChmod(othersType, othersMode, existing&7, exeOk) );
+      int newperms = ( applyChmod(stickyBitType, stickyMode,
+                             (existing>>>9), false) << 9 |
+                       applyChmod(userType, userMode,
+                             (existing>>>6)&7, exeOk) << 6 |
+                       applyChmod(groupType, groupMode,
+                             (existing>>>3)&7, exeOk) << 3 |
+                       applyChmod(othersType, othersMode, existing&7, exeOk));
 
       if (existing != newperms) {
         try {

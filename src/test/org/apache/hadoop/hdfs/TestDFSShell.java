@@ -442,7 +442,6 @@ public class TestDFSShell extends TestCase {
     }
   }
   
-
   public void testURIPaths() throws Exception {
     Configuration srcConf = new Configuration();
     Configuration dstConf = new Configuration();
@@ -758,18 +757,15 @@ public class TestDFSShell extends TestCase {
      fs.delete(dir, true);
      fs.mkdirs(dir);
 
-     runCmd(shell, "-chmod", "u+rwx,g=rw,o-rwx", chmodDir);
-     assertEquals("rwxrw----",
-                  fs.getFileStatus(dir).getPermission().toString());
-
+     confirmPermissionChange(/* Setting */ "u+rwx,g=rw,o-rwx",
+                             /* Should give */ "rwxrw----", fs, shell, dir);
+     
      //create an empty file
      Path file = new Path(chmodDir, "file");
      TestDFSShell.writeFile(fs, file);
 
      //test octal mode
-     runCmd(shell, "-chmod", "644", file.toString());
-     assertEquals("rw-r--r--",
-                  fs.getFileStatus(file).getPermission().toString());
+     confirmPermissionChange( "644", "rw-r--r--", fs, shell, file);
 
      //test recursive
      runCmd(shell, "-chmod", "-R", "a+rwX", chmodDir);
@@ -777,8 +773,28 @@ public class TestDFSShell extends TestCase {
                   fs.getFileStatus(dir).getPermission().toString()); 
      assertEquals("rw-rw-rw-",
                   fs.getFileStatus(file).getPermission().toString());
+
+     // test sticky bit on directories
+     Path dir2 = new Path(dir, "stickybit" );
+     fs.mkdirs(dir2 );
      
-     fs.delete(dir, true);     
+     assertEquals("rwxr-xr-x", fs.getFileStatus(dir2).getPermission()
+         .toString());
+     
+     confirmPermissionChange("+t", "rwxr-xr-t", fs, shell, dir2);
+
+     confirmPermissionChange("-t", "rwxr-xr-x", fs, shell, dir2);
+
+     confirmPermissionChange("=t", "--------T", fs, shell, dir2);
+
+     confirmPermissionChange("0000", "---------", fs, shell, dir2);
+
+     confirmPermissionChange("1666", "rw-rw-rwT", fs, shell, dir2);
+
+     confirmPermissionChange("777", "rwxrwxrwt", fs, shell, dir2);
+
+     fs.delete(dir, true);
+     fs.delete(dir2, true);
     } finally {
       try {
         fs.close();
@@ -786,7 +802,16 @@ public class TestDFSShell extends TestCase {
       } catch (IOException ignored) {}
     }
   }
-  
+
+  // Apply a new permission to a path and confirm that the new permission
+  // is the one you were expecting
+  private void confirmPermissionChange(String toApply, String expected,
+      FileSystem fs, FsShell shell, Path dir2) throws IOException {
+    runCmd(shell, "-chmod", toApply, dir2.toString());
+    
+    assertEquals(expected, fs.getFileStatus(dir2).getPermission().toString());
+  }
+   
   private void confirmOwner(String owner, String group, 
                             FileSystem fs, Path... paths) throws IOException {
     for(Path path : paths) {
@@ -820,7 +845,7 @@ public class TestDFSShell extends TestCase {
     shell.setConf(conf);
     fs = cluster.getFileSystem();
     
-    /* For dfs, I am the super user and I can change ower of any file to
+    /* For dfs, I am the super user and I can change owner of any file to
      * anything. "-R" option is already tested by chmod test above.
      */
     

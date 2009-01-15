@@ -22,8 +22,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -1364,9 +1362,10 @@ public class FsShell extends Configured implements Tool {
       "\t-R\tmodifies the files recursively. This is the only option\n" +
       "\t\tcurrently supported.\n\n" +
       "\tMODE\tMode is same as mode used for chmod shell command.\n" +
-      "\t\tOnly letters recognized are 'rwxX'. E.g. a+r,g-w,+rwx,o=r\n\n" +
-      "\tOCTALMODE Mode specifed in 3 digits. Unlike shell command,\n" +
-      "\t\tthis requires all three digits.\n" +
+      "\t\tOnly letters recognized are 'rwxXt'. E.g. +t,a+r,g-w,+rwx,o=r\n\n" +
+      "\tOCTALMODE Mode specifed in 3 or 4 digits. If 4 digits, the first may\n" +
+      "\tbe 1 or 0 to turn the sticky bit on or off, respectively.  Unlike " +
+      "\tshell command, it is not possible to specify only part of the mode\n" +
       "\t\tE.g. 754 is same as u=rwx,g=rx,o=r\n\n" +
       "\t\tIf none of 'augo' is specified, 'a' is assumed and unlike\n" +
       "\t\tshell command, no umask is applied.\n";

@@ -384,7 +384,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.isPermissionEnabled = conf.getBoolean("dfs.permissions", true);
     LOG.info("supergroup=" + supergroup);
     LOG.info("isPermissionEnabled=" + isPermissionEnabled);
-    short filePermission = (short)conf.getInt("dfs.upgrade.permission", 0777);
+    short filePermission = (short)conf.getInt("dfs.upgrade.permission", 00777);
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getUserName(), supergroup, new FsPermission(filePermission));
 

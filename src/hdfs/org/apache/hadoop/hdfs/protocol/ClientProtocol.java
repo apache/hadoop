@@ -41,9 +41,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 41: saveNamespace introduced.
+   * 42: updated to use sticky bit
    */
-  public static final long versionID = 41L;
+  public static final long versionID = 42L;
   
   ///////////////////////////////////////
   // File contents
