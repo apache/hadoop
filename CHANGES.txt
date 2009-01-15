@@ -36,6 +36,9 @@ Trunk (unreleased changes)
     HADOOP-4963. Fixes a logging to do with getting the location of
     map output file. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2337. Trash should close FileSystem on exit and should not start 
+    emtying thread if disabled. (shv)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

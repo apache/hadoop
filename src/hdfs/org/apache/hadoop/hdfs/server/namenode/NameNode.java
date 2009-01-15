@@ -205,6 +205,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   private void startTrashEmptier(Configuration conf) throws IOException {
+    long trashInterval = conf.getLong("fs.trash.interval", 0);
+    if(trashInterval == 0)
+      return;
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();

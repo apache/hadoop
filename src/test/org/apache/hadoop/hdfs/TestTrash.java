@@ -18,12 +18,13 @@
 package org.apache.hadoop.hdfs;
 
 import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.DataOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FsShell;
 
 /**
  * This class tests commands from Trash.
@@ -71,7 +72,6 @@ public class TestTrash extends TestCase {
     conf.set("fs.trash.interval", "10"); // 10 minute
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
-    DistributedFileSystem fileSys = (DistributedFileSystem) fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
     Path trashRoot = null;

@@ -195,16 +195,14 @@ public class Trash extends Configured {
     return new Emptier(getConf());
   }
 
-  private static class Emptier implements Runnable {
+  private class Emptier implements Runnable {
 
     private Configuration conf;
-    private FileSystem fs;
     private long interval;
 
-    public Emptier(Configuration conf) throws IOException {
+    Emptier(Configuration conf) throws IOException {
       this.conf = conf;
-      this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
-      this.fs = FileSystem.get(conf);
+      this.interval = conf.getLong("fs.trash.interval", 0) * MSECS_PER_MINUTE;
     }
 
     public void run() {
@@ -218,7 +216,7 @@ public class Trash extends Configured {
         try {                                     // sleep for interval
           Thread.sleep(end - now);
         } catch (InterruptedException e) {
-          return;                                 // exit on interrupt
+          break;                                  // exit on interrupt
         }
           
         try {
@@ -252,6 +250,12 @@ public class Trash extends Configured {
           LOG.warn("RuntimeException during Trash.Emptier.run() " + 
                    StringUtils.stringifyException(e));
         }
+      }
+      try {
+        fs.close();
+      } catch(IOException e) {
+        LOG.warn("Trash cannot close FileSystem. " +
+            StringUtils.stringifyException(e));
       }
     }
 
