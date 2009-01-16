@@ -300,14 +300,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
         recoverDetachedBlocks(currentDir, detachDir);
       }
 
-      // Files that were being written when the datanode was last shutdown
-      // are now moved back to the data directory. It is possible that
-      // in the future, we might want to do some sort of datanode-local
-      // recovery for these blocks. For example, crc validation.
+      // Delete all temporary blocks in the tmp diectory
       //
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
-        recoverDetachedBlocks(currentDir, tmpDir);
+        FileUtil.fullyDelete(tmpDir);
       }
       this.dataDir = new FSDir(currentDir);
       if (!tmpDir.mkdirs()) {
