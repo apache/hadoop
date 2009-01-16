@@ -88,7 +88,7 @@ public class Job extends JobContext {
    * @param cls the <code>InputFormat</code> to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setInputFormatClass(Class<? extends InputFormat<?,?>> cls
+  public void setInputFormatClass(Class<? extends InputFormat> cls
                                   ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(INPUT_FORMAT_CLASS_ATTR, cls, InputFormat.class);
@@ -99,7 +99,7 @@ public class Job extends JobContext {
    * @param cls the <code>OutputFormat</code> to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setOutputFormatClass(Class<? extends OutputFormat<?,?>> cls
+  public void setOutputFormatClass(Class<? extends OutputFormat> cls
                                    ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(OUTPUT_FORMAT_CLASS_ATTR, cls, OutputFormat.class);
