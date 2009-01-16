@@ -1415,6 +1415,52 @@ public class TestCapacityScheduler extends TestCase {
     
   }
   
+  // test code to reclaim capacity with one queue haveing zero GC 
+  // (HADOOP-4988). 
+  // Simple test: reclaim capacity should work even if one of the 
+  // queues has a gc of 0. 
+  public void testReclaimCapacityWithZeroGC() throws Exception {
+    // set up some queues
+    String[] qs = {"default", "q2", "q3"};
+    taskTrackerManager.addQueues(qs);
+    resConf = new FakeResourceManagerConf();
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    // we want q3 to have 0 GC. Map slots = 4. 
+    queues.add(new FakeQueueInfo("default", 50.0f, 1000, true, 25));
+    queues.add(new FakeQueueInfo("q2", 40.0f, 1000, true, 25));
+    queues.add(new FakeQueueInfo("q3", 10.0f, 1000, true, 25));
+    // note: because of the way we convert gc% into actual gc, q2's gc
+    // will be 1, not 2. 
+    resConf.setFakeQueues(queues);
+    resConf.setReclaimCapacityInterval(500);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    // set up a situation where q2 is under capacity, and default 
+    // is over capacity
+    FakeJobInProgress j1 = submitJobAndInit(JobStatus.PREP, 10, 10, null, "u1");
+    //FakeJobInProgress j2 = submitJobAndInit(JobStatus.PREP, 10, 10, "q3", "u1");
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000002_0 on tt1");
+    checkAssignment("tt2", "attempt_test_0001_m_000003_0 on tt2");
+    checkAssignment("tt2", "attempt_test_0001_m_000004_0 on tt2");
+    // now submit a job to q2
+    FakeJobInProgress j3 = submitJobAndInit(JobStatus.PREP, 10, 10, "q2", "u1");
+    // get scheduler to notice that q2 needs to reclaim
+    scheduler.reclaimCapacity();
+    // our queue reclaim time is 1000s, heartbeat interval is 5 sec, so 
+    // we start reclaiming when 15 secs are left. 
+    clock.advance(400000);
+    scheduler.reclaimCapacity();
+    // no tasks should have been killed yet
+    assertEquals(j1.runningMapTasks, 4);
+    clock.advance(200000);
+    scheduler.reclaimCapacity();
+    // task from j1 will be killed
+    assertEquals(j1.runningMapTasks, 3);
+    
+  }
+
   /*
    * Following is the testing strategy for testing scheduling information.
    * - start capacity scheduler with two queues.

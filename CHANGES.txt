@@ -539,6 +539,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4977. Fix a deadlock between the reclaimCapacity and assignTasks
     in capacity scheduler. (Vivek Ratan via yhemanth)
 
+    HADOOP-4988. Fix reclaim capacity to work even when there are queues with
+    no capacity. (Vivek Ratan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
