@@ -59,7 +59,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     
       protected void tearDown() throws Exception {
         AppendTestUtil.LOG.info("tearDown()");
-        cluster.shutdown();
+        if(fs != null) fs.close();
+        if(cluster != null) cluster.shutdown();
       }
     };  
   }
