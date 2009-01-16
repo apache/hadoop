@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.io.compress.bzip2.BZip2DummyCompressor;
+import org.apache.hadoop.io.compress.bzip2.BZip2DummyDecompressor;
 import org.apache.hadoop.io.compress.bzip2.CBZip2InputStream;
 import org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream;
 
@@ -67,7 +69,7 @@ public class BZip2Codec implements
    */
   public CompressionOutputStream createOutputStream(OutputStream out,
       Compressor compressor) throws IOException {
-    throw new UnsupportedOperationException();
+    return createOutputStream(out);
   }
 
   /**
@@ -76,8 +78,8 @@ public class BZip2Codec implements
   * @throws java.lang.UnsupportedOperationException
   *             Throws UnsupportedOperationException
   */
-  public Class<org.apache.hadoop.io.compress.Compressor> getCompressorType() {
-    throw new UnsupportedOperationException();
+  public Class<? extends org.apache.hadoop.io.compress.Compressor> getCompressorType() {
+    return BZip2DummyCompressor.class;
   }
 
   /**
@@ -87,7 +89,7 @@ public class BZip2Codec implements
   *             Throws UnsupportedOperationException
   */
   public Compressor createCompressor() {
-    throw new UnsupportedOperationException();
+    return new BZip2DummyCompressor();
   }
 
   /**
@@ -112,8 +114,7 @@ public class BZip2Codec implements
   */
   public CompressionInputStream createInputStream(InputStream in,
       Decompressor decompressor) throws IOException {
-    throw new UnsupportedOperationException();
-
+    return createInputStream(in);
   }
 
   /**
@@ -122,8 +123,8 @@ public class BZip2Codec implements
   * @throws java.lang.UnsupportedOperationException
   *             Throws UnsupportedOperationException
   */
-  public Class<org.apache.hadoop.io.compress.Decompressor> getDecompressorType() {
-    throw new UnsupportedOperationException();
+  public Class<? extends org.apache.hadoop.io.compress.Decompressor> getDecompressorType() {
+    return BZip2DummyDecompressor.class;
   }
 
   /**
@@ -133,7 +134,7 @@ public class BZip2Codec implements
   *             Throws UnsupportedOperationException
   */
   public Decompressor createDecompressor() {
-    throw new UnsupportedOperationException();
+    return new BZip2DummyDecompressor();
   }
 
   /**
@@ -149,14 +150,13 @@ public class BZip2Codec implements
 
     // class data starts here//
     private CBZip2OutputStream output;
-
+    private boolean needsReset; 
     // class data ends here//
 
     public BZip2CompressionOutputStream(OutputStream out)
         throws IOException {
       super(out);
-      writeStreamHeader();
-      this.output = new CBZip2OutputStream(out);
+      needsReset = true;
     }
 
     private void writeStreamHeader() throws IOException {
@@ -168,32 +168,43 @@ public class BZip2Codec implements
       }
     }
 
-    public void write(byte[] b, int off, int len) throws IOException {
-      this.output.write(b, off, len);
-
-    }
-
     public void finish() throws IOException {
-      this.output.flush();
+      this.output.finish();
+      needsReset = true;
     }
 
+    private void internalReset() throws IOException {
+      if (needsReset) {
+        needsReset = false;
+        writeStreamHeader();
+        this.output = new CBZip2OutputStream(out);
+      }
+    }    
+    
     public void resetState() throws IOException {
-
+      // Cannot write to out at this point because out might not be ready
+      // yet, as in SequenceFile.Writer implementation.
+      needsReset = true;
     }
 
     public void write(int b) throws IOException {
+      if (needsReset) {
+        internalReset();
+      }
       this.output.write(b);
+    }
+
+    public void write(byte[] b, int off, int len) throws IOException {
+      if (needsReset) {
+        internalReset();
+      }
+      this.output.write(b, off, len);
     }
 
     public void close() throws IOException {
       this.output.flush();
       this.output.close();
-    }
-
-    protected void finalize() throws IOException {
-      if (this.output != null) {
-        this.close();
-      }
+      needsReset = true;
     }
 
   }// end of class BZip2CompressionOutputStream
@@ -202,14 +213,13 @@ public class BZip2Codec implements
 
     // class data starts here//
     private CBZip2InputStream input;
-
+    boolean needsReset;
     // class data ends here//
 
     public BZip2CompressionInputStream(InputStream in) throws IOException {
 
       super(in);
-      BufferedInputStream bufferedIn = readStreamHeader();
-      input = new CBZip2InputStream(bufferedIn);
+      needsReset = true;
     }
 
     private BufferedInputStream readStreamHeader() throws IOException {
@@ -239,29 +249,39 @@ public class BZip2Codec implements
     }// end of method
 
     public void close() throws IOException {
-      this.input.close();
+      if (!needsReset) {
+        input.close();
+        needsReset = true;
+      }
     }
 
     public int read(byte[] b, int off, int len) throws IOException {
-
+      if (needsReset) {
+        internalReset();
+      }
       return this.input.read(b, off, len);
 
     }
 
+    private void internalReset() throws IOException {
+      if (needsReset) {
+        needsReset = false;
+        BufferedInputStream bufferedIn = readStreamHeader();
+        input = new CBZip2InputStream(bufferedIn);
+      }
+    }    
+    
     public void resetState() throws IOException {
-
+      // Cannot read from bufferedIn at this point because bufferedIn might not be ready
+      // yet, as in SequenceFile.Reader implementation.
+      needsReset = true;
     }
 
     public int read() throws IOException {
-      return this.input.read();
-
-    }
-
-    protected void finalize() throws IOException {
-      if (this.input != null) {
-        this.close();
+      if (needsReset) {
+        internalReset();
       }
-
+      return this.input.read();
     }
 
   }// end of BZip2CompressionInputStream
