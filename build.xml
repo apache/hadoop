@@ -174,7 +174,7 @@
    <!--Conditionally generate the jsp java pages.
        We do it once per ant invocation.  See hbase-593.
      -->
-  <target name="jspc" unless="jspc.not.required">
+  <target name="jspc" depends="init" unless="jspc.not.required">
     <path id="jspc.classpath">
       <fileset dir="${basedir}/lib/jetty-ext/">
         <include name="*jar" />
@@ -191,13 +191,13 @@
      uriroot="${src.webapps}/master"
      outputdir="${generated.webapps.src}"
      package="org.apache.hadoop.hbase.generated.master"
-     webxml="${src.webapps}/master/WEB-INF/web.xml">
+     webxml="${build.webapps}/master/WEB-INF/web.xml">
     </jspcompiler>
     <jspcompiler
      uriroot="${src.webapps}/regionserver"
      outputdir="${generated.webapps.src}"
      package="org.apache.hadoop.hbase.generated.regionserver"
-     webxml="${src.webapps}/regionserver/WEB-INF/web.xml">
+     webxml="${build.webapps}/regionserver/WEB-INF/web.xml">
     </jspcompiler>
     <property name="jspc.not.required" value="true" />
     <echo message="Setting jspc.notRequired property. jsp pages generated once per ant session only" />
