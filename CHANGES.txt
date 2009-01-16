@@ -609,6 +609,8 @@ Release 0.19.1 - Unreleased
     HADOOP-4739. Fix spelling and grammar, improve phrasing of some sections in
     mapred tutorial. (Vivek Ratan via cdouglas)
 
+    HADOOP-3894. DFSClient logging improvements. (Steve Loughran via shv)
+
   BUG FIXES
 
     HADOOP-4697. Fix getBlockLocations in KosmosFileSystem to handle multiple
