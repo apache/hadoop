@@ -963,8 +963,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           try {
             out.close();
           } catch (IOException ie) {
-            System.err.println("Exception closing file " + src);
-            ie.printStackTrace();
+            LOG.error("Exception closing file " + src+ " : " + ie, ie);
           }
         }
       }
@@ -2432,7 +2431,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       while (!success && clientRunning) {
         DatanodeInfo[] newnodes = null;
         if (nodes == null) {
-          String msg = "Could not get block locations. Aborting...";
+          String msg = "Could not get block locations. " +
+                                          "Source file \"" + src
+                                          + "\" - Aborting...";
           LOG.warn(msg);
           setLastException(new IOException(msg));
           closed = true;
