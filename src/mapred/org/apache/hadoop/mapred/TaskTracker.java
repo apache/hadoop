@@ -372,15 +372,13 @@ public class TaskTracker
       }, "taskCleanup");
     
   private RunningJob addTaskToJob(JobID jobId, 
-                                  Path localJobFile,
                                   TaskInProgress tip) {
     synchronized (runningJobs) {
       RunningJob rJob = null;
       if (!runningJobs.containsKey(jobId)) {
-        rJob = new RunningJob(jobId, localJobFile);
+        rJob = new RunningJob(jobId);
         rJob.localized = false;
         rJob.tasks = new HashSet<TaskInProgress>();
-        rJob.jobFile = localJobFile;
         runningJobs.put(jobId, rJob);
       } else {
         rJob = runningJobs.get(jobId);
@@ -762,7 +760,7 @@ public class TaskTracker
                                     + Path.SEPARATOR + jobId 
                                     + Path.SEPARATOR + "job.xml"),
                                     jobFileSize, fConf);
-    RunningJob rjob = addTaskToJob(jobId, localJobFile, tip);
+    RunningJob rjob = addTaskToJob(jobId, tip);
     synchronized (rjob) {
       if (!rjob.localized) {
   
@@ -830,9 +828,10 @@ public class TaskTracker
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
         rjob.localized = true;
+        rjob.jobConf = localJobConf;
       }
     }
-    launchTaskForJob(tip, new JobConf(rjob.jobFile)); 
+    launchTaskForJob(tip, new JobConf(rjob.jobConf)); 
   }
 
   private void launchTaskForJob(TaskInProgress tip, JobConf jobConf) throws IOException{
@@ -2600,22 +2599,17 @@ public class TaskTracker
    */
   static class RunningJob{
     private JobID jobid; 
-    private Path jobFile;
+    private JobConf jobConf;
     // keep this for later use
     volatile Set<TaskInProgress> tasks;
     boolean localized;
     boolean keepJobFiles;
     FetchStatus f;
-    RunningJob(JobID jobid, Path jobFile) {
+    RunningJob(JobID jobid) {
       this.jobid = jobid;
       localized = false;
       tasks = new HashSet<TaskInProgress>();
-      this.jobFile = jobFile;
       keepJobFiles = false;
-    }
-      
-    Path getJobFile() {
-      return jobFile;
     }
       
     JobID getJobID() {
