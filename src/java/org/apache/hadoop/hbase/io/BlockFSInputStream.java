@@ -53,10 +53,9 @@ public class BlockFSInputStream extends FSInputStream {
       public Thread newThread(Runnable r) {
         Thread t = new Thread(r);
         t.setDaemon(true);
-        t.setName("BlockFSInputStream referenceQueue Checker");
+        t.setName("BlockFSInputStreamReferenceQueueChecker");
         return t;
       }
-
     });
   
   /*
@@ -92,7 +91,7 @@ public class BlockFSInputStream extends FSInputStream {
     }
     this.fileLength = fileLength;
     this.blockSize = blockSize;
-    // a memory-sensitive map that has soft references to values
+    // A memory-sensitive map that has soft references to values
     this.blocks = new SoftValueMap<Long, byte []>() {
       private long hits, misses;
       public byte [] get(Object key) {
@@ -111,14 +110,14 @@ public class BlockFSInputStream extends FSInputStream {
     };
     // Register a Runnable that runs checkReferences on a period.
     final int hashcode = hashCode();
-    this.registration = EXECUTOR.scheduleAtFixedRate(new Runnable() {
+    this.registration = EXECUTOR.scheduleWithFixedDelay(new Runnable() {
       public void run() {
         int cleared = checkReferences();
         if (LOG.isDebugEnabled() && cleared > 0) {
-          LOG.debug("Cleared " + cleared + " in " + hashcode);
+          LOG.debug("Checker cleared " + cleared + " in " + hashcode);
         }
       }
-    }, 10, 10, TimeUnit.SECONDS);
+    }, 1, 1, TimeUnit.SECONDS);
   }
 
   @Override
@@ -214,6 +213,10 @@ public class BlockFSInputStream extends FSInputStream {
     if (!this.registration.cancel(false)) {
       LOG.warn("Failed cancel of " + this.registration);
     }
+    int cleared = checkReferences();
+    if (LOG.isDebugEnabled() && cleared > 0) {
+      LOG.debug("Close cleared " + cleared + " in " + hashCode());
+    }
     if (blockStream != null) {
       blockStream.close();
       blockStream = null;
@@ -246,7 +249,7 @@ public class BlockFSInputStream extends FSInputStream {
    * @return Count of references cleared.
    */
   public synchronized int checkReferences() {
-    if (closed || this.blocks == null) {
+    if (this.closed) {
       return 0;
     }
     return this.blocks.checkReferences();

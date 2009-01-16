@@ -103,7 +103,7 @@ public class HColumnDescriptor implements WritableComparable {
   /**
    * Default setting for whether to use a block cache or not.
    */
-  public static final boolean DEFAULT_BLOCKCACHE = true;
+  public static final boolean DEFAULT_BLOCKCACHE = false;
 
   /**
    * Default setting for whether or not to use bloomfilters.
