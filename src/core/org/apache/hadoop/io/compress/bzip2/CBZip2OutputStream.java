@@ -703,13 +703,13 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   * Overriden to close the stream.
   */
   protected void finalize() throws Throwable {
-    close();
+    finish();
     super.finalize();
   }
 
-  public void close() throws IOException {
-    OutputStream outShadow = this.out;
-    if (outShadow != null) {
+  
+  public void finish() throws IOException {
+    if (out != null) {
       try {
         if (this.runLength > 0) {
           writeRun();
@@ -717,7 +717,6 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
         this.currentChar = -1;
         endBlock();
         endCompression();
-        outShadow.close();
       } finally {
         this.out = null;
         this.data = null;
@@ -725,6 +724,14 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     }
   }
 
+  public void close() throws IOException {
+    if (out != null) {
+      OutputStream outShadow = this.out;
+      finish();
+      outShadow.close();
+    }
+  }
+  
   public void flush() throws IOException {
     OutputStream outShadow = this.out;
     if (outShadow != null) {
