@@ -48,6 +48,9 @@ Trunk (unreleased changes)
     HADOOP-2337. Trash should close FileSystem on exit and should not start 
     emtying thread if disabled. (shv)
 
+    HADOOP-5072. Fix failure in TestCodec because testSequenceFileGzipCodec 
+    won't pass without native gzip codec. (Zheng Shao via dhruba)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
