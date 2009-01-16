@@ -405,26 +405,16 @@ class CapacityTaskScheduler extends TaskScheduler {
           return -1;
         }
         else if ((0 == t1.reclaimList.size()) && (0 == t2.reclaimList.size())){
-          // neither needs to reclaim. If either doesn't have a capacity yet,
-          // it comes at the end of the queue.
-          if ((t1.guaranteedCapacity == 0) &&
-                (t2.guaranteedCapacity != 0)) {
-            return 1;
-          } else if ((t1.guaranteedCapacity != 0) &&
-                      (t2.guaranteedCapacity == 0)) {
-            return -1;
-          } else if ((t1.guaranteedCapacity == 0) &&
-                      (t2.guaranteedCapacity == 0)) {
-            // both don't have capacities, treat them as equal.
-            return 0;
-          } else {
-            // look at how much capacity they've filled
-            double r1 = (double)t1.numRunningTasks/(double)t1.guaranteedCapacity;
-            double r2 = (double)t2.numRunningTasks/(double)t2.guaranteedCapacity;
-            if (r1<r2) return -1;
-            else if (r1>r2) return 1;
-            else return 0;
-          }
+          // neither needs to reclaim. 
+          // look at how much capacity they've filled. Treat a queue with gc=0 
+          // equivalent to a queue running at capacity
+          double r1 = (0 == t1.guaranteedCapacity)? 1.0f: 
+            (double)t1.numRunningTasks/(double)t1.guaranteedCapacity;
+          double r2 = (0 == t2.guaranteedCapacity)? 1.0f:
+            (double)t2.numRunningTasks/(double)t2.guaranteedCapacity;
+          if (r1<r2) return -1;
+          else if (r1>r2) return 1;
+          else return 0;
         }
         else {
           // both have to reclaim. Look at which one needs to reclaim earlier
@@ -768,12 +758,10 @@ class CapacityTaskScheduler extends TaskScheduler {
     // collections are up-to-date.
     private TaskLookupResult assignTasks(TaskTrackerStatus taskTracker) throws IOException {
       for (QueueSchedulingInfo qsi : qsiForAssigningTasks) {
-        if (getTSI(qsi).guaranteedCapacity <= 0.0f) {
-          // No capacity is guaranteed yet for this queue.
-          // Queues are sorted so that ones without capacities
-          // come towards the end. Hence, we can simply return
-          // from here without considering any further queues.
-          return TaskLookupResult.getNoTaskFoundResult();
+        // we may have queues with gc=0. We shouldn't look at jobs from 
+        // these queues
+        if (0 == getTSI(qsi).guaranteedCapacity) {
+          continue;
         }
         TaskLookupResult tlr = getTaskFromQueue(taskTracker, qsi);
         TaskLookupResult.LookUpStatus lookUpStatus = tlr.getLookUpStatus();
