@@ -85,9 +85,10 @@
 <b>State:</b> <%= status.getJobTrackerState() %><br>
 <b>Started:</b> <%= new Date(tracker.getStartTime())%><br>
 <b>Version:</b> <%= VersionInfo.getVersion()%>,
-                r<%= VersionInfo.getRevision()%><br>
+                <%= VersionInfo.getRevision()%><br>
 <b>Compiled:</b> <%= VersionInfo.getDate()%> by 
-                 <%= VersionInfo.getUser()%><br>
+                 <%= VersionInfo.getUser()%> from
+                 <%= VersionInfo.getBranch()%><br>
 <b>Identifier:</b> <%= tracker.getTrackerIdentifier()%><br>                 
                    
 <hr>

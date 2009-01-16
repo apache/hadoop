@@ -56,7 +56,15 @@ public class VersionInfo {
   public static String getRevision() {
     return version != null ? version.revision() : "Unknown";
   }
-  
+
+  /**
+   * Get the branch on which this originated.
+   * @return The branch name, e.g. "trunk" or "branches/branch-0.20"
+   */
+  public static String getBranch() {
+    return version != null ? version.branch() : "Unknown";
+  }
+
   /**
    * The date that Hadoop was compiled.
    * @return the compilation date in unix date format

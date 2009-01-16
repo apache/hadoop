@@ -21,9 +21,10 @@
 <h1><%= trackerName %> Task Tracker Status</h1>
 <img src="/static/hadoop-logo.jpg"/><br>
 <b>Version:</b> <%= VersionInfo.getVersion()%>,
-                r<%= VersionInfo.getRevision()%><br>
+                <%= VersionInfo.getRevision()%><br>
 <b>Compiled:</b> <%= VersionInfo.getDate()%> by 
-                 <%= VersionInfo.getUser()%><br>
+                 <%= VersionInfo.getUser()%> from
+                 <%= VersionInfo.getBranch()%><br>
 
 <h2>Running tasks</h2>
 <center>

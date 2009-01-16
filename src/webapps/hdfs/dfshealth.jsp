@@ -239,8 +239,8 @@
 
 <div id="dfstable"> <table>	  
 <tr> <td id="col1"> Started: <td> <%= fsn.getStartTime()%>
-<tr> <td id="col1"> Version: <td> <%= VersionInfo.getVersion()%>, r<%= VersionInfo.getRevision()%>
-<tr> <td id="col1"> Compiled: <td> <%= VersionInfo.getDate()%> by <%= VersionInfo.getUser()%>
+<tr> <td id="col1"> Version: <td> <%= VersionInfo.getVersion()%>, <%= VersionInfo.getRevision()%>
+<tr> <td id="col1"> Compiled: <td> <%= VersionInfo.getDate()%> by <%= VersionInfo.getUser()%> from <%= VersionInfo.getBranch()%>
 <tr> <td id="col1"> Upgrades: <td> <%= jspHelper.getUpgradeStatusText()%>
 </table></div><br>				      
 

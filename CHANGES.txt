@@ -34,6 +34,10 @@ Trunk (unreleased changes)
 
     HADOOP-5017. Change NameNode.namesystem declaration to private.  (szetszwo)
 
+    HADOOP-4794. Add branch information from the source version control into
+    the version information that is compiled into Hadoop. (cdouglas via 
+    omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
