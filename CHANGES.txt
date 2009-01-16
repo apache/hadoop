@@ -52,6 +52,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4906. Fix TaskTracker OOM by keeping a shallow copy of JobConf in
     TaskTracker.TaskInProgress. (Sharad Agarwal via acmurthy) 
 
+    HADOOP-4918. Fix bzip2 compression to work with Sequence Files.
+    (Zheng Shao via dhruba).
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
