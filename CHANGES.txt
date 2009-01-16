@@ -591,6 +591,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4988. Fix reclaim capacity to work even when there are queues with
     no capacity. (Vivek Ratan via yhemanth)
 
+    HADOOP-5065. Remove generic parameters from argument to 
+    setIn/OutputFormatClass so that it works with SequenceIn/OutputFormat.
+    (cdouglas via omalley)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
