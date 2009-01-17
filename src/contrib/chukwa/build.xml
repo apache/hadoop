@@ -785,33 +785,33 @@ clusters.
 %setup -q
 %build
 mkdir -p %{buildroot}%{_prefix}
-if [ -d %{buildroot}%{_prefix}/%{name} ]; then
-    rm -rf %{buildroot}%{_prefix}/%{name}
-fi 
-mv %{buildroot}/%{name}-%{version} %{buildroot}%{_prefix}/%{name}
+if [ -d %{buildroot}%{_prefix} ]; then
+    rm -rf %{buildroot}%{_prefix}
+fi
+mv %{buildroot}/%{name}-%{version} %{buildroot}%{_prefix}
 cd %{buildroot}%{_prefix}
 mkdir -p %{buildroot}/etc/init.d
-cat %{name}/tools/init.d/chukwa-data-processors | \
+cat %{buildroot}%{_prefix}/tools/init.d/chukwa-data-processors | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
 sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-data-processors
-cat %{name}/tools/init.d/chukwa-collector | \
+cat %{buildroot}%{_prefix}/tools/init.d/chukwa-collector | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
 sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-collector
-cat %{name}/tools/init.d/chukwa-agent | \
+cat %{buildroot}%{_prefix}/tools/init.d/chukwa-agent | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
 sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-agent
-cat %{name}/tools/init.d/chukwa-system-metrics | \
+cat %{buildroot}%{_prefix}/tools/init.d/chukwa-system-metrics | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
 sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-system-metrics
 chmod a+x %{buildroot}/etc/init.d/chukwa-*
-rm -rf %{buildroot}%{_prefix}/%{name}/src
-rm -rf %{buildroot}%{_prefix}/%{name}/build.xml
+rm -rf %{buildroot}%{_prefix}/src
+rm -rf %{buildroot}%{_prefix}/build.xml
 %post
-mkdir -p %{_prefix}/%{name}
+mkdir -p %{_prefix}
 echo "Congratulation!  You have successfully installed Chukwa."
 echo ""
 echo "To collect Data             : /etc/init.d/chukwa-system-metrics start"
@@ -827,7 +827,8 @@ echo
 %postun
 %files
 %defattr(-,%{uid},%{gid})
-%{_prefix}/%{name}/*
+%{_prefix}
+%{_prefix}/*
 %defattr(-,root,root)
 /etc/init.d/chukwa-data-processors
 /etc/init.d/chukwa-collector
