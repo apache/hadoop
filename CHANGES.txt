@@ -555,6 +555,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4818. Pass user config to instrumentation API. (Eric Yang via
     cdouglas)
 
+    HADOOP-4993. Fix Chukwa agent configuration and startup to make it both
+    more modular and testable. (Ari Rabkin via cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
