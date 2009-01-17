@@ -276,7 +276,7 @@
 		<mkdir dir="${build.dir}"/>
 		<mkdir dir="${build.classes}"/>
 		<mkdir dir="${build.dir}/test"/>
-		<javac srcdir="src/java/org/apache/hadoop/chukwa" destdir="${build.classes}" excludes="**/ChukwaTTInstru.java" debug="${javac.debug}">
+		<javac srcdir="src/java/org/apache/hadoop" destdir="${build.classes}" excludes="**/ChukwaTTInstru.java" debug="${javac.debug}">
 			<classpath refid="classpath" />
 		</javac>
 	</target>
@@ -446,6 +446,7 @@
 
 		<jar jarfile="${build.dir}/chukwa-hadoop-${chukwaVersion}-client.jar" basedir="${build.classes}" includes="org/apache/hadoop/chukwa/inputtools/log4j/**/*.class">
 			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/mapred/**/*.java"/>
 				<include name="org/apache/hadoop/chukwa/inputtools/log4j/**/*.java"/>
 		                <include name="org/apache/hadoop/chukwa/datacollection/client/**/*.java"/>
 		                <include name="org/apache/hadoop/chukwa/util/**/*.java"/>
@@ -454,6 +455,7 @@
 		                <include name="chukwa-hadoop-metrics-log4j.properties"/>
 			</fileset>
 			<fileset dir="${build.classes}">
+				<include name="org/apache/hadoop/mapred/**/*.class"/>
 				<include name="org/apache/hadoop/chukwa/datacollection/client/**/*.class"/>
 				<include name="org/apache/hadoop/chukwa/util/**/*.class"/>
 				<include name="org/apache/hadoop/chukwa/datacollection/controller/*.class"/>
