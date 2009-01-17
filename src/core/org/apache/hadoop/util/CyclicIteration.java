@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.SortedMap;
 
-/** Provide an cyclic {@link Iterator} for a {@link NavigableMap}.
+/** Provide an cyclic {@link Iterator} for a {@link SortedMap}.
  * The {@link Iterator} navigates the entries of the map
  * according to the map's ordering.
  * If the {@link Iterator} hits the last entry of the map,
@@ -35,7 +35,7 @@ public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
 
   /** Construct an {@link Iterable} object,
    * so that an {@link Iterator} can be created  
-   * for iterating the given {@link NavigableMap}.
+   * for iterating the given {@link SortedMap}.
    * The iteration begins from the starting key exclusively.
    */
   public CyclicIteration(SortedMap<K, V> navigablemap, K startingkey) {
