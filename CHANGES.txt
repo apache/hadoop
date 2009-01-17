@@ -302,6 +302,9 @@ Release 0.20.0 - Unreleased
     BlockCompressorStream, and BlockDecompressorStream public to facilitate 
     non-Hadoop codecs. (omalley)
 
+    HADOOP-4843. Collect job history and configuration in Chukwa. (Eric Yang
+    via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
