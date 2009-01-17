@@ -95,9 +95,18 @@ options = ( {'short'   : "-p",
 	     'dest'    : "dynamicdfs",
 	     'metavar' : " ",
 	     'default' : "false",
-	     'help'    : "'true', if the cluster is used to bring up dynamic dfs clusters, 'false' otherwise"}
+	     'help'    : "'true', if the cluster is used to bring up dynamic dfs clusters, 'false' otherwise"},
+              
+	    {'short'   : "-r",
+	     'long'    : "--retain-master-logs",
+	     'type'    : "string",
+	     'action'  : "store",
+	     'dest'    : "retain_masters_logs",
+	     'metavar' : " ",
+	     'default' : "false",
+	     'help'    : "'true' if the logs of the masters(jobtracker and namenode if '--dynamicdfs' is set) have to be retained, 'false' if everything has to be removed"}
 	    )
-
+ 
 def getDfsCommand(options, args):
   if (options.config == None): 
     cmd = options.package + " " + "dfs " + args
@@ -109,12 +118,19 @@ def runcondense():
   import shutil
   
   options = process_args()
-  # if the cluster is used to bring up dynamic dfs, we must leave NameNode and JobTracker logs, 
-  # otherwise only JobTracker logs. Likewise, in case of dynamic dfs, we must also look for
-  # deleting datanode logs
-  filteredNames = ['jobtracker']
-  deletedNamePrefixes = ['*-tasktracker-*']
-  if options.dynamicdfs == 'true':
+ 
+  # if the retain-master-logs option is true, we do not delete
+  # the jobtracker, and in case of dynamic dfs, namenode logs.
+  # else, we delete the entire job directory, as nothing other
+  # than master and slave log files should be under the hod-logs
+  # directory. 
+  filteredNames = [] # logs to skip while deleting
+  deletedNamePrefixes = [] # logs prefixes to delete.
+  if options.retain_masters_logs == 'true':
+    filteredNames = ['jobtracker']
+    deletedNamePrefixes = ['*-tasktracker-*']
+
+  if options.dynamicdfs == 'true' and options.retain_masters_logs == 'true':
     filteredNames.append('namenode')
     deletedNamePrefixes.append('*-datanode-*')
 
@@ -167,13 +183,21 @@ def runcondense():
 
   for job in toPurge.keys():
     try:
-      for prefix in deletedNamePrefixes:
-        cmd = getDfsCommand(options, "-rm " + toPurge[job] + '/' + prefix)
+      if options.retain_masters_logs == 'false':
+        # delete entire job-id directory.
+        cmd = getDfsCommand(options, "-rmr " + toPurge[job])
         print cmd
-        ret = 0
         ret = os.system(cmd)
         if (ret != 0):
-          print >> sys.stderr, "Command failed to delete file " + cmd 
+          print >> sys.stderr, "Command failed to delete job directory " + cmd
+      else:
+        # delete only the prefixes we're interested in.
+        for prefix in deletedNamePrefixes:
+          cmd = getDfsCommand(options, "-rm " + toPurge[job] + '/' + prefix)
+          print cmd
+          ret = os.system(cmd)
+          if (ret != 0):
+            print >> sys.stderr, "Command failed to delete file " + cmd 
     except Exception, e:
       print >> sys.stderr, e
 	  

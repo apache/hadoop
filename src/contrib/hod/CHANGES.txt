@@ -4,6 +4,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-5022. Provide an option to remove all log files older
+    than the configured time via logcondense.
+    (Peeyush Bishnoi via yhemanth)
+
   NEW FEATURES
 
   IMPROVEMENTS

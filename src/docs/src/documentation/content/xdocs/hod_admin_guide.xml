@@ -312,6 +312,16 @@ in the HOD Configuration Guide.</p>
               logs - a scenario that may be common in test clusters.</td>
               <td>false</td>
             </tr>
+            <tr>
+              <td>-r</td>
+              <td>--retain-master-logs</td>
+              <td>If true, this will keep the JobTracker logs of job in hod-logs inside HDFS and it 
+              will delete only the TaskTracker logs. Also, this will keep the Namenode logs along with 
+              JobTracker logs and will only delete the Datanode logs if 'dynamicdfs' options is set 
+              to true. Otherwise, it will delete the complete job directory from hod-logs inside 
+              HDFS. By default it is set to false.</td>
+              <td>false</td>
+            </tr>
           </table>
         <p>So, for example, to delete all log files older than 7 days using a hadoop-site.xml stored in
         ~/hadoop-conf, using the hadoop installation under ~/hadoop-0.17.0, you could say:</p>
