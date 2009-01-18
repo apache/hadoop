@@ -13,6 +13,7 @@ Release 0.19.0 - Unreleased
    HBASE-994   IPC interfaces with different versions can cause problems
    HBASE-1028  If key does not exist, return null in getRow rather than an
                empty RowResult
+   HBASE-1134  OOME in HMaster when HBaseRPC is older than 0.19
 
   BUG FIXES
    HBASE-891   HRS.validateValuesLength throws IOE, gets caught in the retries

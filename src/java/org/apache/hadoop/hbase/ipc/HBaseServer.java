@@ -75,7 +75,8 @@ public abstract class HBaseServer {
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
   
   // 1 : Introduce ping and server does not throw away RPCs
-  public static final byte CURRENT_VERSION = 2;
+  // 3 : RPC was refactored in 0.19 
+  public static final byte CURRENT_VERSION = 3;
   
   /**
    * How many calls/handler are allowed in the queue.
