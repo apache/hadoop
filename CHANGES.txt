@@ -145,6 +145,8 @@ Release 0.19.0 - Unreleased
                not already marked as pending close
    HBASE-1124  Balancer kicks in way too early
    HBASE-1127  OOME running randomRead PE
+   HBASE-1132  Can't append to HLog, can't roll log, infinite cycle (another
+               spin on HBASE-930)
 
   IMPROVEMENTS
    HBASE-901   Add a limit to key length, check key and value length on client side

@@ -68,14 +68,18 @@ class LogRoller extends Thread implements LogRollListener {
         }
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);
+        server.checkFileSystem();
         server.abort();
       } catch (java.net.ConnectException e) {
         LOG.fatal("Forcing server shutdown", e);
+        server.checkFileSystem();
         server.abort();
       } catch (IOException ex) {
-        LOG.error("Log rolling failed with ioe: ",
-            RemoteExceptionHandler.checkIOException(ex));
+        LOG.fatal("Log rolling failed with ioe: ",
+          RemoteExceptionHandler.checkIOException(ex));
         server.checkFileSystem();
+        // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
+        server.abort();
       } catch (Exception ex) {
         LOG.error("Log rolling failed", ex);
         server.checkFileSystem();
