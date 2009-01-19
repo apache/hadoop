@@ -10,6 +10,7 @@ Release 0.20.0 - Unreleased
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
                online as difference between whats open and whats on filesystem
                (Samuel Guo via Stack)
+   HBASE-1130  PrefixRowFilter (Michael Gottesman via Stack)
 
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
