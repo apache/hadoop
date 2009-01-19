@@ -632,7 +632,7 @@ public class HRegion implements HConstants {
    * @return compaction directory for the passed in <code>dir</code>
    */
   static Path getCompactionDir(final Path dir) {
-   return new Path(dir, "compaction.dir");
+   return new Path(dir, HREGION_COMPACTIONDIR_NAME);
   }
 
   /*

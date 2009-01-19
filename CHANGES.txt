@@ -6,6 +6,11 @@ Release 0.20.0 - Unreleased
    HBASE-1136  HashFunction inadvertently destroys some randomness
                (Jonathan Ellis via Stack) 
 
+  IMPROVEMENTS
+   HBASE-1089  Add count of regions on filesystem to master UI; add percentage
+               online as difference between whats open and whats on filesystem
+               (Samuel Guo via Stack)
+
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-885   TableMap and TableReduce should be interfaces

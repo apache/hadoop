@@ -46,6 +46,7 @@
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
 <tr><td>Load average</td><td><%= master.getAverageLoad() %></td><td>Average load across all region servers. Naive computation.</td></tr>
+<tr><td>Regions On FS</td><td><%= master.countRegionsOnFS() %></td><td>The Number of regions on FileSystem. Rough count.</td></tr>
 </table>
 
 <h2>Catalog Tables</h2>

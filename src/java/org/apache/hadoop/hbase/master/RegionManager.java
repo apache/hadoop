@@ -38,6 +38,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -445,6 +448,51 @@ class RegionManager implements HConstants {
       regionsClosed++;
     }
     LOG.info("Skipped " + skipped + " region(s) that are in transition states");
+  }
+  
+  static class TableDirFilter implements PathFilter {
+
+    @Override
+    public boolean accept(Path path) {
+      // skip the region servers' log dirs && version file
+      // HBASE-1112 want to sperate the log dirs from table's data dirs by a special character.
+      String pathname = path.getName();
+      return !pathname.startsWith("log_") && !pathname.equals(VERSION_FILE_NAME);
+    }
+    
+  }
+  
+  static class RegionDirFilter implements PathFilter {
+
+    @Override
+    public boolean accept(Path path) { 
+      return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
+    }
+    
+  }
+  
+  /**
+   * @return the rough number of the regions on fs
+   * Note: this method simply counts the regions on fs by accumulating all the dirs 
+   * in each table dir (${HBASE_ROOT}/$TABLE) and skipping logfiles, compaction dirs.
+   * @throws IOException 
+   */
+  public int countRegionsOnFS() throws IOException {
+    int regions = 0;
+    
+    FileStatus[] tableDirs = 
+      master.fs.listStatus(master.rootdir, new TableDirFilter());
+    
+    FileStatus[] regionDirs;
+    RegionDirFilter rdf = new RegionDirFilter();
+    for(FileStatus tabledir : tableDirs) {
+      if(tabledir.isDir()) {
+        regionDirs = master.fs.listStatus(tabledir.getPath(), rdf);
+        regions += regionDirs.length;
+      }
+    }
+    
+    return regions;
   }
   
   /**

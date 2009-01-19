@@ -79,6 +79,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -315,6 +316,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /** @return The average load */
   public double getAverageLoad() {
     return serverManager.getAverageLoad();
+  }
+  
+  /** @return the number of regions on filesystem */
+  public int countRegionsOnFS() {
+    try {
+      return regionManager.countRegionsOnFS();
+    } catch (IOException e) {
+      LOG.warn("Get count of Regions on FileSystem error : " + 
+          StringUtils.stringifyException(e));
+    }
+    return -1;
   }
 
   /**

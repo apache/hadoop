@@ -111,6 +111,9 @@ public interface HConstants {
   /** Name of old log file for reconstruction */
   static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
   
+  /** Used to construct the name of the compaction directory during compaction */
+  static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
+  
   /** Default maximum file size */
   static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
   
