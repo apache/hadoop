@@ -195,6 +195,11 @@ class JvmManager {
     }
     private synchronized void reapJvm( 
         TaskRunner t, TaskTracker tracker, JvmEnv env) {
+      if (t.getTaskInProgress().wasKilled()) {
+        //the task was killed in-flight
+        //no need to do the rest of the operations
+        return;
+      }
       boolean spawnNewJvm = false;
       JobID jobId = t.getTask().getJobID();
       //Check whether there is a free slot to start a new JVM.
