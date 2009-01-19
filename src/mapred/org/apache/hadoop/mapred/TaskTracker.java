@@ -1784,7 +1784,7 @@ public class TaskTracker
     StringBuffer diagnosticInfo = new StringBuffer();
     private TaskRunner runner;
     volatile boolean done = false;
-    boolean wasKilled = false;
+    volatile boolean wasKilled = false;
     private JobConf defaultJobConf;
     private JobConf localJobConf;
     private boolean keepFailedTaskFiles;
@@ -2030,6 +2030,10 @@ public class TaskTracker
       LOG.info("Task " + task.getTaskID() + " is done.");
       LOG.info("reported output size for " + task.getTaskID() +  "  was " + taskStatus.getOutputSize());
 
+    }
+    
+    public boolean wasKilled() {
+      return wasKilled;
     }
 
     /**
