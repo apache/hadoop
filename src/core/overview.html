@@ -134,13 +134,13 @@ following:
 
 <li>The NameNode (Distributed Filesystem master) host.  This is
 specified with the configuration property <tt><a
- href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>.
+ href="../core-default.html#fs.default.name">fs.default.name</a></tt>.
 </li>
 
 <li>The {@link org.apache.hadoop.mapred.JobTracker} (MapReduce master)
 host and port.  This is specified with the configuration property
 <tt><a
-href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
+href="../mapred-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
 </li>
 
 <li>A <em>slaves</em> file that lists the names of all the hosts in
@@ -151,8 +151,10 @@ the cluster.  The default slaves file is <tt>conf/slaves</tt>.
 <h3>Pseudo-distributed configuration</h3>
 
 You can in fact run everything on a single host.  To run things this
-way, put the following in conf/hadoop-site.xml:
-
+way, put the following in:
+<br/>
+<br/>
+conf/core-site.xml:
 <xmp><configuration>
 
   <property>
@@ -160,14 +162,24 @@ way, put the following in conf/hadoop-site.xml:
     <value>hdfs://localhost/</value>
   </property>
 
-  <property>
-    <name>mapred.job.tracker</name>
-    <value>localhost:9001</value>
-  </property>
+</configuration></xmp>
+
+conf/hdfs-site.xml:
+<xmp><configuration>
 
   <property>
     <name>dfs.replication</name>
     <value>1</value>
+  </property>
+
+</configuration></xmp>
+
+conf/mapred-site.xml:
+<xmp><configuration>
+
+  <property>
+    <name>mapred.job.tracker</name>
+    <value>localhost:9001</value>
   </property>
 
 </configuration></xmp>
@@ -217,36 +229,38 @@ cat output/*
 <h3>Fully-distributed operation</h3>
 
 <p>Fully distributed operation is just like the pseudo-distributed operation
-described above, except, in <tt>conf/hadoop-site.xml</tt>, specify:</p>
+described above, except, specify:</p>
 
 <ol>
 
 <li>The hostname or IP address of your master server in the value
 for <tt><a
-href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>,
-  as <tt><em>hdfs://master.example.com/</em></tt>.</li>
+href="../core-default.html#fs.default.name">fs.default.name</a></tt>,
+  as <tt><em>hdfs://master.example.com/</em></tt> in <tt>conf/core-site.xml</tt>.</li>
 
 <li>The host and port of the your master server in the value
-of <tt><a href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
-as <tt><em>master.example.com</em>:<em>port</em></tt>.</li>
+of <tt><a href="../mapred-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
+as <tt><em>master.example.com</em>:<em>port</em></tt> in <tt>conf/mapred-site.xml</tt>.</li>
 
 <li>Directories for <tt><a
-href="../hadoop-default.html#dfs.name.dir">dfs.name.dir</a></tt> and
-<tt><a href="../hadoop-default.html#dfs.data.dir">dfs.data.dir</a>.
+href="../hdfs-default.html#dfs.name.dir">dfs.name.dir</a></tt> and
+<tt><a href="../hdfs-default.html#dfs.data.dir">dfs.data.dir</a> 
+in <tt>conf/hdfs-site.xml</tt>.
 </tt>These are local directories used to hold distributed filesystem
 data on the master node and slave nodes respectively.  Note
 that <tt>dfs.data.dir</tt> may contain a space- or comma-separated
 list of directory names, so that data may be stored on multiple local
 devices.</li>
 
-<li><tt><a href="../hadoop-default.html#mapred.local.dir">mapred.local.dir</a></tt>,
-  the local directory where temporary MapReduce data is stored.  It
-  also may be a list of directories.</li>
+<li><tt><a href="../mapred-default.html#mapred.local.dir">mapred.local.dir</a></tt>
+  in <tt>conf/mapred-site.xml</tt>, the local directory where temporary 
+  MapReduce data is stored.  It also may be a list of directories.</li>
 
 <li><tt><a
-href="../hadoop-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
+href="../mapred-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
 and <tt><a
-href="../hadoop-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt>.
+href="../mapred-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt> 
+in <tt>conf/mapred-site.xml</tt>.
 As a rule of thumb, use 10x the
 number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
 number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>

@@ -82,7 +82,7 @@ gcc above_sample.c -I${HADOOP_HOME}/src/c++/libhdfs -L${HADOOP_HOME}/libhdfs -lh
 <section>
 <title>Common problems</title>
 <p>
-The most common problem is the CLASSPATH is not set properly when calling a program that uses libhdfs. Make sure you set it to all the hadoop jars needed to run Hadoop itself. Currently, there is no way to programmatically generate the classpath, but a good bet is to include all the jar files in ${HADOOP_HOME} and ${HADOOP_HOME}/lib as well as the right configuration directory containing hadoop-site.xml
+The most common problem is the CLASSPATH is not set properly when calling a program that uses libhdfs. Make sure you set it to all the hadoop jars needed to run Hadoop itself. Currently, there is no way to programmatically generate the classpath, but a good bet is to include all the jar files in ${HADOOP_HOME} and ${HADOOP_HOME}/lib as well as the right configuration directory containing hdfs-site.xml
 </p>
 </section>
 <section>

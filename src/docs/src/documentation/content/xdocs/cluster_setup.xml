@@ -75,15 +75,20 @@
       <section>
         <title>Configuration Files</title>
         
-        <p>Hadoop configuration is driven by two important configuration files
-        found in the <code>conf/</code> directory of the distribution:</p>
+        <p>Hadoop configuration is driven by two types of important 
+        configuration files:</p>
         <ol>
           <li>
-            <a href="ext:hadoop-default">hadoop-default.xml</a> - Read-only 
-            default configuration.
+            Read-only default configuration - 
+            <a href="ext:core-default">src/core/core-default.xml</a>, 
+            <a href="ext:hdfs-default">src/hdfs/hdfs-default.xml</a> and 
+            <a href="ext:mapred-default">src/mapred/mapred-default.xml</a>.
           </li>
           <li>
-            <em>hadoop-site.xml</em> - Site-specific configuration.
+            Site-specific configuration - 
+            <em>conf/core-site.xml</em>, 
+            <em>conf/hdfs-site.xml</em> and 
+            <em>conf/mapred-site.xml</em>.
           </li>
         </ol>
       
@@ -157,7 +162,9 @@
           <title>Configuring the Hadoop Daemons</title>
           
           <p>This section deals with important parameters to be specified in the
-          <code>conf/hadoop-site.xml</code> for the Hadoop cluster.</p>
+          following:
+          <br/>
+          <code>conf/core-site.xml</code>:</p>
 
 		  <table>
   		    <tr>
@@ -165,16 +172,21 @@
 		      <th>Value</th> 
 		      <th>Notes</th>
 		    </tr>
-  		    <tr>
-		      <td>fs.default.name</td>
-  		      <td>URI of <code>NameNode</code>.</td>
-		      <td><em>hdfs://hostname/</em></td>
-		    </tr>
 		    <tr>
-		      <td>mapred.job.tracker</td>
-		      <td>Host or IP and port of <code>JobTracker</code>.</td>
-		      <td><em>host:port</em> pair.</td>
-		    </tr>
+              <td>fs.default.name</td>
+              <td>URI of <code>NameNode</code>.</td>
+              <td><em>hdfs://hostname/</em></td>
+            </tr>
+          </table>
+
+      <p><br/><code>conf/hdfs-site.xml</code>:</p>
+          
+      <table>   
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th> 
+          <th>Notes</th>
+        </tr>
 		    <tr>
 		      <td>dfs.name.dir</td>
 		      <td>
@@ -197,6 +209,21 @@
 		        devices.
 		      </td>
 		    </tr>
+      </table>
+
+      <p><br/><code>conf/mapred-site.xml</code>:</p>
+
+      <table>
+          <tr>
+          <th>Parameter</th>
+          <th>Value</th> 
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td>mapred.job.tracker</td>
+          <td>Host or IP and port of <code>JobTracker</code>.</td>
+          <td><em>host:port</em> pair.</td>
+        </tr>
 		    <tr>
 		      <td>mapred.system.dir</td>
 		      <td>
@@ -322,16 +349,19 @@
                 that is 9TB of data sorted on a cluster with 900 nodes:</p>
                 <table>
   		          <tr>
+                <th>Configuration File</th>
 		            <th>Parameter</th>
 		            <th>Value</th> 
 		            <th>Notes</th>
 		          </tr>
                   <tr>
+                    <td>conf/hdfs-site.xml</td>
                     <td>dfs.block.size</td>
                     <td>134217728</td>
                     <td>HDFS blocksize of 128MB for large file-systems.</td>
                   </tr>
                   <tr>
+                    <td>conf/hdfs-site.xml</td>
                     <td>dfs.namenode.handler.count</td>
                     <td>40</td>
                     <td>
@@ -340,6 +370,7 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapred.reduce.parallel.copies</td>
                     <td>20</td>
                     <td>
@@ -348,6 +379,7 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapred.child.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
@@ -355,6 +387,7 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/core-site.xml</td>
                     <td>fs.inmemory.size.mb</td>
                     <td>200</td>
                     <td>
@@ -363,16 +396,19 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/core-site.xml</td>
                     <td>io.sort.factor</td>
                     <td>100</td>
                     <td>More streams merged at once while sorting files.</td>
                   </tr>
                   <tr>
+                    <td>conf/core-site.xml</td>
                     <td>io.sort.mb</td>
                     <td>200</td>
                     <td>Higher memory-limit while sorting data.</td>
                   </tr>
                   <tr>
+                    <td>conf/core-site.xml</td>
                     <td>io.file.buffer.size</td>
                     <td>131072</td>
                     <td>Size of read/write buffer used in SequenceFiles.</td>
@@ -385,11 +421,13 @@
                 data sorted on 2000 nodes:</p>
                 <table>
   		          <tr>
+                <th>Configuration File</th>
 		            <th>Parameter</th>
 		            <th>Value</th> 
 		            <th>Notes</th>
 		          </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapred.job.tracker.handler.count</td>
                     <td>60</td>
                     <td>
@@ -398,11 +436,13 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapred.reduce.parallel.copies</td>
                     <td>50</td>
                     <td></td>
                   </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>tasktracker.http.threads</td>
                     <td>50</td>
                     <td>
@@ -412,6 +452,7 @@
                     </td>
                   </tr>
                   <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapred.child.java.opts</td>
                     <td>-Xmx1024M</td>
                     <td>Larger heap-size for child jvms of maps/reduces.</td>

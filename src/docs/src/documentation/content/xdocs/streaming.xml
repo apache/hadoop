@@ -223,7 +223,7 @@ The -D mapred.reduce.tasks=2 in the above example specifies to use two reducers 
 </p>
 <p>
 For more details on the jobconf parameters see:
-<a href="ext:hadoop-default">hadoop-default.html</a></p>
+<a href="ext:mapred-default">mapred-default.html</a></p>
 </section>
 
 <section>
@@ -276,7 +276,7 @@ To specify additional local temp directories use:
 </source>
 <p>
 For more details on jobconf parameters see:
-<a href="ext:hadoop-default">hadoop-default.html</a></p>
+<a href="ext:mapred-default">mapred-default.html</a></p>
 <p>
 To set an environment variable in a streaming command use:
 </p>
