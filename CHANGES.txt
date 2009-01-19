@@ -3,7 +3,8 @@ Release 0.20.0 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
-   HBASE-1136   HashFunction inadvertently destroys some randomness
+   HBASE-1136  HashFunction inadvertently destroys some randomness
+               (Jonathan Ellis via Stack) 
 
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
