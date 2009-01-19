@@ -274,7 +274,7 @@ public class TestFilter extends TestCase {
     bf.add(k2);
     bf.add(k3);
     assertTrue(bf.membershipTest(key));
-    assertFalse(bf.membershipTest(k2));
+    assertTrue(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
 
@@ -287,7 +287,7 @@ public class TestFilter extends TestCase {
     bf2.add(key);
     bf.or(bf2);
     assertTrue(bf.membershipTest(key));
-    assertTrue(bf.membershipTest(k2));
+    assertTrue(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
     

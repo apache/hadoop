@@ -3,8 +3,6 @@ Release 0.20.0 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
-   HBASE-1136  HashFunction inadvertently destroys some randomness
-               (Jonathan Ellis via Stack) 
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
 
   IMPROVEMENTS
