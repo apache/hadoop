@@ -226,6 +226,7 @@ Release 0.19.0 - Unreleased
                (Michael Gottesman via Stack)
    HBASE-1082  Administrative functions for table/region maintenance
    HBASE-1090  Atomic Check And Save in HTable (Michael Gottesman via Stack)
+   HBASE-1137  Add not on xceivers count to overview documentation
 
   NEW FEATURES
    HBASE-875   Use MurmurHash instead of JenkinsHash [in bloomfilters]

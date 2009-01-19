@@ -39,7 +39,11 @@
   1024 on *nix systems is insufficient if you are loading any significant
   amount of data into regionservers.  See the
   <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
-  for how to up the limit.</li>
+  for how to up the limit.  Also, as of 0.18.x hadoop, datanodes have an upper-bound
+      on the number of threads they will support (<code>dfs.datanode.max.xcievers</code>).
+      Default is 256.  If loading lots of data into hbase, up this limit on your
+      hadoop cluster.  Also consider upping the number of datanode handlers from
+      the default of 3. See <code>dfs.datanode.handler.count</code>.</li>
       <li>The clocks on cluster members should be in basic alignments.  Some skew is tolerable but
       wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
       on your cluster, or an equivalent.</li>
