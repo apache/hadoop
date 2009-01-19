@@ -400,7 +400,7 @@
       redoing init and jscpc at this stage of the game; i.e. the prereqs
       for compile.  TODO: Investigate why.  For now, test will fail
       if not preceeded by manual 'jar' or 'compile' invokation -->
-  <target name="compile-test" > 
+  <target name="compile-test" depends="compile">
     <javac encoding="${build.encoding}" 
        srcdir="${src.test}" 
        includes="**/*.java" 
