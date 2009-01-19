@@ -474,7 +474,7 @@
         <a href="mailto:core-user@hadoop.apache.org">core-user[at]hadoop.apache.org</a>.
       </li>
       <li>
-         Explore <code>conf/hadoop-default.xml</code>. 
+         Explore <code>src/hdfs/hdfs-default.xml</code>. 
          It includes brief 
          description of most of the configuration variables available.
       </li>

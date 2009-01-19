@@ -105,7 +105,7 @@ public class SeqFileWriter implements ChukwaWriter
 		log.info("rotateInterval is " + rotateInterval);
 		log.info("outputDir is " + outputDir);
 		log.info("fsname is " + fsname);
-		log.info("filesystem type from hadoop-default.xml is "
+		log.info("filesystem type from core-default.xml is "
 				+ conf.get("fs.hdfs.impl"));
 
 		if (fsname == null) {

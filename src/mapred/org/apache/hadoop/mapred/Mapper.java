@@ -145,7 +145,7 @@ public interface Mapper<K1, V1, K2, V2> extends JobConfigurable, Closeable {
    * takes an insignificant amount of time to process individual key/value 
    * pairs, this is crucial since the framework might assume that the task has 
    * timed-out and kill that task. The other way of avoiding this is to set 
-   * <a href="{@docRoot}/../hadoop-default.html#mapred.task.timeout">
+   * <a href="{@docRoot}/../mapred-default.html#mapred.task.timeout">
    * mapred.task.timeout</a> to a high-enough value (or even zero for no 
    * time-outs).</p>
    * 

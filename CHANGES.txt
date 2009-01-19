@@ -363,6 +363,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5030. Build Chukwa RPM to install into configured directory. (Eric
     Yang via cdouglas)
+    
+    HADOOP-4828. Updates documents to do with configuration (HADOOP-4631).
+    (Sharad Agarwal via ddas)
 
   OPTIMIZATIONS
 

@@ -70,7 +70,7 @@ from HADOOP_HOME/build/contrib/fairscheduler to HADOOP_HOME/lib. Alternatively
 you can modify HADOOP_CLASSPATH to include this jar, in conf/hadoop-env.sh.
 
 You will also need to set the following property in the Hadoop config file
-(conf/hadoop-site.xml) to have Hadoop use the fair scheduler:
+(conf/mapred-site.xml) to have Hadoop use the fair scheduler:
 
 <property>
   <name>mapred.jobtracker.taskScheduler</name>
@@ -86,7 +86,7 @@ described in the Administration section.
 
 CONFIGURING:
 
-The following properties can be set in hadoop-site.xml to configure the
+The following properties can be set in mapred-site.xml to configure the
 scheduler:
 
 mapred.fairscheduler.allocation.file:

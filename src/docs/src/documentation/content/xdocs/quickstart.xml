@@ -161,7 +161,9 @@
 	  
       <section>
         <title>Configuration</title>
-        <p>Use the following <code>conf/hadoop-site.xml</code>:</p>
+        <p>Use the following:
+        <br/>
+        <code>conf/core-site.xml</code>:</p>
         <table>
         <tr><td>&lt;configuration&gt;</td></tr>
 
@@ -170,14 +172,28 @@
             <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;hdfs://localhost:9000&lt;/value&gt;</td></tr>
           <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
 
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;mapred.job.tracker&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9001&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+        <tr><td>&lt;/configuration&gt;</td></tr>
+        </table>
+      
+        <p><br/><code>conf/hdfs-site.xml</code>:</p>
+        <table>
+        <tr><td>&lt;configuration&gt;</td></tr>
 
           <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
             <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;dfs.replication&lt;/name&gt;</td></tr>
             <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+
+        <tr><td>&lt;/configuration&gt;</td></tr>
+        </table>
+      
+        <p><br/><code>conf/mapred-site.xml</code>:</p>
+        <table>
+        <tr><td>&lt;configuration&gt;</td></tr>
+
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;mapred.job.tracker&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9001&lt;/value&gt;</td></tr>
           <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
 
         <tr><td>&lt;/configuration&gt;</td></tr>

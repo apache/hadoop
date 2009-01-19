@@ -13,7 +13,7 @@ respectively. The location of these files can be specified in
 hdfsproxy-default.xml. Environmental variable HDFSPROXY_CONF_DIR can be used to
 point to the directory where these configuration files are located. The 
 configuration files of the proxied HDFS cluster should also be available on the
-classpath (hadoop-default.xml and hadoop-site.xml).
+classpath (hdfs-default.xml and hdfs-site.xml).
 
 Mirroring those used in HDFS, a few shell scripts are provided to start and 
 stop a group of proxy servers. The hosts to run hdfsproxy on are specified in 

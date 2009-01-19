@@ -1047,7 +1047,7 @@ public class JobConf extends Configuration {
    * bytes, of input files. However, the {@link FileSystem} blocksize of the 
    * input files is treated as an upper bound for input splits. A lower bound 
    * on the split size can be set via 
-   * <a href="{@docRoot}/../hadoop-default.html#mapred.min.split.size">
+   * <a href="{@docRoot}/../mapred-default.html#mapred.min.split.size">
    * mapred.min.split.size</a>.</p>
    *  
    * <p>Thus, if you expect 10TB of input data and have a blocksize of 128MB, 
@@ -1077,7 +1077,7 @@ public class JobConf extends Configuration {
    * 
    * <p>The right number of reduces seems to be <code>0.95</code> or 
    * <code>1.75</code> multiplied by (&lt;<i>no. of nodes</i>&gt; * 
-   * <a href="{@docRoot}/../hadoop-default.html#mapred.tasktracker.reduce.tasks.maximum">
+   * <a href="{@docRoot}/../mapred-default.html#mapred.tasktracker.reduce.tasks.maximum">
    * mapred.tasktracker.reduce.tasks.maximum</a>).
    * </p>
    * 
@@ -1173,7 +1173,7 @@ public class JobConf extends Configuration {
    * performance metrics system via the org.apache.hadoop.metrics API.  The 
    * session identifier is intended, in particular, for use by Hadoop-On-Demand 
    * (HOD) which allocates a virtual Hadoop cluster dynamically and transiently. 
-   * HOD will set the session identifier by modifying the hadoop-site.xml file 
+   * HOD will set the session identifier by modifying the mapred-site.xml file 
    * before starting the cluster.
    *
    * When not running under HOD, this identifer is expected to remain set to 

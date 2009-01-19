@@ -30,8 +30,7 @@ HDFS_TEST=hdfs_test
 HADOOP_LIB_DIR=$HADOOP_HOME/lib
 HADOOP_BIN_DIR=$HADOOP_HOME/bin
 
-# Manipulate HADOOP_CONF_DIR so as to include 
-# HADOOP_HOME/conf/hadoop-default.xml too
+# Manipulate HADOOP_CONF_DIR too
 # which is necessary to circumvent bin/hadoop
 HADOOP_CONF_DIR=$HADOOP_CONF_DIR:$HADOOP_HOME/conf
 
