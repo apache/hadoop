@@ -266,7 +266,7 @@ public class TestFilter extends TestCase {
    * @throws UnsupportedEncodingException
    */
   public void testCountingBloomFilter() throws UnsupportedEncodingException {
-    Filter bf = new CountingBloomFilter(8, 2, Hash.JENKINS_HASH);
+    Filter bf = new CountingBloomFilter(128, 2, Hash.JENKINS_HASH);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
     Key k3 = new StringKey("mama");
@@ -274,22 +274,12 @@ public class TestFilter extends TestCase {
     bf.add(k2);
     bf.add(k3);
     assertTrue(bf.membershipTest(key));
-    assertTrue(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
 
     // delete 'key', and check that it is no longer a member
     ((CountingBloomFilter)bf).delete(key);
     assertFalse(bf.membershipTest(key));
-    
-    // OR 'key' back into the filter
-    Filter bf2 = new CountingBloomFilter(8, 2, Hash.JENKINS_HASH);
-    bf2.add(key);
-    bf.or(bf2);
-    assertTrue(bf.membershipTest(key));
-    assertTrue(bf.membershipTest(new StringKey("graknyl")));
-    assertFalse(bf.membershipTest(new StringKey("xyzzy")));
-    assertFalse(bf.membershipTest(new StringKey("abcd")));
     
     // to test for overflows, add 'key' enough times to overflow a 4bit bucket,
     // while asserting that it stays a member
@@ -319,7 +309,7 @@ public class TestFilter extends TestCase {
    * @throws UnsupportedEncodingException
    */
   public void testDynamicBloomFilter() throws UnsupportedEncodingException {
-    Filter bf = new DynamicBloomFilter(8, 2, Hash.JENKINS_HASH, 2);
+    Filter bf = new DynamicBloomFilter(128, 2, Hash.JENKINS_HASH, 2);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
     Key k3 = new StringKey("mama");
@@ -327,7 +317,6 @@ public class TestFilter extends TestCase {
     bf.add(k2);
     bf.add(k3);
     assertTrue(bf.membershipTest(key));
-    assertTrue(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
   }

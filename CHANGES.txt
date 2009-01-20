@@ -5,6 +5,8 @@ Release 0.20.0 - Unreleased
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
    HBASE-1129  Master won't go down; stuck joined on rootScanner
+   HBASE-1136  HashFunction inadvertently destroys some randomness
+               (Jonathan Ellis via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
