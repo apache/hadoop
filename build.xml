@@ -75,7 +75,8 @@
   <property name="javadoc.packages" value="org.apache.hadoop.hbase.*"/>
   <property name="jarfile" value="${build.dir}/${final.name}.jar" />
 
-  <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
+  <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
+  <available property="clover.present" file="${clover.jar}"/>
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -203,10 +204,10 @@
     <echo message="Setting jspc.notRequired property. jsp pages generated once per ant session only" />
   </target>
 
-  <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  Requires a Clover license and clover.jar in the ANT classpath.  To use, specify -Drun.clover=true on the command line."/>
+  <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
 
   <target name="clover.setup" if="clover.enabled">
-    <taskdef resource="clovertasks"/>
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
     <mkdir dir="${clover.db.dir}"/>
     <clover-setup initString="${clover.db.dir}/hbase_coverage.db">
       <fileset dir="src" includes="java/**/*"/>
@@ -223,8 +224,8 @@
     <fail unless="clover.present">
       ##################################################################
       Clover not found.
-      Please make sure clover.jar is in ANT_HOME/lib, or made available
-      to Ant using other mechanisms like -lib or CLASSPATH.
+      Please specify -Dclover.home=&lt;base of clover installation&gt;
+      on the command line.
       ##################################################################
     </fail>
   </target>
@@ -394,6 +395,7 @@
     <pathelement location="${build.test}" />
     <path refid="classpath"/>
     <pathelement location="${build.dir}"/>
+    <pathelement path="${clover.jar}"/>
   </path>
 
   <!--'compile-test' used to depend on 'compile' but removed it. Hudson doesn't like
