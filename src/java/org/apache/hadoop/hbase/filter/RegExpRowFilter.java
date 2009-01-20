@@ -86,7 +86,6 @@ public class RegExpRowFilter implements RowFilterInterface {
     this.setColumnFilters(columnFilter);
   }
   
-  @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     //doesn't care
   }

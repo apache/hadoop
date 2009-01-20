@@ -61,7 +61,7 @@ public class PageRowFilter implements RowFilterInterface {
     this.pageSize = pageSize;
   }
 
-  public void validate(@SuppressWarnings("unused") final byte [][] columns) {
+  public void validate(final byte [][] columns) {
     // Doesn't filter columns
   }
 
@@ -70,7 +70,7 @@ public class PageRowFilter implements RowFilterInterface {
   }
 
   public void rowProcessed(boolean filtered,
-      @SuppressWarnings("unused") byte [] rowKey) {
+      byte [] rowKey) {
     if (!filtered) {
       this.rowsAccepted++;
     }
@@ -84,18 +84,17 @@ public class PageRowFilter implements RowFilterInterface {
     return this.rowsAccepted > this.pageSize;
   }
 
-  public boolean filterRowKey(@SuppressWarnings("unused") final byte [] r) {
+  public boolean filterRowKey(final byte [] r) {
     return filterAllRemaining();
   }
 
-  public boolean filterColumn(@SuppressWarnings("unused") final byte [] rowKey,
-    @SuppressWarnings("unused") final byte [] colKey,
-    @SuppressWarnings("unused") final byte[] data) {
+  public boolean filterColumn(final byte [] rowKey,
+    final byte [] colKey,
+    final byte[] data) {
     return filterAllRemaining();
   }
 
-  public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<byte [], Cell> columns) {
+  public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 

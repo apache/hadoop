@@ -875,20 +875,21 @@ public class HConnectionManager implements HConstants {
     getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey, 
       boolean reload)
     throws IOException {
+      boolean reloadFlag = reload;
       getMaster();
       List<Throwable> exceptions = new ArrayList<Throwable>();
       HRegionLocation location = null;
       int tries = 0;
       while (tries < numRetries) {
         try {
-          location = getRegionLocation(tableName, rowKey, reload);
+          location = getRegionLocation(tableName, rowKey, reloadFlag);
         } catch (Throwable t) {
           exceptions.add(t);
         }
         if (location != null) {
           break;
         }
-        reload = true;
+        reloadFlag = true;
         tries++;
         try {
           Thread.sleep(getPauseTime(tries));

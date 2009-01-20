@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +33,8 @@ import org.apache.hadoop.io.Writable;
  * HBase customizations of MapFile.
  */
 public class HBaseMapFile extends MapFile {
-  private static final Log LOG = LogFactory.getLog(HBaseMapFile.class);
+  // TODO not used. remove?!
+  //  private static final Log LOG = LogFactory.getLog(HBaseMapFile.class);
   
   /**
    * Values are instances of this class.

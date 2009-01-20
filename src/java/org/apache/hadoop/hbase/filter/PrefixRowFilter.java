@@ -44,15 +44,12 @@ public class PrefixRowFilter implements RowFilterInterface {
    * Default Constructor, filters nothing. Required for RPC
    * deserialization
    */
-  @SuppressWarnings("unused")
   public PrefixRowFilter() { }
   
-  @SuppressWarnings("unused")
   public void reset() {
     // Nothing to reset
   }
-  
-  @SuppressWarnings("unused")
+
   public void rowProcessed(boolean filtered, byte [] key) {
     // does not care
   }
@@ -76,18 +73,15 @@ public class PrefixRowFilter implements RowFilterInterface {
     return false;
   }
 
-  @SuppressWarnings("unused")
   public boolean filterColumn(final byte [] rowKey, final byte [] colunmName,
       final byte[] columnValue) {
     return false;
   }
 
-  @SuppressWarnings("unused")
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     return false;
   }
 
-  @SuppressWarnings("unused")
   public void validate(final byte [][] columns) {
     // does not do this
   }

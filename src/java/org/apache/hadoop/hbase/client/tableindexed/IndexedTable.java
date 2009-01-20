@@ -48,7 +48,7 @@ public class IndexedTable extends TransactionalTable {
   public static final byte[] INDEX_BASE_ROW_COLUMN = Bytes.add(
       INDEX_COL_FAMILY, Bytes.toBytes("ROW"));
 
-  private static final Log LOG = LogFactory.getLog(IndexedTable.class);
+  static final Log LOG = LogFactory.getLog(IndexedTable.class);
 
   private Map<String, HTable> indexIdToTable = new HashMap<String, HTable>();
 

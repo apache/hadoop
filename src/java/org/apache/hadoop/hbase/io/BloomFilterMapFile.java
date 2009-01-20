@@ -42,8 +42,11 @@ import org.onelab.filter.Key;
  * tested first against bloom filter. Keys are HStoreKey.  If passed bloom
  * filter is null, just passes invocation to parent.
  */
+// TODO should be fixed generic warnings from MapFile methods
+@SuppressWarnings("unchecked")
 public class BloomFilterMapFile extends HBaseMapFile {
-  private static final Log LOG = LogFactory.getLog(BloomFilterMapFile.class);
+  @SuppressWarnings("hiding")
+  static final Log LOG = LogFactory.getLog(BloomFilterMapFile.class);
   protected static final String BLOOMFILTER_FILE_NAME = "filter";
 
   public static class Reader extends HBaseReader {
@@ -148,7 +151,6 @@ public class BloomFilterMapFile extends HBaseMapFile {
      * @param hri
      * @throws IOException
      */
-    @SuppressWarnings("unchecked")
     public Writer(Configuration conf, FileSystem fs, String dirName,
       SequenceFile.CompressionType compression, final boolean filter,
       int nrows, final HRegionInfo hri)

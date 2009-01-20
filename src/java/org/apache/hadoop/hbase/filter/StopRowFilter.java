@@ -61,7 +61,7 @@ public class StopRowFilter implements RowFilterInterface {
     return this.stopRowKey;
   }
 
-  public void validate(@SuppressWarnings("unused") final byte [][] columns) {
+  public void validate(final byte [][] columns) {
     // Doesn't filter columns
   }
 
@@ -69,7 +69,6 @@ public class StopRowFilter implements RowFilterInterface {
     // Nothing to reset
   }
 
-  @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, byte [] rowKey) {
     // Doesn't care
   }
@@ -96,9 +95,8 @@ public class StopRowFilter implements RowFilterInterface {
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
    */
-  public boolean filterColumn(@SuppressWarnings("unused") final byte [] rowKey,
-    @SuppressWarnings("unused") final byte [] colKey,
-    @SuppressWarnings("unused") final byte[] data) {
+  public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
+      final byte[] data) {
     return filterRowKey(rowKey);
   }
 
@@ -106,8 +104,7 @@ public class StopRowFilter implements RowFilterInterface {
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling filterAllRemaining().
    */
-  public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<byte [], Cell> columns) {
+  public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();
   }
 

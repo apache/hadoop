@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparator;
  * capacity as {@link org.apache.hadoop.io.BytesWritable} does. Hence its
  * comparatively 'immutable'.
  */
-public class ImmutableBytesWritable implements WritableComparable {
+public class ImmutableBytesWritable implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;
   
   /**
@@ -129,8 +129,8 @@ public class ImmutableBytesWritable implements WritableComparable {
    * @return Positive if left is bigger than right, 0 if they are equal, and
    *         negative if left is smaller than right.
    */
-  public int compareTo(Object right_obj) {
-    return compareTo(((ImmutableBytesWritable)right_obj).get());
+  public int compareTo(ImmutableBytesWritable right_obj) {
+    return compareTo(right_obj.get());
   }
   
   /**
@@ -153,7 +153,7 @@ public class ImmutableBytesWritable implements WritableComparable {
       return compareTo((byte [])right_obj) == 0;
     }
     if (right_obj instanceof ImmutableBytesWritable) {
-      return compareTo(right_obj) == 0;
+      return compareTo((ImmutableBytesWritable)right_obj) == 0;
     }
     return false;
   }

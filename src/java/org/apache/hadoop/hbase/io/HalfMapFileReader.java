@@ -43,6 +43,7 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
  */
+//TODO should be fixed generic warnings from MapFile methods
 public class HalfMapFileReader extends BloomFilterMapFile.Reader {
   private final boolean top;
   private final HStoreKey midkey;
@@ -76,7 +77,6 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
    * @param hri
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public HalfMapFileReader(final FileSystem fs, final String dirName, 
       final Configuration conf, final Range r,
       final WritableComparable<HStoreKey> mk, final boolean filter,
@@ -164,7 +164,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     return closest;
   }
 
-  @SuppressWarnings({"unused", "unchecked"})
+  @SuppressWarnings("unchecked")
   @Override
   public synchronized WritableComparable midKey() throws IOException {
     // Returns null to indicate file is not splitable.

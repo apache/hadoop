@@ -22,8 +22,9 @@ package org.apache.hadoop.hbase.client.transactional;
 /** Thrown when a transaction cannot be committed. 
  * 
  */
-@SuppressWarnings("serial")
 public class CommitUnsuccessfulException extends Exception {
+
+  private static final long serialVersionUID = 7062921444531109202L;
 
   /** Default Constructor */
   public CommitUnsuccessfulException() {

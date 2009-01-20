@@ -25,8 +25,10 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * Thrown when a scanner has timed out. 
  */
-@SuppressWarnings("serial")
 public class ScannerTimeoutException extends DoNotRetryIOException {
+
+  private static final long serialVersionUID = 8788838690290688313L;
+
   /** default constructor */
   ScannerTimeoutException() {
     super();

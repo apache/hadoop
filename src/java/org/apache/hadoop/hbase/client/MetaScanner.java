@@ -7,7 +7,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.util.Bytes;      //TODO: remove
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic 

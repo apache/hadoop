@@ -137,7 +137,6 @@ public class IndexSpecification implements Writable {
   }
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
     indexId = in.readUTF();
     int numIndexedCols = in.readInt();

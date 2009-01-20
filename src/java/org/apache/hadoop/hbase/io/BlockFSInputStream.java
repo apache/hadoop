@@ -94,6 +94,8 @@ public class BlockFSInputStream extends FSInputStream {
     // A memory-sensitive map that has soft references to values
     this.blocks = new SoftValueMap<Long, byte []>() {
       private long hits, misses;
+      
+      @Override
       public byte [] get(Object key) {
         byte [] value = super.get(key);
         if (value == null) {
@@ -140,7 +142,6 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   @Override
-  @SuppressWarnings("unused")
   public synchronized boolean seekToNewSource(long targetPos)
       throws IOException {
     return false;
@@ -234,7 +235,6 @@ public class BlockFSInputStream extends FSInputStream {
   }
 
   @Override
-  @SuppressWarnings("unused")
   public void mark(int readLimit) {
     // Do nothing
   }

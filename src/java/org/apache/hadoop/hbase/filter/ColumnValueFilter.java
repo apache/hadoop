@@ -122,11 +122,11 @@ public class ColumnValueFilter implements RowFilterInterface {
    this.filterIfColumnMissing = filterIfColumnMissing;
  }
 
-  public boolean filterRowKey(@SuppressWarnings("unused") final byte[] rowKey) {
+  public boolean filterRowKey(final byte[] rowKey) {
     return false;
   }
 
-  public boolean filterColumn(@SuppressWarnings("unused") final byte[] rowKey,
+  public boolean filterColumn(final byte[] rowKey,
       final byte[] colKey, final byte[] data) {
     if (!filterIfColumnMissing) {
       return false; // Must filter on the whole row
@@ -201,12 +201,12 @@ public class ColumnValueFilter implements RowFilterInterface {
     // Nothing.
   }
 
-  public void rowProcessed(@SuppressWarnings("unused") final boolean filtered,
-      @SuppressWarnings("unused") final byte[] key) {
+  public void rowProcessed(final boolean filtered,
+      final byte[] key) {
     // Nothing
   }
 
-  public void validate(@SuppressWarnings("unused") final byte[][] columns) {
+  public void validate(final byte[][] columns) {
     // Nothing
   }
 

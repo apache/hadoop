@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -243,51 +242,54 @@ public class HbaseObjectWritable implements Writable, Configurable {
                                  Configuration conf)
   throws IOException {
 
-    if (instance == null) {                       // null
-      instance = new NullInstance(declaredClass, conf);
-      declaredClass = Writable.class;
+    Object instanceObj = instance;
+    Class declClass = declaredClass;
+    
+    if (instanceObj == null) {                       // null
+      instanceObj = new NullInstance(declClass, conf);
+      declClass = Writable.class;
     }
-    writeClassCode(out, declaredClass);
-    if (declaredClass.isArray()) {                // array
+    writeClassCode(out, declClass);
+    if (declClass.isArray()) {                // array
       // If bytearray, just dump it out -- avoid the recursion and
       // byte-at-a-time we were previously doing.
-      if (declaredClass.equals(byte [].class)) {
-        Bytes.writeByteArray(out, (byte [])instance);
+      if (declClass.equals(byte [].class)) {
+        Bytes.writeByteArray(out, (byte [])instanceObj);
       } else {
-        int length = Array.getLength(instance);
+        int length = Array.getLength(instanceObj);
         out.writeInt(length);
         for (int i = 0; i < length; i++) {
-          writeObject(out, Array.get(instance, i),
-                    declaredClass.getComponentType(), conf);
+          writeObject(out, Array.get(instanceObj, i),
+                    declClass.getComponentType(), conf);
         }
       }
-    } else if (declaredClass == String.class) {   // String
-      Text.writeString(out, (String)instance);
-    } else if (declaredClass.isPrimitive()) {     // primitive type
-      if (declaredClass == Boolean.TYPE) {        // boolean
-        out.writeBoolean(((Boolean)instance).booleanValue());
-      } else if (declaredClass == Character.TYPE) { // char
-        out.writeChar(((Character)instance).charValue());
-      } else if (declaredClass == Byte.TYPE) {    // byte
-        out.writeByte(((Byte)instance).byteValue());
-      } else if (declaredClass == Short.TYPE) {   // short
-        out.writeShort(((Short)instance).shortValue());
-      } else if (declaredClass == Integer.TYPE) { // int
-        out.writeInt(((Integer)instance).intValue());
-      } else if (declaredClass == Long.TYPE) {    // long
-        out.writeLong(((Long)instance).longValue());
-      } else if (declaredClass == Float.TYPE) {   // float
-        out.writeFloat(((Float)instance).floatValue());
-      } else if (declaredClass == Double.TYPE) {  // double
-        out.writeDouble(((Double)instance).doubleValue());
-      } else if (declaredClass == Void.TYPE) {    // void
+    } else if (declClass == String.class) {   // String
+      Text.writeString(out, (String)instanceObj);
+    } else if (declClass.isPrimitive()) {     // primitive type
+      if (declClass == Boolean.TYPE) {        // boolean
+        out.writeBoolean(((Boolean)instanceObj).booleanValue());
+      } else if (declClass == Character.TYPE) { // char
+        out.writeChar(((Character)instanceObj).charValue());
+      } else if (declClass == Byte.TYPE) {    // byte
+        out.writeByte(((Byte)instanceObj).byteValue());
+      } else if (declClass == Short.TYPE) {   // short
+        out.writeShort(((Short)instanceObj).shortValue());
+      } else if (declClass == Integer.TYPE) { // int
+        out.writeInt(((Integer)instanceObj).intValue());
+      } else if (declClass == Long.TYPE) {    // long
+        out.writeLong(((Long)instanceObj).longValue());
+      } else if (declClass == Float.TYPE) {   // float
+        out.writeFloat(((Float)instanceObj).floatValue());
+      } else if (declClass == Double.TYPE) {  // double
+        out.writeDouble(((Double)instanceObj).doubleValue());
+      } else if (declClass == Void.TYPE) {    // void
       } else {
-        throw new IllegalArgumentException("Not a primitive: "+declaredClass);
+        throw new IllegalArgumentException("Not a primitive: "+declClass);
       }
-    } else if (declaredClass.isEnum()) {         // enum
-      Text.writeString(out, ((Enum)instance).name());
-    } else if (Writable.class.isAssignableFrom(declaredClass)) { // Writable
-      Class <?> c = instance.getClass();
+    } else if (declClass.isEnum()) {         // enum
+      Text.writeString(out, ((Enum)instanceObj).name());
+    } else if (Writable.class.isAssignableFrom(declClass)) { // Writable
+      Class <?> c = instanceObj.getClass();
       Byte code = CLASS_TO_CODE.get(c);
       if (code == null) {
         out.writeByte(NOT_ENCODED);
@@ -295,9 +297,9 @@ public class HbaseObjectWritable implements Writable, Configurable {
       } else {
         writeClassCode(out, c);
       }
-      ((Writable)instance).write(out);
+      ((Writable)instanceObj).write(out);
     } else {
-      throw new IOException("Can't write: "+instance+" as "+declaredClass);
+      throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
   }
   

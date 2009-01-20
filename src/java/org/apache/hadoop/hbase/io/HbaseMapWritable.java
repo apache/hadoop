@@ -45,7 +45,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * if passed a value type that it has not already been told about. Its  been
  * primed with hbase Writables and byte [].  Keys are always byte arrays.
  *
- * @param <byte []> key
+ * @param <byte []> key  TODO: Parameter K is never used, could be removed.
  * @param <V> value Expects a Writable or byte [].
  */
 public class HbaseMapWritable <K, V>
@@ -164,13 +164,13 @@ implements SortedMap<byte [], V>, Writable, Configurable {
   // Writable
 
   /** @return the Class class for the specified id */
-  @SuppressWarnings({ "unchecked", "boxing" })
+  @SuppressWarnings("boxing")
   protected Class<?> getClass(byte id) {
     return CODE_TO_CLASS.get(id);
   }
 
   /** @return the id for the specified Class */
-  @SuppressWarnings({ "unchecked", "boxing" })
+  @SuppressWarnings("boxing")
   protected byte getId(Class<?> clazz) {
     Byte b = CLASS_TO_CODE.get(clazz);
     if (b == null) {

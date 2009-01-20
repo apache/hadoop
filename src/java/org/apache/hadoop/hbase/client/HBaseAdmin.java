@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
  * Provides administrative functions for HBase
@@ -133,9 +131,10 @@ public class HBaseAdmin {
   }
   
   private long getPauseTime(int tries) {
-    if (tries >= HConstants.RETRY_BACKOFF.length)
-      tries = HConstants.RETRY_BACKOFF.length - 1;
-    return this.pause * HConstants.RETRY_BACKOFF[tries];
+	int triesCount = tries;
+    if (triesCount >= HConstants.RETRY_BACKOFF.length)
+    	triesCount = HConstants.RETRY_BACKOFF.length - 1;
+    return this.pause * HConstants.RETRY_BACKOFF[triesCount];
   }
 
   /**
@@ -534,8 +533,10 @@ public class HBaseAdmin {
     int xtraArgsCount = 1;
     Object [] newargs = new Object[len + xtraArgsCount];
     newargs[0] = regionname;
-    for (int i = 0; i < len; i++) {
-      newargs[i + xtraArgsCount] = args[i];
+    if(args != null) {
+      for (int i = 0; i < len; i++) {
+        newargs[i + xtraArgsCount] = args[i];
+      }
     }
     modifyTable(HConstants.META_TABLE_NAME, HConstants.MODIFY_CLOSE_REGION,
       newargs);
