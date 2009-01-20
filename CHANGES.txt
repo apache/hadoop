@@ -16,6 +16,10 @@ Trunk (unreleased changes)
     HADOOP-4940. Remove a deprecated method FileSystem.delete(Path f).  (Enis
     Soztutar via szetszwo)
 
+    HADOOP-4010. Change semantics for LineRecordReader to read an additional
+    line per split- rather than moving back one character in the stream- to
+    work with splittable compression codecs. (Abdul Qadeer via cdouglas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

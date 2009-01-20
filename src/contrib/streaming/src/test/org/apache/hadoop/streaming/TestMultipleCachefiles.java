@@ -97,16 +97,16 @@ public class TestMultipleCachefiles extends TestCase
         file.writeBytes(mapString2 + "\n");
         file.close();
         file = fileSys.create(new Path(CACHE_FILE));
-        file.writeBytes(cacheString);
+        file.writeBytes(cacheString + "\n");
         file.close();
         file = fileSys.create(new Path(CACHE_FILE_2));
-        file.writeBytes(cacheString2);
+        file.writeBytes(cacheString2 + "\n");
         file.close();
           
         job = new StreamJob(argv, mayExit);     
         job.go();
 
-	fileSys = dfs.getFileSystem();
+        fileSys = dfs.getFileSystem();
         String line = null;
         String line2 = null;
         Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(

@@ -79,21 +79,19 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     // open the file and seek to the start of the split
     FileSystem fs = file.getFileSystem(job);
     FSDataInputStream fileIn = fs.open(split.getPath());
-    boolean skipFirstLine = false;
     if (codec != null) {
       in = new LineReader(codec.createInputStream(fileIn), job);
       end = Long.MAX_VALUE;
     } else {
-      if (start != 0) {
-        skipFirstLine = true;
-        --start;
-        fileIn.seek(start);
-      }
+      fileIn.seek(start);
       in = new LineReader(fileIn, job);
     }
-    if (skipFirstLine) {  // skip first line and re-establish "start".
-      start += in.readLine(new Text(), 0,
-                           (int)Math.min((long)Integer.MAX_VALUE, end - start));
+    // If this is not the first split, we always throw away first record
+    // because we always (except the last split) read one extra line in
+    // next() method.
+    if (start != 0) {
+      start += in.readLine(new Text(), 0, (int) Math.min(
+          (long) Integer.MAX_VALUE, end - start));
     }
     this.pos = start;
   }
@@ -130,7 +128,9 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
   public synchronized boolean next(LongWritable key, Text value)
     throws IOException {
 
-    while (pos < end) {
+    // We always read one extra line, which lies outside the upper
+    // split limit i.e. (end - 1)
+    while (pos <= end) {
       key.set(pos);
 
       int newSize = in.readLine(value, maxLineLength,
