@@ -128,6 +128,7 @@ public class TestCapacityScheduler extends TestCase {
 
     @Override
     void selectJobsToInitialize() {
+      super.cleanUpInitializedJobsList();
       super.selectJobsToInitialize();
       for (ControlledJobInitializer t : workers) {
         t.initializeJobs();
@@ -704,7 +705,7 @@ public class TestCapacityScheduler extends TestCase {
     // check if the jobs are missing from the waiting queue
     // The jobs are not removed from waiting queue until they are scheduled 
     assertEquals("Waiting queue is garbled on job init", 2, 
-                 scheduler.jobQueuesManager.getJobs("default")
+                 scheduler.jobQueuesManager.getWaitingJobs("default")
                           .size());
     
     // test if changing the job priority/start-time works as expected in the 
@@ -788,7 +789,7 @@ public class TestCapacityScheduler extends TestCase {
   private JobInProgress[] getJobsInQueue(boolean waiting) {
     Collection<JobInProgress> queue = 
       waiting 
-      ? scheduler.jobQueuesManager.getJobs("default")
+      ? scheduler.jobQueuesManager.getWaitingJobs("default")
       : scheduler.jobQueuesManager.getRunningJobQueue("default");
     return queue.toArray(new JobInProgress[0]);
   }
@@ -897,7 +898,7 @@ public class TestCapacityScheduler extends TestCase {
    
     JobQueuesManager mgr = scheduler.jobQueuesManager;
     
-    while(mgr.getJobs("default").size() < 4){
+    while(mgr.getWaitingJobs("default").size() < 4){
       Thread.sleep(1);
     }
     //Raise status change events for jobs submitted.
@@ -2147,10 +2148,10 @@ public class TestCapacityScheduler extends TestCase {
     
     // reference to the initializedJobs data structure
     // changes are reflected in the set as they are made by the poller
-    HashSet<JobID> initializedJobs = initPoller.getInitializedJobList();
+    Set<JobID> initializedJobs = initPoller.getInitializedJobList();
     
     // we should have 12 (3 x 4) jobs in the job queue
-    assertEquals(mgr.getJobs("default").size(), 12);
+    assertEquals(mgr.getWaitingJobs("default").size(), 12);
 
     // run one poller iteration.
     p.selectJobsToInitialize();
@@ -2264,7 +2265,7 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.setInitializationPoller(p);
     scheduler.start();
     JobInitializationPoller initPoller = scheduler.getInitializationPoller();
-    HashSet<JobID> initializedJobsList = initPoller.getInitializedJobList();
+    Set<JobID> initializedJobsList = initPoller.getInitializedJobList();
 
     // submit 3 jobs for 3 users
     submitJobs(3,3,"default");
@@ -2317,22 +2318,38 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.start();
     
     JobQueuesManager mgr = scheduler.jobQueuesManager;
-    JobInitializationPoller initPoller = scheduler.getInitializationPoller();
-    HashSet<JobID> initializedJobsList = initPoller.getInitializedJobList();
     
+    // check proper running job movement and completion
+    checkRunningJobMovementAndCompletion();
+
+    // check failed running job movement
+    checkFailedRunningJobMovement();
+
+    // Check job movement of failed initalized job
+    checkFailedInitializedJobMovement();
+
+    // Check failed waiting job movement
+    checkFailedWaitingJobMovement();
+    
+  }
+  
+  private void checkRunningJobMovementAndCompletion() throws IOException {
+    
+    JobQueuesManager mgr = scheduler.jobQueuesManager;
+    JobInitializationPoller p = scheduler.getInitializationPoller();
     // submit a job
     FakeJobInProgress job = 
       submitJob(JobStatus.PREP, 1, 1, "default", "u1");
     p.selectJobsToInitialize();
     
-    assertEquals(initializedJobsList.size(), 1);
+    assertEquals(p.getInitializedJobList().size(), 1);
 
     // make it running.
     raiseStatusChangeEvents(mgr);
     
     // it should be there in both the queues.
     assertTrue("Job not present in Job Queue",
-        mgr.getJobs("default").contains(job));
+        mgr.getWaitingJobs("default").contains(job));
     assertTrue("Job not present in Running Queue",
         mgr.getRunningJobQueue("default").contains(job));
     
@@ -2343,12 +2360,12 @@ public class TestCapacityScheduler extends TestCase {
     p.selectJobsToInitialize();
     
     // now this task should be removed from the initialized list.
-    assertTrue(initializedJobsList.isEmpty());
+    assertTrue(p.getInitializedJobList().isEmpty());
 
     // the job should also be removed from the job queue as tasks
     // are scheduled
     assertFalse("Job present in Job Queue",
-        mgr.getJobs("default").contains(job));
+        mgr.getWaitingJobs("default").contains(job));
     
     // complete tasks and job
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000001_0", job);
@@ -2360,8 +2377,78 @@ public class TestCapacityScheduler extends TestCase {
         mgr.getRunningJobQueue("default").contains(job));
   }
   
+  private void checkFailedRunningJobMovement() throws IOException {
+    
+    JobQueuesManager mgr = scheduler.jobQueuesManager;
+    
+    //submit a job and initalized the same
+    FakeJobInProgress job = 
+      submitJobAndInit(JobStatus.RUNNING, 1, 1, "default", "u1");
+    
+    //check if the job is present in running queue.
+    assertTrue("Running jobs list does not contain submitted job",
+        mgr.getRunningJobQueue("default").contains(job));
+    
+    taskTrackerManager.finalizeJob(job, JobStatus.KILLED);
+    
+    //check if the job is properly removed from running queue.
+    assertFalse("Running jobs list does not contain submitted job",
+        mgr.getRunningJobQueue("default").contains(job));
+    
+  }
+
+  private void checkFailedInitializedJobMovement() throws IOException {
+    
+    JobQueuesManager mgr = scheduler.jobQueuesManager;
+    JobInitializationPoller p = scheduler.getInitializationPoller();
+    
+    //submit a job
+    FakeJobInProgress job = submitJob(JobStatus.PREP, 1, 1, "default", "u1");
+    //Initialize the job
+    p.selectJobsToInitialize();
+    //Don't raise the status change event.
+    
+    //check in waiting and initialized jobs list.
+    assertTrue("Waiting jobs list does not contain the job",
+        mgr.getWaitingJobs("default").contains(job));
+    
+    assertTrue("Initialized job does not contain the job",
+        p.getInitializedJobList().contains(job.getJobID()));
+    
+    //fail the initalized job
+    taskTrackerManager.finalizeJob(job, JobStatus.KILLED);
+    
+    //Check if the job is present in waiting queue
+    assertFalse("Waiting jobs list contains failed job",
+        mgr.getWaitingJobs("default").contains(job));
+    
+    //run the poller to do the cleanup
+    p.selectJobsToInitialize();
+    
+    //check for failed job in the initialized job list
+    assertFalse("Initialized jobs  contains failed job",
+        p.getInitializedJobList().contains(job.getJobID()));
+  }
+  
+  private void checkFailedWaitingJobMovement() throws IOException {
+    JobQueuesManager mgr = scheduler.jobQueuesManager;
+    // submit a job
+    FakeJobInProgress job = submitJob(JobStatus.PREP, 1, 1, "default",
+        "u1");
+    
+    // check in waiting and initialized jobs list.
+    assertTrue("Waiting jobs list does not contain the job", mgr
+        .getWaitingJobs("default").contains(job));
+    // fail the waiting job
+    taskTrackerManager.finalizeJob(job, JobStatus.KILLED);
+
+    // Check if the job is present in waiting queue
+    assertFalse("Waiting jobs list contains failed job", mgr
+        .getWaitingJobs("default").contains(job));
+  }
+  
   private void raiseStatusChangeEvents(JobQueuesManager mgr) {
-    Collection<JobInProgress> jips = mgr.getJobs("default");
+    Collection<JobInProgress> jips = mgr.getWaitingJobs("default");
     for(JobInProgress jip : jips) {
       if(jip.getStatus().getRunState() == JobStatus.RUNNING) {
         JobStatusChangeEvent evt = new JobStatusChangeEvent(jip,
