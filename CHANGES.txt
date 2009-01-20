@@ -7,6 +7,8 @@ Release 0.20.0 - Unreleased
    HBASE-1129  Master won't go down; stuck joined on rootScanner
    HBASE-1136  HashFunction inadvertently destroys some randomness
                (Jonathan Ellis via Stack)
+   HBASE-1138  Test that readers opened after a sync can see all data up to the
+               sync (temporary until HADOOP-4379 is resolved)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

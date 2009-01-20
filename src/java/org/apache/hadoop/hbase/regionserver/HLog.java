@@ -51,7 +51,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.SequenceFile.Reader;
+import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
  * HLog stores all the edits to the HStore.
@@ -98,6 +100,7 @@ public class HLog implements HConstants, Syncable {
   final LogRollListener listener;
   private final int maxlogentries;
   private final long optionalFlushInterval;
+  private final long blocksize;
   private final int flushlogentries;
   private volatile int unflushedEntries = 0;
   private volatile long lastLogFlushTime;
@@ -170,6 +173,8 @@ public class HLog implements HConstants, Syncable {
       conf.getInt("hbase.regionserver.maxlogentries", 100000);
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 100);
+    this.blocksize =
+      conf.getLong("hbase.regionserver.hlog.blocksize", 1024L * 1024L);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -182,7 +187,7 @@ public class HLog implements HConstants, Syncable {
     rollWriter();
   }
 
-  /*
+  /**
    * Accessor for tests. Not a part of the public API.
    * @return Current state of the monotonically increasing file id.
    */
@@ -260,8 +265,14 @@ public class HLog implements HConstants, Syncable {
         this.old_filenum = this.filenum;
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
+
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-          HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
+          HLogKey.class, HLogEdit.class,
+          fs.getConf().getInt("io.file.buffer.size", 4096),
+          fs.getDefaultReplication(), this.blocksize,
+          SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
+          new Metadata());
+
         LOG.info((oldFile != null?
           "Closed " + oldFile + ", entries=" + this.numEntries + ". ": "") +
           "New log writer: " + FSUtils.getPath(newPath));
