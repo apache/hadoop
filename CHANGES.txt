@@ -17,6 +17,7 @@ Release 0.20.0 - Unreleased
    HBASE-876   There are a large number of Java warnings in HBase; part 1,
                part 2, and part 3 (Evgeny Ryabitskiy via Stack)
    HBASE-896   Update jruby from 1.1.2 to 1.1.6
+   HBASE-1031  Add the Zookeeper jar
 
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES
