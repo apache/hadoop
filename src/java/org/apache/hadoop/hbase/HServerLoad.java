@@ -31,8 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
-@SuppressWarnings("unchecked")
-public class HServerLoad implements WritableComparable {
+public class HServerLoad implements WritableComparable<HServerLoad> {
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
     // around with this value while passing HServerLoad objects around during
@@ -279,7 +278,7 @@ public class HServerLoad implements WritableComparable {
 
   @Override
   public boolean equals(Object o) {
-    return compareTo(o) == 0;
+    return compareTo((HServerLoad)o) == 0;
   }
   
   @Override
@@ -311,7 +310,7 @@ public class HServerLoad implements WritableComparable {
   public int getStorefiles() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-      count += info.storefiles;
+    	count += info.getStorefiles();
     return count;
   }
 
@@ -321,7 +320,7 @@ public class HServerLoad implements WritableComparable {
   public int getMemcacheSizeInMB() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-      count += info.memcacheSizeMB;
+    	count += info.getMemcacheSizeMB();
     return count;
   }
 
@@ -331,7 +330,7 @@ public class HServerLoad implements WritableComparable {
   public int getStorefileIndexSizeInMB() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-      count += info.storefileIndexSizeMB;
+    	count += info.getStorefileIndexSizeMB();
     return count;
   }
 
@@ -414,8 +413,7 @@ public class HServerLoad implements WritableComparable {
 
   // Comparable
 
-  public int compareTo(Object o) {
-    HServerLoad other = (HServerLoad) o;
-    return this.getLoad() - other.getLoad();
+  public int compareTo(HServerLoad o) {
+    return this.getLoad() - o.getLoad();
   }
 }

@@ -30,8 +30,7 @@ import java.net.InetSocketAddress;
  * HServerAddress is a "label" for a HBase server that combines the host
  * name and port number.
  */
-@SuppressWarnings("unchecked")
-public class HServerAddress implements WritableComparable {
+public class HServerAddress implements WritableComparable<HServerAddress> {
   private InetSocketAddress address;
   String stringValue;
 
@@ -117,7 +116,7 @@ public class HServerAddress implements WritableComparable {
 
   @Override
   public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
+    return this.compareTo((HServerAddress)o) == 0;
   }
   
   @Override
@@ -160,12 +159,11 @@ public class HServerAddress implements WritableComparable {
   // Comparable
   //
   
-  public int compareTo(Object o) {
-    HServerAddress that = (HServerAddress)o;
+  public int compareTo(HServerAddress o) {
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname
     // resolved whereas other only has IP.
-    if (this.address.equals(that.address)) return 0;
-    return this.toString().compareTo(that.toString());
+    if (this.address.equals(o.address)) return 0;
+    return this.toString().compareTo(o.toString());
   }
 }

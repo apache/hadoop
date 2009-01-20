@@ -34,7 +34,7 @@ import org.apache.hadoop.io.WritableComparable;
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
-public class HRegionInfo extends VersionedWritable implements WritableComparable {
+public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
   private final byte VERSION = 0;
 
   /**
@@ -325,7 +325,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     
   @Override
   public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
+    return this.compareTo((HRegionInfo)o) == 0;
   }
   
   @Override
@@ -374,26 +374,25 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   // Comparable
   //
   
-  public int compareTo(Object o) {
-    HRegionInfo other = (HRegionInfo) o;
-    if (other == null) {
+  public int compareTo(HRegionInfo o) {
+    if (o == null) {
       return 1;
     }
     
     // Are regions of same table?
-    int result = this.tableDesc.compareTo(other.tableDesc);
+    int result = this.tableDesc.compareTo(o.tableDesc);
     if (result != 0) {
       return result;
     }
 
     // Compare start keys.
-    result = HStoreKey.compareTwoRowKeys(other, this.startKey, other.startKey);
+    result = HStoreKey.compareTwoRowKeys(o, this.startKey, o.startKey);
     if (result != 0) {
       return result;
     }
     
     // Compare end keys.
-    return HStoreKey.compareTwoRowKeys(other, this.endKey, other.endKey);
+    return HStoreKey.compareTwoRowKeys(o, this.endKey, o.endKey);
   }
 
   /**

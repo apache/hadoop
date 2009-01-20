@@ -356,7 +356,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   // Comparable
 
   public int compareTo(final HStoreKey o) {
-    return compareTo(this.regionInfo, this, (HStoreKey)o);
+    return compareTo(this.regionInfo, this, o);
   }
   
   static int compareTo(final HRegionInfo hri, final HStoreKey left,
@@ -548,10 +548,8 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    */
   public static boolean equalsTwoRowKeys(HRegionInfo regionInfo, 
       byte[] rowA, byte[] rowB) {
-    return rowA == null && rowB == null? true:
-      rowA == null && rowB != null? false:
-        rowA != null && rowB == null? false:
-          rowA.length != rowB.length? false:
+    return ((rowA == null) && (rowB == null)) ? true:
+      (rowA == null) || (rowB == null) || (rowA.length != rowB.length) ? false:
         compareTwoRowKeys(regionInfo,rowA,rowB) == 0;
   }
   
@@ -609,6 +607,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       this.hri = hri;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public int compare(final WritableComparable left,
         final WritableComparable right) {
@@ -644,7 +643,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     
     @Override
-    public boolean equals(@SuppressWarnings("unused") Object obj) {
+    public boolean equals(Object obj) {
       return false;
     }
 

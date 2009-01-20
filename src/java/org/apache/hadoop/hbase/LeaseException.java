@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase;
 /**
  * Reports a problem with a lease
  */
-@SuppressWarnings("serial")
 public class LeaseException extends DoNotRetryIOException {
+
+  private static final long serialVersionUID = 8179703995292418650L;
+
   /** default constructor */
   public LeaseException() {
     super();

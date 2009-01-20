@@ -12,6 +12,8 @@ Release 0.20.0 - Unreleased
                (Samuel Guo via Stack)
    HBASE-1130  PrefixRowFilter (Michael Gottesman via Stack)
    HBASE-1139  Update Clover in build.xml
+   HBASE-876   There are a large number of Java warnings in HBase; part 1
+               (Evgeny Ryabitskiy via Stack)
 
 Release 0.19.0 - Unreleased
   INCOMPATIBLE CHANGES

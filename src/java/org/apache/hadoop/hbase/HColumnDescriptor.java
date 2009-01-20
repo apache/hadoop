@@ -40,7 +40,7 @@ import org.apache.hadoop.io.WritableComparable;
  * column and recreating it. If there is data stored in the column, it will be
  * deleted when the column is deleted.
  */
-public class HColumnDescriptor implements WritableComparable {
+public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
   // For future backward compatibility
 
   // Version 3 was when column names become byte arrays and when we picked up
@@ -489,7 +489,7 @@ public class HColumnDescriptor implements WritableComparable {
   
   @Override
   public boolean equals(Object obj) {
-    return compareTo(obj) == 0;
+    return compareTo((HColumnDescriptor)obj) == 0;
   }
   
   @Override
@@ -502,7 +502,6 @@ public class HColumnDescriptor implements WritableComparable {
   
   // Writable
 
-  @SuppressWarnings("deprecation")
   public void readFields(DataInput in) throws IOException {
     int version = in.readByte();
     if (version < 6) {
@@ -566,12 +565,11 @@ public class HColumnDescriptor implements WritableComparable {
 
   // Comparable
 
-  public int compareTo(Object o) {
-    HColumnDescriptor other = (HColumnDescriptor)o;
-    int result = Bytes.compareTo(this.name, other.getName());
+  public int compareTo(HColumnDescriptor o) {
+    int result = Bytes.compareTo(this.name, o.getName());
     if (result == 0) {
       // punt on comparison for ordering, just calculate difference
-      result = this.values.hashCode() - other.values.hashCode();
+      result = this.values.hashCode() - o.values.hashCode();
       if (result < 0)
         result = -1;
       else if (result > 0)

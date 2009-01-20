@@ -47,18 +47,17 @@ public class RegionHistorian implements HConstants {
   
   private HTable metaTable;
 
-  private GregorianCalendar cal = new GregorianCalendar();
+
 
   /** Singleton reference */
   private static RegionHistorian historian;
 
   /** Date formater for the timestamp in RegionHistoryInformation */
-  private static SimpleDateFormat dateFormat = new SimpleDateFormat(
+  static SimpleDateFormat dateFormat = new SimpleDateFormat(
   "EEE, d MMM yyyy HH:mm:ss");
 
-  //TODO: Why is this public? Appears to only apply internally.
   
-  public static enum HistorianColumnKey  {
+  private static enum HistorianColumnKey  {
     REGION_CREATION ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"creation")),
     REGION_OPEN ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"open")),
     REGION_SPLIT ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"split")),
@@ -66,13 +65,13 @@ public class RegionHistorian implements HConstants {
     REGION_FLUSH ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"flush")),
     REGION_ASSIGNMENT ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"assignment"));
 
-    public byte[] key;
+  byte[] key;
 
     HistorianColumnKey(byte[] key) {
       this.key = key;
     }
   } 
-
+  
   public static final String SPLIT_PREFIX = "Region split from: ";
 
   /**
@@ -199,8 +198,7 @@ public class RegionHistorian implements HConstants {
    * @param info
    * @param timeTaken
    */
-  public void addRegionFlush(HRegionInfo info,
-    @SuppressWarnings("unused") String timeTaken) {
+  public void addRegionFlush(HRegionInfo info, String timeTaken) {
     // Disabled.  Noop.  If this regionserver is hosting the .META. AND is
     // holding the reclaimMemcacheMemory global lock --
     // see Flusher#flushSomeRegions --  we deadlock.  For now, just disable
@@ -249,6 +247,8 @@ public class RegionHistorian implements HConstants {
    */
   public class RegionHistoryInformation implements
   Comparable<RegionHistoryInformation> {
+    
+    private GregorianCalendar cal = new GregorianCalendar();
 
     private long timestamp;
 

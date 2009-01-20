@@ -80,16 +80,15 @@ public class RemoteExceptionHandler {
    *         exception is not an IOException. The decoded exception is set as
    *         the cause.
    */
-  @SuppressWarnings("unchecked")
   public static IOException decodeRemoteException(final RemoteException re)
   throws IOException {
     IOException i = re;
 
     try {
-      Class c = Class.forName(re.getClassName());
+      Class<?> c = Class.forName(re.getClassName());
 
-      Class[] parameterTypes = { String.class };
-      Constructor ctor = c.getConstructor(parameterTypes);
+      Class<?>[] parameterTypes = { String.class };
+      Constructor<?> ctor = c.getConstructor(parameterTypes);
       
       Object[] arguments = { re.getMessage() };
       Throwable t = (Throwable) ctor.newInstance(arguments);

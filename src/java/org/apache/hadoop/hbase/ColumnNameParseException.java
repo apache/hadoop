@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase;
 /**
  * Thrown if issue with passed column name.
  */
-@SuppressWarnings("serial")
 public class ColumnNameParseException extends DoNotRetryIOException {
+
+  private static final long serialVersionUID = -2897373353949942302L;
+
   /** default constructor */
   public ColumnNameParseException() {
     super();

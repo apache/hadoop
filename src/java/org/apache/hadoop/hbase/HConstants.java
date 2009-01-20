@@ -245,16 +245,14 @@ public interface HConstants {
   //      there.
   public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
     "hbase.client.retries.number";
-  //TODO: DEFAULT_CLIENT_RETRIES is not referenced anywhere. Remove it.
-  public static final int DEFAULT_CLIENT_RETRIES = 5;
 
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be
   //      public. They could have package visibility
-  public static final String NAME = "NAME";
-  public static final String VERSIONS = "VERSIONS";
-  public static final String IN_MEMORY = "IN_MEMORY";
+  static final String NAME = "NAME";
+  static final String VERSIONS = "VERSIONS";
+  static final String IN_MEMORY = "IN_MEMORY";
   
   /**
    * This is a retry backoff multiplier table similar to the BSD TCP syn

@@ -23,8 +23,7 @@ package org.apache.hadoop.hbase;
  * Contains the HRegionInfo for the region and the HServerAddress for the
  * HRegionServer serving the region
  */
-@SuppressWarnings("unchecked")
-public class HRegionLocation implements Comparable {
+public class HRegionLocation implements Comparable<HRegionLocation> {
   private HRegionInfo regionInfo;
   private HServerAddress serverAddress;
 
@@ -47,7 +46,7 @@ public class HRegionLocation implements Comparable {
   
   @Override
   public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
+    return this.compareTo((HRegionLocation)o) == 0;
   }
   
   @Override
@@ -71,11 +70,10 @@ public class HRegionLocation implements Comparable {
   // Comparable
   //
   
-  public int compareTo(Object o) {
-    HRegionLocation other = (HRegionLocation) o;
-    int result = this.regionInfo.compareTo(other.regionInfo);
+  public int compareTo(HRegionLocation o) {
+    int result = this.regionInfo.compareTo(o.regionInfo);
     if(result == 0) {
-      result = this.serverAddress.compareTo(other.serverAddress);
+      result = this.serverAddress.compareTo(o.serverAddress);
     }
     return result;
   }

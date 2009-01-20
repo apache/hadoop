@@ -33,7 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
  * In the future it will contain information about the source machine and
  * load statistics.
  */
-public class HServerInfo implements WritableComparable {
+public class HServerInfo implements WritableComparable<HServerInfo> {
   private HServerAddress serverAddress;
   private long startCode;
   private HServerLoad load;
@@ -123,7 +123,7 @@ public class HServerInfo implements WritableComparable {
 
   @Override
   public boolean equals(Object obj) {
-    return compareTo(obj) == 0;
+    return compareTo((HServerInfo)obj) == 0;
   }
 
   @Override
@@ -151,19 +151,18 @@ public class HServerInfo implements WritableComparable {
     out.writeInt(this.infoPort);
   }
 
-  public int compareTo(Object o) {
-    HServerInfo that = (HServerInfo)o;
-    int result = getServerAddress().compareTo(that.getServerAddress());
+  public int compareTo(HServerInfo o) {
+    int result = getServerAddress().compareTo(o.getServerAddress());
     if (result != 0) {
       return result;
     }
-    if (this.infoPort != that.infoPort) {
-      return this.infoPort - that.infoPort;
+    if (this.infoPort != o.infoPort) {
+      return this.infoPort - o.infoPort;
     }
-    if (getStartCode() == that.getStartCode()) {
+    if (getStartCode() == o.getStartCode()) {
       return 0;
     }
     // Startcodes are timestamps.
-    return (int)(getStartCode() - that.getStartCode());
+    return (int)(getStartCode() - o.getStartCode());
   }
 }
