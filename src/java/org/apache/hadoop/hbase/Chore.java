@@ -55,14 +55,15 @@ public abstract class Chore extends Thread {
   @Override
   public void run() {
     try {
-      while (!initialChore()) {
-        this.sleeper.sleep();
-      }
-      this.sleeper.sleep();
+      boolean initialChoreComplete = false;
       while (!this.stop.get()) {
         long startTime = System.currentTimeMillis();
         try {
-          chore();
+          if (!initialChoreComplete) {
+            initialChoreComplete = initialChore();
+          } else {
+            chore();
+          }
         } catch (Exception e) {
           LOG.error("Caught exception", e);
           if (this.stop.get()) {
