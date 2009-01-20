@@ -1276,7 +1276,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       }
       
       //update stats on waiting jobs
-      for(JobInProgress j: jobQueuesManager.getJobs(qsi.queueName)) {
+      for(JobInProgress j: jobQueuesManager.getWaitingJobs(qsi.queueName)) {
         // pending tasks
         if ((qsi.mapTSI.numPendingTasks > mapClusterCapacity) &&
             (qsi.reduceTSI.numPendingTasks > reduceClusterCapacity)) {
@@ -1498,7 +1498,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       jobCollection.addAll(runningJobs);
     }
     Collection<JobInProgress> waitingJobs = 
-      jobQueuesManager.getJobs(queueName);
+      jobQueuesManager.getWaitingJobs(queueName);
     Collection<JobInProgress> tempCollection = new ArrayList<JobInProgress>();
     if(waitingJobs != null) {
       tempCollection.addAll(waitingJobs);

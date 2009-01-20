@@ -65,7 +65,7 @@ class JobQueuesManager extends JobInProgressListener {
 
     // whether the queue supports priorities
     boolean supportsPriorities;
-    Map<JobSchedulingInfo, JobInProgress> jobList; // for waiting jobs
+    Map<JobSchedulingInfo, JobInProgress> waitingJobs; // for waiting jobs
     Map<JobSchedulingInfo, JobInProgress> runningJobs; // for running jobs
     
     public Comparator<JobSchedulingInfo> comparator;
@@ -79,14 +79,14 @@ class JobQueuesManager extends JobInProgressListener {
       else {
         comparator = STARTTIME_JOB_COMPARATOR;
       }
-      jobList = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+      waitingJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
       runningJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
     }
     
-    Collection<JobInProgress> getJobs() {
-      synchronized (jobList) {
+    Collection<JobInProgress> getWaitingJobs() {
+      synchronized (waitingJobs) {
         return Collections.unmodifiableCollection(
-            new LinkedList<JobInProgress>(jobList.values()));
+            new LinkedList<JobInProgress>(waitingJobs.values()));
       }
     }
     
@@ -109,21 +109,21 @@ class JobQueuesManager extends JobInProgressListener {
       }
     }
     
-    JobInProgress removeJob(JobSchedulingInfo schedInfo) {
-      synchronized (jobList) {
-        return jobList.remove(schedInfo);
+    JobInProgress removeWaitingJob(JobSchedulingInfo schedInfo) {
+      synchronized (waitingJobs) {
+        return waitingJobs.remove(schedInfo);
       }
     }
     
-    void addJob(JobInProgress job) {
-      synchronized (jobList) {
-        jobList.put(new JobSchedulingInfo(job), job);
+    void addWaitingJob(JobInProgress job) {
+      synchronized (waitingJobs) {
+        waitingJobs.put(new JobSchedulingInfo(job), job);
       }
     }
     
     int getWaitingJobCount() {
-      synchronized (jobList) {
-       return jobList.size(); 
+      synchronized (waitingJobs) {
+       return waitingJobs.size(); 
       }
     }
     
@@ -157,11 +157,11 @@ class JobQueuesManager extends JobInProgressListener {
   }
   
   /**
-   * Returns the queue of Uninitialised jobs associated with queue name.
+   * Returns the queue of waiting jobs associated with queue name.
    * 
    */
-  public Collection<JobInProgress> getJobs(String queueName) {
-    return jobQueues.get(queueName).getJobs();
+  Collection<JobInProgress> getWaitingJobs(String queueName) {
+    return jobQueues.get(queueName).getWaitingJobs();
   }
   
   @Override
@@ -178,21 +178,23 @@ class JobQueuesManager extends JobInProgressListener {
     }
     // add job to waiting queue. It will end up in the right place, 
     // based on priority. 
-    qi.addJob(job);
+    qi.addWaitingJob(job);
     // let scheduler know. 
     scheduler.jobAdded(job);
   }
 
   /*
-   * The removal of the running jobs alone is done by the JobQueueManager.
-   * The removal of the jobs in the job queue is taken care by the
-   * JobInitializationPoller.
+   * Method removes the jobs from both running and waiting job queue in 
+   * job queue manager.
    */
   private void jobCompleted(JobInProgress job, JobSchedulingInfo oldInfo, 
                             QueueInfo qi) {
     LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
         + job.getProfile().getQueueName() + " has completed");
+    //remove jobs from both queue's a job can be in
+    //running and waiting queue at the same time.
     qi.removeRunningJob(oldInfo);
+    qi.removeWaitingJob(oldInfo);
     // let scheduler know
     scheduler.jobCompleted(job);
   }
@@ -206,8 +208,8 @@ class JobQueuesManager extends JobInProgressListener {
   private void reorderJobs(JobInProgress job, JobSchedulingInfo oldInfo, 
                            QueueInfo qi) {
     
-    if(qi.removeJob(oldInfo) != null) {
-      qi.addJob(job);
+    if(qi.removeWaitingJob(oldInfo) != null) {
+      qi.addWaitingJob(job);
     }
     if(qi.removeRunningJob(oldInfo) != null) {
       qi.addRunningJob(job);
@@ -264,10 +266,10 @@ class JobQueuesManager extends JobInProgressListener {
     }
   }
   
-  void removeJobFromQueue(JobInProgress job) {
+  void removeJobFromWaitingQueue(JobInProgress job) {
     String queue = job.getProfile().getQueueName();
     QueueInfo qi = jobQueues.get(queue);
-    qi.removeJob(new JobSchedulingInfo(job));
+    qi.removeWaitingJob(new JobSchedulingInfo(job));
   }
   
   Comparator<JobSchedulingInfo> getComparator(String queue) {

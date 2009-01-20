@@ -561,6 +561,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4993. Fix Chukwa agent configuration and startup to make it both
     more modular and testable. (Ari Rabkin via cdouglas)
 
+    HADOOP-5048. Fix capacity scheduler to correctly cleanup jobs that are
+    killed after initialization, but before running. 
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
