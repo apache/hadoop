@@ -685,6 +685,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4967. Fixes a race condition in the JvmManager to do with killing
     tasks. (ddas)
 
+    HADOOP-5009. DataNode#shutdown sometimes leaves data block scanner
+    verification log unclosed. (hairong)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
