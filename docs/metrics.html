@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta content="Apache Forrest" name="Generator">
+<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-skin-name" content="pelt">
+<title> 
+      HBase Metrics
+    </title>
+<link type="text/css" href="skin/basic.css" rel="stylesheet">
+<link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
+<link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
+<link type="text/css" href="skin/profile.css" rel="stylesheet">
+<script src="skin/getBlank.js" language="javascript" type="text/javascript"></script><script src="skin/getMenu.js" language="javascript" type="text/javascript"></script><script src="skin/fontsize.js" language="javascript" type="text/javascript"></script>
+<link rel="shortcut icon" href="images/favicon.ico">
+</head>
+<body onload="init()">
+<script type="text/javascript">ndeSetTextSize();</script>
+<div id="top">
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/hbase/">HBase</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+</div>
+<!--+
+    |header
+    +-->
+<div class="header">
+<!--+
+    |start group logo
+    +-->
+<div class="grouplogo">
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
+</div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
+<div class="projectlogo">
+<a href="http://hadoop.apache.org/hbase/"><img class="logoImage" alt="HBase" src="images/hbase_small.gif" title="The Hadoop database"></a>
+</div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
+<div class="searchbox">
+<form action="http://www.google.com/search" method="get" class="roundtopsmall">
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+                    <input name="Search" value="Search" type="submit">
+</form>
+</div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
+<ul id="tabs">
+<li>
+<a class="unselected" href="http://hadoop.apache.org/hbase/">Project</a>
+</li>
+<li>
+<a class="unselected" href="http://wiki.apache.org/hadoop/Hbase">Wiki</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">HBase Documentation</a>
+</li>
+</ul>
+<!--+
+    |end Tabs
+    +-->
+</div>
+</div>
+<div id="main">
+<div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
+<div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<!--+
+    |breadtrail
+    +-->
+<div class="breadtrail">
+
+             &nbsp;
+           </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
+<div id="menu">
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menuitem">
+<a href="index.html">Overview</a>
+</div>
+<div class="menuitem">
+<a href="api/overview-summary.html#overview_description">Getting Started</a>
+</div>
+<div class="menuitem">
+<a href="api/index.html">API Docs</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">HBase Metrics</div>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/Hbase">Wiki</a>
+</div>
+<div class="menuitem">
+<a href="http://wiki.apache.org/hadoop/Hbase/FAQ">FAQ</a>
+</div>
+<div class="menuitem">
+<a href="http://hadoop.apache.org/hbase/mailing_lists.html">Mailing Lists</a>
+</div>
+</div>
+<div id="credit"></div>
+<div id="roundbottom">
+<img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
+<div id="credit2"></div>
+</div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
+<div id="content">
+<div title="Portable Document Format" class="pdflink">
+<a class="dida" href="metrics.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+        PDF</a>
+</div>
+<h1> 
+      HBase Metrics
+    </h1>
+<div id="minitoc-area">
+<ul class="minitoc">
+<li>
+<a href="#Introduction"> Introduction </a>
+</li>
+<li>
+<a href="#HOWTO">HOWTO</a>
+</li>
+</ul>
+</div>
+    
+<a name="N1000D"></a><a name="Introduction"></a>
+<h2 class="h3"> Introduction </h2>
+<div class="section">
+<p>
+      HBase emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      </p>
+</div>
+      
+<a name="N1001B"></a><a name="HOWTO"></a>
+<h2 class="h3">HOWTO</h2>
+<div class="section">
+<p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      If you are using ganglia, the <a href="http://wiki.apache.org/hadoop/GangliaMetrics">GangliaMetrics</a>
+      wiki page is useful read.</p>
+<p>To have HBase emit metrics, edit <span class="codefrag">$HBASE_HOME/conf/hadoop-metrics.properties</span>
+      and enable metric 'contexts' per plugin.  As of this writing, hadoop supports
+      <strong>file</strong> and <strong>ganglia</strong> plugins.
+      Yes, the hbase metrics files is named hadoop-metrics rather than
+      <em>hbase-metrics</em> because currently at least the hadoop metrics system has the
+      properties filename hardcoded. Per metrics <em>context</em>,
+      comment out the NullContext and enable one or more plugins instead.
+      </p>
+<p>
+      If you enable the <em>hbase</em> context, on regionservers you'll see total requests since last
+      metric emission, count of regions and storefiles as well as a count of memcache size.
+      On the master, you'll see a count of the cluster's requests.
+      </p>
+<p>
+      Enabling the <em>rpc</em> context is good if you are interested in seeing
+      metrics on each hbase rpc method invocation (counts and time taken).
+      </p>
+<p>
+      The <em>jvm</em> context is
+      useful for long-term stats on running hbase jvms -- memory used, thread counts, etc.
+      As of this writing, if more than one jvm is running emitting metrics, at least
+      in ganglia, the stats are aggregated rather than reported per instance.
+      </p>
+</div>
+  
+</div>
+<!--+
+    |end content
+    +-->
+<div class="clearboth">&nbsp;</div>
+</div>
+<div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
+<div class="lastmodified">
+<script type="text/javascript"><!--
+document.write("Last Published: " + document.lastModified);
+//  --></script>
+</div>
+<div class="copyright">
+        Copyright &copy;
+         2008 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
+</div>
+<!--+
+    |end bottomstrip
+    +-->
+</div>
+</body>
+</html>
