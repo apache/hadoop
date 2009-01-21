@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     HADOOP-5072. Fix failure in TestCodec because testSequenceFileGzipCodec 
     won't pass without native gzip codec. (Zheng Shao via dhruba)
 
+    HADOOP-5050. TestDFSShell.testFilePermissions should not assume umask
+    setting.  (Jakob Homan via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
