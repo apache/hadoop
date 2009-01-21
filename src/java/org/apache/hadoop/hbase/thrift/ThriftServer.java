@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.thrift;
 
 import java.io.IOException;
-import java.nio.charset.MalformedInputException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -93,7 +91,7 @@ public class ThriftServer {
      */
     protected HTable getTable(final byte[] tableName) throws IOError,
         IOException {
-      return new HTable(this.conf, getText(tableName));
+      return new HTable(this.conf, tableName);
     }
     
     /**
@@ -141,33 +139,7 @@ public class ThriftServer {
       scannerMap = new HashMap<Integer, Scanner>();
     }
     
-    /**
-     * Converts a byte array to a Text object after validating the UTF-8
-     * encoding.
-     * 
-     * @param buf
-     *          UTF-8 encoded bytes
-     * @return Text object
-     * @throws IllegalArgument
-     * @throws IOError     
-     */
-    byte [] getText(byte[] buf) throws IOError {
-      try {
-        Text.validateUTF8(buf);
-      } catch (MalformedInputException e) {
-        throw new IOError("invalid UTF-8 encoding in row or column name");
-      }
-      return buf;
-    }
-    
-    //
-    // The Thrift Hbase.Iface interface is implemented below.
-    // Documentation for the methods and datastructures is the Hbase.thrift file
-    // used to generate the interface.
-    //
-    
     public void enableTable(final byte[] tableName) throws IOError {
-      LOG.debug("enableTable");
       try{
         admin.enableTable(tableName);
       } catch (IOException e) {
@@ -176,7 +148,6 @@ public class ThriftServer {
     }
     
     public void disableTable(final byte[] tableName) throws IOError{
-      LOG.debug("disableTable");
       try{
         admin.disableTable(tableName);
       } catch (IOException e) {
@@ -185,7 +156,6 @@ public class ThriftServer {
     }
     
     public boolean isTableEnabled(final byte[] tableName) throws IOError {
-      LOG.debug("isTableEnabled");
       try {
         return HTable.isTableEnabled(tableName);
       } catch (IOException e) {
@@ -194,7 +164,6 @@ public class ThriftServer {
     }
     
     public List<byte[]> getTableNames() throws IOError {
-      LOG.debug("getTableNames");
       try {
         HTableDescriptor[] tables = this.admin.listTables();
         ArrayList<byte[]> list = new ArrayList<byte[]>(tables.length);
@@ -210,8 +179,6 @@ public class ThriftServer {
     public List<TRegionInfo> getTableRegions(byte[] tableName)
     throws IOError {
       try{
-        LOG.debug("getTableRegions: " + new String(tableName));
-
         HTable table = getTable(tableName);
         Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
@@ -233,13 +200,9 @@ public class ThriftServer {
     
     public TCell get(byte[] tableName, byte[] row, byte[] column)
         throws NotFound, IOError {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("get: table=" + new String(tableName) + ", row="
-            + new String(row) + ", col=" + new String(column));
-      }
       try {
         HTable table = getTable(tableName);
-        Cell cell = table.get(getText(row), getText(column));
+        Cell cell = table.get(row, column);
         if (cell == null) {
           throw new NotFound();
         }
@@ -251,15 +214,10 @@ public class ThriftServer {
     
     public List<TCell> getVer(byte[] tableName, byte[] row,
         byte[] column, int numVersions) throws IOError, NotFound {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("getVer: table=" + new String(tableName) + ", row="
-            + new String(row) + ", col=" + new String(column) + ", numVers="
-            + numVersions);
-      }
       try {
         HTable table = getTable(tableName);
         Cell[] cells = 
-          table.get(getText(row), getText(column), numVersions);
+          table.get(row, column, numVersions);
         if (cells == null) {
           throw new NotFound();
         }
@@ -276,15 +234,9 @@ public class ThriftServer {
     public List<TCell> getVerTs(byte[] tableName, byte[] row,
         byte[] column, long timestamp, int numVersions) throws IOError,
         NotFound {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("getVerTs: table=" + new String(tableName) + ", row="
-            + new String(row) + ", col=" + new String(column) + ", ts="
-            + timestamp + ", numVers=" + numVersions);
-      }
       try {
         HTable table = getTable(tableName);
-        Cell[] cells = table.get(getText(row), 
-          getText(column), timestamp, numVersions);
+        Cell[] cells = table.get(row, column, timestamp, numVersions);
         if (cells == null) {
           throw new NotFound();
         }
@@ -318,18 +270,14 @@ public class ThriftServer {
     
     public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row,
         List<byte[]> columns, long timestamp) throws IOError {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("getRowTs: table=" + new String(tableName) + ", row="
-            + new String(row) + ", ts=" + timestamp);
-      }
       try {
         HTable table = getTable(tableName);
         if (columns == null) {
-          return ThriftUtilities.rowResultFromHBase(table.getRow(getText(row),
+          return ThriftUtilities.rowResultFromHBase(table.getRow(row,
                                                         timestamp));
         } else {
           byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-          return ThriftUtilities.rowResultFromHBase(table.getRow(getText(row),
+          return ThriftUtilities.rowResultFromHBase(table.getRow(row,
                                                         columnArr, timestamp));
         }
       } catch (IOException e) {
@@ -344,14 +292,9 @@ public class ThriftServer {
     
     public void deleteAllTs(byte[] tableName, byte[] row, byte[] column,
         long timestamp) throws IOError {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteAllTs: table=" + new String(tableName) + ", row="
-            + new String(row) + ", col=" + new String(column) + ", ts="
-            + timestamp);
-      }
       try {
         HTable table = getTable(tableName);
-        table.deleteAll(getText(row), getText(column), timestamp);
+        table.deleteAll(row, column, timestamp);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -363,13 +306,9 @@ public class ThriftServer {
     
     public void deleteAllRowTs(byte[] tableName, byte[] row, long timestamp)
         throws IOError {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteAllRowTs: table=" + new String(tableName) + ", row="
-            + new String(row) + ", ts=" + timestamp);
-      }
       try {
         HTable table = getTable(tableName);
-        table.deleteAll(getText(row), timestamp);
+        table.deleteAll(row, timestamp);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -378,21 +317,14 @@ public class ThriftServer {
     public void createTable(byte[] tableName,
         List<ColumnDescriptor> columnFamilies) throws IOError,
         IllegalArgument, AlreadyExists {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("createTable: table=" + new String(tableName));
-      }
       try {
-        byte [] tableStr = getText(tableName);
-        if (admin.tableExists(tableStr)) {
+        if (admin.tableExists(tableName)) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(tableStr);
+        HTableDescriptor desc = new HTableDescriptor(tableName);
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("createTable:     col=" + new String(colDesc.getName()));
-          }
         }
         admin.createTable(desc);
       } catch (IOException e) {
@@ -407,11 +339,10 @@ public class ThriftServer {
         LOG.debug("deleteTable: table=" + new String(tableName));
       }
       try {
-        byte [] tableStr = getText(tableName);
-        if (!admin.tableExists(tableStr)) {
+        if (!admin.tableExists(tableName)) {
           throw new NotFound();
         }
-        admin.deleteTable(tableStr);
+        admin.deleteTable(tableName);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -424,29 +355,15 @@ public class ThriftServer {
     
     public void mutateRowTs(byte[] tableName, byte[] row,
         List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("mutateRowTs: table=" + new String(tableName) + ", row="
-            + new String(row) + ", ts=" + timestamp + " mutations="
-            + mutations.size());
-        for (Mutation m : mutations) {
-          if (m.isDelete) {
-            LOG.debug("mutateRowTs:    : delete - " + new String(getText(m.column)));
-          } else {
-            LOG.debug("mutateRowTs:    : put - " + new String(getText(m.column)) + " => "
-                + new String(m.value));
-          }
-        }
-      }
-      
       HTable table = null;
       try {
         table = getTable(tableName);
-        BatchUpdate batchUpdate = new BatchUpdate(getText(row), timestamp);
+        BatchUpdate batchUpdate = new BatchUpdate(row, timestamp);
         for (Mutation m : mutations) {
           if (m.isDelete) {
-            batchUpdate.delete(getText(m.column));
+            batchUpdate.delete(m.column);
           } else {
-            batchUpdate.put(getText(m.column), m.value);
+            batchUpdate.put(m.column, m.value);
           }
         }
         table.commit(batchUpdate);
@@ -466,30 +383,15 @@ public class ThriftServer {
         throws IOError, IllegalArgument, TException {
       List<BatchUpdate> batchUpdates = new ArrayList<BatchUpdate>();
        
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("mutateRowsTs: table=" + new String(tableName) + ", rows=" 
-            + rowBatches.size() + ", ts=" + timestamp);
-      }
       for (BatchMutation batch : rowBatches) {
         byte[] row = batch.row;
         List<Mutation> mutations = batch.mutations;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("mutateRowsTs:    : row=" + new String(row) + " mutations=" + mutations.size());
-          for (Mutation m : mutations) {
-            if (m.isDelete) {
-              LOG.debug("mutateRowsTs:    : delete - " + new String(getText(m.column)));
-            } else {
-              LOG.debug("mutateRowsTs:    : put - " + new String(getText(m.column)) + " => "
-                  + new String(m.value));
-            }
-          }
-        }
-        BatchUpdate batchUpdate = new BatchUpdate(getText(row), timestamp);
+        BatchUpdate batchUpdate = new BatchUpdate(row, timestamp);
         for (Mutation m : mutations) {
           if (m.isDelete) {
-            batchUpdate.delete(getText(m.column));
+            batchUpdate.delete(m.column);
           } else {
-            batchUpdate.put(getText(m.column), m.value);
+            batchUpdate.put(m.column, m.value);
           }
         }
         batchUpdates.add(batchUpdate);
@@ -539,18 +441,10 @@ public class ThriftServer {
     
     public int scannerOpen(byte[] tableName, byte[] startRow,
         List<byte[]> columns) throws IOError {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("scannerOpen: table=" + new String(getText(tableName)) + ", start="
-            + new String(getText(startRow)) + ", columns=" + columns.toString());
-      }
       try {
         HTable table = getTable(tableName);
-        byte [][] columnsText = new byte[columns.size()][];
-        for (int i = 0; i < columns.size(); ++i) {
-          columnsText[i] = getText(columns.get(i));
-        }
-        Scanner scanner = table.getScanner(columnsText,
-            getText(startRow));
+        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
+            startRow);
         return addScanner(scanner);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -559,19 +453,10 @@ public class ThriftServer {
     
     public int scannerOpenWithStop(byte[] tableName, byte[] startRow,
         byte[] stopRow, List<byte[]> columns) throws IOError, TException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("scannerOpen: table=" + new String(getText(tableName)) + ", start="
-            + new String(getText(startRow)) + ", stop=" + new String(getText(stopRow)) + ", columns="
-            + columns.toString());
-      }
       try {
         HTable table = getTable(tableName);
-        byte [][] columnsText = new byte[columns.size()][];
-        for (int i = 0; i < columns.size(); ++i) {
-          columnsText[i] = getText(columns.get(i));
-        }
-        Scanner scanner = table.getScanner(columnsText,
-            getText(startRow), getText(stopRow));
+        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
+            startRow, stopRow);
         return addScanner(scanner);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -580,19 +465,10 @@ public class ThriftServer {
     
     public int scannerOpenTs(byte[] tableName, byte[] startRow,
         List<byte[]> columns, long timestamp) throws IOError, TException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("scannerOpen: table=" + new String(getText(tableName)) + ", start="
-            + new String(getText(startRow)) + ", columns=" + columns.toString()
-            + ", timestamp=" + timestamp);
-      }
       try {
         HTable table = getTable(tableName);
-        byte [][] columnsText = new byte[columns.size()][];
-        for (int i = 0; i < columns.size(); ++i) {
-          columnsText[i] = getText(columns.get(i));
-        }
-        Scanner scanner = table.getScanner(columnsText,
-            getText(startRow), timestamp);
+        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
+            startRow, timestamp);
         return addScanner(scanner);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -602,19 +478,10 @@ public class ThriftServer {
     public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow,
         byte[] stopRow, List<byte[]> columns, long timestamp)
         throws IOError, TException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("scannerOpen: table=" + new String(getText(tableName)) + ", start="
-            + new String(getText(startRow)) + ", stop=" + new String(getText(stopRow)) + ", columns="
-            + columns.toString() + ", timestamp=" + timestamp);
-      }
       try {
         HTable table = getTable(tableName);
-        byte [][] columnsText = new byte[columns.size()][];
-        for (int i = 0; i < columns.size(); ++i) {
-          columnsText[i] = getText(columns.get(i));
-        }
-        Scanner scanner = table.getScanner(columnsText,
-            getText(startRow), getText(stopRow), timestamp);
+        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
+            startRow, stopRow, timestamp);
         return addScanner(scanner);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -623,9 +490,6 @@ public class ThriftServer {
     
     public Map<byte[], ColumnDescriptor> getColumnDescriptors(
         byte[] tableName) throws IOError, TException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("getColumnDescriptors: table=" + new String(tableName));
-      }
       try {
         TreeMap<byte[], ColumnDescriptor> columns =
           new TreeMap<byte[], ColumnDescriptor>(Bytes.BYTES_COMPARATOR);
@@ -669,7 +533,7 @@ public class ThriftServer {
   }
 
   /*
-   * Start up the REST servlet in standalone mode.
+   * Start up the Thrift server.
    * @param args
    */
   protected static void doMain(final String [] args) throws Exception {
