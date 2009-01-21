@@ -42,6 +42,9 @@ Trunk (unreleased changes)
     the version information that is compiled into Hadoop. (cdouglas via 
     omalley)
 
+    HADOOP-5070. Increment copyright year to 2009, remove assertions of ASF
+    copyright to licensed files. (Tsz Wo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
