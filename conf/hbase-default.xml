@@ -181,6 +181,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.hlog.blocksize</name>
+    <value>67108864</value>
+    <description>Block size for HLog files. To minimize potential data loss,
+    the size should be (avg key length) * (avg value length) * flushlogentries.
+    Default 64MB.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
     <value>20000</value>
     <description>How often a region server runs the split/compaction check.
