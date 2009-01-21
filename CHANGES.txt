@@ -66,6 +66,9 @@ Release 0.19.1 - Unreleased
     reduce task and instantiating the reducer class. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5009. DataNode#shutdown sometimes leaves data block scanner
+    verification log unclosed. (hairong)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

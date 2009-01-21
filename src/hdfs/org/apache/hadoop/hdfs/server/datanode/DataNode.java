@@ -578,10 +578,13 @@ public class DataNode extends Configured
     
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
-    if (blockScanner != null)
-      blockScanner.shutdown();
-    if (blockScannerThread != null) 
+    if (blockScannerThread != null) { 
       blockScannerThread.interrupt();
+      try {
+        blockScannerThread.join(3600000L); // wait for at most 1 hour
+      } catch (InterruptedException ie) {
+      }
+    }
     if (storage != null) {
       try {
         this.storage.unlockAll();
