@@ -445,7 +445,7 @@ public class HConnectionManager implements HConstants {
           // second waits. The second thread will not do find.
           
           if (!useCache || rootRegionLocation == null) {
-            return locateRootRegion();
+            this.rootRegionLocation = locateRootRegion();
           }
           return rootRegionLocation;
         }        
