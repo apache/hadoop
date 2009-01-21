@@ -144,6 +144,8 @@ Release 0.18.3 - Unreleased
     HADOOP-4983. Fixes a problem in updating Counters in the status reporting.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4924. Fixes a race condition in TaskTracker re-init. (ddas)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
