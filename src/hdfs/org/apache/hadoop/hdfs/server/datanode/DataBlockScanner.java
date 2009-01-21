@@ -517,6 +517,7 @@ class DataBlockScanner implements Runnable {
       verificationLog.updateCurNumLines();
     }
     
+    try {
     // update verification times from the verificationLog.
     while (logReader != null && logReader.hasNext()) {
       if (!datanode.shouldRun || Thread.interrupted()) {
@@ -526,6 +527,9 @@ class DataBlockScanner implements Runnable {
       if (entry != null) {
         updateBlockInfo(entry);
       }
+    }
+    } finally {
+      IOUtils.closeStream(logReader);
     }
     
     /* Initially spread the block reads over half of 
@@ -590,12 +594,12 @@ class DataBlockScanner implements Runnable {
           } catch (InterruptedException ignored) {}
         }
       }
-      shutdown();
     } catch (RuntimeException e) {
       LOG.warn("RuntimeException during DataBlockScanner.run() : " +
                StringUtils.stringifyException(e));
       throw e;
     } finally {
+      shutdown();
       LOG.info("Exiting DataBlockScanner thread.");
     }
   }
@@ -783,8 +787,9 @@ class DataBlockScanner implements Runnable {
     //This reads the current file and updates the count.
     void updateCurNumLines() {
       int count = 0;
+      Reader it = null;
       try {
-        for(Reader it = new Reader(true); it.hasNext(); count++) {
+        for(it = new Reader(true); it.hasNext(); count++) {
           it.next();
         }
       } catch (IOException e) {
@@ -793,6 +798,7 @@ class DataBlockScanner implements Runnable {
         synchronized (this) {
           curNumLines = count;
         }
+        IOUtils.closeStream(it);
       }
     }
     
