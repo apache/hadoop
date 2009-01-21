@@ -792,7 +792,11 @@ class TaskInProgress {
           if (status.getProgress() >= bestProgress) {
             bestProgress = status.getProgress();
             bestState = status.getStateString();
-            bestCounters = status.getCounters();
+            if (status.getIncludeCounters()) {
+              bestCounters = status.getCounters();
+            } else {
+              bestCounters = this.counters;
+            }
           }
         }
       }
