@@ -62,6 +62,10 @@ Release 0.19.1 - Unreleased
     HADOOP-4967. Fixes a race condition in the JvmManager to do with killing
     tasks. (ddas)
 
+    HADOOP-5002. Fixes a problem to do with the order of initialization of
+    reduce task and instantiating the reducer class. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

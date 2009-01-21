@@ -334,7 +334,6 @@ class ReduceTask extends Task {
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
     job.setBoolean("mapred.skip.on", isSkipping());
-    Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
 
     if (!cleanupJob && !setupJob) {
       copyPhase = getProgress().addPhase("copy");
@@ -410,6 +409,7 @@ class ReduceTask extends Task {
       };
     
     // apply reduce function
+    Reducer reducer = ReflectionUtils.newInstance(job.getReducerClass(), job);
     try {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
