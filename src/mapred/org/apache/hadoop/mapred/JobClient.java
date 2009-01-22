@@ -1193,7 +1193,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @throws IOException
    */
   public ClusterStatus getClusterStatus() throws IOException {
-    return jobSubmitClient.getClusterStatus(false);
+    return getClusterStatus(false);
+  }
+
+  /**
+   * Get status information about the Map-Reduce cluster.
+   *  
+   * @param  detailed if true then get a detailed status including the
+   *         tracker names
+   * @return the status information about the Map-Reduce cluster as an object
+   *         of {@link ClusterStatus}.
+   * @throws IOException
+   */
+  public ClusterStatus getClusterStatus(boolean detailed) throws IOException {
+    return jobSubmitClient.getClusterStatus(detailed);
   }
     
 
