@@ -1,15 +1,74 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Hadoop 0.18.3 Release Notes</title></head><body>
+<font face="sans-serif">
 
-    <title>Hadoop 0.18.2 Release Notes</title></head><body>
-<font face="sans-serif">
-    </font><h1><font face="sans-serif">Hadoop 0.18.2 Release Notes</font></h1>
-<font face="sans-serif">The bug fixes are listed below.
-</font><ul><font face="sans-serif"><a name="changes">
-    </a></font><h2><font face="sans-serif"><a name="changes">Changes Since Hadoop 0.18.1</a></font></h2>
+<h1>Hadoop 0.18.3 Release Notes</h1>
+Hadoop 0.18.3 fixes serveral problems that may lead to data loss
+from the file system. Important changes were made to lease recovery and the management of
+block replicas.  The bug fixes are listed below.
 <ul>
-<font face="sans-serif">
+<h2>Changes Since Hadoop 0.18.2</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4823'>HADOOP-4823</a>] - Should not use java.util.NavigableMap in 0.18</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4824'>HADOOP-4824</a>] - Should not use File.setWritable(..) in 0.18</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-1980'>HADOOP-1980</a>] - 'dfsadmin -safemode enter' should prevent the namenode from leaving safemode automatically after startup</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3121'>HADOOP-3121</a>] - dfs -lsr fail with &quot;Could not get listing &quot;</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3883'>HADOOP-3883</a>] - TestFileCreation fails once in a while</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4061'>HADOOP-4061</a>] - Large number of decommission freezes the Namenode</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4257'>HADOOP-4257</a>] - TestLeaseRecovery2.testBlockSynchronization failing.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4499'>HADOOP-4499</a>] - DFSClient should invoke checksumOk only once.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4542'>HADOOP-4542</a>] - Fault in TestDistributedUpgrade</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4556'>HADOOP-4556</a>] - Block went missing</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4597'>HADOOP-4597</a>] - Under-replicated blocks are not calculated if the name-node is forced out of safe-mode.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4610'>HADOOP-4610</a>] - Always calculate mis-replicated blocks when safe-mode is turned off.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4613'>HADOOP-4613</a>] - browseBlock.jsp does not generate &quot;genstamp&quot; property.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4614'>HADOOP-4614</a>] - &quot;Too many open files&quot; error while processing a large gzip file</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4616'>HADOOP-4616</a>] - assertion makes fuse-dfs exit when reading incomplete data</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4620'>HADOOP-4620</a>] - Streaming mapper never completes if the mapper does not write to stdout</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4635'>HADOOP-4635</a>] - Memory leak ?</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4643'>HADOOP-4643</a>] - NameNode should exclude excessive replicas when counting live replicas for a block</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4647'>HADOOP-4647</a>] - NamenodeFsck creates a new DFSClient but never closes it</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4654'>HADOOP-4654</a>] - remove temporary output directory of failed tasks</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4659'>HADOOP-4659</a>] - Root cause of connection failure is being lost to code that uses it for delaying startup</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4679'>HADOOP-4679</a>] - Datanode prints tons of log messages: Waiting for threadgroup to exit, active theads is XX</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4702'>HADOOP-4702</a>] - Failed block replication leaves an incomplete block in receiver's tmp data directory</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4703'>HADOOP-4703</a>] - DataNode.createInterDataNodeProtocolProxy should not wait for proxy forever while recovering lease</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4713'>HADOOP-4713</a>] - librecordio does not scale to large records</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4714'>HADOOP-4714</a>] - map tasks timing out during merge phase</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4717'>HADOOP-4717</a>] - Removal of default port# in NameNode.getUri() cause a map/reduce job failed to prompt temporay output</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4726'>HADOOP-4726</a>] - documentation typos: &quot;the the&quot;</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4734'>HADOOP-4734</a>] - Some lease recovery codes in 0.19 or trunk should also be committed in 0.18.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4742'>HADOOP-4742</a>] - Mistake delete replica in hadoop 0.18.1</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4746'>HADOOP-4746</a>] - Job output directory should be normalized</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4778'>HADOOP-4778</a>] - Check for zero size block meta file when updating a block.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4795'>HADOOP-4795</a>] - Lease monitor may get into an infinite loop</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4797'>HADOOP-4797</a>] - RPC Server can leave a lot of direct buffers </li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4806'>HADOOP-4806</a>] - HDFS rename does not work correctly if src contains Java regular expression special characters</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4810'>HADOOP-4810</a>] - Data lost at cluster startup time</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4822'>HADOOP-4822</a>] - 0.18 cannot be compiled in Java 5.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4840'>HADOOP-4840</a>] - TestNodeCount sometimes fails with NullPointerException</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4904'>HADOOP-4904</a>] - Deadlock while leaving safe mode.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4910'>HADOOP-4910</a>] - NameNode should exclude corrupt replicas when choosing excessive replicas to delete</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4919'>HADOOP-4919</a>] - [HOD] Provide execute access to JT history directory path for group</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4924'>HADOOP-4924</a>] - Race condition in re-init of TaskTracker</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4935'>HADOOP-4935</a>] - Manual leaving of safe mode may lead to data lost</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4951'>HADOOP-4951</a>] - Lease monitor does not own the LeaseManager lock in changing leases.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4961'>HADOOP-4961</a>] - ConcurrentModificationException in lease recovery of empty files.</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4971'>HADOOP-4971</a>] - Block report times from datanodes could converge to same time.   </li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4983'>HADOOP-4983</a>] - Job counters sometimes go down as tasks run without task failures</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4997'>HADOOP-4997</a>] - workaround for tmp file handling on DataNodes in 0.18 (HADOOP-4663)</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5077'>HADOOP-5077</a>] - JavaDoc errors in 0.18.3</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3780'>HADOOP-3780</a>] - JobTracker should synchronously resolve the tasktracker's network location when the tracker registers</li>
+</ul>
+</ul>
+
+<h1>Hadoop 0.18.2 Release Notes</h1>
+The bug fixes are listed below.
+<ul>
+<h2>Changes Since Hadoop 0.18.1</h2>
+<ul>
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-2421">HADOOP-2421</a>] - Release JDiff report of changes between different versions of Hadoop.</li>
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-3217">HADOOP-3217</a>] - [HOD] Be less aggressive when querying job status from resource manager.</li>
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-3614">HADOOP-3614</a>] - TestLeaseRecovery fails when run with assertions enabled.</li>
@@ -35,13 +94,15 @@
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4517">HADOOP-4517</a>] - unstable dfs when running jobs on 0.18.1.</li>
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4526">HADOOP-4526</a>] - fsck failing with NullPointerException (return value 0).</li>
 	<li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4533">HADOOP-4533</a>] - HDFS client of hadoop 0.18.1 and HDFS server 0.18.2 (0.18 branch) not compatible.</li>
-</font></ul>
+</ul>
 </ul>
 
-</font><ul><font face="sans-serif"><a name="changes">
-    </a></font><h2><font face="sans-serif"><a name="changes">Changes Since Hadoop 0.18.0</a></font></h2>
+<h1>Hadoop 0.18.1 Release Notes</h1>
+The bug fixes are listed below.
 <ul>
-<font face="sans-serif"><li><a name="changes">[</a><a href="https://issues.apache.org/jira/browse/HADOOP-4040">HADOOP-4040</a>] - Remove the hardcoded ipc.client.connection.maxidletime setting from the TaskTracker.Child.main().</li>
+<h2>Changes Since Hadoop 0.18.0</h2>
+<ul>
+<li><a name="changes">[</a><a href="https://issues.apache.org/jira/browse/HADOOP-4040">HADOOP-4040</a>] - Remove the hardcoded ipc.client.connection.maxidletime setting from the TaskTracker.Child.main().</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-3934">HADOOP-3934</a>] - Update log4j from 1.2.13 to 1.2.15.</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-3995">HADOOP-3995</a>] - renameTo(src, dst) does not restore src name in case of quota failur.</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4046">HADOOP-4046</a>] - WritableComparator's constructor should be protected instead of private.</li>
@@ -52,17 +113,17 @@ gets into an inconsistent state when calling close() more than onc.</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4161">HADOOP-4161</a>] - [HOD] Uncaught exceptions can potentially hang hod-client.</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4060">HADOOP-4060</a>] - [HOD] Make HOD to roll log files on the client.</li>
 <li>[<a href="https://issues.apache.org/jira/browse/HADOOP-4145">HADOOP-4145</a>] - [HOD] Support an accounting plugin script for HOD.</li>
-</font></ul>
+</ul>
 </ul>
 
 
-<font face="sans-serif">    </font><h1><font face="sans-serif">Hadoop 0.18.0 Release Notes</font></h1>
-
-<font face="sans-serif">These release notes include new developer and user facing incompatibilities, features, and major improvements.
+<h1>Hadoop 0.18.0 Release Notes</h1>
+These release notes include new developer and user facing incompatibilities, features, and major improvements.
 The table below is sorted by Component.
-</font><ul><font face="sans-serif"><a name="changes">
-</a></font><h2><font face="sans-serif"><a name="changes">Changes Since Hadoop 0.17.2</a></font></h2>
-<font face="sans-serif"><a name="changes">  </a><table 100%="" border="1" cellpadding="4">
+<ul>
+<h2>Changes Since Hadoop 0.17.2</h2>
+<ul>
+<table 100%="" border="1" cellpadding="4">
    <tbody><tr>
     <td><b>Issue</b></td>
     <td><b>Component</b></td>
@@ -587,5 +648,7 @@ The table below is sorted by Component.
   FTPClient to directly store data into HDFS.</td>
  </tr>
 </tbody></table>
-</font></ul>
+</ul>
+</ul>
+</font>
 </body></html>

@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.18.3_-_unreleased_' && list.id != 'release_0.18.2_-_2008-11-03_') {
+        if (list.id != 'release_0.18.3_-_2009-01-27_' && list.id != 'release_0.18.2_-_2008-11-03_') {
           list.style.display = "none";
         }
       }
@@ -52,19 +52,19 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
-<h2><a href="javascript:toggleList('release_0.18.3_-_unreleased_')">Release 0.18.3 - Unreleased
+<h2><a href="javascript:toggleList('release_0.18.3_-_2009-01-27_')">Release 0.18.3 - 2009-01-27
 </a></h2>
-<ul id="release_0.18.3_-_unreleased_">
-  <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._improvements_')">  IMPROVEMENTS
+<ul id="release_0.18.3_-_2009-01-27_">
+  <li><a href="javascript:toggleList('release_0.18.3_-_2009-01-27_._improvements_')">  IMPROVEMENTS
 </a>&nbsp;&nbsp;&nbsp;(1)
-    <ol id="release_0.18.3_-_unreleased_._improvements_">
+    <ol id="release_0.18.3_-_2009-01-27_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4150">HADOOP-4150</a>. Include librecordio in hadoop releases.<br />(Giridharan Kesavan
 via acmurthy)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('release_0.18.3_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(29)
-    <ol id="release_0.18.3_-_unreleased_._bug_fixes_">
+  <li><a href="javascript:toggleList('release_0.18.3_-_2009-01-27_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(49)
+    <ol id="release_0.18.3_-_2009-01-27_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4499">HADOOP-4499</a>. DFSClient should invoke checksumOk only once.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4597">HADOOP-4597</a>. Calculate mis-replicated blocks when safe-mode is turned
 off manually.<br />(shv)</li>
@@ -111,6 +111,39 @@ map/reduce job failed to prompt temporary output.<br />(hairong)</li>
 receiver's tmp data directory.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4613">HADOOP-4613</a>. Fix block browsing on Web UI.<br />(Johan Oskarsson via shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4806">HADOOP-4806</a>. HDFS rename should not use src path as a regular expression.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4795">HADOOP-4795</a>. Prevent lease monitor getting into an infinite loop when
+leases and the namespace tree does not match.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4823">HADOOP-4823</a>. Use SortedMap instead of NavigableMap in 0.18 due to the
+Java 5 requirement.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4824">HADOOP-4824</a>. Should not use File.setWritable() in 0.18.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4620">HADOOP-4620</a>. Fixes Streaming to handle well the cases of map/reduce with empty
+input/output.<br />(Ravi Gummadi via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4857">HADOOP-4857</a>. Fixes TestUlimit to have exactly 1 map in the jobs spawned.<br />(Ravi Gummadi via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4810">HADOOP-4810</a>. Data lost at cluster startup time.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4797">HADOOP-4797</a>. Improve how RPC server reads and writes large buffers. Avoids
+soft-leak of direct buffers and excess copies in NIO layer.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4840">HADOOP-4840</a>. TestNodeCount sometimes fails with NullPointerException.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4904">HADOOP-4904</a>. Fix deadlock while leaving safe mode.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-1980">HADOOP-1980</a>. 'dfsadmin -safemode enter' should prevent the namenode from
+leaving safemode automatically.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4951">HADOOP-4951</a>. Lease monitor should acquire the LeaseManager lock but not the
+Monitor lock.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3780">HADOOP-3780</a>. Fixes a problem to do with NPE due to nodes not being
+resolved by the resolution thread in time.<br />(Ravia Gummadi via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4935">HADOOP-4935</a>. processMisReplicatedBlocks() should not clear
+excessReplicateMap.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4961">HADOOP-4961</a>. Fix ConcurrentModificationException in lease recovery
+of empty files.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4971">HADOOP-4971</a>. A long (unexpected) delay at datanodes could make subsequent
+block reports from many datanode at the same time.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4910">HADOOP-4910</a>. NameNode should exclude replicas when choosing excessive
+replicas to delete to avoid data lose.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4997">HADOOP-4997</a>. Revert tmp files handling on DataNodes back to 0.17.
+sync() introduced in 0.18 has less gaurantees (Raghu Angadi).
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5077">HADOOP-5077</a>. Fix couple of JavaDoc warnings.<br />(Raghu Angadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4983">HADOOP-4983</a>. Fixes a problem in updating Counters in the status reporting.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4924">HADOOP-4924</a>. Fixes a race condition in TaskTracker re-init.<br />(ddas)</li>
     </ol>
   </li>
 </ul>
