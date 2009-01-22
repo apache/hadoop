@@ -26,7 +26,7 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.18.3-dev"/>
+  <property name="version" value="0.18.4-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2008"/>
   <property name="libhdfs.version" value="1"/>
