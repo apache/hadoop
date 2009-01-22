@@ -1666,7 +1666,7 @@ Release 0.19.0 - 2008-11-18
     HADOOP-4500. Fix MultiFileSplit to get the FileSystem from the relevant
     path rather than the JobClient. (Joydeep Sen Sarma via cdouglas)
 
-Release 0.18.3 - Unreleased
+Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
 
