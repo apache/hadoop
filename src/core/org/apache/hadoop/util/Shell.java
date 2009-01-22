@@ -334,7 +334,23 @@ abstract public class Shell {
    * @return the output of the executed command.
    */
   public static String execCommand(String ... cmd) throws IOException {
+    return execCommand(null, cmd);
+  }
+  
+  /** 
+   * Static method to execute a shell command. 
+   * Covers most of the simple cases without requiring the user to implement  
+   * the <code>Shell</code> interface.
+   * @param env the map of environment key=value
+   * @param cmd shell command to execute.
+   * @return the output of the executed command.
+   */
+  public static String execCommand(Map<String,String> env, String ... cmd) 
+  throws IOException {
     ShellCommandExecutor exec = new ShellCommandExecutor(cmd);
+    if (env != null) {
+      exec.setEnvironment(env);
+    }
     exec.execute();
     return exec.getOutput();
   }

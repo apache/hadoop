@@ -22,6 +22,7 @@ import org.apache.hadoop.util.ProgramDriver;
 import org.apache.hadoop.mapred.BigMapOutput;
 import org.apache.hadoop.mapred.GenericMRLoadGenerator;
 import org.apache.hadoop.mapred.MRBench;
+import org.apache.hadoop.mapred.ReliabilityTest;
 import org.apache.hadoop.mapred.SortValidator;
 import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
@@ -74,6 +75,9 @@ public class AllTestDriver {
       pgd.addClass("filebench", FileBench.class, "Benchmark SequenceFile(Input|Output)Format (block,record compressed and uncompressed), Text(Input|Output)Format (compressed and uncompressed)");
       pgd.addClass("dfsthroughput", BenchmarkThroughput.class, 
                    "measure hdfs throughput");
+      pgd.addClass("MRReliabilityTest", ReliabilityTest.class,
+          "A program that tests the reliability of the MR framework by " +
+          "injecting faults/failures");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();

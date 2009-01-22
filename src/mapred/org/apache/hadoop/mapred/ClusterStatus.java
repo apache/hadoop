@@ -61,6 +61,7 @@ public class ClusterStatus implements Writable {
   private Collection<String> activeTrackers = new ArrayList<String>();
   private Collection<String> blacklistedTrackers = new ArrayList<String>();
   private int numBlacklistedTrackers;
+  private long ttExpiryInterval;
   private int map_tasks;
   private int reduce_tasks;
   private int max_map_tasks;
@@ -85,7 +86,8 @@ public class ClusterStatus implements Writable {
   @Deprecated
   ClusterStatus(int trackers, int maps, int reduces, int maxMaps,
                 int maxReduces, JobTracker.State state) {
-    this(trackers, 0, maps, reduces, maxMaps, maxReduces, state);
+    this(trackers, 0, JobTracker.TASKTRACKER_EXPIRY_INTERVAL, maps, reduces,
+        maxMaps, maxReduces, state);
   }
   
   /**
@@ -93,16 +95,19 @@ public class ClusterStatus implements Writable {
    * 
    * @param trackers no. of tasktrackers in the cluster
    * @param blacklists no of blacklisted task trackers in the cluster
+   * @param ttExpiryInterval the tasktracker expiry interval
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
    * @param maxMaps the maximum no. of map tasks in the cluster
    * @param maxReduces the maximum no. of reduce tasks in the cluster
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
    */
-  ClusterStatus(int trackers, int blacklists, int maps, int reduces,
+  ClusterStatus(int trackers, int blacklists, long ttExpiryInterval, 
+                int maps, int reduces,
                 int maxMaps, int maxReduces, JobTracker.State state) {
     numActiveTrackers = trackers;
     numBlacklistedTrackers = blacklists;
+    this.ttExpiryInterval = ttExpiryInterval;
     map_tasks = maps;
     reduce_tasks = reduces;
     max_map_tasks = maxMaps;
@@ -117,6 +122,7 @@ public class ClusterStatus implements Writable {
    * 
    * @param activeTrackers active tasktrackers in the cluster
    * @param blacklistedTrackers blacklisted tasktrackers in the cluster
+   * @param ttExpiryInterval the tasktracker expiry interval
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
    * @param maxMaps the maximum no. of map tasks in the cluster
@@ -125,10 +131,11 @@ public class ClusterStatus implements Writable {
    */
   ClusterStatus(Collection<String> activeTrackers, 
       Collection<String> blacklistedTrackers,
+      long ttExpiryInterval,
       int maps, int reduces, int maxMaps, int maxReduces, 
       JobTracker.State state) {
-    this(activeTrackers.size(), blacklistedTrackers.size(), maps, reduces,
-        maxMaps, maxReduces, state);
+    this(activeTrackers.size(), blacklistedTrackers.size(), ttExpiryInterval, 
+        maps, reduces, maxMaps, maxReduces, state);
     this.activeTrackers = activeTrackers;
     this.blacklistedTrackers = blacklistedTrackers;
   }
@@ -168,6 +175,14 @@ public class ClusterStatus implements Writable {
    */
   public int getBlacklistedTrackers() {
     return numBlacklistedTrackers;
+  }
+  
+  /**
+   * Get the tasktracker expiry interval for the cluster
+   * @return the expiry interval in msec
+   */
+  public long getTTExpiryInterval() {
+    return ttExpiryInterval;
   }
   
   /**
@@ -255,6 +270,7 @@ public class ClusterStatus implements Writable {
         Text.writeString(out, tracker);
       }
     }
+    out.writeLong(ttExpiryInterval);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
     out.writeInt(max_map_tasks);
@@ -281,6 +297,7 @@ public class ClusterStatus implements Writable {
         blacklistedTrackers.add(name);
       }
     }
+    ttExpiryInterval = in.readLong();
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
     max_map_tasks = in.readInt();
