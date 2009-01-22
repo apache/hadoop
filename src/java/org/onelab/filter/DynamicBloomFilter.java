@@ -51,8 +51,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.util.Hash;
-
 /**
  * Implements a <i>dynamic Bloom filter</i>, as defined in the INFOCOM 2006 paper.
  * <p>

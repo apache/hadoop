@@ -62,7 +62,7 @@ implements TableMap<ImmutableBytesWritable, RowResult> {
    */
   public void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<ImmutableBytesWritable,RowResult> output,
-      @SuppressWarnings("unused") Reporter reporter) throws IOException {
+      Reporter reporter) throws IOException {
     
     // convert 
     output.collect(key, value);

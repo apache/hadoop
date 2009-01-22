@@ -1588,8 +1588,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public void batchUpdate(final byte [] regionName, BatchUpdate b,
-      @SuppressWarnings("unused") long lockId)
-  throws IOException {
+      long lockId) throws IOException {
     if (b.getRow() == null)
       throw new IllegalArgumentException("update has null row");
     
@@ -2132,7 +2131,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   public long getProtocolVersion(final String protocol, 
-      @SuppressWarnings("unused") final long clientVersion)
+      final long clientVersion)
   throws IOException {  
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HBaseRPCProtocolVersion.versionID;

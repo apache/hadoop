@@ -94,8 +94,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
-      @SuppressWarnings("unused") long clientVersion) {
+  public long getProtocolVersion(String protocol,
+      long clientVersion) {
     return HBaseRPCProtocolVersion.versionID;
   }
 

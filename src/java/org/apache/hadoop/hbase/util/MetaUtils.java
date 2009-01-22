@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.FileNotFoundException;           //TODO: remove
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -430,7 +429,6 @@ public class MetaUtils {
     scanRootRegion(new ScannerListener() {
       private final Log SL_LOG = LogFactory.getLog(this.getClass());
       
-      @SuppressWarnings("unused")
       public boolean processRow(HRegionInfo info) throws IOException {
         SL_LOG.debug("Testing " + info);
         if (Bytes.equals(info.getTableDesc().getName(),

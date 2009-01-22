@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,6 +74,9 @@ public class IndexConfiguration extends Configuration {
   static final String HBASE_INDEX_OPTIMIZE = "hbase.index.optimize";
 
   public static class ColumnConf extends Properties {
+
+    private static final long serialVersionUID = 7419012290580607821L;
+
     boolean getBoolean(String name, boolean defaultValue) {
       String valueString = getProperty(name);
       if ("true".equals(valueString))
@@ -330,7 +332,7 @@ public class IndexConfiguration extends Configuration {
     }
   }
 
-  public void write(OutputStream out) throws IOException {
+  public void write(OutputStream out) {
     try {
       Document doc = writeDocument();
       DOMSource source = new DOMSource(doc);
@@ -402,6 +404,7 @@ public class IndexConfiguration extends Configuration {
     }
   }
 
+  @Override
   public String toString() {
     StringWriter writer = new StringWriter();
     try {

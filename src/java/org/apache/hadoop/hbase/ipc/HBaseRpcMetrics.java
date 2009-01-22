@@ -25,7 +25,6 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -83,9 +82,9 @@ public class HBaseRpcMetrics implements Updater {
 
     synchronized (metricsList) {
 	// Iterate through the rpcMetrics hashmap to propogate the different rpc metrics.
-	Set keys = metricsList.keySet();
+	Set<String> keys = metricsList.keySet();
 
-	Iterator keyIter = keys.iterator();
+	Iterator<String> keyIter = keys.iterator();
 
 	while (keyIter.hasNext()) {
 		Object key = keyIter.next();

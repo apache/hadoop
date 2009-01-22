@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
  */
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
+  @SuppressWarnings("hiding")
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /**
@@ -62,7 +63,6 @@ public class TableInputFormat extends TableInputFormatBase implements
     }
   }
 
-  @SuppressWarnings("deprecation")
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
     Path [] tableNames = FileInputFormat.getInputPaths(job);

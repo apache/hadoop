@@ -49,8 +49,6 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Responsible for writing and reading (recovering) transactional information
  * to/from the HLog.
- * 
- * 
  */
 class TransactionalHLogManager {
 

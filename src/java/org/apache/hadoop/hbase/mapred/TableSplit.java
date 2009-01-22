@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.InputSplit;
 /**
  * A table split corresponds to a key range [low, high)
  */
-public class TableSplit implements InputSplit, Comparable {
+public class TableSplit implements InputSplit, Comparable<TableSplit> {
   private byte [] m_tableName;
   private byte [] m_startRow;
   private byte [] m_endRow;
@@ -106,8 +106,7 @@ public class TableSplit implements InputSplit, Comparable {
       Bytes.toString(m_startRow) + "," + Bytes.toString(m_endRow);
   }
 
-  public int compareTo(Object arg) {
-    TableSplit other = (TableSplit)arg;
-    return Bytes.compareTo(getStartRow(), other.getStartRow());
+  public int compareTo(TableSplit o) {
+    return Bytes.compareTo(getStartRow(), o.getStartRow());
   }
 }

@@ -62,7 +62,7 @@ public class MasterMetrics implements Updater {
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
    */
-  public void doUpdates(@SuppressWarnings("unused") MetricsContext unused) {
+  public void doUpdates(MetricsContext unused) {
     synchronized (this) {
       synchronized(this.cluster_requests) {
         this.cluster_requests.pushMetric(metricsRecord);

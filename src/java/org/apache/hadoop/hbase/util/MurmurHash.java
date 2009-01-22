@@ -32,6 +32,7 @@ public class MurmurHash extends Hash {
     return _instance;
   }
   
+  @Override
   public int hash(byte[] data, int length, int seed) {
     int m = 0x5bd1e995;
     int r = 24;
@@ -62,13 +63,13 @@ public class MurmurHash extends Hash {
 
     if (left != 0) {
       if (left >= 3) {
-        h ^= (int) data[length - 3] << 16;
+        h ^= data[length - 3] << 16;
       }
       if (left >= 2) {
-        h ^= (int) data[length - 2] << 8;
+        h ^= data[length - 2] << 8;
       }
       if (left >= 1) {
-        h ^= (int) data[length - 1];
+        h ^= data[length - 1];
       }
 
       h *= m;

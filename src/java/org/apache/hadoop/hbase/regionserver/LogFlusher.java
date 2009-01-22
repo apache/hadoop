@@ -48,6 +48,7 @@ public class LogFlusher extends Chore {
     }
   }
 
+  @Override
   protected void chore() {
     synchronized (log) {
       HLog hlog = log.get();

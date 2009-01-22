@@ -50,9 +50,6 @@ package org.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;                        //TODO: remove
-
-import org.apache.hadoop.hbase.util.Hash;
 
 /**
  * Implements a <i>counting Bloom filter</i>, as defined by Fan et al. in a ToN
@@ -228,9 +225,8 @@ public final class CountingBloomFilter extends Filter {
     }
     if (res != Integer.MAX_VALUE) {
       return res;
-    } else {
-      return 0;
     }
+    return 0;
   }
 
   @Override
@@ -257,7 +253,6 @@ public final class CountingBloomFilter extends Filter {
   }//end or()
 
   @Override
-  @SuppressWarnings("unused")
   public void xor(Filter filter){
     throw new UnsupportedOperationException("xor() is undefined for "
         + this.getClass().getName());
@@ -289,7 +284,7 @@ public final class CountingBloomFilter extends Filter {
     CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash, hashType);
     cbf.buckets = this.buckets.clone();
     return cbf;
-  }//end clone()
+  }
 
   // Writable
 
@@ -311,4 +306,4 @@ public final class CountingBloomFilter extends Filter {
       buckets[i] = in.readLong();
     }
   }
-}//end class
+}

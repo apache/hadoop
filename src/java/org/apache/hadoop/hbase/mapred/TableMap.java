@@ -32,8 +32,7 @@ import org.apache.hadoop.mapred.Mapper;
  * @param <K> WritableComparable key class
  * @param <V> Writable value class
  */
-@SuppressWarnings("unchecked")
-public interface TableMap<K extends WritableComparable, V extends Writable>
+public interface TableMap<K extends WritableComparable<K>, V extends Writable>
 extends Mapper<ImmutableBytesWritable, RowResult, K, V> {
 
 }

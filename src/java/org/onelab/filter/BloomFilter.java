@@ -50,10 +50,8 @@ package org.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
 import java.util.BitSet;
 
-import org.apache.hadoop.hbase.util.Hash;
 
 /**
  * Implements a <i>Bloom filter</i>, as defined by Bloom in 1970.

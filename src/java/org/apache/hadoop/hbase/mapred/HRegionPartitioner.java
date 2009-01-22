@@ -61,7 +61,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
   }
 
   public int getPartition(ImmutableBytesWritable key,
-      @SuppressWarnings("unused") V2 value, int numPartitions) {
+      V2 value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
     if (this.startKeys.length == 1){

@@ -8,7 +8,6 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -239,9 +238,7 @@ public class Bytes {
    */
   public static boolean equals(final byte [] left, final byte [] right) {
     return left == null && right == null? true:
-      left == null && right != null? false:
-      left != null && right == null? false:
-      left.length != right.length? false:
+      (left == null || right == null || (left.length != right.length))? false:
         compareTo(left, right) == 0;
   }
   

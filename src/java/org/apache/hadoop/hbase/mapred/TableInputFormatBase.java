@@ -34,9 +34,7 @@ import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -74,7 +72,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, RowResult> {
-  private final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
   private HTable table;
   private TableRecordReader tableRecordReader;
@@ -203,7 +201,6 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
      * @return true if there was more data
      * @throws IOException
      */
-    @SuppressWarnings("unchecked")
     public boolean next(ImmutableBytesWritable key, RowResult value)
     throws IOException {
       RowResult result;
@@ -215,13 +212,14 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
         this.scanner.next();    // skip presumed already mapped row
         result = this.scanner.next();
       }
-      boolean hasMore = result != null && result.size() > 0;
-      if (hasMore) {
+
+      if (result != null && result.size() > 0) {
         key.set(result.getRow());
         lastRow = key.get();
         Writables.copyWritable(result, value);
+        return true;
       }
-      return hasMore;
+      return false;
     }
   }
 
@@ -232,10 +230,8 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
    * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
    *      JobConf, Reporter)
    */
-  public RecordReader<ImmutableBytesWritable, RowResult> getRecordReader(InputSplit split,
-      @SuppressWarnings("unused")
-      JobConf job, @SuppressWarnings("unused")
-      Reporter reporter)
+  public RecordReader<ImmutableBytesWritable, RowResult> getRecordReader(
+      InputSplit split, JobConf job, Reporter reporter)
   throws IOException {
     TableSplit tSplit = (TableSplit) split;
     TableRecordReader trr = this.tableRecordReader;

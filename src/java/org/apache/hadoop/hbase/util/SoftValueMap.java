@@ -68,7 +68,7 @@ public class SoftValueMap<K,V> implements Map<K,V> {
   }
   
   @SuppressWarnings("unchecked")
-  public void putAll(@SuppressWarnings("unused") Map map) {
+  public void putAll(Map map) {
     throw new RuntimeException("Not implemented");
   }
   
@@ -96,7 +96,7 @@ public class SoftValueMap<K,V> implements Map<K,V> {
     return this.internalMap.containsKey(key);
   }
   
-  public boolean containsValue(@SuppressWarnings("unused") Object value) {
+  public boolean containsValue(Object value) {
 /*    checkReferences();
     return internalMap.containsValue(value);*/
     throw new UnsupportedOperationException("Don't support containsValue!");

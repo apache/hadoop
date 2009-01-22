@@ -58,7 +58,7 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  * @see org.onelab.filter.Filter The general behavior of a filter
  */
-public class Key implements WritableComparable {
+public class Key implements WritableComparable<Key> {
   /** Byte value of key */
   byte[] bytes;
   
@@ -131,7 +131,7 @@ public class Key implements WritableComparable {
 
   @Override
   public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
+    return this.compareTo((Key)o) == 0;
   }
   
   @Override
@@ -160,16 +160,14 @@ public class Key implements WritableComparable {
   
   // Comparable
   
-  public int compareTo(Object o) {
-    Key other = (Key)o;
-
-    int result = this.bytes.length - other.getBytes().length;
+  public int compareTo(Key o) {
+    int result = this.bytes.length - o.getBytes().length;
     for(int i = 0; result == 0 && i < bytes.length; i++) {
-      result = this.bytes[i] - other.bytes[i];
+      result = this.bytes[i] - o.bytes[i];
     }
     
     if(result == 0) {
-      result = Double.valueOf(this.weight - other.weight).intValue();
+      result = Double.valueOf(this.weight - o.weight).intValue();
     }
     return result;
   }

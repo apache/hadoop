@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
  * load numbers, dying servers, etc.
  */
 class ServerManager implements HConstants {
-  private static final Log LOG =
+  static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
@@ -101,7 +101,7 @@ class ServerManager implements HConstants {
       getInt("hbase.regions.nobalancing.count", 4);
   }
  
-  /*
+  /**
    * Look to see if we have ghost references to this regionserver such as
    * still-existing leases or if regionserver is on the dead servers list
    * getting its logs processed.
@@ -337,7 +337,8 @@ class ServerManager implements HConstants {
     }    
   }
 
-  /* RegionServer is checking in, no exceptional circumstances
+  /**
+   *  RegionServer is checking in, no exceptional circumstances
    * @param serverName
    * @param serverInfo
    * @param mostLoadedRegions
@@ -739,7 +740,6 @@ class ServerManager implements HConstants {
   
   /** Instantiated to monitor the health of a region server */
   private class ServerExpirer implements LeaseListener {
-    @SuppressWarnings("hiding")
     private String server;
 
     ServerExpirer(String server) {

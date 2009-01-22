@@ -25,8 +25,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * Thrown when an operation requires the root and all meta regions to be online
  */
-@SuppressWarnings("serial")
 public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
+  private static final long serialVersionUID = 6439786157874827523L;
+
   /**
    * default constructor
    */

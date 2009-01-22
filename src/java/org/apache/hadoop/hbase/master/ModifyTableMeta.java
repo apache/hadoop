@@ -57,10 +57,8 @@ class ModifyTableMeta extends TableOperation {
   }
 
   @Override
-  protected void processScanItem(
-    @SuppressWarnings("unused") String serverName,
-    @SuppressWarnings("unused") long startCode, final HRegionInfo info) 
-      throws IOException {
+  protected void processScanItem(String serverName, long startCode,
+      final HRegionInfo info) throws IOException {
     if (isEnabled(info)) {
       throw new TableNotDisabledException(tableName.toString());
     }

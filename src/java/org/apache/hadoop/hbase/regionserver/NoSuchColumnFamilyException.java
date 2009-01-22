@@ -24,8 +24,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * Thrown if request for nonexistent column family.
  */
-@SuppressWarnings("serial")
 public class NoSuchColumnFamilyException extends DoNotRetryIOException {
+  private static final long serialVersionUID = -6569952730832331274L;
+
   /** default constructor */
   public NoSuchColumnFamilyException() {
     super();

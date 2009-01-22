@@ -83,7 +83,7 @@ public class TransactionalRegion extends HRegion {
   private static final int DEFAULT_OLD_TRANSACTION_FLUSH = 100; // Do a flush if we have this many old transactions..
   
 
-  private static final Log LOG = LogFactory.getLog(TransactionalRegion.class);
+  static final Log LOG = LogFactory.getLog(TransactionalRegion.class);
 
   // Collection of active transactions (PENDING) keyed by id.
   private Map<String, TransactionState> transactionsById = new HashMap<String, TransactionState>();

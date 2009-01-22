@@ -87,9 +87,9 @@ implements TableMap<ImmutableBytesWritable,RowResult> {
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
    */
-  public void map(@SuppressWarnings("unused") ImmutableBytesWritable key,
-      RowResult value, OutputCollector<ImmutableBytesWritable,RowResult> output,
-      @SuppressWarnings("unused") Reporter reporter) throws IOException {
+  public void map(ImmutableBytesWritable key, RowResult value, 
+      OutputCollector<ImmutableBytesWritable,RowResult> output,
+      Reporter reporter) throws IOException {
     
     byte[][] keyVals = extractKeyValues(value);
     if(keyVals != null) {

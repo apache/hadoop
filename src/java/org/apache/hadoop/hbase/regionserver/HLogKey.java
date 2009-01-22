@@ -33,7 +33,7 @@ import java.io.*;
  * 
  * Some Transactional edits (START, COMMIT, ABORT) will not have an associated row.
  */
-public class HLogKey implements WritableComparable {
+public class HLogKey implements WritableComparable<HLogKey> {
   private byte [] regionName;
   private byte [] tablename;
   private byte [] row;
@@ -94,7 +94,7 @@ public class HLogKey implements WritableComparable {
   
   @Override
   public boolean equals(Object obj) {
-    return compareTo(obj) == 0;
+    return compareTo((HLogKey)obj) == 0;
   }
   
   @Override
@@ -109,19 +109,18 @@ public class HLogKey implements WritableComparable {
   // Comparable
   //
 
-  public int compareTo(Object o) {
-    HLogKey other = (HLogKey) o;
-    int result = Bytes.compareTo(this.regionName, other.regionName);
+  public int compareTo(HLogKey o) {
+    int result = Bytes.compareTo(this.regionName, o.regionName);
     
     if(result == 0) {
-      result = Bytes.compareTo(this.row, other.row);
+      result = Bytes.compareTo(this.row, o.row);
       
       if(result == 0) {
         
-        if (this.logSeqNum < other.logSeqNum) {
+        if (this.logSeqNum < o.logSeqNum) {
           result = -1;
           
-        } else if (this.logSeqNum > other.logSeqNum) {
+        } else if (this.logSeqNum > o.logSeqNum) {
           result = 1;
         }
       }

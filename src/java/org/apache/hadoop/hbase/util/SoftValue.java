@@ -43,7 +43,7 @@ class SoftValue<K, V> extends SoftReference<V> implements Map.Entry<K, V> {
     return get();
   }
 
-  public V setValue(@SuppressWarnings("unused") V value) {
+  public V setValue(V value) {
     throw new RuntimeException("Not implemented");
   }
 }

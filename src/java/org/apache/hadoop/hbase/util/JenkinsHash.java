@@ -78,6 +78,7 @@ public class JenkinsHash extends Hash {
    * <p>Use for hash table lookup, or anything where one collision in 2^^32 is
    * acceptable.  Do NOT use for cryptographic purposes.
   */
+  @Override
   @SuppressWarnings("fallthrough")
   public int hash(byte[] key, int nbytes, int initval) {
     int length = nbytes;

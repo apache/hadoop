@@ -66,7 +66,7 @@ public class IndexTableReduce extends MapReduceBase implements
 
   public void reduce(ImmutableBytesWritable key, Iterator<RowResult> values,
       OutputCollector<ImmutableBytesWritable, LuceneDocumentWrapper> output,
-      @SuppressWarnings("unused") Reporter reporter)
+      Reporter reporter)
   throws IOException {
     if (!values.hasNext()) {
       return;

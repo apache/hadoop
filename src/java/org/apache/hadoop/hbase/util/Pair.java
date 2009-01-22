@@ -68,6 +68,7 @@ public class Pair<T1, T2> implements Serializable
      return (x == null && y == null) || (x != null && x.equals(y));
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public boolean equals(Object other)
   {
@@ -75,6 +76,7 @@ public class Pair<T1, T2> implements Serializable
       equals(second, ((Pair)other).second);
   }
 
+  @Override
   public int hashCode()
   {
     if (first == null)
@@ -85,6 +87,7 @@ public class Pair<T1, T2> implements Serializable
       return first.hashCode() * 17 + second.hashCode();
   }
 
+  @Override
   public String toString()
   {
     return "{" + getFirst() + "," + getSecond() + "}";

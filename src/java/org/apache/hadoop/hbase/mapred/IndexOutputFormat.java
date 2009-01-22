@@ -102,8 +102,8 @@ public class IndexOutputFormat extends
       boolean closed;
       private long docCount = 0;
 
-      public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
-        LuceneDocumentWrapper value)
+      public void write(ImmutableBytesWritable key, 
+          LuceneDocumentWrapper value)
       throws IOException {
         // unwrap and index doc
         Document doc = value.get();

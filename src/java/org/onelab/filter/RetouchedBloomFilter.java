@@ -56,8 +56,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.util.Hash;
-
 /**
  * Implements a <i>retouched Bloom filter</i>, as defined in the CoNEXT 2006 paper.
  * <p>

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.metrics;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
@@ -96,7 +95,7 @@ public class RegionServerMetrics implements Updater {
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
    */
-  public void doUpdates(@SuppressWarnings("unused") MetricsContext unused) {
+  public void doUpdates(MetricsContext unused) {
     synchronized (this) {
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);

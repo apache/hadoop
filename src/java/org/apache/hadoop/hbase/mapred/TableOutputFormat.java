@@ -63,12 +63,12 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
       m_table = table;
     }
 
-    public void close(@SuppressWarnings("unused") Reporter reporter) 
+    public void close(Reporter reporter) 
       throws IOException {
       m_table.flushCommits();
     }
 
-    public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
+    public void write(ImmutableBytesWritable key,
         BatchUpdate value) throws IOException {
       m_table.commit(new BatchUpdate(value));
     }
@@ -76,11 +76,8 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
   
   @Override
   @SuppressWarnings("unchecked")
-  public RecordWriter getRecordWriter(
-      @SuppressWarnings("unused") FileSystem ignored,
-      JobConf job,
-      @SuppressWarnings("unused") String name,
-      @SuppressWarnings("unused") Progressable progress) throws IOException {
+  public RecordWriter getRecordWriter(FileSystem ignored,
+      JobConf job, String name, Progressable progress) throws IOException {
     
     // expecting exactly one path
     
@@ -97,7 +94,6 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
   }
 
   @Override
-  @SuppressWarnings("unused")
   public void checkOutputSpecs(FileSystem ignored, JobConf job)
   throws FileAlreadyExistsException, InvalidJobConfException, IOException {
     

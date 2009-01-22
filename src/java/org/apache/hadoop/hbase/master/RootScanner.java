@@ -28,14 +28,13 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 class RootScanner extends BaseScanner {
   /**
    * Constructor
-   * 
    * @param master
    */
   public RootScanner(HMaster master) {
     super(master, true, master.metaRescanInterval, master.closed);
   }
 
-  /*
+  /**
    * Don't retry if we get an error while scanning. Errors are most often
    *
    * caused by the server going away. Wait until next rescan interval when

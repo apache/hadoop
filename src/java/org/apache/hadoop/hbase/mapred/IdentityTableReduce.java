@@ -45,7 +45,7 @@ implements TableReduce<ImmutableBytesWritable, BatchUpdate> {
    */
   public void reduce(ImmutableBytesWritable key, Iterator<BatchUpdate> values,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
-      @SuppressWarnings("unused") Reporter reporter)
+      Reporter reporter)
       throws IOException {
     
     while(values.hasNext()) {

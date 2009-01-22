@@ -46,6 +46,7 @@ public class TimeStampingFileContext extends FileContext {
     this.sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
   }
 
+  @Override
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
     String fileName = getAttribute(FILE_NAME_PROPERTY);
@@ -54,6 +55,7 @@ public class TimeStampingFileContext extends FileContext {
     }
   }
 
+  @Override
   public void startMonitoring() throws IOException {
     if (file == null) {
       writer = new PrintWriter(new BufferedOutputStream(System.out));
@@ -63,6 +65,7 @@ public class TimeStampingFileContext extends FileContext {
     super.startMonitoring();
   }
 
+  @Override
   public void stopMonitoring() {
     super.stopMonitoring();
     if (writer != null) {
@@ -75,6 +78,7 @@ public class TimeStampingFileContext extends FileContext {
     return this.sdf.format(new Date());
   }
 
+  @Override
   public void emitRecord(String contextName, String recordName,
       OutputRecord outRec) {
     writer.print(iso8601());
@@ -100,6 +104,7 @@ public class TimeStampingFileContext extends FileContext {
     writer.println();
   }
 
+  @Override
   public void flush() {
     writer.flush();
   }

@@ -38,18 +38,15 @@ abstract class ColumnOperation extends TableOperation {
   }
 
   @Override
-  protected void processScanItem(
-    @SuppressWarnings("unused") String serverName,
-    @SuppressWarnings("unused") long startCode, final HRegionInfo info) 
-  throws IOException {
+  protected void processScanItem(String serverName, long startCode,
+      final HRegionInfo info) throws IOException {
     if (isEnabled(info)) {
       throw new TableNotDisabledException(tableName);
     }
   }
 
   protected void updateRegionInfo(HRegionInterface server, byte [] regionName,
-    HRegionInfo i) 
-  throws IOException {
+    HRegionInfo i) throws IOException {
     BatchUpdate b = new BatchUpdate(i.getRegionName());
     b.put(COL_REGIONINFO, Writables.getBytes(i));
     server.batchUpdate(regionName, b, -1L);

@@ -59,7 +59,7 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
   
   public void map(ImmutableBytesWritable row, RowResult value,
     OutputCollector<ImmutableBytesWritable, RowResult> output,
-    @SuppressWarnings("unused") Reporter reporter)
+    Reporter reporter)
   throws IOException {
     boolean content = false;
     for (Map.Entry<byte [], Cell> e: value.entrySet()) {
@@ -82,7 +82,7 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
    * @return the JobConf
    * @throws IOException
    */
-  @SuppressWarnings({ "unused", "deprecation" })
+  @SuppressWarnings("unused")
   public JobConf createSubmittableJob(String[] args) throws IOException {
     JobConf c = new JobConf(getConf(), RowCounter.class);
     c.setJobName(NAME);

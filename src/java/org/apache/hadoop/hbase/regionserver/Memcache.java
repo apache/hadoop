@@ -258,7 +258,6 @@ class Memcache {
    * @param b
    * @return Return lowest of a or b or null if both a and b are null
    */
-  @SuppressWarnings("unchecked")
   private byte [] getLowest(final byte [] a,
       final byte [] b) {
     if (a == null) {
