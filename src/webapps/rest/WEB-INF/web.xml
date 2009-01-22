@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app id="WebApp_ID" version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
-  <display-name>rest</display-name>
+  <display-name>jsonrest</display-name>
   <servlet>
-    <description>Hbase REST Interface</description>
+    <description>Hbase JSONREST Interface</description>
     <display-name>api</display-name>
     <servlet-name>api</servlet-name>
     <servlet-class>org.apache.hadoop.hbase.rest.Dispatcher</servlet-class>
   </servlet>
   <servlet-mapping>
     <servlet-name>api</servlet-name>
-    <url-pattern>/*</url-pattern>
+    <url-pattern>/api/*</url-pattern>
   </servlet-mapping>
 </web-app>

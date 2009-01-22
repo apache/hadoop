@@ -32,14 +32,20 @@ import java.util.SortedMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.rest.descriptors.RestCell;
+import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
+import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
+import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
+import agilejson.TOJSON;
+
 /**
  * Holds row name and then a map of columns to cells.
  */
-public class RowResult implements Writable, SortedMap<byte [], Cell> {
+public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializable {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
@@ -63,6 +69,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
    * Get the row for this RowResult
    * @return the row
    */
+  @TOJSON(base64=true)
   public byte [] getRow() {
     return row;
   }
@@ -123,6 +130,22 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
 
   public Set<Map.Entry<byte [], Cell>> entrySet() {
     return Collections.unmodifiableSet(this.cells.entrySet());
+  }
+  
+  /**
+   * This method used solely for the REST serialization
+   * 
+   * @return
+   */
+  @TOJSON
+  public RestCell[] getCells() {
+    RestCell[] restCells = new RestCell[this.cells.size()];
+    int i = 0;
+    for (Map.Entry<byte[], Cell> entry : this.cells.entrySet()) {
+      restCells[i] = new RestCell(entry.getKey(), entry.getValue());
+      i++;
+    }
+    return restCells;
   }
 
   public Collection<Cell> values() {
@@ -235,10 +258,17 @@ public class RowResult implements Writable, SortedMap<byte [], Cell> {
     return sb.toString();
   }
   
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
+   */
+  public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
+    serializer.serializeRowResult(this);
+  }  
+  
   //
   // Writable
   //
-  
+
   public void readFields(final DataInput in) throws IOException {
     this.row = Bytes.readByteArray(in);
     this.cells.readFields(in);

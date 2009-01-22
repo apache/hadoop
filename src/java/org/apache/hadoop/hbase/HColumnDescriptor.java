@@ -27,9 +27,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
+import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
+import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+
+import agilejson.TOJSON;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -40,7 +45,7 @@ import org.apache.hadoop.io.WritableComparable;
  * column and recreating it. If there is data stored in the column, it will be
  * deleted when the column is deleted.
  */
-public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
+public class HColumnDescriptor implements ISerializable, WritableComparable<HColumnDescriptor> {
   // For future backward compatibility
 
   // Version 3 was when column names become byte arrays and when we picked up
@@ -257,6 +262,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Name of this column family with colon as required by client API
    */
+  @TOJSON(fieldName = "name", base64=true)
   public byte [] getNameWithColon() {
     return HStoreKey.addDelimiter(this.name);
   }
@@ -315,6 +321,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /** @return compression type being used for the column family */
+  @TOJSON
   public CompressionType getCompression() {
     String value = getValue(COMPRESSION);
     if (value != null) {
@@ -327,6 +334,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
   
   /** @return maximum number of versions */
+  @TOJSON
   public int getMaxVersions() {
     String value = getValue(HConstants.VERSIONS);
     if (value != null)
@@ -344,6 +352,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Compression type setting.
    */
+  @TOJSON
   public CompressionType getCompressionType() {
     return getCompression();
   }
@@ -364,6 +373,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return True if we are to keep all in use HRegionServer cache.
    */
+  @TOJSON(prefixLength = 2)
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
     if (value != null)
@@ -382,6 +392,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Maximum value length.
    */
+  @TOJSON
   public synchronized int getMaxValueLength() {
     if (this.maxValueLength == null) {
       String value = getValue(LENGTH);
@@ -402,6 +413,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Time-to-live of cell contents, in seconds.
    */
+  @TOJSON
   public int getTimeToLive() {
     String value = getValue(TTL);
     return (value != null)? Integer.valueOf(value).intValue(): DEFAULT_TTL;
@@ -417,6 +429,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return True if MapFile blocks should be cached.
    */
+  @TOJSON(prefixLength = 2)
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
     if (value != null)
@@ -434,6 +447,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return true if a bloom filter is enabled
    */
+  @TOJSON(prefixLength = 2)
   public boolean isBloomfilter() {
     String value = getValue(BLOOMFILTER);
     if (value != null)
@@ -576,5 +590,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         result = 1;
     }
     return result;
+  }
+
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
+   */
+  public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
+    serializer.serializeColumnDescriptor(this);    
   }
 }

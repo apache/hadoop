@@ -23,8 +23,10 @@ Release 0.20.0 - Unreleased
    HBASE-1031  Add the Zookeeper jar
    HBASE-1142  Cleanup thrift server; remove Text and profuse DEBUG messaging
                (Tim Sell via Stack)
+   HBASE-1064  HBase REST xml/json improvements (Brian Beggs working of
+               initial Michael Gottesman work via Stack)
 
-Release 0.19.0 - Unreleased
+Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
    HBASE-885   TableMap and TableReduce should be interfaces
                (Doğacan Güney via Stack)

@@ -31,14 +31,19 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
+import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
+import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
+
+import agilejson.TOJSON;
 
 /**
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
  */
-public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
+public class HTableDescriptor implements WritableComparable<HTableDescriptor>, ISerializable {
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -383,6 +388,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /** @return name of table */
+  @TOJSON
   public byte [] getName() {
     return name;
   }
@@ -621,6 +627,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public Collection<HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableCollection(this.families.values());
   }
+  
+  @TOJSON(fieldName = "columns")
+  public HColumnDescriptor[] getColumnFamilies() {
+    return getFamilies().toArray(new HColumnDescriptor[0]);
+  }
 
   /**
    * @param column
@@ -667,4 +678,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
             HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
             false, false, Integer.MAX_VALUE, HConstants.WEEK_IN_SECONDS, false)});
+
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
+   */
+  public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
+    serializer.serializeTableDescriptor(this);
+  }
 }
