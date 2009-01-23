@@ -1707,7 +1707,8 @@ public class HRegion implements HConstants {
     try {
       if (writeToWAL) {
         this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), updatesByColumn);
+          regionInfo.getTableDesc().getName(), updatesByColumn,
+          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()));
       }
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {

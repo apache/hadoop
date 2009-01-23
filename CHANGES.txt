@@ -10,6 +10,7 @@ Release 0.20.0 - Unreleased
    HBASE-1138  Test that readers opened after a sync can see all data up to the
                sync (temporary until HADOOP-4379 is resolved)
    HBASE-1121  Cluster confused about where -ROOT- is
+   HBASE-1148  Always flush HLog on root or meta region updates
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
