@@ -173,7 +173,7 @@ public class HLog implements HConstants, Syncable {
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 100);
     this.blocksize =
-      conf.getLong("hbase.regionserver.hlog.blocksize", 1024L * 1024L * 64L);
+      conf.getLong("hbase.regionserver.hlog.blocksize", 1024L * 1024L);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);

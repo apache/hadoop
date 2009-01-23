@@ -64,7 +64,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
   @Override
   protected boolean process() throws IOException {
     Boolean result =
-      new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+      new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
         private final RegionHistorian historian = RegionHistorian.getInstance();
       
         public Boolean call() throws IOException {

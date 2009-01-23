@@ -134,6 +134,7 @@ public class HConnectionManager implements HConstants {
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
 
+    // Used by master and region servers during safe mode only
     private volatile HRegionLocation rootRegionLocation; 
     
     private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
@@ -177,10 +178,12 @@ public class HConnectionManager implements HConstants {
       return this.pause * HConstants.RETRY_BACKOFF[ntries];
     }
 
+    // Used by master and region servers during safe mode only
     public void unsetRootRegionLocation() {
       this.rootRegionLocation = null;
     }
     
+    // Used by master and region servers during safe mode only
     public void setRootRegionLocation(HRegionLocation rootRegion) {
       if (rootRegion == null) {
         throw new IllegalArgumentException(
@@ -445,7 +448,7 @@ public class HConnectionManager implements HConstants {
           // second waits. The second thread will not do find.
           
           if (!useCache || rootRegionLocation == null) {
-            this.rootRegionLocation = locateRootRegion();
+            return locateRootRegion();
           }
           return rootRegionLocation;
         }        

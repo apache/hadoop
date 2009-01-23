@@ -182,10 +182,10 @@
   </property>
   <property>
     <name>hbase.regionserver.hlog.blocksize</name>
-    <value>67108864</value>
+    <value>1048576</value>
     <description>Block size for HLog files. To minimize potential data loss,
     the size should be (avg key length) * (avg value length) * flushlogentries.
-    Default 64MB.
+    Default 1MB.
     </description>
   </property>
   <property>
@@ -231,12 +231,6 @@
     <description>Time to sleep in between searches for work (in milliseconds).
     Used as sleep interval by service threads such as META scanner and log roller.
     </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.safemode.period</name>
-    <value>120000</value>
-    <description>Time to wait on regionserver startup before beginning
-    compactions and memcache flushes.</description>
   </property>
   <property>
     <name>hbase.hregion.memcache.flush.size</name>

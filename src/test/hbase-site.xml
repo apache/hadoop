@@ -98,6 +98,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.safemode</name>
+    <value>false</value>
+    <description>
+    Turn on/off safe mode in region server. Always on for production, always off
+    for tests.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.max.filesize</name>
     <value>67108864</value>
     <description>
@@ -110,12 +118,5 @@
   <property>
     <name>hadoop.log.dir</name>
     <value>${user.dir}/../logs</value>
-  </property>
-  <property>
-    <name>hbase.regionserver.safemode.period</name>
-    <value>0</value>
-    <description>Time to wait on regionserver startup before beginning
-    compactions and memcache flushes.
-    </description>
   </property>
 </configuration>

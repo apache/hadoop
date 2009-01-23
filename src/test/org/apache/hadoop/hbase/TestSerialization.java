@@ -33,10 +33,12 @@ import org.apache.hadoop.hbase.util.Writables;
  */
 public class TestSerialization extends HBaseTestCase {
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
   }
 
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }
@@ -53,7 +55,7 @@ public class TestSerialization extends HBaseTestCase {
   }
   
   public void testHMsg() throws Exception {
-    HMsg  m = HMsg.REGIONSERVER_QUIESCE;
+    HMsg  m = new HMsg(HMsg.Type.MSG_REGIONSERVER_QUIESCE);
     byte [] mb = Writables.getBytes(m);
     HMsg deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
     assertTrue(m.equals(deserializedHMsg));

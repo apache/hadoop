@@ -61,7 +61,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
     Boolean result = null;
     if (offlineRegion) {
       result =
-        new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+        new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
           public Boolean call() throws IOException {
             LOG.info("region closed: " + regionInfo.getRegionNameAsString());
 

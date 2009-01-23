@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HMsg.Type;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
@@ -52,6 +53,13 @@ import org.apache.hadoop.hbase.HRegionLocation;
 class ServerManager implements HConstants {
   static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
+  private static final HMsg REGIONSERVER_QUIESCE =
+    new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
+  private static final HMsg REGIONSERVER_STOP =
+    new HMsg(Type.MSG_REGIONSERVER_STOP);
+  private static final HMsg CALL_SERVER_STARTUP =
+    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
+  private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
 
@@ -225,7 +233,7 @@ class ServerManager implements HConstants {
     if (msgs.length > 0) {
       if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
         processRegionServerExit(serverName, msgs);
-        return HMsg.EMPTY_HMSG_ARRAY;
+        return EMPTY_HMSG_ARRAY;
       } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
         LOG.info("Region server " + serverName + " quiesced");
         quiescedServers.incrementAndGet();
@@ -245,10 +253,10 @@ class ServerManager implements HConstants {
             msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
           // Server is already quiesced, but we aren't ready to shut down
           // return empty response
-          return HMsg.EMPTY_HMSG_ARRAY;
+          return EMPTY_HMSG_ARRAY;
         }
         // Tell the server to stop serving any user regions
-        return new HMsg [] {HMsg.REGIONSERVER_QUIESCE};
+        return new HMsg [] {REGIONSERVER_QUIESCE};
       }
     }
 
@@ -256,7 +264,7 @@ class ServerManager implements HConstants {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
-      return new HMsg [] {HMsg.REGIONSERVER_STOP};
+      return new HMsg [] {REGIONSERVER_STOP};
     }
 
     HServerInfo storedInfo = serversToServerInfo.get(serverName);
@@ -267,7 +275,7 @@ class ServerManager implements HConstants {
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
-      return new HMsg[]{HMsg.CALL_SERVER_STARTUP};
+      return new HMsg[]{CALL_SERVER_STARTUP};
     } else if (storedInfo.getStartCode() != serverInfo.getStartCode()) {
       // This state is reachable if:
       //
@@ -287,7 +295,7 @@ class ServerManager implements HConstants {
         serversToServerInfo.notifyAll();
       }
       
-      return new HMsg[]{HMsg.REGIONSERVER_STOP};
+      return new HMsg[]{REGIONSERVER_STOP};
     } else {
       return processRegionServerAllsWell(serverName, serverInfo, 
         mostLoadedRegions, msgs);
@@ -436,7 +444,8 @@ class ServerManager implements HConstants {
     synchronized (master.regionManager) {
       // Tell the region server to close regions that we have marked for closing.
       for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
-        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i,
+            master.regionManager.inSafeMode()));
         // Transition the region from toClose to closing state
         master.regionManager.setPendingClose(i.getRegionName());
       }
@@ -531,7 +540,8 @@ class ServerManager implements HConstants {
         // Otherwise the HMaster will think the Region was closed on purpose, 
         // and then try to reopen it elsewhere; that's not what we want.
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
-            region, "Duplicate assignment".getBytes()));
+            region, "Duplicate assignment".getBytes(),
+            master.regionManager.inSafeMode()));
       } else {
         if (region.isRootRegion()) {
           // it was assigned, and it's not a duplicate assignment, so take it out 
@@ -540,8 +550,10 @@ class ServerManager implements HConstants {
 
           // Store the Root Region location (in memory)
           HServerAddress rootServer = serverInfo.getServerAddress();
-          master.connection.setRootRegionLocation(
-              new HRegionLocation(region, rootServer));
+          if (master.regionManager.inSafeMode()) {
+            master.connection.setRootRegionLocation(
+                new HRegionLocation(region, rootServer));
+          }
           master.regionManager.setRootRegionLocation(rootServer);
         } else {
           // Note that the table has been assigned and is waiting for the
@@ -564,7 +576,6 @@ class ServerManager implements HConstants {
     synchronized (master.regionManager) {
       if (region.isRootRegion()) {
         // Root region
-        master.connection.unsetRootRegionLocation();
         master.regionManager.unsetRootRegion();
         if (region.isOffline()) {
           // Can't proceed without root region. Shutdown.

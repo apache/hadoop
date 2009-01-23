@@ -274,7 +274,8 @@ class RegionManager implements HConstants {
           " to server " + serverName);
         s.setPendingOpen(serverName);
         this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
-        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
+        returnMsgs.add(
+            new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
         if (--nregions <= 0) {
           break;
         }
@@ -401,7 +402,8 @@ class RegionManager implements HConstants {
           " to the only server " + serverName);
       s.setPendingOpen(serverName);
       this.historian.addRegionAssignment(s.getRegionInfo(), serverName);
-      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
+      returnMsgs.add(
+          new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
     }
   }
   
@@ -440,7 +442,7 @@ class RegionManager implements HConstants {
           currentRegion.getRegionNameAsString());
       // make a message to close the region
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,
-        OVERLOADED));
+        OVERLOADED, inSafeMode()));
       // mark the region as closing
       setClosing(serverName, currentRegion, false);
       setPendingClose(currentRegion.getRegionName());
@@ -901,6 +903,7 @@ class RegionManager implements HConstants {
   public boolean inSafeMode() {
     if (safeMode) {
       if(isInitialMetaScanComplete() && regionsInTransition.size() == 0) {
+        master.connection.unsetRootRegionLocation();
         safeMode = false;
         LOG.info("exiting safe mode");
       } else {
@@ -1065,7 +1068,7 @@ class RegionManager implements HConstants {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Sending " + msg + " " + pair.getFirst() + " to " + addr);
           }
-          returnMsgs.add(new HMsg(msg, pair.getFirst()));
+          returnMsgs.add(new HMsg(msg, pair.getFirst(), inSafeMode()));
           i.remove();
         }
       }

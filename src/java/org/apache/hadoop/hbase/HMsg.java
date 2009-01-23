@@ -114,23 +114,7 @@ public class HMsg implements Writable {
   private Type type = null;
   private HRegionInfo info = null;
   private byte[] message = null;
-
-  // Some useful statics.  Use these rather than create a new HMsg each time.
-  //TODO: move the following to HRegionServer
-  public static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
-  public static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
-  //TODO: Move to o.a.h.h.master
-  public static final HMsg REGIONSERVER_QUIESCE =
-    new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
-  //TODO: Move to o.a.h.h.master
-  public static final HMsg REGIONSERVER_STOP =
-    new HMsg(Type.MSG_REGIONSERVER_STOP);
-  //TODO: Move to o.a.h.h.master
-  public static final HMsg CALL_SERVER_STARTUP =
-    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
-  //TODO: Move to o.a.h.h.master
-  public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
-  
+  private boolean safeMode = false;
 
   /** Default constructor. Used during deserialization */
   public HMsg() {
@@ -138,11 +122,11 @@ public class HMsg implements Writable {
   }
 
   /**
-   * Construct a message with the specified message and HRegionInfo
+   * Construct a message with the specified message and empty HRegionInfo
    * @param type Message type
    */
   public HMsg(final HMsg.Type type) {
-    this(type, new HRegionInfo(), null);
+    this(type, new HRegionInfo(), null, false);
   }
   
   /**
@@ -151,7 +135,20 @@ public class HMsg implements Writable {
    * @param hri Region to which message <code>type</code> applies
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri) {
-    this(type, hri, null);
+    this(type, hri, null, false);
+  }
+  
+  /**
+   * Constructor used by master to inform region servers if we are still in 
+   * safe mode.
+   * 
+   * @param type
+   * @param hri
+   * @param safeMode
+   */
+  public HMsg(final HMsg.Type type, final HRegionInfo hri,
+      final boolean safeMode) {
+    this(type, hri, null, safeMode);
   }
   
   /**
@@ -163,6 +160,19 @@ public class HMsg implements Writable {
    * @param msg Optional message (Stringified exception, etc.)
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg) {
+    this(type, hri, msg, false);
+  }
+
+  /**
+   * Used by the master to inform region servers if we are still in safe mode
+   * 
+   * @param type
+   * @param hri
+   * @param msg
+   * @param safemode
+   */
+  public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg,
+      final boolean safemode) {
     if (type == null) {
       throw new NullPointerException("Message type cannot be null");
     }
@@ -172,6 +182,7 @@ public class HMsg implements Writable {
     }
     this.info = hri;
     this.message = msg;
+    this.safeMode = safemode;
   }
 
   /**
@@ -198,6 +209,11 @@ public class HMsg implements Writable {
   public byte[] getMessage() {
     return this.message;
   }
+  
+  /** @return safe mode */
+  public boolean isInSafeMode() {
+    return this.safeMode;
+  }
 
   @Override
   public String toString() {
@@ -211,6 +227,7 @@ public class HMsg implements Writable {
     if (this.message != null && this.message.length > 0) {
       sb.append(": " + Bytes.toString(this.message));
     }
+    sb.append(": safeMode=" + safeMode);
     return sb.toString();
   }
   
@@ -244,6 +261,7 @@ public class HMsg implements Writable {
        out.writeBoolean(true);
        Bytes.writeByteArray(out, this.message);
      }
+     out.writeBoolean(this.safeMode);
    }
 
   public void readFields(DataInput in) throws IOException {
@@ -254,5 +272,6 @@ public class HMsg implements Writable {
      if (hasMessage) {
        this.message = Bytes.readByteArray(in);
      }
+     this.safeMode = in.readBoolean();
    }
 }

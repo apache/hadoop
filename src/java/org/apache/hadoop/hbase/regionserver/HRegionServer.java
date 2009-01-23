@@ -109,6 +109,8 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
+  private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
@@ -200,8 +202,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final LogRoller logRoller;
   final LogFlusher logFlusher;
   
-  // safemode processing
-  SafeModeThread safeModeThread;
+  // limit compactions while starting up
+  CompactionLimitThread compactionLimitThread;
 
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -317,7 +319,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             haveRootRegion.set(true);
           }
         }
-          long now = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
           LOG.warn("unable to report to master for " + (now - lastMsg) +
@@ -361,6 +363,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 !restart && !stopRequested.get() && i < msgs.length;
                 i++) {
               LOG.info(msgs[i].toString());
+              if (safeMode.get()) {
+                if (!msgs[i].isInSafeMode()) {
+                  this.connection.unsetRootRegionLocation();
+                  synchronized (safeMode) {
+                    safeMode.set(false);
+                    safeMode.notifyAll();
+                  }
+                }
+              }
               switch(msgs[i].getType()) {
               case MSG_CALL_SERVER_STARTUP:
                 // We the MSG_CALL_SERVER_STARTUP on startup but we can also
@@ -503,7 +514,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-        exitMsg[0] = HMsg.REPORT_EXITING;
+        exitMsg[0] = REPORT_EXITING;
         // Tell the master what regions we are/were serving
         int i = 1;
         for (HRegion region: closedRegions) {
@@ -729,30 +740,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * Thread for toggling safemode after some configurable interval.
    */
-  private class SafeModeThread extends Thread {
+  private class CompactionLimitThread extends Thread {
     @Override
     public void run() {
-      // first, wait the required interval before turning off safemode
-      int safemodeInterval =
-        conf.getInt("hbase.regionserver.safemode.period", 120 * 1000);
-      try {
-        Thread.sleep(safemodeInterval);
-      } catch (InterruptedException ex) {
-        // turn off safemode and limits on the way out due to some kind of
-        // abnormal condition so we do not prevent such things as memcache
-        // flushes and worsen the situation
-        safeMode.set(false);
-        compactSplitThread.setLimit(-1);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(this.getName() + " exiting on interrupt");
+      // First wait until we exit safe mode
+      synchronized (safeMode) {
+        while(safeMode.get()) {
+          LOG.debug("Waiting to exit safe mode");
+          try {
+            safeMode.wait();
+          } catch (InterruptedException e) {
+            // ignore
+          }
         }
-        return;
       }
-      LOG.info("leaving safe mode");
-      safeMode.set(false);
 
       // now that safemode is off, slowly increase the per-cycle compaction
       // limit, finally setting it to unlimited (-1)
+
       int compactionCheckInterval = 
         conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
             20 * 1000);
@@ -1006,13 +1011,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
 
     // Set up the safe mode handler if safe mode has been configured.
-    if (conf.getInt("hbase.regionserver.safemode.period", 0) < 1) {
+    if (!conf.getBoolean("hbase.regionserver.safemode", true)) {
       safeMode.set(false);
       compactSplitThread.setLimit(-1);
       LOG.debug("skipping safe mode");
     } else {
-      this.safeModeThread = new SafeModeThread();
-      Threads.setDaemonThreadRunning(this.safeModeThread, n + ".safeMode",
+      this.compactionLimitThread = new CompactionLimitThread();
+      Threads.setDaemonThreadRunning(this.compactionLimitThread, n + ".safeMode",
         handler);
     }
 
@@ -1482,9 +1487,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     this.quiesced.set(true);
     if (onlineRegions.size() == 0) {
-      outboundMsgs.add(HMsg.REPORT_EXITING);
+      outboundMsgs.add(REPORT_EXITING);
     } else {
-      outboundMsgs.add(HMsg.REPORT_QUIESCED);
+      outboundMsgs.add(REPORT_QUIESCED);
     }
   }
 

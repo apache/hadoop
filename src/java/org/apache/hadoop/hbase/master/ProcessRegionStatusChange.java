@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final boolean isMetaTable;
   protected final HRegionInfo regionInfo;
-  protected final MetaRegion metaRegion;
-  protected final byte [] metaRegionName;
+  private volatile MetaRegion metaRegion = null;
+  protected volatile byte[] metaRegionName = null;
   
   /**
    * @param master
@@ -40,15 +40,6 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     super(master);
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
-    if (isMetaTable) {
-      this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
-      this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
-          this.metaRegionName, HConstants.EMPTY_START_ROW);
-    } else {
-      this.metaRegion =
-        master.regionManager.getFirstMetaRegionForRegion(regionInfo);
-      this.metaRegionName = this.metaRegion.getRegionName();
-    }
   }
   
   protected boolean metaRegionAvailable() {
@@ -70,5 +61,18 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
       }
     }
     return available;
+  }
+
+  protected MetaRegion getMetaRegion() {
+    if (isMetaTable) {
+      this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
+      this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
+          this.metaRegionName, HConstants.EMPTY_START_ROW);
+    } else {
+      this.metaRegion =
+        master.regionManager.getFirstMetaRegionForRegion(regionInfo);
+      this.metaRegionName = this.metaRegion.getRegionName();
+    }
+    return this.metaRegion;
   }
 }
