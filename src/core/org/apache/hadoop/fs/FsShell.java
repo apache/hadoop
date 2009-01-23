@@ -1035,7 +1035,7 @@ public class FsShell extends Configured implements Tool {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
-    Trash trashTmp = new Trash(srcFs.getConf());
+    Trash trashTmp = new Trash(srcFs, getConf());
     if (trashTmp.moveToTrash(src)) {
       System.out.println("Moved to trash: " + src);
       return;

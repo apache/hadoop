@@ -50,21 +50,31 @@ public class Trash extends Configured {
   private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmm");
   private static final int MSECS_PER_MINUTE = 60*1000;
 
-  private FileSystem fs;
-  private Path trash;
-  private Path current;
-  private long interval;
+  private final FileSystem fs;
+  private final Path trash;
+  private final Path current;
+  private final long interval;
 
   /** Construct a trash can accessor.
    * @param conf a Configuration
    */
   public Trash(Configuration conf) throws IOException {
-    this(FileSystem.get(conf).getHomeDirectory(), conf);
+    this(FileSystem.get(conf), conf);
+  }
+
+  /**
+   * Construct a trash can accessor for the FileSystem provided.
+   */
+  public Trash(FileSystem fs, Configuration conf) throws IOException {
+    super(conf);
+    this.fs = fs;
+    this.trash = new Path(fs.getHomeDirectory(), TRASH);
+    this.current = new Path(trash, CURRENT);
+    this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
   }
 
   private Trash(Path home, Configuration conf) throws IOException {
     super(conf);
-
     this.fs = home.getFileSystem(conf);
     this.trash = new Path(home, TRASH);
     this.current = new Path(trash, CURRENT);
