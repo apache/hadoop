@@ -480,7 +480,7 @@ public class FairScheduler extends TaskScheduler {
         }
       }
       mapWeightSums.put(pool.getName(), mapWeightSum);
-      reduceWeightSums.put(pool.getName(), mapWeightSum);
+      reduceWeightSums.put(pool.getName(), reduceWeightSum);
     }
     // And normalize the weights based on pool sums and pool weights
     // to share fairly across pools (proportional to their weights)
@@ -489,8 +489,16 @@ public class FairScheduler extends TaskScheduler {
       JobInfo info = entry.getValue();
       String pool = poolMgr.getPoolName(job);
       double poolWeight = poolMgr.getPoolWeight(pool);
-      info.mapWeight *= (poolWeight / mapWeightSums.get(pool)); 
-      info.reduceWeight *= (poolWeight / reduceWeightSums.get(pool));
+      double mapWeightSum = mapWeightSums.get(pool);
+      double reduceWeightSum = reduceWeightSums.get(pool);
+      if (mapWeightSum == 0)
+        info.mapWeight = 0;
+      else
+        info.mapWeight *= (poolWeight / mapWeightSum); 
+      if (reduceWeightSum == 0)
+        info.reduceWeight = 0;
+      else
+        info.reduceWeight *= (poolWeight / reduceWeightSum); 
     }
   }
   
@@ -555,6 +563,12 @@ public class FairScheduler extends TaskScheduler {
               int share = (int) Math.ceil(oldSlots * weight / totalWeight);
               slotsLeft = giveMinSlots(job, type, slotsLeft, share);
             }
+            if (slotsLeft > 0) {
+              LOG.warn("Had slotsLeft = " + slotsLeft + " after the final "
+                  + "loop in updateMinSlots. This probably means some fair "
+                  + "scheduler weights are being set to NaN or Infinity.");
+            }
+            break;
           }
         }
       }
