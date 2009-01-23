@@ -243,7 +243,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   private int replIndex = 0;
 
-  public static FSNamesystem fsNamesystemObject;
+  private static FSNamesystem fsNamesystemObject;
   /** NameNode RPC address */
   private InetSocketAddress nameNodeAddress = null; // TODO: name-node has this field, it should be removed here
   private SafeModeInfo safeMode;  // safe mode information
@@ -436,8 +436,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
   
   /** Return the FSNamesystem object
-   * 
+   * @deprecated FSNamesystem object should be obtained from the container
+   *             object such as a NameNode object. 
    */
+  @Deprecated
   public static FSNamesystem getFSNamesystem() {
     return fsNamesystemObject;
   } 
@@ -4379,7 +4381,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // package naming for mbeans and their impl.
     StandardMBean bean;
     try {
-      myFSMetrics = new FSNamesystemMetrics(conf);
+      myFSMetrics = new FSNamesystemMetrics(this, conf);
       bean = new StandardMBean(this,FSNamesystemMBean.class);
       mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemState", bean);
     } catch (NotCompliantMBeanException e) {

@@ -17,20 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 
 
@@ -43,17 +39,7 @@ public class TestFileLimit extends TestCase {
   static final int blockSize = 8192;
   boolean simulatedStorage = false;
 
-  // The test file is 2 times the blocksize plus one. This means that when the
-  // entire file is written, the first two blocks definitely get flushed to
-  // the datanodes.
-
-  private static String TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
-  
-  //
   // creates a zero file.
-  //
   private void createFile(FileSystem fileSys, Path name)
     throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -99,8 +85,7 @@ public class TestFileLimit extends TestCase {
     }
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
-    FSNamesystem namesys = FSNamesystem.fsNamesystemObject;
-    NameNode namenode = cluster.getNameNode();
+    FSNamesystem namesys = cluster.getNamesystem();
     try {
 
       //

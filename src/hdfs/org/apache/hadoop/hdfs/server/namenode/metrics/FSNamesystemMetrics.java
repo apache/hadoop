@@ -43,19 +43,23 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 public class FSNamesystemMetrics implements Updater {
   private static Log log = LogFactory.getLog(FSNamesystemMetrics.class);
   private final MetricsRecord metricsRecord;
-  public MetricsRegistry registry = new MetricsRegistry();
+  private final MetricsRegistry registry = new MetricsRegistry();
 
    
-  public MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal", registry);
-  public MetricsLongValue blocksTotal = new MetricsLongValue("BlocksTotal", registry);
-  public MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB", registry);
-  public MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB", registry);
-  public MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB", registry);
-  public MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad", registry);
-  public MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
-  public MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
-  public MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
-  public FSNamesystemMetrics(Configuration conf) {
+  private final MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal", registry);
+  private final MetricsLongValue blocksTotal = new MetricsLongValue("BlocksTotal", registry);
+  private final MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB", registry);
+  private final MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB", registry);
+  private final MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB", registry);
+  private final MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad", registry);
+  private final MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
+  private final MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
+  private final MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
+
+  private final FSNamesystem fsNameSystem;
+
+  public FSNamesystemMetrics(FSNamesystem fsNameSystem, Configuration conf) {
+    this.fsNameSystem = fsNameSystem;
     String sessionId = conf.get("session.id");
      
     // Create a record for FSNamesystem metrics
@@ -91,7 +95,6 @@ public class FSNamesystemMetrics implements Updater {
      * we could avoid copying the values on each update.
      */
     synchronized (this) {
-      FSNamesystem fsNameSystem = FSNamesystem.getFSNamesystem();
       filesTotal.set((int)fsNameSystem.getFilesTotal());
       blocksTotal.set((int)fsNameSystem.getBlocksTotal());
       capacityTotalGB.set(roundBytesToGBytes(fsNameSystem.getCapacityTotal()));
