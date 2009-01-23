@@ -63,7 +63,7 @@ public class HttpConnector implements Connector, Runnable  {
   ChukwaAgent agent;
   String argDestination = null;
   
-  private boolean stopMe = false;
+  private volatile boolean stopMe = false;
   private boolean reloadConfiguration = false;
   private Iterator<String> collectors = null;
   protected ChukwaSender connectorClient = null;

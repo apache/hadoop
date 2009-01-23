@@ -568,6 +568,9 @@ Release 0.20.0 - Unreleased
     killed after initialization, but before running. 
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4671. Mark loop control variables shared between threads as
+    volatile. (cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

@@ -55,7 +55,7 @@ public class FairScheduler extends TaskScheduler {
     new HashMap<JobInProgress, JobInfo>();
   protected long lastUpdateTime;           // Time when we last updated infos
   protected boolean initialized;  // Are we initialized?
-  protected boolean running;      // Are we running?
+  protected volatile boolean running; // Are we running?
   protected boolean useFifo;      // Set if we want to revert to FIFO behavior
   protected boolean assignMultiple; // Simultaneously assign map and reduce?
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs

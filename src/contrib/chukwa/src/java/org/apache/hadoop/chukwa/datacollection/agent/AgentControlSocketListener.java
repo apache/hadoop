@@ -41,7 +41,7 @@ public class AgentControlSocketListener extends Thread {
   ChukwaAgent agent;
   int portno;
   ServerSocket s= null;
-  boolean closing = false;
+  volatile boolean closing = false;
   
   private class ListenThread extends Thread
   {

@@ -90,7 +90,7 @@ public class IndexUpdateReducer extends MapReduceBase implements
     // close the shard
     final Reporter fReporter = reporter;
     new Closeable() {
-      boolean closed = false;
+      volatile boolean closed = false;
 
       public void close() throws IOException {
         // spawn a thread to give progress heartbeats

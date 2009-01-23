@@ -63,7 +63,7 @@ public class SecondaryNameNode implements Runnable {
   private NamenodeProtocol namenode;
   private Configuration conf;
   private InetSocketAddress nameNodeAddr;
-  private boolean shouldRun;
+  private volatile boolean shouldRun;
   private HttpServer infoServer;
   private int infoPort;
   private String infoBindAddress;
