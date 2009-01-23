@@ -1152,6 +1152,51 @@ public class TestFairScheduler extends TestCase {
   }
 
   /**
+   * This test submits jobs in two pools, poolA and poolB. None of the
+   * jobs in poolA have maps, but this should not affect their reduce
+   * share.
+   */
+  public void testPoolWeightsWhenNoMaps() throws Exception {
+    // Set up pools file
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<pool name=\"poolA\">");
+    out.println("<weight>2.0</weight>");
+    out.println("</pool>");
+    out.println("<pool name=\"poolB\">");
+    out.println("<weight>1.0</weight>");
+    out.println("</pool>");
+    out.println("</allocations>");
+    out.close();
+    scheduler.getPoolManager().reloadAllocs();
+    
+    // Submit jobs, advancing time in-between to make sure that they are
+    // all submitted at distinct times.
+    JobInProgress job1 = submitJob(JobStatus.RUNNING, 0, 10, "poolA");
+    JobInfo info1 = scheduler.infos.get(job1);
+    JobInProgress job2 = submitJob(JobStatus.RUNNING, 0, 10, "poolA");
+    JobInfo info2 = scheduler.infos.get(job2);
+    JobInProgress job3 = submitJob(JobStatus.RUNNING, 10, 10, "poolB");
+    JobInfo info3 = scheduler.infos.get(job3);
+    advanceTime(10);
+    
+    assertEquals(0,     info1.mapWeight, 0.01);
+    assertEquals(1.0,   info1.reduceWeight, 0.01);
+    assertEquals(0,     info2.mapWeight, 0.01);
+    assertEquals(1.0,   info2.reduceWeight, 0.01);
+    assertEquals(1.0,   info3.mapWeight, 0.01);
+    assertEquals(1.0,   info3.reduceWeight, 0.01);
+    
+    assertEquals(0,     info1.mapFairShare, 0.01);
+    assertEquals(1.33,  info1.reduceFairShare, 0.01);
+    assertEquals(0,     info2.mapFairShare, 0.01);
+    assertEquals(1.33,  info2.reduceFairShare, 0.01);
+    assertEquals(4,     info3.mapFairShare, 0.01);
+    assertEquals(1.33,  info3.reduceFairShare, 0.01);
+  }
+
+  /**
    * Tests that max-running-tasks per node are set by assigning load
    * equally accross the cluster in CapBasedLoadManager.
    */
