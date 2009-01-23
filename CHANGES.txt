@@ -625,6 +625,8 @@ Release 0.19.1 - Unreleased
     HADOOP-5009. DataNode#shutdown sometimes leaves data block scanner
     verification log unclosed. (hairong)
 
+    HADOOP-5086. Use the appropriate FileSystem for trash URIs. (cdouglas)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
