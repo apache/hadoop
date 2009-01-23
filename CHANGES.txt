@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     HADOOP-5050. TestDFSShell.testFilePermissions should not assume umask
     setting.  (Jakob Homan via szetszwo)
 
+    HADOOP-4975. Set classloader for nested mapred.join configs. (Jingkei Ly
+    via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
