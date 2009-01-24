@@ -27,6 +27,7 @@ Release 0.20.0 - Unreleased
                (Tim Sell via Stack)
    HBASE-1064  HBase REST xml/json improvements (Brian Beggs working of
                initial Michael Gottesman work via Stack)
+   HBASE-5121  Fix shell usage for format.width
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

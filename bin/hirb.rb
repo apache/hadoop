@@ -30,7 +30,7 @@ require 'HBase'
 cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
  format        Formatter for outputting results: console | html. Default: console
- format.width  Width of table outputs. Default: 110 characters.
+ format-width  Width of table outputs. Default: 110 characters.
  master        HBase master shell should connect to: e.g --master=example:60000
 HERE
 master = nil
