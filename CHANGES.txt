@@ -66,6 +66,10 @@ Trunk (unreleased changes)
     HADOOP-4975. Set classloader for nested mapred.join configs. (Jingkei Ly
     via cdouglas)
 
+    HADOOP-5079. HashFunction inadvertently destroys some randomness
+    (Jonathan Ellis via stack)
+     
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
