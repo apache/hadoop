@@ -314,6 +314,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4939. Adds a test that would inject random failures for tasks in 
     large jobs and would also inject TaskTracker failures. (ddas)
 
+    HADOOP-4920.  Stop storing Forrest output in Subversion. (cutting)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
