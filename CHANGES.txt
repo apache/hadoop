@@ -1,6 +1,7 @@
 HBase Change Log
 Release 0.20.0 - Unreleased
   INCOMPATIBLE CHANGES
+   HBASE-1147  Modify the scripts to use Zookeeper
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

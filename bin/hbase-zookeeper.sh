@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 #/**
-# * Copyright 2007 The Apache Software Foundation
+# * Copyright 2009 The Apache Software Foundation
 # *
 # * Licensed to the Apache Software Foundation (ASF) under one
 # * or more contributor license agreements.  See the NOTICE file
@@ -19,16 +19,24 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
+# 
+# Run a hbase command on all slave hosts.
+# Modelled after $HADOOP_HOME/bin/hadoop-daemons.sh
 
-# Modelled after $HADOOP_HOME/bin/stop-hbase.sh.
+usage="Usage: hbase-daemons.sh [--config <hbase-confdir>] \
+ [start|stop] command args..."
 
-# Stop hadoop hbase daemons.  Run this on master node.
+# if no args specified, show usage
+if [ $# -le 1 ]; then
+  echo $usage
+  exit 1
+fi
 
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hbase-config.sh
+. $bin/hbase-config.sh
 
-"$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
-"$bin"/hbase-zookeeper.sh --config "${HBASE_CONF_DIR}" \
-  stop zookeeper
+exec "$bin/zookeeper.sh" --config "${HBASE_CONF_DIR}" \
+ cd "${HBASE_HOME}" \; \
+ "$bin/hbase-daemon.sh" --config "${HBASE_CONF_DIR}" "$@"
