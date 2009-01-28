@@ -57,8 +57,8 @@ public class TestTrash extends TestCase {
 
   // check that the specified file is in Trash
   protected static void checkTrash(FileSystem fs, Path trashRoot,
-      String pathname) throws IOException {
-    Path p = new Path(trashRoot+"/"+new Path(pathname).getName());
+      Path path) throws IOException {
+    Path p = new Path(trashRoot+"/"+ path.toUri().getPath());
     assertTrue(fs.exists(p));
   }
 
@@ -106,7 +106,7 @@ public class TestTrash extends TestCase {
     {
       String[] args = new String[2];
       args[0] = "-rm";
-      args[1] = new Path(base, "test/mkdirs/myFile").toString();
+      args[1] = myFile.toString();
       int val = -1;
       try {
         val = shell.run(args);
@@ -117,7 +117,7 @@ public class TestTrash extends TestCase {
       assertTrue(val == 0);
 
       trashRoot = shell.getCurrentTrashDir();
-      checkTrash(fs, trashRoot, args[1]);
+      checkTrash(fs, trashRoot, myFile);
     }
 
     // Verify that we can recreate the file
@@ -216,7 +216,7 @@ public class TestTrash extends TestCase {
     {
       String[] args = new String[2];
       args[0] = "-rm";
-      args[1] = new Path(base, "test/mkdirs/myFile").toString();
+      args[1] = myFile.toString();
       int val = -1;
       try {
         val = shell.run(args);
@@ -225,11 +225,11 @@ public class TestTrash extends TestCase {
                            e.getLocalizedMessage());
       }
       assertTrue(val == 0);
-      checkTrash(fs, trashRoot, args[1]);
+      checkTrash(fs, trashRoot, myFile);
 
       args = new String[2];
       args[0] = "-rmr";
-      args[1] = new Path(base, "test/mkdirs").toString();
+      args[1] = myPath.toString();
       val = -1;
       try {
         val = shell.run(args);
@@ -238,7 +238,7 @@ public class TestTrash extends TestCase {
                            e.getLocalizedMessage());
       }
       assertTrue(val == 0);
-      checkTrash(fs, trashRoot, args[1]);
+      checkTrash(fs, trashRoot, myPath);
     }
 
     // attempt to remove parent of trash
@@ -272,10 +272,10 @@ public class TestTrash extends TestCase {
         f = writeFile(lfs, f);
 
         FileSystem.closeAll();
-        Trash lTrash =
-          new Trash(FileSystem.get(URI.create("file:///"), conf), conf);
+        FileSystem localFs = FileSystem.get(URI.create("file:///"), conf);
+        Trash lTrash = new Trash(localFs, conf);
         lTrash.moveToTrash(f.getParent());
-        assertTrue(lfs.exists(new Path(lTrash.getCurrentTrashDir(), "foo/bar")));
+        checkTrash(localFs, lTrash.getCurrentTrashDir(), f);
       } finally {
         if (lfs.exists(p)) {
           lfs.delete(p, true);

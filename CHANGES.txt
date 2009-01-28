@@ -64,6 +64,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4874. Remove LZO codec because of licensing issues. (omalley)
 
+    HADOOP-4970. The full path name of a file is preserved inside Trash.
+    (Prasad Chakka via dhruba)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
