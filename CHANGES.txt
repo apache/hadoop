@@ -66,9 +66,6 @@ Trunk (unreleased changes)
     HADOOP-4975. Set classloader for nested mapred.join configs. (Jingkei Ly
     via cdouglas)
 
-    HADOOP-5079. HashFunction inadvertently destroys some randomness
-    (Jonathan Ellis via stack)
-
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -647,6 +644,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4999. A failure to write to FsEditsLog results in 
     IndexOutOfBounds exception. (Boris Shkolnik via rangadi)
+
+    HADOOP-5079. HashFunction inadvertently destroys some randomness
+    (Jonathan Ellis via stack)
 
 Release 0.19.1 - Unreleased
 
