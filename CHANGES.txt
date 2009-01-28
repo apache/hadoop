@@ -646,7 +646,7 @@ Release 0.20.0 - Unreleased
     HADOOP-4671. Mark loop control variables shared between threads as
     volatile. (cdouglas)
 
-    HADOOP-4999. A failure to write to FsEditsLog esults in 
+    HADOOP-4999. A failure to write to FsEditsLog results in 
     IndexOutOfBounds exception. (Boris Shkolnik via rangadi)
 
 Release 0.19.1 - Unreleased
