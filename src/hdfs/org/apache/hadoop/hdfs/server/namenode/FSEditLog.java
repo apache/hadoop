@@ -843,13 +843,15 @@ public class FSEditLog {
   synchronized void logEdit(byte op, Writable ... writables) {
     assert this.getNumEditStreams() > 0 : "no editlog streams";
     long start = FSNamesystem.now();
-    int numEditStreams = editStreams.size();
-    for (int idx = 0; idx < numEditStreams; idx++) {
+    for (int idx = 0; idx < editStreams.size(); idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
       try {
         eStream.write(op, writables);
       } catch (IOException ie) {
         processIOError(idx);         
+        // processIOError will remove the idx's stream 
+        // from the editStreams collection, so we need to update idx
+        idx--; 
       }
     }
     // get a new transactionId
