@@ -80,6 +80,10 @@ public class Trash extends Configured {
     this.current = new Path(trash, CURRENT);
     this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
   }
+  
+  private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
+    return new Path(basePath + rmFilePath.toUri().getPath());
+  }
 
   /** Move a file or directory to the current trash directory.
    * @return false if the item is already in the trash or trash is disabled
@@ -105,19 +109,20 @@ public class Trash extends Configured {
                             "\" to the trash, as it contains the trash");
     }
 
-    Path trashPath = new Path(current, path.getName());
-
+    Path trashPath = makeTrashRelativePath(current, path);
+    Path baseTrashPath = makeTrashRelativePath(current, path.getParent());
+    
     IOException cause = null;
 
     // try twice, in case checkpoint between the mkdirs() & rename()
     for (int i = 0; i < 2; i++) {
       try {
-        if (!fs.mkdirs(current, PERMISSION)) {      // create current
-          LOG.warn("Can't create trash directory: "+current);
+        if (!fs.mkdirs(baseTrashPath, PERMISSION)) {      // create current
+          LOG.warn("Can't create trash directory: "+baseTrashPath);
           return false;
         }
       } catch (IOException e) {
-        LOG.warn("Can't create trash directory: "+current);
+        LOG.warn("Can't create trash directory: "+baseTrashPath);
         return false;
       }
       try {
