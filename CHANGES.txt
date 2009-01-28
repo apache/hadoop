@@ -68,7 +68,9 @@ Trunk (unreleased changes)
 
     HADOOP-5079. HashFunction inadvertently destroys some randomness
     (Jonathan Ellis via stack)
-     
+    
+    HADOOP-4955. Make DBOutputFormat us column names from setOutput().
+    (Kevin Peterson via enis) 
 
 Release 0.20.0 - Unreleased
 
