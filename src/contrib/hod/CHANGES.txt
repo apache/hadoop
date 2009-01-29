@@ -16,6 +16,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-5113. Fixed logcondense to remove files for usernames
+    beginning with characters specified in the -l option.
+    (Peeyush Bishnoi via yhemanth)
+
 Release 0.20.0 - (unreleased changes)
 
   INCOMPATIBLE CHANGES
