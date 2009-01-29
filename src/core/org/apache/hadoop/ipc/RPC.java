@@ -519,8 +519,15 @@ public class RPC {
         MetricsTimeVaryingRate m =
          (MetricsTimeVaryingRate) rpcMetrics.registry.get(call.getMethodName());
       	if (m == null) {
-      	  m = new MetricsTimeVaryingRate(call.getMethodName(),
+      	  try {
+      	    m = new MetricsTimeVaryingRate(call.getMethodName(),
       	                                        rpcMetrics.registry);
+      	  } catch (IllegalArgumentException iae) {
+      	    // the metrics has been registered; re-fetch the handle
+      	    LOG.info("Error register " + call.getMethodName(), iae);
+      	    m = (MetricsTimeVaryingRate) rpcMetrics.registry.get(
+      	        call.getMethodName());
+      	  }
       	}
         m.inc(processingTime);
 

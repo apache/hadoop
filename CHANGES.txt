@@ -647,6 +647,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4862. Minor : HADOOP-3678 did not remove all the cases of 
     spurious IOExceptions logged by DataNode. (Raghu Angadi) 
 
+    HADOOP-5139. Catch IllegalArgumentException during metrics registration
+    in RPC.  (Hairong Kuang via szetszwo)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
