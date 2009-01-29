@@ -74,6 +74,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4955. Make DBOutputFormat us column names from setOutput().
     (Kevin Peterson via enis) 
 
+    HADOOP-4862. Minor : HADOOP-3678 did not remove all the cases of 
+    spurious IOExceptions logged by DataNode. (Raghu Angadi) 
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

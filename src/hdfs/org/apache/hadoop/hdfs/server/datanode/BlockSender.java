@@ -201,6 +201,26 @@ class BlockSender implements java.io.Closeable, FSConstants {
   }
 
   /**
+   * Converts an IOExcpetion (not subclasses) to SocketException.
+   * This is typically done to indicate to upper layers that the error 
+   * was a socket error rather than often more serious exceptions like 
+   * disk errors.
+   */
+  private static IOException ioeToSocketException(IOException ioe) {
+    if (ioe.getClass().equals(IOException.class)) {
+      // "se" could be a new class in stead of SocketException.
+      IOException se = new SocketException("Original Exception : " + ioe);
+      se.initCause(ioe);
+      /* Change the stacktrace so that original trace is not truncated
+       * when printed.*/ 
+      se.setStackTrace(ioe.getStackTrace());
+      return se;
+    }
+    // otherwise just return the same exception.
+    return ioe;
+  }
+
+  /**
    * Sends upto maxChunks chunks of data.
    * 
    * When blockInPosition is >= 0, assumes 'out' is a 
@@ -301,20 +321,9 @@ class BlockSender implements java.io.Closeable, FSConstants {
       
     } catch (IOException e) {
       /* exception while writing to the client (well, with transferTo(),
-       * it could also be while reading from the local file). Many times 
-       * this error can be ignored. We will let the callers distinguish this 
-       * from other exceptions if this is not a subclass of IOException. 
+       * it could also be while reading from the local file).
        */
-      if (e.getClass().equals(IOException.class)) {
-        // "se" could be a new class in stead of SocketException.
-        IOException se = new SocketException("Original Exception : " + e);
-        se.initCause(e);
-        /* Cange the stacktrace so that original trace is not truncated
-         * when printed.*/ 
-        se.setStackTrace(e.getStackTrace());
-        throw se;
-      }
-      throw e;
+      throw ioeToSocketException(e);
     }
 
     if (throttler != null) { // rebalancing so throttle
@@ -349,11 +358,15 @@ class BlockSender implements java.io.Closeable, FSConstants {
     OutputStream streamForSendChunks = out;
     
     try {
-      checksum.writeHeader(out);
-      if ( chunkOffsetOK ) {
-        out.writeLong( offset );
+      try {
+        checksum.writeHeader(out);
+        if ( chunkOffsetOK ) {
+          out.writeLong( offset );
+        }
+        out.flush();
+      } catch (IOException e) { //socket error
+        throw ioeToSocketException(e);
       }
-      out.flush();
       
       int maxChunksPerPacket;
       int pktSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER;
@@ -391,8 +404,12 @@ class BlockSender implements java.io.Closeable, FSConstants {
                             checksumSize);
         seqno++;
       }
-      out.writeInt(0); // mark the end of block        
-      out.flush();
+      try {
+        out.writeInt(0); // mark the end of block        
+        out.flush();
+      } catch (IOException e) { //socket error
+        throw ioeToSocketException(e);
+      }
     } finally {
       if (clientTraceFmt != null) {
         ClientTraceLog.info(String.format(clientTraceFmt, totalRead));
