@@ -315,8 +315,25 @@ public class HConnectionManager implements HConstants {
 
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
-
+    
     public boolean isTableEnabled(byte[] tableName) throws IOException {
+      return testTableOnlineState(tableName, true);
+    }
+    
+    public boolean isTableDisabled(byte[] tableName) throws IOException {
+      return testTableOnlineState(tableName, false);
+    }
+
+    /*
+     * If online == true
+     *   Returns true if all regions are online
+     *   Returns false in any other case
+     * If online == false
+     *   Returns true if all regions are offline
+     *   Returns false in any other case
+     */
+    private boolean testTableOnlineState(byte[] tableName, 
+        boolean online) throws IOException {
       if (!tableExists(tableName)) {
         throw new TableNotFoundException(Bytes.toString(tableName));
       }
@@ -325,38 +342,30 @@ public class HConnectionManager implements HConstants {
         return true;
       }
       
-      boolean result = true;
       int rowsScanned = 0;
+      int rowsOffline = 0;
       byte[] startKey =
         HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES);
+      byte[] endKey = null;
       HRegionInfo currentRegion = null;
-      do {
-        if (currentRegion != null) {
-          byte[] endKey = currentRegion.getEndKey();
-          if (endKey == null ||
-              HStoreKey.equalsTwoRowKeys(currentRegion, endKey,
-                HConstants.EMPTY_BYTE_ARRAY)) {
-            // We have reached the end of the table and we're done
-            break;
-          }
-        }
-        HRegionInfo oldRegion = currentRegion;
-        if (oldRegion != null) {
-          startKey = oldRegion.getEndKey();
-        }
-        ScannerCallable s = new ScannerCallable(this, 
-            (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
-                HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME),
-            HConstants.COL_REGIONINFO_ARRAY, startKey,
-            HConstants.LATEST_TIMESTAMP, null
-        );
+      ScannerCallable s = new ScannerCallable(this, 
+          (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
+              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME),
+          HConstants.COL_REGIONINFO_ARRAY, startKey,
+          HConstants.LATEST_TIMESTAMP, null
+      );
+      try {
         // Open scanner
         getRegionServerWithRetries(s);
-        currentRegion = s.getHRegionInfo();
-        try {
+        do {
+          HRegionInfo oldRegion = currentRegion;
+          if (oldRegion != null) {
+            startKey = oldRegion.getEndKey();
+          }
+          currentRegion = s.getHRegionInfo();
           RowResult r = null;
           RowResult[] rrs = null;
-          while (result && (rrs = getRegionServerWithRetries(s)) != null) {
+          while ((rrs = getRegionServerWithRetries(s)) != null) {
             r = rrs[0];
             Cell c = r.get(HConstants.COL_REGIONINFO);
             if (c != null) {
@@ -366,18 +375,23 @@ public class HConnectionManager implements HConstants {
                 if (info != null) {
                   if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
                     rowsScanned += 1;
-                    result = !info.isOffline();
+                    rowsOffline += info.isOffline() ? 1 : 0;
                   }
                 }
               }
             }
           }
-        } finally {
-          s.setClose();
-          getRegionServerWithRetries(s);
-        }
-      } while (result);
-      return rowsScanned > 0 && result;
+          endKey = currentRegion.getEndKey();
+        } while (!(endKey == null || HStoreKey.equalsTwoRowKeys(currentRegion,
+            endKey, HConstants.EMPTY_BYTE_ARRAY)));
+      }
+      finally {
+        s.setClose();
+      }
+      boolean onlineOffline = 
+        online ? rowsOffline == 0 : rowsOffline == rowsScanned;
+      return rowsScanned > 0 && onlineOffline;
+      
     }
     
     private class HTableDescriptorFinder 

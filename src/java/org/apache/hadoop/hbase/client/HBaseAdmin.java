@@ -366,7 +366,7 @@ public class HBaseAdmin {
 
     // Wait until all regions are disabled
     for (int tries = 0;
-        (tries < numRetries) && (isTableEnabled(tableName));
+        (tries < numRetries) && (!isTableDisabled(tableName));
         tries++) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
@@ -382,7 +382,7 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
-    if (isTableEnabled(tableName)) {
+    if (!isTableDisabled(tableName)) {
       throw new RegionException("Retries exhausted, it took too long to wait"+
         " for the table " + Bytes.toString(tableName) + " to be disabled.");
     }
@@ -404,6 +404,15 @@ public class HBaseAdmin {
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
     return connection.isTableEnabled(tableName);
+  }
+  
+  /**
+   * @param tableName name of table to check
+   * @return true if table is off-line
+   * @throws IOException
+   */
+  public boolean isTableDisabled(byte[] tableName) throws IOException {
+    return connection.isTableDisabled(tableName);
   }
 
   /**
@@ -633,6 +642,17 @@ public class HBaseAdmin {
     byte [] regionName = tableName == null? tableNameOrRegionName: null;
     Object [] args = regionName == null? null: new byte [][] {regionName};
     modifyTable(tableName == null? null: tableName, op, args);
+  }
+  
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param tableName name of table.
+   * @param htd modified description of the table
+   * @throws IOException
+   */
+  public void modifyTable(final byte [] tableName, HTableDescriptor htd) 
+  throws IOException {
+    modifyTable(tableName, HConstants.MODIFY_TABLE_SET_HTD, htd);
   }
 
   /**

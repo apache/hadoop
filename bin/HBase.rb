@@ -8,6 +8,7 @@
 # whether the table exists and returns nil regardless.
 include Java
 include_class('java.lang.Integer') {|package,name| "J#{name}" }
+include_class('java.lang.Long') {|package,name| "J#{name}" }
 include_class('java.lang.Boolean') {|package,name| "J#{name}" }
 
 import org.apache.hadoop.hbase.client.HBaseAdmin
@@ -203,6 +204,15 @@ module HBase
       method = args.delete(METHOD)
       if method == "delete"
         @admin.deleteColumn(tableName, makeColumnName(args[NAME]))
+      elsif method == "table_att"
+        args[MAX_FILESIZE]? htd.setMaxFileSize(JLong.valueOf(args[MAX_FILESIZE])) :  
+          htd.setMaxFileSize(HTableDescriptor::DEFAULT_MAX_FILESIZE);
+        args[READONLY]? htd.setReadOnly(JBoolean.valueOf(args[READONLY])) : 
+          htd.setReadOnly(HTableDescriptor::DEFAULT_READONLY);
+        args[MEMCACHE_FLUSHSIZE]? 
+          htd.setMemcacheFlushSize(JLong.valueOf(args[MEMCACHE_FLUSHSIZE])) :
+          htd.setMemcacheFlushSize(HTableDescriptor::DEFAULT_MEMCACHE_FLUSH_SIZE);
+        @admin.modifyTable(tableName.to_java_bytes,htd)
       else
         descriptor = hcd(args) 
         if (htd.hasFamily(descriptor.getNameAsString().to_java_bytes))

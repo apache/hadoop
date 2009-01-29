@@ -54,11 +54,21 @@ public interface HConnection {
   throws MasterNotRunningException;
 
   /**
+   * A table that isTableEnabled == false and isTableDisabled == false
+   * is possible. This happens when a table has a lot of regions
+   * that must be processed.
    * @param tableName
    * @return true if the table is enabled, false otherwise
    * @throws IOException
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException;
+  
+  /**
+   * @param tableName
+   * @return true if the table is disabled, false otherwise
+   * @throws IOException
+   */
+  public boolean isTableDisabled(byte[] tableName) throws IOException;
   
   /**
    * List all the userspace tables.  In other words, scan the META table.

@@ -155,6 +155,12 @@ HBASE SHELL COMMANDS:
            
            To delete the 'f1' column family in table 't1', do:
            hbase> alter 't1', {NAME => 'f1', METHOD => 'delete'}
+
+           You can also change table-scope attributes like MAX_FILESIZE
+           MEMCACHE_FLUSHSIZE and READONLY.
+
+           For example, to change the max size of a family to 128MB, do:
+           hbase> alter 't1', {METHOD => 'table_att', MAX_FILESIZE => '134217728'}
            
  count     Count the number of rows in a table. This operation may take a LONG
            time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a
