@@ -106,11 +106,19 @@ public class DistributedFSCheck extends TestCase {
   private void listSubtree(Path rootFile,
                            SequenceFile.Writer writer
                            ) throws IOException {
-    if (!fs.isDirectory(rootFile)) {
+    FileStatus rootStatus = fs.getFileStatus(rootFile);
+    listSubtree(rootStatus, writer);
+  }
+
+  private void listSubtree(FileStatus rootStatus,
+                           SequenceFile.Writer writer
+                           ) throws IOException {
+    Path rootFile = rootStatus.getPath();
+    if (!rootStatus.isDir()) {
       nrFiles++;
       // For a regular file generate <fName,offset> pairs
       long blockSize = fs.getDefaultBlockSize();
-      long fileLength = fs.getFileStatus(rootFile).getLen();
+      long fileLength = rootStatus.getLen();
       for(long offset = 0; offset < fileLength; offset += blockSize)
         writer.append(new UTF8(rootFile.toString()), new LongWritable(offset));
       return;
@@ -120,7 +128,7 @@ public class DistributedFSCheck extends TestCase {
     if (children == null)
       throw new IOException("Could not get listing for " + rootFile);
     for (int i = 0; i < children.length; i++)
-      listSubtree(children[i].getPath(), writer);
+      listSubtree(children[i], writer);
   }
 
   /**

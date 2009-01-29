@@ -189,7 +189,7 @@ public class FsShell extends Configured implements Tool {
       for (FileStatus status : srcs) {
         Path p = status.getPath();
         File f = dstIsDir? new File(dst, p.getName()): dst;
-        copyToLocal(srcFS, p, f, copyCrc);
+        copyToLocal(srcFS, status, f, copyCrc);
       }
     }
   }
@@ -220,7 +220,7 @@ public class FsShell extends Configured implements Tool {
    * @param copyCrc copy CRC files?
    * @exception IOException If some IO failed
    */
-  private void copyToLocal(final FileSystem srcFS, final Path src,
+  private void copyToLocal(final FileSystem srcFS, final FileStatus srcStatus,
                            final File dst, final boolean copyCrc)
     throws IOException {
     /* Keep the structure similar to ChecksumFileSystem.copyToLocal(). 
@@ -229,7 +229,8 @@ public class FsShell extends Configured implements Tool {
      * copyCrc and useTmpFile (may be useTmpFile need not be an option).
      */
     
-    if (!srcFS.getFileStatus(src).isDir()) {
+    Path src = srcStatus.getPath();
+    if (!srcStatus.isDir()) {
       if (dst.exists()) {
         // match the error message in FileUtil.checkDest():
         throw new IOException("Target " + dst + " already exists");
@@ -251,15 +252,19 @@ public class FsShell extends Configured implements Tool {
         ChecksumFileSystem csfs = (ChecksumFileSystem) srcFS;
         File dstcs = FileSystem.getLocal(srcFS.getConf())
           .pathToFile(csfs.getChecksumFile(new Path(dst.getCanonicalPath())));
-        copyToLocal(csfs.getRawFileSystem(), csfs.getChecksumFile(src),
-                    dstcs, false);
+        FileSystem fs = csfs.getRawFileSystem();
+        FileStatus status = csfs.getFileStatus(csfs.getChecksumFile(src));
+        copyToLocal(fs, status, dstcs, false);
       } 
     } else {
       // once FileUtil.copy() supports tmp file, we don't need to mkdirs().
-      dst.mkdirs();
-      for(FileStatus path : srcFS.listStatus(src)) {
-        copyToLocal(srcFS, path.getPath(), 
-                    new File(dst, path.getPath().getName()), copyCrc);
+      if (!dst.mkdirs()) {
+        throw new IOException("Failed to create local destination \"" +
+                              dst + "\".");
+      }
+      for(FileStatus status : srcFS.listStatus(src)) {
+        copyToLocal(srcFS, status,
+                    new File(dst, status.getPath().getName()), copyCrc);
       }
     }
   }
@@ -823,31 +828,30 @@ public class FsShell extends Configured implements Tool {
   void rename(String srcf, String dstf) throws IOException {
     Path srcPath = new Path(srcf);
     Path dstPath = new Path(dstf);
-    FileSystem srcFs = srcPath.getFileSystem(getConf());
-    FileSystem dstFs = dstPath.getFileSystem(getConf());
-    URI srcURI = srcFs.getUri();
-    URI dstURI = dstFs.getUri();
+    FileSystem fs = srcPath.getFileSystem(getConf());
+    URI srcURI = fs.getUri();
+    URI dstURI = dstPath.getFileSystem(getConf()).getUri();
     if (srcURI.compareTo(dstURI) != 0) {
       throw new IOException("src and destination filesystems do not match.");
     }
-    Path[] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
+    Path[] srcs = FileUtil.stat2Paths(fs.globStatus(srcPath), srcPath);
     Path dst = new Path(dstf);
-    if (srcs.length > 1 && !srcFs.isDirectory(dst)) {
+    if (srcs.length > 1 && !fs.isDirectory(dst)) {
       throw new IOException("When moving multiple files, " 
                             + "destination should be a directory.");
     }
     for(int i=0; i<srcs.length; i++) {
-      if (!srcFs.rename(srcs[i], dst)) {
+      if (!fs.rename(srcs[i], dst)) {
         FileStatus srcFstatus = null;
         FileStatus dstFstatus = null;
         try {
-          srcFstatus = srcFs.getFileStatus(srcs[i]);
+          srcFstatus = fs.getFileStatus(srcs[i]);
         } catch(FileNotFoundException e) {
           throw new FileNotFoundException(srcs[i] + 
           ": No such file or directory");
         }
         try {
-          dstFstatus = dstFs.getFileStatus(dst);
+          dstFstatus = fs.getFileStatus(dst);
         } catch(IOException e) {
         }
         if((srcFstatus!= null) && (dstFstatus!= null)) {
@@ -1084,11 +1088,12 @@ public class FsShell extends Configured implements Tool {
     boolean foption = c.getOpt("f") ? true: false;
     path = new Path(src);
     FileSystem srcFs = path.getFileSystem(getConf());
-    if (srcFs.isDirectory(path)) {
+    FileStatus fileStatus = srcFs.getFileStatus(path);
+    if (fileStatus.isDir()) {
       throw new IOException("Source must be a file.");
     }
 
-    long fileSize = srcFs.getFileStatus(path).getLen();
+    long fileSize = fileStatus.getLen();
     long offset = (fileSize > 1024) ? fileSize - 1024: 0;
 
     while (true) {

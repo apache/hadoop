@@ -187,20 +187,30 @@ public class FileUtil {
                              boolean deleteSource,
                              boolean overwrite,
                              Configuration conf) throws IOException {
-    dst = checkDest(src.getName(), dstFS, dst, overwrite);
+    FileStatus fileStatus = srcFS.getFileStatus(src);
+    return copy(srcFS, fileStatus, dstFS, dst, deleteSource, overwrite, conf);
+  }
 
-    if (srcFS.getFileStatus(src).isDir()) {
+  /** Copy files between FileSystems. */
+  private static boolean copy(FileSystem srcFS, FileStatus srcStatus,
+                              FileSystem dstFS, Path dst,
+                              boolean deleteSource,
+                              boolean overwrite,
+                              Configuration conf) throws IOException {
+    Path src = srcStatus.getPath();
+    dst = checkDest(src.getName(), dstFS, dst, overwrite);
+    if (srcStatus.isDir()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
       }
       FileStatus contents[] = srcFS.listStatus(src);
       for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i].getPath(), dstFS, 
+        copy(srcFS, contents[i], dstFS,
              new Path(dst, contents[i].getPath().getName()),
              deleteSource, overwrite, conf);
       }
-    } else if (srcFS.isFile(src)) {
+    } else {
       InputStream in=null;
       OutputStream out = null;
       try {
@@ -212,8 +222,6 @@ public class FileUtil {
         IOUtils.closeStream(in);
         throw e;
       }
-    } else {
-      throw new IOException(src.toString() + ": No such file or directory");
     }
     if (deleteSource) {
       return srcFS.delete(src, true);
@@ -305,22 +313,28 @@ public class FileUtil {
   public static boolean copy(FileSystem srcFS, Path src, 
                              File dst, boolean deleteSource,
                              Configuration conf) throws IOException {
-    if (srcFS.getFileStatus(src).isDir()) {
+    FileStatus filestatus = srcFS.getFileStatus(src);
+    return copy(srcFS, filestatus, dst, deleteSource, conf);
+  }
+
+  /** Copy FileSystem files to local files. */
+  private static boolean copy(FileSystem srcFS, FileStatus srcStatus,
+                              File dst, boolean deleteSource,
+                              Configuration conf) throws IOException {
+    Path src = srcStatus.getPath();
+    if (srcStatus.isDir()) {
       if (!dst.mkdirs()) {
         return false;
       }
       FileStatus contents[] = srcFS.listStatus(src);
       for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i].getPath(), 
+        copy(srcFS, contents[i],
              new File(dst, contents[i].getPath().getName()),
              deleteSource, conf);
       }
-    } else if (srcFS.isFile(src)) {
+    } else {
       InputStream in = srcFS.open(src);
       IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
-    } else {
-      throw new IOException(src.toString() + 
-                            ": No such file or directory");
     }
     if (deleteSource) {
       return srcFS.delete(src, true);

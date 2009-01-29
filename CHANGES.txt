@@ -68,6 +68,9 @@ Trunk (unreleased changes)
 
     HADOOP-5078. Remove invalid AMI kernel in EC2 scripts. (tomwhite)
 
+    HADOOP-5045. FileSystem.isDirectory() should not be deprecated.  (Suresh
+    Srinivas via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

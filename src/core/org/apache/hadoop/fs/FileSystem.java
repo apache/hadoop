@@ -625,8 +625,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
   }
 
-  /** True iff the named path is a directory. */
-  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  /** True iff the named path is a directory.
+   * Note: Avoid using this method. Instead reuse the FileStatus 
+   * returned by getFileStatus() or listStatus() methods.
+   */
   public boolean isDirectory(Path f) throws IOException {
     try {
       return getFileStatus(f).isDir();
@@ -635,7 +637,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
   }
 
-  /** True iff the named path is a regular file. */
+  /** True iff the named path is a regular file.
+   * Note: Avoid using this method. Instead reuse the FileStatus 
+   * returned by getFileStatus() or listStatus() methods.
+   */
   public boolean isFile(Path f) throws IOException {
     try {
       return !getFileStatus(f).isDir();
