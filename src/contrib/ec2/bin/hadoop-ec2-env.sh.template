@@ -88,14 +88,6 @@ else
   JAVA_BINARY_URL=''
 fi
 
-if [ "$INSTANCE_TYPE" == "c1.medium" ]; then
-  AMI_KERNEL=aki-9b00e5f2 # ec2-public-images/vmlinuz-2.6.18-xenU-ec2-v1.0.i386.aki.manifest.xml
-fi
-
-if [ "$INSTANCE_TYPE" == "c1.xlarge" ]; then
-  AMI_KERNEL=aki-9800e5f1 # ec2-public-images/vmlinuz-2.6.18-xenU-ec2-v1.0.x86_64.aki.manifest.xml
-fi
-
 if [ "$AMI_KERNEL" != "" ]; then
   KERNEL_ARG="--kernel ${AMI_KERNEL}"
 fi

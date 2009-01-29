@@ -66,6 +66,8 @@ Trunk (unreleased changes)
     HADOOP-4975. Set classloader for nested mapred.join configs. (Jingkei Ly
     via cdouglas)
 
+    HADOOP-5078. Remove invalid AMI kernel in EC2 scripts. (tomwhite)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
