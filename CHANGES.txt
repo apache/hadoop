@@ -71,9 +71,6 @@ Trunk (unreleased changes)
     HADOOP-5045. FileSystem.isDirectory() should not be deprecated.  (Suresh
     Srinivas via szetszwo)
 
-    HADOOP-5139. Catch IllegalArgumentException during metrics registration 
-    in RPC.  (Hairong Kuang via szetszwo)
-
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -653,11 +650,14 @@ Release 0.20.0 - Unreleased
     HADOOP-4671. Mark loop control variables shared between threads as
     volatile. (cdouglas)
 
+    HADOOP-5079. HashFunction inadvertently destroys some randomness
+    (Jonathan Ellis via stack)
+
     HADOOP-4999. A failure to write to FsEditsLog results in 
     IndexOutOfBounds exception. (Boris Shkolnik via rangadi)
 
-    HADOOP-5079. HashFunction inadvertently destroys some randomness
-    (Jonathan Ellis via stack)
+    HADOOP-5139. Catch IllegalArgumentException during metrics registration 
+    in RPC.  (Hairong Kuang via szetszwo)
 
 Release 0.19.1 - Unreleased
 
