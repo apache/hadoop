@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-5045. FileSystem.isDirectory() should not be deprecated.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-5139. Catch IllegalArgumentException during metrics registration 
+    in RPC.  (Hairong Kuang via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
