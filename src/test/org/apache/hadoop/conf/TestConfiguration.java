@@ -62,7 +62,11 @@ public class TestConfiguration extends TestCase {
     out.write("</configuration>\n");
     out.close();
   }
-  
+
+  private void addInclude(String filename) throws IOException{
+    out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  />\n ");
+  }
+
   public void testVariableSubstitution() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -227,6 +231,32 @@ public class TestConfiguration extends TestCase {
       "Configuration: core-default.xml, core-site.xml, " + 
       fileResource.toString();
     assertEquals(expectedOutput, conf.toString());
+  }
+  
+  public void testIncludes() throws Exception {
+    tearDown();
+    System.out.println("XXX testIncludes");
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("a","b");
+    appendProperty("c","d");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    addInclude(CONFIG2);
+    appendProperty("e","f");
+    appendProperty("g","h");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b"); 
+    assertEquals(conf.get("c"), "d"); 
+    assertEquals(conf.get("e"), "f"); 
+    assertEquals(conf.get("g"), "h"); 
+    tearDown();
   }
 
   BufferedWriter out;

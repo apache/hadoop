@@ -1046,9 +1046,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         = DocumentBuilderFactory.newInstance();
       //ignore all comments inside the xml file
       docBuilderFactory.setIgnoringComments(true);
+
+      //allow includes in the xml file
+      docBuilderFactory.setNamespaceAware(true);
+      docBuilderFactory.setXIncludeAware(true);
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       Document doc = null;
-
+      Element root = null;
 
       if (name instanceof URL) {                  // an URL resource
         URL url = (URL)name;
@@ -1088,15 +1092,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         } finally {
           ((InputStream)name).close();
         }
+      } else if (name instanceof Element) {
+        root = (Element)name;
       }
 
-      if (doc == null) {
+      if (doc == null && root == null) {
         if (quiet)
           return;
         throw new RuntimeException(name + " not found");
       }
 
-      Element root = doc.getDocumentElement();
+      if (root == null) {
+        root = doc.getDocumentElement();
+      }
       if (!"configuration".equals(root.getTagName()))
         LOG.fatal("bad conf file: top-level element not <configuration>");
       NodeList props = root.getChildNodes();
@@ -1105,6 +1113,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         if (!(propNode instanceof Element))
           continue;
         Element prop = (Element)propNode;
+        if ("configuration".equals(prop.getTagName())) {
+          loadResource(properties, prop, quiet);
+          continue;
+        }
         if (!"property".equals(prop.getTagName()))
           LOG.warn("bad conf file: element not <property>");
         NodeList fields = prop.getChildNodes();
