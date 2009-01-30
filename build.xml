@@ -135,7 +135,7 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${docs.dir}/jdiff"/>
-  <property name="jdiff.stable" value="0.18.2"/>
+  <property name="jdiff.stable" value="0.18.3"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
