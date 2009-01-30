@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.Writable;
@@ -88,7 +89,7 @@ public class HBaseMapFile extends MapFile {
     }
 
     @Override
-    protected org.apache.hadoop.hbase.io.SequenceFile.Reader createDataFileReader(
+    protected SequenceFile.Reader createDataFileReader(
         FileSystem fs, Path dataFile, Configuration conf)
     throws IOException {
       if (!blockCacheEnabled) {
