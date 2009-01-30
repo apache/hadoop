@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;

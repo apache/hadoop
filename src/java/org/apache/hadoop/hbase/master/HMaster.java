@@ -408,7 +408,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */ 
   private boolean processToDoQueue() {
     RegionServerOperation op = null;
-    
+
     // block until the root region is online
     if (regionManager.getRootRegionLocation() != null) {
       // We can't process server shutdowns unless the root region is online
@@ -856,14 +856,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     default:
       throw new IOException("unsupported modifyTable op " + op);
     }
-  }
-
-  public HServerAddress findRootRegion() {
-    HServerAddress rootServer = null;
-    if (!regionManager.inSafeMode()) {
-      rootServer = regionManager.getRootRegionLocation();
-    }
-    return rootServer;
   }
 
   /**

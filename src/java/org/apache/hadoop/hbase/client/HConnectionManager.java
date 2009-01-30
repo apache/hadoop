@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -140,7 +141,9 @@ public class HConnectionManager implements HConstants {
     private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
       cachedRegionLocations =
         new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
-    
+
+    private ZooKeeperWrapper zooKeeperWrapper;
+
     /** 
      * constructor
      * @param conf Configuration object
@@ -751,6 +754,13 @@ public class HConnectionManager implements HConstants {
       return server;
     }
 
+    private synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
+      if (zooKeeperWrapper == null) {
+        zooKeeperWrapper = new ZooKeeperWrapper(conf);
+      }
+      return zooKeeperWrapper;
+    }
+
     /*
      * Repeatedly try to find the root region by asking the master for where it is
      * @return HRegionLocation for root region if found
@@ -761,12 +771,22 @@ public class HConnectionManager implements HConstants {
     private HRegionLocation locateRootRegion()
     throws IOException {
       getMaster();
+
+      // We lazily instantiate the ZooKeeper object because we don't want to
+      // make the constructor have to throw IOException or handle it itself.
+      ZooKeeperWrapper zooKeeperWrapper = getZooKeeperWrapper();
+
       HServerAddress rootRegionAddress = null;
       for (int tries = 0; tries < numRetries; tries++) {
         int localTimeouts = 0;
         // ask the master which server has the root region
         while (rootRegionAddress == null && localTimeouts < numRetries) {
-          rootRegionAddress = master.findRootRegion();
+          // Don't read root region until we're out of safe mode so we know
+          // that the meta regions have been assigned.
+          boolean outOfSafeMode = zooKeeperWrapper.checkOutOfSafeMode();
+          if (outOfSafeMode) {
+            rootRegionAddress = zooKeeperWrapper.readRootRegionLocation();
+          }
           if (rootRegionAddress == null) {
             try {
               if (LOG.isDebugEnabled()) {

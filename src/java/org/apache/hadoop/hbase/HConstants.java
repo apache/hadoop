@@ -78,6 +78,39 @@ public interface HConstants {
   /** default port for master web api */
   static final int DEFAULT_MASTER_INFOPORT = 60010;
 
+  /** Name of ZooKeeper config file in conf/ directory. */
+  static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
+
+  /** Parameter name for ZooKeeper session timeout (in milliseconds). */
+  static final String ZOOKEEPER_SESSION_TIMEOUT = "zookeeper.session.timeout";
+  /** Default ZooKeeper session timeout. In milliseconds. */
+  static final int DEFAULT_ZOOKEEPER_SESSION_TIMEOUT = 10 * 1000;
+
+  /** Parameter name for number of times to retry writes to ZooKeeper. */
+  static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
+  /** Default number of times to retry writes to ZooKeeper. */
+  static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
+
+  /** Parameter name for ZooKeeper pause between retries. In milliseconds. */
+  static final String ZOOKEEPER_PAUSE = "zookeeper.pause";
+  /** Default ZooKeeper pause value. In milliseconds. */
+  static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
+
+  /** Parameter name for HBase parent ZNode in ZooKeeper. */
+  static final String ZOOKEEPER_PARENT_ZNODE = "zookeeper.znode.parent";
+  /** Default HBase parent ZNode in ZooKeeper. */
+  static final String DEFAULT_ZOOKEEPER_PARENT_ZNODE = "/hbase";
+
+  /** Parameter name for ZooKeeper ZNode storing root server location. */
+  static final String ZOOKEEPER_ROOT_SERVER_ZNODE = "zookeeper.znode.rootserver";
+  /** Default ZooKeeper ZNode storing root server location. */
+  static final String DEFAULT_ZOOKEEPER_ROOT_SERVER_ZNODE = "root-region-server";
+
+  /** Parameter name for ZooKeeper ZNode storing safe mode. */
+  static final String ZOOKEEPER_SAFE_MODE_ZNODE = "zookeeper.znode.safemode";
+  /** Default ZooKeeper ZNode storing safe mode. */
+  static final String DEFAULT_ZOOKEEPER_SAFE_MODE_ZNODE = "safe-mode";
+
   /** Parameter name for hbase.regionserver address. */
   static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
   

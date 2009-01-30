@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
@@ -211,6 +212,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final Map<String, InternalScanner> scanners =
     new ConcurrentHashMap<String, InternalScanner>();
 
+  private final ZooKeeperWrapper zooKeeperWrapper;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -292,6 +295,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
+
+    this.zooKeeperWrapper = new ZooKeeperWrapper(conf);
   }
 
   /**
@@ -310,7 +315,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
         // Try to get the root region location from the master.
         if (!haveRootRegion.get()) {
-          HServerAddress rootServer = hbaseMaster.getRootRegionLocation();
+          HServerAddress rootServer = zooKeeperWrapper.readRootRegionLocation();
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed on
             // HTable for all regions being assigned.

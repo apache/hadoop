@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Writable;
 
@@ -117,10 +116,4 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException
    */
   public void shutdown() throws IOException;
-
-  /**
-   * Get the location of the root region
-   * @return address of server that serves the root region
-   */
-  public HServerAddress findRootRegion();
 }

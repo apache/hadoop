@@ -68,9 +68,16 @@ operation, continue reading.
 </p>
 
 <h2><a name="distributed">Distributed Operation</a></h2>
-<p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
+<p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS) and a ZooKeeper cluster.
 See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
-requirements and instructions</a> for how to set up a DFS.</p> 
+requirements and instructions</a> for how to set up a DFS.
+See the ZooKeeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>
+for information about the ZooKeeper distributed coordination service.
+If you do not configure a ZooKeeper cluster, HBase will manage a single instance
+ZooKeeper service for you running on the master node.
+This is intended for development and local testing only.
+It SHOULD NOT be used in a fully-distributed production operation.
+</p>
 
 <h3><a name="pseudo-distrib">Pseudo-Distributed Operation</a></h3>
 <p>A pseudo-distributed operation is simply a distributed operation run on a single host.  
@@ -130,6 +137,14 @@ operation requires that you also modify <code>${HBASE_HOME}/conf/regionservers</
 <code>regionserver</code> lists all the hosts running HRegionServers, one host per line  (This file 
 in HBase is like the hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).
 </p>
+<p>
+Furthermore, you should configure a distributed ZooKeeper cluster.
+The ZooKeeper configuration file is stored at <code>${HBASE_HOME}/conf/zoo.cfg</code>.
+See the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html"> Getting Started Guide</a> for information about the format and options of that file.
+Specifically, look at the <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a> section.
+In <code>${HBASE_HOME}/conf/hbase-env.sh</code>, set <code>HBASE_MANAGES_ZK=false</code> to tell HBase not to manage its own single instance ZooKeeper service.
+</p>
+
 <p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, hbase will not
 see this configuration unless you do one of the following:
 <ul>

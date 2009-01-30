@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -126,23 +128,31 @@ class RegionManager implements HConstants {
       new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
       (Bytes.BYTES_COMPARATOR));
 
-  RegionManager(HMaster master) {
+  private final ZooKeeperWrapper zooKeeperWrapper;
+  private final int zooKeeperNumRetries;
+  private final int zooKeeperPause;
+
+  RegionManager(HMaster master) throws IOException {
+    HBaseConfiguration conf = master.getConfiguration();
+
     this.master = master;
     this.historian = RegionHistorian.getInstance();
-    this.maxAssignInOneGo = this.master.getConfiguration().
-      getInt("hbase.regions.percheckin", 10);
-    this.slop = this.master.getConfiguration().getFloat("hbase.regions.slop",
-      (float)0.1);
+    this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
+    this.slop = conf.getFloat("hbase.regions.slop", (float)0.1);
 
     // The root region
     rootScannerThread = new RootScanner(master);
 
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
-    
+
+    zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
+    zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
+
     reassignRootRegion();
   }
-  
+
   void start() {
     Threads.setDaemonThreadRunning(rootScannerThread,
       "RegionManager.rootScanner");
@@ -540,6 +550,7 @@ class RegionManager implements HConstants {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
+    zooKeeperWrapper.close();
   }
   
   /**
@@ -895,14 +906,30 @@ class RegionManager implements HConstants {
   public boolean isInitialMetaScanComplete() {
     return metaScannerThread.isInitialScanComplete();
   }
-  
+
+  private boolean tellZooKeeperOutOfSafeMode() {
+    for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
+      if (zooKeeperWrapper.writeOutOfSafeMode()) {
+        return true;
+      }
+
+      sleep(attempt);
+    }
+
+    LOG.error("Failed to tell ZooKeeper we're out of safe mode after " +
+              zooKeeperNumRetries + " retries");
+
+    return false;
+  }
+
   /** 
    * @return true if the initial meta scan is complete and there are no
    * unassigned or pending regions
    */
   public boolean inSafeMode() {
     if (safeMode) {
-      if(isInitialMetaScanComplete() && regionsInTransition.size() == 0) {
+      if(isInitialMetaScanComplete() && regionsInTransition.size() == 0 &&
+         tellZooKeeperOutOfSafeMode()) {
         master.connection.unsetRootRegionLocation();
         safeMode = false;
         LOG.info("exiting safe mode");
@@ -955,11 +982,46 @@ class RegionManager implements HConstants {
     numberOfMetaRegions.incrementAndGet();
   }
 
+  private long getPauseTime(int tries) {
+    int attempt = tries;
+    if (attempt >= RETRY_BACKOFF.length) {
+      attempt = RETRY_BACKOFF.length - 1;
+    }
+    return this.zooKeeperPause * RETRY_BACKOFF[attempt];
+  }
+
+  private void sleep(int attempt) {
+    try {
+      Thread.sleep(getPauseTime(attempt));
+    } catch (InterruptedException e) {
+      // continue
+    }
+  }
+
+  private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
+    for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
+      if (zooKeeperWrapper.writeRootRegionLocation(address)) {
+        return;
+      }
+
+      sleep(attempt);
+    }
+
+    LOG.error("Failed to write root region location to ZooKeeper after " +
+              zooKeeperNumRetries + " retries, shutting down");
+
+    this.master.shutdown();
+  }
+
   /**
    * Set the root region location.
    * @param address Address of the region server where the root lives
+   * @throws IOException If there's a problem connection to ZooKeeper.
    */
-  public void setRootRegionLocation(HServerAddress address) {
+  public void setRootRegionLocation(HServerAddress address)
+  throws IOException {
+    writeRootRegionLocationToZooKeeper(address);
+
     synchronized (rootRegionLocation) {
       rootRegionLocation.set(new HServerAddress(address));
       rootRegionLocation.notifyAll();

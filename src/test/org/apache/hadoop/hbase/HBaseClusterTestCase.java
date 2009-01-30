@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
@@ -39,8 +41,11 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(HBaseClusterTestCase.class);
   protected MiniHBaseCluster cluster;
   protected MiniDFSCluster dfsCluster;
+  protected MiniZooKeeperCluster zooKeeperCluster;
   protected int regionServers;
+  protected int numZooKeeperPeers;
   protected boolean startDfs;
+  private boolean openMetaTable = true;
 
   /** default constructor */
   public HBaseClusterTestCase() {
@@ -57,8 +62,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     this(regionServers, true);
   }
   
-  /**
-   * Start a MiniHBaseCluster with regionServers region servers in-process to
+  /**  in-process to
    * start with. Optionally, startDfs indicates if a MiniDFSCluster should be
    * started. If startDfs is false, the assumption is that an external DFS is
    * configured in hbase-site.xml and is already started, or you have started a
@@ -71,8 +75,13 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     super();
     this.startDfs = startDfs;
     this.regionServers = regionServers;
+    this.numZooKeeperPeers = 1;
   }
-  
+
+  protected void setOpenMetaTable(boolean val) {
+    openMetaTable = val;
+  }
+
   /**
    * Run after dfs is ready but before hbase cluster is started up.
    */
@@ -84,10 +93,20 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * Actually start the MiniHBase instance.
    */
   protected void hBaseClusterSetup() throws Exception {
+    File testDir = new File(getUnitTestdir(getName()).toString());
+
+    // Note that this is done before we create the MiniHBaseCluster because we
+    // need to edit the config to add the ZooKeeper servers.
+    this.zooKeeperCluster = new MiniZooKeeperCluster(conf);
+    this.zooKeeperCluster.startup(numZooKeeperPeers, testDir);
+
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
-    // opening the META table ensures that cluster is running
-    new HTable(conf, HConstants.META_TABLE_NAME);
+
+    if (openMetaTable) {
+      // opening the META table ensures that cluster is running
+      new HTable(conf, HConstants.META_TABLE_NAME);
+    }
   }
   
   /**
@@ -120,16 +139,19 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     
       // run the pre-cluster setup
       preHBaseClusterSetup();    
-    
+
       // start the instance
       hBaseClusterSetup();
-      
+
       // run post-cluster setup
       postHBaseClusterSetup();
     } catch (Exception e) {
       LOG.error("Exception in setup!", e);
       if (cluster != null) {
         cluster.shutdown();
+      }
+      if (zooKeeperCluster != null) {
+        zooKeeperCluster.shutdown();
       }
       if (dfsCluster != null) {
         shutdownDfs(dfsCluster);
@@ -140,6 +162,10 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
   @Override
   protected void tearDown() throws Exception {
+    if (!openMetaTable) {
+      // open the META table now to ensure cluster is running before shutdown.
+      new HTable(conf, HConstants.META_TABLE_NAME);
+    }
     super.tearDown();
     try {
       HConnectionManager.deleteConnectionInfo(conf, true);
@@ -148,6 +174,11 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
           this.cluster.shutdown();
         } catch (Exception e) {
           LOG.warn("Closing mini dfs", e);
+        }
+        try {
+          this.zooKeeperCluster.shutdown();
+        } catch (IOException e) {
+          LOG.warn("Shutting down ZooKeeper cluster", e);
         }
       }
       if (startDfs) {
