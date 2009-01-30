@@ -331,4 +331,58 @@
     supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
     </description>
   </property>
+  <property>
+    <name>zookeeper.session.timeout</name>
+    <value>10000</value>
+    <description>ZooKeeper session timeout. This option is not used by HBase
+      directly, it is for the internals of ZooKeeper. HBase merely passes it in
+      whenever a connection is established to ZooKeeper. It is used by ZooKeeper
+      for hearbeats. In milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.retries</name>
+    <value>5</value>
+    <description>How many times to retry connections to ZooKeeper. Used for
+      reading/writing root region location, checking/writing out of safe mode.
+      Used together with ${zookeeper.pause} in an exponential backoff fashion
+      when making queries to ZooKeeper.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.pause</name>
+    <value>2000</value>
+    <description>Sleep time between retries to ZooKeeper. In milliseconds. Used
+      together with ${zookeeper.retries} in an exponential backoff fashion when
+      making queries to ZooKeeper.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.parent</name>
+    <value>/hbase</value>
+    <description>Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
+      files that are configured with a relative path will go under this node.
+      By default, all of HBase's ZooKeeper file patsh are configured with a
+      relative path, so they will all go under this directory unless changed.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.rootserver</name>
+    <value>root-region-server</value>
+    <description>Path to ZNode holding root region location. This is written by
+      the master and read by clients and region servers. If a relative path is
+      given, the parent folder will be ${zookeeper.znode.parent}. By default,
+      this means the root location is stored at /hbase/root-region-server.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.safemode</name>
+    <value>safe-mode</value>
+    <description>Path to ephemeral ZNode signifying cluster is out of safe mode.
+      This is created by the master when scanning is done. Clients wait for this
+      node before querying the cluster. If a relative path is given, the parent
+      folder will be ${zookeeper.znode.parent}. By default, this means the safe
+      mode flag is stored at /hbase/safe-mode.
+    </description>
+  </property>
 </configuration>
