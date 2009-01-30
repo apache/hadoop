@@ -319,6 +319,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4920.  Stop storing Forrest output in Subversion. (cutting)
 
+    HADOOP-4944. A configuration file can include other configuration
+    files. (Rama Ramasamy via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
