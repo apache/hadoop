@@ -45,7 +45,10 @@ Trunk (unreleased changes)
     HADOOP-5070. Increment copyright year to 2009, remove assertions of ASF
     copyright to licensed files. (Tsz Wo (Nicholas), SZE via cdouglas)
 
-    HADOOP-5037  Deprecate static FSNamesystem.getFSNamesystem().  (szetszwo)
+    HADOOP-5037. Deprecate static FSNamesystem.getFSNamesystem().  (szetszwo)
+
+    HADOOP-5088. Include releaseaudit target as part of developer test-patch
+    target.  (Giridharan Kesavan via nigel)
 
   OPTIMIZATIONS
 
