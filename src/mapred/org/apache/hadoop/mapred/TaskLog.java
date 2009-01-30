@@ -34,6 +34,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.ProcessTree;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -349,7 +350,7 @@ public class TaskLog {
                                                 long tailLength
                                                ) throws IOException {
     return captureOutAndError(null, cmd, stdoutFilename,
-                              stderrFilename, tailLength, null );
+                              stderrFilename, tailLength, false, null );
   }
 
   /**
@@ -371,7 +372,7 @@ public class TaskLog {
                                                 long tailLength
                                                ) throws IOException {
     return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-        tailLength, null);
+                              tailLength, false, null);
   }
 
   /**
@@ -394,6 +395,32 @@ public class TaskLog {
                                                 long tailLength,
                                                 String pidFileName
                                                ) throws IOException {
+    return captureOutAndError (setup, cmd, stdoutFilename, stderrFilename,
+                               tailLength, false, pidFileName);
+  }
+
+  /**
+   * Wrap a command in a shell to capture stdout and stderr to files.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * If the tailLength is 0, the entire output will be saved.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @param useSetsid Should setsid be used in the command or not.
+   * @param pidFileName The name of the pid-file
+   * @return the modified command that should be run
+   */
+  public static List<String> captureOutAndError(List<String> setup,
+                                                List<String> cmd, 
+                                                File stdoutFilename,
+                                                File stderrFilename,
+                                                long tailLength,
+                                                boolean useSetsid,
+                                                String pidFileName
+                                               ) throws IOException {
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);
     List<String> result = new ArrayList<String>(3);
@@ -414,6 +441,8 @@ public class TaskLog {
     }
     if (tailLength > 0) {
       mergedCmd.append("(");
+    } else if(ProcessTree.isSetsidAvailable && useSetsid) {
+      mergedCmd.append("exec setsid ");
     } else {
       mergedCmd.append("exec ");
     }

@@ -81,6 +81,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
@@ -415,7 +416,35 @@ public class TaskTracker
   static String getPidFilesSubdir() {
     return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.PIDDIR;
   }
-    
+ 
+  /**
+   * Get the pidFile path of a Task
+   * @param tid the TaskAttemptID of the task for which pidFile's path is needed
+   * @return pidFile's Path
+   */
+  public static Path getPidFilePath(TaskAttemptID tid, JobConf conf) {
+    Path pidFileName = null;
+    try {
+      //this actually need not use a localdirAllocator since the PID
+      //files are really small..
+      pidFileName = lDirAlloc.getLocalPathToRead(
+          (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + tid),
+          conf);
+    } catch (IOException i) {
+      // PID file is not there
+      LOG.warn("Failed to get pidFile name for " + tid + " " + i);
+    }
+    return pidFileName;
+  }
+  public void removePidFile(TaskAttemptID tid) {
+    Path pidFilePath = getPidFilePath(tid, getJobConf());
+    if (pidFilePath != null) {
+      try {
+        FileSystem.getLocal(getJobConf()).delete(pidFilePath, false);
+      } catch(IOException ie) {}
+    }
+  }
+  
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
     if (protocol.equals(TaskUmbilicalProtocol.class.getName())) {
@@ -737,7 +766,7 @@ public class TaskTracker
     }
   }
 
-  private LocalDirAllocator lDirAlloc = 
+  private static LocalDirAllocator lDirAlloc = 
                               new LocalDirAllocator("mapred.local.dir");
 
   // intialize the job directory
@@ -1899,9 +1928,6 @@ public class TaskTracker
           alwaysKeepTaskFiles || keepFailedTaskFiles) {
         //disable jvm reuse
         localJobConf.setNumTasksToExecutePerJvm(1);
-      }
-      if (isTaskMemoryManagerEnabled()) {
-        localJobConf.setBoolean("task.memory.mgmt.enabled", true);
       }
       OutputStream out = localFs.create(localTaskFile);
       try {

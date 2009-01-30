@@ -375,11 +375,9 @@ abstract class TaskRunner extends Thread {
       vargs.add(taskid.toString());                      // pass task identifier
 
       String pidFile = null;
-      if (tracker.isTaskMemoryManagerEnabled()) {
-        pidFile = lDirAlloc.getLocalPathForWrite(
+      pidFile = lDirAlloc.getLocalPathForWrite(
             (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + taskid),
             this.conf).toString();
-      }
 
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);

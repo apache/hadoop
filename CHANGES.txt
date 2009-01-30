@@ -50,6 +50,12 @@ Trunk (unreleased changes)
     HADOOP-5088. Include releaseaudit target as part of developer test-patch
     target.  (Giridharan Kesavan via nigel)
 
+    HADOOP-2721. Uses setsid when creating new tasks so that subprocesses of 
+    this process will be within this new session (and this process will be 
+    the process leader for all the subprocesses). Killing the process leader,
+    or the main Java task in Hadoop's case, kills the entire subtree of
+    processes. (Ravi Gummadi via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES

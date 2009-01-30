@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -27,12 +26,12 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.util.ProcessTree;
 
 /**
  * Manages memory usage of tasks running under this TT. Kills any task-trees
@@ -44,7 +43,6 @@ class TaskMemoryManagerThread extends Thread {
 
   private TaskTracker taskTracker;
   private long monitoringInterval;
-  private long sleepTimeBeforeSigKill;
 
   private long maxMemoryAllowedForAllTasks;
 
@@ -66,16 +64,12 @@ class TaskMemoryManagerThread extends Thread {
 
     monitoringInterval = taskTracker.getJobConf().getLong(
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
-    sleepTimeBeforeSigKill = taskTracker.getJobConf().getLong(
-        "mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill",
-        ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
   }
 
   public void addTask(TaskAttemptID tid, long memLimit) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");
-      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit,
-          sleepTimeBeforeSigKill);
+      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit);
       tasksToBeAdded.put(tid, ptInfo);
     }
   }
@@ -93,13 +87,10 @@ class TaskMemoryManagerThread extends Thread {
     private long memLimit;
 
     public ProcessTreeInfo(TaskAttemptID tid, String pid,
-        ProcfsBasedProcessTree pTree, long memLimit, long sleepTimeBeforeSigKill) {
+        ProcfsBasedProcessTree pTree, long memLimit) {
       this.tid = tid;
       this.pid = pid;
       this.pTree = pTree;
-      if (this.pTree != null) {
-        this.pTree.setSigKillInterval(sleepTimeBeforeSigKill);
-      }
       this.memLimit = memLimit;
     }
 
@@ -178,8 +169,13 @@ class TaskMemoryManagerThread extends Thread {
             // itself is still retained in runningTasks till successful
             // transmission to JT
 
+            long sleeptimeBeforeSigkill = taskTracker.getJobConf().getLong(
+                    "mapred.tasktracker.sigkillthread.sleeptime-before-sigkill",
+                    ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+
             // create process tree object
-            ProcfsBasedProcessTree pt = new ProcfsBasedProcessTree(pId);
+            ProcfsBasedProcessTree pt = new ProcfsBasedProcessTree(pId,
+                       ProcessTree.isSetsidAvailable, sleeptimeBeforeSigkill);
             LOG.debug("Tracking ProcessTree " + pId + " for the first time");
 
             ptInfo.setPid(pId);
@@ -225,7 +221,7 @@ class TaskMemoryManagerThread extends Thread {
           taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
           // Now destroy the ProcessTree, remove it from monitoring map.
-          pTree.destroy();
+          pTree.destroy(true/*in the background*/);
           it.remove();
           LOG.info("Removed ProcessTree with root " + pId);
         } else {
@@ -296,7 +292,7 @@ class TaskMemoryManagerThread extends Thread {
         // Now destroy the ProcessTree, remove it from monitoring map.
         ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
         ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
-        pTree.destroy();
+        pTree.destroy(true/*in the background*/);
         processTreeInfoMap.remove(tid);
         LOG.info("Removed ProcessTree with root " + ptInfo.getPID());
       }
@@ -313,43 +309,12 @@ class TaskMemoryManagerThread extends Thread {
    * @return the pid of the task process.
    */
   private String getPid(TaskAttemptID tipID) {
-    Path pidFileName = getPidFilePath(tipID, taskTracker.getJobConf());
+    Path pidFileName = TaskTracker.getPidFilePath(tipID, taskTracker.getJobConf());
     if (pidFileName == null) {
       return null;
     }
-    return ProcfsBasedProcessTree.getPidFromPidFile(pidFileName.toString());
+    return ProcessTree.getPidFromPidFile(pidFileName.toString());
   }
 
-  private static LocalDirAllocator lDirAlloc = 
-    new LocalDirAllocator("mapred.local.dir");
 
-  /**
-   * Get the pidFile path of a Task
-   * @param tipID
-   * @return pidFile's Path
-   */
-  public static Path getPidFilePath(TaskAttemptID tipID, JobConf conf) {
-    Path pidFileName = null;
-    try {
-      //this actually need not use a localdirAllocator since the PID
-      //files are really small..
-      pidFileName = lDirAlloc.getLocalPathToRead(
-          (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + tipID),
-          conf);
-    } catch (IOException i) {
-      // PID file is not there
-      LOG.debug("Failed to get pidFile name for " + tipID);
-    }
-    return pidFileName;
-  }
-  public void removePidFile(TaskAttemptID tid) {
-    if (taskTracker.isTaskMemoryManagerEnabled()) {
-      Path pidFilePath = getPidFilePath(tid, taskTracker.getJobConf());
-      if (pidFilePath != null) {
-        try {
-          FileSystem.getLocal(taskTracker.getJobConf()).delete(pidFilePath, false);
-        } catch(IOException ie) {}
-      }
-    }
-  }
 }

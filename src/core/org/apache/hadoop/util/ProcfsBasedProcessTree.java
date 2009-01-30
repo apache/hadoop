@@ -29,39 +29,51 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Arrays;
 import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.util.Shell.ExitCodeException;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
  */
-public class ProcfsBasedProcessTree {
+public class ProcfsBasedProcessTree extends ProcessTree {
 
   private static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.mapred.ProcfsBasedProcessTree");
+      .getLog(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
-  public static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 5000L;
-  private long sleepTimeBeforeSigKill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
+
   private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern
       .compile("^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+\\s){16}([0-9]+)(\\s[0-9-]+){16}");
 
   private Integer pid = -1;
+  private boolean setsidUsed = false;
+  private long sleeptimeBeforeSigkill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
 
   private Map<Integer, ProcessInfo> processTree = new HashMap<Integer, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this.pid = getValidPID(pid);
+    this(pid, false, DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
   }
 
+  public ProcfsBasedProcessTree(String pid, boolean setsidUsed,
+                                long sigkillInterval) {
+    this.pid = getValidPID(pid);
+    this.setsidUsed = setsidUsed;
+    sleeptimeBeforeSigkill = sigkillInterval;
+  }
+
+  /**
+   * Sets SIGKILL interval
+   * @deprecated Use {@link ProcfsBasedProcessTree#ProcfsBasedProcessTree(
+   *                  String, boolean, long)} instead
+   * @param interval The time to wait before sending SIGKILL
+   *                 after sending SIGTERM
+   */
+  @Deprecated
   public void setSigKillInterval(long interval) {
-    sleepTimeBeforeSigKill = interval;
+    sleeptimeBeforeSigkill = interval;
   }
 
   /**
@@ -141,47 +153,107 @@ public class ProcfsBasedProcessTree {
   }
 
   /**
-   * Is the process-tree alive? Currently we care only about the status of the
-   * root-process.
+   * Is the root-process alive?
    * 
-   * @return true if the process-true is alive, false otherwise.
+   * @return true if the root-process is alive, false otherwise.
    */
   public boolean isAlive() {
     if (pid == -1) {
       return false;
     } else {
-      return this.isAlive(pid);
+      return isAlive(pid.toString());
     }
   }
 
   /**
-   * Destroy the process-tree. Currently we only make sure the root process is
-   * gone. It is the responsibility of the root process to make sure that all
-   * its descendants are cleaned up.
+   * Is any of the subprocesses in the process-tree alive?
+   * 
+   * @return true if any of the processes in the process-tree is
+   *           alive, false otherwise.
+   */
+  public boolean isAnyProcessInTreeAlive() {
+    for (Integer pId : processTree.keySet()) {
+      if (isAlive(pId.toString())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Verify that the given process id is same as its process group id.
+   * @param pidStr Process id of the to-be-verified-process
+   */
+  private static boolean assertPidPgrpidForMatch(String pidStr) {
+    Integer pId = Integer.parseInt(pidStr);
+    // Get information for this process
+    ProcessInfo pInfo = new ProcessInfo(pId);
+    pInfo = constructProcessInfo(pInfo);
+    //make sure that pId and its pgrpId match
+    if (!pInfo.getPgrpId().equals(pId)) {
+      LOG.warn("Unexpected: Process with PID " + pId +
+               " is not a process group leader.");
+      return false;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(pId + " is a process group leader, as expected.");
+    }
+    return true;
+  }
+
+  /** Make sure that the given pid is a process group leader and then
+   * destroy the process group.
+   * @param pgrpId   Process group id of to-be-killed-processes
+   * @param interval The time to wait before sending SIGKILL
+   *                 after sending SIGTERM
+   * @param inBackground Process is to be killed in the back ground with
+   *                     a separate thread
+   */
+  public static void assertAndDestroyProcessGroup(String pgrpId, long interval,
+                       boolean inBackground)
+         throws IOException {
+    // Make sure that the pid given is a process group leader
+    if (!assertPidPgrpidForMatch(pgrpId)) {
+      throw new IOException("Process with PID " + pgrpId  +
+                          " is not a process group leader.");
+    }
+    destroyProcessGroup(pgrpId, interval, inBackground);
+  }
+
+  /**
+   * Destroy the process-tree.
    */
   public void destroy() {
+    destroy(true);
+  }
+  
+  /**
+   * Destroy the process-tree.
+   * @param inBackground Process is to be killed in the back ground with
+   *                     a separate thread
+   */
+  public void destroy(boolean inBackground) {
     LOG.debug("Killing ProcfsBasedProcessTree of " + pid);
     if (pid == -1) {
       return;
     }
-    ShellCommandExecutor shexec = null;
 
-    if (isAlive(this.pid)) {
-      try {
-        String[] args = { "kill", this.pid.toString() };
-        shexec = new ShellCommandExecutor(args);
-        shexec.execute();
-      } catch (IOException ioe) {
-        LOG.warn("Error executing shell command " + ioe);
-      } finally {
-        LOG.info("Killing " + pid + " with SIGTERM. Exit code "
-            + shexec.getExitCode());
+    if (isAlive(pid.toString())) {
+      if (isSetsidAvailable && setsidUsed) {
+        // In this case, we know that pid got created using setsid. So kill the
+        // whole processGroup.
+        try {
+          assertAndDestroyProcessGroup(pid.toString(), sleeptimeBeforeSigkill,
+                              inBackground);
+        } catch (IOException e) {
+          LOG.warn(StringUtils.stringifyException(e));
+        }
+      }
+      else {
+        //TODO: Destroy all the processes in the subtree in this case also.
+        // For the time being, killing only the root process.
+        destroyProcess(pid.toString(), sleeptimeBeforeSigkill, inBackground);
       }
     }
-
-    SigKillThread sigKillThread = new SigKillThread();
-    sigKillThread.setDaemon(true);
-    sigKillThread.start();
   }
 
   /**
@@ -200,52 +272,7 @@ public class ProcfsBasedProcessTree {
     return total;
   }
 
-  /**
-   * Get PID from a pid-file.
-   * 
-   * @param pidFileName
-   *          Name of the pid-file.
-   * @return the PID string read from the pid-file. Returns null if the
-   *         pidFileName points to a non-existing file or if read fails from the
-   *         file.
-   */
-  public static String getPidFromPidFile(String pidFileName) {
-    BufferedReader pidFile = null;
-    FileReader fReader = null;
-    String pid = null;
-
-    try {
-      fReader = new FileReader(pidFileName);
-      pidFile = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
-      LOG.debug("PidFile doesn't exist : " + pidFileName);
-      return pid;
-    }
-
-    try {
-      pid = pidFile.readLine();
-    } catch (IOException i) {
-      LOG.error("Failed to read from " + pidFileName);
-    } finally {
-      try {
-        if (fReader != null) {
-          fReader.close();
-        }
-        try {
-          if (pidFile != null) {
-            pidFile.close();
-          }
-        } catch (IOException i) {
-          LOG.warn("Error closing the stream " + pidFile);
-        }
-      } catch (IOException i) {
-        LOG.warn("Error closing the stream " + fReader);
-      }
-    }
-    return pid;
-  }
-
-  private Integer getValidPID(String pid) {
+  private static Integer getValidPID(String pid) {
     Integer retPid = -1;
     try {
       retPid = Integer.parseInt((String) pid);
@@ -285,7 +312,7 @@ public class ProcfsBasedProcessTree {
    * Construct the ProcessInfo using the process' PID and procfs and return the
    * same. Returns null on failing to read from procfs,
    */
-  private ProcessInfo constructProcessInfo(ProcessInfo pinfo) {
+  private static ProcessInfo constructProcessInfo(ProcessInfo pinfo) {
     ProcessInfo ret = null;
     // Read "/proc/<pid>/stat" file
     BufferedReader in = null;
@@ -331,59 +358,6 @@ public class ProcfsBasedProcessTree {
     }
 
     return ret;
-  }
-
-  /**
-   * Is the process with PID pid still alive?
-   */
-  private boolean isAlive(Integer pid) {
-    // This method assumes that isAlive is called on a pid that was alive not
-    // too long ago, and hence assumes no chance of pid-wrapping-around.
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "-0", pid.toString() };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (ExitCodeException ee) {
-      return false;
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command "
-          + Arrays.toString(shexec.getExecString()) + ioe);
-      return false;
-    }
-    return (shexec.getExitCode() == 0 ? true : false);
-  }
-
-  /**
-   * Helper thread class that kills process-tree with SIGKILL in background
-   */
-  private class SigKillThread extends Thread {
-
-    public void run() {
-      this.setName(this.getClass().getName() + "-" + String.valueOf(pid));
-      ShellCommandExecutor shexec = null;
-
-      try {
-        // Sleep for some time before sending SIGKILL
-        Thread.sleep(sleepTimeBeforeSigKill);
-      } catch (InterruptedException i) {
-        LOG.warn("Thread sleep is interrupted.");
-      }
-
-      // Kill the root process with SIGKILL if it is still alive
-      if (ProcfsBasedProcessTree.this.isAlive(pid)) {
-        try {
-          String[] args = { "kill", "-9", pid.toString() };
-          shexec = new ShellCommandExecutor(args);
-          shexec.execute();
-        } catch (IOException ioe) {
-          LOG.warn("Error executing shell command " + ioe);
-        } finally {
-          LOG.info("Killing " + pid + " with SIGKILL. Exit code "
-              + shexec.getExitCode());
-        }
-      }
-    }
   }
 
   /**

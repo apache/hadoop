@@ -31,8 +31,12 @@ import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.util.ProcfsBasedProcessTree;
 
 class JvmManager {
 
@@ -339,7 +343,7 @@ class JvmManager {
           env.vargs.add(Integer.toString(jvmId.getId()));
           List<String> wrappedCommand = 
             TaskLog.captureOutAndError(env.setup, env.vargs, env.stdout, env.stderr,
-                env.logSize, env.pidFile);
+                env.logSize, true, env.pidFile);
           shexec = new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), 
               env.workDir, env.env);
           shexec.execute();
@@ -362,20 +366,32 @@ class JvmManager {
               FileUtil.fullyDelete(env.workDir);
             }
           } catch (IOException ie){}
-          if (tracker.isTaskMemoryManagerEnabled()) {
           // Remove the associated pid-file, if any
-            tracker.getTaskMemoryManager().
-               removePidFile(TaskAttemptID.forName(
+          tracker.removePidFile(TaskAttemptID.forName(
                    env.conf.get("mapred.task.id")));
-          }
         }
       }
 
+      /** 
+       * Kills the process. Also kills its subprocesses if the process(root of subtree
+       * of processes) is created using setsid.
+       */
       public void kill() {
         if (shexec != null) {
           Process process = shexec.getProcess();
           if (process != null) {
-            process.destroy();
+            Path pidFilePath = TaskTracker.getPidFilePath(
+                        TaskAttemptID.forName(env.conf.get("mapred.task.id")),
+                        env.conf);
+            String pid = ProcessTree.getPidFromPidFile(
+                                                    pidFilePath.toString());
+
+            long sleeptimeBeforeSigkill = env.conf.getLong(
+                 "mapred.tasktracker.sigkillthread.sleeptime-before-sigkill",
+                 ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+
+            ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
+                     ProcessTree.isSetsidAvailable, true/*in the background*/);
           }
         }
         removeJvm(jvmId);
