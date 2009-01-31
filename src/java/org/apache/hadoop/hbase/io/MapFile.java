@@ -24,9 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -52,7 +52,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * database, perform updates by copying the previous version of a database and
  * merging in a sorted change list, to create a new version of the database in
  * a new file.  Sorting large change lists can be done with {@link
- * org.apache.hadoop.io.SequenceFile.Sorter}.
+ * SequenceFile.Sorter}.
  */
 public class MapFile {
   private static final Log LOG = LogFactory.getLog(MapFile.class);
@@ -95,7 +95,7 @@ public class MapFile {
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass,
-                  SequenceFile.CompressionType compress, Progressable progress)
+                  CompressionType compress, Progressable progress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass,
            compress, progress);
@@ -104,7 +104,7 @@ public class MapFile {
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass,
-                  SequenceFile.CompressionType compress, CompressionCodec codec,
+                  CompressionType compress, CompressionCodec codec,
                   Progressable progress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass,
@@ -114,7 +114,7 @@ public class MapFile {
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass,
-                  SequenceFile.CompressionType compress)
+                  CompressionType compress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass, compress);
     }
@@ -168,7 +168,7 @@ public class MapFile {
       this.index =
         SequenceFile.createWriter
         (fs, conf, indexFile, keyClass, LongWritable.class,
-            SequenceFile.CompressionType.BLOCK, progress);
+            CompressionType.BLOCK, progress);
     }
     
     /** The number of entries that are added before an index entry is added.*/
