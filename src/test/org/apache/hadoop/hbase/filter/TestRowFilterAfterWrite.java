@@ -81,7 +81,6 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
 
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
-    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
 
     // For debugging
     conf.setInt("hbase.regionserver.lease.period", 20 * 60 * 1000);

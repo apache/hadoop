@@ -39,12 +39,13 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LeaseException;
-import org.apache.hadoop.hbase.Leases;
-import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
@@ -62,13 +63,14 @@ class ServerManager implements HConstants {
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
+  private final ZooKeeperWrapper zooKeeperWrapper;
 
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
   
   /**
-   * Set of known dead servers.  On lease expiration, servers are added here.
+   * Set of known dead servers.  On znode expiration, servers are added here.
    * Boolean holds whether its logs have been split or not.  Initially set to
    * false.
    */
@@ -84,7 +86,6 @@ class ServerManager implements HConstants {
     new ConcurrentHashMap<String, HServerLoad>();  
 
   private HMaster master;
-  private final Leases serverLeases;
   
   // Last time we logged average load.
   private volatile long lastLogOfAverageLaod = 0;
@@ -100,9 +101,7 @@ class ServerManager implements HConstants {
    */
   public ServerManager(HMaster master) {
     this.master = master;
-    serverLeases = new Leases(master.leaseTimeout, 
-      master.getConfiguration().getInt("hbase.master.lease.thread.wakefrequency",
-        15 * 1000));
+    zooKeeperWrapper = master.getZooKeeperWrapper();
     this.loggingPeriodForAverageLoad = master.getConfiguration().
       getLong("hbase.master.avgload.logging.period", 60000);
     this.nobalancingCount = master.getConfiguration().
@@ -111,8 +110,7 @@ class ServerManager implements HConstants {
  
   /**
    * Look to see if we have ghost references to this regionserver such as
-   * still-existing leases or if regionserver is on the dead servers list
-   * getting its logs processed.
+   * if regionserver is on the dead servers list getting its logs processed.
    * @param serverInfo
    * @return True if still ghost references and we have not been able to clear
    * them or the server is shutting down.
@@ -120,7 +118,6 @@ class ServerManager implements HConstants {
   private boolean checkForGhostReferences(final HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
     boolean result = false;
-    boolean lease = false;
     for (long sleepTime = -1; !master.closed.get() && !result;) {
       if (sleepTime != -1) {
         try {
@@ -129,28 +126,12 @@ class ServerManager implements HConstants {
           // Continue
         }
       }
-      if (!lease) {
-        try {
-          this.serverLeases.createLease(s, new ServerExpirer(s));
-        } catch (Leases.LeaseStillHeldException e) {
-          LOG.debug("Waiting on current lease to expire for " + e.getName());
-          sleepTime = this.master.leaseTimeout / 4;
-          continue;
-        }
-        lease = true;
-      }
       // May be on list of dead servers.  If so, wait till we've cleared it.
       String addr = serverInfo.getServerAddress().toString();
       if (isDead(addr)) {
         LOG.debug("Waiting on " + addr + " removal from dead list before " +
           "processing report-for-duty request");
         sleepTime = this.master.threadWakeFrequency;
-        try {
-          // Keep up lease.  May be here > lease expiration.
-          this.serverLeases.renewLease(s);
-        } catch (LeaseException e) {
-          LOG.warn("Failed renewal. Retrying.", e);
-        }
         continue;
       }
       result = true;
@@ -164,6 +145,10 @@ class ServerManager implements HConstants {
    */
   public void regionServerStartup(final HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
+    Watcher watcher = new ServerExpirer(serverInfo.getServerAddress()
+        .toString().trim());
+    zooKeeperWrapper.updateRSLocationGetWatch(serverInfo, watcher);
+    
     LOG.info("Received start message from: " + s);
     if (!checkForGhostReferences(serverInfo)) {
       return;
@@ -291,7 +276,7 @@ class ServerManager implements HConstants {
       }
 
       synchronized (serversToServerInfo) {
-        cancelLease(serverName);
+        removeServerInfo(serverName);
         serversToServerInfo.notifyAll();
       }
       
@@ -306,14 +291,11 @@ class ServerManager implements HConstants {
   private void processRegionServerExit(String serverName, HMsg[] msgs) {
     synchronized (serversToServerInfo) {
       try {
-        // HRegionServer is shutting down. Cancel the server's lease.
-        // Note that canceling the server's lease takes care of updating
-        // serversToServerInfo, etc.
-        if (cancelLease(serverName)) {
-          // Only process the exit message if the server still has a lease.
+        // HRegionServer is shutting down. 
+        if (removeServerInfo(serverName)) {
+          // Only process the exit message if the server still has registered info.
           // Otherwise we could end up processing the server exit twice.
-          LOG.info("Region server " + serverName +
-          ": MSG_REPORT_EXITING -- lease cancelled");
+          LOG.info("Region server " + serverName + ": MSG_REPORT_EXITING");
           // Get all the regions the server was serving reassigned
           // (if we are not shutting down).
           if (!master.closed.get()) {
@@ -357,10 +339,6 @@ class ServerManager implements HConstants {
   private HMsg[] processRegionServerAllsWell(String serverName, 
     HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
-    // All's well.  Renew the server's lease.
-    // This will always succeed; otherwise, the fetch of serversToServerInfo
-    // would have failed above.
-    serverLeases.renewLease(serverName);
 
     // Refresh the info object and the load information
     serversToServerInfo.put(serverName, serverInfo);
@@ -608,27 +586,19 @@ class ServerManager implements HConstants {
     }
   }
   
-  /** Cancel a server's lease and update its load information */
-  private boolean cancelLease(final String serverName) {
-    boolean leaseCancelled = false;
+  /** Update a server load information because it's shutting down*/
+  private boolean removeServerInfo(final String serverName) {
+    boolean infoUpdated = false;
     HServerInfo info = serversToServerInfo.remove(serverName);
-    // Only cancel lease and update load information once.
+    // Only update load information once.
     // This method can be called a couple of times during shutdown.
     if (info != null) {
-      LOG.info("Cancelling lease for " + serverName);
+      LOG.info("Removing server's info " + serverName);
       if (master.getRootRegionLocation() != null &&
         info.getServerAddress().equals(master.getRootRegionLocation())) {
         master.regionManager.unsetRootRegion();
       }
-      try {
-        serverLeases.cancelLease(serverName);
-      } catch (LeaseException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cancelling " + serverName + " got " + e.getMessage() +
-            "...continuing");
-        }
-      }
-      leaseCancelled = true;
+      infoUpdated = true;
 
       // update load information
       HServerLoad load = serversToLoad.remove(serverName);
@@ -642,7 +612,7 @@ class ServerManager implements HConstants {
         }
       }
     }
-    return leaseCancelled;
+    return infoUpdated;
   }
   
   /** 
@@ -726,8 +696,7 @@ class ServerManager implements HConstants {
    * Wait on regionservers to report in
    * with {@link #regionServerReport(HServerInfo, HMsg[])} so they get notice
    * the master is going down.  Waits until all region servers come back with
-   * a MSG_REGIONSERVER_STOP which will cancel their lease or until leases held
-   * by remote region servers have expired.
+   * a MSG_REGIONSERVER_STOP.
    */
   void letRegionServersShutdown() {
     if (!master.fsOk) {
@@ -737,8 +706,7 @@ class ServerManager implements HConstants {
     }
     synchronized (serversToServerInfo) {
       while (serversToServerInfo.size() > 0) {
-        LOG.info("Waiting on following regionserver(s) to go down (or " +
-          "region server lease expiration, whichever happens first): " +
+        LOG.info("Waiting on following regionserver(s) to go down " +
           serversToServerInfo.values());
         try {
           serversToServerInfo.wait(master.threadWakeFrequency);
@@ -749,64 +717,54 @@ class ServerManager implements HConstants {
     }
   }
   
-  /** Instantiated to monitor the health of a region server */
-  private class ServerExpirer implements LeaseListener {
+  /** Watcher triggered when a RS znode is deleted */
+  private class ServerExpirer implements Watcher {
     private String server;
 
     ServerExpirer(String server) {
       this.server = server;
     }
 
-    public void leaseExpired() {
-      LOG.info(server + " lease expired");
-      // Remove the server from the known servers list and update load info
-      HServerInfo info = serversToServerInfo.remove(server);
-      boolean rootServer = false;
-      if (info != null) {
-        HServerAddress root = master.getRootRegionLocation();
-        if (root != null && root.equals(info.getServerAddress())) {
-          // NOTE: If the server was serving the root region, we cannot reassign
-          // it here because the new server will start serving the root region
-          // before ProcessServerShutdown has a chance to split the log file.
-          master.regionManager.unsetRootRegion();
-          rootServer = true;
-        }
-        String serverName = info.getServerAddress().toString();
-        HServerLoad load = serversToLoad.remove(serverName);
-        if (load != null) {
-          synchronized (loadToServers) {
-            Set<String> servers = loadToServers.get(load);
-            if (servers != null) {
-              servers.remove(serverName);
-              loadToServers.put(load, servers);
+    public void process(WatchedEvent event) {
+      if(event.getType().equals(EventType.NodeDeleted)) {
+        LOG.info(server + " znode expired");
+        // Remove the server from the known servers list and update load info
+        HServerInfo info = serversToServerInfo.remove(server);
+        boolean rootServer = false;
+        if (info != null) {
+          HServerAddress root = master.getRootRegionLocation();
+          if (root != null && root.equals(info.getServerAddress())) {
+            // NOTE: If the server was serving the root region, we cannot
+            // reassign
+            // it here because the new server will start serving the root region
+            // before ProcessServerShutdown has a chance to split the log file.
+            master.regionManager.unsetRootRegion();
+            rootServer = true;
+          }
+          String serverName = info.getServerAddress().toString();
+          HServerLoad load = serversToLoad.remove(serverName);
+          if (load != null) {
+            synchronized (loadToServers) {
+              Set<String> servers = loadToServers.get(load);
+              if (servers != null) {
+                servers.remove(serverName);
+                loadToServers.put(load, servers);
+              }
             }
           }
+          deadServers.put(server, Boolean.FALSE);
+          try {
+            master.toDoQueue.put(new ProcessServerShutdown(master, info,
+                rootServer));
+          } catch (InterruptedException e) {
+            LOG.error("insert into toDoQueue was interrupted", e);
+          }
         }
-        deadServers.put(server, Boolean.FALSE);
-        try {
-          master.toDoQueue.put(
-              new ProcessServerShutdown(master, info, rootServer));
-        } catch (InterruptedException e) {
-          LOG.error("insert into toDoQueue was interrupted", e);
+        synchronized (serversToServerInfo) {
+          serversToServerInfo.notifyAll();
         }
-      }
-      synchronized (serversToServerInfo) {
-        serversToServerInfo.notifyAll();
       }
     }
-  }
-
-  /** Start up the server manager */
-  public void start() {
-    // Leases are not the same as Chore threads. Set name differently.
-    this.serverLeases.setName("ServerManager.leaseChecker");
-    this.serverLeases.start();
-  }
-  
-  /** Shut down the server manager */
-  public void stop() {
-    // stop monitor lease monitor
-    serverLeases.close();
   }
   
   /**

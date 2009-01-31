@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.MapWritable;
@@ -114,6 +115,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final int numRetries;
   final long maxRegionOpenTime;
   final int leaseTimeout;
+  private final ZooKeeperWrapper zooKeeperWrapper;
 
   volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
     new DelayQueue<RegionServerOperation>();
@@ -239,7 +241,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
-
+    
+    zooKeeperWrapper = new ZooKeeperWrapper(conf);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
 
@@ -396,7 +399,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
     }
     server.stop();                      // Stop server
-    serverManager.stop();
     regionManager.stop();
     
     // Join up with all threads
@@ -498,7 +500,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.metrics = new MasterMetrics();
     try {
       regionManager.start();
-      serverManager.start();
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
       if (port >= 0) {
@@ -925,6 +926,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             metaRegionName, e);
       }
     }
+  }
+  
+  /**
+   * Get the ZK wrapper object
+   * @return
+   */
+  public ZooKeeperWrapper getZooKeeperWrapper() {
+    return zooKeeperWrapper;
   }
    
   /*

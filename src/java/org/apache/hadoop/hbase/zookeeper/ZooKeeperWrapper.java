@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -64,6 +65,7 @@ public class ZooKeeperWrapper implements HConstants {
   private final String parentZNode;
   private final String rootRegionZNode;
   private final String outOfSafeModeZNode;
+  private final String rsZNode;
 
   /**
    * Create a ZooKeeperWrapper.
@@ -103,20 +105,14 @@ public class ZooKeeperWrapper implements HConstants {
 
     String rootServerZNodeName = conf.get(ZOOKEEPER_ROOT_SERVER_ZNODE,
                                           DEFAULT_ZOOKEEPER_ROOT_SERVER_ZNODE);
-    if (rootServerZNodeName.startsWith(ZNODE_PATH_SEPARATOR)) {
-      rootRegionZNode = rootServerZNodeName;
-    } else {
-      rootRegionZNode = parentZNode + ZNODE_PATH_SEPARATOR + rootServerZNodeName;
-    }
-
     String outOfSafeModeZNodeName = conf.get(ZOOKEEPER_SAFE_MODE_ZNODE,
-                                             DEFAULT_ZOOKEEPER_SAFE_MODE_ZNODE);
-    if (outOfSafeModeZNodeName.startsWith(ZNODE_PATH_SEPARATOR)) {
-      outOfSafeModeZNode = outOfSafeModeZNodeName;
-    } else {
-      outOfSafeModeZNode = parentZNode + ZNODE_PATH_SEPARATOR +
-                           outOfSafeModeZNodeName;
-    }
+        DEFAULT_ZOOKEEPER_SAFE_MODE_ZNODE);
+    String rsZNodeName = conf.get(ZOOKEEPER_RS_ZNODE,
+        DEFAULT_ZOOKEEPER_RS_ZNODE);
+    
+    rootRegionZNode = getZNode(rootServerZNodeName);
+    outOfSafeModeZNode = getZNode(outOfSafeModeZNodeName);
+    rsZNode = getZNode(rsZNodeName);
   }
 
   /**
@@ -218,11 +214,11 @@ public class ZooKeeperWrapper implements HConstants {
     return address;
   }
 
-  private boolean ensureParentZNodeExists() {
+  private boolean ensureZNodeExists(String path) {
     try {
-      zooKeeper.create(parentZNode, new byte[0],
+      zooKeeper.create(path, new byte[0],
                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-      LOG.debug("Created ZNode " + parentZNode);
+      LOG.debug("Created ZNode " + path);
       return true;
     } catch (KeeperException.NodeExistsException e) {
       return true;      // ok, move on.
@@ -240,7 +236,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if operation succeeded, false otherwise.
    */
   public boolean deleteRootRegionLocation()  {
-    if (!ensureParentZNodeExists()) {
+    if (!ensureZNodeExists(parentZNode)) {
       return false;
     }
 
@@ -301,7 +297,7 @@ public class ZooKeeperWrapper implements HConstants {
       return deleteRootRegionLocation();
     }
 
-    if (!ensureParentZNodeExists()) {
+    if (!ensureZNodeExists(parentZNode)) {
       return false;
     }
 
@@ -320,7 +316,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if we're out of safe mode, false otherwise.
    */
   public boolean checkOutOfSafeMode() {
-    if (!ensureParentZNodeExists()) {
+    if (!ensureZNodeExists(parentZNode)) {
       return false;
     }
 
@@ -332,7 +328,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if ephemeral ZNode created successfully, false otherwise.
    */
   public boolean writeOutOfSafeMode() {
-    if (!ensureParentZNodeExists()) {
+    if (!ensureZNodeExists(parentZNode)) {
       return false;
     }
 
@@ -349,7 +345,55 @@ public class ZooKeeperWrapper implements HConstants {
 
     return false;
   }
+  
+  /**
+   * Write in ZK this RS startCode and address.
+   * Ensures that the full path exists.
+   * @param info The RS info
+   * @return true if the location was written, false if it failed
+   */
+  public boolean writeRSLocation(HServerInfo info) {
+    ensureZNodeExists(parentZNode);
+    ensureZNodeExists(rsZNode);
+    byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
+    String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getStartCode();
+    try {
+      zooKeeper.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+      LOG.debug("Created ZNode " + znode
+          + " with data " + info.getServerAddress().getBindAddress());
+      return true;
+    } catch (KeeperException e) {
+      LOG.warn("Failed to create " + znode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to create " + znode + " znode in ZooKeeper: " + e);
+    }
+    return false;
+  }
 
+  /**
+   * Update the RS address and set a watcher on the znode
+   * @param info The RS info
+   * @param watcher The watcher to put on the znode
+   * @return true if the update is done, false if it failed
+   */
+  public boolean updateRSLocationGetWatch(HServerInfo info, Watcher watcher) {
+    byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
+    String znode = rsZNode + "/" + info.getStartCode();
+    try {
+      zooKeeper.setData(znode, data, -1);
+      LOG.debug("Updated ZNode " + znode
+          + " with data " + info.getServerAddress().getBindAddress());
+      zooKeeper.getData(znode, watcher, null);
+      return true;
+    } catch (KeeperException e) {
+      LOG.warn("Failed to update " + znode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to update " + znode + " znode in ZooKeeper: " + e);
+    }
+
+    return false;
+  }
+  
   private boolean checkExistenceOf(String path) {
     Stat stat = null;
     try {
@@ -373,5 +417,11 @@ public class ZooKeeperWrapper implements HConstants {
     } catch (InterruptedException e) {
       LOG.warn("Failed to close connection with ZooKeeper");
     }
+  }
+  
+  private String getZNode(String znodeName) {
+    return znodeName.startsWith(ZNODE_PATH_SEPARATOR) ? 
+      znodeName :
+      parentZNode + ZNODE_PATH_SEPARATOR + znodeName;
   }
 }

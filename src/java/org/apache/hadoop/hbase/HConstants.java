@@ -110,6 +110,11 @@ public interface HConstants {
   static final String ZOOKEEPER_SAFE_MODE_ZNODE = "zookeeper.znode.safemode";
   /** Default ZooKeeper ZNode storing safe mode. */
   static final String DEFAULT_ZOOKEEPER_SAFE_MODE_ZNODE = "safe-mode";
+  
+  /** Parameter name for ZooKeeper ZNode storing safe mode. */
+  static final String ZOOKEEPER_RS_ZNODE = "zookeeper.znode.rs";
+  /** Default ZooKeeper ZNode storing safe mode. */
+  static final String DEFAULT_ZOOKEEPER_RS_ZNODE = "rs";
 
   /** Parameter name for hbase.regionserver address. */
   static final String REGIONSERVER_ADDRESS = "hbase.regionserver";

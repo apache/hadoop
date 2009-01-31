@@ -88,7 +88,6 @@ public class TestLogRolling extends HBaseClusterTestCase {
 
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
-    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
 
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);

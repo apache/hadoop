@@ -284,6 +284,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
+    this.zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    boolean startCodeOk = false; 
+    while(!startCodeOk) {
+      serverInfo.setStartCode(System.currentTimeMillis());
+      startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
+      if(!startCodeOk) {
+        LOG.debug("Start code already taken, trying another one");
+      }
+    }
+    
     this.numRegionsToReport =                                        
       conf.getInt("hbase.regionserver.numregionstoreport", 10);      
       
@@ -295,8 +305,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
-
-    this.zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    
   }
 
   /**

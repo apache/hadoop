@@ -146,7 +146,7 @@ class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
-    zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    zooKeeperWrapper = master.getZooKeeperWrapper();
     zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
     zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
 
