@@ -23,8 +23,13 @@
 unset LANG
 unset LC_CTYPE
 version=$1
-revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
-url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
+if [[ -d .svn ]]; then
+  revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
+  url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
+elif [[ -d .git ]]; then
+  revision=`git rev-list --max-count=1 HEAD`
+  url=`git config --get remote.origin.url`
+fi
 user=`whoami`
 date=`date`
 mkdir -p build/src/org/apache/hadoop/hbase
