@@ -188,12 +188,14 @@
     <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" >
       <classpath refid="jspc.classpath"/>
     </taskdef>
+    <mkdir dir="${build.webapps}/master/WEB-INF"/>
     <jspcompiler
      uriroot="${src.webapps}/master"
      outputdir="${generated.webapps.src}"
      package="org.apache.hadoop.hbase.generated.master"
      webxml="${build.webapps}/master/WEB-INF/web.xml">
     </jspcompiler>
+    <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
     <jspcompiler
      uriroot="${src.webapps}/regionserver"
      outputdir="${generated.webapps.src}"

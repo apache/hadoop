@@ -35,6 +35,8 @@ Release 0.20.0 - Unreleased
    HBASE-903   [shell] Can't set table descriptor attributes when I alter a table
    HBASE-1164  Remove HBase private copy of SequenceFile
    HBASE-1166  saveVersion.sh doesn't work with git (Nitay Joffe via Stack)
+   HBASE-1167  JSP doesn't work in a git checkout (Nitay Joffe via Andrew
+               Purtell)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
