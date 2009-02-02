@@ -34,6 +34,8 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
  * @see org.apache.hadoop.hdfs.HftpFileSystem
  */
 public class FileDataServlet extends DfsServlet {
+  /** For java.io.Serializable */
+  private static final long serialVersionUID = 1L;
 
   /** Create a redirection URI */
   protected URI createUri(FileStatus i, UnixUserGroupInformation ugi,
@@ -54,26 +56,20 @@ public class FileDataServlet extends DfsServlet {
         "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
   }
 
-  private static JspHelper jspHelper = null;
-
   /** Select a datanode to service this request.
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  private static DatanodeID pickSrcDatanode(FileStatus i,
+  private DatanodeID pickSrcDatanode(FileStatus i,
       ClientProtocol nnproxy) throws IOException {
-    // a race condition can happen by initializing a static member this way.
-    // A proper fix should make JspHelper a singleton. Since it doesn't affect 
-    // correctness, we leave it as is for now.
-    if (jspHelper == null)
-      jspHelper = new JspHelper();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
         i.getPath().toUri().getPath(), 0, 1);
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
       // pick a random datanode
-      return jspHelper.randomNode();
+      NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
+      return nn.getNamesystem().getRandomDatanode();
     }
-    return jspHelper.bestNode(blks.get(0));
+    return JspHelper.bestNode(blks.get(0));
   }
 
   /**

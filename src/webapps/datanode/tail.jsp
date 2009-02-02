@@ -18,14 +18,10 @@
 %>
 
 <%!
-  static JspHelper jspHelper = new JspHelper();
+  static final DataNode datanode = DataNode.getDataNode();
 
   public void generateFileChunks(JspWriter out, HttpServletRequest req) 
     throws IOException {
-    long startOffset = 0;
-    
-    int chunkSizeToView = 0;
-
     String referrer = req.getParameter("referrer");
     boolean noLink = false;
     if (referrer == null) {
@@ -43,10 +39,7 @@
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
     
-    String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
-    if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
-      chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
-    else chunkSizeToView = jspHelper.defaultChunkSizeToView;
+    final int chunkSizeToView = JspHelper.string2ChunkSizeToView(req.getParameter("chunkSizeToView"));
 
     if (!noLink) {
       out.print("<h3>Tail of File: ");
@@ -70,8 +63,7 @@
                 referrer+ "\">");
 
     //fetch the block from the datanode that has the last block for this file
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
-                                         jspHelper.conf);
+    final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(), JspHelper.conf);
     List<LocatedBlock> blocks = 
       dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
     if (blocks == null || blocks.size() == 0) {
@@ -85,7 +77,7 @@
     long genStamp = lastBlk.getBlock().getGenerationStamp();
     DatanodeInfo chosenNode;
     try {
-      chosenNode = jspHelper.bestNode(lastBlk);
+      chosenNode = JspHelper.bestNode(lastBlk);
     } catch (IOException e) {
       out.print(e.toString());
       dfs.close();
@@ -93,12 +85,10 @@
     }      
     InetSocketAddress addr = NetUtils.createSocketAddr(chosenNode.getName());
     //view the last chunkSizeToView bytes while Tailing
-    if (blockSize >= chunkSizeToView)
-      startOffset = blockSize - chunkSizeToView;
-    else startOffset = 0;
+    final long startOffset = blockSize >= chunkSizeToView? blockSize - chunkSizeToView: 0;
 
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
-    jspHelper.streamBlockInAscii(addr, blockId, genStamp, blockSize, startOffset, chunkSizeToView, out);
+    JspHelper.streamBlockInAscii(addr, blockId, genStamp, blockSize, startOffset, chunkSizeToView, out);
     out.print("</textarea>");
     dfs.close();
   }

@@ -17,7 +17,7 @@
   import="java.text.DateFormat"
 %>
 <%!
-  static JspHelper jspHelper = new JspHelper();
+  static final DataNode datanode = DataNode.getDataNode();
   
   public void generateDirectoryStructure( JspWriter out, 
                                           HttpServletRequest req,
@@ -34,7 +34,7 @@
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
     
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(), JspHelper.conf);
     String target = dir;
     final FileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
@@ -55,7 +55,7 @@
         if (locations == null || locations.length == 0) {
           out.print("Empty file");
         } else {
-          DatanodeInfo chosenNode = jspHelper.bestNode(firstBlock);
+          DatanodeInfo chosenNode = JspHelper.bestNode(firstBlock);
           String fqdn = InetAddress.getByName(chosenNode.getHost()).
             getCanonicalHostName();
           String datanodeAddr = chosenNode.getName();
@@ -99,9 +99,9 @@
         out.print("Empty directory");
       }
       else {
-        jspHelper.addTableHeader(out);
+        JspHelper.addTableHeader(out);
         int row=0;
-        jspHelper.addTableRow(out, headings, row++);
+        JspHelper.addTableRow(out, headings, row++);
         String cols [] = new String[headings.length];
         for (int i = 0; i < files.length; i++) {
           //Get the location of the first block of the file
@@ -126,12 +126,12 @@
           cols[6] = files[i].getPermission().toString();
           cols[7] = files[i].getOwner();
           cols[8] = files[i].getGroup();
-          jspHelper.addTableRow(out, cols, row++);
+          JspHelper.addTableRow(out, cols, row++);
         }
-        jspHelper.addTableFooter(out);
+        JspHelper.addTableFooter(out);
       }
     } 
-    String namenodeHost = jspHelper.nameNodeAddr.getHostName();
+    String namenodeHost = datanode.getNameNodeAddr().getHostName();
     out.print("<br><a href=\"http://" + 
               InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":" +
               namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");

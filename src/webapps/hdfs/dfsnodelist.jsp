@@ -16,8 +16,6 @@ contentType="text/html; charset=UTF-8"
 	import="java.net.URLEncoder"
 %>
 <%!
-	JspHelper jspHelper = new JspHelper();
-
 	int rowNum = 0;
 	int colNum = 0;
 
@@ -127,7 +125,7 @@ public void generateDFSNodesList(JspWriter out,
 throws IOException {
 	ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();    
 	ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-	jspHelper.DFSNodesStatus(live, dead);
+	nn.getNamesystem().DFSNodesStatus(live, dead);
 
 	whatNodes = request.getParameter("whatNodes"); // show only live or only dead nodes
 	sorterField = request.getParameter("sorter/field");
@@ -137,8 +135,8 @@ throws IOException {
 	if ( sorterOrder == null )
 		sorterOrder = "ASC";
 
-	jspHelper.sortNodeList(live, sorterField, sorterOrder);
-	jspHelper.sortNodeList(dead, "name", "ASC");
+	JspHelper.sortNodeList(live, sorterField, sorterOrder);
+	JspHelper.sortNodeList(dead, "name", "ASC");
 
 	// Find out common suffix. Should this be before or after the sort?
 	String port_suffix = null;
@@ -203,7 +201,7 @@ throws IOException {
 						NodeHeaderStr("pcremaining") + "> Remaining <br>(%) <th " +
 						NodeHeaderStr("blocks") + "> Blocks\n" );
 
-				jspHelper.sortNodeList(live, sorterField, sorterOrder);
+				JspHelper.sortNodeList(live, sorterField, sorterOrder);
 				for ( int i=0; i < live.size(); i++ ) {
 					generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort);
 				}
@@ -218,7 +216,7 @@ throws IOException {
 				out.print( "<table border=1 cellspacing=0> <tr id=\"row1\"> " +
 				"<td> Node \n" );
 
-				jspHelper.sortNodeList(dead, "name", "ASC");
+				JspHelper.sortNodeList(dead, "name", "ASC");
 				for ( int i=0; i < dead.size() ; i++ ) {
 					generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
 				}
@@ -243,15 +241,8 @@ String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameN
   
 <body>
 <h1>NameNode '<%=namenodeLabel%>'</h1>
-
-
-<div id="dfstable"> <table>	  
-<tr> <td id="col1"> Started: <td> <%= fsn.getStartTime()%>
-<tr> <td id="col1"> Version: <td> <%= VersionInfo.getVersion()%>, r<%= VersionInfo.getRevision()%>
-<tr> <td id="col1"> Compiled: <td> <%= VersionInfo.getDate()%> by <%= VersionInfo.getUser()%>
-<tr> <td id="col1"> Upgrades: <td> <%= jspHelper.getUpgradeStatusText()%>
-</table></div><br>				      
-
+<%= JspHelper.getVersionTable(fsn) %>
+<br />
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
 <b><a href="/logs/">Namenode Logs</a></b><br>
 <b><a href=/dfshealth.jsp> Go back to DFS home</a></b>

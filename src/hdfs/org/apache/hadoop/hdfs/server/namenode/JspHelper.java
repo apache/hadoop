@@ -32,51 +32,39 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.*;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 public class JspHelper {
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
 
-  static FSNamesystem fsn = null;
-  public static InetSocketAddress nameNodeAddr;
   public static final Configuration conf = new Configuration();
   public static final UnixUserGroupInformation webUGI
   = UnixUserGroupInformation.createImmutable(
       conf.getStrings(WEB_UGI_PROPERTY_NAME));
 
-  public static final int defaultChunkSizeToView = 
+  private static final int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
-  static Random rand = new Random();
+  static final Random rand = new Random();
 
-  public JspHelper() {
-    if (DataNode.getDataNode() != null) {
-      nameNodeAddr = DataNode.getDataNode().getNameNodeAddr();
-    }
-    else {
-      fsn = FSNamesystem.getFSNamesystem();
-      nameNodeAddr = fsn.getDFSNameNodeAddress(); 
-    }      
-
+  static {
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, webUGI);
   }
 
-  public DatanodeID randomNode() throws IOException {
-    return fsn.getRandomDatanode();
-  }
+  /** Private constructor for preventing creating JspHelper object. */
+  private JspHelper() {} 
 
-  public DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
+  public static DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
     int failures = 0;
@@ -115,7 +103,8 @@ public class JspHelper {
     s.close();
     return chosenNode;
   }
-  public void streamBlockInAscii(InetSocketAddress addr, long blockId, 
+
+  public static void streamBlockInAscii(InetSocketAddress addr, long blockId, 
                                  long genStamp, long blockSize, 
                                  long offsetIntoBlock, long chunkSizeToView, JspWriter out) 
     throws IOException {
@@ -155,24 +144,20 @@ public class JspHelper {
     s.close();
     out.print(new String(buf));
   }
-  public void DFSNodesStatus(ArrayList<DatanodeDescriptor> live,
-                             ArrayList<DatanodeDescriptor> dead) {
-    if (fsn != null)
-      fsn.DFSNodesStatus(live, dead);
-  }
-  public void addTableHeader(JspWriter out) throws IOException {
+
+  public static void addTableHeader(JspWriter out) throws IOException {
     out.print("<table border=\"1\""+
               " cellpadding=\"2\" cellspacing=\"2\">");
     out.print("<tbody>");
   }
-  public void addTableRow(JspWriter out, String[] columns) throws IOException {
+  public static void addTableRow(JspWriter out, String[] columns) throws IOException {
     out.print("<tr>");
     for (int i = 0; i < columns.length; i++) {
       out.print("<td style=\"vertical-align: top;\"><B>"+columns[i]+"</B><br></td>");
     }
     out.print("</tr>");
   }
-  public void addTableRow(JspWriter out, String[] columns, int row) throws IOException {
+  public static void addTableRow(JspWriter out, String[] columns, int row) throws IOException {
     out.print("<tr>");
       
     for (int i = 0; i < columns.length; i++) {
@@ -185,17 +170,17 @@ public class JspHelper {
     }
     out.print("</tr>");
   }
-  public void addTableFooter(JspWriter out) throws IOException {
+  public static void addTableFooter(JspWriter out) throws IOException {
     out.print("</tbody></table>");
   }
 
-  public String getSafeModeText() {
+  public static String getSafeModeText(FSNamesystem fsn) {
     if (!fsn.isInSafeMode())
       return "";
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
   }
 
-  public String getInodeLimitText() {
+  public static String getInodeLimitText(FSNamesystem fsn) {
     long inodes = fsn.dir.totalInodes();
     long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
@@ -217,7 +202,7 @@ public class JspHelper {
     return str;
   }
 
-  public String getUpgradeStatusText() {
+  public static String getUpgradeStatusText(FSNamesystem fsn) {
     String statusText = "";
     try {
       UpgradeStatusReport status = 
@@ -231,7 +216,7 @@ public class JspHelper {
     return statusText;
   }
 
-  public void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
+  public static void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
                            String field, String order) {
         
     class NodeComapare implements Comparator<DatanodeDescriptor> {
@@ -369,5 +354,21 @@ public class JspHelper {
     if(start != 0)
       file = "..." + file.substring(start, file.length());
     out.print("<title>HDFS:" + file + "</title>");
+  }
+
+  /** Convert a String to chunk-size-to-view. */
+  public static int string2ChunkSizeToView(String s) {
+    int n = s == null? 0: Integer.parseInt(s);
+    return n > 0? n: defaultChunkSizeToView;
+  }
+
+  /** Return a table containing version information. */
+  public static String getVersionTable(FSNamesystem fsn) {
+    return "<div id='dfstable'><table>"       
+        + "\n  <tr><td id='col1'>Started:</td><td>" + fsn.getStartTime() + "</td></tr>\n"
+        + "\n  <tr><td id='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
+        + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
+        + "\n  <tr><td id='col1'>Upgrades:</td><td>" + getUpgradeStatusText(fsn)
+        + "\n</table></div>";
   }
 }

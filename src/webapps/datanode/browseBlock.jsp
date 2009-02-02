@@ -17,12 +17,11 @@
 %>
 
 <%!
-  static JspHelper jspHelper = new JspHelper();
+  static final DataNode datanode = DataNode.getDataNode();
 
   public void generateFileDetails(JspWriter out, HttpServletRequest req) 
     throws IOException {
 
-    int chunkSizeToView = 0;
     long startOffset = 0;
     int datanodePort;
 
@@ -47,10 +46,7 @@
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
 
-    String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
-    if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
-      chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
-    else chunkSizeToView = jspHelper.defaultChunkSizeToView;
+    final int chunkSizeToView = JspHelper.string2ChunkSizeToView(req.getParameter("chunkSizeToView"));
 
     String startOffsetStr = req.getParameter("startOffset");
     if (startOffsetStr == null || Long.parseLong(startOffsetStr) < 0)
@@ -71,7 +67,7 @@
     } 
     blockSize = Long.parseLong(blockSizeStr);
 
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(), JspHelper.conf);
     List<LocatedBlock> blocks = 
       dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
     //Add the various links for looking at the file contents
@@ -87,7 +83,7 @@
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockId = lastBlk.getBlock().getBlockId();
     try {
-      chosenNode = jspHelper.bestNode(lastBlk);
+      chosenNode = JspHelper.bestNode(lastBlk);
     } catch (IOException e) {
       out.print(e.toString());
       dfs.close();
@@ -157,7 +153,7 @@
     }
     out.println("</table>");
     out.print("<hr>");
-    String namenodeHost = jspHelper.nameNodeAddr.getHostName();
+    String namenodeHost = datanode.getNameNodeAddr().getHostName();
     out.print("<br><a href=\"http://" + 
               InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":" +
               namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
@@ -168,7 +164,6 @@
     throws IOException {
     long startOffset = 0;
     int datanodePort = 0; 
-    int chunkSizeToView = 0;
 
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
     int namenodeInfoPort = -1;
@@ -208,10 +203,7 @@
     }
     blockSize = Long.parseLong(blockSizeStr);
     
-    String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
-    if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
-      chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
-    else chunkSizeToView = jspHelper.defaultChunkSizeToView;
+    final int chunkSizeToView = JspHelper.string2ChunkSizeToView(req.getParameter("chunkSizeToView"));
 
     String startOffsetStr = req.getParameter("startOffset");
     if (startOffsetStr == null || Long.parseLong(startOffsetStr) < 0)
@@ -240,7 +232,7 @@
     out.print("<hr>");
 
     //Determine the prev & next blocks
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(), JspHelper.conf);
     long nextStartOffset = 0;
     long nextBlockSize = 0;
     String nextBlockIdStr = null;
@@ -261,7 +253,7 @@
             nextGenStamp = Long.toString(nextBlock.getBlock().getGenerationStamp());
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
-            DatanodeInfo d = jspHelper.bestNode(nextBlock);
+            DatanodeInfo d = JspHelper.bestNode(nextBlock);
             String datanodeAddr = d.getName();
             nextDatanodePort = Integer.parseInt(
                                       datanodeAddr.substring(
@@ -315,7 +307,7 @@
             if (prevStartOffset < 0)
               prevStartOffset = 0;
             prevBlockSize = prevBlock.getBlock().getNumBytes();
-            DatanodeInfo d = jspHelper.bestNode(prevBlock);
+            DatanodeInfo d = JspHelper.bestNode(prevBlock);
             String datanodeAddr = d.getName();
             prevDatanodePort = Integer.parseInt(
                                       datanodeAddr.substring(
@@ -353,7 +345,7 @@
     out.print("<hr>");
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     try {
-    jspHelper.streamBlockInAscii(
+    JspHelper.streamBlockInAscii(
             new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
             genStamp, blockSize, startOffset, chunkSizeToView, out);
     } catch (Exception e){

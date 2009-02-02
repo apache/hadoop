@@ -56,6 +56,9 @@ Trunk (unreleased changes)
     or the main Java task in Hadoop's case, kills the entire subtree of
     processes. (Ravi Gummadi via ddas)
 
+    HADOOP-5097. Remove static variable JspHelper.fsn, a static reference to
+    a non-singleton FSNamesystem object.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

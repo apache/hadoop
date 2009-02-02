@@ -17,8 +17,6 @@
   import="java.net.URLEncoder"
 %>
 <%!
-  JspHelper jspHelper = new JspHelper();
-
   int rowNum = 0;
   int colNum = 0;
 
@@ -161,7 +159,7 @@
     FSNamesystem fsn = nn.getNamesystem();
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    jspHelper.DFSNodesStatus(live, dead);
+    fsn.DFSNodesStatus(live, dead);
 
     sorterField = request.getParameter("sorter/field");
     sorterOrder = request.getParameter("sorter/order");
@@ -235,22 +233,15 @@
     
 <body>
 <h1>NameNode '<%=namenodeLabel%>'</h1>
-
-
-<div id="dfstable"> <table>	  
-<tr> <td id="col1"> Started: <td> <%= fsn.getStartTime()%>
-<tr> <td id="col1"> Version: <td> <%= VersionInfo.getVersion()%>, <%= VersionInfo.getRevision()%>
-<tr> <td id="col1"> Compiled: <td> <%= VersionInfo.getDate()%> by <%= VersionInfo.getUser()%> from <%= VersionInfo.getBranch()%>
-<tr> <td id="col1"> Upgrades: <td> <%= jspHelper.getUpgradeStatusText()%>
-</table></div><br>				      
-
+<%= JspHelper.getVersionTable(fsn) %>
+<br />
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
 <b><a href="/logs/">Namenode Logs</a></b>
 
 <hr>
 <h3>Cluster Summary</h3>
-<b> <%= jspHelper.getSafeModeText()%> </b>
-<b> <%= jspHelper.getInodeLimitText()%> </b>
+<b> <%= JspHelper.getSafeModeText(fsn)%> </b>
+<b> <%= JspHelper.getInodeLimitText(fsn)%> </b>
 <%
     generateDFSHealthReport(out, nn, request); 
 %>

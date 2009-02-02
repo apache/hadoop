@@ -61,7 +61,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.DataOutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -244,8 +243,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private int replIndex = 0;
 
   private static FSNamesystem fsNamesystemObject;
-  /** NameNode RPC address */
-  private InetSocketAddress nameNodeAddress = null; // TODO: name-node has this field, it should be removed here
   private SafeModeInfo safeMode;  // safe mode information
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
@@ -292,7 +289,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.systemStart = now();
     setConfigurationParameters(conf);
 
-    this.nameNodeAddress = nn.getNameNodeAddress();
     this.registerMBean(conf); // register the MBean for the FSNamesystemStutus
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
@@ -3457,16 +3453,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return datanodeMap.get(name);
   }
 
-  /**
-   * @deprecated use {@link NameNode#getNameNodeAddress()} instead.
-   */
-  @Deprecated
-  public InetSocketAddress getDFSNameNodeAddress() {
-    return nameNodeAddress;
-  }
-
-  /**
-   */
   public Date getStartTime() {
     return new Date(systemStart); 
   }
