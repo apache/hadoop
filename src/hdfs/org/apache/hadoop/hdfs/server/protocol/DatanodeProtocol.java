@@ -35,15 +35,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 18: In sendHeartbeat, the capacity parameter reported was sum of 
-   *     the filesystem disk space of all the data directories. This is 
-   *     changed to exclude the reserved capacity defined by 
-   *     dfs.datanode.du.reserved. 
-   *
-   *     The new capacity reported is sum of the filesystem disk space of 
-   *     all the data directories minus the reserved capacity.
+   * 19: SendHeartbeat returns an array of DatanodeCommand objects
+   *     in stead of a DatanodeCommand object.
    */
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
   
   // error code
   final static int NOTIFY = 0;
@@ -77,11 +72,12 @@ public interface DatanodeProtocol extends VersionedProtocol {
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still
    * alive and well.  Includes some status info, too. 
-   * It also gives the NameNode a chance to return a "DatanodeCommand" object.
+   * It also gives the NameNode a chance to return 
+   * an array of "DatanodeCommand" objects.
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
    */
-  public DatanodeCommand sendHeartbeat(DatanodeRegistration registration,
+  public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
                                        long capacity,
                                        long dfsUsed, long remaining,
                                        int xmitsInProgress,
