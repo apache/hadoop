@@ -27,7 +27,7 @@ public class TestHeartbeatHandling extends TestCase {
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     try {
       cluster.waitActive();
-      final FSNamesystem namesystem = cluster.getNamesystem();
+      final FSNamesystem namesystem = cluster.getNameNode().getNamesystem();
       final DatanodeRegistration nodeReg = cluster.getDataNodes().get(0).dnRegistration;
       DatanodeDescriptor dd = namesystem.getDatanode(nodeReg);
       

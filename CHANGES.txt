@@ -658,6 +658,9 @@ Release 0.19.1 - Unreleased
     HADOOP-5034. NameNode should send both replication and deletion requests
     to DataNode in one reply to a heartbeat. (hairong)
 
+    HADOOP-556. TestHeartbeatHandling uses MiiDFSCluster.getNamesystem()
+    which does not exit in branch 0.19 and 0.20. (hairong)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
