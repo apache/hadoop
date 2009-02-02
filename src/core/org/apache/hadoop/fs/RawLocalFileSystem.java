@@ -328,6 +328,17 @@ public class RawLocalFileSystem extends FileSystem {
   public Path getWorkingDirectory() {
     return workingDir;
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public FsStatus getStatus(Path p) throws IOException {
+    File partition = pathToFile(p == null ? new Path("/") : p);
+    //File provides getUsableSpace() and getFreeSpace()
+    //File provides no API to obtain used space, assume used = total - free
+    return new FsStatus(partition.getTotalSpace(), 
+      partition.getTotalSpace() - partition.getFreeSpace(),
+      partition.getFreeSpace());
+  }
   
   // In the case of the local filesystem, we can just rename the file.
   public void moveFromLocalFile(Path src, Path dst) throws IOException {

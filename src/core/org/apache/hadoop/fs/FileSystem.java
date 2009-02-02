@@ -1282,6 +1282,34 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return results.toArray(new FileStatus[results.size()]);
   }
+  
+  /**
+   * Returns a status object describing the use and capacity of the
+   * file system. If the file system has multiple partitions, the
+   * use and capacity of the root partition is reflected.
+   * 
+   * @return a FsStatus object
+   * @throws IOException
+   *           see specific implementation
+   */
+  public FsStatus getStatus() throws IOException {
+    return getStatus(null);
+  }
+
+  /**
+   * Returns a status object describing the use and capacity of the
+   * file system. If the file system has multiple partitions, the
+   * use and capacity of the partition pointed to by the specified
+   * path is reflected.
+   * @param p Path for which status should be obtained. null means
+   * the default partition. 
+   * @return a FsStatus object
+   * @throws IOException
+   *           see specific implementation
+   */
+  public FsStatus getStatus(Path p) throws IOException {
+    return new FsStatus(Long.MAX_VALUE, 0, Long.MAX_VALUE);
+  }
 
   /**
    * Set permission of a path.

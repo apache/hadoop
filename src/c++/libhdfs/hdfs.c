@@ -25,6 +25,7 @@
 #define HADOOP_PATH     "org/apache/hadoop/fs/Path"
 #define HADOOP_LOCALFS  "org/apache/hadoop/fs/LocalFileSystem"
 #define HADOOP_FS       "org/apache/hadoop/fs/FileSystem"
+#define HADOOP_FSSTATUS "org/apache/hadoop/fs/FsStatus"
 #define HADOOP_BLK_LOC  "org/apache/hadoop/fs/BlockLocation"
 #define HADOOP_DFS      "org/apache/hadoop/hdfs/DistributedFileSystem"
 #define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
@@ -1678,7 +1679,8 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
 tOffset hdfsGetCapacity(hdfsFS fs)
 {
     // JAVA EQUIVALENT:
-    //  fs.getRawCapacity();
+    //  FsStatus fss = fs.getStatus();
+    //  return Fss.getCapacity();
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1689,23 +1691,22 @@ tOffset hdfsGetCapacity(hdfsFS fs)
 
     jobject jFS = (jobject)fs;
 
-    if (!((*env)->IsInstanceOf(env, jFS, 
-                               globalClassReference(HADOOP_DFS, env)))) {
-        fprintf(stderr, "hdfsGetCapacity works only on a "
-                "DistributedFileSystem!\n");
-        return -1;
-    }
-
-    //FileSystem::getRawCapacity()
+    //FileSystem::getStatus
     jvalue  jVal;
     jthrowable jExc = NULL;
-    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_DFS,
-                     "getRawCapacity", "()J") != 0) {
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
+                     "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;") != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "FileSystem::getRawCapacity");
+                                   "FileSystem::getStatus");
         return -1;
     }
-
+    jobject fss = (jobject)jVal.l;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, fss, HADOOP_FSSTATUS,
+                     "getCapacity", "()J") != 0) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FsStatus::getCapacity");
+        return -1;
+    }
     return jVal.j;
 }
 
@@ -1714,7 +1715,8 @@ tOffset hdfsGetCapacity(hdfsFS fs)
 tOffset hdfsGetUsed(hdfsFS fs)
 {
     // JAVA EQUIVALENT:
-    //  fs.getRawUsed();
+    //  FsStatus fss = fs.getStatus();
+    //  return Fss.getUsed();
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1725,24 +1727,24 @@ tOffset hdfsGetUsed(hdfsFS fs)
 
     jobject jFS = (jobject)fs;
 
-    if (!((*env)->IsInstanceOf(env, jFS, 
-                               globalClassReference(HADOOP_DFS, env)))) {
-        fprintf(stderr, "hdfsGetUsed works only on a "
-                "DistributedFileSystem!\n");
-        return -1;
-    }
-
-    //FileSystem::getRawUsed()
-    jvalue jVal;
+    //FileSystem::getStatus
+    jvalue  jVal;
     jthrowable jExc = NULL;
-    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_DFS,
-                     "getRawUsed", "()J") != 0) {
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
+                     "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;") != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "FileSystem::getRawUsed");
+                                   "FileSystem::getStatus");
         return -1;
     }
-
+    jobject fss = (jobject)jVal.l;
+    if (invokeMethod(env, &jVal, &jExc, INSTANCE, fss, HADOOP_FSSTATUS,
+                     "getUsed", "()J") != 0) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                   "FsStatus::getUsed");
+        return -1;
+    }
     return jVal.j;
+
 }
 
 

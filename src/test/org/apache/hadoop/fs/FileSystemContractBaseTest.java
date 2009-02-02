@@ -68,6 +68,15 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   protected boolean renameSupported() {
     return true;
   }
+
+  public void testFsStatus() throws Exception {
+    FsStatus fsStatus = fs.getStatus();
+    assertNotNull(fsStatus);
+    //used, free and capacity are non-negative longs
+    assertTrue(fsStatus.getUsed() >= 0);
+    assertTrue(fsStatus.getRemaining() >= 0);
+    assertTrue(fsStatus.getCapacity() >= 0);
+  }
   
   public void testWorkingDirectory() throws Exception {
 

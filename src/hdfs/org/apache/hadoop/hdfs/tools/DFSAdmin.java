@@ -24,7 +24,6 @@ import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
@@ -260,9 +260,9 @@ public class DFSAdmin extends FsShell {
   public void report() throws IOException {
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      DiskStatus ds = dfs.getDiskStatus();
+      FsStatus ds = dfs.getStatus();
       long capacity = ds.getCapacity();
-      long used = ds.getDfsUsed();
+      long used = ds.getUsed();
       long remaining = ds.getRemaining();
       long presentCapacity = used + remaining;
       boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);

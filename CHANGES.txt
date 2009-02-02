@@ -29,6 +29,9 @@ Trunk (unreleased changes)
     HADOOP-3953. Implement sticky bit for directories in HDFS. (Jakob Homan
     via szetszwo)
 
+    HADOOP-4368. Implement df in FsShell to show the status of a FileSystem.
+    (Craig Macdonald via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4936. Improvements to TestSafeMode. (shv)

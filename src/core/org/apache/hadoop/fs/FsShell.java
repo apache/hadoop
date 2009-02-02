@@ -637,6 +637,28 @@ public class FsShell extends Configured implements Tool {
     }
   }
 
+   /**
+   * Show the size of a partition in the filesystem that contains
+   * the specified <i>path</i>.
+   * @param path a path specifying the source partition. null means /.
+   * @throws IOException  
+   */
+  void df(String path) throws IOException {
+    if (path == null) path = "/";
+    final Path srcPath = new Path(path);
+    final FileSystem srcFs = srcPath.getFileSystem(getConf());
+    if (! srcFs.exists(srcPath)) {
+      throw new FileNotFoundException("Cannot access "+srcPath.toString());
+    }
+    final FsStatus stats = srcFs.getStatus(srcPath);
+    final int PercentUsed = (int)(100.0f *  (float)stats.getUsed() / (float)stats.getCapacity());
+    System.out.println("Filesystem\t\tSize\tUsed\tAvail\tUse%");
+    System.out.printf("%s\t\t%d\t%d\t%d\t%d%%\n",
+      path, 
+      stats.getCapacity(), stats.getUsed(), stats.getRemaining(),
+      PercentUsed);
+  }
+
   /**
    * Show the size of all files that match the file pattern <i>src</i>
    * @param src a file pattern specifying source files
@@ -1236,7 +1258,7 @@ public class FsShell extends Configured implements Tool {
     String summary = "hadoop fs is the command to execute fs commands. " +
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
-      "[-D <property=value>] [-ls <path>] [-lsr <path>] [-du <path>]\n\t" + 
+      "[-D <property=value>] [-ls <path>] [-lsr <path>] [-df [<path>]] [-du <path>]\n\t" + 
       "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]\n\t" + 
       "[-rmr <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
@@ -1281,6 +1303,10 @@ public class FsShell extends Configured implements Tool {
       "\t\tfile pattern.  Behaves very similarly to hadoop fs -ls,\n" + 
       "\t\texcept that the data is shown for all the entries in the\n" +
       "\t\tsubtree.\n";
+
+    String df = "-df [<path>]: \tShows the capacity, free and used space of the filesystem.\n"+
+      "\t\tIf the filesystem has multiple partitions, and no path to a particular partition\n"+
+      "\t\tis specified, then the status of the root partitions will be shown.\n";
 
     String du = "-du <path>: \tShow the amount of space, in bytes, used by the files that \n" +
       "\t\tmatch the specified file pattern.  Equivalent to the unix\n" + 
@@ -1406,6 +1432,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(ls);
     } else if ("lsr".equals(cmd)) {
       System.out.println(lsr);
+    } else if ("df".equals(cmd)) {
+      System.out.println(df);
     } else if ("du".equals(cmd)) {
       System.out.println(du);
     } else if ("dus".equals(cmd)) {
@@ -1463,6 +1491,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println(fs);
       System.out.println(ls);
       System.out.println(lsr);
+      System.out.println(df);
       System.out.println(du);
       System.out.println(dus);
       System.out.println(mv);
@@ -1512,6 +1541,8 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], false);
         } else if ("-rmr".equals(cmd)) {
           delete(argv[i], true);
+        } else if ("-df".equals(cmd)) {
+          df(argv[i]);
         } else if ("-du".equals(cmd)) {
           du(argv[i]);
         } else if ("-dus".equals(cmd)) {
@@ -1580,6 +1611,9 @@ public class FsShell extends Configured implements Tool {
                "-text".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
+    } else if ("-df".equals(cmd) ) {
+      System.err.println("Usage: java FsShell" +
+                         " [" + cmd + " [<path>]]");
     } else if (Count.matches(cmd)) {
       System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
@@ -1613,6 +1647,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-ls <path>]");
       System.err.println("           [-lsr <path>]");
+      System.err.println("           [-df [<path>]]");
       System.err.println("           [-du <path>]");
       System.err.println("           [-dus <path>]");
       System.err.println("           [" + Count.USAGE + "]");
@@ -1658,7 +1693,6 @@ public class FsShell extends Configured implements Tool {
     int exitCode = -1;
     int i = 0;
     String cmd = argv[i++];
-
     //
     // verify that we have enough command line parameters
     //
@@ -1688,7 +1722,6 @@ public class FsShell extends Configured implements Tool {
         return exitCode;
       }
     }
-
     // initialize FsShell
     try {
       init();
@@ -1754,6 +1787,12 @@ public class FsShell extends Configured implements Tool {
         exitCode = doall(cmd, argv, i);
       } else if ("-expunge".equals(cmd)) {
         expunge();
+      } else if ("-df".equals(cmd)) {
+        if (argv.length-1 > 0) {
+          exitCode = doall(cmd, argv, i);
+        } else {
+          df(null);
+        }
       } else if ("-du".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);

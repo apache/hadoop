@@ -27,7 +27,6 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -695,22 +694,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
-  public DiskStatus getDiskStatus() throws IOException {
+  public FsStatus getDiskStatus() throws IOException {
     long rawNums[] = namenode.getStats();
-    return new DiskStatus(rawNums[0], rawNums[1], rawNums[2]);
-  }
-  /**
-   */
-  public long totalRawCapacity() throws IOException {
-    long rawNums[] = namenode.getStats();
-    return rawNums[0];
-  }
-
-  /**
-   */
-  public long totalRawUsed() throws IOException {
-    long rawNums[] = namenode.getStats();
-    return rawNums[1];
+    return new FsStatus(rawNums[0], rawNums[1], rawNums[2]);
   }
 
   public DatanodeInfo[] datanodeReport(DatanodeReportType type)

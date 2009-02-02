@@ -171,6 +171,12 @@ public class FilterFileSystem extends FileSystem {
   public Path getWorkingDirectory() {
     return fs.getWorkingDirectory();
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public FsStatus getStatus(Path p) throws IOException {
+    return fs.getStatus(p);
+  }
   
   /** {@inheritDoc} */
   @Override

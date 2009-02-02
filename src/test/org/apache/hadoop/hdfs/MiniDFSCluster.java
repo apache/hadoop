@@ -676,16 +676,12 @@ public class MiniDFSCluster {
     if (nameNode == null) {
       return false;
     }
-    try {
-      long[] sizes = nameNode.getStats();
-      boolean isUp = false;
-      synchronized (this) {
-        isUp = (!nameNode.isInSafeMode() && sizes[0] != 0);
-      }
-      return isUp;
-    } catch (IOException ie) {
-      return false;
+    long[] sizes = nameNode.getStats();
+    boolean isUp = false;
+    synchronized (this) {
+      isUp = (!nameNode.isInSafeMode() && sizes[0] != 0);
     }
+    return isUp;
   }
   
   /**

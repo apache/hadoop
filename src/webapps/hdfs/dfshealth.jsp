@@ -186,13 +186,16 @@
     }
         
     counterReset();
-    
-    long total = fsn.getCapacityTotal();
-    long remaining = fsn.getCapacityRemaining();
-    long used = fsn.getCapacityUsed();
-    long nonDFS = fsn.getCapacityUsedNonDFS();
-    float percentUsed = fsn.getCapacityUsedPercent();
-    float percentRemaining = fsn.getCapacityRemainingPercent();
+    long[] fsnStats = fsn.getStats(); 
+    long total = fsnStats[0];
+    long remaining = fsnStats[2];
+    long used = fsnStats[1];
+    long nonDFS = total - remaining - used;
+	nonDFS = nonDFS < 0 ? 0 : nonDFS; 
+    float percentUsed = total <= 0 
+        ? 0f : ((float)used * 100.0f)/(float)total;
+    float percentRemaining = total <= 0 
+        ? 100f : ((float)remaining * 100.0f)/(float)total;
 
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Configured Capacity" + colTxt() + ":" + colTxt() +
