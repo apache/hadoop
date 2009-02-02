@@ -168,7 +168,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell " + GET_SHORT_USAGE);
       throw iae;
     }
-    final boolean copyCrc = cf.getOpt("crc");
+    boolean copyCrc = cf.getOpt("crc");
     final boolean verifyChecksum = !cf.getOpt("ignoreCrc");
 
     if (dststr.equals("-")) {
@@ -180,6 +180,11 @@ public class FsShell extends Configured implements Tool {
       File dst = new File(dststr);      
       Path srcpath = new Path(srcstr);
       FileSystem srcFS = getSrcFileSystem(srcpath, verifyChecksum);
+      if (copyCrc && !(srcFS instanceof ChecksumFileSystem)) {
+        System.err.println("-crc option is not valid when source file system " +
+            "does not have crc files. Automatically turn the option off.");
+        copyCrc = false;
+      }
       FileStatus[] srcs = srcFS.globStatus(srcpath);
       boolean dstIsDir = dst.isDirectory(); 
       if (srcs.length > 1 && !dstIsDir) {
@@ -249,6 +254,10 @@ public class FsShell extends Configured implements Tool {
       }
 
       if (copyCrc) {
+        if (!(srcFS instanceof ChecksumFileSystem)) {
+          throw new IOException("Source file system does not have crc files");
+        }
+        
         ChecksumFileSystem csfs = (ChecksumFileSystem) srcFS;
         File dstcs = FileSystem.getLocal(srcFS.getConf())
           .pathToFile(csfs.getChecksumFile(new Path(dst.getCanonicalPath())));

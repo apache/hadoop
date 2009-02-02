@@ -677,6 +677,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5139. Catch IllegalArgumentException during metrics registration 
     in RPC.  (Hairong Kuang via szetszwo)
 
+    HADOOP-5085. Copying a file to local with Crc throws an exception.
+    (hairong)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
