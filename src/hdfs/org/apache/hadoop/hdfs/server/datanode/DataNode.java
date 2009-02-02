@@ -694,7 +694,7 @@ public class DataNode extends Configured
           // -- Bytes remaining
           //
           lastHeartbeat = startTime;
-          DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration,
+          DatanodeCommand[] cmds = namenode.sendHeartbeat(dnRegistration,
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
                                                        data.getRemaining(),
@@ -702,7 +702,7 @@ public class DataNode extends Configured
                                                        getXceiverCount());
           myMetrics.heartbeats.inc(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
-          if (!processCommand(cmd))
+          if (!processCommand(cmds))
             continue;
         }
             
@@ -812,6 +812,27 @@ public class DataNode extends Configured
     } // while (shouldRun)
   } // offerService
 
+  /**
+   * Process an array of datanode commands
+   * 
+   * @param cmds an array of datanode commands
+   * @return true if further processing may be required or false otherwise. 
+   */
+  private boolean processCommand(DatanodeCommand[] cmds) {
+    if (cmds != null) {
+      for (DatanodeCommand cmd : cmds) {
+        try {
+          if (processCommand(cmd) == false) {
+            return false;
+          }
+        } catch (IOException ioe) {
+          LOG.warn("Error processing datanode Command", ioe);
+        }
+      }
+    }
+    return true;
+  }
+  
     /**
      * 
      * @param cmd

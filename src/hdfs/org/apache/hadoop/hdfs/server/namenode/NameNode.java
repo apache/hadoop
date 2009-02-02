@@ -697,10 +697,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    * Data node notify the name node that it is alive 
-   * Return a block-oriented command for the datanode to execute.
+   * Return an array of block-oriented commands for the datanode to execute.
    * This will be either a transfer or a delete operation.
    */
-  public DatanodeCommand sendHeartbeat(DatanodeRegistration nodeReg,
+  public DatanodeCommand[] sendHeartbeat(DatanodeRegistration nodeReg,
                                        long capacity,
                                        long dfsUsed,
                                        long remaining,

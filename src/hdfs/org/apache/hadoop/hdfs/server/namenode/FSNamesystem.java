@@ -2132,10 +2132,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * If a substantial amount of time passed since the last datanode 
    * heartbeat then request an immediate block report.  
    * 
-   * @return a datanode command 
+   * @return an array of datanode commands 
    * @throws IOException
    */
-  DatanodeCommand handleHeartbeat(DatanodeRegistration nodeReg,
+  DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       long capacity, long dfsUsed, long remaining,
       int xceiverCount, int xmitsInProgress) throws IOException {
     DatanodeCommand cmd = null;
@@ -2145,7 +2145,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         try {
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredDatanodeException e) {
-          return DatanodeCommand.REGISTER;
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
           
         // Check if this datanode should actually be shutdown instead. 
@@ -2155,7 +2155,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
 
         if (nodeinfo == null || !nodeinfo.isAlive) {
-          return DatanodeCommand.REGISTER;
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
 
         updateStats(nodeinfo, false);
@@ -2163,26 +2163,35 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         updateStats(nodeinfo, true);
         
         //check lease recovery
-        if (cmd == null) {
-          cmd = nodeinfo.getLeaseRecoveryCommand(Integer.MAX_VALUE);
+        cmd = nodeinfo.getLeaseRecoveryCommand(Integer.MAX_VALUE);
+        if (cmd != null) {
+          return new DatanodeCommand[] {cmd};
         }
+      
+        ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>(2);
         //check pending replication
-        if (cmd == null) {
-          cmd = nodeinfo.getReplicationCommand(
+        cmd = nodeinfo.getReplicationCommand(
               maxReplicationStreams - xmitsInProgress);
+        if (cmd != null) {
+          cmds.add(cmd);
         }
         //check block invalidation
-        if (cmd == null) {
-          cmd = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
+        cmd = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
+        if (cmd != null) {
+          cmds.add(cmd);
+        }
+        if (!cmds.isEmpty()) {
+          return cmds.toArray(new DatanodeCommand[cmds.size()]);
         }
       }
     }
 
     //check distributed upgrade
-    if (cmd == null) {
-      cmd = getDistributedUpgradeCommand();
+    cmd = getDistributedUpgradeCommand();
+    if (cmd != null) {
+      return new DatanodeCommand[] {cmd};
     }
-    return cmd;
+    return null;
   }
 
   private void updateStats(DatanodeDescriptor node, boolean isAdded) {
