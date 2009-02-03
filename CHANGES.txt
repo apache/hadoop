@@ -125,6 +125,9 @@ Release 0.20.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-4565. Added CombineFileInputFormat to use data locality information
+    to create splits. (dhruba via zshao)
+
     HADOOP-4749. Added a new counter REDUCE_INPUT_BYTES. (Yongqiang He via 
     zshao)
 
