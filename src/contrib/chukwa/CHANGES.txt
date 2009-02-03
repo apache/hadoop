@@ -6,17 +6,19 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    HADOOP-4431. Add versionning/tags to Chukwa Chunk. 
-    (Jerome Boulon via Johan)
-
-    HADOOP-4433. Improve data loader for collecting metrics and log files.
-    (Eric Yang via omalley)
-
   OPTIMIZATIONS
 
   BUG FIXES
 
 Release 0.19.0 - Unreleased
+
+  IMPROVEMENTS
+
+    HADOOP-4431. Add versionning/tags to Chukwa Chunk. 
+    (Jerome Boulon via Johan)
+
+    HADOOP-4433. Improve data loader for collecting metrics and log files.
+    (Eric Yang via omalley)
 
   NEW FEATURES
 
