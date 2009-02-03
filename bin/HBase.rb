@@ -247,6 +247,10 @@ module HBase
       arg
     end
 
+    def shutdown()
+      @admin.shutdown()
+    end
+
     def hcd(arg)
       # Return a new HColumnDescriptor made of passed args
       # TODO: This is brittle code.

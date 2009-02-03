@@ -234,6 +234,8 @@ HBASE SHELL COMMANDS:
            hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, \\
              STARTROW => 'xyz'}
 
+ shutdown  Shut down the cluster.
+
  truncate  Disables, drops and recreates the specified table.
            
  version   Output this HBase version
@@ -263,6 +265,10 @@ def version
  r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()},\
  #{org.apache.hadoop.hbase.util.VersionInfo.getDate()}"
 end
+
+def shutdown
+  admin().shutdown()
+end 
 
 # DDL
 
