@@ -84,16 +84,15 @@ public class FileTailingAdaptor implements Adaptor
 	    this.dest = dest;
 	    this.attempts = 0;
 			
-	    Pattern cmd = Pattern.compile("(\\d+)\\s+(.+)");
+	    Pattern cmd = Pattern.compile("(\\d+)\\s+(.+)\\s");
 	    Matcher m = cmd.matcher(params);
 	    if(m.matches()) {
 	        offsetOfFirstByte = Long.parseLong(m.group(1));
 	        toWatch = new File(m.group(2));
 	    } else {
-	        toWatch = new File(params);
+	        toWatch = new File(params.trim());
 	    }
 	  
-	    
 		this.fileReadOffset= bytes;
 		tailer.startWatchingFile(this);
 	}

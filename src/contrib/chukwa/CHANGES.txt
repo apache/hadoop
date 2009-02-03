@@ -10,6 +10,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-5138. Fixing failing test cases by separating TestCharFileTailing
+    and TestFileTailing adaptors. (Jerome Boulon via acmurthy)
+
 Release 0.19.0 - Unreleased
 
   IMPROVEMENTS
