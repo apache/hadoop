@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.lib.CombineFileSplit;
 
 /**
  * A sub-collection of input files. Unlike {@link FileSplit}, MultiFileSplit 
@@ -38,60 +40,21 @@ import org.apache.hadoop.io.Text;
  * reading one record per file.
  * @see FileSplit
  * @see MultiFileInputFormat 
+ * @deprecated Use {@link org.apache.hadoop.mapred.lib.CombineFileSplit} instead
  */
-public class MultiFileSplit implements InputSplit {
-
-  private Path[] paths;
-  private long[] lengths;
-  private long totLength;
-  private JobConf job;
+@Deprecated
+public class MultiFileSplit extends CombineFileSplit {
 
   MultiFileSplit() {}
   
   public MultiFileSplit(JobConf job, Path[] files, long[] lengths) {
-    this.job = job;
-    this.lengths = lengths;
-    this.paths = files;
-    this.totLength = 0;
-    for(long length : lengths) {
-      totLength += length;
-    }
-  }
-
-  public long getLength() {
-    return totLength;
-  }
-  
-  /** Returns an array containing the lengths of the files in 
-   * the split*/ 
-  public long[] getLengths() {
-    return lengths;
-  }
-  
-  /** Returns the length of the i<sup>th</sup> Path */
-  public long getLength(int i) {
-    return lengths[i];
-  }
-  
-  /** Returns the number of Paths in the split */
-  public int getNumPaths() {
-    return paths.length;
-  }
-
-  /** Returns the i<sup>th</sup> Path */
-  public Path getPath(int i) {
-    return paths[i];
-  }
-  
-  /** Returns all the Paths in the split */
-  public Path[] getPaths() {
-    return paths;
+    super(job, files, lengths);
   }
 
   public String[] getLocations() throws IOException {
     HashSet<String> hostSet = new HashSet<String>();
-    for (Path file : paths) {
-      FileSystem fs = file.getFileSystem(job);
+    for (Path file : getPaths()) {
+      FileSystem fs = file.getFileSystem(getJob());
       FileStatus status = fs.getFileStatus(file);
       BlockLocation[] blkLocations = fs.getFileBlockLocations(status,
                                           0, status.getLen());
@@ -107,37 +70,12 @@ public class MultiFileSplit implements InputSplit {
       set.add(s); 
   }
 
-  public void readFields(DataInput in) throws IOException {
-    totLength = in.readLong();
-    int arrLength = in.readInt();
-    lengths = new long[arrLength];
-    for(int i=0; i<arrLength;i++) {
-      lengths[i] = in.readLong();
-    }
-    int filesLength = in.readInt();
-    paths = new Path[filesLength];
-    for(int i=0; i<filesLength;i++) {
-      paths[i] = new Path(Text.readString(in));
-    }
-  }
-
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(totLength);
-    out.writeInt(lengths.length);
-    for(long length : lengths)
-      out.writeLong(length);
-    out.writeInt(paths.length);
-    for(Path p : paths) {
-      Text.writeString(out, p.toString());
-    }
-  }
-  
   @Override
   public String toString() {
     StringBuffer sb = new StringBuffer();
-    for(int i=0; i < paths.length; i++) {
-      sb.append(paths[i].toUri().getPath() + ":0+" + lengths[i]);
-      if (i < paths.length -1) {
+    for(int i=0; i < getPaths().length; i++) {
+      sb.append(getPath(i).toUri().getPath() + ":0+" + getLength(i));
+      if (i < getPaths().length -1) {
         sb.append("\n");
       }
     }

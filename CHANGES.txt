@@ -34,6 +34,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-4565. Added CombineFileInputFormat to use data locality information
+    to create splits. (dhruba via zshao)
+
     HADOOP-4936. Improvements to TestSafeMode. (shv)
 
     HADOOP-4985. Remove unnecessary "throw IOException" declarations in
