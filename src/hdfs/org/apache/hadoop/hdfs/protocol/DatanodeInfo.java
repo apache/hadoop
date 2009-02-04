@@ -20,7 +20,10 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -44,6 +47,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected long lastUpdate;
   protected int xceiverCount;
   protected String location = NetworkTopology.DEFAULT_RACK;
+  static final Pattern ip = // Pattern for matching hostname to ip:port
+    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:?\\d*");
 
   /** HostName as suplied by the datanode during registration as its 
    * name. Namenode uses datanode IP address as the name.
@@ -172,8 +177,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long nonDFSUsed = getNonDfsUsed();
     float usedPercent = getDfsUsedPercent();
     float remainingPercent = getRemainingPercent();
+    String hostName = getHostNameOfIP();
 
-    buffer.append("Name: "+name+"\n");
+    buffer.append("Name: "+ name);
+    if(hostName != null)
+      buffer.append(" (" + hostName + ")");
+    buffer.append("\n");
+
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
     }
@@ -188,11 +198,35 @@ public class DatanodeInfo extends DatanodeID implements Node {
     buffer.append("Configured Capacity: "+c+" ("+StringUtils.byteDesc(c)+")"+"\n");
     buffer.append("DFS Used: "+u+" ("+StringUtils.byteDesc(u)+")"+"\n");
     buffer.append("Non DFS Used: "+nonDFSUsed+" ("+StringUtils.byteDesc(nonDFSUsed)+")"+"\n");
-    buffer.append("DFS Remaining: " +r+ "("+StringUtils.byteDesc(r)+")"+"\n");
+    buffer.append("DFS Remaining: " +r+ " ("+StringUtils.byteDesc(r)+")"+"\n");
     buffer.append("DFS Used%: "+StringUtils.limitDecimalTo2(usedPercent)+"%\n");
     buffer.append("DFS Remaining%: "+StringUtils.limitDecimalTo2(remainingPercent)+"%\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
+  }
+
+  /**
+   * Attempt to obtain the host name of a name specified by ip address.  
+   * Check that the node name is an ip addr and if so, attempt to determine
+   * its host name.  If the name is not an IP addr, or the actual name cannot
+   * be determined, return null.
+   * 
+   * @return Host name or null
+   */
+  private String getHostNameOfIP() {
+    // If name is not an ip addr, don't bother looking it up
+    if(!ip.matcher(name).matches())
+      return null;
+    
+    String hostname = "";
+    try {
+      String n = name.substring(0, name.indexOf(':'));
+      hostname = InetAddress.getByName(n).getHostName();
+    } catch (UnknownHostException e) {
+      return null;
+    }
+    
+    return hostname; 
   }
 
   /** A formatted string for printing the status of the DataNode. */

@@ -20,6 +20,9 @@ Trunk (unreleased changes)
     line per split- rather than moving back one character in the stream- to
     work with splittable compression codecs. (Abdul Qadeer via cdouglas)
 
+    HADOOP-5094. Show hostname and separate live/dead datanodes in DFSAdmin
+    report.  (Jakob Homan via szetszwo)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

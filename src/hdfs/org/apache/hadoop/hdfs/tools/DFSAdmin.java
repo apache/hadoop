@@ -23,6 +23,12 @@ import java.util.List;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.Command;
+import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -30,12 +36,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsStatus;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.Command;
-import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -298,14 +298,21 @@ public class DFSAdmin extends FsShell {
                          " (" + (live.length + dead.length) + " total, " + 
                          dead.length + " dead)\n");
       
-      for (DatanodeInfo dn : live) {
-        System.out.println(dn.getDatanodeReport());
-        System.out.println();
+      if(live.length > 0) {
+        System.out.println("Live datanodes:");
+        for (DatanodeInfo dn : live) {
+          System.out.println(dn.getDatanodeReport());
+          System.out.println();
+        }
       }
-      for (DatanodeInfo dn : dead) {
-        System.out.println(dn.getDatanodeReport());
-        System.out.println();
-      }      
+      
+      if(dead.length > 0) {
+        System.out.println("Dead datanodes:");
+        for (DatanodeInfo dn : dead) {
+          System.out.println(dn.getDatanodeReport());
+          System.out.println();
+        }     
+      }
     }
   }
 
