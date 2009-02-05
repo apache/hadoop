@@ -98,6 +98,8 @@ Trunk (unreleased changes)
     HADOOP-4960. Use datasource time, rather than system time, during metrics
     demux. (Eric Yang via cdouglas)
 
+    HADOOP-5032. Export conf dir set in config script. (Eric Yang via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

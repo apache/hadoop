@@ -48,7 +48,7 @@ then
               shift
               confdir=$1
               shift
-              CHUKWA_CONF_DIR=$confdir
+              export CHUKWA_CONF_DIR=$confdir
     fi
 fi
 
