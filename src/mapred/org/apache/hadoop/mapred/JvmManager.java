@@ -43,8 +43,6 @@ class JvmManager {
 
   JvmManagerForType reduceJvmManager;
   
-  TaskTracker tracker;
-
   public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
       File stdout,File stderr,long logSize, File workDir, 
       Map<String,String> env, String pidFile, JobConf conf) {
@@ -53,10 +51,9 @@ class JvmManager {
   
   public JvmManager(TaskTracker tracker) {
     mapJvmManager = new JvmManagerForType(tracker.getMaxCurrentMapTasks(), 
-        true, tracker);
+        true);
     reduceJvmManager = new JvmManagerForType(tracker.getMaxCurrentReduceTasks(),
-        false, tracker);
-    this.tracker = tracker;
+        false);
   }
   
   public void stop() {
@@ -74,9 +71,9 @@ class JvmManager {
 
   public void launchJvm(TaskRunner t, JvmEnv env) {
     if (t.getTask().isMapTask()) {
-      mapJvmManager.reapJvm(t, tracker, env);
+      mapJvmManager.reapJvm(t, env);
     } else {
-      reduceJvmManager.reapJvm(t, tracker, env);
+      reduceJvmManager.reapJvm(t, env);
     }
   }
 
@@ -125,12 +122,10 @@ class JvmManager {
     boolean isMap;
     
     Random rand = new Random(System.currentTimeMillis());
-    TaskTracker tracker;
 
-    public JvmManagerForType(int maxJvms, boolean isMap, TaskTracker tracker) {
+    public JvmManagerForType(int maxJvms, boolean isMap) {
       this.maxJvms = maxJvms;
       this.isMap = isMap;
-      this.tracker = tracker;
     }
 
     synchronized public void setRunningTaskForJvm(JVMId jvmId, 
@@ -194,7 +189,7 @@ class JvmManager {
       jvmIdToRunner.remove(jvmId);
     }
     private synchronized void reapJvm( 
-        TaskRunner t, TaskTracker tracker, JvmEnv env) {
+        TaskRunner t, JvmEnv env) {
       if (t.getTaskInProgress().wasKilled()) {
         //the task was killed in-flight
         //no need to do the rest of the operations
@@ -251,7 +246,7 @@ class JvmManager {
           LOG.info("Killing JVM: " + runnerToKill.jvmId);
           runnerToKill.kill();
         }
-        spawnNewJvm(jobId, env, tracker, t);
+        spawnNewJvm(jobId, env, t);
         return;
       }
       //*MUST* never reach this
@@ -281,7 +276,7 @@ class JvmManager {
       return details.toString();
     }
 
-    private void spawnNewJvm(JobID jobId, JvmEnv env, TaskTracker tracker, 
+    private void spawnNewJvm(JobID jobId, JvmEnv env,  
         TaskRunner t) {
       JvmRunner jvmRunner = new JvmRunner(env,jobId);
       jvmIdToRunner.put(jvmRunner.jvmId, jvmRunner);
@@ -293,11 +288,6 @@ class JvmManager {
       //tasks. Doing it this way also keeps code simple.
       jvmRunner.setDaemon(true);
       jvmRunner.setName("JVM Runner " + jvmRunner.jvmId + " spawned.");
-      if (tracker.isTaskMemoryManagerEnabled()) {
-        tracker.getTaskMemoryManager().addTask(
-            TaskAttemptID.forName(env.conf.get("mapred.task.id")),
-            tracker.getMemoryForTask(env.conf));
-      }
       setRunningTaskForJvm(jvmRunner.jvmId, t);
       LOG.info(jvmRunner.getName());
       jvmRunner.start();
@@ -355,6 +345,7 @@ class JvmManager {
           LOG.info("JVM : " + jvmId +" exited. Number of tasks it ran: " + 
               numTasksRan);
           try {
+            // In case of jvm-reuse,
             //the task jvm cleans up the common workdir for every 
             //task at the beginning of each task in the task JVM.
             //For the last task, we do it here.
@@ -362,12 +353,6 @@ class JvmManager {
               FileUtil.fullyDelete(env.workDir);
             }
           } catch (IOException ie){}
-          if (tracker.isTaskMemoryManagerEnabled()) {
-          // Remove the associated pid-file, if any
-            tracker.getTaskMemoryManager().
-               removePidFile(TaskAttemptID.forName(
-                   env.conf.get("mapred.task.id")));
-          }
         }
       }
 

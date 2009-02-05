@@ -47,6 +47,7 @@ class Child {
     LogFactory.getLog(TaskTracker.class);
 
   static volatile TaskAttemptID taskid;
+  static volatile boolean isCleanup;
 
   public static void main(String[] args) throws Throwable {
     LOG.debug("Child starting");
@@ -75,7 +76,7 @@ class Child {
           try {
             Thread.sleep(5000);
             if (taskid != null) {
-              TaskLog.syncLogs(firstTaskid, taskid);
+              TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
             }
           } catch (InterruptedException ie) {
           } catch (IOException iee) {
@@ -95,6 +96,7 @@ class Child {
     Path srcPidPath = null;
     Path dstPidPath = null;
     int idleLoopCount = 0;
+    Task task = null;
     try {
       while (true) {
         JvmTask myTask = umbilical.getTask(jvmId);
@@ -114,22 +116,23 @@ class Child {
           }
         }
         idleLoopCount = 0;
-        Task task = myTask.getTask();
+        task = myTask.getTask();
         taskid = task.getTaskID();
+        isCleanup = task.isTaskCleanupTask();
         
         //create the index file so that the log files 
         //are viewable immediately
-        TaskLog.syncLogs(firstTaskid, taskid);
+        TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
         if (job.getBoolean("task.memory.mgmt.enabled", false)) {
           if (srcPidPath == null) {
-            srcPidPath = TaskMemoryManagerThread.getPidFilePath(firstTaskid,
-                                                              job);
+            // get the first task's path for the first time  
+            srcPidPath = new Path(task.getPidFile());
           }
           //since the JVM is running multiple tasks potentially, we need
           //to do symlink stuff only for the subsequent tasks
           if (!taskid.equals(firstTaskid)) {
-            dstPidPath = new Path(srcPidPath.getParent(), taskid.toString());
+            dstPidPath = new Path(task.getPidFile());
             FileUtil.symLink(srcPidPath.toUri().getPath(), 
                 dstPidPath.toUri().getPath());
           }
@@ -154,9 +157,10 @@ class Child {
         try {
           task.run(job, umbilical);             // run the task
         } finally {
-          TaskLog.syncLogs(firstTaskid, taskid);
+          TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
           if (!taskid.equals(firstTaskid) && 
               job.getBoolean("task.memory.mgmt.enabled", false)) {
+            // delete the pid-file's symlink
             new File(dstPidPath.toUri().getPath()).delete();
           }
         }
@@ -169,6 +173,10 @@ class Child {
       umbilical.fsError(taskid, e.getMessage());
     } catch (Throwable throwable) {
       LOG.warn("Error running child", throwable);
+      if (task != null) {
+        // do cleanup for the task
+        task.taskCleanup(umbilical);
+      }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       throwable.printStackTrace(new PrintStream(baos));

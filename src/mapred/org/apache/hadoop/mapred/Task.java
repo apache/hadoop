@@ -107,8 +107,10 @@ abstract class Task implements Writable, Configurable {
   private TaskAttemptID taskId;                          // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
-  protected boolean cleanupJob = false;
-  protected boolean setupJob = false;
+  protected boolean jobCleanup = false;
+  protected boolean jobSetup = false;
+  protected boolean taskCleanup = false;
+  private String pidFile = "";
   private Thread pingProgressThread;
   
   //skip ranges based on failed ranges from previous attempts
@@ -127,7 +129,6 @@ abstract class Task implements Writable, Configurable {
   private final static int MAX_RETRIES = 10;
   protected JobContext jobContext;
   protected TaskAttemptContext taskContext;
-  private volatile boolean commitPending = false;
 
   ////////////////////////////////////////////
   // Constructors
@@ -160,7 +161,12 @@ abstract class Task implements Writable, Configurable {
   public String getJobFile() { return jobFile; }
   public TaskAttemptID getTaskID() { return taskId; }
   public Counters getCounters() { return counters; }
-  
+  public void setPidFile(String pidFile) { 
+    this.pidFile = pidFile; 
+  }
+  public String getPidFile() { 
+    return pidFile; 
+  }  
   /**
    * Get the job name for this task.
    * @return the job name
@@ -236,15 +242,50 @@ abstract class Task implements Writable, Configurable {
   }
 
   /**
-   * Sets whether the task is cleanup task
+   * Return current state of the task. 
+   * needs to be synchronized as communication thread 
+   * sends the state every second
+   * @return
    */
-  public void setCleanupTask() {
-    cleanupJob = true;
+  synchronized TaskStatus.State getState(){
+    return this.taskStatus.getRunState(); 
+  }
+  /**
+   * Set current state of the task. 
+   * @param state
+   */
+  synchronized void setState(TaskStatus.State state){
+    this.taskStatus.setRunState(state); 
   }
 
-  public void setSetupTask() {
-    setupJob = true; 
+  void setTaskCleanupTask() {
+    taskCleanup = true;
   }
+	   
+  boolean isTaskCleanupTask() {
+    return taskCleanup;
+  }
+
+  boolean isJobCleanupTask() {
+    return jobCleanup;
+  }
+
+  boolean isJobSetupTask() {
+    return jobSetup;
+  }
+
+  void setJobSetupTask() {
+    jobSetup = true; 
+  }
+
+  void setJobCleanupTask() {
+    jobCleanup = true; 
+  }
+
+  boolean isMapOrReduce() {
+    return !jobSetup && !jobCleanup && !taskCleanup;
+  }
+  
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -256,10 +297,13 @@ abstract class Task implements Writable, Configurable {
     taskStatus.write(out);
     skipRanges.write(out);
     out.writeBoolean(skipping);
-    out.writeBoolean(cleanupJob);
-    out.writeBoolean(setupJob);
+    out.writeBoolean(jobCleanup);
+    out.writeBoolean(jobSetup);
     out.writeBoolean(writeSkipRecs);
+    out.writeBoolean(taskCleanup);  
+    Text.writeString(out, pidFile);
   }
+  
   public void readFields(DataInput in) throws IOException {
     jobFile = Text.readString(in);
     taskId = TaskAttemptID.read(in);
@@ -270,9 +314,14 @@ abstract class Task implements Writable, Configurable {
     currentRecIndexIterator = skipRanges.skipRangeIterator();
     currentRecStartIndex = currentRecIndexIterator.next();
     skipping = in.readBoolean();
-    cleanupJob = in.readBoolean();
-    setupJob = in.readBoolean();
+    jobCleanup = in.readBoolean();
+    jobSetup = in.readBoolean();
     writeSkipRecs = in.readBoolean();
+    taskCleanup = in.readBoolean();
+    if (taskCleanup) {
+      setPhase(TaskStatus.Phase.CLEANUP);
+    }
+    pidFile = Text.readString(in);
   }
 
   @Override
@@ -362,17 +411,10 @@ abstract class Task implements Writable, Configurable {
               if (sendProgress) {
                 // we need to send progress update
                 updateCounters();
-                if (commitPending) {
-                  taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
-                                          taskProgress.get(),
-                                          taskProgress.toString(), 
-                                          counters);
-                } else {
-                  taskStatus.statusUpdate(TaskStatus.State.RUNNING,
-                                          taskProgress.get(),
-                                          taskProgress.toString(), 
-                                          counters);
-                }
+                taskStatus.statusUpdate(getState(),
+                                        taskProgress.get(),
+                                        taskProgress.toString(), 
+                                        counters);
                 taskFound = umbilical.statusUpdate(taskId, taskStatus);
                 taskStatus.clearStatus();
               }
@@ -412,6 +454,9 @@ abstract class Task implements Writable, Configurable {
   throws IOException {
     jobContext = new JobContext(job, reporter);
     taskContext = new TaskAttemptContext(job, taskId, reporter);
+    if (getState() == TaskStatus.State.UNASSIGNED) {
+      setState(TaskStatus.State.RUNNING);
+    }
     OutputCommitter committer = conf.getOutputCommitter();
     Path outputPath = FileOutputFormat.getOutputPath(conf);
     if (outputPath != null) {
@@ -580,8 +625,7 @@ abstract class Task implements Writable, Configurable {
     boolean commitRequired = outputCommitter.needsTaskCommit(taskContext);
     if (commitRequired) {
       int retries = MAX_RETRIES;
-      taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
-      commitPending = true;
+      setState(TaskStatus.State.COMMIT_PENDING);
       // say the task tracker that task is commit pending
       while (true) {
         try {
@@ -610,43 +654,37 @@ abstract class Task implements Writable, Configurable {
     sendDone(umbilical);
   }
 
-  private void sendLastUpdate(TaskUmbilicalProtocol umbilical) 
+  protected void statusUpdate(TaskUmbilicalProtocol umbilical) 
   throws IOException {
-    //first wait for the COMMIT approval from the tasktracker
     int retries = MAX_RETRIES;
     while (true) {
       try {
-        // send a final status report
-        if (commitPending) {
-          taskStatus.statusUpdate(TaskStatus.State.COMMIT_PENDING,
-                                  taskProgress.get(),
-                                  taskProgress.toString(), 
-                                  counters);
-        } else {
-          taskStatus.statusUpdate(TaskStatus.State.RUNNING,
-                                  taskProgress.get(),
-                                  taskProgress.toString(), 
-                                  counters);
+        if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
+          LOG.warn("Parent died.  Exiting "+taskId);
+          System.exit(66);
         }
-
-        try {
-          if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
-            LOG.warn("Parent died.  Exiting "+taskId);
-            System.exit(66);
-          }
-          taskStatus.clearStatus();
-          return;
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt(); // interrupt ourself
-        }
+        taskStatus.clearStatus();
+        return;
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt(); // interrupt ourself
       } catch (IOException ie) {
-        LOG.warn("Failure sending last status update: " + 
+        LOG.warn("Failure sending status update: " + 
                   StringUtils.stringifyException(ie));
         if (--retries == 0) {
           throw ie;
         }
       }
     }
+  }
+  
+  private void sendLastUpdate(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    // send a final status report
+    taskStatus.statusUpdate(getState(),
+                            taskProgress.get(),
+                            taskProgress.toString(), 
+                            counters);
+    statusUpdate(umbilical);
   }
 
   private void sendDone(TaskUmbilicalProtocol umbilical) throws IOException {
@@ -712,7 +750,24 @@ abstract class Task implements Writable, Configurable {
     }
   }
 
-  protected void runCleanup(TaskUmbilicalProtocol umbilical) 
+  protected void runTaskCleanupTask(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    taskCleanup(umbilical);
+    done(umbilical);
+  }
+
+  void taskCleanup(TaskUmbilicalProtocol umbilical) 
+  throws IOException {
+    // set phase for this task
+    setPhase(TaskStatus.Phase.CLEANUP);
+    getProgress().setStatus("cleanup");
+    statusUpdate(umbilical);
+    LOG.info("Runnning cleanup for the task");
+    // do the cleanup
+    discardOutput(taskContext, conf.getOutputCommitter());
+  }
+
+  protected void runJobCleanupTask(TaskUmbilicalProtocol umbilical) 
   throws IOException {
     // set phase for this task
     setPhase(TaskStatus.Phase.CLEANUP);
@@ -722,7 +777,7 @@ abstract class Task implements Writable, Configurable {
     done(umbilical);
   }
 
-  protected void runSetupJob(TaskUmbilicalProtocol umbilical) 
+  protected void runJobSetupTask(TaskUmbilicalProtocol umbilical) 
   throws IOException {
     // do the setup
     getProgress().setStatus("setup");

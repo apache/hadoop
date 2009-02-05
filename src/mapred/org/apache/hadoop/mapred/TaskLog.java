@@ -80,7 +80,14 @@ public class TaskLog {
   
   private static LogFileDetail getTaskLogFileDetail(TaskAttemptID taskid,
       LogName filter) throws IOException {
-    File indexFile = new File(getBaseDir(taskid.toString()), "log.index");
+    return getLogFileDetail(taskid, filter, false);
+  }
+  
+  private static LogFileDetail getLogFileDetail(TaskAttemptID taskid, 
+                                                LogName filter,
+                                                boolean isCleanup) 
+  throws IOException {
+    File indexFile = getIndexFile(taskid.toString(), isCleanup);
     BufferedReader fis = new BufferedReader(new java.io.FileReader(indexFile));
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
@@ -120,8 +127,17 @@ public class TaskLog {
   }
   
   public static File getIndexFile(String taskid) {
-    return new File(getBaseDir(taskid), "log.index");
+    return getIndexFile(taskid, false);
   }
+  
+  public static File getIndexFile(String taskid, boolean isCleanup) {
+    if (isCleanup) {
+      return new File(getBaseDir(taskid), "log.index.cleanup");
+    } else {
+      return new File(getBaseDir(taskid), "log.index");
+    }
+  }
+  
   private static File getBaseDir(String taskid) {
     return new File(LOG_DIR, taskid);
   }
@@ -129,9 +145,10 @@ public class TaskLog {
   private static long prevErrLength;
   private static long prevLogLength;
   
-  private static void writeToIndexFile(TaskAttemptID firstTaskid) 
+  private static void writeToIndexFile(TaskAttemptID firstTaskid,
+                                       boolean isCleanup) 
   throws IOException {
-    File indexFile = getIndexFile(currentTaskid.toString());
+    File indexFile = getIndexFile(currentTaskid.toString(), isCleanup);
     BufferedOutputStream bos = 
       new BufferedOutputStream(new FileOutputStream(indexFile,false));
     DataOutputStream dos = new DataOutputStream(bos);
@@ -159,8 +176,17 @@ public class TaskLog {
     prevLogLength = getTaskLogFile(firstTaskid, LogName.SYSLOG).length();
   }
   private volatile static TaskAttemptID currentTaskid = null;
+
+  public synchronized static void syncLogs(TaskAttemptID firstTaskid, 
+                                           TaskAttemptID taskid) 
+  throws IOException {
+    syncLogs(firstTaskid, taskid, false);
+  }
+  
   @SuppressWarnings("unchecked")
-  public synchronized static void syncLogs(TaskAttemptID firstTaskid, TaskAttemptID taskid) 
+  public synchronized static void syncLogs(TaskAttemptID firstTaskid, 
+                                           TaskAttemptID taskid,
+                                           boolean isCleanup) 
   throws IOException {
     System.out.flush();
     System.err.flush();
@@ -179,9 +205,8 @@ public class TaskLog {
       currentTaskid = taskid;
       resetPrevLengths(firstTaskid);
     }
-    writeToIndexFile(firstTaskid);
+    writeToIndexFile(firstTaskid, isCleanup);
   }
-  
   
   /**
    * The filter for userlogs.
@@ -249,6 +274,12 @@ public class TaskLog {
   static class Reader extends InputStream {
     private long bytesRemaining;
     private FileInputStream file;
+
+    public Reader(TaskAttemptID taskid, LogName kind, 
+                  long start, long end) throws IOException {
+      this(taskid, kind, start, end, false);
+    }
+    
     /**
      * Read a log file from start to end positions. The offsets may be negative,
      * in which case they are relative to the end of the file. For example,
@@ -258,12 +289,13 @@ public class TaskLog {
      * @param kind the kind of log to read
      * @param start the offset to read from (negative is relative to tail)
      * @param end the offset to read upto (negative is relative to tail)
+     * @param isCleanup whether the attempt is cleanup attempt or not
      * @throws IOException
      */
     public Reader(TaskAttemptID taskid, LogName kind, 
-                  long start, long end) throws IOException {
+                  long start, long end, boolean isCleanup) throws IOException {
       // find the right log file
-      LogFileDetail fileDetail = getTaskLogFileDetail(taskid, kind);
+      LogFileDetail fileDetail = getLogFileDetail(taskid, kind, isCleanup);
       // calculate the start and stop
       long size = fileDetail.length;
       if (start < 0) {

@@ -178,9 +178,9 @@ public class IsolationRunner {
     FileSystem local = FileSystem.getLocal(conf);
     LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
     File workDirName = new File(lDirAlloc.getLocalPathToRead(
-                                  TaskTracker.getJobCacheSubdir() 
-                                  + Path.SEPARATOR + taskId.getJobID() 
-                                  + Path.SEPARATOR + taskId
+                                  TaskTracker.getLocalTaskDir(
+                                    taskId.getJobID().toString(), 
+                                    taskId.toString())
                                   + Path.SEPARATOR + "work",
                                   conf). toString());
     local.setWorkingDirectory(new Path(workDirName.toString()));

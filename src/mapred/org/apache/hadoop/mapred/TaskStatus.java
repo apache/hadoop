@@ -41,7 +41,7 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   // what state is the task in?
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
-                            COMMIT_PENDING}
+                            COMMIT_PENDING, FAILED_UNCLEAN, KILLED_UNCLEAN}
     
   private TaskAttemptID taskid;
   private float progress;
@@ -202,6 +202,12 @@ abstract class TaskStatus implements Writable, Cloneable {
     }
     this.phase = phase; 
   }
+
+  boolean inTaskCleanupPhase() {
+    return (this.phase == TaskStatus.Phase.CLEANUP && 
+      (this.runState == TaskStatus.State.FAILED_UNCLEAN || 
+      this.runState == TaskStatus.State.KILLED_UNCLEAN));
+  }
   
   public boolean getIncludeCounters() {
     return includeCounters; 
@@ -259,9 +265,9 @@ abstract class TaskStatus implements Writable, Cloneable {
   /**
    * Update the status of the task.
    * 
+   * @param runstate
    * @param progress
    * @param state
-   * @param phase
    * @param counters
    */
   synchronized void statusUpdate(State runState, 
@@ -298,7 +304,33 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.counters = status.getCounters();
     this.outputSize = status.outputSize;
   }
-  
+
+  /**
+   * Update specific fields of task status
+   * 
+   * This update is done in JobTracker when a cleanup attempt of task
+   * reports its status. Then update only specific fields, not all.
+   * 
+   * @param runState
+   * @param progress
+   * @param state
+   * @param phase
+   * @param finishTime
+   */
+  synchronized void statusUpdate(State runState, 
+                                 float progress,
+                                 String state, 
+                                 Phase phase,
+                                 long finishTime) {
+    setRunState(runState);
+    setProgress(progress);
+    setStateString(state);
+    setPhase(phase);
+    if (finishTime != 0) {
+      this.finishTime = finishTime; 
+    }
+  }
+
   /**
    * Clear out transient information after sending out a status-update
    * from either the {@link Task} to the {@link TaskTracker} or from the

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
+import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -27,9 +27,6 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 
@@ -64,14 +61,14 @@ class TaskMemoryManagerThread extends Thread {
         ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
   }
 
-  public void addTask(TaskAttemptID tid, long memLimit) {
+  public void addTask(TaskAttemptID tid, long memLimit, String pidFile) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");
       // TODO: Negative values must have been checked in JobConf.
       memLimit = (memLimit < 0 ? JobConf.DISABLED_VIRTUAL_MEMORY_LIMIT
           : memLimit);
       ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit,
-          sleepTimeBeforeSigKill);
+          sleepTimeBeforeSigKill, pidFile);
       tasksToBeAdded.put(tid, ptInfo);
     }
   }
@@ -87,9 +84,11 @@ class TaskMemoryManagerThread extends Thread {
     private String pid;
     private ProcfsBasedProcessTree pTree;
     private long memLimit;
+    private String pidFile;
 
     public ProcessTreeInfo(TaskAttemptID tid, String pid,
-        ProcfsBasedProcessTree pTree, long memLimit, long sleepTimeBeforeSigKill) {
+        ProcfsBasedProcessTree pTree, long memLimit, 
+        long sleepTimeBeforeSigKill, String pidFile) {
       this.tid = tid;
       this.pid = pid;
       this.pTree = pTree;
@@ -97,6 +96,7 @@ class TaskMemoryManagerThread extends Thread {
         this.pTree.setSigKillInterval(sleepTimeBeforeSigKill);
       }
       this.memLimit = memLimit;
+      this.pidFile = pidFile;
     }
 
     public TaskAttemptID getTID() {
@@ -166,7 +166,8 @@ class TaskMemoryManagerThread extends Thread {
 
         // Initialize any uninitialized processTrees
         if (pId == null) {
-          pId = getPid(tid); // get pid from pid-file
+          // get pid from pid-file
+          pId = getPid(ptInfo.pidFile); 
           if (pId != null) {
             // PID will be null, either if the pid file is yet to be created
             // or if the tip is finished and we removed pidFile, but the TIP
@@ -232,47 +233,14 @@ class TaskMemoryManagerThread extends Thread {
   /**
    * Load pid of the task from the pidFile.
    * 
-   * @param tipID
+   * @param pidFileName
    * @return the pid of the task process.
    */
-  private String getPid(TaskAttemptID tipID) {
-    Path pidFileName = getPidFilePath(tipID, taskTracker.getJobConf());
-    if (pidFileName == null) {
-      return null;
+  private String getPid(String pidFileName) {
+    if ((new File(pidFileName)).exists()) {
+      return ProcfsBasedProcessTree.getPidFromPidFile(pidFileName);
     }
-    return ProcfsBasedProcessTree.getPidFromPidFile(pidFileName.toString());
+    return null;
   }
-
-  private static LocalDirAllocator lDirAlloc = 
-    new LocalDirAllocator("mapred.local.dir");
-
-  /**
-   * Get the pidFile path of a Task
-   * @param tipID
-   * @return pidFile's Path
-   */
-  public static Path getPidFilePath(TaskAttemptID tipID, JobConf conf) {
-    Path pidFileName = null;
-    try {
-      //this actually need not use a localdirAllocator since the PID
-      //files are really small..
-      pidFileName = lDirAlloc.getLocalPathToRead(
-          (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + tipID),
-          conf);
-    } catch (IOException i) {
-      // PID file is not there
-      LOG.debug("Failed to get pidFile name for " + tipID);
-    }
-    return pidFileName;
-  }
-  public void removePidFile(TaskAttemptID tid) {
-    if (taskTracker.isTaskMemoryManagerEnabled()) {
-      Path pidFilePath = getPidFilePath(tid, taskTracker.getJobConf());
-      if (pidFilePath != null) {
-        try {
-          FileSystem.getLocal(taskTracker.getJobConf()).delete(pidFilePath, false);
-        } catch(IOException ie) {}
-      }
-    }
-  }
+  
 }

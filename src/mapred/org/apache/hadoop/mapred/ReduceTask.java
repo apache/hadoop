@@ -335,7 +335,7 @@ class ReduceTask extends Task {
     throws IOException {
     job.setBoolean("mapred.skip.on", isSkipping());
 
-    if (!cleanupJob && !setupJob) {
+    if (isMapOrReduce()) {
       copyPhase = getProgress().addPhase("copy");
       sortPhase  = getProgress().addPhase("sort");
       reducePhase = getProgress().addPhase("reduce");
@@ -346,12 +346,16 @@ class ReduceTask extends Task {
     initialize(job, reporter);
 
     // check if it is a cleanupJobTask
-    if (cleanupJob) {
-      runCleanup(umbilical);
+    if (jobCleanup) {
+      runJobCleanupTask(umbilical);
       return;
     }
-    if (setupJob) {
-      runSetupJob(umbilical);
+    if (jobSetup) {
+      runJobSetupTask(umbilical);
+      return;
+    }
+    if (taskCleanup) {
+      runTaskCleanupTask(umbilical);
       return;
     }
     
@@ -374,6 +378,7 @@ class ReduceTask extends Task {
     }
     copyPhase.complete();                         // copy is already complete
     setPhase(TaskStatus.Phase.SORT);
+    statusUpdate(umbilical);
 
     final FileSystem rfs = FileSystem.getLocal(job).getRaw();
     RawKeyValueIterator rIter = isLocal
@@ -389,6 +394,7 @@ class ReduceTask extends Task {
     
     sortPhase.complete();                         // sort is complete
     setPhase(TaskStatus.Phase.REDUCE); 
+    statusUpdate(umbilical);
 
     // make output collector
     String finalName = getOutputName(getPartition());
@@ -1125,10 +1131,10 @@ class ReduceTask extends Task {
         // else, we will check the localFS to find a suitable final location
         // for this path
         TaskAttemptID reduceId = reduceTask.getTaskID();
-        Path filename = new Path("/" + TaskTracker.getJobCacheSubdir() +
-                                 Path.SEPARATOR + getTaskID().getJobID() +
-                                 Path.SEPARATOR + reduceId +
-                                 Path.SEPARATOR + "output" + "/map_" +
+        Path filename = new Path("/" + TaskTracker.getIntermediateOutputDir(
+                                 reduceId.getJobID().toString(),
+                                 reduceId.toString()) 
+                                 + "/map_" +
                                  loc.getTaskId().getId() + ".out");
         
         // Copy the map output to a temp file whose name is unique to this attempt 
