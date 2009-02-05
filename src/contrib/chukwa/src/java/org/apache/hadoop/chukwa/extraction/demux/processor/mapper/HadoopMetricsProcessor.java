@@ -77,7 +77,7 @@ public class HadoopMetricsProcessor extends AbstractProcessor {
 				if (chukwaTimestampField.intern() == keyName.intern()) {
 					d = new Date(json.getLong(keyName));
 					Calendar cal = Calendar.getInstance();
-					cal.setTimeInMillis(System.currentTimeMillis());
+					cal.setTimeInMillis(d.getTime());
 					cal.set(Calendar.SECOND, 0);
 					cal.set(Calendar.MILLISECOND, 0);
 					d.setTime(cal.getTimeInMillis());

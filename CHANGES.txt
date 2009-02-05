@@ -95,6 +95,9 @@ Trunk (unreleased changes)
     HADOOP-5045. FileSystem.isDirectory() should not be deprecated.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-4960. Use datasource time, rather than system time, during metrics
+    demux. (Eric Yang via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
