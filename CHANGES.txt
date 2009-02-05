@@ -68,6 +68,9 @@ Trunk (unreleased changes)
     HADOOP-5097. Remove static variable JspHelper.fsn, a static reference to
     a non-singleton FSNamesystem object.  (szetszwo)
 
+    HADOOP-3327. Improves handling of READ_TIMEOUT during map output copying.
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
