@@ -242,12 +242,11 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
         Bytes.toString(b));
     }
     for (int i = 0; i < (b.length - 1); i++) {
-      if (Character.isLetterOrDigit(b[i]) || b[i] == '_' || b[i] == '.') {
-        continue;
+      if (Character.isISOControl(b[i])) {
+        throw new IllegalArgumentException("Illegal character <" + b[i] +
+          ">. Family names cannot contain control characters: " +
+          Bytes.toString(b));
       }
-      throw new IllegalArgumentException("Illegal character <" + b[i] +
-        ">. Family names  can only contain  'word characters' and must end" +
-        "with a colon: " + Bytes.toString(b));
     }
     return b;
   }
