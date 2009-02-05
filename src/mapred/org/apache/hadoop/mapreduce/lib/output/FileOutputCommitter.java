@@ -174,8 +174,10 @@ public class FileOutputCommitter extends OutputCommitter {
   @Override
   public void abortTask(TaskAttemptContext context) {
     try {
-      context.progress();
-      outputFileSystem.delete(workPath, true);
+      if (workPath != null) { 
+        context.progress();
+        outputFileSystem.delete(workPath, true);
+      }
     } catch (IOException ie) {
       LOG.warn("Error discarding output" + StringUtils.stringifyException(ie));
     }

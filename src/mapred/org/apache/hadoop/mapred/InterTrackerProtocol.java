@@ -59,8 +59,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *             in heartbeat method (HADOOP-4305) 
    * Version 23: Added parameter 'initialContact' again in heartbeat method
    *            (HADOOP-4869) 
+   * Version 24: Changed format of Task and TaskStatus for HADOOP-4759 
    */
-  public static final long versionID = 23L;
+  public static final long versionID = 24L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

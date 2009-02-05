@@ -183,7 +183,8 @@ public class TaskTracker
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
-  private static final String PIDDIR = "pids";
+  private static final String PID = "pid";
+  private static final String OUTPUT = "output";
   private JobConf originalConf;
   private JobConf fConf;
   private int maxCurrentMapTasks;
@@ -412,37 +413,62 @@ public class TaskTracker
   static String getJobCacheSubdir() {
     return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.JOBCACHE;
   }
-
-  static String getPidFilesSubdir() {
-    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.PIDDIR;
+  
+  static String getLocalJobDir(String jobid) {
+	return getJobCacheSubdir() + Path.SEPARATOR + jobid; 
   }
- 
+
+  static String getLocalTaskDir(String jobid, String taskid) {
+	return getLocalTaskDir(jobid, taskid, false) ; 
+  }
+
+  static String getIntermediateOutputDir(String jobid, String taskid) {
+	return getLocalTaskDir(jobid, taskid) 
+           + Path.SEPARATOR + TaskTracker.OUTPUT ; 
+  }
+
+  static String getLocalTaskDir(String jobid, 
+                                String taskid, 
+                                boolean isCleanupAttempt) {
+	String taskDir = getLocalJobDir(jobid) + Path.SEPARATOR + taskid;
+	if (isCleanupAttempt) { 
+      taskDir = taskDir + ".cleanup";
+	}
+	return taskDir;
+  }
+
+  static String getPidFile(String jobid, 
+                           String taskid, 
+                           boolean isCleanup) {
+    return  getLocalTaskDir(jobid, taskid, isCleanup)
+            + Path.SEPARATOR + PID;
+  }
+
   /**
    * Get the pidFile path of a Task
+   * 
    * @param tid the TaskAttemptID of the task for which pidFile's path is needed
+   * @param conf Configuration for local dir allocator
+   * @param isCleanup true if the task is cleanup attempt
+   *  
    * @return pidFile's Path
    */
-  public static Path getPidFilePath(TaskAttemptID tid, JobConf conf) {
+  static Path getPidFilePath(TaskAttemptID tid, 
+                             JobConf conf, 
+                             boolean isCleanup) {
     Path pidFileName = null;
     try {
       //this actually need not use a localdirAllocator since the PID
       //files are really small..
       pidFileName = lDirAlloc.getLocalPathToRead(
-          (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + tid),
-          conf);
+        getPidFile(tid.getJobID().toString(), tid.toString(), isCleanup),
+        conf);
     } catch (IOException i) {
       // PID file is not there
-      LOG.warn("Failed to get pidFile name for " + tid + " " + i);
+      LOG.warn("Failed to get pidFile name for " + tid + " " + 
+                StringUtils.stringifyException(i));
     }
     return pidFileName;
-  }
-  public void removePidFile(TaskAttemptID tid) {
-    Path pidFilePath = getPidFilePath(tid, getJobConf());
-    if (pidFilePath != null) {
-      try {
-        FileSystem.getLocal(getJobConf()).delete(pidFilePath, false);
-      } catch(IOException ie) {}
-    }
   }
   
   public long getProtocolVersion(String protocol, 
@@ -785,9 +811,9 @@ public class TaskTracker
     } catch(FileNotFoundException fe) {
       jobFileSize = -1;
     }
-    Path localJobFile = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
-                                    + Path.SEPARATOR + jobId 
-                                    + Path.SEPARATOR + "job.xml"),
+    Path localJobFile = lDirAlloc.getLocalPathForWrite(
+                                    getLocalJobDir(jobId.toString())
+                                    + Path.SEPARATOR + "job.xml",
                                     jobFileSize, fConf);
     RunningJob rjob = addTaskToJob(jobId, tip);
     synchronized (rjob) {
@@ -811,9 +837,9 @@ public class TaskTracker
         
         // create the 'work' directory
         // job-specific shared directory for use as scratch space 
-        Path workDir = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
-                       + Path.SEPARATOR + jobId 
-                       + Path.SEPARATOR + "work"), fConf);
+        Path workDir = lDirAlloc.getLocalPathForWrite(
+                         (getLocalJobDir(jobId.toString())
+                         + Path.SEPARATOR + "work"), fConf);
         if (!localFs.mkdirs(workDir)) {
           throw new IOException("Mkdirs failed to create " 
                       + workDir.toString());
@@ -835,8 +861,7 @@ public class TaskTracker
           // Here we check for and we check five times the size of jarFileSize
           // to accommodate for unjarring the jar file in work directory 
           localJarFile = new Path(lDirAlloc.getLocalPathForWrite(
-                                     getJobCacheSubdir()
-                                     + Path.SEPARATOR + jobId 
+                                     getLocalJobDir(jobId.toString())
                                      + Path.SEPARATOR + "jars",
                                      5 * jarFileSize, fConf), "job.jar");
           if (!localFs.mkdirs(localJarFile.getParent())) {
@@ -1253,7 +1278,8 @@ public class TaskTracker
       for (TaskStatus taskStatus : status.getTaskReports()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING &&
             taskStatus.getRunState() != TaskStatus.State.UNASSIGNED &&
-            taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING) {
+            taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
+            !taskStatus.inTaskCleanupPhase()) {
           if (taskStatus.getIsMap()) {
             mapTotal--;
           } else {
@@ -1370,7 +1396,8 @@ public class TaskTracker
     long now = System.currentTimeMillis();
     for (TaskInProgress tip: runningTasks.values()) {
       if (tip.getRunState() == TaskStatus.State.RUNNING ||
-          tip.getRunState() == TaskStatus.State.COMMIT_PENDING) {
+          tip.getRunState() == TaskStatus.State.COMMIT_PENDING ||
+          tip.isCleaningup()) {
         // Check the per-job timeout interval for tasks;
         // an interval of '0' implies it is never timed-out
         long jobTaskTimeout = tip.getTaskTimeout();
@@ -1424,8 +1451,7 @@ public class TaskTracker
         // task if the job is done/failed
         if (!rjob.keepJobFiles){
           directoryCleanupThread.addToQueue(getLocalFiles(fConf, 
-                                   SUBDIR + Path.SEPARATOR + JOBCACHE + 
-                                   Path.SEPARATOR +  rjob.getJobID()));
+            getLocalJobDir(rjob.getJobID().toString())));
         }
         // Remove this job 
         rjob.tasks.clear();
@@ -1684,7 +1710,9 @@ public class TaskTracker
           }
           synchronized (tip) {
             //to make sure that there is no kill task action for this
-            if (tip.getRunState() != TaskStatus.State.UNASSIGNED) {
+            if (tip.getRunState() != TaskStatus.State.UNASSIGNED &&
+                tip.getRunState() != TaskStatus.State.FAILED_UNCLEAN &&
+                tip.getRunState() != TaskStatus.State.KILLED_UNCLEAN) {
               //got killed externally while still in the launcher queue
               addFreeSlot();
               continue;
@@ -1705,7 +1733,8 @@ public class TaskTracker
   private TaskInProgress registerTask(LaunchTaskAction action, 
       TaskLauncher launcher) {
     Task t = action.getTask();
-    LOG.info("LaunchTaskAction (registerTask): " + t.getTaskID());
+    LOG.info("LaunchTaskAction (registerTask): " + t.getTaskID() +
+             " task's state:" + t.getState());
     TaskInProgress tip = new TaskInProgress(t, this.fConf, launcher);
     synchronized (this) {
       tasks.put(t.getTaskID(), tip);
@@ -1727,10 +1756,6 @@ public class TaskTracker
   private void startNewTask(TaskInProgress tip) {
     try {
       localizeJob(tip);
-      if (isTaskMemoryManagerEnabled()) {
-        taskMemoryManager.addTask(tip.getTask().getTaskID(), 
-            getVirtualMemoryForTask(tip.getJobConf()));
-      }
     } catch (Throwable e) {
       String msg = ("Error initializing " + tip.getTask().getTaskID() + 
                     ":\n" + StringUtils.stringifyException(e));
@@ -1751,7 +1776,23 @@ public class TaskTracker
       }
     }
   }
-    
+  
+  void addToMemoryManager(TaskAttemptID attemptId, 
+                          JobConf conf, 
+                          String pidFile) {
+    if (isTaskMemoryManagerEnabled()) {
+      taskMemoryManager.addTask(attemptId, 
+        getVirtualMemoryForTask(conf), pidFile);
+    }
+  }
+
+  void removeFromMemoryManager(TaskAttemptID attemptId) {
+    // Remove the entry from taskMemoryManagerThread's data structures.
+    if (isTaskMemoryManagerEnabled()) {
+      taskMemoryManager.removeTask(attemptId);
+    }
+  }
+
   /**
    * The server retry loop.  
    * This while-loop attempts to connect to the JobTracker.  It only 
@@ -1838,10 +1879,12 @@ public class TaskTracker
       localJobConf = null;
       taskStatus = TaskStatus.createTaskStatus(task.isMapTask(), task.getTaskID(), 
                                                0.0f, 
-                                               TaskStatus.State.UNASSIGNED, 
+                                               task.getState(),
                                                diagnosticInfo.toString(), 
                                                "initializing",  
                                                getName(), 
+                                               task.isTaskCleanupTask() ? 
+                                                 TaskStatus.Phase.CLEANUP :  
                                                task.isMapTask()? TaskStatus.Phase.MAP:
                                                TaskStatus.Phase.SHUFFLE,
                                                task.getCounters()); 
@@ -1851,9 +1894,10 @@ public class TaskTracker
     private void localizeTask(Task task) throws IOException{
 
       Path localTaskDir = 
-        lDirAlloc.getLocalPathForWrite((TaskTracker.getJobCacheSubdir() + 
-                    Path.SEPARATOR + task.getJobID() + Path.SEPARATOR +
-                    task.getTaskID()), defaultJobConf );
+        lDirAlloc.getLocalPathForWrite(
+          TaskTracker.getLocalTaskDir(task.getJobID().toString(), 
+            task.getTaskID().toString(), task.isTaskCleanupTask()), 
+          defaultJobConf );
       
       FileSystem localFs = FileSystem.getLocal(fConf);
       if (!localFs.mkdirs(localTaskDir)) {
@@ -1863,8 +1907,7 @@ public class TaskTracker
 
       // create symlink for ../work if it already doesnt exist
       String workDir = lDirAlloc.getLocalPathToRead(
-                         TaskTracker.getJobCacheSubdir() 
-                         + Path.SEPARATOR + task.getJobID() 
+                         TaskTracker.getLocalJobDir(task.getJobID().toString())
                          + Path.SEPARATOR  
                          + "work", defaultJobConf).toString();
       String link = localTaskDir.getParent().toString() 
@@ -1875,11 +1918,10 @@ public class TaskTracker
       
       // create the working-directory of the task 
       Path cwd = lDirAlloc.getLocalPathForWrite(
-                         TaskTracker.getJobCacheSubdir() 
-                         + Path.SEPARATOR + task.getJobID() 
-                         + Path.SEPARATOR + task.getTaskID()
-                         + Path.SEPARATOR + MRConstants.WORKDIR,
-                         defaultJobConf);
+                   getLocalTaskDir(task.getJobID().toString(), 
+                      task.getTaskID().toString(), task.isTaskCleanupTask()) 
+                   + Path.SEPARATOR + MRConstants.WORKDIR,
+                   defaultJobConf);
       if (!localFs.mkdirs(cwd)) {
         throw new IOException("Mkdirs failed to create " 
                     + cwd.toString());
@@ -1974,9 +2016,13 @@ public class TaskTracker
      * Kick off the task execution
      */
     public synchronized void launchTask() throws IOException {
-      if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
+      if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED ||
+          this.taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
+          this.taskStatus.getRunState() == TaskStatus.State.KILLED_UNCLEAN) {
         localizeTask(task);
-        this.taskStatus.setRunState(TaskStatus.State.RUNNING);
+        if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
+          this.taskStatus.setRunState(TaskStatus.State.RUNNING);
+        }
         this.runner = task.createRunner(TaskTracker.this, this);
         this.runner.start();
         this.taskStatus.setStartTime(System.currentTimeMillis());
@@ -1986,6 +2032,10 @@ public class TaskTracker
       }
     }
 
+    boolean isCleaningup() {
+   	  return this.taskStatus.inTaskCleanupPhase();
+    }
+    
     /**
      * The task is reporting its progress
      */
@@ -1993,10 +2043,14 @@ public class TaskTracker
     {
       LOG.info(task.getTaskID() + " " + taskStatus.getProgress() + 
           "% " + taskStatus.getStateString());
-      
+      // task will report its state as
+      // COMMIT_PENDING when it is waiting for commit response and 
+      // when it is committing.
+      // cleanup attempt will report its state as FAILED_UNCLEAN/KILLED_UNCLEAN
       if (this.done || 
           (this.taskStatus.getRunState() != TaskStatus.State.RUNNING &&
-          this.taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING)) {
+          this.taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
+          !isCleaningup())) {
         //make sure we ignore progress messages after a task has 
         //invoked TaskUmbilicalProtocol.done() or if the task has been
         //KILLED/FAILED
@@ -2047,7 +2101,16 @@ public class TaskTracker
      * The task is reporting that it's done running
      */
     public synchronized void reportDone() {
-      this.taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+      if (isCleaningup()) {
+        if (this.taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
+          this.taskStatus.setRunState(TaskStatus.State.FAILED);
+        } else if (this.taskStatus.getRunState() == 
+                   TaskStatus.State.KILLED_UNCLEAN) {
+          this.taskStatus.setRunState(TaskStatus.State.KILLED);
+        }
+      } else {
+        this.taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+      }
       this.taskStatus.setProgress(1.0f);
       this.taskStatus.setFinishTime(System.currentTimeMillis());
       this.done = true;
@@ -2060,6 +2123,11 @@ public class TaskTracker
     
     public boolean wasKilled() {
       return wasKilled;
+    }
+
+    void reportTaskFinished() {
+      taskFinished();
+      releaseSlot();
     }
 
     /**
@@ -2088,7 +2156,23 @@ public class TaskTracker
         if (!done) {
           if (!wasKilled) {
             failures += 1;
-            taskStatus.setRunState(TaskStatus.State.FAILED);
+            /* State changes:
+             * RUNNING/COMMIT_PENDING -> FAILED_UNCLEAN/FAILED
+             * FAILED_UNCLEAN -> FAILED 
+             * KILLED_UNCLEAN -> KILLED 
+             */
+            if (taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
+              taskStatus.setRunState(TaskStatus.State.FAILED);
+            } else if (taskStatus.getRunState() == 
+                       TaskStatus.State.KILLED_UNCLEAN) {
+              taskStatus.setRunState(TaskStatus.State.KILLED);
+            } else if (task.isMapOrReduce() && 
+                       taskStatus.getPhase() != TaskStatus.Phase.CLEANUP) {
+              taskStatus.setRunState(TaskStatus.State.FAILED_UNCLEAN);
+            } else {
+              taskStatus.setRunState(TaskStatus.State.FAILED);
+            }
+            removeFromMemoryManager(task.getTaskID());
             // call the script here for the failed tasks.
             if (debugCommand != null) {
               String taskStdout ="";
@@ -2114,9 +2198,10 @@ public class TaskTracker
               File workDir = null;
               try {
                 workDir = new File(lDirAlloc.getLocalPathToRead(
-                                     TaskTracker.getJobCacheSubdir() 
-                                     + Path.SEPARATOR + task.getJobID() 
-                                     + Path.SEPARATOR + task.getTaskID()
+                                     TaskTracker.getLocalTaskDir( 
+                                       task.getJobID().toString(), 
+                                       task.getTaskID().toString(),
+                                       task.isTaskCleanupTask())
                                      + Path.SEPARATOR + MRConstants.WORKDIR,
                                      localJobConf). toString());
               } catch (IOException e) {
@@ -2169,14 +2254,14 @@ public class TaskTracker
                 LOG.warn("Exception in add diagnostics!");
               }
             }
-          } else {
-            taskStatus.setRunState(TaskStatus.State.KILLED);
           }
           taskStatus.setProgress(0.0f);
         }
         this.taskStatus.setFinishTime(System.currentTimeMillis());
         needCleanup = (taskStatus.getRunState() == TaskStatus.State.FAILED || 
-                       taskStatus.getRunState() == TaskStatus.State.KILLED);
+                taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
+                taskStatus.getRunState() == TaskStatus.State.KILLED_UNCLEAN || 
+                taskStatus.getRunState() == TaskStatus.State.KILLED);
       }
 
       //
@@ -2286,7 +2371,8 @@ public class TaskTracker
       synchronized(this){
         if (getRunState() == TaskStatus.State.RUNNING ||
             getRunState() == TaskStatus.State.UNASSIGNED ||
-            getRunState() == TaskStatus.State.COMMIT_PENDING) {
+            getRunState() == TaskStatus.State.COMMIT_PENDING ||
+            isCleaningup()) {
           kill(wasFailure);
         }
       }
@@ -2297,19 +2383,46 @@ public class TaskTracker
 
     /**
      * Something went wrong and the task must be killed.
+     * 
+     * RUNNING/COMMIT_PENDING -> FAILED_UNCLEAN/KILLED_UNCLEAN
+     * FAILED_UNCLEAN -> FAILED 
+     * KILLED_UNCLEAN -> KILLED
+     * UNASSIGNED -> FAILED/KILLED
      * @param wasFailure was it a failure (versus a kill request)?
      */
     public synchronized void kill(boolean wasFailure) throws IOException {
+      /* State changes:
+       * RUNNING -> FAILED_UNCLEAN/KILLED_UNCLEAN/FAILED/KILLED
+       * COMMIT_PENDING -> FAILED_UNCLEAN/KILLED_UNCLEAN
+       * FAILED_UNCLEAN -> FAILED 
+       * KILLED_UNCLEAN -> KILLED
+       * UNASSIGNED -> FAILED/KILLED 
+       */
       if (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
-          taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING) {
+          taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING ||
+          isCleaningup()) {
         wasKilled = true;
         if (wasFailure) {
           failures += 1;
         }
         runner.kill();
-        taskStatus.setRunState((wasFailure) ? 
-                                  TaskStatus.State.FAILED : 
-                                  TaskStatus.State.KILLED);
+        if (task.isMapOrReduce()) {
+          taskStatus.setRunState((wasFailure) ? 
+                                    TaskStatus.State.FAILED_UNCLEAN : 
+                                    TaskStatus.State.KILLED_UNCLEAN);
+        } else {
+          // go FAILED_UNCLEAN -> FAILED and KILLED_UNCLEAN -> KILLED always
+          if (taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
+            taskStatus.setRunState(TaskStatus.State.FAILED);
+          } else if (taskStatus.getRunState() == 
+                     TaskStatus.State.KILLED_UNCLEAN) {
+            taskStatus.setRunState(TaskStatus.State.KILLED);
+          } else {
+            taskStatus.setRunState((wasFailure) ? 
+                                      TaskStatus.State.FAILED : 
+                                      TaskStatus.State.KILLED);
+          }
+        }
       } else if (taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
         if (wasFailure) {
           failures += 1;
@@ -2318,6 +2431,7 @@ public class TaskTracker
           taskStatus.setRunState(TaskStatus.State.KILLED);
         }
       }
+      removeFromMemoryManager(task.getTaskID());
       releaseSlot();
     }
     
@@ -2369,7 +2483,12 @@ public class TaskTracker
 
       synchronized (TaskTracker.this) {
         if (needCleanup) {
-          tasks.remove(taskId);
+          // see if tasks data structure is holding this tip.
+          // tasks could hold the tip for cleanup attempt, if cleanup attempt 
+          // got launched before this method.
+          if (tasks.get(taskId) == this) {
+            tasks.remove(taskId);
+          }
         }
         synchronized (this){
           if (alwaysKeepTaskFiles ||
@@ -2381,8 +2500,8 @@ public class TaskTracker
       }
       synchronized (this) {
         try {
-          String taskDir = SUBDIR + Path.SEPARATOR + JOBCACHE + Path.SEPARATOR
-                           + task.getJobID() + Path.SEPARATOR + taskId;
+          String taskDir = getLocalTaskDir(task.getJobID().toString(),
+                             taskId.toString(), task.isTaskCleanupTask());
           if (needCleanup) {
             if (runner != null) {
               //cleans up the output directory of the task (where map outputs 
@@ -2603,15 +2722,10 @@ public class TaskTracker
     }
     if (tip != null) {
       if (!commitPending) {
-        tip.taskFinished();
-        // Remove the entry from taskMemoryManagerThread's data structures.
-        if (isTaskMemoryManagerEnabled()) {
-          taskMemoryManager.removeTask(taskid);
-        }
-        tip.releaseSlot();
+        tip.reportTaskFinished();
       }
     } else {
-      LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");
+      LOG.warn("Unknown child task finished: "+taskid+". Ignored.");
     }
   }
   
@@ -2838,15 +2952,13 @@ public class TaskTracker
 
         // Index file
         Path indexFileName = lDirAlloc.getLocalPathToRead(
-            TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + 
-            jobId + Path.SEPARATOR +
-            mapId + "/output" + "/file.out.index", conf);
+            TaskTracker.getIntermediateOutputDir(jobId, mapId)
+            + "/file.out.index", conf);
         
         // Map-output file
         Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-            TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + 
-            jobId + Path.SEPARATOR +
-            mapId + "/output" + "/file.out", conf);
+            TaskTracker.getIntermediateOutputDir(jobId, mapId)
+            + "/file.out", conf);
 
         /**
          * Read the index file to get the information about where

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -27,7 +28,6 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
@@ -66,10 +66,11 @@ class TaskMemoryManagerThread extends Thread {
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
   }
 
-  public void addTask(TaskAttemptID tid, long memLimit) {
+  public void addTask(TaskAttemptID tid, long memLimit, String pidFile) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");
-      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit);
+      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, 
+                                                   memLimit, pidFile);
       tasksToBeAdded.put(tid, ptInfo);
     }
   }
@@ -85,13 +86,15 @@ class TaskMemoryManagerThread extends Thread {
     private String pid;
     private ProcfsBasedProcessTree pTree;
     private long memLimit;
+    private String pidFile;
 
     public ProcessTreeInfo(TaskAttemptID tid, String pid,
-        ProcfsBasedProcessTree pTree, long memLimit) {
+        ProcfsBasedProcessTree pTree, long memLimit, String pidFile) {
       this.tid = tid;
       this.pid = pid;
       this.pTree = pTree;
       this.memLimit = memLimit;
+      this.pidFile = pidFile;
     }
 
     public TaskAttemptID getTID() {
@@ -162,7 +165,8 @@ class TaskMemoryManagerThread extends Thread {
 
         // Initialize any uninitialized processTrees
         if (pId == null) {
-          pId = getPid(tid); // get pid from pid-file
+          // get pid from pid-file
+          pId = getPid(ptInfo.pidFile); 
           if (pId != null) {
             // PID will be null, either if the pid file is yet to be created
             // or if the tip is finished and we removed pidFile, but the TIP
@@ -305,15 +309,14 @@ class TaskMemoryManagerThread extends Thread {
   /**
    * Load pid of the task from the pidFile.
    * 
-   * @param tipID
+   * @param pidFileName
    * @return the pid of the task process.
    */
-  private String getPid(TaskAttemptID tipID) {
-    Path pidFileName = TaskTracker.getPidFilePath(tipID, taskTracker.getJobConf());
-    if (pidFileName == null) {
-      return null;
+  private String getPid(String pidFileName) {
+    if ((new File(pidFileName)).exists()) {
+      return ProcessTree.getPidFromPidFile(pidFileName);
     }
-    return ProcessTree.getPidFromPidFile(pidFileName.toString());
+    return null;
   }
 
 

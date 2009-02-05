@@ -1272,7 +1272,8 @@ public class JobHistory {
                                       taskAttemptId.getTaskID().toString(), 
                                       taskAttemptId.toString(), 
                                       String.valueOf(startTime), trackerName,
-                                      String.valueOf(httpPort)}); 
+                                      httpPort == -1 ? "" : 
+                                        String.valueOf(httpPort)}); 
         }
       }
     }
@@ -1468,7 +1469,8 @@ public class JobHistory {
                                       taskAttemptId.getTaskID().toString(), 
                                       taskAttemptId.toString(), 
                                       String.valueOf(startTime), trackerName,
-                                      String.valueOf(httpPort)}); 
+                                      httpPort == -1 ? "" : 
+                                        String.valueOf(httpPort)}); 
         }
       }
     }

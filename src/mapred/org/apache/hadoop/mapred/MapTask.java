@@ -103,13 +103,15 @@ class MapTask extends Task {
   @Override
   public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
-    Path localSplit = new Path(new Path(getJobFile()).getParent(), 
-                               "split.dta");
-    LOG.debug("Writing local split to " + localSplit);
-    DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
-    Text.writeString(out, splitClass);
-    split.write(out);
-    out.close();
+    if (isMapOrReduce()) {
+      Path localSplit = new Path(new Path(getJobFile()).getParent(), 
+                                 "split.dta");
+      LOG.debug("Writing local split to " + localSplit);
+      DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
+      Text.writeString(out, splitClass);
+      split.write(out);
+      out.close();
+    }
   }
   
   @Override
@@ -121,16 +123,20 @@ class MapTask extends Task {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    Text.writeString(out, splitClass);
-    split.write(out);
-    split = null;
+    if (isMapOrReduce()) {
+      Text.writeString(out, splitClass);
+      split.write(out);
+      split = null;
+    }
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    splitClass = Text.readString(in);
-    split.readFields(in);
+    if (isMapOrReduce()) {
+      splitClass = Text.readString(in);
+      split.readFields(in);
+    }
   }
 
   /**
@@ -280,12 +286,16 @@ class MapTask extends Task {
     initialize(job, getJobID(), reporter, useNewApi);
 
     // check if it is a cleanupJobTask
-    if (cleanupJob) {
-      runCleanup(umbilical, reporter);
+    if (jobCleanup) {
+      runJobCleanupTask(umbilical, reporter);
       return;
     }
-    if (setupJob) {
-      runSetupJob(umbilical, reporter);
+    if (jobSetup) {
+      runJobSetupTask(umbilical, reporter);
+      return;
+    }
+    if (taskCleanup) {
+      runTaskCleanupTask(umbilical, reporter);
       return;
     }
 

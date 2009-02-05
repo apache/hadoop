@@ -110,7 +110,7 @@ public class TestKillSubProcesses extends TestCase {
         JobConf confForThisTask = new JobConf(conf);
         confForThisTask.set("mapred.local.dir", localDir);//set the localDir
 
-        Path pidFilePath = TaskTracker.getPidFilePath(id, confForThisTask);
+        Path pidFilePath = TaskTracker.getPidFilePath(id, confForThisTask, false);
         while (pidFilePath == null) {
           //wait till the pid file is created
           try {
@@ -119,7 +119,7 @@ public class TestKillSubProcesses extends TestCase {
             LOG.warn("sleep is interrupted:" + ie);
             break;
           }
-          pidFilePath = TaskTracker.getPidFilePath(id, confForThisTask);
+          pidFilePath = TaskTracker.getPidFilePath(id, confForThisTask, false);
         }
 
         pid = ProcessTree.getPidFromPidFile(pidFilePath.toString());

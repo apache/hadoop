@@ -82,8 +82,8 @@ class TaskInProgress {
   private long maxSkipRecords = 0;
   private FailedRanges failedRanges = new FailedRanges();
   private volatile boolean skipping = false;
-  private boolean cleanup = false; 
-  private boolean setup = false;
+  private boolean jobCleanup = false; 
+  private boolean jobSetup = false;
    
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
@@ -103,8 +103,10 @@ class TaskInProgress {
   private TreeMap<TaskAttemptID,TaskStatus> taskStatuses = 
     new TreeMap<TaskAttemptID,TaskStatus>();
 
-  // Map from taskId -> Task
-  private Map<TaskAttemptID, Task> tasks = new TreeMap<TaskAttemptID, Task>();
+  // Map from taskId -> TaskTracker Id, 
+  // contains cleanup attempts and where they ran, if any
+  private TreeMap<TaskAttemptID, String> cleanupTasks =
+    new TreeMap<TaskAttemptID, String>();
 
   private TreeSet<String> machinesWhereFailed = new TreeSet<String>();
   private TreeSet<TaskAttemptID> tasksReportedClosed = new TreeSet<TaskAttemptID>();
@@ -174,20 +176,20 @@ class TaskInProgress {
     return partition;
   }    
 
-  public boolean isCleanupTask() {
-   return cleanup;
+  public boolean isJobCleanupTask() {
+   return jobCleanup;
   }
   
-  public void setCleanupTask() {
-    cleanup = true;
+  public void setJobCleanupTask() {
+    jobCleanup = true;
   }
 
-  public boolean isSetupTask() {
-    return setup;
+  public boolean isJobSetupTask() {
+    return jobSetup;
   }
 	  
-  public void setSetupTask() {
-    setup = true;
+  public void setJobSetupTask() {
+    jobSetup = true;
   }
 
   public boolean isOnlyCommitPending() {
@@ -274,15 +276,6 @@ class TaskInProgress {
     return rawSplit != null;
   }
     
-  /**
-   * Return the Task object associated with a taskId
-   * @param taskId
-   * @return
-   */  
-  public Task getTask(TaskAttemptID taskId) {
-    return tasks.get(taskId);
-  }
-
   /**
    * Is the Task associated with taskid is the first attempt of the tip? 
    * @param taskId
@@ -392,7 +385,8 @@ class TaskInProgress {
       tasksReportedClosed.add(taskid);
       close = true;
     } else if (isComplete() && 
-               !(isMapTask() && !setup && !cleanup && isComplete(taskid)) &&
+               !(isMapTask() && !jobSetup && 
+                   !jobCleanup && isComplete(taskid)) &&
                !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
       close = true; 
@@ -516,6 +510,8 @@ class TaskInProgress {
       // @see {@link TaskTracker.transmitHeartbeat()}
       if ((newState != TaskStatus.State.RUNNING && 
            newState != TaskStatus.State.COMMIT_PENDING && 
+           newState != TaskStatus.State.FAILED_UNCLEAN && 
+           newState != TaskStatus.State.KILLED_UNCLEAN && 
            newState != TaskStatus.State.UNASSIGNED) && 
           (oldState == newState)) {
         LOG.warn("Recieved duplicate status update of '" + newState + 
@@ -531,6 +527,8 @@ class TaskInProgress {
           newState == TaskStatus.State.UNASSIGNED) &&
           (oldState == TaskStatus.State.FAILED || 
            oldState == TaskStatus.State.KILLED || 
+           oldState == TaskStatus.State.FAILED_UNCLEAN || 
+           oldState == TaskStatus.State.KILLED_UNCLEAN || 
            oldState == TaskStatus.State.SUCCEEDED ||
            oldState == TaskStatus.State.COMMIT_PENDING)) {
         return false;
@@ -538,8 +536,17 @@ class TaskInProgress {
           
       changed = oldState != newState;
     }
-        
-    taskStatuses.put(taskid, status);
+    // if task is a cleanup attempt, do not replace the complete status,
+    // update only specific fields.
+    // For example, startTime should not be updated, 
+    // but finishTime has to be updated.
+    if (!isCleanupAttempt(taskid)) {
+      taskStatuses.put(taskid, status);
+    } else {
+      taskStatuses.get(taskid).statusUpdate(status.getRunState(),
+        status.getProgress(), status.getStateString(), status.getPhase(),
+        status.getFinishTime());
+    }
 
     // Recompute progress
     recomputeProgress();
@@ -551,29 +558,38 @@ class TaskInProgress {
    * has failed.
    */
   public void incompleteSubTask(TaskAttemptID taskid, 
-                                TaskTrackerStatus ttStatus,
                                 JobStatus jobStatus) {
     //
     // Note the failure and its location
     //
-    String trackerName = ttStatus.getTrackerName();
-    String trackerHostName = ttStatus.getHost();
-     
     TaskStatus status = taskStatuses.get(taskid);
+    String trackerName;
+    String trackerHostName = null;
     TaskStatus.State taskState = TaskStatus.State.FAILED;
     if (status != null) {
+      trackerName = status.getTaskTracker();
+      trackerHostName = 
+        JobInProgress.convertTrackerNameToHostName(trackerName);
       // Check if the user manually KILLED/FAILED this task-attempt...
       Boolean shouldFail = tasksToKill.remove(taskid);
       if (shouldFail != null) {
-        taskState = (shouldFail) ? TaskStatus.State.FAILED :
-                                   TaskStatus.State.KILLED;
+        if (isCleanupAttempt(taskid)) {
+          taskState = (shouldFail) ? TaskStatus.State.FAILED :
+                                     TaskStatus.State.KILLED;
+        } else {
+          taskState = (shouldFail) ? TaskStatus.State.FAILED_UNCLEAN :
+                                     TaskStatus.State.KILLED_UNCLEAN;
+          
+        }
         status.setRunState(taskState);
         addDiagnosticInfo(taskid, "Task has been " + taskState + " by the user" );
       }
  
       taskState = status.getRunState();
       if (taskState != TaskStatus.State.FAILED && 
-              taskState != TaskStatus.State.KILLED) {
+          taskState != TaskStatus.State.KILLED &&
+          taskState != TaskStatus.State.FAILED_UNCLEAN &&
+          taskState != TaskStatus.State.KILLED_UNCLEAN) {
         LOG.info("Task '" + taskid + "' running on '" + trackerName + 
                 "' in state: '" + taskState + "' being failed!");
         status.setRunState(TaskStatus.State.FAILED);
@@ -594,7 +610,7 @@ class TaskInProgress {
     // should note this failure only for completed maps, only if this taskid;
     // completed this map. however if the job is done, there is no need to 
     // manipulate completed maps
-    if (this.isMapTask() && !setup && !cleanup && isComplete(taskid) && 
+    if (this.isMapTask() && !jobSetup && !jobCleanup && isComplete(taskid) && 
         jobStatus.getRunState() != JobStatus.SUCCEEDED) {
       this.completes--;
       
@@ -614,7 +630,7 @@ class TaskInProgress {
           skipping = startSkipping();
         }
 
-      } else {
+      } else if (taskState == TaskStatus.State.KILLED) {
         numKilledTasks++;
       }
     }
@@ -741,6 +757,7 @@ class TaskInProgress {
     TaskStatus st = taskStatuses.get(taskId);
     if(st != null && (st.getRunState() == TaskStatus.State.RUNNING
         || st.getRunState() == TaskStatus.State.COMMIT_PENDING ||
+        st.inTaskCleanupPhase() ||
         st.getRunState() == TaskStatus.State.UNASSIGNED)
         && tasksToKill.put(taskId, shouldFail) == null ) {
       String logStr = "Request received to " + (shouldFail ? "fail" : "kill") 
@@ -865,11 +882,17 @@ class TaskInProgress {
     return addRunningTask(taskid, taskTracker);
   }
   
+  public Task addRunningTask(TaskAttemptID taskid, String taskTracker) {
+    return addRunningTask(taskid, taskTracker, false);
+  }
+  
   /**
    * Adds a previously running task to this tip. This is used in case of 
    * jobtracker restarts.
    */
-  public Task addRunningTask(TaskAttemptID taskid, String taskTracker) {
+  public Task addRunningTask(TaskAttemptID taskid, 
+                             String taskTracker,
+                             boolean taskCleanup) {
     // create the task
     Task t = null;
     if (isMapTask()) {
@@ -880,11 +903,17 @@ class TaskInProgress {
     } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps);
     }
-    if (cleanup) {
-      t.setCleanupTask();
+    if (jobCleanup) {
+      t.setJobCleanupTask();
     }
-    if (setup) {
-      t.setSetupTask();
+    if (jobSetup) {
+      t.setJobSetupTask();
+    }
+    if (taskCleanup) {
+      t.setTaskCleanupTask();
+      t.setState(taskStatuses.get(taskid).getRunState());
+      cleanupTasks.put(taskid, taskTracker);
+      jobtracker.removeTaskEntry(taskid);
     }
     t.setConf(conf);
     LOG.debug("Launching task with skipRanges:"+failedRanges.getSkipRanges());
@@ -893,13 +922,29 @@ class TaskInProgress {
     if(failedRanges.isTestAttempt()) {
       t.setWriteSkipRecs(false);
     }
-    tasks.put(taskid, t);
 
     activeTasks.put(taskid, taskTracker);
 
     // Ask JobTracker to note that the task exists
     jobtracker.createTaskEntry(taskid, taskTracker, this);
     return t;
+  }
+
+  boolean isRunningTask(TaskAttemptID taskid) {
+    TaskStatus status = taskStatuses.get(taskid);
+    return status != null && status.getRunState() == TaskStatus.State.RUNNING;
+  }
+  
+  boolean isCleanupAttempt(TaskAttemptID taskid) {
+    return cleanupTasks.containsKey(taskid);
+  }
+  
+  String machineWhereCleanupRan(TaskAttemptID taskid) {
+    return cleanupTasks.get(taskid);
+  }
+  
+  String machineWhereTaskRan(TaskAttemptID taskid) {
+    return taskStatuses.get(taskid).getTaskTracker();
   }
     
   /**
@@ -987,7 +1032,7 @@ class TaskInProgress {
   }
 
   public long getMapInputSize() {
-    if(isMapTask() && !setup && !cleanup) {
+    if(isMapTask() && !jobSetup && !jobCleanup) {
       return rawSplit.getDataLength();
     } else {
       return 0;

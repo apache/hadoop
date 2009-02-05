@@ -312,7 +312,7 @@
 </property>
 
 <property>
-  <name>mapred.tasktracker.sigkillthread.sleeptime-before-sigkill</name>
+  <name>mapred.tasktracker.tasks.sleeptime-before-sigkill</name>
   <value>5000</value>
   <description>The time, in milliseconds, the tasktracker waits for sending a
   SIGKILL to a process, after it has been sent a SIGTERM.
