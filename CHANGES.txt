@@ -760,7 +760,7 @@ Release 0.19.1 - Unreleased
     to DataNode in one reply to a heartbeat. (hairong)
 
     HADOOP-4759. Removes temporary output directory for failed and killed
-    tasks in the JobTracker's task commit thread.
+    tasks  by launching special CLEANUP tasks for the same.
     (Amareshwari Sriramadasu via ddas)
 
 Release 0.19.0 - 2008-11-18
