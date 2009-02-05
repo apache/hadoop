@@ -132,9 +132,11 @@ public class FileOutputCommitter extends OutputCommitter {
   public void abortTask(TaskAttemptContext context) {
     Path taskOutputPath =  getTempTaskOutputPath(context);
     try {
-      FileSystem fs = taskOutputPath.getFileSystem(context.getJobConf());
-      context.getProgressible().progress();
-      fs.delete(taskOutputPath, true);
+      if (taskOutputPath != null) {
+        FileSystem fs = taskOutputPath.getFileSystem(context.getJobConf());
+        context.getProgressible().progress();
+        fs.delete(taskOutputPath, true);
+      }
     } catch (IOException ie) {
       LOG.warn("Error discarding output" + StringUtils.stringifyException(ie));
     }

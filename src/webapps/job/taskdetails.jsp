@@ -67,13 +67,19 @@
         }
       }
     }
-    TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(tipidObj)
-        : null;
+    TaskInProgress tip = null;
+    if (job != null && tipidObj != null) {
+      tip = job.getTaskInProgress(tipidObj);
+    }
+    TaskStatus[] ts = null;
+    if (tip != null) { 
+      ts = tip.getTaskStatuses();
+    }
     boolean isCleanupOrSetup = false;
-    if (tipidObj != null) { 
-      isCleanupOrSetup = job.getTaskInProgress(tipidObj).isCleanupTask();
+    if ( tip != null) {
+      isCleanupOrSetup = tip.isJobCleanupTask();
       if (!isCleanupOrSetup) {
-        isCleanupOrSetup = job.getTaskInProgress(tipidObj).isSetupTask();
+        isCleanupOrSetup = tip.isJobSetupTask();
       }
     }
 %>
@@ -115,14 +121,41 @@
       TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
       out.print("<tr><td>" + status.getTaskID() + "</td>");
       String taskAttemptTracker = null;
+      String cleanupTrackerName = null;
+      TaskTrackerStatus cleanupTracker = null;
+      String cleanupAttemptTracker = null;
+      boolean hasCleanupAttempt = false;
+      if (tip != null && tip.isCleanupAttempt(status.getTaskID())) {
+        cleanupTrackerName = tip.machineWhereCleanupRan(status.getTaskID());
+        cleanupTracker = tracker.getTaskTracker(cleanupTrackerName);
+        if (cleanupTracker != null) {
+          cleanupAttemptTracker = "http://" + cleanupTracker.getHost() + ":"
+            + cleanupTracker.getHttpPort();
+        }
+        hasCleanupAttempt = true;
+      }
+      out.print("<td>");
+      if (hasCleanupAttempt) {
+        out.print("Task attempt: ");
+      }
       if (taskTracker == null) {
-        out.print("<td>" + taskTrackerName + "</td>");
+        out.print(taskTrackerName);
       } else {
         taskAttemptTracker = "http://" + taskTracker.getHost() + ":"
           + taskTracker.getHttpPort();
-        out.print("<td><a href=\"" + taskAttemptTracker + "\">"
-          + tracker.getNode(taskTracker.getHost()) + "</a></td>");
+        out.print("<a href=\"" + taskAttemptTracker + "\">"
+          + tracker.getNode(taskTracker.getHost()) + "</a>");
+      }
+      if (hasCleanupAttempt) {
+        out.print("<br/>Cleanup Attempt: ");
+        if (cleanupAttemptTracker == null ) {
+          out.print(cleanupTrackerName);
+        } else {
+          out.print("<a href=\"" + cleanupAttemptTracker + "\">"
+            + tracker.getNode(cleanupTracker.getHost()) + "</a>");
         }
+      }
+      out.print("</td>");
         out.print("<td>" + status.getRunState() + "</td>");
         out.print("<td>" + StringUtils.formatPercent(status.getProgress(), 2)
           + ServletUtil.percentageGraph(status.getProgress() * 100f, 80) + "</td>");
@@ -162,6 +195,9 @@
         						String.valueOf(taskTracker.getHttpPort()),
         						status.getTaskID().toString());
       	}
+        if (hasCleanupAttempt) {
+          out.print("Task attempt: <br/>");
+        }
         if (taskLogUrl == null) {
           out.print("n/a");
         } else {
@@ -171,6 +207,25 @@
           out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
           out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
           out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
+        }
+        if (hasCleanupAttempt) {
+          out.print("Cleanup attempt: <br/>");
+          taskLogUrl = null;
+          if (cleanupTracker != null ) {
+        	taskLogUrl = TaskLogServlet.getTaskLogUrl(cleanupTracker.getHost(),
+                                String.valueOf(cleanupTracker.getHttpPort()),
+                                status.getTaskID().toString());
+      	  }
+          if (taskLogUrl == null) {
+            out.print("n/a");
+          } else {
+            String tailFourKBUrl = taskLogUrl + "&start=-4097&cleanup=true";
+            String tailEightKBUrl = taskLogUrl + "&start=-8193&cleanup=true";
+            String entireLogUrl = taskLogUrl + "&all=true&cleanup=true";
+            out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
+            out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
+            out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
+          }
         }
         out.print("</td><td>" + "<a href=\"/taskstats.jsp?jobid=" + jobid
           + "&tipid=" + tipid + "&taskid=" + status.getTaskID() + "\">"

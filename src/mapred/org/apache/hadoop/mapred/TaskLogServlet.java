@@ -104,7 +104,8 @@ public class TaskLogServlet extends HttpServlet {
   private void printTaskLog(HttpServletResponse response,
                             OutputStream out, TaskAttemptID taskId, 
                             long start, long end, boolean plainText, 
-                            TaskLog.LogName filter) throws IOException {
+                            TaskLog.LogName filter, boolean isCleanup) 
+  throws IOException {
     if (!plainText) {
       out.write(("<br><b><u>" + filter + " logs</u></b><br>\n" +
                  "<pre>\n").getBytes());
@@ -112,7 +113,7 @@ public class TaskLogServlet extends HttpServlet {
 
     try {
       InputStream taskLogReader = 
-        new TaskLog.Reader(taskId, filter, start, end);
+        new TaskLog.Reader(taskId, filter, start, end, isCleanup);
       byte[] b = new byte[65536];
       int result;
       while (true) {
@@ -159,6 +160,7 @@ public class TaskLogServlet extends HttpServlet {
     long end = -1;
     boolean plainText = false;
     TaskLog.LogName filter = null;
+    boolean isCleanup = false;
 
     String taskIdStr = request.getParameter("taskid");
     if (taskIdStr == null) {
@@ -193,7 +195,12 @@ public class TaskLogServlet extends HttpServlet {
     if (sPlainText != null) {
       plainText = Boolean.valueOf(sPlainText);
     }
-
+    
+    String sCleanup = request.getParameter("cleanup");
+    if (sCleanup != null) {
+      isCleanup = Boolean.valueOf(sCleanup);
+    }
+    
     OutputStream out = response.getOutputStream();
     if( !plainText ) {
       out.write(("<html>\n" +
@@ -203,21 +210,22 @@ public class TaskLogServlet extends HttpServlet {
 
       if (filter == null) {
         printTaskLog(response, out, taskId, start, end, plainText, 
-                     TaskLog.LogName.STDOUT);
+                     TaskLog.LogName.STDOUT, isCleanup);
         printTaskLog(response, out, taskId, start, end, plainText, 
-                     TaskLog.LogName.STDERR);
+                     TaskLog.LogName.STDERR, isCleanup);
         printTaskLog(response, out, taskId, start, end, plainText, 
-                     TaskLog.LogName.SYSLOG);
+                     TaskLog.LogName.SYSLOG, isCleanup);
         if (haveTaskLog(taskId, TaskLog.LogName.DEBUGOUT)) {
           printTaskLog(response, out, taskId, start, end, plainText, 
-                       TaskLog.LogName.DEBUGOUT);
+                       TaskLog.LogName.DEBUGOUT, isCleanup);
         }
         if (haveTaskLog(taskId, TaskLog.LogName.PROFILE)) {
           printTaskLog(response, out, taskId, start, end, plainText, 
-                       TaskLog.LogName.PROFILE);
+                       TaskLog.LogName.PROFILE, isCleanup);
         }
       } else {
-        printTaskLog(response, out, taskId, start, end, plainText, filter);
+        printTaskLog(response, out, taskId, start, end, plainText, filter,
+                     isCleanup);
       }
       
       out.write("</body></html>\n".getBytes());
@@ -226,7 +234,8 @@ public class TaskLogServlet extends HttpServlet {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST,
           "You must supply a value for `filter' (STDOUT, STDERR, or SYSLOG) if you set plainText = true");
     } else {
-      printTaskLog(response, out, taskId, start, end, plainText, filter);
+      printTaskLog(response, out, taskId, start, end, plainText, filter, 
+                   isCleanup);
     } 
   }
 }

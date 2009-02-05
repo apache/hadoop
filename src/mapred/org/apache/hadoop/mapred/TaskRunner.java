@@ -113,9 +113,10 @@ abstract class TaskRunner extends Thread {
                           new Path(conf.getJar()).getParent().toString());
       }
       File workDir = new File(lDirAlloc.getLocalPathToRead(
-                                TaskTracker.getJobCacheSubdir() 
-                                + Path.SEPARATOR + t.getJobID() 
-                                + Path.SEPARATOR + t.getTaskID()
+                                TaskTracker.getLocalTaskDir( 
+                                  t.getJobID().toString(), 
+                                  t.getTaskID().toString(),
+                                  t.isTaskCleanupTask())
                                 + Path.SEPARATOR + MRConstants.WORKDIR,
                                 conf). toString());
 
@@ -374,12 +375,12 @@ abstract class TaskRunner extends Thread {
       vargs.add(Integer.toString(address.getPort())); 
       vargs.add(taskid.toString());                      // pass task identifier
 
-      String pidFile = null;
-      if (tracker.isTaskMemoryManagerEnabled()) {
-        pidFile = lDirAlloc.getLocalPathForWrite(
-            (TaskTracker.getPidFilesSubdir() + Path.SEPARATOR + taskid),
+      String pidFile = lDirAlloc.getLocalPathForWrite(
+            (TaskTracker.getPidFile(t.getJobID().toString(), 
+             taskid.toString(), t.isTaskCleanupTask())),
             this.conf).toString();
-      }
+      t.setPidFile(pidFile);
+      tracker.addToMemoryManager(t.getTaskID(), conf, pidFile);
 
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
@@ -458,7 +459,7 @@ abstract class TaskRunner extends Thread {
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
-      tracker.reportTaskFinished(t.getTaskID(), false);
+      tip.reportTaskFinished();
     }
   }
   
