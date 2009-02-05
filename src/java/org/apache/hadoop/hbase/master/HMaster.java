@@ -768,6 +768,29 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return null;
   }
 
+  private Pair<HRegionInfo,HServerAddress>
+  getTableRegionFromName(final byte [] regionName)
+    throws IOException {
+    byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
+    Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
+    for (MetaRegion m: regions) {
+      byte [] metaRegionName = m.getRegionName();
+      HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
+      RowResult data = srvr.getRow(metaRegionName, regionName, 
+        new byte[][] {COL_REGIONINFO, COL_SERVER},
+        HConstants.LATEST_TIMESTAMP, 1, -1L);
+      if(data == null || data.size() <= 0) continue;
+      HRegionInfo info = Writables.getHRegionInfo(data.get(COL_REGIONINFO));
+      Cell cell = data.get(COL_SERVER);
+      if(cell != null) {
+        HServerAddress server =
+          new HServerAddress(Bytes.toString(cell.getValue()));
+        return new Pair<HRegionInfo,HServerAddress>(info, server);
+      }
+    }
+    return null;
+  }
+  
   /**
    * Get row from meta table.
    * @param row
@@ -813,9 +836,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (!(args[0] instanceof ImmutableBytesWritable))
           throw new IOException(
             "request argument must be ImmutableBytesWritable");
-        byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
-        Pair<HRegionInfo,HServerAddress> pair =
-          getTableRegionClosest(tableName, rowKey);
+        Pair<HRegionInfo,HServerAddress> pair = null;
+        if(tableName == null) {
+          byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
+          pair = getTableRegionFromName(regionName);
+        } else {
+          byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
+          pair = getTableRegionClosest(tableName, rowKey);
+        }
         if (pair != null) {
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);

@@ -217,6 +217,47 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return b;
   }
   
+  /**
+   * Separate elements of a regionName.
+   * @param regionName
+   * @return Array of byte[] containing tableName, startKey and id
+   */
+  public static byte [][] parseRegionName(final byte [] regionName)
+  throws IOException {
+    int offset = -1;
+    for (int i = 0; i < regionName.length; i++) {
+      if (regionName[i] == DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    if(offset == -1) throw new IOException("Invalid regionName format");
+    byte [] tableName = new byte[offset];
+    System.arraycopy(regionName, 0, tableName, 0, offset);
+    offset = -1;
+    for (int i = regionName.length - 1; i > 0; i--) {
+      if(regionName[i] == DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    if(offset == -1) throw new IOException("Invalid regionName format");
+    byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
+    if(offset != tableName.length + 1) {
+      startKey = new byte[offset - tableName.length - 1];
+      System.arraycopy(regionName, tableName.length + 1, startKey, 0, 
+          offset - tableName.length - 1);
+    }
+    byte [] id = new byte[regionName.length - offset - 1];
+    System.arraycopy(regionName, offset + 1, id, 0, 
+        regionName.length - offset - 1);
+    byte [][] elements = new byte[3][];
+    elements[0] = tableName;
+    elements[1] = startKey;
+    elements[2] = id;
+    return elements;
+  }
+  
   /** @return the endKey */
   public byte [] getEndKey(){
     return endKey;

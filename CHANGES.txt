@@ -17,6 +17,8 @@ Release 0.20.0 - Unreleased
    HBASE-1148  Always flush HLog on root or meta region updates
    HBASE-1181  src/saveVersion.sh bails on non-standard Bourne shells (e.g. dash)
                (K M via Jean-Daniel Cryans)
+   HBASE-1175  HBA administrative tools do not work when specifying region
+               name (Jonathan Gray via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
