@@ -40,7 +40,6 @@ public class WatcherWrapper implements Watcher {
   /**
    * @param event WatchedEvent from ZooKeeper.
    */
-  @Override
   public void process(WatchedEvent event) {
     if (otherWatcher != null) {
       otherWatcher.process(event);

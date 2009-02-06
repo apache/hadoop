@@ -161,8 +161,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     }
 
     // Writable
-
-    @Override
     public void readFields(DataInput in) throws IOException {
       int namelen = in.readInt();
       this.name = new byte[namelen];
@@ -173,7 +171,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileIndexSizeMB = in.readInt();
     }
 
-    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(name.length);
       out.write(name);

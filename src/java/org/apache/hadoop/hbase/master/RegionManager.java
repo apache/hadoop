@@ -464,7 +464,6 @@ class RegionManager implements HConstants {
   
   static class TableDirFilter implements PathFilter {
 
-    @Override
     public boolean accept(Path path) {
       // skip the region servers' log dirs && version file
       // HBASE-1112 want to sperate the log dirs from table's data dirs by a special character.
@@ -476,7 +475,6 @@ class RegionManager implements HConstants {
   
   static class RegionDirFilter implements PathFilter {
 
-    @Override
     public boolean accept(Path path) { 
       return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
     }
@@ -1324,7 +1322,6 @@ class RegionManager implements HConstants {
       return Bytes.toString(getRegionName()).hashCode();
     }
     
-    @Override
     public int compareTo(RegionState o) {
       if (o == null) {
         return 1;

@@ -44,6 +44,8 @@ Release 0.20.0 - Unreleased
    HBASE-1178  Add shutdown command to shell
    HBASE-1184  HColumnDescriptor is too restrictive with family names
                (Toby White via Andrew Purtell)
+   HBASE-1180  Add missing import statements to SampleUploader and remove
+               unnecessary @Overrides (Ryan Smith via Andrew Purtell)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
