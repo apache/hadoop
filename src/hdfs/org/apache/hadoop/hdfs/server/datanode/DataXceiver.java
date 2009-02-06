@@ -61,6 +61,7 @@ class DataXceiver implements Runnable, FSConstants {
     this.s = s;
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
+    dataXceiverServer.childSockets.put(s, s);
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
     LOG.debug("Number of active connections is: " + datanode.getXceiverCount());
