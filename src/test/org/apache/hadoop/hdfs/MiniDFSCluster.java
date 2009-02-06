@@ -602,7 +602,7 @@ public class MiniDFSCluster {
   /*
    * Shutdown a particular datanode
    */
-  DataNodeProperties stopDataNode(int i) {
+  public DataNodeProperties stopDataNode(int i) {
     if (i < 0 || i >= dataNodes.size()) {
       return null;
     }
