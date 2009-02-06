@@ -192,7 +192,7 @@ public class FairSchedulerServlet extends HttpServlet {
   private void showJobs(PrintWriter out, boolean advancedView) {
     out.print("<h2>Running Jobs</h2>\n");
     out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
-    int colsPerTaskType = advancedView ? 5 : 3;
+    int colsPerTaskType = advancedView ? 6 : 3;
     out.printf("<tr><th rowspan=2>Submitted</th>" + 
         "<th rowspan=2>JobID</th>" +
         "<th rowspan=2>User</th>" +
@@ -204,9 +204,9 @@ public class FairSchedulerServlet extends HttpServlet {
         colsPerTaskType, colsPerTaskType);
     out.print("</tr><tr>\n");
     out.print("<th>Finished</th><th>Running</th><th>Fair Share</th>" +
-        (advancedView ? "<th>Weight</th><th>Deficit</th>" : ""));
+        (advancedView ? "<th>Weight</th><th>Deficit</th><th>minMaps</th>" : ""));
     out.print("<th>Finished</th><th>Running</th><th>Fair Share</th>" +
-        (advancedView ? "<th>Weight</th><th>Deficit</th>" : ""));
+        (advancedView ? "<th>Weight</th><th>Deficit</th><th>minReduces</th>" : ""));
     out.print("</tr>\n");
     Collection<JobInProgress> runningJobs = jobTracker.runningJobs();
     for (JobInProgress job: runningJobs) {
@@ -240,6 +240,7 @@ public class FairSchedulerServlet extends HttpServlet {
         out.printf("<td>%8.1f</td>\n", info.mapWeight);
         out.printf("<td>%s</td>\n", info.neededMaps > 0 ?
             (info.mapDeficit / 1000) + "s" : "--");
+        out.printf("<td>%d</td>\n", info.minMaps);
       }
       out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
           job.finishedReduces(), job.desiredReduces(), info.runningReduces,
@@ -248,6 +249,7 @@ public class FairSchedulerServlet extends HttpServlet {
         out.printf("<td>%8.1f</td>\n", info.reduceWeight);
         out.printf("<td>%s</td>\n", info.neededReduces > 0 ?
             (info.reduceDeficit / 1000) + "s" : "--");
+        out.printf("<td>%d</td>\n", info.minReduces);
       }
       out.print("</tr>\n");
     }
