@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-3327. Improves handling of READ_TIMEOUT during map output copying.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5124. Choose datanodes randomly instead of starting from the first
+    datanode for providing fairness.  (hairong via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
