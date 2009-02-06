@@ -37,10 +37,18 @@ import junit.framework.TestCase;
 /** Test if a datanode can correctly handle errors during block read/write*/
 public class TestDiskError extends TestCase {
   public void testShutdown() throws Exception {
+    if (System.getProperty("os.name").startsWith("Windows")) {
+      /**
+       * This test depends on OS not allowing file creations on a directory
+       * that does not have write permissions for the user. Apparently it is 
+       * not the case on Windows (at least under Cygwin), and possibly AIX.
+       * This is disabled on Windows.
+       */
+      return;
+    }
     // bring up a cluster of 3
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", 512L);
-    conf.setInt("dfs.dataXceiver.timeoutInMS", 1000);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();

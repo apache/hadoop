@@ -11,6 +11,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.dfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.dfs.Block;
 import org.apache.hadoop.dfs.DatanodeID;
+import org.apache.hadoop.dfs.MiniDFSCluster.DataNodeProperties;
 
 import junit.framework.TestCase;
 
@@ -35,11 +36,20 @@ public class TestOverReplicatedBlocks extends TestCase {
       // corrupt the block on datanode 0
       Block block = DFSTestUtil.getFirstBlock(fs, fileName);
       TestDatanodeBlockScanner.corruptReplica(block.getBlockName(), 0);
+      DataNodeProperties dnProps = cluster.stopDataNode(0);
+      // remove block scanner log to trigger block scanning
       File scanLog = new File(System.getProperty("test.build.data"),
           "dfs/data/data1/current/dncp_block_verification.log.curr");
-      assertTrue(scanLog.delete()); 
+      //wait for one minute for deletion to succeed;
+      for(int i=0; !scanLog.delete(); i++) {
+        assertTrue("Could not delete log file in one minute", i < 60);
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ignored) {}
+      }
+      
       // restart the datanode so the corrupt replica will be detected
-      cluster.restartDataNode(0);
+      cluster.restartDataNode(dnProps);
       DFSTestUtil.waitReplication(fs, fileName, (short)2);
       
       final DatanodeID corruptDataNode = 

@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.18.4 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-5114. Remove timeout for accept() in DataNode. This makes accept() 
+    fail in JDK on Windows and causes many tests to fail. (Raghu Angadi)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS

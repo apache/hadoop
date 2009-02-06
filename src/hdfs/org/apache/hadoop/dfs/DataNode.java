@@ -316,7 +316,6 @@ public class DataNode extends Configured
           ServerSocketChannel.open().socket() : new ServerSocket();
     Server.bind(ss, socAddr, 0);
     ss.setReceiveBufferSize(DEFAULT_DATA_SOCKET_SIZE); 
-    ss.setSoTimeout(conf.getInt("dfs.dataXceiver.timeoutInMS", 30000)); //30s
     // adjust machine name with the actual port
     tmpPort = ss.getLocalPort();
     selfAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
@@ -588,6 +587,10 @@ public class DataNode extends Configured
             Thread.sleep(1000);
           } catch (InterruptedException e) {}
         }
+      }
+      try {
+        this.dataXceiveServer.join();
+      } catch (InterruptedException ie) {
       }
     }
     
@@ -2974,12 +2977,6 @@ public class DataNode extends Configured
           }
         }
       }
-    }
-        
-    // wait for dataXceiveServer to terminate
-    try {
-      this.dataXceiveServer.join();
-    } catch (InterruptedException ie) {
     }
         
     LOG.info(dnRegistration + ":Finishing DataNode in: "+data);
