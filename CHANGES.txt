@@ -47,7 +47,7 @@ Release 0.20.0 - Unreleased
    HBASE-1180  Add missing import statements to SampleUploader and remove
                unnecessary @Overrides (Ryan Smith via Andrew Purtell)
    HBASE-1191  ZooKeeper ensureParentExists calls fail 
-               on absolute path (via Nitay Joffe)
+               on absolute path (Nitay Joffe via Jean-Daniel Cryans)
    HBASE-1187  After disabling/enabling a table, the regions seems to 
                be assigned to only 1-2 region servers
 
