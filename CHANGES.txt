@@ -674,6 +674,8 @@ Release 0.19.1 - Unreleased
     HADOOP-5161. Accepted sockets do not get placed in
     DataXceiverServer#childSockets. (hairong)
 
+    HADOOP-5193. Correct calculation of edits modification time. (shv)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES
