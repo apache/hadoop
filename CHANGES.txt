@@ -19,6 +19,8 @@ Release 0.20.0 - Unreleased
                (K M via Jean-Daniel Cryans)
    HBASE-1175  HBA administrative tools do not work when specifying region
                name (Jonathan Gray via Andrew Purtell)
+   HBASE-1190  TableInputFormatBase with row filters scan too far (Dave
+               Latham via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

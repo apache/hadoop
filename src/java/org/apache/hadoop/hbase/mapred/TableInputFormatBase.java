@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Writables;
@@ -102,7 +103,7 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
         if (trrRowFilter != null) {
           final Set<RowFilterInterface> rowFiltersSet =
             new HashSet<RowFilterInterface>();
-          rowFiltersSet.add(new StopRowFilter(endRow));
+          rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
           rowFiltersSet.add(trrRowFilter);
           this.scanner = this.htable.getScanner(trrInputColumns, startRow,
             new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
