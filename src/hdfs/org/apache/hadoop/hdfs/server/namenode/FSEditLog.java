@@ -215,14 +215,6 @@ public class FSEditLog {
       // file size + size of both buffers
       return fc.size() + bufReady.size() + bufCurrent.size();
     }
-    
-    /**
-     * Returns the time the edits log file was last modified. 
-     */
-    @Override
-    long lastModified() {
-      return file.lastModified();
-    }
 
     // allocate a big chunk of data
     private void preallocate() throws IOException {
@@ -1203,7 +1195,10 @@ public class FSEditLog {
    * Returns the timestamp of the edit log
    */
   synchronized long getFsEditTime() {
-    return editStreams.get(0).lastModified();
+    Iterator<StorageDirectory> it = fsimage.dirIterator(NameNodeDirType.EDITS);
+    if(it.hasNext())
+      return getEditFile(it.next()).lastModified();
+    return 0;
   }
 
   // sets the initial capacity of the flush buffer.
