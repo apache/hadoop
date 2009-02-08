@@ -214,21 +214,30 @@ public class ZooKeeperWrapper implements HConstants {
     return address;
   }
 
-  private boolean ensureZNodeExists(String path) {
+  private boolean ensureExists(final String znode) {
     try {
-      zooKeeper.create(path, new byte[0],
+      zooKeeper.create(znode, new byte[0],
                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-      LOG.debug("Created ZNode " + path);
+      LOG.debug("Created ZNode " + znode);
       return true;
     } catch (KeeperException.NodeExistsException e) {
       return true;      // ok, move on.
+    } catch (KeeperException.NoNodeException e) {
+      return ensureParentExists(znode) && ensureExists(znode);
     } catch (KeeperException e) {
-      LOG.warn("Failed to create " + parentZNode + ": " + e);
+      LOG.warn("Failed to create " + znode + ":", e);
     } catch (InterruptedException e) {
-      LOG.warn("Failed to create " + parentZNode + ": " + e);
+      LOG.warn("Failed to create " + znode + ":", e);
     }
-
     return false;
+  }
+
+  private boolean ensureParentExists(final String znode) {
+    int index = znode.lastIndexOf(ZNODE_PATH_SEPARATOR);
+    if (index <= 0) {   // Parent is root, which always exists.
+      return true;
+    }
+    return ensureExists(znode.substring(0, index));
   }
 
   /**
@@ -236,7 +245,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if operation succeeded, false otherwise.
    */
   public boolean deleteRootRegionLocation()  {
-    if (!ensureZNodeExists(parentZNode)) {
+    if (!ensureParentExists(rootRegionZNode)) {
       return false;
     }
 
@@ -297,7 +306,7 @@ public class ZooKeeperWrapper implements HConstants {
       return deleteRootRegionLocation();
     }
 
-    if (!ensureZNodeExists(parentZNode)) {
+    if (!ensureParentExists(rootRegionZNode)) {
       return false;
     }
 
@@ -316,7 +325,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if we're out of safe mode, false otherwise.
    */
   public boolean checkOutOfSafeMode() {
-    if (!ensureZNodeExists(parentZNode)) {
+    if (!ensureParentExists(outOfSafeModeZNode)) {
       return false;
     }
 
@@ -328,7 +337,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if ephemeral ZNode created successfully, false otherwise.
    */
   public boolean writeOutOfSafeMode() {
-    if (!ensureZNodeExists(parentZNode)) {
+    if (!ensureParentExists(outOfSafeModeZNode)) {
       return false;
     }
 
@@ -353,8 +362,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if the location was written, false if it failed
    */
   public boolean writeRSLocation(HServerInfo info) {
-    ensureZNodeExists(parentZNode);
-    ensureZNodeExists(rsZNode);
+    ensureExists(rsZNode);
     byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
     String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getStartCode();
     try {

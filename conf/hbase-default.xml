@@ -226,6 +226,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.regions.percheckin</name>
+    <value>10</value>
+    <description>Maximum number of regions that can be assigned in a single go
+    to a region server.
+    </description>
+  </property>
+  <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
     <description>Time to sleep in between searches for work (in milliseconds).

@@ -62,4 +62,13 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     masterRootAddress = master.getRootRegionLocation();
     assertEquals(masterRootAddress, zooKeeperRootAddress);
   }
+
+  /**
+   * @throws IOException
+   */
+  public void testParentExists() throws IOException {
+    conf.set("zookeeper.znode.safemode", "/a/b/c/d/e");
+    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf);
+    assertTrue(zooKeeper.writeOutOfSafeMode());
+  }
 }
