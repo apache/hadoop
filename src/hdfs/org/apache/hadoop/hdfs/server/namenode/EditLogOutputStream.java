@@ -93,13 +93,9 @@ abstract class EditLogOutputStream extends OutputStream {
 
   /**
    * Return the size of the current edits log.
+   * Length is used to check when it is large enough to start a checkpoint.
    */
   abstract long length() throws IOException;
-
-  /**
-   * Returns the time the edits log stream was last modified. 
-   */
-  abstract long lastModified();
 
   /**
    * Return total time spent in {@link #flushAndSync()}
