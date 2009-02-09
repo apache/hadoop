@@ -16,9 +16,12 @@
 
 <property>
   <name>fs.default.name</name>
-  <value>localhost:23000</value>
-  <description>The name of the default file system.  Either the
-  literal string "local" or a host:port for DFS.</description>
+  <value>hdfs://localhost:23000/</value>
+  <description>The name of the default file system.  A URI whose
+  scheme and authority determine the FileSystem implementation.  The
+  uri's scheme determines the config property (fs.SCHEME.impl) naming
+  the FileSystem implementation class.  The uri's authority is used to
+  determine the host, port, etc. for a filesystem.</description>
 </property>
 
 </configuration>
