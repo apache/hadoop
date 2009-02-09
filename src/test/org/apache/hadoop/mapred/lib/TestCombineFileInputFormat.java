@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -118,12 +119,14 @@ public class TestCombineFileInputFormat extends TestCase{
       if (!fileSys.mkdirs(inDir)) {
         throw new IOException("Mkdirs failed to create " + inDir.toString());
       }
-      writeFile(conf, new Path(dir1 + "/file1"), (short)1, 1);
+      Path file1 = new Path(dir1 + "/file1");
+      writeFile(conf, file1, (short)1, 1);
       dfs.startDataNodes(conf, 1, true, null, rack2, hosts2, null);
       dfs.waitActive();
 
       // create file on two datanodes.
-      writeFile(conf, new Path(dir2 + "/file2"), (short)2, 2);
+      Path file2 = new Path(dir2 + "/file2");
+      writeFile(conf, file2, (short)2, 2);
 
       // split it using a CombinedFile input format
       DummyInputFormat inFormat = new DummyInputFormat();
@@ -133,37 +136,117 @@ public class TestCombineFileInputFormat extends TestCase{
       System.out.println("Made splits(Test1): " + splits.length);
 
       // make sure that each split has different locations
+      CombineFileSplit fileSplit = null;
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test1): " + fileSplit);
       }
       assertEquals(splits.length, 2);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r2");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file1.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r1");
 
       // create another file on 3 datanodes and 3 racks.
       dfs.startDataNodes(conf, 1, true, null, rack3, hosts3, null);
       dfs.waitActive();
+      Path file3 = new Path(dir3 + "/file3");
       writeFile(conf, new Path(dir3 + "/file3"), (short)3, 3);
       inFormat = new DummyInputFormat();
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3);
       inFormat.setMinSplitSizeRack(BLOCKSIZE);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test2): " + fileSplit);
       }
       assertEquals(splits.length, 3);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 3);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(2), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r3");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r2");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file1.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r1");
 
       // create file4 on all three racks
-      writeFile(conf, new Path(dir4 + "/file4"), (short)3, 3);
+      Path file4 = new Path(dir4 + "/file4");
+      writeFile(conf, file4, (short)3, 3);
       inFormat = new DummyInputFormat();
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3 + "," + dir4);
       inFormat.setMinSplitSizeRack(BLOCKSIZE);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test3): " + fileSplit);
       }
       assertEquals(splits.length, 3);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 6);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(2), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r3");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r2");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file1.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r1");
 
       // maximum split size is 2 blocks 
       inFormat = new DummyInputFormat();
@@ -172,10 +255,38 @@ public class TestCombineFileInputFormat extends TestCase{
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3 + "," + dir4);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test4): " + fileSplit);
       }
       assertEquals(splits.length, 5);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(1), 0);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(1), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
 
       // maximum split size is 3 blocks 
       inFormat = new DummyInputFormat();
@@ -184,10 +295,51 @@ public class TestCombineFileInputFormat extends TestCase{
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3 + "," + dir4);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test5): " + fileSplit);
       }
       assertEquals(splits.length, 4);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 3);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(2), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getPath(0).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(2),  2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host2.rack2.com");
+      fileSplit = (CombineFileSplit) splits[3];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file1.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host1.rack1.com");
 
       // maximum split size is 4 blocks 
       inFormat = new DummyInputFormat();
@@ -195,10 +347,45 @@ public class TestCombineFileInputFormat extends TestCase{
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3 + "," + dir4);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test6): " + fileSplit);
       }
       assertEquals(splits.length, 3);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 4);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file3.getName());
+      assertEquals(fileSplit.getOffset(2), 2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 4);
+      assertEquals(fileSplit.getPath(0).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(1).getName(), file2.getName());
+      assertEquals(fileSplit.getOffset(1), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(1), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(2).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(2), BLOCKSIZE);
+      assertEquals(fileSplit.getLength(2), BLOCKSIZE);
+      assertEquals(fileSplit.getPath(3).getName(), file4.getName());
+      assertEquals(fileSplit.getOffset(3),  2 * BLOCKSIZE);
+      assertEquals(fileSplit.getLength(3), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "host2.rack2.com");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getPath(0).getName(), file1.getName());
+      assertEquals(fileSplit.getOffset(0), 0);
+      assertEquals(fileSplit.getLength(0), BLOCKSIZE);
+      assertEquals(fileSplit.getLocations()[0], "/r1");
 
       // maximum split size is 7 blocks and min is 3 blocks
       inFormat = new DummyInputFormat();
@@ -208,22 +395,26 @@ public class TestCombineFileInputFormat extends TestCase{
       inFormat.setInputPaths(conf, dir1 + "," + dir2 + "," + dir3 + "," + dir4);
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(Test7): " + fileSplit);
       }
       assertEquals(splits.length, 2);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 6);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getLocations()[0], "host3.rack3.com");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 3);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getLocations()[0], "host1.rack1.com");
 
       // Rack 1 has file1, file2 and file3 and file4
       // Rack 2 has file2 and file3 and file4
       // Rack 3 has file3 and file4
-      Path file1 = new Path(dir1 + "/file1");
       file1 = new Path(conf.getWorkingDirectory(), file1);
-      Path file2 = new Path(dir2 + "/file2");
       file2 = new Path(conf.getWorkingDirectory(), file2);
-      Path file3 = new Path(dir3 + "/file3");
       file3 = new Path(conf.getWorkingDirectory(), file3);
-      Path file4 = new Path(dir4 + "/file4");
-      file4 = new Path(conf.getWorkingDirectory(), file3);
+      file4 = new Path(conf.getWorkingDirectory(), file4);
 
       // setup a filter so that only file1 and file2 can be combined
       inFormat = new DummyInputFormat();
@@ -233,10 +424,22 @@ public class TestCombineFileInputFormat extends TestCase{
                           new TestFilter(dir2));
       splits = inFormat.getSplits(conf, 1);
       for (int i = 0; i < splits.length; ++i) {
-        CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+        fileSplit = (CombineFileSplit) splits[i];
         System.out.println("File split(TestPool1): " + fileSplit);
       }
       assertEquals(splits.length, 3);
+      fileSplit = (CombineFileSplit) splits[0];
+      assertEquals(fileSplit.getNumPaths(), 2);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getLocations()[0], "/r2");
+      fileSplit = (CombineFileSplit) splits[1];
+      assertEquals(fileSplit.getNumPaths(), 1);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getLocations()[0], "/r1");
+      fileSplit = (CombineFileSplit) splits[2];
+      assertEquals(fileSplit.getNumPaths(), 6);
+      assertEquals(fileSplit.getLocations().length, 1);
+      assertEquals(fileSplit.getLocations()[0], "/r3");
     } finally {
       if (dfs != null) {
         dfs.shutdown();
@@ -280,8 +483,41 @@ public class TestCombineFileInputFormat extends TestCase{
     }
   }
 
+  /*
+   * Prints out the input splits for the specified files
+   */
+  private void splitRealFiles(String[] args) throws IOException {
+    JobConf conf = new JobConf();
+    FileSystem fs = FileSystem.get(conf);
+    if (!(fs instanceof DistributedFileSystem)) {
+      throw new IOException("Wrong file system: " + fs.getClass().getName());
+    }
+    int blockSize = conf.getInt("dfs.block.size", 128 * 1024 * 1024);
+
+    DummyInputFormat inFormat = new DummyInputFormat();
+    for (int i = 0; i < args.length; i++) {
+      inFormat.addInputPaths(conf, args[i]);
+    }
+    inFormat.setMinSplitSizeRack(blockSize);
+    inFormat.setMaxSplitSize(10 * blockSize);
+
+    InputSplit[] splits = inFormat.getSplits(conf, 1);
+    System.out.println("Total number of splits " + splits.length);
+    for (int i = 0; i < splits.length; ++i) {
+      CombineFileSplit fileSplit = (CombineFileSplit) splits[i];
+      System.out.println("Split[" + i + "] " + fileSplit);
+    }
+  }
+
   public static void main(String[] args) throws Exception{
-    TestCombineFileInputFormat test = new TestCombineFileInputFormat();
-    test.testSplitPlacement();
+
+    // if there are some parameters specified, then use those paths
+    if (args.length != 0) {
+      TestCombineFileInputFormat test = new TestCombineFileInputFormat();
+      test.splitRealFiles(args);
+    } else {
+      TestCombineFileInputFormat test = new TestCombineFileInputFormat();
+      test.testSplitPlacement();
+    }
   }
 }

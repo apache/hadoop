@@ -179,24 +179,26 @@ public class CombineFileSplit implements InputSplit {
   }
   
   @Override
-  public String toString() {
-    String locs = "";
-    StringBuffer locsb = new StringBuffer();
+ public String toString() {
+    StringBuffer sb = new StringBuffer();
+    for (int i = 0; i < paths.length; i++) {
+      if (i == 0 ) {
+        sb.append("Paths:");
+      }
+      sb.append(paths[i].toUri().getPath() + ":" + startoffset[i] +
+                "+" + lengths[i]);
+      if (i < paths.length -1) {
+        sb.append(",");
+      }
+    }
     if (locations != null) {
+      String locs = "";
+      StringBuffer locsb = new StringBuffer();
       for (int i = 0; i < locations.length; i++) {
         locsb.append(locations[i] + ":");
       }
       locs = locsb.toString();
-    }
-    StringBuffer sb = new StringBuffer();
-    for (int i = 0; i < paths.length; i++) {
-      sb.append(paths[i].toUri().getPath() + ":" + startoffset[i] +
-                "+" + lengths[i] +
-                ":" + locs
-                );
-      if (i < paths.length -1) {
-        sb.append(", ");
-      }
+      sb.append(" Locations:" + locs + "; ");
     }
     return sb.toString();
   }
