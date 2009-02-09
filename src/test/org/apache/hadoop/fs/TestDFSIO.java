@@ -299,9 +299,10 @@ public class TestDFSIO extends TestCase {
     int nrFiles = 1;
     String resFileName = DEFAULT_RES_FILE_NAME;
     boolean isSequential = false;
-
-    String version="TestFDSIO.0.0.4";
-    String usage = "Usage: TestFDSIO -read | -write | -clean [-nrFiles N] [-fileSize MB] [-resFile resultFileName] [-bufferSize Bytes] ";
+    
+    String className = TestDFSIO.class.getSimpleName();
+    String version = className + ".0.0.4";
+    String usage = "Usage: " + className + " -read | -write | -clean [-nrFiles N] [-fileSize MB] [-resFile resultFileName] [-bufferSize Bytes] ";
     
     System.out.println(version);
     if (args.length == 0) {

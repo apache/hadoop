@@ -112,6 +112,8 @@ Trunk (unreleased changes)
 
     HADOOP-5032. Export conf dir set in config script. (Eric Yang via cdouglas)
 
+    HADOOP-5176. Fix a typo in TestDFSIO.  (Ravi Phulari via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
