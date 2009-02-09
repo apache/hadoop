@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     HADOOP-5124. Choose datanodes randomly instead of starting from the first
     datanode for providing fairness.  (hairong via szetszwo)
 
+    HADOOP-4930. Implement a Linux native executable that can be used to 
+    launch tasks as users. (Sreekanth Ramakrishnan via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES
