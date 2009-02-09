@@ -35,6 +35,9 @@ Trunk (unreleased changes)
     HADOOP-4368. Implement df in FsShell to show the status of a FileSystem.
     (Craig Macdonald via szetszwo)
 
+    HADOOP-3741. Add a web ui to the SecondaryNameNode for showing its status.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
