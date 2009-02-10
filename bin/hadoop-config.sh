@@ -39,7 +39,7 @@ this="$bin/$script"
 # the root of the Hadoop installation
 #TODO: change the env variable when dir structure is changed
 export HADOOP_HOME=`dirname "$this"`/..
-export HADOOP_CORE_HOME="${HADOOP_CORE_HOME:-$HADOOP_HOME}"
+export HADOOP_CORE_HOME="${HADOOP_HOME}"
 #export HADOOP_HOME=`dirname "$this"`/../..
 #export HADOOP_CORE_HOME="${HADOOP_CORE_HOME:-`dirname "$this"`/..}"
 
@@ -56,7 +56,7 @@ then
 fi
  
 # Allow alternate conf dir location.
-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 
 #check to see it is specified whether to use the slaves or the
 # masters file
@@ -175,7 +175,6 @@ unset IFS
 
 # cygwin path translation
 if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
   HADOOP_CORE_HOME=`cygpath -w "$HADOOP_CORE_HOME"`
   HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`

@@ -98,6 +98,10 @@ case $COMMAND in
       CLASS=$COMMAND
     fi
     shift
+    
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
     exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
     ;;
 

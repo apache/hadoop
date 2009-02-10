@@ -168,7 +168,7 @@ class S3InputStream extends FSInputStream {
   @Override
   public void close() throws IOException {
     if (closed) {
-      throw new IOException("Stream closed");
+      return;
     }
     if (blockStream != null) {
       blockStream.close();

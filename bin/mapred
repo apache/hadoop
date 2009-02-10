@@ -93,4 +93,8 @@ for f in $HADOOP_MAPRED_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+fi
+
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
