@@ -609,6 +609,8 @@ Release 0.19.1 - Unreleased
 
     HADOOP-5126. Remove empty file BlocksWithLocations.java (shv)
 
+    HADOOP-5127. Remove public methods in FSDirectory. (Jakob Homan via shv)
+
   BUG FIXES
 
     HADOOP-4697. Fix getBlockLocations in KosmosFileSystem to handle multiple
