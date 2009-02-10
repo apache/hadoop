@@ -141,6 +141,9 @@ Trunk (unreleased changes)
     HADOOP-5148. Fix logic disabling watchdog timer in Chukwa daemon scripts.
     (Ari Rabkin via cdouglas)
 
+    HADOOP-5100. Append, rather than truncate, when creating log4j metrics in
+    Chukwa. (Jerome Boulon via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

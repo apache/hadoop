@@ -85,7 +85,7 @@ public class Log4JMetricsContext extends AbstractMetricsContext {
 				        new org.apache.hadoop.chukwa.inputtools.log4j.ChukwaDailyRollingFileAppender();
 				  appender.setName("chukwa."+contextName);
 				  appender.setLayout(layout);
-				  appender.setAppend(false);
+				  appender.setAppend(true);
 				  if(properties.getProperty("log4j.appender.chukwa."+contextName+".Dir")!=null) {
 					  String logName = properties.getProperty("log4j.appender.chukwa."+contextName+".Dir")+File.separator+"chukwa-"+user+"-"+contextName+".log";
 					  // FIXME: Hack to make the log file readable by chukwa user. 
