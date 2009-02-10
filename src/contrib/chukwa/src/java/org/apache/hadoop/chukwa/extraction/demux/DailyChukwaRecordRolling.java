@@ -90,7 +90,7 @@ public class DailyChukwaRecordRolling extends Configured implements Tool
 				// input
 				mergeArgs[0] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay +  "/*/*.evt";
 				// temp dir
-				mergeArgs[1] = tempDir + "/" + cluster + "/" + dataSource + "/" + workingDay ;
+				mergeArgs[1] = tempDir + "/" + cluster + "/" + dataSource + "/" + workingDay + "_" + System.currentTimeMillis();
 				// final output dir
 				mergeArgs[2] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay  ;
 				// final output fileName

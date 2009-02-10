@@ -114,6 +114,9 @@ Trunk (unreleased changes)
 
     HADOOP-5176. Fix a typo in TestDFSIO.  (Ravi Phulari via szetszwo)
 
+    HADOOP-4859. Distinguish daily rolling output dir by adding a timestamp.
+    (Jerome Boulon via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
