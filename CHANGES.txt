@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HADOOP-4959. Correct system metric collection from top on Redhat 5.1. (Eric
     Yang via cdouglas)
 
+    HADOOP-5039. Fix log rolling regex to process only the relevant
+    subdirectories. (Jerome Boulon via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

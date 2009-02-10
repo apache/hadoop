@@ -88,7 +88,7 @@ public class DailyChukwaRecordRolling extends Configured implements Tool
 				// Merge
 				String[] mergeArgs = new String[5];
 				// input
-				mergeArgs[0] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay +  "/*/*.evt";
+				mergeArgs[0] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay +  "/[0-24]*/*.evt";
 				// temp dir
 				mergeArgs[1] = tempDir + "/" + cluster + "/" + dataSource + "/" + workingDay + "_" + System.currentTimeMillis();
 				// final output dir

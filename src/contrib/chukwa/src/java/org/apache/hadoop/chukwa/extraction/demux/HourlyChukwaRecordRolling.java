@@ -88,7 +88,7 @@ public class HourlyChukwaRecordRolling extends Configured implements Tool
 				// Merge
 				String[] mergeArgs = new String[5];
 				// input
-				mergeArgs[0] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay + "/" + workingHour + "/*/*.evt";
+				mergeArgs[0] = chukwaMainRepository + "/" + cluster + "/" + dataSource + "/" + workingDay + "/" + workingHour + "/[0-5]*/*.evt";
 				// temp dir
 				mergeArgs[1] = tempDir + "/" + cluster + "/" + dataSource + "/" + workingDay + "/" + workingHour + "_" + System.currentTimeMillis() ;
 				// final output dir
