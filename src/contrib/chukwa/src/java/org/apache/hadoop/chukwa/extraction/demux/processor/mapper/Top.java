@@ -126,7 +126,7 @@ public class Top extends AbstractProcessor
 			record.add("tasks_stopped",matcher.group(4));
 			record.add("tasks_zombie",matcher.group(5));
 		}
-		p = Pattern.compile("Cpu\\(s\\):\\s+(.*?)% us,\\s+(.*?)% sy,\\s+(.*?)% ni,\\s+(.*?)% id,\\s+(.*?)% wa,\\s+(.*?)% hi,\\s+(.*?)% si");
+		p = Pattern.compile("Cpu\\(s\\):\\s*(.*?)%\\s*us,\\s*(.*?)%\\s*sy,\\s*(.*?)%\\s*ni,\\s*(.*?)%\\s*id,\\s*(.*?)%\\s*wa,\\s*(.*?)%\\s*hi,\\s*(.*?)%\\s*si");
 		matcher = p.matcher(headers[2]);
 		if(matcher.find()) {
 			record.add("cpu_user%",matcher.group(1));

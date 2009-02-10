@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     HADOOP-4859. Distinguish daily rolling output dir by adding a timestamp.
     (Jerome Boulon via cdouglas)
 
+    HADOOP-4959. Correct system metric collection from top on Redhat 5.1. (Eric
+    Yang via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
