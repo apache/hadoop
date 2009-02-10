@@ -1294,11 +1294,6 @@
        <arg value="-if"/>
     </exec>
     <antcall target="create-c++-configure-libhdfs"/>
-    <!-- task-controller autoreconf creation -->
-  	<exec executable="autoreconf" dir="${c++.task-controller.src}"
-          searchpath="yes" failonerror="yes">
-      <arg value="-if"/>
-    </exec>
   </target>
    
   <target name="create-c++-configure-libhdfs" depends="check-c++-libhdfs" if="islibhdfs">

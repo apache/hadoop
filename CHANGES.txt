@@ -147,6 +147,10 @@ Trunk (unreleased changes)
     HADOOP-5100. Append, rather than truncate, when creating log4j metrics in
     Chukwa. (Jerome Boulon via cdouglas)
 
+    HADOOP-5204. Fix broken trunk compilation on Hudson by letting 
+    task-controller be an independent target in build.xml.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
