@@ -15,19 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.chukwa.datacollection.collector;
 
-package org.apache.hadoop.chukwa.datacollection.writer;
-
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.chukwa.Chunk;
+import org.apache.hadoop.chukwa.datacollection.writer.ChukwaWriter;
+import org.apache.hadoop.chukwa.datacollection.writer.WriterException;
 import org.apache.hadoop.conf.Configuration;
 
-public interface ChukwaWriter
-{
-	public void init(Configuration c) throws WriterException;
-	public void add(Chunk data) throws WriterException;
-	public void add(List<Chunk> chunks) throws WriterException;
-	public void close() throws WriterException;;
+public class CaptureWriter implements ChukwaWriter {
+  static ArrayList<Chunk> outputs = new ArrayList<Chunk>();
 
+  @Override
+  public void add(Chunk data) throws WriterException {
+    synchronized(outputs) {
+      outputs.add(data);
+    }
+    
+  }
+
+  @Override
+  public void add(List<Chunk> chunks) throws WriterException {
+     for(Chunk c: chunks)
+       add(c);
+  }
+
+  @Override
+  public void close() throws WriterException { }
+
+  @Override
+  public void init(Configuration c) throws WriterException {  }
+  
 }
+

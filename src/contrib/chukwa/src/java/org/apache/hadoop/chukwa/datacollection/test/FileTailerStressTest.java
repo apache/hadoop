@@ -73,7 +73,7 @@ static int FILES_TO_USE  = 100;
       Context root = new Context(server,"/",Context.SESSIONS);
   
       ServletCollector.setWriter(new ConsoleWriter(true));
-      root.addServlet(new ServletHolder(new ServletCollector()), "/*");
+      root.addServlet(new ServletHolder(new ServletCollector(new ChukwaConfiguration(true))), "/*");
       server.start();
       server.setStopAtShutdown(false);
   

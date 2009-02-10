@@ -48,26 +48,25 @@ public class CollectorStub {
         portNum = Integer.parseInt(args[0]);
       
         //pick a writer.
+      ChukwaWriter w = null;
       if(args.length > 1) {
         if(args[1].equals("pretend"))
-          ServletCollector.setWriter(new ConsoleWriter(true));
+          w= new ConsoleWriter(true);
         else if(args[1].equals("pretend-quietly"))
-          ServletCollector.setWriter(new ConsoleWriter(false));
+          w = new ConsoleWriter(false);
         else if(args[1].equals("-classname")) {
           if(args.length < 3)
             System.err.println("need to specify a writer class");
           else {
-            Class<?> writerClass = Class.forName(args[2]);
-            if(writerClass != null &&
-                ChukwaWriter.class.isAssignableFrom(writerClass))
-              ServletCollector.setWriter(
-                  (ChukwaWriter) writerClass.newInstance());
-            else
-              System.err.println(args[2]+ "is not a ChukwaWriter");
+            conf.set("chukwaCollector.writerClass", args[2]);
           }
         }
         else
           System.out.println("WARNING: unknown command line arg "+ args[1]);
+      }
+      if(w != null) {
+        w.init(conf);
+        ServletCollector.setWriter(w);
       }
       
         //set up jetty connector
@@ -85,7 +84,7 @@ public class CollectorStub {
       jettyServer.setThreadPool(pool);
         //and add the servlet to it
       Context root = new Context(jettyServer,"/",Context.SESSIONS);
-      root.addServlet(new ServletHolder(new ServletCollector()), "/*");
+      root.addServlet(new ServletHolder(new ServletCollector(conf)), "/*");
       jettyServer.start();
       jettyServer.setStopAtShutdown(false);
      

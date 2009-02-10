@@ -38,6 +38,8 @@ Trunk (unreleased changes)
     HADOOP-3741. Add a web ui to the SecondaryNameNode for showing its status.
     (szetszwo)
 
+    HADOOP-5018. Add pipelined writers to Chukwa. (Ari Rabkin via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

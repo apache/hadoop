@@ -23,6 +23,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.apache.hadoop.chukwa.Chunk;
+import org.apache.hadoop.conf.Configuration;
 
 public class ConsoleWriter implements ChukwaWriter {
 
@@ -48,6 +49,10 @@ public class ConsoleWriter implements ChukwaWriter {
     }
   };
   
+
+  public ConsoleWriter() {
+    this(true);
+  }
   
   public ConsoleWriter(boolean printData) {
     this.printData = printData;
@@ -59,7 +64,7 @@ public class ConsoleWriter implements ChukwaWriter {
     statTimer.cancel();
   }
 
-  public void init() throws WriterException
+  public void init(Configuration conf) throws WriterException
   {
      System.out.println("----  DUMMY HDFS WRITER IN USE ---");
 
@@ -73,7 +78,7 @@ public class ConsoleWriter implements ChukwaWriter {
     dataSize += data.getData().length;
     if(printData) {
       System.out.println(data.getData().length + " bytes of data in chunk");
-      
+
       for(int offset: data.getRecordOffsets()) {
         System.out.print(data.getStreamName());
         System.out.print(" ");

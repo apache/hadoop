@@ -29,7 +29,7 @@ import java.util.TimerTask;
 import org.apache.hadoop.chukwa.ChukwaArchiveKey;
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.ChunkImpl;
-import org.apache.hadoop.chukwa.conf.ChukwaConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +51,7 @@ public class SeqFileWriter implements ChukwaWriter
     static Logger log = Logger.getLogger(SeqFileWriter.class);
   
 	private FileSystem fs = null;
-	private ChukwaConfiguration conf = null;
+	private Configuration conf = null;
 
 	private String outputDir = null;
 	private Calendar calendar = Calendar.getInstance();
@@ -78,11 +78,9 @@ public class SeqFileWriter implements ChukwaWriter
 	
 	public SeqFileWriter() throws WriterException
 	{
-		conf = new ChukwaConfiguration(true);
-		init();
 	}
 
-	public void init() throws WriterException
+	public void init(Configuration conf) throws WriterException
 	{
 		outputDir = conf.get("chukwaCollector.outputDir", "/chukwa");
 

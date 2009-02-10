@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.chukwa.Chunk;
 import org.apache.hadoop.chukwa.ChunkImpl;
+import org.apache.hadoop.conf.Configuration;
 
 public class InMemoryWriter implements ChukwaWriter {
 
@@ -31,7 +32,7 @@ public class InMemoryWriter implements ChukwaWriter {
     buf.reset();
   }
 
-  public void init() throws WriterException {
+  public void init(Configuration conf) throws WriterException {
     buf = new ByteArrayOutputStream();
   }
 
