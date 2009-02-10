@@ -21,9 +21,8 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/hdfs-config.sh
 
-"$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR stop namenode
-"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR stop datanode
-"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters stop secondarynamenode
-
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/hdfs stop namenode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR "$bin"/hdfs stop datanode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters "$bin"/hdfs stop secondarynamenode

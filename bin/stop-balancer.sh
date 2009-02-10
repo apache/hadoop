@@ -18,9 +18,9 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/hdfs-config.sh
 
 # Stop balancer daemon.
 # Run this on the machine where the balancer is running
 
-"$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR stop balancer
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/hdfs stop balancer

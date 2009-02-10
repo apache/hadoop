@@ -28,7 +28,7 @@
 #   HADOOP_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
-usage="Usage: hadoop-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] (start|stop) <hadoop-command> <args...>"
+usage="Usage: hadoop-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] <hadoop-script> (start|stop) <hadoop-command> <args...>"
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -42,6 +42,8 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-config.sh
 
 # get arguments
+hadoopScript=$1
+shift
 startStop=$1
 shift
 command=$1
@@ -114,7 +116,7 @@ case $startStop in
     hadoop_rotate_log $log
     echo starting $command, logging to $log
     cd "$HADOOP_HOME"
-    nohup nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;

@@ -15,22 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# Start all hadoop daemons.  Run this on master node.
-
-echo "This script is Deprecated. Instead use start-dfs.sh and start-mapred.sh"
+# included in all the hdfs scripts with source command
+# should not be executed directly
 
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+#TODO: change the env variable when directory structure is changed
+export HADOOP_CORE_HOME="${HADOOP_CORE_HOME:-$bin/..}"
+#export HADOOP_CORE_HOME="${HADOOP_CORE_HOME:-$bin/../../core}"
 
-# start hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh --config $HADOOP_CONF_DIR
-fi
-
-# start mapred daemons if mapred is present
-if [ -f "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh ]; then
-  "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh --config $HADOOP_CONF_DIR
+if [ -d "${HADOOP_CORE_HOME}" ]; then
+  . "$HADOOP_CORE_HOME"/bin/hadoop-config.sh
+else
+  echo "Hadoop core not found."
+  exit
 fi

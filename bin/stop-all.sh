@@ -18,10 +18,20 @@
 
 # Stop all hadoop daemons.  Run this on master node.
 
+echo "This script is Deprecated. Instead use stop-dfs.sh and stop-mapred.sh"
+
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/hadoop-config.sh
 
-"$bin"/stop-mapred.sh --config $HADOOP_CONF_DIR
-"$bin"/stop-dfs.sh --config $HADOOP_CONF_DIR
+# stop hdfs daemons if hdfs is present
+if [ -f "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh ]; then
+  "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh --config $HADOOP_CONF_DIR
+fi
+
+# stop mapred daemons if mapred is present
+if [ -f "${HADOOP_MAPRED_HOME}"/bin/stop-mapred.sh ]; then
+  "${HADOOP_MAPRED_HOME}"/bin/stop-mapred.sh --config $HADOOP_CONF_DIR
+fi
+

@@ -92,6 +92,9 @@ Trunk (unreleased changes)
     tools, and example jars. Let findbugs depend on this rather than the 'tar'
     target. (Giridharan Kesavan via cdouglas)
 
+    HADOOP-4868. Splits the hadoop script into three parts - bin/hadoop, bin/mapred and 
+    bin/hdfs. (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
