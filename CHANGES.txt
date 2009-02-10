@@ -85,6 +85,9 @@ Trunk (unreleased changes)
     HADOOP-5122. Fix format of fs.default.name value in libhdfs test conf.
     (Craig Macdonald via tomwhite)
 
+    HADOOP-5038. Direct daemon trace to debug log instead of stdout. (Jerome
+    Boulon via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

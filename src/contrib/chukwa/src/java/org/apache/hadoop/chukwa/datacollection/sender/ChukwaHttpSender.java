@@ -267,7 +267,9 @@ public class ChukwaHttpSender implements ChukwaSender{
     BufferedReader br = new BufferedReader(new InputStreamReader(rstream));
     String line;
     while ((line = br.readLine()) != null) {
-      System.out.println("response: " + line);
+      if (log.isDebugEnabled()) {
+        log.debug("response: " + line);
+      }
     }
   }
   
