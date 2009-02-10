@@ -88,6 +88,10 @@ Trunk (unreleased changes)
     HADOOP-5038. Direct daemon trace to debug log instead of stdout. (Jerome
     Boulon via cdouglas)
 
+    HADOOP-5101. Improve packaging by adding 'all-jars' target building core,
+    tools, and example jars. Let findbugs depend on this rather than the 'tar'
+    target. (Giridharan Kesavan via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

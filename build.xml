@@ -775,7 +775,7 @@
     </subant> 
   </target>
 	  
-  <target name="test" depends="test-core, test-contrib" description="Run core, contrib unit tests">
+  <target name="test" depends="test-c++-libhdfs, test-core, test-contrib" description="Run core, contrib unit tests">
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
@@ -818,8 +818,16 @@
     </available>  	
   </target>
 
+ <target name="all-jars" depends="tools-jar,examples">
+   <subant target="jar">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <fileset file="${contrib.dir}/streaming/build.xml"/>
+    </subant>
+ </target>
+
  <property name="findbugs.home" value=""/>
-  <target name="findbugs" depends="check-for-findbugs, tar" if="findbugs.present" description="Run findbugs if present">
+  <target name="findbugs" depends="check-for-findbugs, all-jars" if="findbugs.present" description="Run findbugs if present">
     <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
     <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
     <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.html"/>
