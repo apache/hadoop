@@ -17,85 +17,39 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.zip.CRC32;
-
-import javax.net.SocketFactory;
-import javax.security.auth.login.LoginException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSInputChecker;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputSummer;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.*;
+
+import org.apache.commons.logging.*;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.zip.CRC32;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
+
+import javax.net.SocketFactory;
+import javax.security.auth.login.LoginException;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -997,7 +951,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
 
     /** {@inheritDoc} */
-    @Override
     public String toString() {
       String s = getClass().getSimpleName();
       if (LOG.isTraceEnabled()) {
@@ -1575,7 +1528,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     public synchronized void close() throws IOException {
       checkOpen();
       if (closed) {
-        return;
+        throw new IOException("Stream closed");
       }
 
       if ( blockReader != null ) {
@@ -2143,7 +2096,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
       private volatile boolean closed = false;
   
-      @Override
       public void run() {
 
         while (!closed && clientRunning) {
@@ -2312,7 +2264,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         this.targets = targets;
       }
 
-      @Override
       public void run() {
 
         this.setName("ResponseProcessor for block " + block);
@@ -2532,8 +2483,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
 
     private void isClosed() throws IOException {
-      if (closed && lastException != null) {
+      if (closed) {
+        if (lastException != null) {
           throw lastException;
+        } else {
+          throw new IOException("Stream closed.");
+        }
       }
     }
 
@@ -3055,8 +3010,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public void close() throws IOException {
-      if(closed)
-        return;
       closeInternal();
       leasechecker.remove(src);
       
@@ -3190,7 +3143,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /** {@inheritDoc} */
-  @Override
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
         + ", ugi=" + ugi + "]"; 

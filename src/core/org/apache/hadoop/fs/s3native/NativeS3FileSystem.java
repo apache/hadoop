@@ -85,7 +85,6 @@ public class NativeS3FileSystem extends FileSystem {
       this.key = key;
     }
     
-    @Override
     public synchronized int read() throws IOException {
       int result = in.read();
       if (result != -1) {
@@ -93,7 +92,6 @@ public class NativeS3FileSystem extends FileSystem {
       }
       return result;
     }
-    @Override
     public synchronized int read(byte[] b, int off, int len)
       throws IOException {
       
@@ -104,22 +102,18 @@ public class NativeS3FileSystem extends FileSystem {
       return result;
     }
 
-    @Override
     public void close() throws IOException {
       in.close();
     }
 
-    @Override
     public synchronized void seek(long pos) throws IOException {
       in.close();
       in = store.retrieve(key, pos);
       this.pos = pos;
     }
-    @Override
     public synchronized long getPos() throws IOException {
       return pos;
     }
-    @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       return false;
     }
@@ -170,7 +164,7 @@ public class NativeS3FileSystem extends FileSystem {
     @Override
     public synchronized void close() throws IOException {
       if (closed) {
-        return;
+        throw new IOException("Stream closed");
       }
 
       backupStream.close();
@@ -266,7 +260,6 @@ public class NativeS3FileSystem extends FileSystem {
   }
 
   /** This optional operation is not yet supported. */
-  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");
