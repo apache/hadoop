@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     HADOOP-5039. Fix log rolling regex to process only the relevant
     subdirectories. (Jerome Boulon via cdouglas)
 
+    HADOOP-5095. Update Chukwa watchdog to accept config parameter. (Jerome
+    Boulon via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

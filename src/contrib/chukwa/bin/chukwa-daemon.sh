@@ -119,7 +119,7 @@ case $startStop in
           rm -f ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2
         fi
         cat >> ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
-*/5 * * * * ${CHUKWA_HOME}/bin/watchdog.sh > ${CHUKWA_HOME}/var/run/watchdog.out
+*/5 * * * * ${CHUKWA_HOME}/bin/watchdog.sh --config ${CHUKWA_CONF_DIR}  > ${CHUKWA_HOME}/var/run/watchdog.out
 1 ${PARTROL_HOUR},${PARTROL_HOUR2} * * * /bin/bash -c "cat ${CHUKWA_HOME}/var/run/watchdog.out; cat /dev/null > ${CHUKWA_HOME}/var/run/watchdog.out"
 15 3 * * * ${CHUKWA_HOME}/tools/expire.sh 10 ${CHUKWA_LOG_DIR} nowait
 CRON
