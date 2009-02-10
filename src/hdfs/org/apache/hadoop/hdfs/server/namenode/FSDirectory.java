@@ -48,18 +48,18 @@ class FSDirectory implements Closeable {
   final FSNamesystem namesystem;
   final INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
-  boolean ready = false;
+  private boolean ready = false;
   // Metrics record
   private MetricsRecord directoryMetrics = null;
 
   /** Access an existing dfs name directory. */
-  public FSDirectory(FSNamesystem ns, Configuration conf) {
+  FSDirectory(FSNamesystem ns, Configuration conf) {
     this(new FSImage(), ns, conf);
     fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null),
                                 FSImage.getCheckpointEditsDirs(conf, null));
   }
 
-  public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
+  FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, -1);
@@ -497,7 +497,7 @@ class FSDirectory implements Closeable {
    * @return the number of bytes 
    * @throws IOException if it is a directory or does not exist.
    */
-  public long getPreferredBlockSize(String filename) throws IOException {
+  long getPreferredBlockSize(String filename) throws IOException {
     synchronized (rootDir) {
       INode fileNode = rootDir.getNode(filename);
       if (fileNode == null) {
@@ -562,7 +562,7 @@ class FSDirectory implements Closeable {
   /**
    * Remove the file from management, return blocks
    */
-  public INode delete(String src) {
+  INode delete(String src) {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "+src);
     }
@@ -576,8 +576,8 @@ class FSDirectory implements Closeable {
   }
   
   /** Return if a directory is empty or not **/
-  public boolean isDirEmpty(String src) {
-	boolean dirNotEmpty = true;
+  boolean isDirEmpty(String src) {
+	   boolean dirNotEmpty = true;
     if (!isDir(src)) {
       return true;
     }
@@ -699,7 +699,7 @@ class FSDirectory implements Closeable {
    * This function is admittedly very inefficient right now.  We'll
    * make it better later.
    */
-  public FileStatus[] getListing(String src) {
+  FileStatus[] getListing(String src) {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
@@ -788,7 +788,7 @@ class FSDirectory implements Closeable {
   /** 
    * Check whether the filepath could be created
    */
-  public boolean isValidToCreate(String src) {
+  boolean isValidToCreate(String src) {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       if (srcs.startsWith("/") && 
@@ -804,7 +804,7 @@ class FSDirectory implements Closeable {
   /**
    * Check whether the path specifies a directory
    */
-  public boolean isDir(String src) {
+  boolean isDir(String src) {
     synchronized (rootDir) {
       INode node = rootDir.getNode(normalizePath(src));
       return node != null && node.isDirectory();
