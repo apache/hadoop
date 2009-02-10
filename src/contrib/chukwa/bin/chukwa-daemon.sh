@@ -105,7 +105,7 @@ case $startStop in
     else 
         PARTROL_HOUR2=$[${PARTROL_HOUR}+12]
     fi
-    if [ "${WATCHDOG}" != "" ]; then
+    if [ -n "${WATCHDOG}" ]; then
         mkdir -p ${CHUKWA_HOME}/var/tmp >&/dev/null
         crontab -l > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
         crontest=$?

@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-5147. Correct reference to agent list in Chukwa bin scripts. (Ari
     Rabkin via cdouglas)
 
+    HADOOP-5148. Fix logic disabling watchdog timer in Chukwa daemon scripts.
+    (Ari Rabkin via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
