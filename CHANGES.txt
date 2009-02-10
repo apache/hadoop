@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     HADOOP-5095. Update Chukwa watchdog to accept config parameter. (Jerome
     Boulon via cdouglas)
 
+    HADOOP-5147. Correct reference to agent list in Chukwa bin scripts. (Ari
+    Rabkin via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

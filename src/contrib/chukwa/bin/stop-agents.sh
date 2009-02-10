@@ -23,4 +23,4 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-"$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR --hosts slaves --watchdog stop agent.sh
+"$bin"/chukwa-daemons.sh --config $CHUKWA_CONF_DIR --hosts chukwa-agents stop agent.sh
