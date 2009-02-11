@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Oops! Failed to connect to 'local' hdfs!\n");
         exit(-1);
     } 
- 
+
         const char* writePath = "/tmp/testfile.txt";
     {
         //Write tests
@@ -317,7 +317,75 @@ int main(int argc, char **argv) {
         totalResult += (result ? 0 : 1);
     }
 
+    {
+      // TEST APPENDS
+      const char *writePath = "/tmp/appends";
 
+      // CREATE
+      hdfsFile writeFile = hdfsOpenFile(fs, writePath, O_WRONLY, 0, 0, 0);
+      if(!writeFile) {
+        fprintf(stderr, "Failed to open %s for writing!\n", writePath);
+        exit(-1);
+      }
+      fprintf(stderr, "Opened %s for writing successfully...\n", writePath);
+
+      char* buffer = "Hello,";
+      tSize num_written_bytes = hdfsWrite(fs, writeFile, (void*)buffer, strlen(buffer));
+      fprintf(stderr, "Wrote %d bytes\n", num_written_bytes);
+
+      if (hdfsFlush(fs, writeFile)) {
+        fprintf(stderr, "Failed to 'flush' %s\n", writePath); 
+        exit(-1);
+        }
+      fprintf(stderr, "Flushed %s successfully!\n", writePath); 
+
+      hdfsCloseFile(fs, writeFile);
+
+      // RE-OPEN
+      writeFile = hdfsOpenFile(fs, writePath, O_WRONLY|O_APPEND, 0, 0, 0);
+      if(!writeFile) {
+        fprintf(stderr, "Failed to open %s for writing!\n", writePath);
+        exit(-1);
+      }
+      fprintf(stderr, "Opened %s for writing successfully...\n", writePath);
+
+      buffer = " World";
+      num_written_bytes = hdfsWrite(fs, writeFile, (void*)buffer, strlen(buffer) + 1);
+      fprintf(stderr, "Wrote %d bytes\n", num_written_bytes);
+
+      if (hdfsFlush(fs, writeFile)) {
+        fprintf(stderr, "Failed to 'flush' %s\n", writePath); 
+        exit(-1);
+      }
+      fprintf(stderr, "Flushed %s successfully!\n", writePath); 
+
+      hdfsCloseFile(fs, writeFile);
+
+      // CHECK size
+      hdfsFileInfo *finfo = hdfsGetPathInfo(fs, writePath);
+      fprintf(stderr, "fileinfo->mSize: == total %s\n", ((result = (finfo->mSize == strlen("Hello, World") + 1)) ? "Success!" : "Failed!"));
+      totalResult += (result ? 0 : 1);
+
+      // READ and check data
+      hdfsFile readFile = hdfsOpenFile(fs, writePath, O_RDONLY, 0, 0, 0);
+      if (!readFile) {
+        fprintf(stderr, "Failed to open %s for reading!\n", writePath);
+        exit(-1);
+      }
+
+      char rdbuffer[32];
+      tSize num_read_bytes = hdfsRead(fs, readFile, (void*)rdbuffer, sizeof(rdbuffer));
+      fprintf(stderr, "Read following %d bytes:\n%s\n", 
+              num_read_bytes, rdbuffer);
+
+      fprintf(stderr, "read == Hello, World %s\n", (result = (strcmp(rdbuffer, "Hello, World") == 0)) ? "Success!" : "Failed!");
+
+      hdfsCloseFile(fs, readFile);
+
+      // DONE test appends
+    }
+      
+      
     totalResult += (hdfsDisconnect(fs) != 0);
 
     {
