@@ -410,12 +410,17 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
       return NULL;
     }
 
+    if ((flags & O_CREAT) && (flags & O_EXCL)) {
+      fprintf(stderr, "WARN: hdfs does not truly support O_CREATE && O_EXCL\n");
+    }
 
     /* The hadoop java api/signature */
-    const char* method = ((flags & O_WRONLY) == 0) ? "open" : "create";
+    const char* method = ((flags & O_WRONLY) == 0) ? "open" : (flags & O_APPEND) ? "append" : "create";
     const char* signature = ((flags & O_WRONLY) == 0) ?
         JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM)) :
-        JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
+      (flags & O_APPEND) ?
+      JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM)) :
+      JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
 
     /* Return value */
     hdfsFile file = NULL;
@@ -459,7 +464,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         jBufferSize = jVal.i;
     }
 
-    if (flags & O_WRONLY) {
+    if ((flags & O_WRONLY) && (flags & O_APPEND) == 0) {
         //replication
 
         if (!replication) {
@@ -490,15 +495,28 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     /* Create and return either the FSDataInputStream or
        FSDataOutputStream references jobject jStream */
 
+    // READ?
     if ((flags & O_WRONLY) == 0) {
+      if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
+                       method, signature, jPath, jBufferSize)) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                   "FileSystem::%s(%s)", method,
+                                   signature);
+        goto done;
+      }
+      // WRITE/APPEND?
+      else if ((flags & O_WRONLY) && (flags & O_APPEND)) {
         if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
-                         method, signature, jPath, jBufferSize)) {
-            errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
-                                       "FileSystem::%s(%s)", method,
-                                       signature);
-            goto done;
+                         method, signature, jPath)) {
+          errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                     "FileSystem::%s(%s)", method,
+                                     signature);
+          goto done;
         }
+      }
+
     }
+    // WRITE/CREATE
     else {
         jboolean jOverWrite = 1;
         if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
