@@ -64,7 +64,7 @@ public class TestSymLink extends TestCase
         Configuration conf = new Configuration();
         dfs = new MiniDFSCluster(conf, 1, true, null);
         FileSystem fileSys = dfs.getFileSystem();
-        String namenode = fileSys.getName();
+        String namenode = fileSys.getUri().toString();
         mr  = new MiniMRCluster(1, namenode, 3);
         // During tests, the default Configuration will use a local mapred
         // So don't specify -config or -cluster
@@ -83,7 +83,7 @@ public class TestSymLink extends TestCase
           "-jobconf", "mapred.child.java.opts=-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
                       "-Dbuild.test=" + System.getProperty("build.test") + " " +
                       conf.get("mapred.child.java.opts",""),
-          "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
+          "-cacheFile", fileSys.getUri() + CACHE_FILE + "#testlink"
         };
 
         fileSys.delete(new Path(OUTPUT_DIR), true);

@@ -69,11 +69,6 @@ public class FilterFileSystem extends FileSystem {
     return fs.getUri();
   }
 
-  /** @deprecated call #getUri() instead.*/
-  public String getName() {
-    return fs.getName();
-  }
-
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     return fs.makeQualified(path);

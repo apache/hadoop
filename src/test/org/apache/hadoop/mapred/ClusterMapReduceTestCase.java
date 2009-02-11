@@ -82,7 +82,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
 
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
-      mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getName(), 1);
+      mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getUri().toString(), 1);
     }
   }
 

@@ -64,11 +64,10 @@ public class DistributedFileSystem extends FileSystem {
     initialize(NameNode.getUri(namenode), conf);
   }
 
-  /** @deprecated */
-  public String getName() { return uri.getAuthority(); }
-
+  @Override
   public URI getUri() { return uri; }
 
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     setConf(conf);
 
@@ -84,6 +83,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** Permit paths which explicitly specify the default port. */
+  @Override
   protected void checkPath(Path path) {
     URI thisUri = this.getUri();
     URI thatUri = path.toUri();
@@ -99,6 +99,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** Normalize paths that explicitly specify the default port. */
+  @Override
   public Path makeQualified(Path path) {
     URI thisUri = this.getUri();
     URI thatUri = path.toUri();
@@ -115,15 +116,17 @@ public class DistributedFileSystem extends FileSystem {
     return super.makeQualified(path);
   }
 
-
+  @Override
   public Path getWorkingDirectory() {
     return workingDir;
   }
 
+  @Override
   public long getDefaultBlockSize() {
     return dfs.getDefaultBlockSize();
   }
 
+  @Override
   public short getDefaultReplication() {
     return dfs.getDefaultReplication();
   }
@@ -136,6 +139,7 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
+  @Override
   public void setWorkingDirectory(Path dir) {
     String result = makeAbsolute(dir).toUri().getPath();
     if (!DFSUtil.isValidName(result)) {
@@ -146,6 +150,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** {@inheritDoc} */
+  @Override
   public Path getHomeDirectory() {
     return new Path("/user/" + dfs.ugi.getUserName()).makeQualified(this);
   }
@@ -160,7 +165,7 @@ public class DistributedFileSystem extends FileSystem {
     return result;
   }
   
-
+  @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
       long len) throws IOException {
     if (file == null) {
@@ -169,16 +174,19 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getBlockLocations(getPathName(file.getPath()), start, len);
   }
 
+  @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     this.verifyChecksum = verifyChecksum;
   }
 
+  @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return new DFSClient.DFSDataInputStream(
           dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
 
@@ -186,6 +194,7 @@ public class DistributedFileSystem extends FileSystem {
     return new FSDataOutputStream(op, statistics, op.getInitialLen());
   }
 
+  @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
     boolean overwrite,
     int bufferSize, short replication, long blockSize,
@@ -197,6 +206,7 @@ public class DistributedFileSystem extends FileSystem {
         statistics);
   }
 
+  @Override
   public boolean setReplication(Path src, 
                                 short replication
                                ) throws IOException {
@@ -206,6 +216,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Rename files/dirs
    */
+  @Override
   public boolean rename(Path src, Path dst) throws IOException {
     return dfs.rename(getPathName(src), getPathName(dst));
   }
@@ -214,11 +225,13 @@ public class DistributedFileSystem extends FileSystem {
    * requires a boolean check to delete a non 
    * empty directory recursively.
    */
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
    return dfs.delete(getPathName(f), recursive);
   }
   
   /** {@inheritDoc} */
+  @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
     return dfs.getContentSummary(getPathName(f));
   }
@@ -239,6 +252,7 @@ public class DistributedFileSystem extends FileSystem {
         f.getPath().makeQualified(this)); // fully-qualify path
   }
 
+  @Override
   public FileStatus[] listStatus(Path p) throws IOException {
     FileStatus[] infos = dfs.listPaths(getPathName(p));
     if (infos == null) return null;
@@ -249,11 +263,13 @@ public class DistributedFileSystem extends FileSystem {
     return stats;
   }
 
+  @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     return dfs.mkdirs(getPathName(f), permission);
   }
 
   /** {@inheritDoc} */
+  @Override
   public void close() throws IOException {
     try {
       super.processDeleteOnExit();
@@ -263,6 +279,7 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
+  @Override
   public String toString() {
     return "DFS[" + dfs + "]";
   }
@@ -288,6 +305,7 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /** {@inheritDoc} */
+  @Override
   public FsStatus getStatus(Path p) throws IOException {
     return dfs.getDiskStatus();
   }
@@ -420,6 +438,7 @@ public class DistributedFileSystem extends FileSystem {
    * Returns the stat information about the file.
    * @throws FileNotFoundException if the file does not exist.
    */
+  @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     FileStatus fi = dfs.getFileInfo(getPathName(f));
     if (fi != null) {
@@ -430,17 +449,20 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** {@inheritDoc} */
+  @Override
   public MD5MD5CRC32FileChecksum getFileChecksum(Path f) throws IOException {
     return dfs.getFileChecksum(getPathName(f));
   }
 
   /** {@inheritDoc }*/
+  @Override
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
     dfs.setPermission(getPathName(p), permission);
   }
 
   /** {@inheritDoc }*/
+  @Override
   public void setOwner(Path p, String username, String groupname
       ) throws IOException {
     if (username == null && groupname == null) {
@@ -450,6 +472,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** {@inheritDoc }*/
+  @Override
   public void setTimes(Path p, long mtime, long atime
       ) throws IOException {
     dfs.setTimes(getPathName(p), mtime, atime);

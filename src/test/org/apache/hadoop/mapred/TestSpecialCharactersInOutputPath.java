@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.URI;
 
 import junit.framework.TestCase;
 
@@ -44,15 +45,15 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
   
   private static final String OUTPUT_FILENAME = "result[0]";
   
-  public static boolean launchJob(String fileSys,
-                                       String jobTracker,
-                                       JobConf conf,
-                                       int numMaps,
-                                       int numReduces) throws IOException {
+  public static boolean launchJob(URI fileSys,
+                                  String jobTracker,
+                                  JobConf conf,
+                                  int numMaps,
+                                  int numReduces) throws IOException {
     
     final Path inDir = new Path("/testing/input");
     final Path outDir = new Path("/testing/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(fileSys, conf);
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       LOG.warn("Can't create " + inDir);
@@ -107,12 +108,12 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 2);
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       JobConf jobConf = new JobConf();
       boolean result;
-      result = launchJob(namenode, jobTrackerName, jobConf, 
+      result = launchJob(fileSys.getUri(), jobTrackerName, jobConf, 
                               3, 1);
       assertTrue(result);
           

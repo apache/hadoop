@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.net.URI;
+
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -35,7 +37,7 @@ import org.apache.hadoop.io.Text;
 public class TestMiniMRClasspath extends TestCase {
   
   
-  static String launchWordCount(String fileSys,
+  static String launchWordCount(URI fileSys,
                                 String jobTracker,
                                 JobConf conf,
                                 String input,
@@ -43,7 +45,7 @@ public class TestMiniMRClasspath extends TestCase {
                                 int numReduces) throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(fileSys, conf);
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
@@ -93,13 +95,13 @@ public class TestMiniMRClasspath extends TestCase {
     return result.toString();
   }
 
-  static String launchExternal(String fileSys, String jobTracker, JobConf conf,
+  static String launchExternal(URI uri, String jobTracker, JobConf conf,
                                String input, int numMaps, int numReduces)
     throws IOException {
 
     final Path inDir = new Path("/testing/ext/input");
     final Path outDir = new Path("/testing/ext/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(uri, conf);
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
@@ -109,7 +111,7 @@ public class TestMiniMRClasspath extends TestCase {
       file.writeBytes(input);
       file.close();
     }
-    FileSystem.setDefaultUri(conf, fileSys);
+    FileSystem.setDefaultUri(conf, uri);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
@@ -160,12 +162,12 @@ public class TestMiniMRClasspath extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);
       JobConf jobConf = new JobConf();
       String result;
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
-      result = launchWordCount(namenode, jobTrackerName, jobConf, 
+      result = launchWordCount(fileSys.getUri(), jobTrackerName, jobConf, 
                                "The quick brown fox\nhas many silly\n" + 
                                "red fox sox\n",
                                3, 1);
@@ -194,13 +196,13 @@ public class TestMiniMRClasspath extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);      
       JobConf jobConf = new JobConf();
       String result;
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       
-      result = launchExternal(namenode, jobTrackerName, jobConf, 
+      result = launchExternal(fileSys.getUri(), jobTrackerName, jobConf, 
                               "Dennis was here!\nDennis again!",
                               3, 1);
       assertEquals("Dennis again!\t1\nDennis was here!\t1\n", result);

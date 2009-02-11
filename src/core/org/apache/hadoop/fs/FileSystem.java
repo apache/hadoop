@@ -134,15 +134,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
   
-  /** @deprecated call #getUri() instead.*/
-  public String getName() { return getUri().toString(); }
-
-  /** @deprecated call #get(URI,Configuration) instead. */
-  public static FileSystem getNamed(String name, Configuration conf)
-    throws IOException {
-    return get(URI.create(fixName(name)), conf);
-  }
-
   /** Update old-format filesystem names, for back-compatibility.  This should
    * eventually be replaced with a checkName() method that throws an exception
    * for old-format names. */ 

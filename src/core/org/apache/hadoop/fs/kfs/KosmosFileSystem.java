@@ -86,12 +86,6 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     @Override
-    @Deprecated
-    public String getName() {
-	return getUri().toString();
-    }
-
-    @Override
     public Path getWorkingDirectory() {
 	return workingDir;
     }

@@ -152,7 +152,7 @@ public abstract class HadoopTestCase extends TestCase {
     }
     else {
       //noinspection deprecation
-      mrCluster = new MiniMRCluster(taskTrackers, fileSystem.getName(), 1);
+      mrCluster = new MiniMRCluster(taskTrackers, fileSystem.getUri().toString(), 1);
     }
   }
 

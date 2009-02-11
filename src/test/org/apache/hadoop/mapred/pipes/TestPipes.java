@@ -66,7 +66,7 @@ public class TestPipes extends TestCase {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, numSlaves, true, null);
-      mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getName(), 1);
+      mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getUri().toString(), 1);
       writeInputFile(dfs.getFileSystem(), inputPath);
       runProgram(mr, dfs, new Path(cppExamples, "bin/wordcount-simple"), 
                  inputPath, outputPath, 3, 2, twoSplitOutput);

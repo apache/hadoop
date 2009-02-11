@@ -187,7 +187,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
       Configuration cnf = new Configuration();
       dfs = new MiniDFSCluster(cnf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(2, fileSys.getName(), 1);
+      mr = new MiniMRCluster(2, fileSys.getUri().toString(), 1);
       JobConf conf = mr.createJobConf();
       
       // intialize input, output and debug directories

@@ -100,11 +100,6 @@ public class S3FileSystem extends FileSystem {
     return (FileSystemStore) RetryProxy.create(FileSystemStore.class,
                                                store, methodNameToPolicyMap);
   }
-  
-  @Override
-  public String getName() {
-    return getUri().toString();
-  }
 
   @Override
   public Path getWorkingDirectory() {

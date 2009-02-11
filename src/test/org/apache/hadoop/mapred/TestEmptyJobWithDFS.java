@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.URI;
 
 import junit.framework.TestCase;
 
@@ -51,7 +52,7 @@ public class TestEmptyJobWithDFS extends TestCase {
    * @return true if the MR job is successful, otherwise false
    * @throws IOException
    */
-  public static boolean launchEmptyJob(String fileSys,
+  public static boolean launchEmptyJob(URI fileSys,
                                        String jobTracker,
                                        JobConf conf,
                                        int numMaps,
@@ -59,7 +60,7 @@ public class TestEmptyJobWithDFS extends TestCase {
     // create an empty input dir
     final Path inDir = new Path("/testing/empty/input");
     final Path outDir = new Path("/testing/empty/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(fileSys, conf);
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       LOG.warn("Can't create " + inDir);
@@ -122,12 +123,12 @@ public class TestEmptyJobWithDFS extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 2);
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       JobConf jobConf = new JobConf();
       boolean result;
-      result = launchEmptyJob(namenode, jobTrackerName, jobConf, 
+      result = launchEmptyJob(fileSys.getUri(), jobTrackerName, jobConf, 
                               3, 1);
       assertTrue(result);
           

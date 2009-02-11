@@ -23,6 +23,9 @@ Trunk (unreleased changes)
     HADOOP-5094. Show hostname and separate live/dead datanodes in DFSAdmin
     report.  (Jakob Homan via szetszwo)
 
+    HADOOP-4942. Remove deprecated FileSystem methods getName() and
+    getNamed(String name, Configuration conf).  (Jakob Homan via szetszwo)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

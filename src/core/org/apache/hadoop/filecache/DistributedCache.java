@@ -498,22 +498,10 @@ public class DistributedCache {
     }  
   }
   
-  private static String getFileSysName(URI url) {
-    String fsname = url.getScheme();
-    if ("hdfs".equals(fsname)) {
-      String host = url.getHost();
-      int port = url.getPort();
-      return (port == (-1)) ? host : (host + ":" + port);
-    } else {
-      return null;
-    }
-  }
-  
   private static FileSystem getFileSystem(URI cache, Configuration conf)
     throws IOException {
-    String fileSysName = getFileSysName(cache);
-    if (fileSysName != null)
-      return FileSystem.getNamed(fileSysName, conf);
+    if ("hdfs".equals(cache.getScheme()))
+      return FileSystem.get(cache, conf);
     else
       return FileSystem.get(conf);
   }
