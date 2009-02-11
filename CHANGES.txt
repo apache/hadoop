@@ -748,6 +748,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5085. Copying a file to local with Crc throws an exception.
     (hairong)
 
+    HADOOP-5211. Fix check for job completion in TestSetupAndCleanupFailure.
+    (enis)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

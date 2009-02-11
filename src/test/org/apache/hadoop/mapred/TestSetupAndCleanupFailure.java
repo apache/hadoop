@@ -23,21 +23,23 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 public class TestSetupAndCleanupFailure extends TestCase {
 
   static class CommitterWithFailSetup extends FileOutputCommitter {
+    @Override
     public void setupJob(JobContext context) throws IOException {
       throw new IOException();
     }
   }
 
   static class CommitterWithFailCleanup extends FileOutputCommitter {
+    @Override
     public void cleanupJob(JobContext context) throws IOException {
       throw new IOException();
     }
@@ -80,10 +82,10 @@ public class TestSetupAndCleanupFailure extends TestCase {
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
     try {
-      final int taskTrackers = 4;
+      final int taskTrackers = 2;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 4, true, null);
+      dfs = new MiniDFSCluster(conf, 2, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1);
       JobConf jobConf = mr.createJobConf();
@@ -95,13 +97,13 @@ public class TestSetupAndCleanupFailure extends TestCase {
       jobConf.setOutputCommitter(CommitterWithFailSetup.class);
       job = launchJob(jobConf, inDir, outDir, input);
       // wait for the job to finish.
-      while (!job.isComplete()) ;
+      job.waitForCompletion();
       assertEquals(JobStatus.FAILED, job.getJobState());
 
       jobConf.setOutputCommitter(CommitterWithFailCleanup.class);
       job = launchJob(jobConf, inDir, outDir, input);
       // wait for the job to finish.
-      while (!job.isComplete()) ;
+      job.waitForCompletion();
       assertEquals(JobStatus.FAILED, job.getJobState());
     } finally {
       if (dfs != null) { dfs.shutdown(); }
