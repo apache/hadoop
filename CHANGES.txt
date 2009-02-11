@@ -598,6 +598,9 @@ Release 0.20.0 - Unreleased
     killed tasks by launching special CLEANUP tasks for the same. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5211. Fix check for job completion in TestSetupAndCleanupFailure.
+    (enis)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
