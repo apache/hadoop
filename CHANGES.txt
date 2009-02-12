@@ -99,6 +99,9 @@ Release 0.19.1 - Unreleased
     HADOOP-4494. Allow libhdfs to append to files.
     (Pete Wyckoff via dhruba)
 
+    HADOOP-5166. Fix JobTracker restart to work when ACLs are configured
+    for the JobTracker. (Amar Kamat via yhemanth).
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

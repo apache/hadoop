@@ -2261,6 +2261,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
     
     JobInProgress job = new JobInProgress(jobId, this, this.conf);
+
+    // check for access
+    checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB);
+
    return addJob(jobId, job); 
   }
 
@@ -2272,7 +2276,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private synchronized JobStatus addJob(JobID jobId, JobInProgress job) 
   throws IOException {
     totalSubmissions++;
-    checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB);
 
     synchronized (jobs) {
       synchronized (taskScheduler) {

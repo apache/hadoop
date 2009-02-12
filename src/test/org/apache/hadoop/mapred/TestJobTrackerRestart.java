@@ -26,6 +26,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.ThreadedMapBenchmark.RandomInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
 import java.io.*;
@@ -670,6 +671,10 @@ public class TestJobTrackerRestart extends TestCase {
       jtConf.set("mapred.jobtracker.job.history.buffer.size", "1024");
       jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
       jtConf.setLong("mapred.tasktracker.expiry.interval", 25 * 1000);
+      jtConf.setBoolean("mapred.acls.enabled", true);
+      // get the user group info
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+      jtConf.set("mapred.queue.default.acl-submit-job", ugi.getUserName());
       
       mr = new MiniMRCluster(1, namenode, 1, null, null, jtConf);
       
