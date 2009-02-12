@@ -2389,9 +2389,11 @@ public class DataNode extends Configured
                                                     streams.checksumOut, 
                                                     SMALL_BUFFER_SIZE));
         }
+      } catch(BlockAlreadyExistsException bae) {
+        throw bae;
       } catch(IOException ioe) {
         IOUtils.closeStream(this);
-        removeBlock();
+        cleanupBlock();
 
         // check if there is a disk error
         IOException cause = FSDataset.getCauseIfDiskError(ioe);
@@ -2805,7 +2807,7 @@ public class DataNode extends Configured
         if (responder != null) {
           responder.interrupt();
         }
-        removeBlock();
+        cleanupBlock();
         throw ioe;
       } finally {
         if (responder != null) {
@@ -2819,10 +2821,10 @@ public class DataNode extends Configured
       }
     }
 
-    /** Remove a partial block
+    /** Cleanup a partial block
      * if this write is for a replication request (and not from a client)
      */
-    private void removeBlock() throws IOException {
+    private void cleanupBlock() throws IOException {
       if (clientName.length() == 0) { // not client write
         data.unfinalizeBlock(block);
       }

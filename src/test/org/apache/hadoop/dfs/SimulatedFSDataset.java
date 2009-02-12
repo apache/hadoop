@@ -372,7 +372,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
                                             boolean isRecovery)
                                             throws IOException {
     if (isValidBlock(b)) {
-          throw new IOException("Block " + b + 
+          throw new BlockAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
       }
       BInfo binfo = new BInfo(b, true);
