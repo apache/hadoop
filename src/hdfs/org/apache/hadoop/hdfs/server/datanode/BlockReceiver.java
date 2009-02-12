@@ -107,9 +107,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           datanode.blockScanner.deleteBlock(block);
         }
       }
+    } catch (BlockAlreadyExistsException bae) {
+      throw bae;
     } catch(IOException ioe) {
       IOUtils.closeStream(this);
-      removeBlock();
+      cleanupBlock();
       
       // check if there is a disk error
       IOException cause = FSDataset.getCauseIfDiskError(ioe);
@@ -557,7 +559,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       if (responder != null) {
         responder.interrupt();
       }
-      removeBlock();
+      cleanupBlock();
       throw ioe;
     } finally {
       if (responder != null) {
@@ -571,10 +573,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     }
   }
 
-  /** Remove a partial block 
+  /** Cleanup a partial block 
    * if this write is for a replication request (and not from a client)
    */
-  private void removeBlock() throws IOException {
+  private void cleanupBlock() throws IOException {
     if (clientName.length() == 0) { // not client write
       datanode.data.unfinalizeBlock(block);
     }
