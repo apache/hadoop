@@ -21,6 +21,7 @@ Release 0.20.0 - Unreleased
                name (Jonathan Gray via Andrew Purtell)
    HBASE-1190  TableInputFormatBase with row filters scan too far (Dave
                Latham via Andrew Purtell)
+   HBASE-1198  OOME in IPC server does not trigger abort behavior
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

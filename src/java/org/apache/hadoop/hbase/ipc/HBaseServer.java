@@ -152,6 +152,7 @@ public abstract class HBaseServer {
   private Responder responder = null;
   private int numConnections = 0;
   private Handler[] handlers = null;
+  private HBaseRPCErrorHandler errorHandler = null;
 
   /**
    * A convenience method to bind to a given address and report 
@@ -313,13 +314,22 @@ public abstract class HBaseServer {
             key = null;
           }
         } catch (OutOfMemoryError e) {
-          // we can run out of memory if we have too many threads
-          // log the event and sleep for a minute and give 
-          // some thread(s) a chance to finish
-          LOG.warn("Out of Memory in server select", e);
-          closeCurrentConnection(key, e);
-          cleanupConnections(true);
-          try { Thread.sleep(60000); } catch (Exception ie) {}
+          if (errorHandler != null) {
+            if (errorHandler.checkOOME(e)) {
+              LOG.info(getName() + ": exiting on OOME");
+              closeCurrentConnection(key, e);
+              cleanupConnections(true);
+              return;
+            }
+          } else {
+            // we can run out of memory if we have too many threads
+            // log the event and sleep for a minute and give 
+            // some thread(s) a chance to finish
+            LOG.warn("Out of Memory in server select", e);
+            closeCurrentConnection(key, e);
+            cleanupConnections(true);
+            try { Thread.sleep(60000); } catch (Exception ie) {}
+      }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
             LOG.info(getName() + " caught: " +
@@ -364,7 +374,7 @@ public abstract class HBaseServer {
       return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
     }
     
-    void doAccept(SelectionKey key) throws IOException,  OutOfMemoryError {
+    void doAccept(SelectionKey key) throws IOException, OutOfMemoryError {
       Connection c = null;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       // accept up to 10 connections
@@ -501,13 +511,20 @@ public abstract class HBaseServer {
             }
           }
         } catch (OutOfMemoryError e) {
-          //
-          // we can run out of memory if we have too many threads
-          // log the event and sleep for a minute and give
-          // some thread(s) a chance to finish
-          //
-          LOG.warn("Out of Memory in server select", e);
-          try { Thread.sleep(60000); } catch (Exception ie) {}
+          if (errorHandler != null) {
+            if (errorHandler.checkOOME(e)) {
+              LOG.info(getName() + ": exiting on OOME");
+              return;
+            }
+          } else {
+            //
+            // we can run out of memory if we have too many threads
+            // log the event and sleep for a minute and give
+            // some thread(s) a chance to finish
+            //
+            LOG.warn("Out of Memory in server select", e);
+            try { Thread.sleep(60000); } catch (Exception ie) {}
+      }
         } catch (Exception e) {
           LOG.warn("Exception in Responder " + 
                    StringUtils.stringifyException(e));
@@ -926,6 +943,16 @@ public abstract class HBaseServer {
             LOG.info(getName() + " caught: " +
                      StringUtils.stringifyException(e));
           }
+        } catch (OutOfMemoryError e) {
+          if (errorHandler != null) {
+            if (errorHandler.checkOOME(e)) {
+              LOG.info(getName() + ": exiting on OOME");
+              return;
+            }
+          } else {
+            // rethrow if no handler
+            throw e;
+          }
         } catch (Exception e) {
           LOG.info(getName() + " caught: " +
                    StringUtils.stringifyException(e));
@@ -1060,8 +1087,15 @@ public abstract class HBaseServer {
   public int getCallQueueLen() {
     return callQueue.size();
   }
-  
-  
+
+  /**
+   * Set the handler for calling out of RPC for error conditions.
+   * @param handler the handler implementation
+   */
+  public void setErrorHandler(HBaseRPCErrorHandler handler) {
+    this.errorHandler = handler;
+  }      
+
   /**
    * When the read or write buffer size is larger than this limit, i/o will be 
    * done in chunks of this size. Most RPC requests and responses would be

@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -108,7 +109,7 @@ import org.apache.hadoop.util.StringUtils;
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
-public class HRegionServer implements HConstants, HRegionInterface, Runnable {
+public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErrorHandler, Runnable {
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -274,6 +275,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.server = HBaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
+    this.server.setErrorHandler(this);
     // Address is givin a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
@@ -718,7 +720,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @param e
    * @return True if we OOME'd and are aborting.
    */
-  private boolean checkOOME(final Throwable e) {
+  public boolean checkOOME(final Throwable e) {
     boolean stop = false;
     if (e instanceof OutOfMemoryError ||
       (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
