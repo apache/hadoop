@@ -975,7 +975,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     //
     if (isValidBlock(b)) {
       if (!isRecovery) {
-        throw new IOException("Block " + b + " is valid, and cannot be written to.");
+        throw new BlockAlreadyExistsException("Block " + b + " is valid, and cannot be written to.");
       }
       // If the block was successfully finalized because all packets
       // were successfully processed at the Datanode but the ack for
@@ -1001,7 +1001,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         threads = activeFile.threads;
         
         if (!isRecovery) {
-          throw new IOException("Block " + b +
+          throw new BlockAlreadyExistsException("Block " + b +
                                   " has already been started (though not completed), and thus cannot be created.");
         } else {
           for (Thread thread:threads) {

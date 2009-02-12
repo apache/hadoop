@@ -1082,6 +1082,9 @@ Release 0.18.4 - Unreleased
     HADOOP-5114. Remove timeout for accept() in DataNode. This makes accept() 
     fail in JDK on Windows and causes many tests to fail. (Raghu Angadi)
 
+    HADOOP-5192. Block receiver should not remove a block that's created or
+    being written by other threads. (hairong)
+ 
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
