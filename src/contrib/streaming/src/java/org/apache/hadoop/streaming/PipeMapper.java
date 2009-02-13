@@ -27,6 +27,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.streaming.io.InputWriter;
+import org.apache.hadoop.streaming.io.OutputReader;
+import org.apache.hadoop.streaming.io.TextInputWriter;
 import org.apache.hadoop.util.StringUtils;
 
 /** A generic Mapper bridge.
@@ -66,9 +69,11 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     //records input.
     SkipBadRecords.setAutoIncrMapperProcCount(job, false);
     skipping = job.getBoolean("mapred.skip.on", false);
-    String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
-    ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
-
+    if (mapInputWriterClass_.getCanonicalName().equals(TextInputWriter.class.getCanonicalName())) {
+      String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
+      ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
+    }
+    
     try {
       mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t").getBytes("UTF-8");
       mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t").getBytes("UTF-8");
@@ -99,11 +104,9 @@ public class PipeMapper extends PipeMapRed implements Mapper {
       // 2/4 Hadoop to Tool
       if (numExceptions_ == 0) {
         if (!this.ignoreKey) {
-          write(key);
-          clientOut_.write(getInputSeparator());
+          inWriter_.writeKey(key);
         }
-        write(value);
-        clientOut_.write('\n');
+        inWriter_.writeValue(value);
         if(skipping) {
           //flush the streams on every record input if running in skip mode
           //so that we don't buffer other records surrounding a bad record. 
@@ -132,18 +135,29 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     mapRedFinished();
   }
 
-  byte[] getInputSeparator() {
+  @Override
+  public byte[] getInputSeparator() {
     return mapInputFieldSeparator;
   }
 
   @Override
-  byte[] getFieldSeparator() {
+  public byte[] getFieldSeparator() {
     return mapOutputFieldSeparator;
   }
 
   @Override
-  int getNumOfKeyFields() {
+  public int getNumOfKeyFields() {
     return numOfMapOutputKeyFields;
+  }
+
+  @Override
+  InputWriter createInputWriter() throws IOException {
+    return super.createInputWriter(mapInputWriterClass_);
+  }
+
+  @Override
+  OutputReader createOutputReader() throws IOException {
+    return super.createOutputReader(mapOutputReaderClass_);
   }
 
 }

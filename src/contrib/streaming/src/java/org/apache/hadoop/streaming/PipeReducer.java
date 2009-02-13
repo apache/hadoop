@@ -28,6 +28,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.SkipBadRecords;
+import org.apache.hadoop.streaming.io.InputWriter;
+import org.apache.hadoop.streaming.io.OutputReader;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.Writable;
@@ -97,10 +99,8 @@ public class PipeReducer extends PipeMapRed implements Reducer {
                                    + StringUtils.stringifyException(
                                                                     outerrThreadsThrowable));
           }
-          write(key);
-          clientOut_.write(getInputSeparator());
-          write(val);
-          clientOut_.write('\n');
+          inWriter_.writeKey(key);
+          inWriter_.writeValue(val);
         } else {
           // "identity reduce"
           output.collect(key, val);
@@ -137,18 +137,29 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     mapRedFinished();
   }
 
-  byte[] getInputSeparator() {
+  @Override
+  public byte[] getInputSeparator() {
     return reduceInputFieldSeparator;
   }
 
   @Override
-  byte[] getFieldSeparator() {
+  public byte[] getFieldSeparator() {
     return reduceOutFieldSeparator;
   }
   
   @Override
-  int getNumOfKeyFields() {
+  public int getNumOfKeyFields() {
     return numOfReduceOutputKeyFields;
+  }
+  
+  @Override
+  InputWriter createInputWriter() throws IOException {
+    return super.createInputWriter(reduceInputWriterClass_);
+  }
+
+  @Override
+  OutputReader createOutputReader() throws IOException {
+    return super.createOutputReader(reduceOutputReaderClass_);
   }
 
 }

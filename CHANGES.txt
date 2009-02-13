@@ -98,6 +98,9 @@ Trunk (unreleased changes)
     HADOOP-4868. Splits the hadoop script into three parts - bin/hadoop, 
     bin/mapred and bin/hdfs. (Sharad Agarwal via ddas)
 
+    HADOOP-1722. Adds support for TypedBytes and RawBytes in Streaming.
+    (Klaas Bosteels via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
