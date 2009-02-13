@@ -168,6 +168,10 @@ Trunk (unreleased changes)
     HADOOP-5172. Disable misbehaving Chukwa unit test until it can be fixed.
     (Jerome Boulon via nigel)
 
+    HADOOP-4933. Fixes a ConcurrentModificationException problem that shows up
+    when the history viewer is accessed concurrently. 
+    (Amar Kamat via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
