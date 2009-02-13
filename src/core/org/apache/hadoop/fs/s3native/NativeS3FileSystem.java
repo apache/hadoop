@@ -164,7 +164,7 @@ public class NativeS3FileSystem extends FileSystem {
     @Override
     public synchronized void close() throws IOException {
       if (closed) {
-        throw new IOException("Stream closed");
+        return;
       }
 
       backupStream.close();
