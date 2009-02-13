@@ -1068,7 +1068,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>

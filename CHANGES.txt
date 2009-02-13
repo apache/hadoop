@@ -172,6 +172,9 @@ Trunk (unreleased changes)
     when the history viewer is accessed concurrently. 
     (Amar Kamat via ddas)
 
+    HADOOP-5253. Remove duplicate call to cn-docs target. 
+    (Giri Kesavan via nigel)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
