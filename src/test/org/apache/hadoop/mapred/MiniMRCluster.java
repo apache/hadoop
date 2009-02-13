@@ -235,6 +235,9 @@ public class MiniMRCluster {
     return jobTracker;
   }
   
+  TaskTrackerRunner getTaskTrackerRunner(int id) {
+    return taskTrackerList.get(id);
+  }
   /**
    * Get the number of task trackers in the cluster
    */

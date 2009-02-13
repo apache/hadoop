@@ -94,6 +94,8 @@ class TaskInProgress {
   // Map from task Id -> TaskTracker Id, contains tasks that are
   // currently runnings
   private TreeMap<TaskAttemptID, String> activeTasks = new TreeMap<TaskAttemptID, String>();
+  // All attempt Ids of this TIP
+  private TreeSet<TaskAttemptID> tasks = new TreeSet<TaskAttemptID>();
   private JobConf conf;
   private Map<TaskAttemptID,List<String>> taskDiagnosticData =
     new TreeMap<TaskAttemptID,List<String>>();
@@ -585,9 +587,7 @@ class TaskInProgress {
       }
     }
 
-    // Note that there can be failures of tasks that are hosted on a machine 
-    // that has not yet registered with restarted jobtracker
-    boolean isPresent = this.activeTasks.remove(taskid) != null;
+    this.activeTasks.remove(taskid);
     
     // Since we do not fail completed reduces (whose outputs go to hdfs), we 
     // should note this failure only for completed maps, only if this taskid;
@@ -601,8 +601,10 @@ class TaskInProgress {
       resetSuccessfulTaskid();
     }
 
+    // Note that there can be failures of tasks that are hosted on a machine 
+    // that has not yet registered with restarted jobtracker
     // recalculate the counts only if its a genuine failure
-    if (isPresent) {
+    if (tasks.contains(taskid)) {
       if (taskState == TaskStatus.State.FAILED) {
         numTaskFailures++;
         machinesWhereFailed.add(trackerHostName);
@@ -907,6 +909,7 @@ class TaskInProgress {
     }
 
     activeTasks.put(taskid, taskTracker);
+    tasks.add(taskid);
 
     // Ask JobTracker to note that the task exists
     jobtracker.createTaskEntry(taskid, taskTracker, this);
