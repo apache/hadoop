@@ -690,6 +690,9 @@ Release 0.19.1 - Unreleased
     HADOOP-5067. Fixes TaskInProgress.java to keep track of count of failed and
     killed tasks correctly. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4760. HDFS streams should not throw exceptions when closed twice. 
+    (enis)
+
 Release 0.19.0 - 2008-11-18
 
   INCOMPATIBLE CHANGES

@@ -205,12 +205,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * created and close connections to the namenode.
    */
   public synchronized void close() throws IOException {
-    checkOpen();
-    clientRunning = false;
-    leasechecker.close();
-
-    // close connections to the namenode
-    RPC.stopProxy(rpcNamenode);
+    if(clientRunning) {
+      clientRunning = false;
+      leasechecker.close();
+  
+      // close connections to the namenode
+      RPC.stopProxy(rpcNamenode);
+    }
   }
 
   /**
@@ -1583,11 +1584,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public synchronized void close() throws IOException {
-      checkOpen();
       if (closed) {
-        throw new IOException("Stream closed");
+        return;
       }
-
+      checkOpen();
+      
       if ( blockReader != null ) {
         blockReader.close();
         blockReader = null;
@@ -2540,12 +2541,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
 
     private void isClosed() throws IOException {
-      if (closed) {
-        if (lastException != null) {
+      if (closed && lastException != null) {
           throw lastException;
-        } else {
-          throw new IOException("Stream closed.");
-        }
       }
     }
 
@@ -3067,6 +3064,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public void close() throws IOException {
+      if(closed)
+        return;
       closeInternal();
       leasechecker.remove(src);
       
