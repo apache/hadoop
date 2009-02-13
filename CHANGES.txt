@@ -101,6 +101,9 @@ Trunk (unreleased changes)
     HADOOP-1722. Adds support for TypedBytes and RawBytes in Streaming.
     (Klaas Bosteels via ddas)
 
+    HADOOP-4220. Changes the JobTracker restart tests so that they take much
+    less time. (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES

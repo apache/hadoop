@@ -254,7 +254,7 @@ public class UtilsForTests {
         }
       }
       if (shouldWait) {
-        waitFor(1000);
+        waitFor(100);
       } else {
         break;
       }

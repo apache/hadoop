@@ -49,7 +49,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
   throws IOException {
     FileSystem fileSys = dfs.getFileSystem();
     JobConf jobConf = mr.createJobConf();
-    int numMaps = 50;
+    int numMaps = 30;
     int numReds = 1;
     String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
     String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
@@ -87,9 +87,6 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     // Kill the 2nd tasktracker
     mr.stopTaskTracker(1);
     
-    // Wait for a minute before submitting a job
-    UtilsForTests.waitFor(60 * 1000);
-    
     // Restart the jobtracker
     mr.startJobTracker();
 
@@ -104,11 +101,17 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     
     UtilsForTests.waitTillDone(jobClient);
 
-    // Check if the tasks on the lost tracker got re-executed
+    // Check if the tracker got lost
     assertTrue("Tracker killed while the jobtracker was down did not get lost "
                 + "upon restart", 
                 jobClient.getClusterStatus().getTaskTrackers() 
                 < mr.getNumTaskTrackers());
+    
+    //  Check if the tasks on the lost tracker got killed
+    int failedMaps = 
+      mr.getJobTrackerRunner().getJobTracker().getJob(id).failedMapTasks;
+    assertTrue("Tasks that were run on the lost tracker were not killed", 
+               failedMaps > 0);
   }
   
   public void testRestartWithLostTracker() throws IOException {
@@ -144,10 +147,10 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
       // Make sure that jobhistory leads to a proper job restart
       // So keep the blocksize and the buffer size small
       JobConf jtConf = new JobConf();
-      jtConf.set("mapred.jobtracker.job.history.block.size", "1024");
-      jtConf.set("mapred.jobtracker.job.history.buffer.size", "1024");
+      jtConf.set("mapred.jobtracker.job.history.block.size", "512");
+      jtConf.set("mapred.jobtracker.job.history.buffer.size", "512");
       jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
-      jtConf.setLong("mapred.tasktracker.expiry.interval", 25 * 1000);
+      jtConf.setLong("mapred.tasktracker.expiry.interval", 5000);
       jtConf.setInt("mapred.reduce.copy.backoff", 4);
       
       mr = new MiniMRCluster(2, namenode, 1, null, null, jtConf);
