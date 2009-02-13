@@ -37,6 +37,9 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
   }
 
   public void testFileCreationDeleteParent() throws IOException {
+    /* XXX This test is temporarily disabled since sync() is not supported in
+     * 0.19.1.*/
+    if (true) return;
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);

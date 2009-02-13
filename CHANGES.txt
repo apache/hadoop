@@ -4,6 +4,11 @@ Hadoop Change Log
 
 Release 0.19.1 - Unreleased
 
+  INCOMPATIBLE CHANGES
+
+    HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
+    incomplete as a result. committed only to 0.19.x. (Raghu Angadi)
+
   IMPROVEMENTS
 
     HADOOP-4739. Fix spelling and grammar, improve phrasing of some sections in
