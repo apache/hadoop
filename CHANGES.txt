@@ -159,6 +159,9 @@ Trunk (unreleased changes)
 
     HADOOP-5226. Add license headers to html and jsp files.  (szetszwo)
 
+    HADOOP-5172. Disable misbehaving Chukwa unit test until it can be fixed.
+    (Jerome Boulon via nigel)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

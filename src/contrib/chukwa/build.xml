@@ -314,6 +314,7 @@
             <fileset dir="${test.src.dir}">
               <include name="**/${test.include}.java"/>
               <exclude name="**/${test.exclude}.java"/>
+              <exclude name="**/TestAgentConfig.java"/>
             </fileset>
            </batchtest>
            <batchtest todir="${test.build.dir}" if="testcase">
