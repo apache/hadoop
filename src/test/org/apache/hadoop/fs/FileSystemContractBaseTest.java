@@ -423,6 +423,26 @@ public abstract class FileSystemContractBaseTest extends TestCase {
         fs.exists(path("/test/new/newdir/dir/subdir/file2")));
   }
 
+  public void testInputStreamClosedTwice() throws IOException {
+    //HADOOP-4760 according to Closeable#close() closing already-closed 
+    //streams should have no effect. 
+    Path src = path("/test/hadoop/file");
+    createFile(src);
+    FSDataInputStream in = fs.open(src);
+    in.close();
+    in.close();
+  }
+  
+  public void testOutputStreamClosedTwice() throws IOException {
+    //HADOOP-4760 according to Closeable#close() closing already-closed 
+    //streams should have no effect. 
+    Path src = path("/test/hadoop/file");
+    FSDataOutputStream out = fs.create(src);
+    out.writeChar('H'); //write some data
+    out.close();
+    out.close();
+  }
+  
   protected Path path(String pathString) {
     return new Path(pathString).makeQualified(fs);
   }

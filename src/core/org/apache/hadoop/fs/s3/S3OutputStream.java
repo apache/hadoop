@@ -200,7 +200,7 @@ class S3OutputStream extends OutputStream {
   @Override
   public synchronized void close() throws IOException {
     if (closed) {
-      throw new IOException("Stream closed");
+      return;
     }
 
     flush();
