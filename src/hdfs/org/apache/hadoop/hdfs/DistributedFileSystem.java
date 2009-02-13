@@ -175,9 +175,11 @@ public class DistributedFileSystem extends FileSystem {
   /** This optional operation is not yet supported. */
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
-
-    DFSOutputStream op = (DFSOutputStream)dfs.append(getPathName(f), bufferSize, progress);
-    return new FSDataOutputStream(op, statistics, op.getInitialLen());
+    // disable append() in 0.19.x
+    throw new UnsupportedOperationException("HDFS does not support append yet");
+        
+    //DFSOutputStream op = (DFSOutputStream)dfs.append(getPathName(f), bufferSize, progress);
+    //return new FSDataOutputStream(op, statistics, op.getInitialLen());
   }
 
   public FSDataOutputStream create(Path f, FsPermission permission,

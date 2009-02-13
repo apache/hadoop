@@ -123,6 +123,8 @@ public class TestFileAppend2 extends TestCase {
    * Verify that all data exists in file.
    */ 
   public void testSimpleAppend() throws IOException {
+    /* HDFS append() is temporarily disabled in 0.19 */
+    if (true) return;
     Configuration conf = new Configuration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
@@ -369,6 +371,8 @@ public class TestFileAppend2 extends TestCase {
    * Test that appends to files at random offsets.
    */
   public void testComplexAppend() throws IOException {
+    /* HDFS append() is temporarily disabled in 0.19 */
+    if (true) return;
     initBuffer(fileSize);
     Configuration conf = new Configuration();
     conf.setInt("heartbeat.recheck.interval", 2000);
