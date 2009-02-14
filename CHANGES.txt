@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-5253. Remove duplicate call to cn-docs target. 
     (Giri Kesavan via nigel)
 
+    HADOOP-5251. Fix classpath for contrib unit tests to include clover jar.
+    (nigel)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
