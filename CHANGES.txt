@@ -325,6 +325,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4944. A configuration file can include other configuration
     files. (Rama Ramasamy via dhruba)
 
+    HADOOP-4804. Provide Forrest documentation for the Fair Scheduler.
+    (Sreekanth Ramakrishnan via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
