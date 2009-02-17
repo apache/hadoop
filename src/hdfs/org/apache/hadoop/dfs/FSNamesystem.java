@@ -1757,7 +1757,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     LOG.info("commitBlockSynchronization(lastblock=" + lastblock
           + ", newgenerationstamp=" + newgenerationstamp
           + ", newlength=" + newlength
-          + ", newtargets=" + Arrays.asList(newtargets) + ")");
+          + ", newtargets=" + Arrays.asList(newtargets)
+          + ", closeFile=" + closeFile
+          + ", deleteBlock=" + deleteblock
+          + ")");
     final BlockInfo oldblockinfo = blocksMap.getStoredBlock(lastblock);
     if (oldblockinfo == null) {
       throw new IOException("Block (=" + lastblock + ") not found");
@@ -1781,22 +1784,33 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // update last block, construct newblockinfo and add it to the blocks map
       lastblock.set(lastblock.blkid, newlength, newgenerationstamp);
       final BlockInfo newblockinfo = blocksMap.addINode(lastblock, pendingFile);
-    
-      //update block info
+
+      // find the DatanodeDescriptor objects
+      // There should be no locations in the blocksMap till now because the
+      // file is underConstruction
       DatanodeDescriptor[] descriptors = null;
       if (newtargets.length > 0) {
         descriptors = new DatanodeDescriptor[newtargets.length];
         for(int i = 0; i < newtargets.length; i++) {
           descriptors[i] = getDatanode(newtargets[i]);
-          descriptors[i].addBlock(newblockinfo);
         }
       }
-
-      pendingFile.setLastBlock(newblockinfo, descriptors);
+      if (closeFile) {
+        // the file is getting closed. Insert block locations into blocksMap.
+        // Otherwise fsck will report these blocks as MISSING, especially if the
+        // blocksReceived from Datanodes take a long time to arrive.
+        for (int i = 0; i < descriptors.length; i++) {
+          descriptors[i].addBlock(newblockinfo);
+        }
+        pendingFile.setLastBlock(newblockinfo, null);
+      } else {
+        // add locations into the INodeUnderConstruction
+        pendingFile.setLastBlock(newblockinfo, descriptors);
+      }
     }
 
     // If this commit does not want to close the file, just persist
-    // block locations and return
+    // blocks and return
     String src = leaseManager.findPath(pendingFile);
     if (!closeFile) {
       dir.persistBlocks(src, pendingFile);
@@ -1809,6 +1823,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     finalizeINodeFileUnderConstruction(src, pendingFile);
     getEditLog().logSync();
     LOG.info("commitBlockSynchronization(newblock=" + lastblock
+          + ", file=" + src
           + ", newgenerationstamp=" + newgenerationstamp
           + ", newlength=" + newlength
           + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
