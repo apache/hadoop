@@ -318,7 +318,7 @@ public class SecondaryNameNode implements Runnable {
     startCheckpoint();
 
     // Tell the namenode to start logging transactions in a new edit file
-    // Retuns a token that would be used to upload the merged image.
+    // Returns a token that would be used to upload the merged image.
     CheckpointSignature sig = (CheckpointSignature)namenode.rollEditLog();
 
     // error simulation code for junit test

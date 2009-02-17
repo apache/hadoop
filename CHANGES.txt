@@ -104,6 +104,9 @@ Trunk (unreleased changes)
     HADOOP-4220. Changes the JobTracker restart tests so that they take much
     less time. (Amar Kamat via ddas)
 
+    HADOOP-4885. Try to restore failed name-node storage directories at 
+    checkpoint time. (Boris Shkolnik via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
