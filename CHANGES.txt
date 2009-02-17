@@ -784,6 +784,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5211. Fix check for job completion in TestSetupAndCleanupFailure.
     (enis)
 
+    HADOOP-5254. The Configuration class should be able to work with XML
+    parsers that do not support xmlinclude. (Steve Loughran via dhruba)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
