@@ -1099,6 +1099,9 @@ Release 0.18.4 - Unreleased
     HADOOP-5192. Block receiver should not remove a block that's created or
     being written by other threads. (hairong)
  
+    HADOOP-5134. FSNamesystem#commitBlockSynchronization adds under-construction
+    block locations to blocksMap. (Dhruba Borthakur via hairong)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
