@@ -178,6 +178,9 @@ Trunk (unreleased changes)
     HADOOP-5251. Fix classpath for contrib unit tests to include clover jar.
     (nigel)
 
+    HADOOP-5206. Synchronize "unprotected*" methods of FSDirectory on the root.
+    (Jakob Homan via shv)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

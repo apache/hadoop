@@ -846,7 +846,7 @@ class FSDirectory implements Closeable {
                            long nsDelta, long dsDelta)
                            throws QuotaExceededException {
     if (!ready) {
-      //still intializing. do not check or update quotas.
+      //still initializing. do not check or update quotas.
       return;
     }
     if (numOfINodes>inodes.length) {
@@ -1152,36 +1152,39 @@ class FSDirectory implements Closeable {
     }
     
     String srcs = normalizePath(src);
-    INode[] inodes = rootDir.getExistingPathINodes(src);
-    INode targetNode = inodes[inodes.length-1];
-    if (targetNode == null) {
-      throw new FileNotFoundException("Directory does not exist: " + srcs);
-    } else if (!targetNode.isDirectory()) {
-      throw new FileNotFoundException("Cannot set quota on a file: " + srcs);  
-    } else { // a directory inode
-      INodeDirectory dirNode = (INodeDirectory)targetNode;
-      long oldNsQuota = dirNode.getNsQuota();
-      long oldDsQuota = dirNode.getDsQuota();
-      if (nsQuota == FSConstants.QUOTA_DONT_SET) {
-        nsQuota = oldNsQuota;
-      }
-      if (dsQuota == FSConstants.QUOTA_DONT_SET) {
-        dsQuota = oldDsQuota;
-      }        
 
-      if (dirNode instanceof INodeDirectoryWithQuota) { 
-        // a directory with quota; so set the quota to the new value
-        ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
-      } else {
-        // a non-quota directory; so replace it with a directory with quota
-        INodeDirectoryWithQuota newNode = 
-          new INodeDirectoryWithQuota(nsQuota, dsQuota, dirNode);
-        // non-root directory node; parent != null
-        INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
-        dirNode = newNode;
-        parent.replaceChild(newNode);
+    synchronized(rootDir) {
+      INode[] inodes = rootDir.getExistingPathINodes(src);
+      INode targetNode = inodes[inodes.length-1];
+      if (targetNode == null) {
+        throw new FileNotFoundException("Directory does not exist: " + srcs);
+      } else if (!targetNode.isDirectory()) {
+        throw new FileNotFoundException("Cannot set quota on a file: " + srcs);  
+      } else { // a directory inode
+        INodeDirectory dirNode = (INodeDirectory)targetNode;
+        long oldNsQuota = dirNode.getNsQuota();
+        long oldDsQuota = dirNode.getDsQuota();
+        if (nsQuota == FSConstants.QUOTA_DONT_SET) {
+          nsQuota = oldNsQuota;
+        }
+        if (dsQuota == FSConstants.QUOTA_DONT_SET) {
+          dsQuota = oldDsQuota;
+        }        
+
+        if (dirNode instanceof INodeDirectoryWithQuota) { 
+          // a directory with quota; so set the quota to the new value
+          ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
+        } else {
+          // a non-quota directory; so replace it with a directory with quota
+          INodeDirectoryWithQuota newNode = 
+            new INodeDirectoryWithQuota(nsQuota, dsQuota, dirNode);
+          // non-root directory node; parent != null
+          INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
+          dirNode = newNode;
+          parent.replaceChild(newNode);
+        }
+        return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
       }
-      return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }
   }
   
@@ -1217,8 +1220,10 @@ class FSDirectory implements Closeable {
   }
 
   boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) {
-    INodeFile inode = getFileINode(src);
-    return unprotectedSetTimes(src, inode, mtime, atime, force);
+    synchronized(rootDir) {
+      INodeFile inode = getFileINode(src);
+      return unprotectedSetTimes(src, inode, mtime, atime, force);
+    }
   }
 
   private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
