@@ -1,8 +1,154 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-    <title>Hadoop 0.19.0</title></head>
+    <title>Hadoop 0.19.1</title></head>
 <body>
 <font face="sans-serif">
+
+<h1>Hadoop 0.19.1 Release Notes</h1>
+Hadoop 0.19.1 fixes serveral problems that may lead to data loss
+from the file system and makes some incompatible changes from Hadoop 0.19.0. For instance, the file append API has been disabled in this release due to implementation issues that can lead to data loss.
+The bug fixes are listed below.
+<ul>
+<h2>Changes Since Hadoop 0.19.0</h2>
+<h3>        Bug
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3874'>HADOOP-3874</a>] -         TestFileAppend2.testComplexAppend sometimes fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4061'>HADOOP-4061</a>] -         Large number of decommission freezes the Namenode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4420'>HADOOP-4420</a>] -         JobTracker.killJob() doesn't check for the JobID being valid
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4494'>HADOOP-4494</a>] -         libhdfs does not call FileSystem.append when O_APPEND passed to hdfsOpenFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4508'>HADOOP-4508</a>] -         FSDataOutputStream.getPos() == 0when appending to existing file and should be file length
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4616'>HADOOP-4616</a>] -         assertion makes fuse-dfs exit when reading incomplete data
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4619'>HADOOP-4619</a>] -         hdfs_write infinite loop when dfs fails and cannot write files &gt; 2 GB
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4632'>HADOOP-4632</a>] -         TestJobHistoryVersion should not create directory in current dir.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4635'>HADOOP-4635</a>] -         Memory leak ?
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4680'>HADOOP-4680</a>] -         fuse-dfs - df -kh on hdfs mount shows much less %used than the dfs UI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4681'>HADOOP-4681</a>] -         DFSClient block read failures cause open DFSInputStream to become unusable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4697'>HADOOP-4697</a>] -         KFS::getBlockLocations() fails with files having multiple blocks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4715'>HADOOP-4715</a>] -         Fix quickstart.html to reflect that Hadoop works with Java 1.6.x now
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4720'>HADOOP-4720</a>] -         docs/api does not contain the hdfs directory after building
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4727'>HADOOP-4727</a>] -         Groups do not work for fuse-dfs out of the box on 0.19.0
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4731'>HADOOP-4731</a>] -         Job is not removed from the waiting jobs queue upon completion.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4759'>HADOOP-4759</a>] -         HADOOP-4654 to be fixed for branches &gt;= 0.19
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4760'>HADOOP-4760</a>] -         HDFS streams should not throw exceptions when closed twice
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4797'>HADOOP-4797</a>] -         RPC Server can leave a lot of direct buffers 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4821'>HADOOP-4821</a>] -         Usage description in the Quotas guide documentations are incorrect
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4836'>HADOOP-4836</a>] -         Minor typos in documentation and comments
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4847'>HADOOP-4847</a>] -         OutputCommitter is loaded in the TaskTracker in localizeConfiguration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4862'>HADOOP-4862</a>] -         A spurious IOException log on DataNode is not completely removed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4873'>HADOOP-4873</a>] -         display minMaps/Reduces on advanced scheduler page
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4906'>HADOOP-4906</a>] -         TaskTracker running out of memory after running several tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4918'>HADOOP-4918</a>] -         Fix bzip2 work with SequenceFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4924'>HADOOP-4924</a>] -         Race condition in re-init of TaskTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4943'>HADOOP-4943</a>] -         fair share scheduler does not utilize all slots if the task trackers are configured heterogeneously
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4955'>HADOOP-4955</a>] -         Make DBOutputFormat us column names from setOutput(...)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4965'>HADOOP-4965</a>] -         DFSClient should log instead of printing into std err.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4966'>HADOOP-4966</a>] -         Setup tasks are not removed from JobTracker's taskIdToTIPMap even after the job completes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4967'>HADOOP-4967</a>] -         Inconsistent state in JVM manager
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4976'>HADOOP-4976</a>] -         Mapper runs out of memory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4982'>HADOOP-4982</a>] -         TestFsck does not run in Eclipse.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4983'>HADOOP-4983</a>] -         Job counters sometimes go down as tasks run without task failures
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4992'>HADOOP-4992</a>] -         TestCustomOutputCommitter fails on hadoop-0.19
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5002'>HADOOP-5002</a>] -         2 core tests TestFileOutputFormat and TestHarFileSystem are failing in branch 19
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5008'>HADOOP-5008</a>] -         TestReplication#testPendingReplicationRetry leaves an opened fd unclosed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5009'>HADOOP-5009</a>] -         DataNode#shutdown sometimes leaves data block scanner verification log unclosed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5067'>HADOOP-5067</a>] -         Failed/Killed attempts column in jobdetails.jsp does not show the number of failed/killed attempts correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5134'>HADOOP-5134</a>] -         FSNamesystem#commitBlockSynchronization adds under-construction block locations to blocksMap
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5156'>HADOOP-5156</a>] -         TestHeartbeatHandling uses MiniDFSCluster.getNamesystem() which does not exist in branch 0.20
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5161'>HADOOP-5161</a>] -         Accepted sockets do not get placed in DataXceiverServer#childSockets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5166'>HADOOP-5166</a>] -         JobTracker fails to restart if recovery and ACLs are enabled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5192'>HADOOP-5192</a>] -         Block reciever should not remove a finalized block when block replication fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5193'>HADOOP-5193</a>] -         SecondaryNameNode does not rollImage because of incorrect calculation of edits modification time.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5213'>HADOOP-5213</a>] -         BZip2CompressionOutputStream NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5224'>HADOOP-5224</a>] -         Disable append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5225'>HADOOP-5225</a>] -         workaround for tmp file handling on DataNodes in 0.19.1 (HADOOP-4663)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5233'>HADOOP-5233</a>] -         Reducer not Succeded after 100%
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5235'>HADOOP-5235</a>] -         possible NPE in tip.kill()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5241'>HADOOP-5241</a>] -         Reduce tasks get stuck because of over-estimated task size (regression from 0.18)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5269'>HADOOP-5269</a>] -         TaskTracker.runningTasks holding FAILED_UNCLEAN and KILLED_UNCLEAN taskStatuses forever in some cases.
+</li>
+</ul>
+    
+<h3>        Improvement
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3894'>HADOOP-3894</a>] -         DFSClient chould log errors better, and provide better diagnostics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4482'>HADOOP-4482</a>] -         Hadoop JMX usage makes Nagios monitoring impossible
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4675'>HADOOP-4675</a>] -         Current Ganglia metrics implementation is incompatible with Ganglia 3.1
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4739'>HADOOP-4739</a>] -         Minor enhancements to some sections of the Map/Reduce tutorial
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4751'>HADOOP-4751</a>] -         FileSystem.listStatus should report the current length of a file if it has been sync'd
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5086'>HADOOP-5086</a>] -         Trash URI semantics can be relaxed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5127'>HADOOP-5127</a>] -         FSDirectory should not have public methods.
+</li>
+</ul>
+    
+<h3>        New Feature
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5034'>HADOOP-5034</a>] -         NameNode should send both replication and deletion requests to DataNode in one reply to a heartbeat
+</li>
+</ul>
+</ul>
+                            
+
     <h1>Hadoop 0.19.0 Release Notes</h1>
 
 These release notes include new developer and user facing incompatibilities, features, and major improvements.
