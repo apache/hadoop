@@ -107,6 +107,8 @@ Trunk (unreleased changes)
     HADOOP-4885. Try to restore failed name-node storage directories at 
     checkpoint time. (Boris Shkolnik via shv)
 
+    HADOOP-5209. Update year to 2009 for javadoc.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

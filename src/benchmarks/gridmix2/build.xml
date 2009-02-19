@@ -3,8 +3,7 @@
     <property name="Name" value="gridmix"/>
     <property name="version" value="0.1"/>
     <property name="final.name" value="${name}-${version}"/>
-    <property name="year" value="2008"/>	
-	<property name="hadoop.dir" value="${basedir}/../../../"/>
+    <property name="hadoop.dir" value="${basedir}/../../../"/>
     <property name="lib.dir" value="${hadoop.dir}/lib"/>
     <property name="src.dir" value="${basedir}/src"/>
     <property name="conf.dir" value="${basedir}/conf"/>
