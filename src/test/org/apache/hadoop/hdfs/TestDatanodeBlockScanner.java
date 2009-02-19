@@ -402,7 +402,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
 
       // Truncate replica of block
-      truncateReplica(block, 0);
+      changeReplicaLength(block, 0, -1);
 
       cluster.shutdown();
 
@@ -423,18 +423,22 @@ public class TestDatanodeBlockScanner extends TestCase {
     }
   }
   
-  private static void truncateReplica(String blockName, int dnIndex) throws IOException {
+  /**
+   * Change the length of a block at datanode dnIndex
+   */
+  static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
                                blockName);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
-        raFile.setLength(raFile.length()-1);
+        raFile.setLength(raFile.length()+lenDelta);
         raFile.close();
-        break;
+        return true;
       }
     }
+    return false;
   }
   
   private static void waitForBlockDeleted(String blockName, int dnIndex) 

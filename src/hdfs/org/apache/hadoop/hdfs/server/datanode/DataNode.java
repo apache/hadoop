@@ -925,6 +925,7 @@ public class DataNode extends Configured
                               DatanodeInfo xferTargets[] 
                               ) throws IOException {
     if (!data.isValidBlock(block)) {
+      // block does not exist or is under-construction
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
       namenode.errorReport(dnRegistration, 
@@ -933,6 +934,19 @@ public class DataNode extends Configured
       return;
     }
 
+    // Check if NN recorded length matches on-disk length 
+    long onDiskLength = data.getLength(block);
+    if (block.getNumBytes() > onDiskLength) {
+      // Shorter on-disk len indicates corruption so report NN the corrupt block
+      namenode.reportBadBlocks(new LocatedBlock[]{
+          new LocatedBlock(block, new DatanodeInfo[] {
+              new DatanodeInfo(dnRegistration)})});
+      LOG.info("Can't replicate block " + block
+          + " because on-disk length " + onDiskLength 
+          + " is shorter than NameNode recorded length " + block.getNumBytes());
+      return;
+    }
+    
     int numTargets = xferTargets.length;
     if (numTargets > 0) {
       if (LOG.isInfoEnabled()) {
@@ -1113,7 +1127,7 @@ public class DataNode extends Configured
         out = new DataOutputStream(new BufferedOutputStream(baseStream, 
                                                             SMALL_BUFFER_SIZE));
 
-        blockSender = new BlockSender(b, 0, -1, false, false, false, 
+        blockSender = new BlockSender(b, 0, b.getNumBytes(), false, false, false, 
             datanode);
         DatanodeInfo srcNode = new DatanodeInfo(dnRegistration);
 
