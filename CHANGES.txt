@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 
     HADOOP-5209. Update year to 2009 for javadoc.  (szetszwo)
 
+    HADOOP-5279. Remove unnecessary targets from test-patch.sh.
+    (Giridharan Kesavan via nigel)
+
   OPTIMIZATIONS
 
   BUG FIXES
