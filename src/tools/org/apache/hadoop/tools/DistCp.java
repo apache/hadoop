@@ -1039,10 +1039,8 @@ public class DistCp implements Tool {
       (args.srcs.size() == 1 && !dstExists) || update || overwrite;
     int srcCount = 0, cnsyncf = 0, dirsyn = 0;
     long fileCount = 0L, byteCount = 0L, cbsyncs = 0L;
-    boolean exceededlimit = false;
     try {
-      for(Iterator<Path> srcItr = args.srcs.iterator();
-          !exceededlimit && srcItr.hasNext(); ) {
+      for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
         final Path src = srcItr.next();
         FileSystem srcfs = src.getFileSystem(conf);
         FileStatus srcfilestat = srcfs.getFileStatus(src);
@@ -1052,10 +1050,10 @@ public class DistCp implements Tool {
         }
 
         Stack<FileStatus> pathstack = new Stack<FileStatus>();
-        for(pathstack.push(srcfilestat); !exceededlimit && !pathstack.empty(); ) {
+        for(pathstack.push(srcfilestat); !pathstack.empty(); ) {
           FileStatus cur = pathstack.pop();
           FileStatus[] children = srcfs.listStatus(cur.getPath());
-          for(int i = 0; !exceededlimit && i < children.length; i++) {
+          for(int i = 0; i < children.length; i++) {
             boolean skipfile = false;
             final FileStatus child = children[i]; 
             final String dst = makeRelative(root, child.getPath());
@@ -1067,37 +1065,36 @@ public class DistCp implements Tool {
             else {
               //skip file if the src and the dst files are the same.
               skipfile = update && sameFile(srcfs, child, dstfs, new Path(args.dst, dst));
-              
+              //skip file if it exceed file limit or size limit
+              skipfile |= fileCount == args.filelimit
+                          || byteCount + child.getLen() > args.sizelimit; 
+
               if (!skipfile) {
                 ++fileCount;
                 byteCount += child.getLen();
-  
-                exceededlimit |= fileCount > args.filelimit
-                                 || byteCount > args.sizelimit;
 
-                if (!exceededlimit) {
-                  if (LOG.isTraceEnabled()) {
-                    LOG.trace("adding file " + child.getPath());
-                  }
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("adding file " + child.getPath());
+                }
 
-                  ++cnsyncf;
-                  cbsyncs += child.getLen();
-                  if (cnsyncf > SYNC_FILE_MAX || cbsyncs > BYTES_PER_MAP) {
-                    src_writer.sync();
-                    dst_writer.sync();
-                    cnsyncf = 0;
-                    cbsyncs = 0L;
-                  }
+                ++cnsyncf;
+                cbsyncs += child.getLen();
+                if (cnsyncf > SYNC_FILE_MAX || cbsyncs > BYTES_PER_MAP) {
+                  src_writer.sync();
+                  dst_writer.sync();
+                  cnsyncf = 0;
+                  cbsyncs = 0L;
                 }
               }
             }
 
-            if (!skipfile && !exceededlimit) {
+            if (!skipfile) {
               src_writer.append(new LongWritable(child.isDir()? 0: child.getLen()),
                   new FilePair(child, dst));
-              dst_writer.append(new Text(dst),
-                  new Text(child.getPath().toString()));
             }
+
+            dst_writer.append(new Text(dst),
+                new Text(child.getPath().toString()));
           }
 
           if (cur.isDir()) {
