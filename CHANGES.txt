@@ -112,6 +112,9 @@ Trunk (unreleased changes)
     HADOOP-5279. Remove unnecessary targets from test-patch.sh.
     (Giridharan Kesavan via nigel)
 
+    HADOOP-5275. Add ivy directory and files to built tar.
+    (Giridharan Kesavan via nigel)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -1124,6 +1124,12 @@
       <fileset dir="${build.docs}"/>
     </copy>
 
+    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
+
+    <copy todir="${dist.dir}/ivy">
+      <fileset dir="ivy"/>
+    </copy>
+
     <copy todir="${dist.dir}">
       <fileset dir=".">
         <include name="*.txt" />
