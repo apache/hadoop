@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title> 
+      Hadoop On Demand
+    </title>
+  </header>
+
+  <body>
+    <section>
+      <title> Introduction </title>
+      <p>
+Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.
+      </p>
+      </section>
+      <section>
+        <title>Documentation</title>
+      <p>Please go through the following to know more about using HOD</p>
+      <ul>
+        <li><a href="hod_admin_guide.html">HOD Admin Guide</a> : This guide provides an overview of the HOD architecture, Torque resource manager, and various support tools and utilities, and shows you how to install, configure, and run HOD.</li>
+        <li><a href="hod_config_guide.html">Hod Configuration Guide</a> : This guide discusses HOD configuration sections and shows you how to work with the most important and commonly used configuration options.</li>
+        <li><a href="hod_user_guide.html">Hod User Guide</a> : This guide shows you how to get started using HOD, reviews various HOD features and command line options, and provides detailed troubleshooting help.</li>
+      </ul>
+    </section>
+  </body>
+</document>

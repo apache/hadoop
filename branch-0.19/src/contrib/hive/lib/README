@@ -1,0 +1,14 @@
+Folowing is the list of external jars contained in this directory and the sources from where they were obtained:
+---------------------------------------------------------------------------------------------------------------
+
+*  libfb303.jar - http://developers.facebook.com/thrift/
+*  libthrift.jar - http://developers.facebook.com/thrift/
+*  jpox-core-1.2.2.jar - http://www.jpox.org/docs/download.html
+*  derby.jar - http://db.apache.org/derby/derby_downloads.html
+*  asm-3.1.jar - http://forge.objectweb.org/projects/asm/
+*  jpox-enhancer-1.2.2.jar - http://www.jpox.org/docs/download.html
+*  jdo2-api-2.1.jar - http://db.apache.org/jdo/downloads.html
+*  jpox-rdbms-1.2.2.jar - http://www.jpox.org/docs/download.html
+*  velocity-1.5.jar - http://velocity.apache.org/engine/releases/velocity-1.5/
+*  commons-collections-3.2.1.jar - http://commons.apache.org/downloads/download_collections.cgi
+*  commons-lang-2.4.jar - http://commons.apache.org/downloads/download_lang.cgi

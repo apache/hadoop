@@ -1,0 +1,22 @@
+#! /bin/bash
+d=`mktemp -d /tmp/hivetest_XXXX`
+for i in `find . -name Test\*\.* | grep -v svn | egrep "java$|vm$" | sed 's/.*\/Test/Test/g' | sed 's/\.java//g' | sed 's/\.vm//g' | sort`;
+do 
+  if [ "$i" != "TestSerDe" ]; then
+    cmd="ant -lib ../../../lib -Dtestcase=$i clean-test test -logfile $d/$i.log"
+    echo $cmd;
+    $cmd;
+  fi
+done
+cat $d/*.log | grep junit | egrep "Running org|Tests run"
+echo Logs at $d
+
+err=`cat $d/*.log | grep junit | egrep "Tests run|Running org" | grep -v "Failures: 0, Errors: 0" | grep -B 1 "Failures" | tr '\n' '#'`
+if [ "$err" = '' ]; then
+  echo "All tests passed!";
+  exit 0
+else
+  echo "There were some failures!"
+  echo $err | tr '#' '\n';
+  exit 1
+fi

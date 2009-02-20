@@ -1,0 +1,583 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_JOIN (TOK_TABREF src src1) (TOK_TABREF src src2) (= (TOK_COLREF src1 key) (TOK_COLREF src2 key))) (TOK_TABREF src src3) (= (+ (TOK_COLREF src1 key) (TOK_COLREF src2 key)) (TOK_COLREF src3 key)))) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR (TOK_COLREF src1 key)) (TOK_SELEXPR (TOK_COLREF src3 value)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-2 depends on stages: Stage-1
+  Stage-0 depends on stages: Stage-2, Stage-1
+  Stage-0 depends on stages: Stage-2, Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src2 
+            Reduce Output Operator
+              key expressions:
+                    expr: key
+                    type: string
+              # partition fields: 1
+              tag: 1
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+        src1 
+            Reduce Output Operator
+              key expressions:
+                    expr: key
+                    type: string
+              # partition fields: 1
+              tag: 0
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+      Reduce Operator Tree:
+        Join Operator
+          condition map:
+               Inner Join 0 to 1
+          condition expressions:
+            0 {VALUE.0} {VALUE.1}
+            1 {VALUE.0} {VALUE.1}
+          File Output Operator
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-2
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src3 
+            Reduce Output Operator
+              key expressions:
+                    expr: UDFToDouble(key)
+                    type: double
+              # partition fields: 1
+              tag: 1
+              value expressions:
+                    expr: key
+                    type: string
+                    expr: value
+                    type: string
+        $INTNAME 
+          Reduce Output Operator
+            key expressions:
+                  expr: (UDFToDouble(0) + UDFToDouble(2))
+                  type: double
+            # partition fields: 1
+            tag: 0
+            value expressions:
+                  expr: 2
+                  type: string
+                  expr: 3
+                  type: string
+                  expr: 0
+                  type: string
+                  expr: 1
+                  type: string
+      Reduce Operator Tree:
+        Join Operator
+          condition map:
+               Inner Join 0 to 1
+          condition expressions:
+            0 {VALUE.0} {VALUE.1} {VALUE.2} {VALUE.3}
+            1 {VALUE.0} {VALUE.1}
+          Select Operator
+            expressions:
+                  expr: 2
+                  type: string
+                  expr: 5
+                  type: string
+            File Output Operator
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                  serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                  name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+0	val_0
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+5	val_10
+57	val_114
+58	val_116
+58	val_116
+58	val_116
+58	val_116
+64	val_128
+64	val_128
+64	val_128
+67	val_134
+67	val_134
+67	val_134
+67	val_134
+67	val_134
+67	val_134
+67	val_134
+67	val_134
+69	val_138
+69	val_138
+69	val_138
+69	val_138
+76	val_152
+76	val_152
+76	val_152
+76	val_152
+76	val_152
+76	val_152
+76	val_152
+76	val_152
+78	val_156
+80	val_160
+82	val_164
+82	val_164
+83	val_166
+83	val_166
+83	val_166
+83	val_166
+84	val_168
+84	val_168
+84	val_168
+84	val_168
+85	val_170
+86	val_172
+86	val_172
+87	val_174
+87	val_174
+9	val_18
+9	val_18
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+90	val_180
+95	val_190
+95	val_190
+95	val_190
+95	val_190
+96	val_192
+97	val_194
+97	val_194
+97	val_194
+97	val_194
+98	val_196
+98	val_196
+98	val_196
+98	val_196
+10	val_20
+100	val_200
+100	val_200
+100	val_200
+100	val_200
+100	val_200
+100	val_200
+100	val_200
+100	val_200
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+104	val_208
+111	val_222
+113	val_226
+113	val_226
+113	val_226
+113	val_226
+114	val_228
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+119	val_238
+12	val_24
+12	val_24
+12	val_24
+12	val_24
+12	val_24
+12	val_24
+12	val_24
+12	val_24
+126	val_252
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+128	val_256
+129	val_258
+129	val_258
+129	val_258
+129	val_258
+131	val_262
+133	val_266
+136	val_272
+136	val_272
+137	val_274
+137	val_274
+137	val_274
+137	val_274
+143	val_286
+146	val_292
+146	val_292
+146	val_292
+146	val_292
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+149	val_298
+15	val_30
+15	val_30
+15	val_30
+15	val_30
+153	val_306
+155	val_310
+158	val_316
+158	val_316
+158	val_316
+166	val_332
+168	val_336
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+169	val_338
+17	val_34
+172	val_344
+172	val_344
+172	val_344
+172	val_344
+172	val_344
+172	val_344
+172	val_344
+172	val_344
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+174	val_348
+178	val_356
+180	val_360
+181	val_362
+183	val_366
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+187	val_374
+189	val_378
+191	val_382
+191	val_382
+191	val_382
+191	val_382
+191	val_382
+191	val_382
+191	val_382
+191	val_382
+192	val_384
+192	val_384
+192	val_384
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+193	val_386
+196	val_392
+197	val_394
+197	val_394
+197	val_394
+197	val_394
+2	val_4
+200	val_400
+200	val_400
+200	val_400
+200	val_400
+201	val_402
+202	val_404
+202	val_404
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+203	val_406
+207	val_414
+207	val_414
+207	val_414
+207	val_414
+207	val_414
+207	val_414
+207	val_414
+207	val_414
+209	val_418
+209	val_418
+209	val_418
+209	val_418
+216	val_432
+216	val_432
+216	val_432
+216	val_432
+218	val_436
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+219	val_438
+222	val_444
+223	val_446
+223	val_446
+223	val_446
+223	val_446
+224	val_448
+224	val_448
+224	val_448
+224	val_448
+226	val_452
+229	val_458
+229	val_458
+229	val_458
+229	val_458
+229	val_458
+229	val_458
+229	val_458
+229	val_458
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+230	val_460
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+233	val_466
+235	val_470
+239	val_478
+239	val_478
+239	val_478
+239	val_478
+239	val_478
+239	val_478
+239	val_478
+239	val_478
+241	val_482
+242	val_484
+242	val_484
+242	val_484
+242	val_484
+247	val_494
+248	val_496
+249	val_498
+249	val_498
+249	val_498
+27	val_54
+33	val_66
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+35	val_70
+37	val_74
+37	val_74
+37	val_74
+37	val_74
+4	val_8
+41	val_82
+42	val_84
+42	val_84
+42	val_84
+42	val_84
+42	val_84
+42	val_84
+42	val_84
+42	val_84
+43	val_86

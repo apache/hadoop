@@ -1,0 +1,3 @@
+46a47,48
+> CHUKWA_HOME=`dirname "$0"`/../chukwa ;  CHUKWA_HOME=`cd "$CHUKWA_HOME"; pwd` ;  export CHUKWA_HOME
+> nohup bash $CHUKWA_HOME/bin/agent.sh &> /tmp/chukwa_out < /dev/null &

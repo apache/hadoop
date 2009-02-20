@@ -1,0 +1,90 @@
+package org.apache.hadoop.hive.ql.parse;
+
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+
+import java.io.*;
+import java.util.*;
+
+import org.apache.hadoop.hive.ql.QTestUtil;
+import org.apache.hadoop.hive.ql.exec.Task;
+
+import org.antlr.runtime.*;
+import org.antlr.runtime.tree.*;
+
+public class $className extends TestCase {
+
+  private QTestUtil qt;
+
+  public $className(String name) {
+    super(name);
+    qt = null;
+  }
+
+  @Override
+  protected void setUp() {
+    try {
+      qt = new QTestUtil("$resultsDir.getCanonicalPath()");
+
+#foreach ($qf in $qfiles)
+      qt.addFile("$qf.getCanonicalPath()");
+#end
+    }
+    catch (Exception e) {
+      System.out.println("Exception: " + e.getMessage());
+      e.printStackTrace();
+      System.out.flush();
+      fail("Unexpected exception in setup");
+    }
+  }
+
+  public static Test suite() {
+    TestSuite suite = new TestSuite();
+#foreach ($qf in $qfiles)
+  #set ($fname = $qf.getName())
+  #set ($eidx = $fname.length() - 2)
+  #set ($tname = $fname.substring(0, $eidx))
+    suite.addTest(new $className("testParseNegative_$tname"));
+#end
+    return suite;
+  }
+
+#foreach ($qf in $qfiles)
+  #set ($fname = $qf.getName())
+  #set ($eidx = $fname.length() - 2)
+  #set ($tname = $fname.substring(0, $eidx))
+  public void testParseNegative_$tname() throws Exception {
+    try {
+      System.out.println("Begin query: " + "$fname");
+      qt.init("$fname");
+      CommonTree tree = qt.parseQuery("$fname");
+      List<Task<? extends Serializable>> tasks = qt.analyzeAST(tree);
+      fail("Unexpected success for query: " + "$fname");
+    }
+    catch (ParseException pe) {
+      int ecode = qt.checkNegativeResults("$fname", pe);
+      if (ecode != 0) {
+        fail("failed with error code = " + ecode);
+      }
+    }
+    catch (SemanticException se) {
+      int ecode = qt.checkNegativeResults("$fname", se);
+      if (ecode != 0) {
+        fail("failed with error code = " + ecode);
+      }
+    }
+    catch (Throwable e) {
+      System.out.println("Exception: " + e.getMessage());
+      e.printStackTrace();
+      System.out.flush();
+      fail("Unexpected exception");
+    }
+
+    System.out.println("Done query: " + "$fname");
+    assertTrue("Test passed", true);
+  }
+
+#end
+}
+

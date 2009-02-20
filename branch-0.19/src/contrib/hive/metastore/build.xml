@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project name="metastore" default="jar">
+  <property name="src.dir" value="${basedir}/src"/>
+  <import file="../build-common.xml"/>
+  <property name="model.dir" value="${src.dir}/model"/>
+
+  <target name="thriftif">
+    <echo>Executing thrift (which needs to be in your path) to build java metastore APIs.... </echo>
+    <exec executable="thrift"  failonerror="true" dir=".">
+      <arg line="--gen java:beans -php --gen py -I ${basedir}/include/ -o ${src.dir} if/hive_metastore.thrift " />
+    </exec>
+  </target>
+
+  <target name="core-compile" depends="init, model-compile">
+    <echo message="Compiling: "/>
+    <javac
+     encoding="${build.encoding}"
+     srcdir="${src.dir}/java:${src.dir}/gen-javabean"
+     includes="**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     deprecation="${javac.deprecation}"
+     >
+      <classpath refid="classpath"/>
+    </javac>
+  </target>
+ 
+  <target name="compile" depends="core-compile, model-compile, model-enhance">
+  </target>
+
+  <target name="model-compile" depends="init">
+    <javac srcdir="${model.dir}"  destdir="${build.classes}" debug="${javac.debug}"> 
+       <classpath refid="classpath"/> 
+    </javac> 
+    <!-- ORM data for model -->
+    <copy file="${model.dir}/package.jdo" todir="${build.classes}"/>
+  </target>
+
+  <uptodate property="enhanceModel.notRequired">
+    <srcfiles dir= "${model.dir}" includes="**/*.java,*.jdo"/>
+    <mapper type="merge" to="${build.dir}/hive_${name}.jar"/>
+  </uptodate>
+
+  <target name="model-enhance" depends="model-compile" unless="enhanceModel.notRequired">
+    <echo>Enhancing model classes with JPOX stuff....</echo>
+    <java classname="org.jpox.enhancer.JPOXEnhancer"  failonerror="true" dir="${basedir}" fork="true">
+      <classpath>
+        <path refid="classpath"/>
+        <pathelement path="${build.dir}/classes/"/>
+      </classpath>
+      <sysproperty key="log4j.configuration" value="file:${basedir}/../conf/hive-log4j.properties"/>
+      <arg value="${model.dir}/package.jdo" />
+    </java>
+  </target>
+
+  <target name="model-jar" depends="model-enhance">
+    <echo message="Jar: ${name}"/>
+    <jar
+      jarfile="${build.dir}/${name}_model.jar"
+      basedir="${build.classes}"     
+      includes="**/model/M*" 
+    />
+  </target>
+
+  <target name="generate-schema">
+    <java classname="org.jpox.SchemaTool"  failonerror="true" dir="${basedir}" fork="true">
+      <classpath>
+        <path refid="classpath"/>
+        <pathelement path="${build.dir}/classes/"/>
+      </classpath>
+      <sysproperty key="log4j.configuration" value="file:${basedir}/../../../../conf/log4j.properties"/>
+      <arg line="-props jdo/jpox.properties -create jdo/package.jdo" />
+    </java>
+  </target>
+</project>

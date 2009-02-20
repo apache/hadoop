@@ -1,0 +1,285 @@
+<?xml version="1.0"?> 
+<!DOCTYPE jdo PUBLIC "-//Sun Microsystems, Inc.//DTD Java Data Objects Metadata 2.0//EN" 
+  "http://java.sun.com/dtd/jdo_2_0.dtd">  
+<jdo>  
+  <package name="org.apache.hadoop.hive.metastore.model">  
+    <class name="MDatabase" identity-type="datastore" table="DBS" detachable="true">  
+      <datastore-identity>
+        <column name="DB_ID"/>
+      </datastore-identity>
+      <field name="name">  
+        <column name="NAME" length="128" jdbc-type="VARCHAR"/>  
+        <index name="UniqueDatabase" unique="true"/>
+      </field>
+      <field name="description">  
+        <column name="DESC" length="767" jdbc-type="VARCHAR"/>  
+      </field>  
+    </class>
+
+    <class name="MFieldSchema" embedded-only="true" table="TYPE_FIELDS" detachable="true">
+      <field name="name">
+        <column name="FNAME" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="type" >
+        <column name="FTYPE" length="767" jdbc-type="VARCHAR" allows-null="false"/>
+      </field>
+      <field name="comment" >
+        <column name="FCOMMENT" length="767" jdbc-type="VARCHAR" allows-null="true"/>
+      </field>
+    </class>
+
+    <class name="MType" table="TYPES" detachable="true">  
+      <field name="name" >  
+        <column name="TYPE_NAME" length="128" jdbc-type="VARCHAR"/>  
+        <index name="UniqueType" unique="true"/>
+      </field>
+      <field name="type1">  
+        <column name="TYPE1" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="type2">  
+        <column name="TYPE2" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="fields" table="TYPE_FIELDS" >
+        <collection element-type="MFieldSchema"/>
+        <join>
+          <primary-key name="TYPE_FIELDS_PK">
+            <column name="TYPE_NAME"/>
+            <column name="FIELD_NAME"/>
+          </primary-key>
+          <column name="TYPE_NAME"/>
+        </join>
+        <element>
+          <embedded>
+            <field name="name">
+              <column name="FIELD_NAME" length="128" jdbc-type="VARCHAR"/>
+              </field>
+            <field name="type">
+              <column name="FIELD_TYPE" length="128" jdbc-type="VARCHAR"  allows-null="false"/>
+            </field>
+          </embedded>
+        </element>
+      </field>
+    </class>
+
+    <class name="MTable" table="TBLS" identity-type="datastore" detachable="true">
+      <datastore-identity>
+        <column name="TBL_ID"/>
+      </datastore-identity>
+      <index name="UniqueTable" unique="true">
+        <column name="TBL_NAME"/>
+        <column name="DB_ID"/>
+      </index>
+      <field name="tableName">
+        <column name="TBL_NAME" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="database">
+        <column name="DB_ID"/>
+      </field>
+      <field name="partitionKeys" table="PARTITION_KEYS" >
+        <collection element-type="MFieldSchema"/>
+        <join>
+          <primary-key name="PARTITION_KEY_PK">
+            <column name="TBL_ID"/>
+            <column name="PKEY_NAME"/>
+          </primary-key>
+          <column name="TBL_ID"/>
+        </join>
+        <element>
+          <embedded>
+            <field name="name">
+              <column name="PKEY_NAME" length="128" jdbc-type="VARCHAR"/>
+              </field>
+            <field name="type">
+              <column name="PKEY_TYPE" length="767" jdbc-type="VARCHAR" allows-null="false"/>
+            </field>
+            <field name="comment" >
+              <column name="PKEY_COMMENT" length="767" jdbc-type="VARCHAR" allows-null="true"/>
+            </field>
+          </embedded>
+        </element>
+      </field>
+      <field name="sd" dependent="true">
+        <column name="SD_ID"/>
+      </field>
+      <field name="owner">
+        <column name="OWNER" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="createTime">
+        <column name="CREATE_TIME" jdbc-type="integer"/>
+      </field>
+      <field name="lastAccessTime">
+        <column name="LAST_ACCESS_TIME" jdbc-type="integer"/>
+      </field>
+      <field name="retention">
+        <column name="RETENTION" jdbc-type="integer"/>
+      </field>
+      <field name="parameters" table="TABLE_PARAMS">
+        <map key-type="java.lang.String" value-type="java.lang.String"/>
+        <join>
+          <column name="TBL_ID"/>
+        </join>
+        <key>
+           <column name="PARAM_KEY" length="256" jdbc-type="VARCHAR"/>
+        </key>
+        <value>
+           <column name="PARAM_VALUE" length="767" jdbc-type="VARCHAR"/>
+        </value>
+      </field>
+    </class>
+
+    <class name="MSerDeInfo" identity-type="datastore" table="SERDES" detachable="true">
+      <datastore-identity>
+        <column name="SERDE_ID"/>
+      </datastore-identity>
+      <field name="name">
+        <column name="NAME" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="serializationLib">
+        <column name="SLIB" length="767" jdbc-type="VARCHAR" allows-null="true"/>
+      </field>
+      <field name="parameters" table="SERDE_PARAMS">
+        <map key-type="java.lang.String" value-type="java.lang.String"/>
+        <join>
+          <column name="SERDE_ID"/>
+        </join>
+        <key>
+           <column name="PARAM_KEY" length="256" jdbc-type="VARCHAR"/>
+        </key>
+        <value>
+           <column name="PARAM_VALUE" length="767" jdbc-type="VARCHAR"/>
+        </value>
+      </field>
+    </class>
+
+    <class name="MOrder" embedded-only="true" table="SORT_ORDER" detachable="true">
+      <field name="col">
+        <column name="COL_NAME" length="128" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="order">
+        <column name="ORDER" jdbc-type="INTEGER"  allows-null="false"/>
+      </field>
+    </class>
+
+    <class name="MStorageDescriptor" identity-type="datastore" table="SDS" detachable="true">
+      <datastore-identity>
+        <column name="SD_ID"/>
+      </datastore-identity>
+      <field name="cols" table="COLUMNS" >
+        <collection element-type="MFieldSchema"/>
+        <join>
+          <primary-key name="COLUMNS_PK">
+            <column name="COLUMN_NAME"/>
+            <column name="TYPE_NAME"/>
+          </primary-key>
+          <column name="SD_ID"/>
+        </join>
+        <element>
+          <embedded>
+            <field name="name">
+              <column name="COLUMN_NAME" length="128" jdbc-type="VARCHAR"/>
+              </field>
+            <field name="type">
+              <column name="TYPE_NAME" length="128" jdbc-type="VARCHAR"  allows-null="false"/>
+            </field>
+          </embedded>
+        </element>
+      </field>
+      <field name="location">
+        <column name="LOCATION" length="767" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="inputFormat">
+        <column name="INPUT_FORMAT" length="256" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="outputFormat">
+        <column name="OUTPUT_FORMAT" length="256" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="isCompressed"/>
+      <field name="numBuckets">
+        <column name="NUM_BUCKETS" jdbc-type="integer"/>
+      </field>
+      <field name="serDeInfo" dependent="true">
+        <column name="SERDE_ID"/>
+      </field>
+      <field name="bucketCols" table="BUCKETING_COLS">
+        <collection element-type="java.lang.String"/>
+        <join>
+          <column name="SD_ID"/>
+        </join>
+        <element column="BUCKET_COL_NAME"/>
+      </field>
+      <field name="sortCols" table="SORT_COLS">
+        <collection element-type="MOrder"/>
+        <join>
+          <column name="SD_ID"/>
+        </join>
+        <element>
+          <embedded>
+            <field name="col">
+              <column name="COLUMN_NAME" length="128" jdbc-type="VARCHAR"/>
+              </field>
+            <field name="order">
+              <column name="ORDER" jdbc-type="INTEGER"  allows-null="false"/>
+            </field>
+          </embedded>
+        </element>
+      </field>
+      <field name="parameters" table="SD_PARAMS">
+        <map key-type="java.lang.String" value-type="java.lang.String"/>
+        <join>
+          <column name="SD_ID"/>
+        </join>
+        <key>
+           <column name="PARAM_KEY" length="256" jdbc-type="VARCHAR"/>
+        </key>
+        <value>
+           <column name="PARAM_VALUE" length="767" jdbc-type="VARCHAR"/>
+        </value>
+      </field>
+    </class>
+
+    <class name="MPartition" table="PARTITIONS" identity-type="datastore" detachable="true">
+      <index name="UniquePartition" unique="true">
+        <column name="PART_NAME"/>
+        <column name="TBL_ID"/>
+      </index>
+      <datastore-identity>
+        <column name="PART_ID"/>
+      </datastore-identity>
+      <field name="partitionName">
+        <column name="PART_NAME" length="767" jdbc-type="VARCHAR"/>
+      </field>
+      <field name="table">
+        <column name="TBL_ID"/>
+      </field>
+      <field name="createTime">
+        <column name="CREATE_TIME" jdbc-type="integer"/>
+      </field>
+      <field name="lastAccessTime">
+        <column name="LAST_ACCESS_TIME" jdbc-type="integer"/>
+      </field>
+      <field name="values" table="PARTITION_KEY_VALS">
+        <collection element-type="java.lang.String"/>
+        <join>
+          <column name="PART_ID"/>
+        </join>
+        <element column="PART_KEY_VAL"/>
+      </field>
+      <field name="sd" dependent="true">
+        <column name="SD_ID"/>
+      </field>
+      <field name="parameters" table="PARTITION_PARAMS">
+        <map key-type="java.lang.String" value-type="java.lang.String"/>
+        <join>
+          <column name="PART_ID"/>
+        </join>
+        <key>
+           <column name="PARAM_KEY" length="256" jdbc-type="VARCHAR"/>
+        </key>
+        <value>
+           <column name="PARAM_VALUE" length="767" jdbc-type="VARCHAR"/>
+        </value>
+      </field>
+    </class>
+
+  </package>
+</jdo>

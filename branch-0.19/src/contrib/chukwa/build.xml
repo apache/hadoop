@@ -1,0 +1,363 @@
+<?xml version="1.0" ?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project name="chukwa" default="main">
+
+	<property name="chukwaVersion" value="0.0.1"/>
+
+	<property name="lib.dir" value="${basedir}/lib"/>
+	<property name="src.dir" value="${basedir}/src"/>
+	<property name="conf.dir" value="${basedir}/conf"/>
+	<property name="docs.dir" value="${basedir}/docs"/>
+	<property name="tools.dir" value="${basedir}/tools"/>
+	<property name="dist.dir" value="${basedir}/dist"/>
+	<property name="opt.dir" value="${basedir}/opt"/>
+        <property name="javac.debug" value="on"/>
+
+	<import file="../build-contrib.xml"/>
+
+	<target name="init">
+		<mkdir dir="${build.dir}"/>
+		<mkdir dir="${build.dir}/test"/>
+		<!-- 
+    	<copy todir="${build.dir}">
+            <fileset dir="${basedir}">
+                <exclude name="**/VERSION"/>
+            </fileset>
+        </copy>
+      
+-->
+		<exec executable="echo" output="${basedir}/bin/VERSION">
+			<arg line="${chukwaVersion}" />
+		</exec>
+
+		<mkdir dir="${dist.dir}"/>
+		<property name="final.name" value="${name}-${chukwaVersion}"/>
+
+	</target>
+
+	<target name="main" depends="init, compile, compress" description="Main target">
+		<echo>
+            Building the .jar files.
+        </echo>
+	</target>
+
+	<target name="compile" depends="init" description="Compilation target">
+		<javac srcdir="src/java/org/apache/hadoop/chukwa" destdir="${build.dir}" excludes="**/ChukwaTTInstru.java" debug="${javac.debug}">
+			<classpath refid="chukwaHadoopClasspath" />
+		</javac>
+	</target>
+
+	<target name="test" depends="init" description="Test target">
+		<javac srcdir="src/test/org/apache/hadoop/chukwa" destdir="${build.dir}" excludes="**/TestDemux.java" debug="${javac.debug}">
+			<classpath refid="chukwaHadoopClasspath" />
+		</javac>
+	</target>
+
+	<target name="collector" depends="compile" description="Prepare collector.war">
+		<mkdir dir="${build.dir}/collector"/>
+		<mkdir dir="${build.dir}/collector/WEB-INF"/>
+		<mkdir dir="${build.dir}/collector/WEB-INF/classes"/>
+		<mkdir dir="${build.dir}/collector/WEB-INF/lib"/>
+		<mkdir dir="${build.dir}/collector/META-INF"/>
+		<copy todir="${build.dir}/collector/WEB-INF/classes">
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/conf/**/*.class" />
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/datacollection/**/*.class" />
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/extraction/**/*.class" />
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/util/**/*.class" />
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/conf/**/*.java" />
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/datacollection/**/*.java" />
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/extraction/**/*.java" />
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/util/**/*.java" />
+			</fileset>
+		</copy>
+
+		<copy todir="${build.dir}/collector">
+			<fileset dir="${basedir}/src/web/collector">
+				<include name="**" />
+			</fileset>
+		</copy>
+
+		<copy todir="${build.dir}/collector/WEB-INF/lib">
+			<fileset dir="${basedir}/lib">
+				<include name="log4j-1.2.13.jar" />
+				<include name="${build.dir}/${final.name}-core.jar" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="collector_jar" depends="compile, collector" description="Create collector jar">
+		<jar jarfile="${build.dir}/collector-${chukwaVersion}.war" basedir="${build.dir}/collector">
+			<fileset dir="${build.dir}/collector" includes="**" />
+		</jar>
+	</target>
+	<target name="tools_jar" depends="compile, collector" description="Create tools jar">
+		<jar jarfile="${build.dir}/tools-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/inputtools/**/*.class">
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/inputtools/**/*.java"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="agent_jar" depends="compile, collector" description="Create agent jar">
+		<jar jarfile="${build.dir}/chukwa-agent-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/client/**/*.class" >
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/conf/**/*.class"/>
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/util/**/*.class"/>
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/inputtools/**/*.class"/>
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/datacollection/**/*.class"/>
+			</fileset>
+
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/client/**/*.java"/>
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/util/**/*.java"/>
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/inputtools/**/*.java"/>
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/inputtools/**/*.java"/>
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/datacollection/**/*.java"/>
+				<exclude name="org/apache/hadoop/chukwa/datacollection/collector/**/*.java"/>
+				<exclude name="org/apache/hadoop/chukwa/datacollection/writer/**/*.java"/>
+			</fileset>
+
+		</jar>
+	</target>
+
+	<target name="chukwa_jar" depends="compile, collector" description="Create chukwa-core jar">
+		<jar jarfile="${build.dir}/chukwa-core-${chukwaVersion}.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/datacollection/**/*.class" >
+                        <manifest>
+                            <section name="org/apache/hadoop/chukwa">
+                                <attribute name="Implementation-Title" value="Chukwa"/>
+                                <attribute name="Implementation-Version" value="${version}"/>
+                                <attribute name="Implementation-Vendor" value="Apache"/>
+                            </section>
+                        </manifest>
+
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/**/*.class"/>
+			</fileset>
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/**/*.java"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="chukwa-hadoop_jar" depends="compile" description="Create chukwa_hadoop jar for use with getting hadoop to use chukwa">
+
+		<jar jarfile="${build.dir}/chukwa-hadoop-${chukwaVersion}-client.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/inputtools/log4j/**/*.class">
+			<fileset dir="${basedir}/src/java">
+				<include name="org/apache/hadoop/chukwa/inputtools/log4j/**/*.java"/>
+		        <include name="org/apache/hadoop/chukwa/datacollection/client/**/*.java"/>
+		        <include name="org/apache/hadoop/chukwa/util/**/*.java"/>
+			</fileset>
+			<fileset dir="${build.dir}">
+				<include name="org/apache/hadoop/chukwa/datacollection/client/**/*.class"/>
+				<include name="org/apache/hadoop/chukwa/util/**/*.class"/>
+				<include name="org/apache/hadoop/chukwa/datacollection/controller/*.class"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="compress" depends="compile,collector,collector_jar,tools_jar,agent_jar,chukwa_jar,chukwa-hadoop_jar" description="Compression target">
+		<!-- 	<jar jarfile="${build.dir}/chukwa.jar" basedir="${build.dir}" includes="org/apache/hadoop/chukwa/**/*.class" /> -->
+
+		<copy todir="." includeEmptyDirs="false">
+			<fileset dir="${build.dir}">
+				<exclude name="**" />
+				<include name="**/*.jar" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- ====================================================== -->
+	<!-- Macro definitions                                      -->
+	<!-- ====================================================== -->
+	<macrodef name="macro_tar" description="Worker Macro for tar">
+		<attribute name="param.destfile"/>
+		<element name="param.listofitems"/>
+		<sequential>
+			<tar compression="gzip" longfile="gnu"
+          destfile="@{param.destfile}">
+				<param.listofitems/>
+			</tar>
+		</sequential>
+	</macrodef>
+
+	<!-- ================================================================== -->
+	<!-- D I S T R I B U T I O N                                            -->
+	<!-- ================================================================== -->
+	<!--                                                                    -->
+	<!-- ================================================================== -->
+	<target name="package" depends="compress" description="Build distribution">
+		<mkdir dir="${build.dir}/${final.name}"/>
+		<mkdir dir="${build.dir}/${final.name}/lib"/>
+		<mkdir dir="${build.dir}/${final.name}/bin"/>
+		<mkdir dir="${build.dir}/${final.name}/opt"/>
+		<mkdir dir="${build.dir}/${final.name}/tools"/>
+		<mkdir dir="${build.dir}/${final.name}/var"/>
+		<mkdir dir="${build.dir}/${final.name}/var/run"/>
+		<mkdir dir="${build.dir}/${final.name}/logs"/>
+
+		<copy todir="${build.dir}/${final.name}" includeEmptyDirs="false">
+			<fileset dir="${build.dir}">
+				<include name="**/*.jar" />
+				<include name="**/*.war" />
+			</fileset>
+		</copy>
+		<copy todir="${build.dir}/${final.name}/lib" includeEmptyDirs="false">
+			<fileset dir="lib">
+				<exclude name="**/native/**"/>
+			</fileset>
+		</copy>
+
+		<exec dir="${dist.dir}" executable="sh" failonerror="true">
+			<env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+			<env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+			<env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+		</exec>
+
+		<copy todir="${build.dir}/${final.name}/bin">
+			<fileset dir="bin"/>
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}/conf">
+			<fileset dir="${conf.dir}" excludes="**/*.template"/>
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}/docs">
+			<fileset dir="${docs.dir}" />
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}/opt">
+			<fileset dir="${opt.dir}" />
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}/tools">
+			<fileset dir="${tools.dir}" />
+		</copy>
+
+		<chmod perm="ugo+x" type="file" parallel="false">
+			<fileset dir="${build.dir}/${final.name}/tools">
+				<include name="**" />
+			</fileset>
+		</chmod>
+
+		<copy todir="${build.dir}/${final.name}">
+			<fileset dir=".">
+				<include name="*.txt" />
+			</fileset>
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}/src" includeEmptyDirs="true">
+			<fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
+		</copy>
+
+		<copy todir="${build.dir}/${final.name}" file="build.xml"/>
+
+		<chmod perm="ugo+x" type="file" parallel="false">
+			<fileset dir="${build.dir}/${final.name}/bin">
+				<include name="*/bin/*" />
+			</fileset>
+		</chmod>
+
+	</target>
+
+	<!-- ================================================================== -->
+	<!-- Make release tarball                                               -->
+	<!-- ================================================================== -->
+	<target name="tar" depends="package" description="Make release tarball">
+		<macro_tar param.destfile="${dist.dir}/${final.name}.tar.gz">
+			<param.listofitems>
+				<tarfileset dir="${build.dir}" mode="664">
+					<exclude name="${final.name}/org/*" />
+					<include name="${final.name}/**" />
+				</tarfileset>
+				<tarfileset dir="${build.dir}" mode="755">
+					<include name="${final.name}/bin/*" />
+				</tarfileset>
+			</param.listofitems>
+		</macro_tar>
+	</target>
+
+	<target name="binary" depends="package" description="Make tarball without source and documentation">
+		<macro_tar param.destfile="${dist.dir}/${final.name}-bin.tar.gz">
+			<param.listofitems>
+				<tarfileset dir="${build.dir}" mode="664">
+					<exclude name="${final.name}/src/**" />
+					<exclude name="${final.name}/docs/**" />
+					<include name="${final.name}/**" />
+				</tarfileset>
+				<tarfileset dir="${build.dir}" mode="755">
+					<include name="${final.name}/bin/*" />
+				</tarfileset>
+			</param.listofitems>
+		</macro_tar>
+	</target>
+
+	<!-- the normal classpath -->
+	<path id="classpath">
+		<pathelement location="${build.classes}"/>
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+			<exclude name="**/excluded/" />
+		</fileset>
+		<pathelement location="${conf.dir}"/>
+	</path>
+
+	<!-- the hadoop classpath -->
+	<path id="chukwaHadoopClasspath">
+		<pathelement location="${hadoop.root}/build/classes"/>
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+			<exclude name="**/excluded/" />
+		</fileset>
+		<fileset dir="${hadoop.root}/lib">
+			<include name="**/*.jar" />
+			<exclude name="**/excluded/" />
+		</fileset>
+	</path>
+
+</project>

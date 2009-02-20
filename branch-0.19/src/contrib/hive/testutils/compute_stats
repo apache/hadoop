@@ -1,0 +1,36 @@
+
+if [ "$1" = '' ]; then
+echo "Usage: compute_stats '<table_name>(<comma separated column list>)'"
+exit 1
+fi
+d=`mktemp -d compute_stats_XXXX`
+echo -n "Removing hive temp tables from previous runs if any..."
+test=`/mnt/vol/hive/stable/cluster/bin/hadoop dfs -ls compute_stats_test 2>>$d/err`
+if [ "$test" != '' ]; then
+  /mnt/vol/hive/stable/cluster/bin/hadoop dfs -rmr compute_stats_test >>$d/err 2>&1
+  /mnt/vol/hive/stable/cluster/bin/hadoop dfs -rmr /Trash/Current/compute_stats_test >> $d/err 2>&1
+fi
+echo "Done"
+
+echo -n "Project out columns to test table using hive..."
+/mnt/vol/hive/stable/cluster/bin/hadoop jar /mnt/vol/hive/stable/lib/hive/fb_hive.jar com.facebook.hive.streaming.HiveStreaming -select $1 -sample 1/1024 -output compute_stats_test -numReduceTasks 0 >> $d/err 2>&1
+echo "Done"
+
+test=`/mnt/vol/hive/stable/cluster/bin/hadoop dfs -ls compute_stats_test 2>>$d/err`
+if [ "$test" != '' ]; then
+  echo -n "Generate single local file out of hdfs table..."
+  /mnt/vol/hive/stable/cluster/bin/hadoop dfs -cat /user/`whoami`/compute_stats_test/* 2>>$d/err | gzip > $d/sample.gz
+  echo "Done"
+  n=`zcat $d/sample.gz | head -1 | tr ',' '\n' | wc -l`
+  echo "Generate stats for each of the projected columns..."
+  for ((i=1;i<=$n;i+=1)); do 
+    echo "  column $i"
+    zcat $d/sample.gz | cut -f$i -d',' | sort | uniq -c > $d/$i.stats; 
+    count=`cat $d/$i.stats | wc -l`; 
+    echo $i $count >> $d/overall.stats; 
+  done
+  echo "Done"
+  echo "Stats in $d"
+else
+  echo "Error extracting columns from table!";
+fi

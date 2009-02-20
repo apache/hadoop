@@ -1,0 +1,17 @@
+#!/usr/bin/python
+
+import os, sys
+sys.path.append('/usr/local/fbprojects/fb303/scripts')
+
+import fb303_scripts
+
+if (len(sys.argv) > 1):
+    args = sys.argv[1]
+else:
+    args = ''
+
+fb303_scripts.daemonize_with_restarts('hive.metastore',
+                                      False,
+                                      binary_name = 'start_meta_store_thrift_server.sh',
+                                      libs = '',
+                                      args = args)

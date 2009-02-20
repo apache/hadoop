@@ -1,0 +1,61 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src1)) (TOK_INSERT (TOK_DESTINATION (TOK_TAB dest1)) (TOK_SELECT (TOK_SELEXPR TOK_NULL) (TOK_SELEXPR (TOK_COLREF src1 key)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src1 
+            Select Operator
+              expressions:
+                    expr: null
+                    type: string
+                    expr: key
+                    type: string
+              File Output Operator
+                table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                    name: dest1
+
+  Stage: Stage-0
+    Move Operator
+      tables:
+            replace:
+            table:
+                input format: org.apache.hadoop.mapred.TextInputFormat
+                output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+                serde: org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
+                name: dest1
+
+
+NULL	238
+NULL	
+NULL	311
+NULL	
+NULL	
+NULL	
+NULL	255
+NULL	278
+NULL	98
+NULL	
+NULL	
+NULL	
+NULL	401
+NULL	150
+NULL	273
+NULL	224
+NULL	369
+NULL	66
+NULL	128
+NULL	213
+NULL	146
+NULL	406
+NULL	
+NULL	
+NULL	

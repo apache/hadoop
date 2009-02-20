@@ -1,0 +1,1542 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into hadoop-site.xml and change them -->
+<!-- there.  If hadoop-site.xml does not already exist, create it.      -->
+
+<configuration>
+
+<!--- global properties -->
+
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/tmp/hadoop-${user.name}</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+<property>
+  <name>hadoop.native.lib</name>
+  <value>true</value>
+  <description>Should native hadoop libraries, if present, be used.</description>
+</property>
+
+<property>
+  <name>hadoop.http.filter.initializers</name>
+  <value></value>
+  <description>A comma separated list of class names. Each class in the list 
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
+  Filter will be initialized. Then, the Filter will be applied to all user 
+  facing jsp and servlet web pages.  The ordering of the list defines the 
+  ordering of the filters.</description>
+</property>
+
+<!--- logging properties -->
+
+<property>
+  <name>hadoop.logfile.size</name>
+  <value>10000000</value>
+  <description>The max size of each log file</description>
+</property>
+
+<property>
+  <name>hadoop.logfile.count</name>
+  <value>10</value>
+  <description>The max number of log files</description>
+</property>
+
+<property>
+  <name>hadoop.job.history.location</name>
+  <value></value>
+  <description> If job tracker is static the history files are stored 
+  in this single well known place. If No value is set here, by default,
+  it is in the local file system at ${hadoop.log.dir}/history.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.job.history.user.location</name>
+  <value></value>
+  <description> User can specify a location to store the history files of 
+  a particular job. If nothing is specified, the logs are stored in 
+  output directory. The files are stored in "_logs/history/" in the directory.
+  User can stop logging by giving the value "none". 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.logging.level</name>
+  <value>info</value>
+  <description>The logging level for dfs namenode. Other values are "dir"(trac
+e namespace mutations), "block"(trace block under/over replications and block
+creations/deletions), or "all".</description>
+</property>
+
+<!-- i/o properties -->
+
+<property>
+  <name>io.sort.factor</name>
+  <value>10</value>
+  <description>The number of streams to merge at once while sorting
+  files.  This determines the number of open file handles.</description>
+</property>
+
+<property>
+  <name>io.sort.mb</name>
+  <value>100</value>
+  <description>The total amount of buffer memory to use while sorting 
+  files, in megabytes.  By default, gives each merge stream 1MB, which
+  should minimize seeks.</description>
+</property>
+
+<property>
+  <name>io.sort.record.percent</name>
+  <value>0.05</value>
+  <description>The percentage of io.sort.mb dedicated to tracking record
+  boundaries. Let this value be r, io.sort.mb be x. The maximum number
+  of records collected before the collection thread must block is equal
+  to (r * x) / 4</description>
+</property>
+
+<property>
+  <name>io.sort.spill.percent</name>
+  <value>0.80</value>
+  <description>The soft limit in either the buffer or record collection
+  buffers. Once reached, a thread will begin to spill the contents to disk
+  in the background. Note that this does not imply any chunking of data to
+  the spill. A value less than 0.5 is not recommended.</description>
+</property>
+
+<property>
+  <name>io.file.buffer.size</name>
+  <value>4096</value>
+  <description>The size of buffer for use in sequence files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+  
+<property>
+  <name>io.bytes.per.checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  io.file.buffer.size.</description>
+</property>
+
+<property>
+  <name>io.skip.checksum.errors</name>
+  <value>false</value>
+  <description>If true, when a checksum error is encountered while
+  reading a sequence file, entries are skipped, instead of throwing an
+  exception.</description>
+</property>
+  
+<property>
+  <name>io.map.index.skip</name>
+  <value>0</value>
+  <description>Number of index entries to skip between each entry.
+  Zero by default. Setting this to values larger than zero can
+  facilitate opening large map files using less memory.</description>
+</property>
+
+<property>
+  <name>io.compression.codecs</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.BZip2Codec</value>
+  <description>A list of the compression codec classes that can be used 
+               for compression/decompression.</description>
+</property>
+
+<property>
+  <name>io.serializations</name>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization</value>
+  <description>A list of serialization classes that can be used for
+  obtaining serializers and deserializers.</description>
+</property>
+
+<!-- file system properties -->
+
+<property>
+  <name>fs.default.name</name>
+  <value>file:///</value>
+  <description>The name of the default file system.  A URI whose
+  scheme and authority determine the FileSystem implementation.  The
+  uri's scheme determines the config property (fs.SCHEME.impl) naming
+  the FileSystem implementation class.  The uri's authority is used to
+  determine the host, port, etc. for a filesystem.</description>
+</property>
+
+<property>
+  <name>fs.trash.interval</name>
+  <value>0</value>
+  <description>Number of minutes between trash checkpoints.
+  If zero, the trash feature is disabled.
+  </description>
+</property>
+
+<property>
+  <name>fs.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The FileSystem for file: uris.</description>
+</property>
+
+<property>
+  <name>fs.hdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.s3.impl</name>
+  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+  <description>The FileSystem for s3: uris.</description>
+</property>
+
+<property>
+  <name>fs.s3n.impl</name>
+  <value>org.apache.hadoop.fs.s3native.NativeS3FileSystem</value>
+  <description>The FileSystem for s3n: (Native S3) uris.</description>
+</property>
+
+<property>
+  <name>fs.kfs.impl</name>
+  <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
+  <description>The FileSystem for kfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.hftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.hsftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HsftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The FileSystem for ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.ramfs.impl</name>
+  <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
+  <description>The FileSystem for ramfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.har.impl</name>
+  <value>org.apache.hadoop.fs.HarFileSystem</value>
+  <description>The filesystem for Hadoop archives. </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary images to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.edits.dir</name>
+  <value>${fs.checkpoint.dir}</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as fs.checkpoint.dir
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.period</name>
+  <value>3600</value>
+  <description>The number of seconds between two periodic checkpoints.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.size</name>
+  <value>67108864</value>
+  <description>The size of the current edit log (in bytes) that triggers
+       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
+  </description>
+</property>
+
+<property>
+  <name>dfs.secondary.http.address</name>
+  <value>0.0.0.0:50090</value>
+  <description>
+    The secondary namenode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.address</name>
+  <value>0.0.0.0:50010</value>
+  <description>
+    The address where the datanode server will listen to.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.http.address</name>
+  <value>0.0.0.0:50075</value>
+  <description>
+    The datanode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ipc.address</name>
+  <value>0.0.0.0:50020</value>
+  <description>
+    The datanode ipc server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.handler.count</name>
+  <value>3</value>
+  <description>The number of server threads for the datanode.</description>
+</property>
+
+<property>
+  <name>dfs.http.address</name>
+  <value>0.0.0.0:50070</value>
+  <description>
+    The address and the base port where the dfs namenode web ui will listen on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.https.address</name>
+  <value>0.0.0.0:50475</value>
+</property>
+
+<property>
+  <name>dfs.https.address</name>
+  <value>0.0.0.0:50470</value>
+</property>
+
+<property>
+  <name>https.keystore.info.rsrc</name>
+  <value>sslinfo.xml</value>
+  <description>The name of the resource from which ssl keystore information
+  will be extracted
+  </description>
+</property>
+
+ <property>
+  <name>dfs.datanode.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a data node should 
+  report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.datanode.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a DataNode should use to determine the host name used by the
+  NameNode for communication and display purposes.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.replication.considerLoad</name>
+  <value>true</value>
+  <description>Decide if chooseTarget considers the target's load or not
+  </description>
+</property>
+<property>
+  <name>dfs.default.chunk.view.size</name>
+  <value>32768</value>
+  <description>The number of bytes to view for a file on the browser.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.du.reserved</name>
+  <value>0</value>
+  <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+  </description>
+</property>
+
+<property>
+  <name>dfs.name.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/name</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the name table(fsimage).  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
+</property>
+
+<property>
+  <name>dfs.name.edits.dir</name>
+  <value>${dfs.name.dir}</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </description>
+</property>
+<property>
+  <name>dfs.web.ugi</name>
+  <value>webuser,webgroup</value>
+  <description>The user account used by the web interface.
+    Syntax: USERNAME,GROUP1,GROUP2, ...
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions</name>
+  <value>true</value>
+  <description>
+    If "true", enable permission checking in HDFS.
+    If "false", permission checking is turned off,
+    but all other behavior is unchanged.
+    Switching from one parameter value to the other does not change the mode,
+    owner or group of files or directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.supergroup</name>
+  <value>supergroup</value>
+  <description>The name of the group of super-users.</description>
+</property>
+
+<property>
+  <name>dfs.data.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/data</value>
+  <description>Determines where on the local filesystem an DFS data node
+  should store its blocks.  If this is a comma-delimited
+  list of directories, then data will be stored in all named
+  directories, typically on different devices.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication</name>
+  <value>3</value>
+  <description>Default block replication. 
+  The actual number of replications can be specified when the file is created.
+  The default is used if replication is not specified in create time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication.max</name>
+  <value>512</value>
+  <description>Maximal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication.min</name>
+  <value>1</value>
+  <description>Minimal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.size</name>
+  <value>67108864</value>
+  <description>The default block size for new files.</description>
+</property>
+
+<property>
+  <name>dfs.df.interval</name>
+  <value>60000</value>
+  <description>Disk usage statistics refresh interval in msec.</description>
+</property>
+
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>3</value>
+  <description>The number of retries for writing blocks to the data nodes, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>dfs.blockreport.intervalMsec</name>
+  <value>3600000</value>
+  <description>Determines block reporting interval in milliseconds.</description>
+</property>
+
+<property>
+  <name>dfs.blockreport.initialDelay</name>  <value>0</value>
+  <description>Delay for first block report in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.heartbeat.interval</name>
+  <value>3</value>
+  <description>Determines datanode heartbeat interval in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.handler.count</name>
+  <value>10</value>
+  <description>The number of server threads for the namenode.</description>
+</property>
+
+<property>
+  <name>dfs.safemode.threshold.pct</name>
+  <value>0.999f</value>
+  <description>
+  	Specifies the percentage of blocks that should satisfy 
+  	the minimal replication requirement defined by dfs.replication.min.
+  	Values less than or equal to 0 mean not to start in safe mode.
+  	Values greater than 1 will make safe mode permanent.
+ 	</description>
+</property>
+
+<property>
+  <name>dfs.safemode.extension</name>
+  <value>30000</value>
+  <description>
+  	Determines extension of safe mode in milliseconds 
+  	after the threshold level is reached.
+ 	</description>
+</property>
+
+<property>
+  <name>dfs.balance.bandwidthPerSec</name>
+  <value>1048576</value>
+  <description>
+        Specifies the maximum amount of bandwidth that each datanode
+        can utilize for the balancing purpose in term of
+        the number of bytes per second.
+  </description>
+</property>
+
+<property>
+  <name>dfs.hosts</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  permitted to connect to the namenode. The full pathname of the file
+  must be specified.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  not permitted to connect to the namenode.  The full pathname of the
+  file must be specified.  If the value is empty, no hosts are
+  excluded.</description>
+</property> 
+
+<property>
+  <name>dfs.max.objects</name>
+  <value>0</value>
+  <description>The maximum number of files, directories and blocks
+  dfs supports. A value of zero indicates no limit to the number
+  of objects that dfs supports.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.interval</name>
+  <value>30</value>
+  <description>Namenode periodicity in seconds to check if decommission is 
+  complete.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.nodes.per.interval</name>
+  <value>5</value>
+  <description>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</description>
+</property>
+
+<property>
+  <name>dfs.replication.interval</name>
+  <value>3</value>
+  <description>The periodicity in seconds with which the namenode computes 
+  repliaction work for datanodes. </description>
+</property>
+
+<property>
+  <name>dfs.access.time.precision</name>
+  <value>3600000</value>
+  <description>The access time for HDFS file is precise upto this value. 
+               The default value is 1 hour. Setting a value of 0 disables
+               access times for HDFS.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.block.size</name>
+  <value>67108864</value>
+  <description>Block size to use when writing files to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3.buffer.dir</name>
+  <value>${hadoop.tmp.dir}/s3</value>
+  <description>Determines where on the local filesystem the S3 filesystem
+  should store files before sending them to S3
+  (or after retrieving them from S3).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.maxRetries</name>
+  <value>4</value>
+  <description>The maximum number of retries for reading or writing files to S3, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.sleepTimeSeconds</name>
+  <value>10</value>
+  <description>The number of seconds to sleep between each S3 retry.
+  </description>
+</property>
+
+<!-- map/reduce properties -->
+
+<property>
+  <name>mapred.job.tracker</name>
+  <value>local</value>
+  <description>The host and port that the MapReduce job tracker runs
+  at.  If "local", then jobs are run in-process as a single map
+  and reduce task.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.tracker.http.address</name>
+  <value>0.0.0.0:50030</value>
+  <description>
+    The job tracker http server address and port the server will listen on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.tracker.handler.count</name>
+  <value>10</value>
+  <description>
+    The number of server threads for the JobTracker. This should be roughly
+    4% of the number of tasktracker nodes.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.tracker.report.address</name>
+  <value>127.0.0.1:0</value>
+  <description>The interface and port that task tracker server listens on. 
+  Since it is only connected to by the tasks, it uses the local interface.
+  EXPERT ONLY. Should only be changed if your host does not have the loopback 
+  interface.</description>
+</property>
+
+<property>
+  <name>mapred.local.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/local</value>
+  <description>The local directory where MapReduce stores intermediate
+  data files.  May be a comma-separated list of
+  directories on different devices in order to spread disk i/o.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
+  <name>local.cache.size</name>
+  <value>10737418240</value>
+  <description>The limit on the size of cache you want to keep, set by default
+  to 10GB. This will act as a soft limit on the cache directory for out of band data.
+  </description>
+</property>
+            
+<property>
+  <name>mapred.system.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/system</value>
+  <description>The shared directory where MapReduce stores control files.
+  </description>
+</property>
+
+<property>
+  <name>mapred.temp.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/temp</value>
+  <description>A shared directory for temporary files.
+  </description>
+</property>
+
+<property>
+  <name>mapred.local.dir.minspacestart</name>
+  <value>0</value>
+  <description>If the space in mapred.local.dir drops under this, 
+  do not ask for more tasks.
+  Value in bytes.
+  </description>
+</property>
+
+<property>
+  <name>mapred.local.dir.minspacekill</name>
+  <value>0</value>
+  <description>If the space in mapred.local.dir drops under this, 
+  	do not ask more tasks until all the current ones have finished and 
+  	cleaned up. Also, to save the rest of the tasks we have running, 
+  	kill one of them, to clean up some space. Start with the reduce tasks,
+  	then go with the ones that have finished the least.
+  	Value in bytes.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.expiry.interval</name>
+  <value>600000</value>
+  <description>Expert: The time-interval, in miliseconds, after which
+  a tasktracker is declared 'lost' if it doesn't send heartbeats.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.instrumentation</name>
+  <value>org.apache.hadoop.mapred.TaskTrackerMetricsInst</value>
+  <description>Expert: The instrumentation class to associate with each TaskTracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.taskmemorymanager.monitoring-interval</name>
+  <value>5000</value>
+  <description>The interval, in milliseconds, for which the tasktracker waits
+   between two cycles of monitoring its tasks' memory usage. Used only if
+   tasks' memory management is enabled via mapred.tasktracker.tasks.maxmemory.
+   </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill</name>
+  <value>5000</value>
+  <description>The time, in milliseconds, the tasktracker waits for sending a
+  SIGKILL to a process that has overrun memory limits, after it has been sent
+  a SIGTERM. Used only if tasks' memory management is enabled via
+  mapred.tasktracker.tasks.maxmemory.</description>
+</property>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>2</value>
+  <description>The default number of map tasks per job.  Typically set
+  to a prime several times greater than number of available hosts.
+  Ignored when mapred.job.tracker is "local".  
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.tasks</name>
+  <value>1</value>
+  <description>The default number of reduce tasks per job.  Typically set
+  to a prime close to the number of available hosts.  Ignored when
+  mapred.job.tracker is "local".
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.restart.recover</name>
+  <value>false</value>
+  <description>"true" to enable (job) recovery upon restart,
+               "false" to start afresh
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.job.history.block.size</name>
+  <value>3145728</value>
+  <description>The block size of the job history file. Since the job recovery
+               uses job history, its important to dump job history to disk as 
+               soon as possible. Note that this is an expert level parameter.
+               The default value is set to 3 MB.
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.taskScheduler</name>
+  <value>org.apache.hadoop.mapred.JobQueueTaskScheduler</value>
+  <description>The class responsible for scheduling the tasks.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.taskScheduler.maxRunningTasksPerJob</name>
+  <value></value>
+  <description>The maximum number of running tasks for a job before
+  it gets preempted. No limits if undefined.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.max.attempts</name>
+  <value>4</value>
+  <description>Expert: The maximum number of attempts per map task.
+  In other words, framework will try to execute a map task these many number
+  of times before giving up on it.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.max.attempts</name>
+  <value>4</value>
+  <description>Expert: The maximum number of attempts per reduce task.
+  In other words, framework will try to execute a reduce task these many number
+  of times before giving up on it.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.parallel.copies</name>
+  <value>5</value>
+  <description>The default number of parallel transfers run by reduce
+  during the copy(shuffle) phase.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.copy.backoff</name>
+  <value>300</value>
+  <description>The maximum amount of time (in seconds) a reducer spends on 
+  fetching one map output before declaring it as failed.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.timeout</name>
+  <value>600000</value>
+  <description>The number of milliseconds before a task will be
+  terminated if it neither reads an input, writes an output, nor
+  updates its status string.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of map tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.reduce.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of reduce tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.completeuserjobs.maximum</name>
+  <value>100</value>
+  <description>The maximum number of complete jobs per user to keep around 
+  before delegating them to the job history.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.instrumentation</name>
+  <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
+  <description>Expert: The instrumentation class to associate with each JobTracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.child.java.opts</name>
+  <value>-Xmx200m</value>
+  <description>Java opts for the task tracker child processes.  
+  The following symbol, if present, will be interpolated: @taskid@ is replaced 
+  by current TaskID. Any other occurrences of '@' will go unchanged.
+  For example, to enable verbose gc logging to a file named for the taskid in
+  /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+        -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  
+  The configuration variable mapred.child.ulimit can be used to control the
+  maximum virtual memory of the child processes. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.child.ulimit</name>
+  <value></value>
+  <description>The maximum virtual memory, in KB, of a process launched by the 
+  Map-Reduce framework. This can be used to control both the Mapper/Reducer 
+  tasks and applications using Hadoop Pipes, Hadoop Streaming etc. 
+  By default it is left unspecified to let cluster admins control it via 
+  limits.conf and other such relevant mechanisms.
+  
+  Note: mapred.child.ulimit must be greater than or equal to the -Xmx passed to
+  JavaVM, else the VM might not start. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.child.tmp</name>
+  <value>./tmp</value>
+  <description> To set the value of tmp directory for map and reduce tasks.
+  If the value is an absolute path, it is directly assigned. Otherwise, it is
+  prepended with task's working directory. The java tasks are executed with
+  option -Djava.io.tmpdir='the absolute path of the tmp dir'. Pipes and
+  streaming are set with environment variable,
+   TMPDIR='the absolute path of the tmp dir'
+  </description>
+</property>
+
+<property>
+  <name>mapred.inmem.merge.threshold</name>
+  <value>1000</value>
+  <description>The threshold, in terms of the number of files 
+  for the in-memory merge process. When we accumulate threshold number of files
+  we initiate the in-memory merge and spill to disk. A value of 0 or less than
+  0 indicates we want to DON'T have any threshold and instead depend only on
+  the ramfs's memory consumption to trigger the merge.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.shuffle.merge.percent</name>
+  <value>0.66</value>
+  <description>The usage threshold at which an in-memory merge will be
+  initiated, expressed as a percentage of the total memory allocated to
+  storing in-memory map outputs, as defined by
+  mapred.job.shuffle.input.buffer.percent.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.shuffle.input.buffer.percent</name>
+  <value>0.70</value>
+  <description>The percentage of memory to be allocated from the maximum heap
+  size to storing map outputs during the shuffle.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.reduce.input.buffer.percent</name>
+  <value>0.0</value>
+  <description>The percentage of memory- relative to the maximum heap size- to
+  retain map outputs during the reduce. When the shuffle is concluded, any
+  remaining map outputs in memory must consume less than this threshold before
+  the reduce can begin.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.tasks.speculative.execution</name>
+  <value>true</value>
+  <description>If true, then multiple instances of some map tasks 
+               may be executed in parallel.</description>
+</property>
+
+<property>
+  <name>mapred.reduce.tasks.speculative.execution</name>
+  <value>true</value>
+  <description>If true, then multiple instances of some reduce tasks 
+               may be executed in parallel.</description>
+</property>
+
+<property>
+  <name>mapred.job.reuse.jvm.num.tasks</name>
+  <value>1</value>
+  <description>How many tasks to run per jvm. If set to -1, there is
+  no limit. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.min.split.size</name>
+  <value>0</value>
+  <description>The minimum size chunk that map input should be split
+  into.  Note that some file formats may have minimum split sizes that
+  take priority over this setting.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.maxtasks.per.job</name>
+  <value>-1</value>
+  <description>The maximum number of tasks for a single job.
+  A value of -1 indicates that there is no maximum.  </description>
+</property>
+
+<property>
+  <name>mapred.submit.replication</name>
+  <value>10</value>
+  <description>The replication level for submitted job files.  This
+  should be around the square root of the number of nodes.
+  </description>
+</property>
+
+
+<property>
+  <name>mapred.tasktracker.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a task
+  tracker should report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>mapred.tasktracker.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a TaskTracker should use to determine the host name used by
+  the JobTracker for communication and display purposes.
+  </description>
+ </property>
+ 
+<property>
+  <name>tasktracker.http.threads</name>
+  <value>40</value>
+  <description>The number of worker threads that for the http server. This is
+               used for map output fetching
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.tracker.http.address</name>
+  <value>0.0.0.0:50060</value>
+  <description>
+    The task tracker http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>keep.failed.task.files</name>
+  <value>false</value>
+  <description>Should the files for failed tasks be kept. This should only be 
+               used on jobs that are failing, because the storage is never
+               reclaimed. It also prevents the map outputs from being erased
+               from the reduce directory as they are consumed.</description>
+</property>
+
+<!-- 
+  <property>
+  <name>keep.task.files.pattern</name>
+  <value>.*_m_123456_0</value>
+  <description>Keep all files from tasks whose task names match the given
+               regular expression. Defaults to none.</description>
+  </property>
+-->
+
+<property>
+  <name>mapred.output.compress</name>
+  <value>false</value>
+  <description>Should the job outputs be compressed?
+  </description>
+</property>
+
+<property>
+  <name>mapred.output.compression.type</name>
+  <value>RECORD</value>
+  <description>If the job outputs are to compressed as SequenceFiles, how should
+               they be compressed? Should be one of NONE, RECORD or BLOCK.
+  </description>
+</property>
+
+<property>
+  <name>mapred.output.compression.codec</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec</value>
+  <description>If the job outputs are compressed, how should they be compressed?
+  </description>
+</property>
+
+<property>
+  <name>mapred.compress.map.output</name>
+  <value>false</value>
+  <description>Should the outputs of the maps be compressed before being
+               sent across the network. Uses SequenceFile compression.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.output.compression.codec</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec</value>
+  <description>If the map outputs are compressed, how should they be 
+               compressed?
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.compress.blocksize</name>
+  <value>1000000</value>
+  <description>The minimum block size for compression in block compressed 
+  				SequenceFiles.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.lazydecompress</name>
+  <value>true</value>
+  <description>Should values of block-compressed SequenceFiles be decompressed
+  				only when necessary.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.sorter.recordlimit</name>
+  <value>1000000</value>
+  <description>The limit on number of records to be kept in memory in a spill 
+  				in SequenceFiles.Sorter
+  </description>
+</property>
+
+<property>
+  <name>map.sort.class</name>
+  <value>org.apache.hadoop.util.QuickSort</value>
+  <description>The default sort class for sorting keys.
+  </description>
+</property>
+
+<property>
+  <name>mapred.userlog.limit.kb</name>
+  <value>0</value>
+  <description>The maximum size of user-logs of each task in KB. 0 disables the cap.
+  </description>
+</property>
+
+<property>
+  <name>mapred.userlog.retain.hours</name>
+  <value>24</value>
+  <description>The maximum time, in hours, for which the user-logs are to be 
+  				retained.
+  </description>
+</property>
+
+<property>
+  <name>mapred.hosts</name>
+  <value></value>
+  <description>Names a file that contains the list of nodes that may
+  connect to the jobtracker.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>mapred.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains the list of hosts that
+  should be excluded by the jobtracker.  If the value is empty, no
+  hosts are excluded.</description>
+</property> 
+
+<property>
+  <name>mapred.max.tracker.failures</name>
+  <value>4</value>
+  <description>The number of task-failures on a tasktracker of a given job 
+               after which new tasks of that job aren't assigned to it.
+  </description>
+</property>
+
+<property>
+  <name>jobclient.output.filter</name>
+  <value>FAILED</value>
+  <description>The filter for controlling the output of the task's userlogs sent
+               to the console of the JobClient. 
+               The permissible options are: NONE, KILLED, FAILED, SUCCEEDED and 
+               ALL.
+  </description>
+</property>
+
+  <property>
+    <name>mapred.job.tracker.persist.jobstatus.active</name>
+    <value>false</value>
+    <description>Indicates if persistency of job status information is
+      active or not.
+    </description>
+  </property>
+
+  <property>
+  <name>mapred.job.tracker.persist.jobstatus.hours</name>
+  <value>0</value>
+  <description>The number of hours job status information is persisted in DFS.
+    The job status information will be available after it drops of the memory
+    queue and between jobtracker restarts. With a zero value the job status
+    information is not persisted at all in DFS.
+  </description>
+</property>
+
+  <property>
+    <name>mapred.job.tracker.persist.jobstatus.dir</name>
+    <value>/jobtracker/jobsInfo</value>
+    <description>The directory where the job status information is persisted
+      in a file system to be available after it drops of the memory queue and
+      between jobtracker restarts.
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.task.profile</name>
+    <value>false</value>
+    <description>To set whether the system should collect profiler
+     information for some of the tasks in this job? The information is stored
+     in the user log directory. The value is "true" if task profiling
+     is enabled.</description>
+  </property>
+
+  <property>
+    <name>mapred.task.profile.maps</name>
+    <value>0-2</value>
+    <description> To set the ranges of map tasks to profile.
+    mapred.task.profile has to be set to true for the value to be accounted.
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.task.profile.reduces</name>
+    <value>0-2</value>
+    <description> To set the ranges of reduce tasks to profile.
+    mapred.task.profile has to be set to true for the value to be accounted.
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.line.input.format.linespermap</name>
+    <value>1</value>
+    <description> Number of lines per split in NLineInputFormat.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.attempts.to.start.skipping</name>
+    <value>2</value>
+    <description> The number of Task attempts AFTER which skip mode 
+    will be kicked off. When skip mode is kicked off, the 
+    tasks reports the range of records which it will process 
+    next, to the TaskTracker. So that on failures, TT knows which 
+    ones are possibly the bad records. On further executions, 
+    those are skipped.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.map.auto.incr.proc.count</name>
+    <value>true</value>
+    <description> The flag which if set to true, 
+    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
+    by MapRunner after invoking the map function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.reduce.auto.incr.proc.count</name>
+    <value>true</value>
+    <description> The flag which if set to true, 
+    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
+    by framework after invoking the reduce function. This value must be set to 
+    false for applications which process the records asynchronously 
+    or buffer the input records. For example streaming. 
+    In such cases applications should increment this counter on their own.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.out.dir</name>
+    <value></value>
+    <description> If no value is specified here, the skipped records are 
+    written to the output directory at _logs/skip.
+    User can stop writing skipped records by giving the value "none". 
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.skip.map.max.skip.records</name>
+    <value>0</value>
+    <description> The number of acceptable skip records surrounding the bad 
+    record PER bad record in mapper. The number includes the bad record as well.
+    To turn the feature of detection/skipping of bad records off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever records(depends on application) get skipped are 
+    acceptable.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.skip.reduce.max.skip.groups</name>
+    <value>0</value>
+    <description> The number of acceptable skip groups surrounding the bad 
+    group PER bad group in reducer. The number includes the bad group as well.
+    To turn the feature of detection/skipping of bad groups off, set the 
+    value to 0.
+    The framework tries to narrow down the skipped range by retrying  
+    until this threshold is met OR all attempts get exhausted for this task. 
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
+    narrow down. Whatever groups(depends on application) get skipped are 
+    acceptable.
+    </description>
+  </property>
+
+<!-- ipc properties -->
+
+<property>
+  <name>ipc.client.idlethreshold</name>
+  <value>4000</value>
+  <description>Defines the threshold number of connections after which
+               connections will be inspected for idleness.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.kill.max</name>
+  <value>10</value>
+  <description>Defines the maximum number of clients to disconnect in one go.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connection.maxidletime</name>
+  <value>10000</value>
+  <description>The maximum time in msec after which a client will bring down the
+               connection to the server.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.max.retries</name>
+  <value>10</value>
+  <description>Indicates the number of retries a client will make to establish
+               a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.listen.queue.size</name>
+  <value>128</value>
+  <description>Indicates the length of the listen queue for servers accepting
+               client connections.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the server. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the client. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
+<!-- Job Notification Configuration -->
+
+<!--
+<property>
+ <name>job.end.notification.url</name>
+ <value>http://localhost:8080/jobstatus.php?jobId=$jobId&amp;jobStatus=$jobStatus</value>
+ <description>Indicates url which will be called on completion of job to inform
+              end status of job.
+              User can give at most 2 variables with URI : $jobId and $jobStatus.
+              If they are present in URI, then they will be replaced by their
+              respective values.
+</description>
+</property>
+-->
+
+<property>
+  <name>job.end.retry.attempts</name>
+  <value>0</value>
+  <description>Indicates how many times hadoop should attempt to contact the
+               notification URL </description>
+</property>
+
+<property>
+  <name>job.end.retry.interval</name>
+   <value>30000</value>
+   <description>Indicates time in milliseconds between notification URL retry
+                calls</description>
+</property>
+
+<!-- Web Interface Configuration -->
+
+<property>
+  <name>webinterface.private.actions</name>
+  <value>false</value>
+  <description> If set to true, the web interfaces of JT and NN may contain 
+                actions, such as kill job, delete file, etc., that should 
+                not be exposed to public. Enable this option if the interfaces 
+                are only reachable by those who have the right authorization.
+  </description>
+</property>
+
+<!-- Proxy Configuration -->
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.default</name>
+  <value>org.apache.hadoop.net.StandardSocketFactory</value>
+  <description> Default SocketFactory to use. This parameter is expected to be
+    formatted as "package.FactoryClassName".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.ClientProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a DFS. If null or empty, use
+    hadoop.rpc.socket.class.default. This socket factory is also used by
+    DFSClient to create sockets to DataNodes.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.JobSubmissionProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a Map/Reduce master
+    (JobTracker). If null or empty, then use hadoop.rpc.socket.class.default.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.socks.server</name>
+  <value></value>
+  <description> Address (host:port) of the SOCKS server to be used by the
+    SocksSocketFactory.
+  </description>
+</property>
+
+<!-- Rack Configuration -->
+
+<property>
+  <name>topology.node.switch.mapping.impl</name>
+  <value>org.apache.hadoop.net.ScriptBasedMapping</value>
+  <description> The default implementation of the DNSToSwitchMapping. It
+    invokes a script specified in topology.script.file.name to resolve
+    node names. If the value for topology.script.file.name is not set, the
+    default value of DEFAULT_RACK is returned for all node names.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.file.name</name>
+  <value></value>
+  <description> The script name that should be invoked to resolve DNS names to
+    NetworkTopology names. Example: the script would take host.foo.bar as an
+    argument, and return /rack1 as the output.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.number.args</name>
+  <value>100</value>
+  <description> The max number of args that the script configured with 
+    topology.script.file.name should be run with. Each arg is an
+    IP address.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.cache.levels</name>
+  <value>2</value>
+  <description> This is the max level of the task cache. For example, if
+    the level is 2, the tasks cached are at the host level and at the rack
+    level.
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.names</name>
+  <value>default</value>
+  <description> Comma separated list of queues configured for this jobtracker.
+    Jobs are added to queues and schedulers can configure different 
+    scheduling properties for the various queues. To configure a property 
+    for a queue, the name of the queue must match the name specified in this 
+    value. Queue properties that are common to all schedulers are configured 
+    here with the naming convention, mapred.queue.$QUEUE-NAME.$PROPERTY-NAME,
+    for e.g. mapred.queue.default.submit-job-acl.
+    The number of queues configured in this parameter could depend on the
+    type of scheduler being used, as specified in 
+    mapred.jobtracker.taskScheduler. For example, the JobQueueTaskScheduler
+    supports only a single queue, which is the default configured here.
+    Before adding more queues, ensure that the scheduler you've configured
+    supports multiple queues.
+  </description>
+</property>
+
+<property>
+  <name>mapred.acls.enabled</name>
+  <value>false</value>
+  <description> Specifies whether ACLs are enabled, and should be checked
+    for various operations.
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.default.acl-submit-job</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to submit jobs to the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to 
+    submit jobs. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.default.acl-administer-jobs</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to delete jobs or modify job's priority for jobs not owned by the current
+    user in the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to do 
+    this operation.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.queue.name</name>
+  <value>default</value>
+  <description> Queue to which a job is submitted. This must match one of the
+    queues defined in mapred.queue.names for the system. Also, the ACL setup
+    for the queue must allow the current user to submit a job to the queue.
+    Before specifying a queue, ensure that the system is configured with 
+    the queue, and access is allowed for submitting jobs to the queue.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.indexcache.mb</name>
+  <value>10</value>
+  <description> The maximum memory that a task tracker allows for the 
+    index cache that is used when serving map outputs to reducers.
+  </description>
+</property>
+
+<property>
+  <name>mapred.merge.recordsBeforeProgress</name>
+  <value>10000</value>
+  <description> The number of records to process during merge before
+   sending a progress notification to the TaskTracker.
+  </description>
+</property>
+
+</configuration>

@@ -1,0 +1,38 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_QUERY (TOK_FROM (TOK_TABREF src_thrift)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR ([ (TOK_COLREF src_thrift mstringstring) 'key_9')) (TOK_SELEXPR (. (TOK_COLREF src_thrift lintstring) myint)))))
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Alias -> Map Operator Tree:
+        src_thrift 
+            Select Operator
+              expressions:
+                    expr: mstringstring['key_9']
+                    type: string
+                    expr: lintstring.myint
+                    type: array<int>
+              File Output Operator
+                table:
+                    input format: org.apache.hadoop.mapred.TextInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+
+
+NULL	[0]
+NULL	[1]
+NULL	[4]
+NULL	[9]
+NULL	[16]
+NULL	[25]
+NULL	[36]
+NULL	[49]
+NULL	[64]
+value_9	[81]

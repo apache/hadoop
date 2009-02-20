@@ -1,0 +1,8 @@
+Folowing is the list of external jars contained in this directory and the sources from where they were obtained:
+---------------------------------------------------------------------------------------------------------------
+
+*  stringtemplate-3.1b1.jar - http://www.stringtemplate.org/download.html
+*  commons-jexl-1.1.jar - http://commons.apache.org/downloads/download_jexl.cgi
+*  antlr-2.7.7.jar - http://www.antlr.org/download.html
+*  antlr-3.0.1.jar - http://www.antlr.org/download.html
+*  antlr-runtime-3.0.1.jar - http://www.antlr.org/download.html

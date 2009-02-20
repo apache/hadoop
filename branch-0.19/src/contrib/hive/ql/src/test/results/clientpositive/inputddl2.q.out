@@ -1,0 +1,22 @@
+ABSTRACT SYNTAX TREE:
+  (TOK_CREATETABLE INPUTDDL2 (TOK_TABCOLLIST (TOK_TABCOL key TOK_INT) (TOK_TABCOL value TOK_STRING)) (TOK_TABLEPARTCOLS (TOK_TABCOLLIST (TOK_TABCOL ds TOK_DATETIME) (TOK_TABCOL country TOK_STRING))))
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+      Create Table Operator:
+        Create Table
+          columns: key int, value string
+          # buckets: -1
+          partition columns: ds datetime, country string
+          name: INPUTDDL2
+          isExternal:
+          isSequenceFile:
+
+
+key	int
+value	string
+ds	datetime
+country	string

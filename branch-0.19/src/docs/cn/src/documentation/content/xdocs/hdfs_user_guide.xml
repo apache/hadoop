@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, 
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+<!--DCCOMMENT:diff begin-->
+  <header>
+    <title>
+      Hadoop分布式文件系统使用指南
+    </title>
+  </header>
+
+  <body>
+    <section> <title>目的</title>
+      <p>
+	本文档的目标是为Hadoop分布式文件系统（HDFS）的用户提供一个学习的起点，这里的HDFS既可以作为<a href="http://hadoop.apache.org/">Hadoop</a>集群的一部分，也可以作为一个独立的分布式文件系统。虽然HDFS在很多环境下被设计成是可正确工作的，但是了解HDFS的工作原理对在特定集群上改进HDFS的运行性能和错误诊断都有极大的帮助。
+      </p>
+    </section>
+<!--DCCOMMENT:diff end
+@@ -23,18 +23,18 @@
+
+   <header>
+     <title>
+-      Hadoop DFS User Guide
++      HDFS User Guide
+     </title>
+   </header>
+
+   <body>
+     <section> <title>Purpose</title>
+       <p>
+- This document aims to be the starting point for users working with
++ This document is a starting point for users working with
+  Hadoop Distributed File System (HDFS) either as a part of a
+  <a href="http://hadoop.apache.org/">Hadoop</a>
+  cluster or as a stand-alone general purpose distributed file system.
+- While HDFS is designed to "just-work" in many environments, a working
++ While HDFS is designed to "just work" in many environments, a working
+  knowledge of HDFS helps greatly with configuration improvements and
+  diagnostics on a specific cluster.
+       </p>
+
+-->
+<!--DCCOMMENT:begin-->
+
+    <section> <title> 概述 </title>
+      <p>
+HDFS是Hadoop应用用到的一个最主要的分布式存储系统。一个HDFS集群主要由一个NameNode和很多个Datanode组成：Namenode管理文件系统的元数据，而Datanode存储了实际的数据。HDFS的体系结构在<a href="hdfs_design.html">这里</a>有详细的描述。本文档主要关注用户以及管理员怎样和HDFS进行交互。<a href="hdfs_design.html">HDFS架构设计</a>中的<a href="images/hdfsarchitecture.gif">图解</a>描述了Namenode、Datanode和客户端之间的基本的交互操作。基本上，客户端联系Namenode以获取文件的元数据或修饰属性，而真正的文件I/O操作是直接和Datanode进行交互的。
+      </p>
+      <p>
+      下面列出了一些多数用户都比较感兴趣的重要特性。
+      </p> 
+    <ul>
+    <li>
+<!--DCCOMMENT:end
+note:all tag "<em>" has been deleted in this doc.
+
+@@ -43,21 +43,20 @@
+     <section> <title> Overview </title>
+       <p>
+  HDFS is the primary distributed storage used by Hadoop applications. A
+- HDFS cluster primarily consists of a <em>NameNode</em> that manages the
+- filesystem metadata and Datanodes that store the actual data. The
++ HDFS cluster primarily consists of a NameNode that manages the
++ file system metadata and DataNodes that store the actual data. The
+  architecture of HDFS is described in detail
+  <a href="hdfs_design.html">here</a>. This user guide primarily deals with
+  interaction of users and administrators with HDFS clusters.
+  The <a href="images/hdfsarchitecture.gif">diagram</a> from
+  <a href="hdfs_design.html">HDFS architecture</a> depicts
+- basic interactions among Namenode, Datanodes, and the clients. Eseentially,
+- clients contact Namenode for file metadata or file modifications and perform
+- actual file I/O directly with the datanodes.
++ basic interactions among NameNode, the DataNodes, and the clients.
++ Clients contact NameNode for file metadata or file modifications and perform
++ actual file I/O directly with the DataNodes.
+       </p>
+       <p>
+  The following are some of the salient features that could be of
+- interest to many users. The terms in <em>italics</em>
+- are described in later sections.
++ interest to many users.
+       </p>
+     <ul>
+     <li>
+-->
+    Hadoop（包括HDFS）非常适合在商用硬件（commodity hardware）上做分布式存储和计算，因为它不仅具有容错性和可扩展性，而且非常易于扩展。<a href="mapred_tutorial.html">Map-Reduce</a>框架以其在大型分布式系统应用上的简单性和可用性而著称，这个框架已经被集成进Hadoop中。
+    </li>
+    <li>
+    	HDFS的可配置性极高，同时，它的默认配置能够满足很多的安装环境。多数情况下，这些参数只在非常大规模的集群环境下才需要调整。
+    </li>
+<!--DCCOMMENT:diff begin-->
+    <li>
+    	用Java语言开发，支持所有的主流平台。
+    </li>
+    <li>
+    	支持类Shell命令，可直接和HDFS进行交互。
+    </li>
+    <li>
+    	NameNode和DataNode有内置的Web服务器，方便用户检查集群的当前状态。
+    </li>
+<!--DCCOMMENT:diff end
+@@ -74,13 +73,13 @@
+        needs to be tuned only for very large clusters.
+     </li>
+     <li>
+-       It is written in Java and is supported on all major platforms.
++       Hadoop is written in Java and is supported on all major platforms.
+     </li>
+     <li>
+-       Supports <em>shell like commands</em> to interact with HDFS directly.
++       Hadoop supports shell-like commands to interact with HDFS directly.
+     </li>
+     <li>
+-       Namenode and Datanodes have built in web servers that makes it
++       The NameNode and Datanodes have built in web servers that makes it
+        easy to check current status of the cluster.
+     </li>
+     <li>
+-->
+    <li>
+	新特性和改进会定期加入HDFS的实现中。下面列出的是HDFS中常用特性的一部分：
+      <ul>
+    	<li>
+    		文件权限和授权。
+    	</li>
+    	<li>
+    		机架感知（Rack awareness）：在调度任务和分配存储空间时考虑节点的物理位置。
+    	</li>
+    	<li>
+    		安全模式：一种维护需要的管理模式。
+    	</li>
+    	<li>
+    		fsck：一个诊断文件系统健康状况的工具，能够发现丢失的文件或数据块。
+    	</li>
+    	<li>
+    		Rebalancer：当datanode之间数据不均衡时，平衡集群上的数据负载。
+    	</li>
+    	<li>
+    		升级和回滚：在软件更新后有异常发生的情形下，能够回滚到HDFS升级之前的状态。
+    	</li>
+    	<li>
+		Secondary Namenode：对文件系统名字空间执行周期性的检查点，将Namenode上HDFS改动日志文件的大小控制在某个特定的限度下。
+    	</li>
+      </ul>
+    </li>
+    </ul>
+    
+    </section> <section> <title> 先决条件 </title>
+    <p>
+    下面的文档描述了如何安装和搭建Hadoop集群：
+    </p>
+ 	<ul>
+ 	<li>
+ 		<a href="quickstart.html">Hadoop快速入门</a>
+ 		针对初次使用者。
+ 	</li>
+ 	<li>
+		<a href="cluster_setup.html">Hadoop集群搭建</a>
+ 		针对大规模分布式集群的搭建。
+ 	</li>
+    </ul>
+    <p>
+    文档余下部分假设用户已经安装并运行了至少包含一个Datanode节点的HDFS。就本文目的来说，Namenode和Datanode可以运行在同一个物理主机上。
+    </p>
+     
+    </section> <section> <title> Web接口 </title>
+<!--DCCOMMENT:diff begin-->
+    <p>
+ 	NameNode和DataNode各自启动了一个内置的Web服务器，显示了集群当前的基本状态和信息。在默认配置下NameNode的首页地址是<code>http://namenode-name:50070/</code>。这个页面列出了集群里的所有DataNode和集群的基本状态。这个Web接口也可以用来浏览整个文件系统（使用NameNode首页上的"Browse the file system"链接）。
+ </p> 
+<!--DCCOMMENT:diff end
+  </section> <section> <title> Web Interface </title>
+  <p>
+-       Namenode and Datanode each run an internal web server in order to
++       NameNode and DataNode each run an internal web server in order to
+        display basic information about the current status of the cluster.
+-       With the default configuration, namenode front page is at
+-       <code>http://namenode:50070/</code> .
+-       It lists the datanodes in the cluster and basic stats of the
++       With the default configuration, the NameNode front page is at
++       <code>http://namenode-name:50070/</code>.
++       It lists the DataNodes in the cluster and basic statistics of the
+        cluster. The web interface can also be used to browse the file
+-       system (using "Browse the file system" link on the Namenode front
++       system (using "Browse the file system" link on the NameNode front
+        page).
+  </p>
+
+
+-->
+<!--DCCOMMENT:diff begin-->
+    </section> <section> <title>Shell命令</title>
+ 	<p>Hadoop包括一系列的类shell的命令，可直接和HDFS以及其他Hadoop支持的文件系统进行交互。<code>bin/hadoop fs -help</code> 命令列出所有Hadoop Shell支持的命令。而 <code>bin/hadoop fs -help command-name</code> 命令能显示关于某个命令的详细信息。这些命令支持大多数普通文件系统的操作，比如复制文件、改变文件权限等。它还支持一些HDFS特有的操作，比如改变文件副本数目。
+     </p>
+<!--DCCOMMENT:diff end
+    </section> <section> <title>Shell Commands</title>
+        <p>
+-      Hadoop includes various "shell-like" commands that directly
++      Hadoop includes various shell-like commands that directly
+       interact with HDFS and other file systems that Hadoop supports.
+       The command
+       <code>bin/hadoop fs -help</code>
+       lists the commands supported by Hadoop
+-      shell. Further,
+-      <code>bin/hadoop fs -help command</code>
+-      displays more detailed help on a command. The commands support
+-      most of the normal filesystem operations like copying files,
++      shell. Furthermore, the command
++      <code>bin/hadoop fs -help command-name</code>
++      displays more detailed help for a command. These commands support
++      most of the normal files ystem operations like copying files,
+       changing file permissions, etc. It also supports a few HDFS
+       specific operations like changing replication of files.
+      </p>
+
+-->
+   <section> <title> DFSAdmin命令 </title>
+   <p>
+   	<code>'bin/hadoop dfsadmin'</code> 命令支持一些和HDFS管理相关的操作。<code>bin/hadoop dfsadmin -help</code> 命令能列出所有当前支持的命令。比如：
+   </p>  
+   	<ul>
+   	<li>
+<!--DCCOMMENT:diff begin-->
+   	    <code>-report</code>：报告HDFS的基本统计信息。有些信息也可以在NameNode Web服务首页看到。
+<!--DCCOMMENT:diff end
+note: "Namenode" is replaced by "NameNode" in this doc
+
+        <li>
+            <code>-report</code>
+-           : reports basic stats of HDFS. Some of this information is
+-           also available on the Namenode front page.
++           : reports basic statistics of HDFS. Some of this information is
++           also available on the NameNode front page.
+        </li>
+-->
+   	</li>
+   	<li>
+   	    <code>-safemode</code>：虽然通常并不需要，但是管理员的确可以手动让NameNode进入或离开安全模式。
+   	</li>
+   	<li>
+   	    <code>-finalizeUpgrade</code>：删除上一次升级时制作的集群备份。
+   	</li>
+   	</ul>
+   </section>
+   
+   </section> <section> <title> Secondary NameNode </title>
+   <p>NameNode将对文件系统的改动追加保存到本地文件系统上的一个日志文件（<code>edits</code>）。当一个NameNode启动时，它首先从一个映像文件（<code>fsimage</code>）中读取HDFS的状态，接着应用日志文件中的edits操作。然后它将新的HDFS状态写入（<code>fsimage</code>）中，并使用一个空的edits文件开始正常操作。因为NameNode只有在启动阶段才合并<code>fsimage</code>和<code>edits</code>，所以久而久之日志文件可能会变得非常庞大，特别是对大型的集群。日志文件太大的另一个副作用是下一次NameNode启动会花很长时间。
+   </p>
+   <p>
+     Secondary NameNode定期合并fsimage和edits日志，将edits日志文件大小控制在一个限度下。因为内存需求和NameNode在一个数量级上，所以通常secondary NameNode和NameNode运行在不同的机器上。Secondary NameNode通过<code>bin/start-dfs.sh</code>在<code>conf/masters</code>中指定的节点上启动。
+   </p>
+
+<!--DCCOMMENT:diff begin-->
+<p>
+Secondary NameNode的检查点进程启动，是由两个配置参数控制的：
+</p>
+   <ul>
+      <li>
+        <code>fs.checkpoint.period</code>，指定连续两次检查点的最大时间间隔，
+        默认值是1小时。
+      </li>
+      <li>
+        <code>fs.checkpoint.size</code>定义了edits日志文件的最大值，一旦超过这个值会导致强制执行检查点（即使没到检查点的最大时间间隔）。默认值是64MB。
+      </li>
+   </ul>
+   <p>
+     Secondary NameNode保存最新检查点的目录与NameNode的目录结构相同。
+     所以NameNode可以在需要的时候读取Secondary NameNode上的检查点镜像。
+   </p>
+  <p>
+     如果NameNode上除了最新的检查点以外，所有的其他的历史镜像和edits文件都丢失了，
+     NameNode可以引入这个最新的检查点。以下操作可以实现这个功能：
+   </p>
+   <ul>
+      <li>
+        在配置参数<code>dfs.name.dir</code>指定的位置建立一个空文件夹；
+      </li>
+      <li>
+        把检查点目录的位置赋值给配置参数<code>fs.checkpoint.dir</code>；
+      </li>
+      <li>
+        启动NameNode，并加上<code>-importCheckpoint</code>。 
+      </li>
+   </ul>
+   <p>
+     NameNode会从<code>fs.checkpoint.dir</code>目录读取检查点，
+     并把它保存在<code>dfs.name.dir</code>目录下。
+     如果<code>dfs.name.dir</code>目录下有合法的镜像文件，NameNode会启动失败。
+     NameNode会检查<code>fs.checkpoint.dir</code>目录下镜像文件的一致性，但是不会去改动它。
+   </p>
+   <p>
+     命令的使用方法请参考<a href="commands_manual.html#secondarynamenode"><code>secondarynamenode</code> 命令</a>.
+   </p>
+
+ 
+<!--DCCOMMENT:diff end
++   <p>
++     The start of the checkpoint process on the secondary NameNode is
++     controlled by two configuration parameters.
++   </p>
++   <ul>
++      <li>
++        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
++        the maximum delay between two consecutive checkpoints, and
++      </li>
++      <li>
++        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
++        size of the edits log file that forces an urgent checkpoint even if
++        the maximum checkpoint delay is not reached.
++      </li>
++   </ul>
++   <p>
++     The secondary NameNode stores the latest checkpoint in a
++     directory which is structured the same way as the primary NameNode's
++     directory. So that the check pointed image is always ready to be
++     read by the primary NameNode if necessary.
++   </p>
++   <p>
++     The latest checkpoint can be imported to the primary NameNode if
++     all other copies of the image and the edits files are lost.
++     In order to do that one should:
++   </p>
++   <ul>
++      <li>
++        Create an empty directory specified in the
++        <code>dfs.name.dir</code> configuration variable;
++      </li>
++      <li>
++        Specify the location of the checkpoint directory in the
++        configuration variable <code>fs.checkpoint.dir</code>;
++      </li>
++      <li>
++        and start the NameNode with <code>-importCheckpoint</code> option.
++      </li>
++   </ul>
++   <p>
++     The NameNode will upload the checkpoint from the
++     <code>fs.checkpoint.dir</code> directory and then save it to the NameNode
++     directory(s) set in <code>dfs.name.dir</code>.
++     The NameNode will fail if a legal image is contained in
++     <code>dfs.name.dir</code>.
++     The NameNode verifies that the image in <code>fs.checkpoint.dir</code> is
++     consistent, but does not modify it in any way.
++   </p>
++   <p>
++     For command usage, see <a href="commands_manual.html#secondarynamenode"><code>secondarynamenode</code> command</a>.
++   </p>
+
+    </section> <section> <title> Rebalancer </title>
+-->
+   
+   </section> <section> <title> Rebalancer </title>
+<!--DCCOMMENT:diff begin-->
+    <p>
+      HDFS的数据也许并不是非常均匀的分布在各个DataNode中。一个常见的原因是在现有的集群上经常会增添新的DataNode节点。当新增一个数据块（一个文件的数据被保存在一系列的块中）时，NameNode在选择DataNode接收这个数据块之前，会考虑到很多因素。其中的一些考虑的是：
+    </p>
+<!--DCCOMMENT:diff end
+note : "datanode" is replaced by "DataNode" in this doc.
+
+    HDFS data might not always be be placed uniformly across the
+-      datanode. One common reason is addition of new datanodes to an
+-      existing cluster. While placing new <em>blocks</em> (data for a file is
+-      stored as a series of blocks), Namenode considers various
+-      parameters before choosing the datanodes to receive these blocks.
+-      Some of the considerations are :
++      DataNode. One common reason is addition of new DataNodes to an
++      existing cluster. While placing new blocks (data for a file is
++      stored as a series of blocks), NameNode considers various
++      parameters before choosing the DataNodes to receive these blocks.
++      Some of the considerations are:
+     </p>
+-->
+      <ul>
+      <li>
+	将数据块的一个副本放在正在写这个数据块的节点上。
+      </li>
+      <li>
+        尽量将数据块的不同副本分布在不同的机架上，这样集群可在完全失去某一机架的情况下还能存活。
+      </li>
+      <li>
+        一个副本通常被放置在和写文件的节点同一机架的某个节点上，这样可以减少跨越机架的网络I/O。
+      </li>
+      <li>
+        尽量均匀地将HDFS数据分布在集群的DataNode中。
+      </li>
+      </ul>
+    <p>
+由于上述多种考虑需要取舍，数据可能并不会均匀分布在DataNode中。HDFS为管理员提供了一个工具，用于分析数据块分布和重新平衡DataNode上的数据分布。<a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>的附件中的一个<a href="http://issues.apache.org/jira/secure/attachment/12368261/RebalanceDesign6.pdf">PDF</a>是一个简要的rebalancer管理员指南。
+    </p>
+<!--DCCOMMENT:diff begin-->
+    <p>
+     使用方法请参考<a href="commands_manual.html#balancer">balancer 命令</a>.
+   </p>
+<!--DCCOMMENT:diff end
+      <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
+     </p>
++    <p>
++     For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
++   </p>
+
+    </section> <section> <title> Rack Awareness </title>
+
+-->
+   </section> <section> <title> 机架感知（Rack awareness） </title>
+    <p>
+      通常，大型Hadoop集群是以机架的形式来组织的，同一个机架上不同节点间的网络状况比不同机架之间的更为理想。另外，NameNode设法将数据块副本保存在不同的机架上以提高容错性。Hadoop允许集群的管理员通过配置<code>dfs.network.script</code>参数来确定节点所处的机架。当这个脚本配置完毕，每个节点都会运行这个脚本来获取它的机架ID。默认的安装假定所有的节点属于同一个机架。这个特性及其配置参数在<a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>所附的<a href="http://issues.apache.org/jira/secure/attachment/12345251/Rack_aware_HDFS_proposal.pdf">PDF</a>上有更详细的描述。
+    </p>
+
+   </section> <section> <title> 安全模式 </title>
+    <p>
+     NameNode启动时会从fsimage和edits日志文件中装载文件系统的状态信息，接着它等待各个DataNode向它报告它们各自的数据块状态，这样，NameNode就不会过早地开始复制数据块，即使在副本充足的情况下。这个阶段，NameNode处于安全模式下。NameNode的安全模式本质上是HDFS集群的一种只读模式，此时集群不允许任何对文件系统或者数据块修改的操作。通常NameNode会在开始阶段自动地退出安全模式。如果需要，你也可以通过<code>'bin/hadoop dfsadmin -safemode'</code>命令显式地将HDFS置于安全模式。NameNode首页会显示当前是否处于安全模式。关于安全模式的更多介绍和配置信息请参考JavaDoc：<a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><code>setSafeMode()</code></a>。
+    </p>
+
+   </section> <section> <title> fsck </title>
+     <p>    
+      HDFS支持<code>fsck</code>命令来检查系统中的各种不一致状况。这个命令被设计来报告各种文件存在的问题，比如文件缺少数据块或者副本数目不够。不同于在本地文件系统上传统的fsck工具，这个命令并不会修正它检测到的错误。一般来说，NameNode会自动修正大多数可恢复的错误。HDFS的fsck不是一个Hadoop shell命令。它通过'<code>bin/hadoop fsck</code>'执行。
+<!--DCCOMMENT:diff begin-->
+命令的使用方法请参考<a href="commands_manual.html#fsck"><code>fsck</code>命令</a>
+<code>fsck</code>可用来检查整个文件系统，也可以只检查部分文件。
+<!--DCCOMMENT:diff end
+ Hadoop shell command. It can be run as '<code>bin/hadoop fsck</code>'.
+-      Fsck can be run on the whole filesystem or on a subset of files.
++      For command usage, see <a href="commands_manual.html#fsck"><code>fsck</code> command</a>.
++      <code>fsck</code> can be run on the whole file system or on a subset of files.
+      </p>
+
+-->
+     </p>
+     
+   </section> <section> <title> 升级和回滚 </title>
+     <p>当在一个已有集群上升级Hadoop时，像其他的软件升级一样，可能会有新的bug或一些会影响到现有应用的非兼容性变更出现。在任何有实际意义的HDSF系统上，丢失数据是不被允许的，更不用说重新搭建启动HDFS了。HDFS允许管理员退回到之前的Hadoop版本，并将集群的状态回滚到升级之前。更多关于HDFS升级的细节在<a href="http://wiki.apache.org/hadoop/Hadoop%20Upgrade">升级wiki</a>上可以找到。HDFS在一个时间可以有一个这样的备份。在升级之前，管理员需要用<code>bin/hadoop dfsadmin -finalizeUpgrade</code>（升级终结操作）命令删除存在的备份文件。下面简单介绍一下一般的升级过程：
+     </p>
+      <ul>
+      <li>升级 Hadoop 软件之前，请检查是否已经存在一个备份，如果存在，可执行升级终结操作删除这个备份。通过<code>dfsadmin -upgradeProgress status</code>命令能够知道是否需要对一个集群执行升级终结操作。</li>
+      <li>停止集群并部署新版本的Hadoop。</li>
+      <li>使用<code>-upgrade</code>选项运行新的版本（<code>bin/start-dfs.sh -upgrade</code>）。
+      </li>
+      <li>在大多数情况下，集群都能够正常运行。一旦我们认为新的HDFS运行正常（也许经过几天的操作之后），就可以对之执行升级终结操作。注意，在对一个集群执行升级终结操作之前，删除那些升级前就已经存在的文件并不会真正地释放DataNodes上的磁盘空间。</li>
+      <li>如果需要退回到老版本，
+	<ul>
+          <li>停止集群并且部署老版本的Hadoop。</li>
+          <li>用回滚选项启动集群（<code>bin/start-dfs.h -rollback</code>）。</li>
+        </ul>
+      </li>
+      </ul>
+    
+   </section> <section> <title> 文件权限和安全性 </title>
+     <p>           
+      这里的文件权限和其他常见平台如Linux的文件权限类似。目前，安全性仅限于简单的文件权限。启动NameNode的用户被视为HDFS的超级用户。HDFS以后的版本将会支持网络验证协议（比如Kerberos）来对用户身份进行验证和对数据进行加密传输。具体的细节请参考<a href="hdfs_permissions_guide.html">权限使用管理指南</a>。
+     </p>
+     
+   </section> <section> <title> 可扩展性 </title>
+     <p>
+      现在，Hadoop已经运行在上千个节点的集群上。<a href="http://wiki.apache.org/hadoop/PoweredBy">Powered By Hadoop</a>页面列出了一些已将Hadoop部署在他们的大型集群上的组织。HDFS集群只有一个NameNode节点。目前，NameNode上可用内存大小是一个主要的扩展限制。在超大型的集群中，增大HDFS存储文件的平均大小能够增大集群的规模，而不需要增加NameNode的内存。默认配置也许并不适合超大规模的集群。<a href="http://wiki.apache.org/hadoop/FAQ">Hadoop FAQ</a>页面列举了针对大型Hadoop集群的配置改进。</p>
+     
+   </section> <section> <title> 相关文档 </title>          
+      <p>
+      这个用户手册给用户提供了一个学习和使用HDSF文件系统的起点。本文档会不断地进行改进，同时，用户也可以参考更多的Hadoop和HDFS文档。下面的列表是用户继续学习的起点：
+      </p>
+      <ul>
+      <li>
+        <a href="http://hadoop.apache.org/">Hadoop官方主页</a>：所有Hadoop相关的起始页。
+      </li>
+      <li>
+        <a href="http://wiki.apache.org/hadoop/FrontPage">Hadoop Wiki</a>：Hadoop Wiki文档首页。这个指南是Hadoop代码树中的一部分，与此不同，Hadoop Wiki是由Hadoop社区定期编辑的。
+      </li>
+      <li>Hadoop Wiki上的<a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>。
+      </li>
+      <li>Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/">JavaDoc API</a>。</li>
+      <li>Hadoop用户邮件列表：<a href="mailto:core-user@hadoop.apache.org">core-user[at]hadoop.apache.org</a>。</li>
+      <li>查看<code>conf/hadoop-default.xml</code>文件。这里包括了大多数配置参数的简要描述。</li>
+      <li>
+        <a href="commands_manual.html">命令手册</a>：命令使用说明。
+      </li>
+<!--DCCOMMENT:diff begin-->
+<!--DCCOMMENT:diff end
+@@ -411,6 +469,10 @@
+          It includes brief
+          description of most of the configuration variables available.
+       </li>
++      <li>
++        <a href="commands_manual.html">Commands Manual</a>
++        : commands usage.
++      </li>
+       </ul>
+      </section>
+
+-->
+      </ul>
+     </section>
+     
+  </body>
+</document>

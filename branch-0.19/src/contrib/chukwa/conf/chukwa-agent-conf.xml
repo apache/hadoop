@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="nutch-conf.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+  
+  <property>
+    <name>chukwaAgent.control.port</name>
+    <value>9093</value>
+    <description>The socket port number the agent's control interface can be contacted at.</description>
+  </property>
+
+  <property>
+    <name>chukwaAgent.hostname</name>
+    <value>localhost</value>
+    <description>The hostname of the agent on this node. Usually localhost, this is used by the chukwa instrumentation agent-control interface library</description>
+  </property>
+
+</configuration>
