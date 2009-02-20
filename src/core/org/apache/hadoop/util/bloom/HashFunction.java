@@ -112,7 +112,7 @@ public final class HashFunction {
       int[] result = new int[nbHash];
       for (int i = 0, initval = 0; i < nbHash; i++) {
 	  initval = hashFunction.hash(b, initval);
-	  result[i] = Math.abs(initval) % maxValue;
+	  result[i] = Math.abs(initval % maxValue);
       }
       return result;
   }
