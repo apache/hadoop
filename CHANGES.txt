@@ -801,6 +801,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5255. Fix use of Math.abs to avoid overflow. (Jonathan Ellis via
     cdouglas)
 
+    HADOOP-5269. Fixes a problem to do with tasktracker holding on to FAILED_UNCLEAN
+    or KILLED_UNCLEAN tasks forever. (Amareshwari Sriramadasu via ddas) 
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS

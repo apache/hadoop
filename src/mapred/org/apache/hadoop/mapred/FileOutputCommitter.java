@@ -129,7 +129,7 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
-  public void abortTask(TaskAttemptContext context) {
+  public void abortTask(TaskAttemptContext context) throws IOException {
     Path taskOutputPath =  getTempTaskOutputPath(context);
     try {
       if (taskOutputPath != null) {
