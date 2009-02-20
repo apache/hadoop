@@ -2609,9 +2609,6 @@ class JobInProgress {
   }
 
   boolean isComplete() {
-    int runState = this.status.getRunState();
-    return runState == JobStatus.SUCCEEDED 
-           || runState == JobStatus.FAILED 
-           || runState == JobStatus.KILLED;
+    return status.isJobComplete();
   }
 }

@@ -270,6 +270,14 @@ public class JobStatus implements Writable, Cloneable {
      priority = jp;
    }
   
+   /**
+    * Returns true if the status is for a completed job.
+    */
+   public synchronized boolean isJobComplete() {
+     return (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED 
+             || runState == JobStatus.KILLED);
+   }
+
   ///////////////////////////////////////
   // Writable
   ///////////////////////////////////////
