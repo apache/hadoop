@@ -616,6 +616,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5269. Fixes a problem to do with tasktracker holding on to FAILED_UNCLEAN
     or KILLED_UNCLEAN tasks forever. (Amareshwari Sriramadasu via ddas) 
 
+    HADOOP-5214. Fixes a ConcurrentModificationException while the Fairshare
+    Scheduler accesses the tasktrackers stored by the JobTracker.
+    (Rahul Kumar Singh via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
