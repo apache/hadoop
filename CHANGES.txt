@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     HADOOP-5275. Add ivy directory and files to built tar.
     (Giridharan Kesavan via nigel)
 
+    HADOOP-5120. Remove the use of FSNamesystem.getFSNamesystem() from 
+    UpgradeManagerNamenode and UpgradeObjectNamenode.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

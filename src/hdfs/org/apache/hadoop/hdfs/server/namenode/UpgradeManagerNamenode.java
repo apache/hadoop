@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.SortedSet;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -25,9 +24,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
-import org.apache.hadoop.hdfs.server.common.UpgradeObjectCollection;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.hdfs.server.common.Upgradeable;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -45,6 +42,12 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return HdfsConstants.NodeType.NAME_NODE;
   }
 
+  private final FSNamesystem namesystem;
+
+  UpgradeManagerNamenode(FSNamesystem namesystem) {
+    this.namesystem = namesystem;    
+  }
+
   /**
    * Start distributed upgrade.
    * Instantiates distributed upgrade objects.
@@ -57,7 +60,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
       initializeUpgrade();
       if(!upgradeState) return false;
       // write new upgrade state into disk
-      FSNamesystem.getFSNamesystem().getFSImage().writeAll();
+      namesystem.getFSImage().writeAll();
     }
     assert currentUpgrades != null : "currentUpgrades is null";
     this.broadcastCommand = currentUpgrades.first().startUpgrade();
@@ -106,17 +109,17 @@ class UpgradeManagerNamenode extends UpgradeManager {
   public synchronized void completeUpgrade() throws IOException {
     // set and write new upgrade state into disk
     setUpgradeState(false, FSConstants.LAYOUT_VERSION);
-    FSNamesystem.getFSNamesystem().getFSImage().writeAll();
+    namesystem.getFSImage().writeAll();
     currentUpgrades = null;
     broadcastCommand = null;
-    FSNamesystem.getFSNamesystem().leaveSafeMode(false);
+    namesystem.leaveSafeMode(false);
   }
 
   UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
                                                 ) throws IOException {
     boolean isFinalized = false;
     if(currentUpgrades == null) { // no upgrades are in progress
-      FSImage fsimage = FSNamesystem.getFSNamesystem().getFSImage();
+      FSImage fsimage = namesystem.getFSImage();
       isFinalized = fsimage.isUpgradeFinalized();
       if(isFinalized) // upgrade is finalized
         return null;  // nothing to report
@@ -135,14 +138,5 @@ class UpgradeManagerNamenode extends UpgradeManager {
       curUO.forceProceed();
     }
     return curUO.getUpgradeStatusReport(details);
-  }
-
-  public static void main(String[] args) throws IOException {
-    UpgradeManagerNamenode um = new UpgradeManagerNamenode();
-    SortedSet<Upgradeable> uos;
-    uos = UpgradeObjectCollection.getDistributedUpgrades(-4, 
-        HdfsConstants.NodeType.NAME_NODE);
-    System.out.println(uos.size());
-    um.startUpgrade();
   }
 }

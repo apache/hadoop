@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -53,10 +52,6 @@ public abstract class UpgradeObjectNamenode extends UpgradeObject {
     // broadcast that data-nodes must start the upgrade
     return new UpgradeCommand(UpgradeCommand.UC_ACTION_START_UPGRADE,
                               getVersion(), (short)0);
-  }
-
-  protected FSNamesystem getFSNamesystem() {
-    return FSNamesystem.getFSNamesystem();
   }
 
   public void forceProceed() throws IOException {

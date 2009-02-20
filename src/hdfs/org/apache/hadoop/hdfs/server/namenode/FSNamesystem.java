@@ -4283,7 +4283,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   // Distributed upgrade manager
-  UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode();
+  final UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode(this);
 
   UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
                                                  ) throws IOException {
