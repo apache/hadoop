@@ -1992,10 +1992,7 @@ class JobInProgress {
     TaskTrackerStatus ttStatus = 
       this.jobtracker.getTaskTracker(status.getTaskTracker());
     String trackerHostname = jobtracker.getNode(ttStatus.getHost()).toString();
-    String taskType = tip.isJobCleanupTask() ? Values.CLEANUP.name() :
-                      tip.isJobSetupTask() ? Values.SETUP.name() :
-                      tip.isMapTask() ? Values.MAP.name() : 
-                      Values.REDUCE.name();
+    String taskType = getTaskType(tip);
     if (status.getIsMap()){
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                                        status.getTaskTracker(), 
@@ -2306,10 +2303,7 @@ class JobInProgress {
     List<String> taskDiagnosticInfo = tip.getDiagnosticInfo(taskid);
     String diagInfo = taskDiagnosticInfo == null ? "" :
       StringUtils.arrayToString(taskDiagnosticInfo.toArray(new String[0]));
-    String taskType = tip.isJobCleanupTask() ? Values.CLEANUP.name() :
-                      tip.isJobSetupTask() ? Values.SETUP.name() :
-                      tip.isMapTask() ? Values.MAP.name() : 
-                      Values.REDUCE.name();
+    String taskType = getTaskType(tip);
     if (taskStatus.getIsMap()) {
       JobHistory.MapAttempt.logStarted(taskid, startTime, 
         taskTrackerName, taskTrackerPort, taskType);
@@ -2432,12 +2426,14 @@ class JobInProgress {
                                                     trackerName, phase,
                                                     new Counters());
     status.setFinishTime(System.currentTimeMillis());
+    boolean wasComplete = tip.isComplete();
     updateTaskStatus(tip, status, metrics);
-    JobHistory.Task.logFailed(tip.getTIPId(), 
-                              tip.isJobCleanupTask() ? Values.CLEANUP.name() : 
-                              tip.isJobSetupTask() ? Values.SETUP.name() : 
-                              tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
-                              tip.getExecFinishTime(), reason, taskid); 
+    boolean isComplete = tip.isComplete();
+    if (wasComplete && !isComplete) { // mark a successful tip as failed
+      String taskType = getTaskType(tip);
+      JobHistory.Task.logFailed(tip.getTIPId(), taskType, 
+                                tip.getExecFinishTime(), reason, taskid);
+    }
   }
        
                            
@@ -2610,5 +2606,20 @@ class JobInProgress {
 
   boolean isComplete() {
     return status.isJobComplete();
+  }
+  
+  /**
+   * Get the task type for logging it to {@link JobHistory}.
+   */
+  private String getTaskType(TaskInProgress tip) {
+    if (tip.isJobCleanupTask()) {
+      return Values.CLEANUP.name();
+    } else if (tip.isJobSetupTask()) {
+      return Values.SETUP.name();
+    } else if (tip.isMapTask()) {
+      return Values.MAP.name();
+    } else {
+      return Values.REDUCE.name();
+    }
   }
 }

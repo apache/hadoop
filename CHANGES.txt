@@ -630,6 +630,9 @@ Release 0.20.0 - Unreleased
     job is not in memory and a tasktracker comes to the jobtracker with a status
     report of a task belonging to that job. (Amar Kamat via ddas)
 
+    HADOOP-5282. Fixed job history logs for task attempts that are failed by the
+    JobTracker, say due to lost task trackers. (Amar Kamat via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
