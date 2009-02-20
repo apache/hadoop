@@ -233,11 +233,12 @@ public class FairScheduler extends TaskScheduler {
       runnableReduces += runnableTasks(job, TaskType.REDUCE);
     }
 
+    ClusterStatus clusterStatus = taskTrackerManager.getClusterStatus();
     // Compute total map/reduce slots
     // In the future we can precompute this if the Scheduler becomes a 
     // listener of tracker join/leave events.
-    int totalMapSlots = getTotalSlots(TaskType.MAP);
-    int totalReduceSlots = getTotalSlots(TaskType.REDUCE);
+    int totalMapSlots = getTotalSlots(TaskType.MAP, clusterStatus);
+    int totalReduceSlots = getTotalSlots(TaskType.REDUCE, clusterStatus);
     
     // Scan to see whether any job needs to run a map, then a reduce
     ArrayList<Task> tasks = new ArrayList<Task>();
@@ -331,31 +332,36 @@ public class FairScheduler extends TaskScheduler {
    * fair shares, deficits, minimum slot allocations, and numbers of running
    * and needed tasks of each type. 
    */
-  protected synchronized void update() {
+  protected void update() {
+    //Making more granual locking so that clusterStatus can be fetched from Jobtracker.
+    ClusterStatus clusterStatus = taskTrackerManager.getClusterStatus();
+    // Got clusterStatus hence acquiring scheduler lock now
     // Remove non-running jobs
-    List<JobInProgress> toRemove = new ArrayList<JobInProgress>();
-    for (JobInProgress job: infos.keySet()) { 
-      int runState = job.getStatus().getRunState();
-      if (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED
+    synchronized(this){
+      List<JobInProgress> toRemove = new ArrayList<JobInProgress>();
+      for (JobInProgress job: infos.keySet()) { 
+        int runState = job.getStatus().getRunState();
+        if (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED
           || runState == JobStatus.KILLED) {
-        toRemove.add(job);
+            toRemove.add(job);
+        }
       }
+      for (JobInProgress job: toRemove) {
+        infos.remove(job);
+        poolMgr.removeJob(job);
+      }
+      // Update running jobs with deficits since last update, and compute new
+      // slot allocations, weight, shares and task counts
+      long now = clock.getTime();
+      long timeDelta = now - lastUpdateTime;
+      updateDeficits(timeDelta);
+      updateRunnability();
+      updateTaskCounts();
+      updateWeights();
+      updateMinSlots();
+      updateFairShares(clusterStatus);
+      lastUpdateTime = now;
     }
-    for (JobInProgress job: toRemove) {
-      infos.remove(job);
-      poolMgr.removeJob(job);
-    }
-    // Update running jobs with deficits since last update, and compute new
-    // slot allocations, weight, shares and task counts
-    long now = clock.getTime();
-    long timeDelta = now - lastUpdateTime;
-    updateDeficits(timeDelta);
-    updateRunnability();
-    updateTaskCounts();
-    updateWeights();
-    updateMinSlots();
-    updateFairShares();
-    lastUpdateTime = now;
   }
   
   private void updateDeficits(long timeDelta) {
@@ -594,7 +600,7 @@ public class FairScheduler extends TaskScheduler {
     return slotsLeft;
   }
 
-  private void updateFairShares() {
+  private void updateFairShares(ClusterStatus clusterStatus) {
     // Clear old fairShares
     for (JobInfo info: infos.values()) {
       info.mapFairShare = 0;
@@ -618,7 +624,7 @@ public class FairScheduler extends TaskScheduler {
           jobsLeft.add(info);
         }
       }
-      double slotsLeft = getTotalSlots(type);
+      double slotsLeft = getTotalSlots(type, clusterStatus);
       while (!jobsLeft.isEmpty()) {
         double totalWeight = 0;
         for (JobInfo info: jobsLeft) {
@@ -697,13 +703,9 @@ public class FairScheduler extends TaskScheduler {
     return poolMgr;
   }
 
-  public int getTotalSlots(TaskType type) {
-    int slots = 0;
-    for (TaskTrackerStatus tt: taskTrackerManager.taskTrackers()) {
-      slots += (type == TaskType.MAP ?
-          tt.getMaxMapTasks() : tt.getMaxReduceTasks());
-    }
-    return slots;
+  private int getTotalSlots(TaskType type, ClusterStatus clusterStatus) {
+    return (type == TaskType.MAP ?
+      clusterStatus.getMaxMapTasks() : clusterStatus.getMaxReduceTasks());
   }
 
   public boolean getUseFifo() {
