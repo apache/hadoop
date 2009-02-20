@@ -798,6 +798,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4692. Namenode in infinite loop for replicating/deleting corrupt
     blocks. (hairong)
 
+    HADOOP-5255. Fix use of Math.abs to avoid overflow. (Jonathan Ellis via
+    cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
