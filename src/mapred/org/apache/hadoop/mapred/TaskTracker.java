@@ -2100,6 +2100,34 @@ public class TaskTracker
       releaseSlot();
     }
 
+    /* State changes:
+     * RUNNING/COMMIT_PENDING -> FAILED_UNCLEAN/FAILED/KILLED_UNCLEAN/KILLED
+     * FAILED_UNCLEAN -> FAILED
+     * KILLED_UNCLEAN -> KILLED 
+     */
+    private void setTaskFailState(boolean wasFailure) {
+      // go FAILED_UNCLEAN -> FAILED and KILLED_UNCLEAN -> KILLED always
+      if (taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
+        taskStatus.setRunState(TaskStatus.State.FAILED);
+      } else if (taskStatus.getRunState() == 
+                 TaskStatus.State.KILLED_UNCLEAN) {
+        taskStatus.setRunState(TaskStatus.State.KILLED);
+      } else if (task.isMapOrReduce() && 
+                 taskStatus.getPhase() != TaskStatus.Phase.CLEANUP) {
+        if (wasFailure) {
+          taskStatus.setRunState(TaskStatus.State.FAILED_UNCLEAN);
+        } else {
+          taskStatus.setRunState(TaskStatus.State.KILLED_UNCLEAN);
+        }
+      } else {
+        if (wasFailure) {
+          taskStatus.setRunState(TaskStatus.State.FAILED);
+        } else {
+          taskStatus.setRunState(TaskStatus.State.KILLED);
+        }
+      }
+    }
+    
     /**
      * The task has actually finished running.
      */
@@ -2126,22 +2154,7 @@ public class TaskTracker
         if (!done) {
           if (!wasKilled) {
             failures += 1;
-            /* State changes:
-             * RUNNING/COMMIT_PENDING -> FAILED_UNCLEAN/FAILED
-             * FAILED_UNCLEAN -> FAILED 
-             * KILLED_UNCLEAN -> KILLED 
-             */
-            if (taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
-              taskStatus.setRunState(TaskStatus.State.FAILED);
-            } else if (taskStatus.getRunState() == 
-                       TaskStatus.State.KILLED_UNCLEAN) {
-              taskStatus.setRunState(TaskStatus.State.KILLED);
-            } else if (task.isMapOrReduce() && 
-                       taskStatus.getPhase() != TaskStatus.Phase.CLEANUP) {
-              taskStatus.setRunState(TaskStatus.State.FAILED_UNCLEAN);
-            } else {
-              taskStatus.setRunState(TaskStatus.State.FAILED);
-            }
+            setTaskFailState(true);
             removeFromMemoryManager(task.getTaskID());
             // call the script here for the failed tasks.
             if (debugCommand != null) {
@@ -2356,13 +2369,6 @@ public class TaskTracker
      * @param wasFailure was it a failure (versus a kill request)?
      */
     public synchronized void kill(boolean wasFailure) throws IOException {
-      /* State changes:
-       * RUNNING -> FAILED_UNCLEAN/KILLED_UNCLEAN/FAILED/KILLED
-       * COMMIT_PENDING -> FAILED_UNCLEAN/KILLED_UNCLEAN
-       * FAILED_UNCLEAN -> FAILED 
-       * KILLED_UNCLEAN -> KILLED
-       * UNASSIGNED -> FAILED/KILLED 
-       */
       if (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
           taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING ||
           isCleaningup()) {
@@ -2371,23 +2377,7 @@ public class TaskTracker
           failures += 1;
         }
         runner.kill();
-        if (task.isMapOrReduce()) {
-          taskStatus.setRunState((wasFailure) ? 
-                                    TaskStatus.State.FAILED_UNCLEAN : 
-                                    TaskStatus.State.KILLED_UNCLEAN);
-        } else {
-          // go FAILED_UNCLEAN -> FAILED and KILLED_UNCLEAN -> KILLED always
-          if (taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
-            taskStatus.setRunState(TaskStatus.State.FAILED);
-          } else if (taskStatus.getRunState() == 
-                     TaskStatus.State.KILLED_UNCLEAN) {
-            taskStatus.setRunState(TaskStatus.State.KILLED);
-          } else {
-            taskStatus.setRunState((wasFailure) ? 
-                                      TaskStatus.State.FAILED : 
-                                      TaskStatus.State.KILLED);
-          }
-        }
+        setTaskFailState(wasFailure);
       } else if (taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
         if (wasFailure) {
           failures += 1;
