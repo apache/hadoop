@@ -815,6 +815,8 @@ class JobInProgress {
         } else {
           reduceCleanupTasks.add(taskid);
         }
+        // Remove the task entry from jobtracker
+        jobtracker.removeTaskEntry(taskid);
       }
       //For a failed task update the JT datastructures. 
       else if (state == TaskStatus.State.FAILED ||

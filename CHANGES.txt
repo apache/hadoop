@@ -808,6 +808,11 @@ Release 0.20.0 - Unreleased
     Scheduler accesses the tasktrackers stored by the JobTracker.
     (Rahul Kumar Singh via yhemanth)
 
+    HADOOP-5233. Addresses the three issues - Race condition in updating
+    status, NPE in TaskTracker task localization when the conf file is missing
+    (HADOOP-5234) and NPE in handling KillTaskAction of a cleanup task (HADOOP-5235).
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
