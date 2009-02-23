@@ -645,6 +645,9 @@ Release 0.20.0 - Unreleased
     references to completedJobStore outside the block where the JobTracker is locked.
     (ddas)
 
+    HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes the estimation
+    formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
