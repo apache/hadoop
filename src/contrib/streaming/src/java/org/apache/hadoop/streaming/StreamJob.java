@@ -60,11 +60,13 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.KeyValueTextInputFormat;
+import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileAsTextInputFormat;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.lib.LazyOutputFormat;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorCombiner;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorReducer;
 import org.apache.hadoop.streaming.io.IdentifierResolver;
@@ -271,6 +273,8 @@ public class StreamJob implements Tool {
       comCmd_ = (String)cmdLine.getValue("-combiner"); 
       redCmd_ = (String)cmdLine.getValue("-reducer"); 
       
+      lazyOutput_ = cmdLine.hasOption("-lazyOutput");
+      
       if(!cmdLine.getValues("-file").isEmpty()) {
         packageFiles_.addAll(cmdLine.getValues("-file"));
       }
@@ -468,6 +472,7 @@ public class StreamJob implements Tool {
     Option help = createBoolOption("help", "print this help message"); 
     Option debug = createBoolOption("debug", "print debug output"); 
     Option inputtagged = createBoolOption("inputtagged", "inputtagged"); 
+    Option lazyOutput = createBoolOption("lazyOutput", "create outputs lazily");
     
     allOptions = new GroupBuilder().
       withOption(input).
@@ -496,6 +501,7 @@ public class StreamJob implements Tool {
       withOption(debug).
       withOption(inputtagged).
       withOption(help).
+      withOption(lazyOutput).
       create();
     parser.setGroup(allOptions);
     
@@ -525,6 +531,7 @@ public class StreamJob implements Tool {
     System.out.println("  -reducedebug <path>  Optional." +
     " To run this script when a reduce task fails ");
     System.out.println("  -io <identifier>  Optional.");
+    System.out.println("  -lazyOutput Optional. Lazily create Output");
     System.out.println("  -verbose");
     System.out.println();
     GenericOptionsParser.printGenericCommandUsage(System.out);
@@ -852,7 +859,11 @@ public class StreamJob implements Tool {
     if (fmt == null) {
       fmt = TextOutputFormat.class;
     }
-    jobConf_.setOutputFormat(fmt);
+    if (lazyOutput_) {
+      LazyOutputFormat.setOutputFormatClass(jobConf_, fmt);
+    } else {
+      jobConf_.setOutputFormat(fmt);
+    }
 
     if (partitionerSpec_!= null) {
       c = StreamUtil.goodClassOrNull(jobConf_, partitionerSpec_, defaultPackage);
@@ -1100,6 +1111,7 @@ public class StreamJob implements Tool {
   protected String mapDebugSpec_;
   protected String reduceDebugSpec_;
   protected String ioSpec_;
+  protected boolean lazyOutput_;
 
   // Use to communicate config to the external processes (ex env.var.HADOOP_USER)
   // encoding "a=b c=d"

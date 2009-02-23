@@ -52,6 +52,7 @@ import org.apache.hadoop.mapred.Partitioner;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
+import org.apache.hadoop.mapred.lib.LazyOutputFormat;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -361,6 +362,7 @@ public class Submitter extends Configured implements Tool {
       System.out.println("  [-writer <class>] // Java RecordWriter");
       System.out.println("  [-program <executable>] // executable URI");
       System.out.println("  [-reduces <num>] // number of reduces");
+      System.out.println("  [-lazyOutput] // createOutputLazily");
       System.out.println();
       GenericOptionsParser.printGenericCommandUsage(System.out);
     }
@@ -398,6 +400,8 @@ public class Submitter extends Configured implements Tool {
     cli.addOption("jobconf", false, 
         "\"n1=v1,n2=v2,..\" (Deprecated) Optional. Add or override a JobConf property.",
         "key=val");
+    cli.addOption("lazyOutput", false, "Optional. Create output lazily",
+                  "boolean");
     Parser parser = cli.createParser();
     try {
       
@@ -446,6 +450,14 @@ public class Submitter extends Configured implements Tool {
         job.setOutputFormat(getClass(results, "-writer", job, 
                                       OutputFormat.class));
       }
+      
+      if (results.hasOption("-lazyOutput")) {
+        if (Boolean.parseBoolean((String)results.getValue("-lazyOutput"))) {
+          LazyOutputFormat.setOutputFormatClass(job,
+              job.getOutputFormat().getClass());
+        }
+      }
+      
       if (results.hasOption("-program")) {
         setExecutable(job, (String) results.getValue("-program"));
       }

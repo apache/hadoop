@@ -46,6 +46,9 @@ Trunk (unreleased changes)
     HADOOP-5052. Add an example computing exact digits of pi using the
     Bailey-Borwein-Plouffe algorithm. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-4927. Adds a generic wrapper around outputformat to allow creation of
+    output on demand (Jothi Padmanabhan via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
