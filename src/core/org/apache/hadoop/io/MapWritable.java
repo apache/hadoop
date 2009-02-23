@@ -99,7 +99,7 @@ public class MapWritable extends AbstractMapWritable
   /** {@inheritDoc} */
   public void putAll(Map<? extends Writable, ? extends Writable> t) {
     for (Map.Entry<? extends Writable, ? extends Writable> e: t.entrySet()) {
-      instance.put(e.getKey(), e.getValue());
+      put(e.getKey(), e.getValue());
     }
   }
 
