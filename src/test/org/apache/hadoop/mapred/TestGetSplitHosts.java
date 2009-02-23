@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.net.NetworkTopology;
+
 import junit.framework.TestCase;
 
 public class TestGetSplitHosts extends TestCase {
@@ -28,6 +30,7 @@ public class TestGetSplitHosts extends TestCase {
     int block1Size = 100, block2Size = 150, block3Size = 75;
     int fileSize = block1Size + block2Size + block3Size;
     int replicationFactor = 3;
+    NetworkTopology clusterMap = new NetworkTopology();
     
     BlockLocation[] bs = new BlockLocation[numBlocks];
     
@@ -72,7 +75,7 @@ public class TestGetSplitHosts extends TestCase {
     
     SequenceFileInputFormat< String, String> sif = 
       new SequenceFileInputFormat<String,String>();
-    String [] hosts = sif.getSplitHosts(bs, 0, fileSize);
+    String [] hosts = sif.getSplitHosts(bs, 0, fileSize, clusterMap);
 
     // Contributions By Racks are
     // Rack1   175       
@@ -93,7 +96,7 @@ public class TestGetSplitHosts extends TestCase {
     bs[2] = new BlockLocation(block3Names,block3Hosts,block1Size+block2Size,
                                block3Size);
 
-    hosts = sif.getSplitHosts(bs, 0, fileSize);
+    hosts = sif.getSplitHosts(bs, 0, fileSize, clusterMap);
     
     // host1 makes the highest contribution among all hosts
     // So, that should be returned before others

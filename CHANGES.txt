@@ -208,6 +208,10 @@ Trunk (unreleased changes)
 
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
 
+    HADOOP-5103. FileInputFormat now reuses the clusterMap network topology object
+    and that brings down the log messages in the JobClient to do with 
+    NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
