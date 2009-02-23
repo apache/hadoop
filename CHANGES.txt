@@ -43,6 +43,9 @@ Trunk (unreleased changes)
 
     HADOOP-5018. Add pipelined writers to Chukwa. (Ari Rabkin via cdouglas)
 
+    HADOOP-5052. Add an example computing exact digits of pi using the
+    Bailey-Borwein-Plouffe algorithm. (Tsz Wo (Nicholas), SZE via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
