@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     and that brings down the log messages in the JobClient to do with 
     NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
+    which earlier used mapred.local.dir. (Sharad Agarwal via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

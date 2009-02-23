@@ -90,6 +90,16 @@
   obtaining serializers and deserializers.</description>
 </property>
 
+<property>
+  <name>io.seqfile.local.dir</name>
+  <value>${hadoop.tmp.dir}/io/local</value>
+  <description>The local directory where sequence file stores intermediate
+  data files during merge.  May be a comma-separated list of
+  directories on different devices in order to spread disk i/o.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
 <!-- file system properties -->
 
 <property>

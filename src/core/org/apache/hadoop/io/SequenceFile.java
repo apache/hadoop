@@ -2870,7 +2870,7 @@ public class SequenceFile {
         int numSegments = sortedSegmentSizes.size();
         int origFactor = factor;
         int passNo = 1;
-        LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+        LocalDirAllocator lDirAlloc = new LocalDirAllocator("io.seqfile.local.dir");
         do {
           //get the factor for this pass of merge
           factor = getPassFactor(passNo, numSegments);
