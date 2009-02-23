@@ -635,6 +635,8 @@ Release 0.20.0 - Unreleased
 
     HADOOP-4963. Fixes a logging to do with getting the location of
     map output file. (Amareshwari Sriramadasu via ddas)
+    
+    HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)    
 
 Release 0.19.1 - Unreleased
 
