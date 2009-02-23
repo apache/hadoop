@@ -412,7 +412,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       }
     } finally {
       if (clientTraceFmt != null) {
-        ClientTraceLog.info(String.format(clientTraceFmt, totalRead));
+        ClientTraceLog.info(String.format(clientTraceFmt, totalRead, initialOffset));
       }
       close();
     }

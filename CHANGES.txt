@@ -118,6 +118,8 @@ Trunk (unreleased changes)
     HADOOP-5120. Remove the use of FSNamesystem.getFSNamesystem() from 
     UpgradeManagerNamenode and UpgradeObjectNamenode.  (szetszwo)
 
+    HADOOP-5222. Add offset to datanode clienttrace. (Lei Xu via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
