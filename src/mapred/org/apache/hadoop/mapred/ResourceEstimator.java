@@ -34,82 +34,46 @@ class ResourceEstimator {
   private static final Log LOG = LogFactory.getLog(
       "org.apache.hadoop.mapred.ResourceEstimator");
 
+  private long completedMapsInputSize;
+  private long completedMapsOutputSize;
 
-  /**
-   * Estimated ratio of output to (input size+1) for map tasks. 
-   */
-  private double mapBlowupRatio;
-  
-  /**
-   * How much relative weight to put on the current estimate.
-   * Each completed map has unit weight.
-   */
-  private double estimateWeight;
+  private int completedMapsUpdates;
   final private JobInProgress job;
   final private int threshholdToUse;
 
   public ResourceEstimator(JobInProgress job) {
     this.job = job;
     threshholdToUse = job.desiredMaps()/ 10;
-    mapBlowupRatio = 0;
-    estimateWeight = 1;
   }
 
+  protected synchronized void updateWithCompletedTask(TaskStatus ts, 
+      TaskInProgress tip) {
 
-  /**
-   * Have private access methods to abstract away synchro.
-   * @return
-   */
-  private synchronized double getBlowupRatio() {
-    return mapBlowupRatio;
-  }
-
-  private synchronized void setBlowupRatio(double b)  {
-    mapBlowupRatio = b;
-  }
-
-  void updateWithCompletedTask(TaskStatus ts, TaskInProgress tip) {
-    
     //-1 indicates error, which we don't average in.
     if(tip.isMapTask() &&  ts.getOutputSize() != -1)  {
-      double blowupOnThisTask = ts.getOutputSize() / 
-        ((double) tip.getMapInputSize() + 1);
-      
-      LOG.info("measured blowup on " + tip.getTIPId() + " was " +
-          ts.getOutputSize() + "/" +(tip.getMapInputSize()+1) + " = " 
-          + blowupOnThisTask);
-      
-      double newEstimate;
-      synchronized(this) {
-        newEstimate = blowupOnThisTask / estimateWeight + 
-            ((estimateWeight - 1) / estimateWeight) * getBlowupRatio();
-        estimateWeight++; 
-      }
-      setBlowupRatio(newEstimate);
-      
-      LOG.info("new estimate is blowup = " + newEstimate);
+      completedMapsUpdates++;
+
+      completedMapsInputSize+=(tip.getMapInputSize()+1);
+      completedMapsOutputSize+=ts.getOutputSize();
+
+      LOG.info("completedMapsUpdates:"+completedMapsUpdates+"  "+
+          "completedMapsInputSize:"+completedMapsInputSize+"  " +
+        "completedMapsOutputSize:"+completedMapsOutputSize);
     }
   }
 
   /**
    * @return estimated length of this job's total map output
    */
-  protected long getEstimatedTotalMapOutputSize()  {
-    double estWeight;
-    synchronized(this) {
-      estWeight = this.estimateWeight;
-    }
-    
-    if(estWeight < threshholdToUse) {
+  protected synchronized long getEstimatedTotalMapOutputSize()  {
+    if(completedMapsUpdates < threshholdToUse) {
       return 0;
     } else {
-      double blowup =getBlowupRatio();
       long inputSize = job.getInputLength() + job.desiredMaps(); 
       //add desiredMaps() so that randomwriter case doesn't blow up
-      long estimate = Math.round(inputSize * blowup * 2.0);
-  
-      LOG.debug("estimate total map output will be " + estimate +
-          " bytes. (blowup = 2*" + blowup + ")");
+      long estimate = Math.round((inputSize * 
+          completedMapsOutputSize * 2.0)/completedMapsInputSize);
+      LOG.debug("estimate total map output will be " + estimate);
       return estimate;
     }
   }
