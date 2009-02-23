@@ -834,6 +834,13 @@ Release 0.20.0 - Unreleased
     HADOOP-5282. Fixed job history logs for task attempts that are failed by the
     JobTracker, say due to lost task trackers. (Amar Kamat via yhemanth)
 
+    HADOOP-5285. Fixes the issues - (1) obtainTaskCleanupTask checks whether job is
+    inited before trying to lock the JobInProgress (2) Moves the CleanupQueue class
+    outside the TaskTracker and makes it a generic class that is used by the 
+    JobTracker also for deleting the paths on the job's output fs. (3) Moves the
+    references to completedJobStore outside the block where the JobTracker is locked.
+    (ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
