@@ -80,6 +80,7 @@
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.docs.cn" value="${build.dir}/docs/cn"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
+  <property name="build.javadoc.timestamp" value="${build.javadoc}/index.html" />
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
   <property name="install.c++" value="${build.dir}/c++/${build.platform}"/>
@@ -965,7 +966,18 @@
     </javadoc>
   </target>	
 
-  <target name="javadoc" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc">
+  <target name="javadoc-uptodate" depends="compile, ivy-retrieve-javadoc">
+    <uptodate property="javadoc.is.uptodate">
+      <srcfiles dir="${src.dir}">
+        <include name="**/*.java" />
+        <include name="**/*.html" />
+      </srcfiles>
+      <mapper type="merge" to="${build.javadoc.timestamp}" />
+    </uptodate>
+  </target>
+ 
+  <target name="javadoc" description="Generate javadoc" depends="javadoc-uptodate"
+       unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${core.src.dir}/overview.html"

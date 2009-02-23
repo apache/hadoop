@@ -126,6 +126,9 @@ Trunk (unreleased changes)
 
     HADOOP-5222. Add offset to datanode clienttrace. (Lei Xu via cdouglas)
 
+    HADOOP-5240. Skip re-building javadoc when it is already
+    up-to-date. (Aaron Kimball via cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES
