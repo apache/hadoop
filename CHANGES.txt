@@ -651,6 +651,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5142. Fix MapWritable#putAll to store key/value classes. 
     (Doğacan Güney via enis)
 
+    HADOOP-4744. Workaround for jetty6 returning -1 when getLocalPort is invoked on
+    the connector. The workaround patch takes the most conservative approach of 
+    killing the server process whenever this is true. (ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
