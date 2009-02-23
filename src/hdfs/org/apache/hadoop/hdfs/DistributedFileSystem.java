@@ -288,7 +288,7 @@ public class DistributedFileSystem extends FileSystem {
     return dfs;
   }        
   
-  /** @deprecated Use {@link org.apache.hadoop.fs.FsStatus instead */
+  /** @deprecated Use {@link org.apache.hadoop.fs.FsStatus} instead */
   @Deprecated
   public static class DiskStatus extends FsStatus {
     public DiskStatus(FsStatus stats) {

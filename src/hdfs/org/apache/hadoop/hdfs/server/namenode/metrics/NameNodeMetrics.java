@@ -46,7 +46,7 @@ public class NameNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
     public MetricsRegistry registry = new MetricsRegistry();
     
-    private NameNodeActivtyMBean namenodeActivityMBean;
+    private NameNodeActivityMBean namenodeActivityMBean;
     
     public MetricsTimeVaryingInt numFilesCreated =
                           new MetricsTimeVaryingInt("FilesCreated", registry);
@@ -88,7 +88,7 @@ public class NameNodeMetrics implements Updater {
 
       
       // Now the Mbean for the name node - this alos registers the MBean
-      namenodeActivityMBean = new NameNodeActivtyMBean(registry);
+      namenodeActivityMBean = new NameNodeActivityMBean(registry);
       
       // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");

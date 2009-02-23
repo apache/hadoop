@@ -52,10 +52,10 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * from the metrics registry passed as an argument to the constructor
  */
 
-public class NameNodeActivtyMBean extends MetricsDynamicMBeanBase {
+public class NameNodeActivityMBean extends MetricsDynamicMBeanBase {
   final private ObjectName mbeanName;
 
-  protected NameNodeActivtyMBean(final MetricsRegistry mr) {
+  protected NameNodeActivityMBean(final MetricsRegistry mr) {
     super(mr, "Activity statistics at the NameNode");
     mbeanName = MBeanUtil.registerMBean("NameNode", "NameNodeActivity", this);
   }

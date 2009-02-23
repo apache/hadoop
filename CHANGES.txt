@@ -215,6 +215,9 @@ Trunk (unreleased changes)
     HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
     which earlier used mapred.local.dir. (Sharad Agarwal via ddas)
 
+    HADOOP-5300. Fix ant javadoc-dev target and the typo in the class name
+    NameNodeActivtyMBean.  (szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

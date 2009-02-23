@@ -921,7 +921,7 @@
     <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
   </target>
 	
-  <target name="javadoc-dev" description="Generate javadoc for hadoop developers">
+  <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
       overview="${core.src.dir}/overview.html"
@@ -950,7 +950,9 @@
           <fileset dir="src/contrib/">
             <include name="*/lib/*.jar" />
           </fileset>
+          <path refid="javadoc-classpath"/>
           <pathelement path="${java.class.path}"/>
+          <pathelement location="${build.tools}"/>
         </classpath>
 
     	<group title="Core" packages="org.apache.*"/>
