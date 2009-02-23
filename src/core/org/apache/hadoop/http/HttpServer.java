@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.channels.ServerSocketChannel;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -340,7 +341,15 @@ public class HttpServer implements FilterContainer {
    * @return the port
    */
   public int getPort() {
-    return webServer.getConnectors()[0].getLocalPort();
+    int port = webServer.getConnectors()[0].getLocalPort();
+    if (port < 0) {
+      LOG.warn("Exiting since getLocalPort returned " + port + 
+               " Open status of jetty connector is: " +
+      (((ServerSocketChannel)webServer.getConnectors()[0].getConnection()).
+                                                    isOpen()));
+      System.exit(-1);
+    }
+    return port;
   }
 
   /**
