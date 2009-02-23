@@ -291,6 +291,9 @@ public class KosmosFileSystem extends FileSystem {
       }
       String srep = makeAbsolute(file.getPath()).toUri().getPath();
       String[][] hints = kfsImpl.getDataLocation(srep, start, len);
+      if (hints == null) {
+        return null;
+      }
       BlockLocation[] result = new BlockLocation[hints.length];
       long blockSize = getDefaultBlockSize();
       long length = len;

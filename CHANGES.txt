@@ -203,6 +203,8 @@ Trunk (unreleased changes)
     HADOOP-5227. Fix distcp so -update and -delete can be meaningfully
     combined. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
