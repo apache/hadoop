@@ -1262,6 +1262,12 @@ class JobInProgress {
   synchronized void addRunningTaskToTIP(TaskInProgress tip, TaskAttemptID id, 
                                         TaskTrackerStatus tts, 
                                         boolean isScheduled) {
+    // Make an entry in the tip if the attempt is not scheduled i.e externally
+    // added
+    if (!isScheduled) {
+      tip.addRunningTask(id, tts.getTrackerName());
+    }
+
     // keeping the earlier ordering intact
     String name;
     String splits = "";
@@ -1296,12 +1302,6 @@ class JobInProgress {
       jobCounters.incrCounter(counter, 1);
     }
     
-    // Make an entry in the tip if the attempt is not scheduled i.e externally
-    // added
-    if (!isScheduled) {
-      tip.addRunningTask(id, tts.getTrackerName());
-    }
-
     //TODO The only problem with these counters would be on restart.
     // The jobtracker updates the counter only when the task that is scheduled
     // if from a non-running tip and is local (data, rack ...). But upon restart
