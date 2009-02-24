@@ -260,6 +260,7 @@ class TaskInProgress {
    */
   public void setExecFinishTime(long finishTime) {
     execFinishTime = finishTime;
+    JobHistory.Task.logUpdates(id, execFinishTime); // log the update
   }
   
   /**

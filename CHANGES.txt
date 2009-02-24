@@ -224,6 +224,9 @@ Trunk (unreleased changes)
     HADOOP-5276. Fixes a problem to do with updating the start time of a task when
     the tracker that ran the task is lost. (Amar Kamat via ddas)
 
+    HADOOP-5278. Fixes a problem to do with logging the finish time of a task during
+    recovery (after a JobTracker restart). (Amar Kamat via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
