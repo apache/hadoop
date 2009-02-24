@@ -90,6 +90,9 @@ class TaskInProgress {
     
   // The taskid that took this TIP to SUCCESS
   private TaskAttemptID successfulTaskId;
+
+  // The first taskid of this tip
+  private TaskAttemptID firstTaskId;
   
   // Map from task Id -> TaskTracker Id, contains tasks that are
   // currently runnings
@@ -284,7 +287,7 @@ class TaskInProgress {
    * @return Returns true if the Task is the first attempt of the tip
    */  
   public boolean isFirstAttempt(TaskAttemptID taskId) {
-    return (taskId.getId() == 0); 
+    return firstTaskId == null ? false : firstTaskId.equals(taskId); 
   }
   
   /**
@@ -910,7 +913,7 @@ class TaskInProgress {
     // create the task
     Task t = null;
     if (isMapTask()) {
-      LOG.debug("attemdpt "+  numTaskFailures   +
+      LOG.debug("attempt "+  numTaskFailures   +
           " sending skippedRecords "+failedRanges.getIndicesCount());
       t = new MapTask(jobFile, taskid, partition, 
           rawSplit.getClassName(), rawSplit.getBytes());
@@ -941,6 +944,11 @@ class TaskInProgress {
 
     // Ask JobTracker to note that the task exists
     jobtracker.createTaskEntry(taskid, taskTracker, this);
+
+    // check and set the first attempt
+    if (firstTaskId == null) {
+      firstTaskId = taskid;
+    }
     return t;
   }
 
