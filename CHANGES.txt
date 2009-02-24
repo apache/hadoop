@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     HADOOP-5300. Fix ant javadoc-dev target and the typo in the class name
     NameNodeActivtyMBean.  (szetszwo)
 
+    HADOOP-5276. Fixes a problem to do with updating the start time of a task when
+    the tracker that ran the task is lost. (Amar Kamat via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
