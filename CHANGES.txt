@@ -131,6 +131,9 @@ Trunk (unreleased changes)
 
     HADOOP-4191. Adds a testcase for JobHistory. (Ravi Gummadi via ddas)
 
+    HADOOP-5042. Add a cleanup stage to log rollover in Chukwa appender.
+    (Jerome Boulon via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
