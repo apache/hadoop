@@ -12,6 +12,10 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-2898. Provide an option to specify a port range for
+    Hadoop services provisioned by HOD.
+    (Peeyush Bishnoi via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES

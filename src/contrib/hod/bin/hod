@@ -350,6 +350,9 @@ defList = { 'hod' : (
              ('http-port-range', 'range', 'HTTP port range n-m.',
               False, None, True, True),
               
+             ('hadoop-port-range', 'range', 'Hadoop port range n-m.',
+              False, None, True, True),  
+            
              ('service-id', 'string', 'Service ID.',
               False, None, False, True),
               
