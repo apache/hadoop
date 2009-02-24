@@ -112,6 +112,10 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
       mr.getJobTrackerRunner().getJobTracker().getJob(id).failedMapTasks;
     assertTrue("Tasks that were run on the lost tracker were not killed", 
                failedMaps > 0);
+
+    // validate the history file
+    TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
+    TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);
   }
   
   public void testRestartWithLostTracker() throws IOException {

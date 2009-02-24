@@ -100,6 +100,9 @@ public class TestLostTracker extends TestCase {
       testTaskStatuses(taskInProgress.getTaskStatuses());
     }
     
+    // validate the history file
+    TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
+    TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);
   }
   
   private void testTaskStatuses(TaskStatus[] tasks) {
