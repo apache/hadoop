@@ -86,11 +86,11 @@ public class FairSchedulerServlet extends HttpServlet {
       return;
     }
     if (request.getParameter("setPool") != null) {
-      PoolManager poolMgr = scheduler.getPoolManager();
-      synchronized (poolMgr) {
+      Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
+      synchronized (scheduler) {
+        PoolManager poolMgr = scheduler.getPoolManager();
         String pool = request.getParameter("setPool");
         String jobId = request.getParameter("jobid");
-        Collection<JobInProgress> runningJobs = jobTracker.runningJobs();
         for (JobInProgress job: runningJobs) {
           if (job.getProfile().getJobID().toString().equals(jobId)) {
             poolMgr.setPool(job, pool);
@@ -103,12 +103,11 @@ public class FairSchedulerServlet extends HttpServlet {
       return;
     }
     if (request.getParameter("setPriority") != null) {
-      PoolManager poolMgr = scheduler.getPoolManager();
-      synchronized (poolMgr) {
+      Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
+      synchronized (scheduler) {
         JobPriority priority = JobPriority.valueOf(request.getParameter(
             "setPriority"));
         String jobId = request.getParameter("jobid");
-        Collection<JobInProgress> runningJobs = jobTracker.runningJobs();
         for (JobInProgress job: runningJobs) {
           if (job.getProfile().getJobID().toString().equals(jobId)) {
             job.setPriority(priority);
@@ -127,8 +126,6 @@ public class FairSchedulerServlet extends HttpServlet {
         jobTracker.getJobTrackerMachine());
     out.print("<html><head>");
     out.printf("<title>%s Job Scheduler Admininstration</title>\n", hostname);
-    out.printf("<META http-equiv=\"refresh\" content=\"15;URL=/scheduler%s\">",
-        advancedView ? "?advanced" : "");
     out.print("<link rel=\"stylesheet\" type=\"text/css\" " + 
         "href=\"/static/hadoop.css\">\n");
     out.print("</head><body>\n");
@@ -145,8 +142,8 @@ public class FairSchedulerServlet extends HttpServlet {
    * Print a view of pools to the given output writer.
    */
   private void showPools(PrintWriter out, boolean advancedView) {
-    PoolManager poolManager = scheduler.getPoolManager();
-    synchronized(poolManager) {
+    synchronized(scheduler) {
+      PoolManager poolManager = scheduler.getPoolManager();
       out.print("<h2>Pools</h2>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><th>Pool</th><th>Running Jobs</th>" + 
@@ -208,50 +205,52 @@ public class FairSchedulerServlet extends HttpServlet {
     out.print("<th>Finished</th><th>Running</th><th>Fair Share</th>" +
         (advancedView ? "<th>Weight</th><th>Deficit</th><th>minReduces</th>" : ""));
     out.print("</tr>\n");
-    Collection<JobInProgress> runningJobs = jobTracker.runningJobs();
-    for (JobInProgress job: runningJobs) {
-      JobProfile profile = job.getProfile();
-      JobInfo info = scheduler.infos.get(job);
-      if (info == null) { // Job finished, but let's show 0's for info
-        info = new JobInfo();
+    Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
+    synchronized (scheduler) {
+      for (JobInProgress job: runningJobs) {
+        JobProfile profile = job.getProfile();
+        JobInfo info = scheduler.infos.get(job);
+        if (info == null) { // Job finished, but let's show 0's for info
+          info = new JobInfo();
+        }
+        out.print("<tr>\n");
+        out.printf("<td>%s</td>\n", DATE_FORMAT.format(
+            new Date(job.getStartTime())));
+        out.printf("<td><a href=\"jobdetails.jsp?jobid=%s\">%s</a></td>",
+            profile.getJobID(), profile.getJobID());
+        out.printf("<td>%s</td>\n", profile.getUser());
+        out.printf("<td>%s</td>\n", profile.getJobName());
+        out.printf("<td>%s</td>\n", generateSelect(
+            scheduler.getPoolManager().getPoolNames(),
+            scheduler.getPoolManager().getPoolName(job),
+            "/scheduler?setPool=<CHOICE>&jobid=" + profile.getJobID() +
+            (advancedView ? "&advanced" : "")));
+        out.printf("<td>%s</td>\n", generateSelect(
+            Arrays.asList(new String[]
+                {"VERY_LOW", "LOW", "NORMAL", "HIGH", "VERY_HIGH"}),
+            job.getPriority().toString(),
+            "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID() +
+            (advancedView ? "&advanced" : "")));
+        out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
+            job.finishedMaps(), job.desiredMaps(), info.runningMaps,
+            info.mapFairShare);
+        if (advancedView) {
+          out.printf("<td>%8.1f</td>\n", info.mapWeight);
+          out.printf("<td>%s</td>\n", info.neededMaps > 0 ?
+              (info.mapDeficit / 1000) + "s" : "--");
+          out.printf("<td>%d</td>\n", info.minMaps);
+        }
+        out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
+            job.finishedReduces(), job.desiredReduces(), info.runningReduces,
+            info.reduceFairShare);
+        if (advancedView) {
+          out.printf("<td>%8.1f</td>\n", info.reduceWeight);
+          out.printf("<td>%s</td>\n", info.neededReduces > 0 ?
+              (info.reduceDeficit / 1000) + "s" : "--");
+          out.printf("<td>%d</td>\n", info.minReduces);
+        }
+        out.print("</tr>\n");
       }
-      out.print("<tr>\n");
-      out.printf("<td>%s</td>\n", DATE_FORMAT.format(
-          new Date(job.getStartTime())));
-      out.printf("<td><a href=\"jobdetails.jsp?jobid=%s\">%s</a></td>",
-          profile.getJobID(), profile.getJobID());
-      out.printf("<td>%s</td>\n", profile.getUser());
-      out.printf("<td>%s</td>\n", profile.getJobName());
-      out.printf("<td>%s</td>\n", generateSelect(
-          scheduler.getPoolManager().getPoolNames(),
-          scheduler.getPoolManager().getPoolName(job),
-          "/scheduler?setPool=<CHOICE>&jobid=" + profile.getJobID() +
-          (advancedView ? "&advanced" : "")));
-      out.printf("<td>%s</td>\n", generateSelect(
-          Arrays.asList(new String[]
-              {"VERY_LOW", "LOW", "NORMAL", "HIGH", "VERY_HIGH"}),
-          job.getPriority().toString(),
-          "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID() +
-          (advancedView ? "&advanced" : "")));
-      out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
-          job.finishedMaps(), job.desiredMaps(), info.runningMaps,
-          info.mapFairShare);
-      if (advancedView) {
-        out.printf("<td>%8.1f</td>\n", info.mapWeight);
-        out.printf("<td>%s</td>\n", info.neededMaps > 0 ?
-            (info.mapDeficit / 1000) + "s" : "--");
-        out.printf("<td>%d</td>\n", info.minMaps);
-      }
-      out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
-          job.finishedReduces(), job.desiredReduces(), info.runningReduces,
-          info.reduceFairShare);
-      if (advancedView) {
-        out.printf("<td>%8.1f</td>\n", info.reduceWeight);
-        out.printf("<td>%s</td>\n", info.neededReduces > 0 ?
-            (info.reduceDeficit / 1000) + "s" : "--");
-        out.printf("<td>%d</td>\n", info.minReduces);
-      }
-      out.print("</tr>\n");
     }
     out.print("</table>\n");
   }

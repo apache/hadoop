@@ -708,11 +708,11 @@ public class FairScheduler extends TaskScheduler {
       clusterStatus.getMaxMapTasks() : clusterStatus.getMaxReduceTasks());
   }
 
-  public boolean getUseFifo() {
+  public synchronized boolean getUseFifo() {
     return useFifo;
   }
   
-  public void setUseFifo(boolean useFifo) {
+  public synchronized void setUseFifo(boolean useFifo) {
     this.useFifo = useFifo;
   }
   
