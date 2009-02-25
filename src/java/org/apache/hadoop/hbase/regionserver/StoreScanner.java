@@ -36,13 +36,12 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.io.MapFile;
 
 /**
  * Scanner scans both the memcache and the HStore
  */
-class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
-  static final Log LOG = LogFactory.getLog(HStoreScanner.class);
+class StoreScanner implements InternalScanner,  ChangedReadersObserver {
+  static final Log LOG = LogFactory.getLog(StoreScanner.class);
 
   private InternalScanner[] scanners;
   private TreeMap<byte [], Cell>[] resultSets;
@@ -50,7 +49,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   private boolean wildcardMatch = false;
   private boolean multipleMatchers = false;
   private RowFilterInterface dataFilter;
-  private HStore store;
+  private Store store;
   private final long timestamp;
   private final byte [][] targetCols;
   
@@ -66,7 +65,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   
   /** Create an Scanner with a handle on the memcache and HStore files. */
   @SuppressWarnings("unchecked")
-  HStoreScanner(HStore store, byte [][] targetCols, byte [] firstRow,
+  StoreScanner(Store store, byte [][] targetCols, byte [] firstRow,
     long timestamp, RowFilterInterface filter) 
   throws IOException {
     this.store = store;
@@ -81,7 +80,6 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
     // See updateReaders below.
     this.timestamp = timestamp;
     this.targetCols = targetCols;
-
     try {
       scanners[MEMS_INDEX] =
         store.memcache.getScanner(timestamp, targetCols, firstRow);
@@ -124,7 +122,8 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
   private void setupScanner(final int i) throws IOException {
     this.keys[i] = new HStoreKey();
     this.resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-    if (this.scanners[i] != null && !this.scanners[i].next(this.keys[i], this.resultSets[i])) {
+    if (this.scanners[i] != null && !this.scanners[i].next(this.keys[i],
+        this.resultSets[i])) {
       closeScanner(i);
     }
   }
@@ -154,10 +153,8 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
       for (int i = 0; i < this.keys.length; i++) {
         if (scanners[i] != null &&
             (chosenRow == null ||
-            (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
-              keys[i].getRow(), chosenRow) < 0) ||
-            ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
-              keys[i].getRow(), chosenRow) == 0) &&
+            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) < 0) ||
+            ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) &&
             (keys[i].getTimestamp() > chosenTimestamp)))) {
           chosenRow = keys[i].getRow();
           chosenTimestamp = keys[i].getTimestamp();
@@ -187,8 +184,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
           while ((scanners[i] != null
               && !filtered
               && moreToFollow)
-              && (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
-                keys[i].getRow(), chosenRow) == 0)) {
+              && (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0)) {
             // If we are doing a wild card match or there are multiple
             // matchers per column, we need to scan all the older versions of 
             // this row to pick up the rest of the family members
@@ -204,7 +200,7 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
             // a result if the map does not contain the key.
             HStoreKey hsk = new HStoreKey(key.getRow(),
               HConstants.EMPTY_BYTE_ARRAY,
-              key.getTimestamp(), this.store.getHRegionInfo());
+              key.getTimestamp());
             for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
               hsk.setColumn(e.getKey());
               if (HLogEdit.isDeleted(e.getValue().getValue())) {
@@ -231,15 +227,13 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
               closeScanner(i);
             }
           }
-        }          
+        }
       }
-      
       for (int i = 0; i < scanners.length; i++) {
         // If the current scanner is non-null AND has a lower-or-equal
         // row label, then its timestamp is bad. We need to advance it.
         while ((scanners[i] != null) &&
-            (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
-              keys[i].getRow(), chosenRow) <= 0)) {
+            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) <= 0)) {
           resultSets[i].clear();
           if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);
@@ -248,7 +242,6 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
       }
 
       moreToFollow = chosenTimestamp >= 0;
-      
       if (dataFilter != null) {
         if (dataFilter.filterAllRemaining()) {
           moreToFollow = false;
@@ -319,9 +312,8 @@ class HStoreScanner implements InternalScanner,  ChangedReadersObserver {
     }
     this.lock.writeLock().lock();
     try {
-      MapFile.Reader [] readers = this.store.getReaders();
-      if (this.scanners[HSFS_INDEX] == null && readers != null &&
-          readers.length > 0) {
+      Map<Long, StoreFile> map = this.store.getStorefiles();
+      if (this.scanners[HSFS_INDEX] == null && map != null && map.size() > 0) {
         // Presume that we went from no readers to at least one -- need to put
         // a HStoreScanner in place.
         try {
