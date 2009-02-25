@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-5305. Increase number of files and print debug messages in
     TestCopyFiles.  (szetszwo)
 
+    HADOOP-5320. Add a close() in TestMapReduceLocal.  (Jothi Padmanabhan
+    via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

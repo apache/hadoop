@@ -77,6 +77,7 @@ public class TestMapReduceLocal extends TestCase {
      result.append('\n');
      line = b.readLine();
     }
+    b.close();
     return result.toString();
   }
 
