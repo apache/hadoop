@@ -645,11 +645,11 @@ public class FairScheduler extends TaskScheduler {
     return slots;
   }
 
-  public boolean getUseFifo() {
+  public synchronized boolean getUseFifo() {
     return useFifo;
   }
   
-  public void setUseFifo(boolean useFifo) {
+  public synchronized void setUseFifo(boolean useFifo) {
     this.useFifo = useFifo;
   }
   

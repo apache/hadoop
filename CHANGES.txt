@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.19.2 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-5154. Fixes a deadlock in the fairshare scheduler.
+    (Matei Zaharia via yhemanth)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
