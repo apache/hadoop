@@ -185,7 +185,6 @@ public class TaskTracker
   private static final String JOBCACHE = "jobcache";
   private static final String PID = "pid";
   private static final String OUTPUT = "output";
-  private JobConf originalConf;
   private JobConf fConf;
   private int maxCurrentMapTasks;
   private int maxCurrentReduceTasks;
@@ -488,7 +487,6 @@ public class TaskTracker
    */
   synchronized void initialize() throws IOException {
     // use configured nameserver & interface to get local hostname
-    this.fConf = new JobConf(originalConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
     }
@@ -961,7 +959,7 @@ public class TaskTracker
    * Start with the local machine name, and the default JobTracker
    */
   public TaskTracker(JobConf conf) throws IOException {
-    originalConf = conf;
+    fConf = conf;
     maxCurrentMapTasks = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
     maxCurrentReduceTasks = conf.getInt(

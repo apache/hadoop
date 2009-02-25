@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-5042. Add a cleanup stage to log rollover in Chukwa appender.
     (Jerome Boulon via cdouglas)
 
+    HADOOP-5264. Removes redundant configuration object from the TaskTracker.
+    (Sharad Agarwal via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
