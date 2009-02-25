@@ -235,6 +235,9 @@ Trunk (unreleased changes)
     HADOOP-5278. Fixes a problem to do with logging the finish time of a task during
     recovery (after a JobTracker restart). (Amar Kamat via ddas)
 
+    HADOOP-5305. Increase number of files and print debug messages in
+    TestCopyFiles.  (szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

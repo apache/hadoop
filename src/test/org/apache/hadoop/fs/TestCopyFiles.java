@@ -60,7 +60,7 @@ public class TestCopyFiles extends TestCase {
   static final URI LOCAL_FS = URI.create("file:///");
   
   private static final Random RAN = new Random();
-  private static final int NFILES = 7;
+  private static final int NFILES = 20;
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
@@ -564,6 +564,7 @@ public class TestCopyFiles extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 3, true, null);
       FileSystem fs = dfs.getFileSystem();
+      final FsShell shell = new FsShell(conf);
       namenode = fs.getUri().toString();
       mr = new MiniMRCluster(3, namenode, 1);
       MyFile[] files = createFiles(fs.getUri(), "/srcdat");
@@ -581,9 +582,13 @@ public class TestCopyFiles extends TestCase {
                         namenode+"/destdat"});
       assertTrue("Source and destination directories do not match.",
                  checkFiles(fs, "/destdat", files));
-      FileStatus[] logs = fs.listStatus(new Path(namenode+"/logs"));
+
+      String logdir = namenode + "/logs";
+      System.out.println(execCmd(shell, "-lsr", logdir));
+      FileStatus[] logs = fs.listStatus(new Path(logdir));
       // rare case where splits are exact, logs.length can be 4
-      assertTrue("Unexpected map count", logs.length == 5 || logs.length == 4);
+      assertTrue("Unexpected map count, logs.length=" + logs.length,
+          logs.length == 5 || logs.length == 4);
 
       deldir(fs, "/destdat");
       deldir(fs, "/logs");
@@ -593,8 +598,11 @@ public class TestCopyFiles extends TestCase {
                         namenode+"/logs",
                         namenode+"/srcdat",
                         namenode+"/destdat"});
+
+      System.out.println(execCmd(shell, "-lsr", logdir));
       logs = fs.listStatus(new Path(namenode+"/logs"));
-      assertTrue("Unexpected map count", logs.length == 2);
+      assertTrue("Unexpected map count, logs.length=" + logs.length,
+          logs.length == 2);
     } finally {
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown(); }
