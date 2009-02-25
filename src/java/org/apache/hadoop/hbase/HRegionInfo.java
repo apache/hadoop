@@ -427,13 +427,13 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
 
     // Compare start keys.
-    result = HStoreKey.compareTwoRowKeys(o, this.startKey, o.startKey);
+    result = HStoreKey.compareTwoRowKeys(this.startKey, o.startKey);
     if (result != 0) {
       return result;
     }
     
     // Compare end keys.
-    return HStoreKey.compareTwoRowKeys(o, this.endKey, o.endKey);
+    return HStoreKey.compareTwoRowKeys(this.endKey, o.endKey);
   }
 
   /**

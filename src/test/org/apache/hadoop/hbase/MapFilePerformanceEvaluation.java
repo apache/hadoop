@@ -22,16 +22,17 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.random.RandomData;
 import org.apache.commons.math.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.MapFile;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * <p>
@@ -39,12 +40,20 @@ import org.apache.commons.logging.LogFactory;
  * </p>
  */
 public class MapFilePerformanceEvaluation {
-  
-  private static final int ROW_LENGTH = 1000;
-  private static final int ROW_COUNT = 1000000;
+  private final HBaseConfiguration conf;
+  private static final int ROW_LENGTH = 10;
+  private static final int ROW_COUNT = 100000;
   
   static final Log LOG =
     LogFactory.getLog(MapFilePerformanceEvaluation.class.getName());
+
+  /**
+   * @param c
+   */
+  public MapFilePerformanceEvaluation(final HBaseConfiguration c) {
+    super();
+    this.conf = c;
+  }
   
   static ImmutableBytesWritable format(final int i, ImmutableBytesWritable w) {
     String v = Integer.toString(i);
@@ -52,23 +61,55 @@ public class MapFilePerformanceEvaluation {
     return w;
   }
 
-  private void runBenchmarks() throws Exception {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.get(conf);
-    Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
+  private void runBenchmarks(final String[] args) throws Exception {
+    final FileSystem fs = FileSystem.get(this.conf);
+    final Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
     if (fs.exists(mf)) {
       fs.delete(mf, true);
     }
-
     runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT),
         ROW_COUNT);
-    runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-        ROW_COUNT);
-    runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-        ROW_COUNT);
-    runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),
-        ROW_COUNT);
     
+    PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      public void run() {
+        try {
+          runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT),
+            ROW_COUNT);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      public void run() {
+        try {
+          runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
+              ROW_COUNT);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      public void run() {
+        try {
+          runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
+              ROW_COUNT);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      public void run() {
+        try {
+          runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),
+              ROW_COUNT);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    });
   }
   
   private void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
@@ -200,6 +241,7 @@ public class MapFilePerformanceEvaluation {
   }
 
   static class SequentialReadBenchmark extends ReadBenchmark {
+    ImmutableBytesWritable verify = new ImmutableBytesWritable();
     
     public SequentialReadBenchmark(Configuration conf, FileSystem fs,
         Path mf, int totalRows) {
@@ -208,7 +250,10 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.next(key, value);
+      this.reader.next(key, value);
+      PerformanceEvaluationCommons.assertKey(this.key.get(),
+        format(i, this.verify).get());
+      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, value.getSize());
     }
     
     @Override
@@ -229,7 +274,9 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.get(getRandomRow(), value);
+      ImmutableBytesWritable k = getRandomRow();
+      ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
+      PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
     }
     
     private ImmutableBytesWritable getRandomRow() {
@@ -238,8 +285,36 @@ public class MapFilePerformanceEvaluation {
     
   }
   
-  static class GaussianRandomReadBenchmark extends ReadBenchmark {
+  static class UniformRandomSmallScan extends ReadBenchmark {
+    private Random random = new Random();
+
+    public UniformRandomSmallScan(Configuration conf, FileSystem fs,
+        Path mf, int totalRows) {
+      super(conf, fs, mf, totalRows/10);
+    }
+
+    @Override
+    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+      ImmutableBytesWritable ibw = getRandomRow();
+      WritableComparable<?> wc = this.reader.getClosest(ibw, this.value);
+      if (wc == null) {
+        throw new NullPointerException();
+      }
+      PerformanceEvaluationCommons.assertKey(ibw.get(),
+        ((ImmutableBytesWritable)wc).get());
+      // TODO: Verify we're getting right values.
+      for (int ii = 0; ii < 29; ii++) {
+        this.reader.next(this.key, this.value);
+        PerformanceEvaluationCommons.assertValueSize(this.value.getSize(), ROW_LENGTH);
+      }
+    }
     
+    private ImmutableBytesWritable getRandomRow() {
+      return format(random.nextInt(totalRows), key);
+    }
+  }
+
+  static class GaussianRandomReadBenchmark extends ReadBenchmark {
     private RandomData randomData = new RandomDataImpl();
 
     public GaussianRandomReadBenchmark(Configuration conf, FileSystem fs,
@@ -249,7 +324,9 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.get(getGaussianRandomRow(), value);
+      ImmutableBytesWritable k = getGaussianRandomRow();
+      ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
+      PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
     }
     
     private ImmutableBytesWritable getGaussianRandomRow() {
@@ -258,13 +335,13 @@ public class MapFilePerformanceEvaluation {
     }
     
   }
-  
+
   /**
    * @param args
    * @throws IOException 
    */
   public static void main(String[] args) throws Exception {
-    new MapFilePerformanceEvaluation().runBenchmarks();
+    new MapFilePerformanceEvaluation(new HBaseConfiguration()).
+      runBenchmarks(args);
   }
-
 }

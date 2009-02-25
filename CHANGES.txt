@@ -5,6 +5,8 @@ Release 0.20.0 - Unreleased
    HBASE-1144  Store the ROOT region location in Zookeeper
                (Nitay Joffe via Stack)
    HBASE-1146  Replace the HRS leases with Zookeeper
+   HBASE-61    Create an HBase-specific MapFile implementation
+               (Ryan Rawson via Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

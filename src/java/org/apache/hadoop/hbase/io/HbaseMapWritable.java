@@ -45,7 +45,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * if passed a value type that it has not already been told about. Its  been
  * primed with hbase Writables and byte [].  Keys are always byte arrays.
  *
- * @param <byte []> key  TODO: Parameter K is never used, could be removed.
+ * @param <K> <byte []> key  TODO: Parameter K is never used, could be removed.
  * @param <V> value Expects a Writable or byte [].
  */
 public class HbaseMapWritable <K, V>
@@ -191,7 +191,7 @@ implements SortedMap<byte [], V>, Writable, Configurable {
     // Then write out each key/value pair
     for (Map.Entry<byte [], V> e: instance.entrySet()) {
       Bytes.writeByteArray(out, e.getKey());
-      Byte id =getId(e.getValue().getClass());
+      Byte id = getId(e.getValue().getClass());
       out.writeByte(id);
       Object value = e.getValue();
       if (value instanceof byte []) {

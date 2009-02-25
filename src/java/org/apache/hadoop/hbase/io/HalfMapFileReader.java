@@ -90,7 +90,6 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
     // have an actual midkey themselves. No midkey is how we indicate file is
     // not splittable.
     this.midkey = new HStoreKey((HStoreKey)mk);
-    this.midkey.setHRegionInfo(hri);
     // Is it top or bottom half?
     this.top = Reference.isTopFileRegion(r);
   }

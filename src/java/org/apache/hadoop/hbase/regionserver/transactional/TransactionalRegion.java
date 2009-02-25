@@ -51,8 +51,8 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionState.Status;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Progressable;
@@ -369,7 +369,7 @@ public class TransactionalRegion extends HRegion {
     TransactionState state = getTransactionState(transactionId);
     long now = System.currentTimeMillis();
 
-    for (HStore store : super.stores.values()) {
+    for (Store store : super.stores.values()) {
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
           ALL_VERSIONS, now, null);
       BatchUpdate deleteUpdate = new BatchUpdate(row, timestamp);

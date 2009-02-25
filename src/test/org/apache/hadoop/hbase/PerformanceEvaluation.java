@@ -765,7 +765,6 @@ public class PerformanceEvaluation implements HConstants {
    */
   public static void main(final String[] args) {
     HBaseConfiguration c = new HBaseConfiguration();
-    System.exit(new PerformanceEvaluation(c).
-    doCommandLine(args));
+    System.exit(new PerformanceEvaluation(c).doCommandLine(args));
   }
 }

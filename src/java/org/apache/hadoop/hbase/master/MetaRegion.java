@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -88,8 +87,7 @@ public class MetaRegion implements Comparable<MetaRegion> {
   public int compareTo(MetaRegion other) {
     int result = Bytes.compareTo(this.regionName, other.getRegionName());
     if(result == 0) {
-      result = HStoreKey.compareTwoRowKeys(HRegionInfo.FIRST_META_REGIONINFO,
-        this.startKey, other.getStartKey());
+      result = HStoreKey.compareTwoRowKeys(this.startKey, other.getStartKey());
       if (result == 0) {
         // Might be on different host?
         result = this.server.compareTo(other.server);

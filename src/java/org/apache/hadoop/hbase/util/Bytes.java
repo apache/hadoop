@@ -8,6 +8,8 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -43,16 +45,37 @@ public class Bytes {
    */
   // JHat says BU is 56 bytes.
   public static final int ESTIMATED_HEAP_TAX = 16;
+  
+  /**
+   * Byte array comparator class.
+   * Does byte ordering.
+   */
+  public static class ByteArrayComparator implements RawComparator<byte []> {
+    public ByteArrayComparator() {
+      super();
+    }
+    @Override
+    public int compare(byte [] left, byte [] right) {
+      return compareTo(left, right);
+    }
+    @Override
+    public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
+      return compareTo(b1, s1, l1, b2, s2, l2);
+    }
+  }
 
   /**
    * Pass this to TreeMaps where byte [] are keys.
    */
   public static Comparator<byte []> BYTES_COMPARATOR =
-      new Comparator<byte []>() {
-    public int compare(byte [] left, byte [] right) {
-      return compareTo(left, right);
-    }
-  };
+    new ByteArrayComparator();
+
+  /**
+   * Pass this to TreeMaps where byte [] are keys.
+   */
+  public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
+    new ByteArrayComparator();
+
   
   /**
    * @param in Input to read from.
@@ -71,6 +94,18 @@ public class Bytes {
   }
   
   /**
+   * @param in Input to read from.
+   * @return byte array read off <code>in</code>
+   */
+  public static byte [] readByteArrayThrowsRuntime(final DataInput in) {
+    try {
+      return readByteArray(in);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
    * @param out
    * @param b
    * @throws IOException
@@ -80,22 +115,69 @@ public class Bytes {
     WritableUtils.writeVInt(out, b.length);
     out.write(b, 0, b.length);
   }
-  
+
+  /**
+   * Reads a zero-compressed encoded long from input stream and returns it.
+   * @param buffer Binary array
+   * @param offset Offset into array at which vint begins.
+   * @throws java.io.IOException 
+   * @return deserialized long from stream.
+   */
+  public static long readVLong(final byte [] buffer, final int offset)
+  throws IOException {
+    byte firstByte = buffer[offset];
+    int len = WritableUtils.decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
+    }
+    long i = 0;
+    for (int idx = 0; idx < len-1; idx++) {
+      byte b = buffer[offset + 1 + idx];
+      i = i << 8;
+      i = i | (b & 0xFF);
+    }
+    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
+  }
+
   /**
    * @param b Presumed UTF-8 encoded byte array.
    * @return String made from <code>b</code>
    */
   public static String toString(final byte [] b) {
+    return toString(b, 0, b.length);
+  }
+  
+  public static String toString(final byte [] b, int off, int len) {
     String result = null;
     try {
-      result = new String(b, HConstants.UTF8_ENCODING);
+      result = new String(b, off, len, HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       e.printStackTrace();
     }
     return result;
   }
-  
-  
+
+  /**
+   * @param b
+   * @return <code>b</code> encoded in a byte array.
+   */
+  public static byte [] toBytes(final boolean b) {
+    byte [] bb = new byte[1];
+    bb[0] = b? (byte)-1: (byte)0;
+    return bb;
+  }
+
+  /**
+   * @param b
+   * @return True or false.
+   */
+  public static boolean toBoolean(final byte [] b) {
+    if (b == null || b.length > 1) {
+      throw new IllegalArgumentException("Array is wrong size");
+    }
+    return b[0] != (byte)0;
+  }
+
   /**
    * Converts a string to a UTF-8 byte array.
    * @param s
@@ -111,6 +193,17 @@ public class Bytes {
     } catch (UnsupportedEncodingException e) {
       e.printStackTrace();
     }
+    return result;
+  }
+  
+  /**
+   * @param bb
+   * @return Byte array represented by passed <code>bb</code>
+   */
+  public static byte [] toBytes(final ByteBuffer bb) {
+    int length = bb.limit();
+    byte [] result = new byte[length];
+    System.arraycopy(bb.array(), bb.arrayOffset(), result, 0, length);
     return result;
   }
 
@@ -159,7 +252,7 @@ public class Bytes {
     }
     return ByteBuffer.wrap(bytes).getInt();
   }
-  
+
   /**
    * Convert an float value to a byte array
    * @param val
@@ -237,6 +330,7 @@ public class Bytes {
    * @return True if equal
    */
   public static boolean equals(final byte [] left, final byte [] right) {
+    // Could use Arrays.equals?
     return left == null && right == null? true:
       (left == null || right == null || (left.length != right.length))? false:
         compareTo(left, right) == 0;

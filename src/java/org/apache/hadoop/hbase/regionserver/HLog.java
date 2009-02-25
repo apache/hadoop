@@ -655,7 +655,7 @@ public class HLog implements HConstants, Syncable {
       }
       synchronized (updateLock) {
         this.writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-            new HLogEdit(HLog.METACOLUMN, HLogEdit.completeCacheFlush.get(),
+            new HLogEdit(HLog.METACOLUMN, HLogEdit.COMPLETE_CACHE_FLUSH,
                 System.currentTimeMillis()));
         this.numEntries++;
         Long seq = this.lastSeqWritten.get(regionName);

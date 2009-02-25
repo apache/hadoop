@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.Store;
 
 /** Instantiated to remove a column family from a table */
 class DeleteColumn extends ColumnOperation {
@@ -40,13 +40,14 @@ class DeleteColumn extends ColumnOperation {
   @Override
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
-    Path tabledir = new Path(this.master.rootdir, tableName.toString());
     for (HRegionInfo i: unservedRegions) {
       i.getTableDesc().removeFamily(columnName);
       updateRegionInfo(server, m.getRegionName(), i);
       // Delete the directories used by the column
-      FSUtils.deleteColumnFamily(this.master.fs, tabledir, i.getEncodedName(),
-        this.columnName);
+      Path tabledir =
+        new Path(this.master.rootdir, i.getTableDesc().getNameAsString());
+      this.master.fs.delete(Store.getStoreHomedir(tabledir, i.getEncodedName(),
+        this.columnName), true);
     }
   }
 }

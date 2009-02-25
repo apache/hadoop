@@ -21,15 +21,18 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.io.MapFile;
 
 /**
  * A scanner that iterates through HStore files
@@ -39,13 +42,13 @@ implements ChangedReadersObserver {
     // Keys retrieved from the sources
   private volatile HStoreKey keys[];
   // Values that correspond to those keys
-  private volatile byte [][] vals;
+  private ByteBuffer [] vals;
   
   // Readers we go against.
-  private volatile MapFile.Reader[] readers;
+  private volatile HFileScanner [] scanners;
   
   // Store this scanner came out of.
-  private final HStore store;
+  private final Store store;
   
   // Used around replacement of Readers if they change while we're scanning.
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -57,14 +60,14 @@ implements ChangedReadersObserver {
    * @param firstRow
    * @throws IOException
    */
-  public StoreFileScanner(final HStore store, final long timestamp,
+  public StoreFileScanner(final Store store, final long timestamp,
     final byte [][] targetCols, final byte [] firstRow)
   throws IOException {
     super(timestamp, targetCols);
     this.store = store;
     this.store.addChangedReaderObserver(this);
     try {
-      openReaders(firstRow);
+      openScanner(firstRow);
     } catch (Exception ex) {
       close();
       IOException e = new IOException("HStoreScanner failed construction");
@@ -74,34 +77,23 @@ implements ChangedReadersObserver {
   }
   
   /*
-   * Go open new Reader iterators and cue them at <code>firstRow</code>.
+   * Go open new scanners and cue them at <code>firstRow</code>.
    * Closes existing Readers if any.
    * @param firstRow
    * @throws IOException
    */
-  private void openReaders(final byte [] firstRow) throws IOException {
-    if (this.readers != null) {
-      for (int i = 0; i < this.readers.length; i++) {
-        if (this.readers[i] != null) {
-          this.readers[i].close();
-        }
-      }
+  private void openScanner(final byte [] firstRow) throws IOException {
+    List<HFileScanner> s =
+      new ArrayList<HFileScanner>(this.store.getStorefiles().size());
+    Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
+    for (StoreFile f: map.values()) {
+       s.add(f.getReader().getScanner());
     }
-    // Open our own copies of the Readers here inside in the scanner.
-    this.readers = new MapFile.Reader[this.store.getStorefiles().size()];
-    
-    // Most recent map file should be first
-    int i = readers.length - 1;
-    for(HStoreFile curHSF: store.getStorefiles().values()) {
-      readers[i--] = curHSF.getReader(store.fs, false, false);
-    }
-    
-    this.keys = new HStoreKey[readers.length];
-    this.vals = new byte[readers.length][];
-    
+    this.scanners = s.toArray(new HFileScanner [] {});
+    this.keys = new HStoreKey[this.scanners.length];
+    this.vals = new ByteBuffer[this.scanners.length];
     // Advance the readers to the first pos.
-    for (i = 0; i < readers.length; i++) {
-      keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY, this.store.getHRegionInfo());
+    for (int i = 0; i < this.scanners.length; i++) {
       if (firstRow != null && firstRow.length != 0) {
         if (findFirstRow(i, firstRow)) {
           continue;
@@ -158,9 +150,9 @@ implements ChangedReadersObserver {
 
         for (int i = 0; i < keys.length; i++) {
           // Fetch the data
-          while ((keys[i] != null)
-              && (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
-                  keys[i].getRow(), viableRow.getRow()) == 0)) {
+          while ((keys[i] != null) &&
+            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(),
+              viableRow.getRow()) == 0)) {
 
             // If we are doing a wild card match or there are multiple matchers
             // per column, we need to scan all the older versions of this row
@@ -184,12 +176,11 @@ implements ChangedReadersObserver {
               closeSubScanner(i);
             }
           }
-
           // Advance the current scanner beyond the chosen row, to
           // a valid timestamp, so we're ready next time.
-          while ((keys[i] != null)
-              && ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
-                keys[i].getRow(), viableRow.getRow()) <= 0)
+          while ((keys[i] != null) &&
+              ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(),
+                viableRow.getRow()) <= 0)
                   || (keys[i].getTimestamp() > this.timestamp)
                   || (! columnMatch(i)))) {
             getNext(i);
@@ -231,7 +222,7 @@ implements ChangedReadersObserver {
     long viableTimestamp = -1;
     long now = System.currentTimeMillis();
     long ttl = store.ttl;
-    for(int i = 0; i < keys.length; i++) {
+    for (int i = 0; i < keys.length; i++) {
       // The first key that we find that matches may have a timestamp greater
       // than the one we're looking for. We have to advance to see if there
       // is an older version present, since timestamps are sorted descending
@@ -247,12 +238,10 @@ implements ChangedReadersObserver {
           // If we get here and keys[i] is not null, we already know that the
           // column matches and the timestamp of the row is less than or equal
           // to this.timestamp, so we do not need to test that here
-          && ((viableRow == null)
-              || (HStoreKey.compareTwoRowKeys(store.getHRegionInfo(), 
-                  keys[i].getRow(), viableRow) < 0)
-              || ((HStoreKey.compareTwoRowKeys(store.getHRegionInfo(),
-                  keys[i].getRow(), viableRow) == 0)
-                  && (keys[i].getTimestamp() > viableTimestamp)))) {
+          && ((viableRow == null) ||
+            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), viableRow) < 0) ||
+            ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), viableRow) == 0) &&
+              (keys[i].getTimestamp() > viableTimestamp)))) {
         if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
           viableRow = keys[i].getRow();
           viableTimestamp = keys[i].getTimestamp();
@@ -266,7 +255,7 @@ implements ChangedReadersObserver {
     return new ViableRow(viableRow, viableTimestamp);
   }
 
-  /**
+  /*
    * The user didn't want to start scanning at the first row. This method
    * seeks to the requested row.
    *
@@ -275,28 +264,30 @@ implements ChangedReadersObserver {
    * @return true if this is the first row or if the row was not found
    */
   private boolean findFirstRow(int i, final byte [] firstRow) throws IOException {
-    ImmutableBytesWritable ibw = new ImmutableBytesWritable();
-    HStoreKey firstKey
-      = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow, this.store.getHRegionInfo()), ibw);
-    if (firstKey == null) {
-      // Didn't find it. Close the scanner and return TRUE
-      closeSubScanner(i);
-      return true;
+    if (firstRow == null || firstRow.length <= 0) {
+      if (!this.scanners[i].seekTo()) {
+        closeSubScanner(i);
+        return true;
+      }
+    } else {
+      if (!Store.getClosest(this.scanners[i],
+          new HStoreKey(firstRow).getBytes())) {
+        closeSubScanner(i);
+        return true;
+      }
     }
+    this.keys[i] = HStoreKey.create(this.scanners[i].getKey());
+    this.vals[i] = this.scanners[i].getValue();
     long now = System.currentTimeMillis();
     long ttl = store.ttl;
-    if (ttl != HConstants.FOREVER && now >= firstKey.getTimestamp() + ttl) {
+    if (ttl != HConstants.FOREVER && now >= this.keys[i].getTimestamp() + ttl) {
       // Didn't find it. Close the scanner and return TRUE
       closeSubScanner(i);
       return true;
     }
-    this.vals[i] = ibw.get();
-    keys[i].setRow(firstKey.getRow());
-    keys[i].setColumn(firstKey.getColumn());
-    keys[i].setVersion(firstKey.getTimestamp());
     return columnMatch(i);
   }
-  
+
   /**
    * Get the next value from the specified reader.
    * 
@@ -305,17 +296,18 @@ implements ChangedReadersObserver {
    */
   private boolean getNext(int i) throws IOException {
     boolean result = false;
-    ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     long now = System.currentTimeMillis();
     long ttl = store.ttl;
     while (true) {
-      if (!readers[i].next(keys[i], ibw)) {
+      if ((this.scanners[i].isSeeked() && !this.scanners[i].next()) ||
+          (!this.scanners[i].isSeeked() && !this.scanners[i].seekTo())) {
         closeSubScanner(i);
         break;
       }
+      this.keys[i] = HStoreKey.create(this.scanners[i].getKey());
       if (keys[i].getTimestamp() <= this.timestamp) {
         if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
-          vals[i] = ibw.get();
+          vals[i] = this.scanners[i].getValue();
           result = true;
           break;
         }
@@ -326,23 +318,12 @@ implements ChangedReadersObserver {
     }
     return result;
   }
-  
+
   /** Close down the indicated reader. */
   private void closeSubScanner(int i) {
-    try {
-      if(readers[i] != null) {
-        try {
-          readers[i].close();
-        } catch(IOException e) {
-          LOG.error(store.storeName + " closing sub-scanner", e);
-        }
-      }
-      
-    } finally {
-      readers[i] = null;
-      keys[i] = null;
-      vals[i] = null;
-    }
+    this.scanners[i] = null;
+    this.keys[i] = null;
+    this.vals[i] = null;
   }
 
   /** Shut it down! */
@@ -350,16 +331,9 @@ implements ChangedReadersObserver {
     if (!this.scannerClosed) {
       this.store.deleteChangedReaderObserver(this);
       try {
-        for(int i = 0; i < readers.length; i++) {
-          if(readers[i] != null) {
-            try {
-              readers[i].close();
-            } catch(IOException e) {
-              LOG.error(store.storeName + " closing scanner", e);
-            }
-          }
+        for(int i = 0; i < this.scanners.length; i++) {
+          closeSubScanner(i);
         }
-        
       } finally {
         this.scannerClosed = true;
       }
@@ -375,7 +349,7 @@ implements ChangedReadersObserver {
       // the current row as 'first' row and readers will be opened and cue'd
       // up so future call to next will start here.
       ViableRow viableRow = getNextViableRow();
-      openReaders(viableRow.getRow());
+      openScanner(viableRow.getRow());
       LOG.debug("Replaced Scanner Readers at row " +
         (viableRow == null || viableRow.getRow() == null? "null":
           Bytes.toString(viableRow.getRow())));

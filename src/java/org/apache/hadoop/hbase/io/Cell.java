@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
@@ -74,6 +75,16 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
    */
   public Cell(byte[] value, long timestamp) {
     valueMap.put(timestamp, value);
+  }
+
+  /**
+   * Create a new Cell with a given value and timestamp. Used by HStore.
+   * 
+   * @param bb
+   * @param timestamp
+   */
+  public Cell(final ByteBuffer bb, long timestamp) {
+    this.valueMap.put(timestamp, Bytes.toBytes(bb));
   }
 
   /**

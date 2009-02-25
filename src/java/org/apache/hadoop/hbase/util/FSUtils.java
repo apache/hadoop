@@ -27,17 +27,14 @@ import java.net.URISyntaxException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -51,7 +48,50 @@ public class FSUtils {
   private FSUtils() {
     super();
   }
-  
+
+  /**
+   * Delete if exists.
+   * @param fs
+   * @param dir
+   * @return True if deleted <code>dir</code>
+   * @throws IOException
+   */
+  public static boolean deleteDirectory(final FileSystem fs, final Path dir)
+  throws IOException {
+    return fs.exists(dir)? fs.delete(dir, true): false;
+  }
+
+  /**
+   * Check if directory exists.  If it does not, create it.
+   * @param dir
+   * @return
+   * @throws IOException
+   */
+  public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
+    if (!fs.exists(dir)) {
+      fs.mkdirs(dir);
+    }
+    return dir;
+  }
+
+  /**
+   * Create file.
+   * @param fs
+   * @param p
+   * @return
+   * @throws IOException
+   */
+  public static Path create(final FileSystem fs, final Path p)
+  throws IOException {
+    if (fs.exists(p)) {
+      throw new IOException("File already exists " + p.toString());
+    }
+    if (!fs.createNewFile(p)) {
+      throw new IOException("Failed create of " + p);
+    }
+    return p;
+  }
+
   /**
    * Checks to see if the specified file system is available
    * 
@@ -178,21 +218,6 @@ public class FSUtils {
     return p.toUri().getPath();
   }
 
-  /**
-   * Delete the directories used by the column family under the passed region.
-   * @param fs Filesystem to use.
-   * @param tabledir The directory under hbase.rootdir for this table.
-   * @param encodedRegionName The region name encoded.
-   * @param family Family to delete.
-   * @throws IOException
-   */
-  public static void deleteColumnFamily(final FileSystem fs,
-    final Path tabledir, final int encodedRegionName, final byte [] family)
-  throws IOException {
-    fs.delete(HStoreFile.getMapDir(tabledir, encodedRegionName, family), true);
-    fs.delete(HStoreFile.getInfoDir(tabledir, encodedRegionName, family), true);
-  }
-  
   /**
    * @param c
    * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a

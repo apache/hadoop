@@ -171,11 +171,13 @@ public class MapFile {
             CompressionType.BLOCK, progress);
     }
     
-    /** The number of entries that are added before an index entry is added.*/
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileWriter#getIndexInterval()
+     */
     public int getIndexInterval() { return indexInterval; }
 
-    /** Sets the index interval.
-     * @see #getIndexInterval()
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileWriter#setIndexInterval(int)
      */
     public void setIndexInterval(int interval) { indexInterval = interval; }
 
@@ -186,14 +188,17 @@ public class MapFile {
       conf.setInt(INDEX_INTERVAL, interval);
     }
 
-    /** Close the map. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileWriter#close()
+     */
     public synchronized void close() throws IOException {
       data.close();
       index.close();
     }
 
-    /** Append a key/value pair to the map.  The key must be greater or equal
-     * to the previous key added to the map. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileWriter#append(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     public synchronized void append(WritableComparable key, Writable val)
       throws IOException {
 
@@ -250,10 +255,14 @@ public class MapFile {
     private WritableComparable[] keys;
     private long[] positions;
 
-    /** Returns the class of keys in this file. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#getKeyClass()
+     */
     public Class<?> getKeyClass() { return data.getKeyClass(); }
 
-    /** Returns the class of values in this file. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#getValueClass()
+     */
     public Class<?> getValueClass() { return data.getValueClass(); }
 
     /** Construct a map reader for the named map.*/
@@ -362,14 +371,15 @@ public class MapFile {
       }
     }
 
-    /** Re-positions the reader before its first key. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#reset()
+     */
     public synchronized void reset() throws IOException {
       data.seek(firstPosition);
     }
 
-    /** Get the key at approximately the middle of the file.
-     * 
-     * @throws IOException
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#midKey()
      */
     public synchronized WritableComparable midKey() throws IOException {
 
@@ -382,9 +392,8 @@ public class MapFile {
       return keys[pos];
     }
     
-    /** Reads the final key from the file.
-     *
-     * @param key key to read into
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#finalKey(org.apache.hadoop.io.WritableComparable)
      */
     public synchronized void finalKey(WritableComparable key)
       throws IOException {
@@ -404,9 +413,8 @@ public class MapFile {
       }
     }
 
-    /** Positions the reader at the named key, or if none such exists, at the
-     * first entry after the named key.  Returns true iff the named key exists
-     * in this map.
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#seek(org.apache.hadoop.io.WritableComparable)
      */
     public synchronized boolean seek(WritableComparable key) throws IOException {
       return seekInternal(key) == 0;
@@ -517,15 +525,17 @@ public class MapFile {
       return -(low + 1);                          // key not found.
     }
 
-    /** Read the next key/value pair in the map into <code>key</code> and
-     * <code>val</code>.  Returns true if such a pair exists and false when at
-     * the end of the map */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#next(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     public synchronized boolean next(WritableComparable key, Writable val)
       throws IOException {
       return data.next(key, val);
     }
 
-    /** Return the value for the named key, or null if none exists. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#get(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     public synchronized Writable get(WritableComparable key, Writable val)
       throws IOException {
       if (seek(key)) {
@@ -535,14 +545,8 @@ public class MapFile {
         return null;
     }
 
-    /** 
-     * Finds the record that is the closest match to the specified key.
-     * Returns <code>key</code> or if it does not exist, at the first entry
-     * after the named key.
-     * 
--     * @param key       - key that we're trying to find
--     * @param val       - data value if key is found
--     * @return          - the key that was the closest match or null if eof.
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#getClosest(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
      */
     public synchronized WritableComparable getClosest(WritableComparable key,
       Writable val)
@@ -550,15 +554,8 @@ public class MapFile {
       return getClosest(key, val, false);
     }
 
-    /** 
-     * Finds the record that is the closest match to the specified key.
-     * 
-     * @param key       - key that we're trying to find
-     * @param val       - data value if key is found
-     * @param before    - IF true, and <code>key</code> does not exist, return
-     * the first entry that falls just before the <code>key</code>.  Otherwise,
-     * return the record that sorts just after.
-     * @return          - the key that was the closest match or null if eof.
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#getClosest(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable, boolean)
      */
     public synchronized WritableComparable getClosest(WritableComparable key,
         Writable val, final boolean before)
@@ -578,7 +575,9 @@ public class MapFile {
       return nextKey;
     }
 
-    /** Close the map. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.io.StoreFileReader#close()
+     */
     public synchronized void close() throws IOException {
       if (!indexClosed) {
         index.close();

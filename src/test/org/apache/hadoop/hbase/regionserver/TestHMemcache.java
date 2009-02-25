@@ -273,7 +273,7 @@ public class TestHMemcache extends TestCase {
     hmemcache.add(getHSKForRow(t20), "t20 bytes".getBytes());
     hmemcache.add(getHSKForRow(t30), "t30 bytes".getBytes());
     // write a delete in there to see if things still work ok
-    hmemcache.add(getHSKForRow(t35), HLogEdit.deleteBytes.get());
+    hmemcache.add(getHSKForRow(t35), HLogEdit.DELETED_BYTES);
     hmemcache.add(getHSKForRow(t40), "t40 bytes".getBytes());
     
     SortedMap<HStoreKey, Long> results = null;

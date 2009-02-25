@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -358,7 +359,6 @@ public class MetaUtils {
   public void deleteColumn(final byte [] tableName,
       final byte [] columnFamily) throws IOException {
     List<HRegionInfo> metas = getMETARows(tableName);
-    final Path tabledir = new Path(rootdir, Bytes.toString(tableName));
     for (HRegionInfo hri: metas) {
       final HRegion m = getMetaRegion(hri);
       scanMetaRegion(m, new ScannerListener() {
@@ -370,8 +370,13 @@ public class MetaUtils {
             this.inTable = false;
             info.getTableDesc().removeFamily(columnFamily);
             updateMETARegionInfo(m, info);
-            FSUtils.deleteColumnFamily(fs, tabledir, info.getEncodedName(),
-              HStoreKey.getFamily(columnFamily));
+            Path tabledir = new Path(rootdir,
+              info.getTableDesc().getNameAsString());
+            Path p = Store.getStoreHomedir(tabledir, info.getEncodedName(),
+              columnFamily);
+            if (!fs.delete(p, true)) {
+              LOG.warn("Failed delete of " + p);
+            }
             return false;
           }
           // If we got here and we have not yet encountered the table yet,

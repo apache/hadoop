@@ -40,7 +40,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,8 +56,6 @@ class Memcache {
   private static final Log LOG = LogFactory.getLog(Memcache.class);
   
   private final long ttl;
-  
-  private HRegionInfo regionInfo;
 
   // Note that since these structures are always accessed with a lock held,
   // so no additional synchronization is required.
@@ -76,8 +73,6 @@ class Memcache {
    */
   public Memcache() {
     this.ttl = HConstants.FOREVER;
-    // Set default to be the first meta region.
-    this.regionInfo = HRegionInfo.FIRST_META_REGIONINFO;
     this.memcache = createSynchronizedSortedMap();
     this.snapshot = createSynchronizedSortedMap();
   }
@@ -87,21 +82,21 @@ class Memcache {
    * @param ttl The TTL for cache entries, in milliseconds.
    * @param regionInfo The HRI for this cache 
    */
-  public Memcache(final long ttl, HRegionInfo regionInfo) {
+  public Memcache(final long ttl) {
     this.ttl = ttl;
-    this.regionInfo = regionInfo;
     this.memcache = createSynchronizedSortedMap();
     this.snapshot = createSynchronizedSortedMap();
   }
 
   /*
    * Utility method using HSKWritableComparator
-   * @return sycnhronized sorted map of HStoreKey to byte arrays.
+   * @return synchronized sorted map of HStoreKey to byte arrays.
    */
+  @SuppressWarnings("unchecked")
   private SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap() {
     return Collections.synchronizedSortedMap(
       new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator(this.regionInfo)));
+        new HStoreKey.HStoreKeyWritableComparator()));
   }
 
   /**
@@ -266,7 +261,7 @@ class Memcache {
     if (b == null) {
       return a;
     }
-    return HStoreKey.compareTwoRowKeys(regionInfo, a, b) <= 0? a: b;
+    return HStoreKey.compareTwoRowKeys(a, b) <= 0? a: b;
   }
 
   /**
@@ -296,12 +291,12 @@ class Memcache {
     synchronized (map) {
       // Make an HSK with maximum timestamp so we get past most of the current
       // rows cell entries.
-      HStoreKey hsk = new HStoreKey(row, HConstants.LATEST_TIMESTAMP, this.regionInfo);
+      HStoreKey hsk = new HStoreKey(row, HConstants.LATEST_TIMESTAMP);
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(hsk);
       // Iterate until we fall into the next row; i.e. move off current row
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
-        if (HStoreKey.compareTwoRowKeys(regionInfo, itKey.getRow(), row) <= 0)
+        if (HStoreKey.compareTwoRowKeys(itKey.getRow(), row) <= 0)
           continue;
         // Note: Not suppressing deletes or expired cells.
         result = itKey.getRow();
@@ -372,8 +367,7 @@ class Memcache {
             }
           }
         }
-      } else if (HStoreKey.compareTwoRowKeys(regionInfo, key.getRow(), 
-          itKey.getRow()) < 0) {
+      } else if (HStoreKey.compareTwoRowKeys(key.getRow(), itKey.getRow()) < 0) {
         break;
       }
     }
@@ -422,8 +416,8 @@ class Memcache {
     // We want the earliest possible to start searching from.  Start before
     // the candidate key in case it turns out a delete came in later.
     HStoreKey search_key = candidateKeys.isEmpty()?
-     new HStoreKey(row, this.regionInfo):
-      new HStoreKey(candidateKeys.firstKey().getRow(), this.regionInfo);
+     new HStoreKey(row):
+     new HStoreKey(candidateKeys.firstKey().getRow());
     List<HStoreKey> victims = new ArrayList<HStoreKey>();
     long now = System.currentTimeMillis();
 
@@ -434,8 +428,8 @@ class Memcache {
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tailMap.isEmpty() &&
-        HStoreKey.compareTwoRowKeys(this.regionInfo, 
-          tailMap.firstKey().getRow(), search_key.getRow()) <= 0) {
+        HStoreKey.compareTwoRowKeys(tailMap.firstKey().getRow(),
+          search_key.getRow()) <= 0) {
       Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
 
       // Keep looking at cells as long as they are no greater than the 
@@ -443,18 +437,16 @@ class Memcache {
       HStoreKey deletedOrExpiredRow = null;
       for (HStoreKey found_key = null; key_iterator.hasNext() &&
           (found_key == null ||
-            HStoreKey.compareTwoRowKeys(this.regionInfo, 
-                found_key.getRow(), row) <= 0);) {
+            HStoreKey.compareTwoRowKeys(found_key.getRow(), row) <= 0);) {
         found_key = key_iterator.next();
-        if (HStoreKey.compareTwoRowKeys(this.regionInfo, 
-            found_key.getRow(), row) <= 0) {
+        if (HStoreKey.compareTwoRowKeys(found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
-            HStore.handleDeleted(found_key, candidateKeys, deletes);
+            Store.handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {
               deletedOrExpiredRow = found_key;
             }
           } else {
-            if (HStore.notExpiredAndNotInDeletes(this.ttl, 
+            if (Store.notExpiredAndNotInDeletes(this.ttl, 
                 found_key, now, deletes)) {
               candidateKeys.put(stripTimestamp(found_key),
                 new Long(found_key.getTimestamp()));
@@ -515,15 +507,15 @@ class Memcache {
         // not a delete record.
         boolean deleted = HLogEdit.isDeleted(headMap.get(found_key));
         if (lastRowFound != null &&
-            !HStoreKey.equalsTwoRowKeys(this.regionInfo, lastRowFound, 
-                found_key.getRow()) && !deleted) {
+            !HStoreKey.equalsTwoRowKeys(lastRowFound, found_key.getRow()) &&
+            !deleted) {
           break;
         }
         // If this isn't a delete, record it as a candidate key. Also 
         // take note of the row of this candidate so that we'll know when
         // we cross the row boundary into the previous row.
         if (!deleted) {
-          if (HStore.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
+          if (Store.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
             lastRowFound = found_key.getRow();
             candidateKeys.put(stripTimestamp(found_key), 
               new Long(found_key.getTimestamp()));
@@ -543,12 +535,12 @@ class Memcache {
       // smaller acceptable candidate keys would have caused us to start
       // our search earlier in the list, and we wouldn't be searching here.
       SortedMap<HStoreKey, byte[]> thisRowTailMap = 
-        headMap.tailMap(new HStoreKey(headMap.lastKey().getRow(), this.regionInfo));
+        headMap.tailMap(new HStoreKey(headMap.lastKey().getRow()));
       Iterator<HStoreKey> key_iterator = thisRowTailMap.keySet().iterator();
       do {
         HStoreKey found_key = key_iterator.next();
         if (HLogEdit.isDeleted(thisRowTailMap.get(found_key))) {
-          HStore.handleDeleted(found_key, candidateKeys, deletes);
+          Store.handleDeleted(found_key, candidateKeys, deletes);
         } else {
           if (ttl == HConstants.FOREVER ||
               now < found_key.getTimestamp() + ttl ||
@@ -568,7 +560,7 @@ class Memcache {
   }
   
   static HStoreKey stripTimestamp(HStoreKey key) {
-    return new HStoreKey(key.getRow(), key.getColumn(), key.getHRegionInfo());
+    return new HStoreKey(key.getRow(), key.getColumn());
   }
   
   /*
@@ -595,7 +587,7 @@ class Memcache {
       if (itKey.matchesRowCol(key)) {
         if (!isDeleted(es.getValue())) {
           // Filter out expired results
-          if (HStore.notExpiredAndNotInDeletes(ttl, itKey, now, deletes)) {
+          if (Store.notExpiredAndNotInDeletes(ttl, itKey, now, deletes)) {
             result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
             if (numVersions > 0 && result.size() >= numVersions) {
               break;
@@ -692,8 +684,7 @@ class Memcache {
       if (origin.getColumn() != null && origin.getColumn().length == 0) {
         // if the current and origin row don't match, then we can jump
         // out of the loop entirely.
-        if (!HStoreKey.equalsTwoRowKeys(regionInfo, key.getRow(), 
-            origin.getRow())) {
+        if (!HStoreKey.equalsTwoRowKeys( key.getRow(), origin.getRow())) {
           break;
         }
         // if the column pattern is not null, we use it for column matching.
@@ -716,7 +707,7 @@ class Memcache {
         }
       }
       if (!isDeleted(es.getValue())) {
-        if (HStore.notExpiredAndNotInDeletes(this.ttl, key, now, deletes)) {
+        if (Store.notExpiredAndNotInDeletes(this.ttl, key, now, deletes)) {
           result.add(key);
           if (versions > 0 && result.size() >= versions) {
             break;
@@ -777,7 +768,7 @@ class Memcache {
   private class MemcacheScanner extends HAbstractScanner {
     private byte [] currentRow;
     private Set<byte []> columns = null;
-    
+
     MemcacheScanner(final long timestamp, final byte [] targetCols[],
       final byte [] firstRow)
     throws IOException {
@@ -828,7 +819,7 @@ class Memcache {
             rowResults);
         for (Map.Entry<byte [], Long> e: deletes.entrySet()) {
           rowResults.put(e.getKey(),
-            new Cell(HLogEdit.deleteBytes.get(), e.getValue().longValue()));
+            new Cell(HLogEdit.DELETED_BYTES, e.getValue().longValue()));
         }
         for (Map.Entry<byte [], Cell> e: rowResults.entrySet()) {
           byte [] column = e.getKey();

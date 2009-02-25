@@ -20,36 +20,34 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
-
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.ipc.RemoteException;
 
 
 /**
@@ -292,19 +290,16 @@ abstract class BaseScanner extends Chore implements HConstants {
     if (split == null) {
       return result;
     }
-    Path tabledir = HTableDescriptor.getTableDir(this.master.rootdir,
-        split.getTableDesc().getName());
+    Path tabledir = new Path(this.master.rootdir, split.getTableDesc().getNameAsString());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
-      Path p = HStoreFile.getMapDir(tabledir, split.getEncodedName(),
+      Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
-
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
-
       FileStatus [] ps = this.master.fs.listStatus(p,
           new PathFilter () {
             public boolean accept(Path path) {
-              return HStore.isReference(path);
+              return StoreFile.isReference(path);
             }
           }
       );

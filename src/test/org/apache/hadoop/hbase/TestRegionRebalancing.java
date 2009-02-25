@@ -81,11 +81,9 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // created above into the meta
     
     createRootAndMetaRegions();
-    
     for (HRegion region : regions) {
       HRegion.addRegionToMETA(meta, region);
     }
-    
     closeRootAndMeta();
   }
   
@@ -208,16 +206,11 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    */
   private HRegion createAregion(byte [] startKey, byte [] endKey) 
   throws IOException {
-    
     HRegion region = createNewHRegion(desc, startKey, endKey);
-    
     byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_000") : startKey;
-    
     BatchUpdate bu = new BatchUpdate(keyToWrite);
     bu.put(COLUMN_NAME, "test".getBytes());
-
     region.batchUpdate(bu, null);
-
     region.close();
     region.getLog().closeAndDelete();
     return region;

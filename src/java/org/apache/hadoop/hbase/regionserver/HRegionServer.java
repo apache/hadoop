@@ -647,7 +647,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     int storefileIndexSizeMB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
-      for (HStore store: r.stores.values()) {
+      for (Store store: r.stores.values()) {
         storefiles += store.getStorefilesCount();
         storefileIndexSizeMB += 
           (int)(store.getStorefilesIndexSize()/1024/1024);
@@ -955,8 +955,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
         memcacheSize += r.memcacheSize.get();
         synchronized (r.stores) {
           stores += r.stores.size();
-          for(Map.Entry<Integer, HStore> ee: r.stores.entrySet()) {
-            HStore store = ee.getValue(); 
+          for(Map.Entry<Integer, Store> ee: r.stores.entrySet()) {
+            Store store = ee.getValue(); 
             storefiles += store.getStorefilesCount();
             try {
               storefileIndexSize += store.getStorefilesIndexSize();

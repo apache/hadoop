@@ -72,10 +72,10 @@ public class HBaseMapFile extends MapFile {
     public HBaseReader(FileSystem fs, String dirName, Configuration conf,
         boolean blockCacheEnabled, HRegionInfo hri)
     throws IOException {
-      super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), 
+      super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(), 
           conf, false); // defer opening streams
       this.blockCacheEnabled = blockCacheEnabled;
-      open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), conf);
+      open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(), conf);
       
       // Force reading of the mapfile index by calling midKey. Reading the
       // index will bring the index into memory over here on the client and
@@ -121,7 +121,7 @@ public class HBaseMapFile extends MapFile {
     public HBaseWriter(Configuration conf, FileSystem fs, String dirName,
         SequenceFile.CompressionType compression, final HRegionInfo hri)
     throws IOException {
-      super(conf, fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri),
+      super(conf, fs, dirName, new HStoreKey.HStoreKeyWritableComparator(),
          VALUE_CLASS, compression);
       // Default for mapfiles is 128.  Makes random reads faster if we
       // have more keys indexed and we're not 'next'-ing around in the

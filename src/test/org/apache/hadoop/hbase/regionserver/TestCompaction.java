@@ -21,19 +21,16 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.io.MapFile;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * Test compactions
@@ -136,12 +133,12 @@ public class TestCompaction extends HBaseTestCase {
     // they were deleted.
     int count = 0;
     boolean containsStartRow = false;
-    for (MapFile.Reader reader: this.r.stores.
-        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
-      reader.reset();
-      HStoreKey key = new HStoreKey();
-      ImmutableBytesWritable val = new ImmutableBytesWritable();
-      while(reader.next(key, val)) {
+    for (StoreFile f: this.r.stores.
+        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getStorefiles().values()) {
+      HFileScanner scanner = f.getReader().getScanner();
+      scanner.seekTo();
+      do {
+        HStoreKey key = HStoreKey.create(scanner.getKey());
         if (Bytes.equals(key.getRow(), STARTROW)) {
           containsStartRow = true;
           count++;
@@ -150,13 +147,13 @@ public class TestCompaction extends HBaseTestCase {
           // file.
           assertFalse(Bytes.equals(key.getRow(), secondRowBytes));
         }
-      }
+      } while(scanner.next());
     }
     assertTrue(containsStartRow);
     assertTrue(count == 3);
     // Do a simple TTL test.
     final int ttlInSeconds = 1;
-    for (HStore store: this.r.stores.values()) {
+    for (Store store: this.r.stores.values()) {
       store.ttl = ttlInSeconds * 1000;
     }
     Thread.sleep(ttlInSeconds * 1000);
@@ -167,14 +164,15 @@ public class TestCompaction extends HBaseTestCase {
   
   private int count() throws IOException {
     int count = 0;
-    for (MapFile.Reader reader: this.r.stores.
-        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
-      reader.reset();
-      HStoreKey key = new HStoreKey();
-      ImmutableBytesWritable val = new ImmutableBytesWritable();
-      while(reader.next(key, val)) {
-        count++;
+    for (StoreFile f: this.r.stores.
+        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getStorefiles().values()) {
+      HFileScanner scanner = f.getReader().getScanner();
+      if (!scanner.seekTo()) {
+        continue;
       }
+      do {
+        count++;
+      } while(scanner.next());
     }
     return count;
   }

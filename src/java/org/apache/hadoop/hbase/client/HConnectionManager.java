@@ -385,8 +385,8 @@ public class HConnectionManager implements HConstants {
             }
           }
           endKey = currentRegion.getEndKey();
-        } while (!(endKey == null || HStoreKey.equalsTwoRowKeys(currentRegion,
-            endKey, HConstants.EMPTY_BYTE_ARRAY)));
+        } while (!(endKey == null || HStoreKey.equalsTwoRowKeys(endKey,
+            HConstants.EMPTY_BYTE_ARRAY)));
       }
       finally {
         s.setClose();
@@ -645,10 +645,8 @@ public class HConnectionManager implements HConstants {
           // this one. the exception case is when the endkey is EMPTY_START_ROW,
           // signifying that the region we're checking is actually the last
           // region in the table.
-          if (HStoreKey.equalsTwoRowKeys(possibleRegion.getRegionInfo(), 
-              endKey, HConstants.EMPTY_END_ROW) ||
-              HStoreKey.compareTwoRowKeys(possibleRegion.getRegionInfo(), 
-                  endKey, row) > 0) {
+          if (HStoreKey.equalsTwoRowKeys(endKey, HConstants.EMPTY_END_ROW) ||
+              HStoreKey.compareTwoRowKeys(endKey, row) > 0) {
             return possibleRegion;
           }
         }
@@ -685,8 +683,7 @@ public class HConnectionManager implements HConstants {
 
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (HStoreKey.compareTwoRowKeys(possibleRegion.getRegionInfo(),
-              endKey, row) <= 0) {
+          if (HStoreKey.compareTwoRowKeys(endKey, row) <= 0) {
             // delete any matching entry
             HRegionLocation rl =
               tableLocations.remove(matchingRegions.lastKey());

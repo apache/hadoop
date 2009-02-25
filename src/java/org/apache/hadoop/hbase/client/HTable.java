@@ -226,9 +226,8 @@ public class HTable {
    * @return Array of region starting row keys
    * @throws IOException
    */
-  public byte[][] getStartKeys() throws IOException {
+  public byte [][] getStartKeys() throws IOException {
     final List<byte[]> keyList = new ArrayList<byte[]>();
-
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(RowResult rowResult) throws IOException {
         HRegionInfo info = Writables.getHRegionInfo(
@@ -240,7 +239,6 @@ public class HTable {
         }
         return true;
       }
-
     };
     MetaScanner.metaScan(configuration, visitor, this.tableName);
     return keyList.toArray(new byte[keyList.size()][]);

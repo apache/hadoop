@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -58,8 +57,8 @@ import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -105,10 +104,9 @@ import org.apache.hadoop.util.StringUtils;
  * defines the keyspace for this HRegion.
  */
 public class HRegion implements HConstants {
+  static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
-  static final Random rand = new Random();
-  static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't want
    * to do while in closing state; e.g. like offer this region up to the master as a region
@@ -125,11 +123,11 @@ public class HRegion implements HConstants {
     new ConcurrentHashMap<Integer, byte []>();
   private final Map<Integer, TreeMap<HStoreKey, byte []>> targetColumns =
       new ConcurrentHashMap<Integer, TreeMap<HStoreKey, byte []>>();
-  // Default access because read by tests.
-  protected final Map<Integer, HStore> stores =
-    new ConcurrentHashMap<Integer, HStore>();
+  protected final Map<Integer, Store> stores =
+    new ConcurrentHashMap<Integer, Store>();
   final AtomicLong memcacheSize = new AtomicLong(0);
 
+  // This is the table subdirectory.
   final Path basedir;
   final HLog log;
   final FileSystem fs;
@@ -137,7 +135,7 @@ public class HRegion implements HConstants {
   final HRegionInfo regionInfo;
   final Path regiondir;
   private final Path regionCompactionDir;
-  
+
   /*
    * Set this when scheduling compaction if want the next compaction to be a
    * major compaction.  Cleared each time through compaction code.
@@ -158,7 +156,7 @@ public class HRegion implements HConstants {
     // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
     // Set if region is read-only
-    private volatile boolean readOnly = false;
+    volatile boolean readOnly = false;
     
     /**
      * Set flags that make this region read-only.
@@ -233,34 +231,33 @@ public class HRegion implements HConstants {
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
     this.historian = RegionHistorian.getInstance();
-    
     if (LOG.isDebugEnabled()) {
+      // Write out region name as string and its encoded name.
       LOG.debug("Opening region " + this + "/" +
         this.regionInfo.getEncodedName());
     }
-    
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
-   
     int flushSize = regionInfo.getTableDesc().getMemcacheFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE) {
       flushSize = conf.getInt("hbase.hregion.memcache.flush.size",
                       HTableDescriptor.DEFAULT_MEMCACHE_FLUSH_SIZE);
     }
     this.memcacheFlushSize = flushSize;
-
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
   }
-  
-  /** Initialize this region and get it ready to roll.
+
+  /**
+   * Initialize this region and get it ready to roll.
+   * Called after construction.
    * 
    * @param initialFiles
    * @param reporter
    * @throws IOException
    */
-  public void initialize( Path initialFiles,
-      final Progressable reporter) throws IOException {
+  public void initialize( Path initialFiles, final Progressable reporter)
+  throws IOException {
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
     // Move prefab HStore files into place (if any).  This picks up split files
@@ -273,19 +270,19 @@ public class HRegion implements HConstants {
     long maxSeqId = -1;
     long minSeqId = Integer.MAX_VALUE;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
-      HStore store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
-      stores.put(Bytes.mapKey(c.getName()), store);
+      Store store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
+      this.stores.put(Bytes.mapKey(c.getName()), store);
       long storeSeqId = store.getMaxSequenceId();
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
-      } 
+      }
       if (storeSeqId < minSeqId) {
         minSeqId = storeSeqId;
       }
     }
-    
+
+    // Play log if one.  Delete when done.
     doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
-    
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -302,14 +299,9 @@ public class HRegion implements HConstants {
     }
 
     // Get rid of any splits or merges that were lost in-progress
-    Path splits = new Path(regiondir, SPLITDIR);
-    if (fs.exists(splits)) {
-      fs.delete(splits, true);
-    }
-    Path merges = new Path(regiondir, MERGEDIR);
-    if (fs.exists(merges)) {
-      fs.delete(merges, true);
-    }
+    FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
+    FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
+
     // See if region is meant to run read-only.
     if (this.regionInfo.getTableDesc().isReadOnly()) {
       this.writestate.setReadOnly(true);
@@ -346,7 +338,7 @@ public class HRegion implements HConstants {
   public boolean isClosing() {
     return this.closing.get();
   }
-  
+
   /**
    * Close down this HRegion.  Flush the cache, shut down each HStore, don't 
    * service any more calls.
@@ -360,10 +352,10 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  public List<HStoreFile> close() throws IOException {
+  public List<StoreFile> close() throws IOException {
     return close(false);
   }
-  
+
   /**
    * Close down this HRegion.  Flush the cache unless abort parameter is true,
    * Shut down each HStore, don't service any more calls.
@@ -378,7 +370,7 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  List<HStoreFile> close(boolean abort) throws IOException {
+  List<StoreFile> close(final boolean abort) throws IOException {
     if (isClosed()) {
       LOG.warn("region " + this + " already closed");
       return null;
@@ -433,8 +425,8 @@ public class HRegion implements HConstants {
             internalFlushcache();
           }
   
-          List<HStoreFile> result = new ArrayList<HStoreFile>();
-          for (HStore store: stores.values()) {
+          List<StoreFile> result = new ArrayList<StoreFile>();
+          for (Store store: stores.values()) {
             result.addAll(store.close());
           }
           this.closed.set(true);
@@ -513,7 +505,7 @@ public class HRegion implements HConstants {
   /** @return returns size of largest HStore. */
   public long getLargestHStoreSize() {
     long size = 0;
-    for (HStore h: stores.values()) {
+    for (Store h: stores.values()) {
       long storeSize = h.getSize();
       if (storeSize > size) {
         size = storeSize;
@@ -521,17 +513,17 @@ public class HRegion implements HConstants {
     }
     return size;
   }
-  
+
   /*
    * Split the HRegion to create two brand-new ones.  This also closes
    * current HRegion.  Split should be fast since we don't rewrite store files
    * but instead create new 'reference' store files that read off the top and
    * bottom ranges of parent store files.
-   * @param midKey key on which to split region
+   * @param splitRow row on which to split region
    * @return two brand-new (and open) HRegions or null if a split is not needed
    * @throws IOException
    */
-  HRegion[] splitRegion(final byte [] midKey) throws IOException {
+  HRegion[] splitRegion(final byte [] splitRow) throws IOException {
     synchronized (splitLock) {
       if (closed.get()) {
         return null;
@@ -539,11 +531,11 @@ public class HRegion implements HConstants {
       // Add start/end key checking: hbase-428.
       byte [] startKey = this.regionInfo.getStartKey();
       byte [] endKey = this.regionInfo.getEndKey();
-      if (HStoreKey.equalsTwoRowKeys(this.regionInfo,startKey, midKey)) {
+      if (HStoreKey.equalsTwoRowKeys(startKey, splitRow)) {
         LOG.debug("Startkey and midkey are same, not splitting");
         return null;
       }
-      if (HStoreKey.equalsTwoRowKeys(this.regionInfo,midKey, endKey)) {
+      if (HStoreKey.equalsTwoRowKeys(splitRow, endKey)) {
         LOG.debug("Endkey and midkey are same, not splitting");
         return null;
       }
@@ -561,14 +553,14 @@ public class HRegion implements HConstants {
         rid = this.regionInfo.getRegionId() + 1;
       }
       HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        startKey, midKey, false, rid);
+        startKey, splitRow, false, rid);
       Path dirA =
         new Path(splits, Integer.toString(regionAInfo.getEncodedName()));
       if(fs.exists(dirA)) {
         throw new IOException("Cannot split; target file collision at " + dirA);
       }
       HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        midKey, endKey, false, rid);
+        splitRow, endKey, false, rid);
       Path dirB =
         new Path(splits, Integer.toString(regionBInfo.getEncodedName()));
       if(this.fs.exists(dirB)) {
@@ -578,38 +570,31 @@ public class HRegion implements HConstants {
       // Now close the HRegion.  Close returns all store files or null if not
       // supposed to close (? What to do in this case? Implement abort of close?)
       // Close also does wait on outstanding rows and calls a flush just-in-case.
-      List<HStoreFile> hstoreFilesToSplit = close(false);
+      List<StoreFile> hstoreFilesToSplit = close(false);
       if (hstoreFilesToSplit == null) {
         LOG.warn("Close came back null (Implement abort of close?)");
         throw new RuntimeException("close returned empty vector of HStoreFiles");
       }
 
       // Split each store file.
-      for(HStoreFile h: hstoreFilesToSplit) {
-        // A reference to the bottom half of the hsf store file.
-        Reference aReference = new Reference(
-            this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey, this.regionInfo), Reference.Range.bottom);
-        HStoreFile a = new HStoreFile(this.conf, fs, splits,
-            regionAInfo, h.getColFamily(), -1, aReference);
-        // Reference to top half of the hsf store file.
-        Reference bReference = new Reference(
-            this.regionInfo.getEncodedName(), h.getFileId(),
-            new HStoreKey(midKey, this.regionInfo), Reference.Range.top);
-        HStoreFile b = new HStoreFile(this.conf, fs, splits,
-            regionBInfo, h.getColFamily(), -1, bReference);
-        h.splitStoreFile(a, b, this.fs);
+      for(StoreFile h: hstoreFilesToSplit) {
+        StoreFile.split(fs,
+          Store.getStoreHomedir(splits, regionAInfo.getEncodedName(),
+            h.getFamily()),
+          h, splitRow, Range.bottom);
+        StoreFile.split(fs,
+          Store.getStoreHomedir(splits, regionBInfo.getEncodedName(),
+            h.getFamily()),
+          h, splitRow, Range.top);
       }
 
       // Done!
       // Opening the region copies the splits files from the splits directory
       // under each region.
-      HRegion regionA =
-        new HRegion(basedir, log, fs, conf, regionAInfo, null);
+      HRegion regionA = new HRegion(basedir, log, fs, conf, regionAInfo, null);
       regionA.initialize(dirA, null);
       regionA.close();
-      HRegion regionB =
-        new HRegion(basedir, log, fs, conf, regionBInfo, null);
+      HRegion regionB = new HRegion(basedir, log, fs, conf, regionBInfo, null);
       regionB.initialize(dirB, null);
       regionB.close();
 
@@ -619,10 +604,8 @@ public class HRegion implements HConstants {
         LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
-      
       this.historian.addRegionSplit(this.regionInfo,
         regionA.getRegionInfo(), regionB.getRegionInfo());
-      
       return regions;
     }
   }
@@ -649,15 +632,13 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   private void doRegionCompactionCleanup() throws IOException {
-    if (this.fs.exists(this.regionCompactionDir)) {
-      this.fs.delete(this.regionCompactionDir, true);
-    }
+    FSUtils.deleteDirectory(this.fs, this.regionCompactionDir);
   }
 
   void setForceMajorCompaction(final boolean b) {
     this.forceMajorCompaction = b;
   }
-  
+
   boolean getForceMajorCompaction() {
     return this.forceMajorCompaction;
   }
@@ -694,16 +675,16 @@ public class HRegion implements HConstants {
    * server does them sequentially and not in parallel.
    * 
    * @param majorCompaction True to force a major compaction regardless of thresholds
-   * @return mid key if split is needed
+   * @return split row if split is needed
    * @throws IOException
    */
   byte [] compactStores(final boolean majorCompaction)
   throws IOException {
     splitsAndClosesLock.readLock().lock();
     try {
-      byte [] midKey = null;
+      byte [] splitRow = null;
       if (this.closed.get()) {
-        return midKey;
+        return splitRow;
       }
       try {
         synchronized (writestate) {
@@ -713,7 +694,7 @@ public class HRegion implements HConstants {
             LOG.info("NOT compacting region " + this +
                 ": compacting=" + writestate.compacting + ", writesEnabled=" +
                 writestate.writesEnabled);
-              return midKey;
+              return splitRow;
           }
         }
         LOG.info("starting " + (majorCompaction? "major" : "") + 
@@ -721,11 +702,11 @@ public class HRegion implements HConstants {
         long startTime = System.currentTimeMillis();
         doRegionCompactionPrep();
         long maxSize = -1;
-        for (HStore store: stores.values()) {
-          final HStore.StoreSize size = store.compact(majorCompaction);
+        for (Store store: stores.values()) {
+          final Store.StoreSize size = store.compact(majorCompaction);
           if (size != null && size.getSize() > maxSize) {
             maxSize = size.getSize();
-            midKey = size.getKey();
+            splitRow = size.getSplitRow();
           }
         }
         doRegionCompactionCleanup();
@@ -739,7 +720,7 @@ public class HRegion implements HConstants {
           writestate.notifyAll();
         }
       }
-      return midKey;
+      return splitRow;
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
@@ -859,7 +840,7 @@ public class HRegion implements HConstants {
     // Get current size of memcaches.
     final long currentMemcacheSize = this.memcacheSize.get();
     try {
-      for (HStore s: stores.values()) {
+      for (Store s: stores.values()) {
         s.snapshot();
       }
       sequenceId = log.startCacheFlush();
@@ -877,7 +858,7 @@ public class HRegion implements HConstants {
       // A.  Flush memcache to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
-      for (HStore hstore: stores.values()) {
+      for (Store hstore: stores.values()) {
         boolean needsCompaction = hstore.flushCache(completeSequenceId);
         if (needsCompaction) {
           compactionRequested = true;
@@ -971,7 +952,7 @@ public class HRegion implements HConstants {
       checkRow(row);
       checkColumn(column);
       // Don't need a row lock for a simple get
-      HStoreKey key = new HStoreKey(row, column, timestamp, this.regionInfo);
+      HStoreKey key = new HStoreKey(row, column, timestamp);
       Cell[] result = getStore(column).get(key, numVersions);
       // Guarantee that we return null instead of a zero-length array, 
       // if there are no results to return.
@@ -1009,16 +990,16 @@ public class HRegion implements HConstants {
         checkColumn(column);
       }
     }
-    HStoreKey key = new HStoreKey(row, ts, this.regionInfo);
+    HStoreKey key = new HStoreKey(row, ts);
     Integer lid = getLock(lockid,row);
-    HashSet<HStore> storeSet = new HashSet<HStore>();
+    HashSet<Store> storeSet = new HashSet<Store>();
     try {
       HbaseMapWritable<byte [], Cell> result =
         new HbaseMapWritable<byte [], Cell>();
       // Get the concerned columns or all of them
       if (columns != null) {
         for (byte[] bs : columns) {
-          HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
+          Store store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
           if (store != null) {
             storeSet.add(store);
           }
@@ -1033,14 +1014,14 @@ public class HRegion implements HConstants {
       if (columns != null) {
         for (byte[] bs : columns) {
           if (HStoreKey.getFamilyDelimiterIndex(bs) == (bs.length - 1)) {
-            HStore store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
+            Store store = stores.get(Bytes.mapKey(HStoreKey.getFamily(bs)));
             store.getFull(key, null, numVersions, result);
             storeSet.remove(store);
           }
         }
       }
       
-      for (HStore targetStore: storeSet) {
+      for (Store targetStore: storeSet) {
         targetStore.getFull(key, columns, numVersions, result);
       }
       
@@ -1083,17 +1064,17 @@ public class HRegion implements HConstants {
     checkRow(row);
     splitsAndClosesLock.readLock().lock();
     try {
-      HStore store = getStore(columnFamily);
+      Store store = getStore(columnFamily);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
       byte [] closestKey = store.getRowKeyAtOrBefore(row);
       // If it happens to be an exact match, we can stop.
       // Otherwise, we need to check if it's the max and move to the next
       if (closestKey != null) {
-        if (HStoreKey.equalsTwoRowKeys(regionInfo, row, closestKey)) {
-          key = new HStoreKey(closestKey, this.regionInfo);
+        if (HStoreKey.equalsTwoRowKeys(row, closestKey)) {
+          key = new HStoreKey(closestKey);
         }
         if (key == null) {
-          key = new HStoreKey(closestKey, this.regionInfo);
+          key = new HStoreKey(closestKey);
         }
       }
       if (key == null) {
@@ -1124,16 +1105,16 @@ public class HRegion implements HConstants {
   private Set<HStoreKey> getKeys(final HStoreKey origin, final int versions)
   throws IOException {
     Set<HStoreKey> keys = new TreeSet<HStoreKey>();
-    Collection<HStore> storesToCheck = null;
+    Collection<Store> storesToCheck = null;
     if (origin.getColumn() == null || origin.getColumn().length == 0) {
       // All families
       storesToCheck = this.stores.values();
     } else {
-      storesToCheck = new ArrayList<HStore>(1);
+      storesToCheck = new ArrayList<Store>(1);
       storesToCheck.add(getStore(origin.getColumn()));
     }
     long now = System.currentTimeMillis();
-    for (HStore targetStore: storesToCheck) {
+    for (Store targetStore: storesToCheck) {
       if (targetStore != null) {
         // Pass versions without modification since in the store getKeys, it
         // includes the size of the passed <code>keys</code> array when counting.
@@ -1170,15 +1151,15 @@ public class HRegion implements HConstants {
       if (this.closed.get()) {
         throw new IOException("Region " + this + " closed");
       }
-      HashSet<HStore> storeSet = new HashSet<HStore>();
+      HashSet<Store> storeSet = new HashSet<Store>();
       for (int i = 0; i < cols.length; i++) {
-        HStore s = stores.get(Bytes.mapKey(HStoreKey.getFamily(cols[i])));
+        Store s = stores.get(Bytes.mapKey(HStoreKey.getFamily(cols[i])));
         if (s != null) {
           storeSet.add(s);
         }
       }
       return new HScanner(cols, firstRow, timestamp,
-        storeSet.toArray(new HStore [storeSet.size()]), filter);
+        storeSet.toArray(new Store [storeSet.size()]), filter);
     } finally {
       newScannerLock.readLock().unlock();
     }
@@ -1246,8 +1227,7 @@ public class HRegion implements HConstants {
       try {
         List<byte []> deletes = null;
         for (BatchOperation op: b) {
-          HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
-              this.regionInfo);
+          HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime);
           byte[] val = null;
           if (op.isPut()) {
             val = op.getValue();
@@ -1262,7 +1242,7 @@ public class HRegion implements HConstants {
               }
               deletes.add(op.getColumn());
             } else {
-              val = HLogEdit.deleteBytes.get();
+              val = HLogEdit.DELETED_BYTES;
             }
           }
           if (val != null) {
@@ -1339,8 +1319,7 @@ public class HRegion implements HConstants {
             System.currentTimeMillis(): b.getTimestamp();
           List<byte []> deletes = null;
           for (BatchOperation op: b) {
-            HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime,
-                this.regionInfo);
+            HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime);
             byte[] val = null;
             if (op.isPut()) {
               val = op.getValue();
@@ -1355,7 +1334,7 @@ public class HRegion implements HConstants {
                 }
                 deletes.add(op.getColumn());
               } else {
-                val = HLogEdit.deleteBytes.get();
+                val = HLogEdit.DELETED_BYTES;
               }
             }
             if (val != null) {
@@ -1460,14 +1439,14 @@ public class HRegion implements HConstants {
     Integer lid = getLock(lockid, row);
     long now = System.currentTimeMillis();
     try {
-      for (HStore store : stores.values()) {
+      for (Store store : stores.values()) {
         List<HStoreKey> keys =
-          store.getKeys(new HStoreKey(row, ts, this.regionInfo),
+          store.getKeys(new HStoreKey(row, ts),
             ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-          new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+          new HStoreKey.HStoreKeyWritableComparator());
         for (HStoreKey key: keys) {
-          edits.put(key, HLogEdit.deleteBytes.get());
+          edits.put(key, HLogEdit.DELETED_BYTES);
         }
         update(edits);
       }
@@ -1494,14 +1473,14 @@ public class HRegion implements HConstants {
     Integer lid = getLock(lockid, row);
     long now = System.currentTimeMillis();
     try {
-      for (HStore store : stores.values()) {
+      for (Store store : stores.values()) {
         List<HStoreKey> keys =
-          store.getKeys(new HStoreKey(row, timestamp, this.regionInfo),
+          store.getKeys(new HStoreKey(row, timestamp),
             ALL_VERSIONS, now, columnPattern);
           TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-            new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+            new HStoreKey.HStoreKeyWritableComparator());
           for (HStoreKey key: keys) {
-            edits.put(key, HLogEdit.deleteBytes.get());
+            edits.put(key, HLogEdit.DELETED_BYTES);
           }
           update(edits);
       }
@@ -1529,15 +1508,15 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       // find the HStore for the column family
-      HStore store = getStore(family);
+      Store store = getStore(family);
       // find all the keys that match our criteria
-      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp,
-        this.regionInfo), ALL_VERSIONS, now, null);
+      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
+        ALL_VERSIONS, now, null);
       // delete all the cells
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+        new HStoreKey.HStoreKeyWritableComparator());
       for (HStoreKey key: keys) {
-        edits.put(key, HLogEdit.deleteBytes.get());
+        edits.put(key, HLogEdit.DELETED_BYTES);
       }
       update(edits);
     } finally {
@@ -1565,18 +1544,18 @@ public class HRegion implements HConstants {
     Integer lid = getLock(lockid, row);
     long now = System.currentTimeMillis();
     try {
-      for(HStore store : stores.values()) {
+      for(Store store: stores.values()) {
         String familyName = Bytes.toString(store.getFamily().getName());
         // check the family name match the family pattern.
         if(!(familyPattern.matcher(familyName).matches())) 
           continue;
         
-        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp, 
-            this.regionInfo), ALL_VERSIONS, now, null);
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
+          ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-          new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+          new HStoreKey.HStoreKeyWritableComparator());
         for (HStoreKey key: keys) {
-          edits.put(key, HLogEdit.deleteBytes.get());
+          edits.put(key, HLogEdit.DELETED_BYTES);
         }
         update(edits);
       }
@@ -1601,13 +1580,13 @@ public class HRegion implements HConstants {
       final long ts, final int versions)
   throws IOException {
     checkReadOnly();
-    HStoreKey origin = new HStoreKey(row, column, ts, this.regionInfo);
+    HStoreKey origin = new HStoreKey(row, column, ts);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+        new HStoreKey.HStoreKeyWritableComparator());
       for (HStoreKey key: keys) {
-        edits.put(key, HLogEdit.deleteBytes.get());
+        edits.put(key, HLogEdit.DELETED_BYTES);
       }
       update(edits);
     }
@@ -1672,7 +1651,7 @@ public class HRegion implements HConstants {
     TreeMap<HStoreKey, byte []> targets = this.targetColumns.get(lockid);
     if (targets == null) {
       targets = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator(regionInfo));
+        new HStoreKey.HStoreKeyWritableComparator());
       this.targetColumns.put(lockid, targets);
     }
     targets.put(key, val);
@@ -1759,10 +1738,10 @@ public class HRegion implements HConstants {
     // Nothing to do (Replaying is done in HStores)
   }
 
-  protected HStore instantiateHStore(Path baseDir, 
+  protected Store instantiateHStore(Path baseDir, 
     HColumnDescriptor c, Path oldLogFile, Progressable reporter)
   throws IOException {
-    return new HStore(baseDir, this.regionInfo, c, this.fs, oldLogFile,
+    return new Store(baseDir, this.regionInfo, c, this.fs, oldLogFile,
       this.conf, reporter);
   }
 
@@ -1773,7 +1752,7 @@ public class HRegion implements HConstants {
    * @return Store that goes with the family on passed <code>column</code>.
    * TODO: Make this lookup faster.
    */
-  public HStore getStore(final byte [] column) {
+  public Store getStore(final byte [] column) {
     return this.stores.get(HStoreKey.getFamilyMapKey(column)); 
   }
   
@@ -1962,7 +1941,7 @@ public class HRegion implements HConstants {
 
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
-    HScanner(byte [][] cols, byte [] firstRow, long timestamp, HStore[] stores,
+    HScanner(byte [][] cols, byte [] firstRow, long timestamp, Store [] stores,
       RowFilterInterface filter)
     throws IOException {
       this.filter = filter;
@@ -2004,7 +1983,7 @@ public class HRegion implements HConstants {
       this.resultSets = new TreeMap[scanners.length];
       this.keys = new HStoreKey[scanners.length];
       for (int i = 0; i < scanners.length; i++) {
-        keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY,regionInfo);
+        keys[i] = new HStoreKey(HConstants.EMPTY_BYTE_ARRAY);
         resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
         if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
           closeScanner(i);
@@ -2016,7 +1995,6 @@ public class HRegion implements HConstants {
       activeScannerCount.incrementAndGet();
     }
 
-    @SuppressWarnings("null")
     public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
     throws IOException {
       boolean moreToFollow = false;
@@ -2029,10 +2007,8 @@ public class HRegion implements HConstants {
         for (int i = 0; i < this.keys.length; i++) {
           if (scanners[i] != null &&
              (chosenRow == null ||
-               (HStoreKey.compareTwoRowKeys(regionInfo, 
-                 keys[i].getRow(), chosenRow) < 0) ||
-               ((HStoreKey.compareTwoRowKeys(regionInfo, keys[i].getRow(),
-                 chosenRow) == 0) &&
+               (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) < 0) ||
+               ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) &&
                       (keys[i].getTimestamp() > chosenTimestamp)))) {
             chosenRow = keys[i].getRow();
             chosenTimestamp = keys[i].getTimestamp();
@@ -2049,7 +2025,7 @@ public class HRegion implements HConstants {
 
           for (int i = 0; i < scanners.length; i++) {
             if (scanners[i] != null &&
-              HStoreKey.compareTwoRowKeys(regionInfo,keys[i].getRow(), chosenRow) == 0) {
+              HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) {
               // NOTE: We used to do results.putAll(resultSets[i]);
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
@@ -2071,7 +2047,7 @@ public class HRegion implements HConstants {
           // If the current scanner is non-null AND has a lower-or-equal
           // row label, then its timestamp is bad. We need to advance it.
           while ((scanners[i] != null) &&
-              (HStoreKey.compareTwoRowKeys(regionInfo,keys[i].getRow(), chosenRow) <= 0)) {
+              (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) <= 0)) {
             resultSets[i].clear();
             if (!scanners[i].next(keys[i], resultSets[i])) {
               closeScanner(i);
@@ -2193,8 +2169,8 @@ public class HRegion implements HConstants {
       RegionHistorian.getInstance().addRegionCreation(info);
     }
     HRegion region = new HRegion(tableDir,
-        new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
-        fs, conf, info, null);
+      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
+      fs, conf, info, null);
     region.initialize(null, null);
     return region;
   }
@@ -2250,9 +2226,9 @@ public class HRegion implements HConstants {
     Integer lid = meta.obtainRowLock(row);
     try {
       HStoreKey key = new HStoreKey(row, COL_REGIONINFO,
-        System.currentTimeMillis(), r.getRegionInfo());
+        System.currentTimeMillis());
       TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>(
-        new HStoreKey.HStoreKeyWritableComparator(meta.getRegionInfo()));
+        new HStoreKey.HStoreKeyWritableComparator());
       edits.put(key, Writables.getBytes(r.getRegionInfo()));
       meta.update(edits);
     } finally {
@@ -2336,7 +2312,9 @@ public class HRegion implements HConstants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETING region " + regiondir.toString());
     }
-    fs.delete(regiondir, true);
+    if (!fs.delete(regiondir, true)) {
+      LOG.warn("Failed delete of " + regiondir);
+    }
   }
 
   /**
@@ -2373,28 +2351,29 @@ public class HRegion implements HConstants {
    */
   public static boolean rowIsInRange(HRegionInfo info, final byte [] row) {
     return ((info.getStartKey().length == 0) ||
-        (HStoreKey.compareTwoRowKeys(info,info.getStartKey(), row) <= 0)) &&
+        (HStoreKey.compareTwoRowKeys(info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
-            (HStoreKey.compareTwoRowKeys(info,info.getEndKey(), row) > 0));
+            (HStoreKey.compareTwoRowKeys(info.getEndKey(), row) > 0));
   }
 
   /**
    * Make the directories for a specific column family
    * 
    * @param fs the file system
-   * @param basedir base directory where region will live (usually the table dir)
-   * @param encodedRegionName encoded region name
+   * @param tabledir base directory where region will live (usually the table dir)
+   * @param hri
    * @param colFamily the column family
-   * @param tabledesc table descriptor of table
    * @throws IOException
    */
-  public static void makeColumnFamilyDirs(FileSystem fs, Path basedir,
-    int encodedRegionName, byte [] colFamily, HTableDescriptor tabledesc)
+  public static void makeColumnFamilyDirs(FileSystem fs, Path tabledir,
+    final HRegionInfo hri, byte [] colFamily)
   throws IOException {
-    fs.mkdirs(HStoreFile.getMapDir(basedir, encodedRegionName, colFamily));
-    fs.mkdirs(HStoreFile.getInfoDir(basedir, encodedRegionName, colFamily));
+    Path dir = Store.getStoreHomedir(tabledir, hri.getEncodedName(), colFamily);
+    if (!fs.mkdirs(dir)) {
+      LOG.warn("Failed to create " + dir);
+    }
   }
-  
+
   /**
    * Merge two HRegions.  The regions must be adjacent andmust not overlap.
    * 
@@ -2416,15 +2395,13 @@ public class HRegion implements HConstants {
         throw new IOException("Cannot merge two regions with null start key");
       }
       // A's start key is null but B's isn't. Assume A comes before B
-    } else if ((srcB.getStartKey() == null)         // A is not null but B is
-        || (HStoreKey.compareTwoRowKeys(srcA.getRegionInfo(), 
-            srcA.getStartKey(), srcB.getStartKey()) > 0)) { // A > B
+    } else if ((srcB.getStartKey() == null) ||
+      (HStoreKey.compareTwoRowKeys(srcA.getStartKey(), srcB.getStartKey()) > 0)) {
       a = srcB;
       b = srcA;
     }
 
-    if (!HStoreKey.equalsTwoRowKeys(srcA.getRegionInfo(),
-      a.getEndKey(), b.getStartKey())) {
+    if (!HStoreKey.equalsTwoRowKeys(a.getEndKey(), b.getStartKey())) {
       throw new IOException("Cannot merge non-adjacent regions");
     }
     return merge(a, b);
@@ -2468,20 +2445,17 @@ public class HRegion implements HConstants {
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path basedir = a.getBaseDir();
-    final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-        a.getStartKey(), EMPTY_BYTE_ARRAY) ||
-      HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-          b.getStartKey(), EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getStartKey(), 
-            b.getStartKey()) <= 0 ?
-            a.getStartKey() : b.getStartKey();
-    final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getRegionInfo(), 
-        a.getEndKey(), EMPTY_BYTE_ARRAY) ||
-      HStoreKey.equalsTwoRowKeys(b.getRegionInfo(), b.getEndKey(), 
-          EMPTY_BYTE_ARRAY) ? EMPTY_BYTE_ARRAY :
-        HStoreKey.compareTwoRowKeys(a.getRegionInfo(), a.getEndKey(), 
-            b.getEndKey()) <= 0 ?
-            b.getEndKey() : a.getEndKey();
+    final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getStartKey(),
+        EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(b.getStartKey(), EMPTY_BYTE_ARRAY)?
+        EMPTY_BYTE_ARRAY: HStoreKey.compareTwoRowKeys(a.getStartKey(), 
+          b.getStartKey()) <= 0?
+        a.getStartKey(): b.getStartKey();
+    final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getEndKey(),
+        EMPTY_BYTE_ARRAY) ||
+      HStoreKey.equalsTwoRowKeys(b.getEndKey(), EMPTY_BYTE_ARRAY)?
+        EMPTY_BYTE_ARRAY:
+        HStoreKey.compareTwoRowKeys(a.getEndKey(), b.getEndKey()) <= 0? b.getEndKey(): a.getEndKey();
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
     LOG.info("Creating new region " + newRegionInfo.toString());
@@ -2499,37 +2473,31 @@ public class HRegion implements HConstants {
 
     // Move HStoreFiles under new region directory
     
-    Map<byte [], List<HStoreFile>> byFamily =
-      new TreeMap<byte [], List<HStoreFile>>(Bytes.BYTES_COMPARATOR);
+    Map<byte [], List<StoreFile>> byFamily =
+      new TreeMap<byte [], List<StoreFile>>(Bytes.BYTES_COMPARATOR);
     byFamily = filesByFamily(byFamily, a.close());
     byFamily = filesByFamily(byFamily, b.close());
-    for (Map.Entry<byte [], List<HStoreFile>> es : byFamily.entrySet()) {
+    for (Map.Entry<byte [], List<StoreFile>> es : byFamily.entrySet()) {
       byte [] colFamily = es.getKey();
-      makeColumnFamilyDirs(fs, basedir, encodedName, colFamily, tabledesc);
+      makeColumnFamilyDirs(fs, basedir, newRegionInfo, colFamily);
       
       // Because we compacted the source regions we should have no more than two
       // HStoreFiles per family and there will be no reference store
-      List<HStoreFile> srcFiles = es.getValue();
+      List<StoreFile> srcFiles = es.getValue();
       if (srcFiles.size() == 2) {
-        long seqA = srcFiles.get(0).loadInfo(fs);
-        long seqB = srcFiles.get(1).loadInfo(fs);
+        long seqA = srcFiles.get(0).getMaxSequenceId();
+        long seqB = srcFiles.get(1).getMaxSequenceId();
         if (seqA == seqB) {
-          // We can't have duplicate sequence numbers
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Adjusting sequence id of storeFile " + srcFiles.get(1) +
-              " down by one; sequence id A=" + seqA + ", sequence id B=" +
-              seqB);
-          }
-          srcFiles.get(1).writeInfo(fs, seqB - 1);
+          // Can't have same sequenceid since on open of a store, this is what
+          // distingushes the files (see the map of stores how its keyed by
+          // sequenceid).
+          throw new IOException("Files have same sequenceid");
         }
       }
-      for (HStoreFile hsf: srcFiles) {
-        HStoreFile dst = new HStoreFile(conf, fs, basedir,
-            newRegionInfo, colFamily, -1, null);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Renaming " + hsf + " to " + dst);
-        }
-        hsf.rename(fs, dst);
+      for (StoreFile hsf: srcFiles) {
+        StoreFile.rename(fs, hsf.getPath(),
+          StoreFile.getUniqueFile(fs, Store.getStoreHomedir(basedir,
+            newRegionInfo.getEncodedName(), colFamily)));
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -2555,15 +2523,17 @@ public class HRegion implements HConstants {
    * Fills a map with a vector of store files keyed by column family. 
    * @param byFamily Map to fill.
    * @param storeFiles Store files to process.
+   * @param family
    * @return Returns <code>byFamily</code>
    */
-  private static Map<byte [], List<HStoreFile>> filesByFamily(
-      Map<byte [], List<HStoreFile>> byFamily, List<HStoreFile> storeFiles) {
-    for (HStoreFile src: storeFiles) {
-      List<HStoreFile> v = byFamily.get(src.getColFamily());
+  private static Map<byte [], List<StoreFile>> filesByFamily(
+      Map<byte [], List<StoreFile>> byFamily, List<StoreFile> storeFiles) {
+    for (StoreFile src: storeFiles) {
+      byte [] family = src.getFamily();
+      List<StoreFile> v = byFamily.get(family);
       if (v == null) {
-        v = new ArrayList<HStoreFile>();
-        byFamily.put(src.getColFamily(), v);
+        v = new ArrayList<StoreFile>();
+        byFamily.put(family, v);
       }
       v.add(src);
     }
@@ -2582,7 +2552,7 @@ public class HRegion implements HConstants {
    * @throws IOException 
    */
   boolean isMajorCompaction() throws IOException {
-    for (HStore store: this.stores.values()) {
+    for (Store store: this.stores.values()) {
       if (store.isMajorCompaction()) {
         return true;
       }

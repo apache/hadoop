@@ -146,7 +146,7 @@ public class TestHRegion extends HBaseTestCase {
     byte [] collabel = null;
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       byte [] rowlabel = Bytes.toBytes("row_" + k);
-
+      if (k % 100 == 0) LOG.info(Bytes.toString(rowlabel));
       byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull(bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
@@ -381,7 +381,7 @@ public class TestHRegion extends HBaseTestCase {
       numInserted += 2;
     }
 
-    LOG.info("Write " + (vals1.length / 2) + " rows. Elapsed time: "
+    LOG.info("Write " + (vals1.length / 2) + " rows (second half). Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 6.  Scan from cache and disk
@@ -464,19 +464,16 @@ public class TestHRegion extends HBaseTestCase {
     } finally {
       s.close();
     }
-    assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
-    
+    assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched,
+      numInserted, numFetched);
     LOG.info("Scanned " + vals1.length
         + " rows from disk. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 9. Scan with a starting point
-
     startTime = System.currentTimeMillis();
-    
     s = r.getScanner(cols, Bytes.toBytes("row_vals1_500"),
         System.currentTimeMillis(), null);
-    
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -503,7 +500,8 @@ public class TestHRegion extends HBaseTestCase {
     } finally {
       s.close();
     }
-    assertEquals("Should have fetched " + (numInserted / 2) + " values, but fetched " + numFetched, (numInserted / 2), numFetched);
+    assertEquals("Should have fetched " + (numInserted / 2) +
+      " values, but fetched " + numFetched, (numInserted / 2), numFetched);
     
     LOG.info("Scanned " + (numFetched / 2)
         + " rows from disk with specified start point. Elapsed time: "
@@ -515,30 +513,27 @@ public class TestHRegion extends HBaseTestCase {
   // NOTE: This test depends on testBatchWrite succeeding
   private void splitAndMerge() throws IOException {
     Path oldRegionPath = r.getRegionDir();
-    byte [] midKey = r.compactStores();
-    assertNotNull(midKey);
+    byte [] splitRow = r.compactStores();
+    assertNotNull(splitRow);
     long startTime = System.currentTimeMillis();
-    HRegion subregions[] = r.splitRegion(midKey);
+    HRegion subregions[] = r.splitRegion(splitRow);
     if (subregions != null) {
       LOG.info("Split region elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
-
       assertEquals("Number of subregions", subregions.length, 2);
-
       for (int i = 0; i < subregions.length; i++) {
         subregions[i] = openClosedRegion(subregions[i]);
         subregions[i].compactStores();
       }
       
       // Now merge it back together
-
       Path oldRegion1 = subregions[0].getRegionDir();
       Path oldRegion2 = subregions[1].getRegionDir();
       startTime = System.currentTimeMillis();
       r = HRegion.mergeAdjacent(subregions[0], subregions[1]);
       region = new HRegionIncommon(r);
-      LOG.info("Merge regions elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
+      LOG.info("Merge regions elapsed time: " +
+        ((System.currentTimeMillis() - startTime) / 1000.0));
       fs.delete(oldRegion1, true);
       fs.delete(oldRegion2, true);
       fs.delete(oldRegionPath, true);
@@ -598,8 +593,10 @@ public class TestHRegion extends HBaseTestCase {
         curVals.clear();
         k++;
       }
-      assertEquals("Expected " + NUM_VALS + " " + CONTENTS_BASIC + " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);
-      assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM + " values, but fetched " + anchorFetched, NUM_VALS, anchorFetched);
+      assertEquals("Expected " + NUM_VALS + " " + Bytes.toString(CONTENTS_BASIC) +
+        " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);
+      assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM +
+        " values, but fetched " + anchorFetched, NUM_VALS, anchorFetched);
 
       LOG.info("Scanned " + NUM_VALS
           + " rows from disk. Elapsed time: "
@@ -673,8 +670,8 @@ public class TestHRegion extends HBaseTestCase {
         }
         curVals.clear();
       }
-      assertEquals("Inserted " + (NUM_VALS + numInserted/2) + " values, but fetched " + fetched, (NUM_VALS + numInserted/2), fetched);
-
+      assertEquals("Inserted " + (NUM_VALS + numInserted/2) +
+        " values, but fetched " + fetched, (NUM_VALS + numInserted/2), fetched);
       LOG.info("Scanned " + fetched
           + " rows from disk. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));

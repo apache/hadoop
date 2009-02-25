@@ -52,14 +52,12 @@ public class TestMergeTool extends HBaseTestCase {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     // Create table description
-    
     this.desc = new HTableDescriptor("TestMergeTool");
     this.desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
 
     /*
      * Create the HRegionInfos for the regions.
      */
-    
     // Region 0 will contain the key range [row_0200,row_0300)
     sourceRegions[0] = new HRegionInfo(this.desc, Bytes.toBytes("row_0200"),
       Bytes.toBytes("row_0300"));
@@ -89,10 +87,10 @@ public class TestMergeTool extends HBaseTestCase {
      */
     this.rows = new byte [5][][];
     this.rows[0] = Bytes.toByteArrays(new String[] { "row_0210", "row_0280" });
-    this.rows[1] = Bytes.toByteArrays(new String[] { "row_0260", "row_0350" });
-    this.rows[2] = Bytes.toByteArrays(new String[] { "row_0110", "row_0175" });
-    this.rows[3] = Bytes.toByteArrays(new String[] { "row_0525", "row_0560" });
-    this.rows[4] = Bytes.toByteArrays(new String[] { "row_0050", "row_1000" });
+    this.rows[1] = Bytes.toByteArrays(new String[] { "row_0260", "row_0350", "row_035" });
+    this.rows[2] = Bytes.toByteArrays(new String[] { "row_0110", "row_0175", "row_0175", "row_0175"});
+    this.rows[3] = Bytes.toByteArrays(new String[] { "row_0525", "row_0560", "row_0560", "row_0560", "row_0560"});
+    this.rows[4] = Bytes.toByteArrays(new String[] { "row_0050", "row_1000", "row_1000", "row_1000", "row_1000", "row_1000" });
     
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);

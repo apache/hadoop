@@ -154,7 +154,8 @@ public class TestScanner extends HBaseTestCase {
     this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
     HRegionIncommon hri = new HRegionIncommon(r);
     try {
-      addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO));
+      LOG.info("Added: " + 
+        addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO)));
       int count = count(hri, -1);
       assertEquals(count, count(hri, 100));
       assertEquals(count, count(hri, 0));

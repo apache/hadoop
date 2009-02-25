@@ -335,7 +335,6 @@ class HMerge implements HConstants {
         TreeMap<byte [], Cell> results =
           new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
         while(rootScanner.next(key, results)) {
-          key.setHRegionInfo(HRegionInfo.ROOT_REGIONINFO);
           for(Cell c: results.values()) {
             HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
             if (info != null) {

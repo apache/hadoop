@@ -316,6 +316,14 @@
     </description>
   </property>
   <property>
+    <name>hfile.min.blocksize.size</name>
+    <value>65536</value>
+    <description>Minimum store file block size.  The smaller you make this, the
+    bigger your index and the less you fetch on a random-access.  Set size down
+    if you have small cells and want faster random-access of individual cells.
+    </description>
+  </property>
+  <property>
     <name>hbase.io.seqfile.compression.type</name>
     <value>NONE</value>
     <description>The compression type for hbase sequencefile.Writers

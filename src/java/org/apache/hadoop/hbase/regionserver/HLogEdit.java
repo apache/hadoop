@@ -20,11 +20,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.io.BatchOperation;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.HConstants;
 
@@ -38,19 +38,15 @@ import org.apache.hadoop.hbase.HConstants;
 public class HLogEdit implements Writable, HConstants {
 
   /** Value stored for a deleted item */
-  public static ImmutableBytesWritable deleteBytes = null;
+  public static byte [] DELETED_BYTES = null;
 
   /** Value written to HLog on a complete cache flush */
-  public static ImmutableBytesWritable completeCacheFlush = null;
+  public static byte [] COMPLETE_CACHE_FLUSH = null;
 
   static {
     try {
-      deleteBytes =
-        new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes(UTF8_ENCODING));
-    
-      completeCacheFlush =
-        new ImmutableBytesWritable("HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING));
-      
+      DELETED_BYTES = "HBASE::DELETEVAL".getBytes(UTF8_ENCODING);
+      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       assert(false);
     }
@@ -58,12 +54,31 @@ public class HLogEdit implements Writable, HConstants {
   
   /**
    * @param value
-   * @return True if an entry and its content is {@link #deleteBytes}.
+   * @return True if an entry and its content is {@link #DELETED_BYTES}.
    */
   public static boolean isDeleted(final byte [] value) {
-    return (value == null)? false: deleteBytes.compareTo(value) == 0;
+    return isDeleted(value, 0, value.length);
   }
-  
+
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link #DELETED_BYTES}.
+   */
+  public static boolean isDeleted(final ByteBuffer value) {
+    return isDeleted(value.array(), value.arrayOffset(), value.limit());
+  }
+
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link #DELETED_BYTES}.
+   */
+  public static boolean isDeleted(final byte [] value, final int offset,
+      final int length) {
+    return (value == null)? false:
+      Bytes.BYTES_RAWCOMPARATOR.compare(DELETED_BYTES, 0, DELETED_BYTES.length,
+        value, offset, length) == 0;
+  }
+
   /** If transactional log entry, these are the op codes */
   public enum TransactionalOperation {
     /** start transaction */

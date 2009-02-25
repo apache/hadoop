@@ -86,14 +86,5 @@ public class TestForceSplit extends HBaseClusterTestCase {
     System.out.println("Regions after split (" + m.size() + "): " + m);
     // should have two regions now
     assertTrue(m.size() == 2);
-    // and "mmi" should be the midpoint
-    for (HRegionInfo hri: m.keySet()) {
-      byte[] start = hri.getStartKey();
-      byte[] end = hri.getEndKey();
-      if (Bytes.equals(start, HConstants.EMPTY_BYTE_ARRAY))
-        assertTrue(Bytes.equals(end, key_mmi));
-      if (Bytes.equals(end, key_mmi))
-        assertTrue(Bytes.equals(start, HConstants.EMPTY_BYTE_ARRAY));
-    }
   }
 }

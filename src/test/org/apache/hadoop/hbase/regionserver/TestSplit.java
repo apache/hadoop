@@ -133,11 +133,12 @@ public class TestSplit extends HBaseClusterTestCase {
   }
   
   private void basicSplit(final HRegion region) throws Exception {
-    addContent(region, COLFAMILY_NAME3);
+    LOG.info("" + addContent(region, COLFAMILY_NAME3));
     region.flushcache();
-    byte [] midkey = region.compactStores();
-    assertNotNull(midkey);
-    HRegion [] regions = split(region, midkey);
+    byte [] splitRow = region.compactStores();
+    assertNotNull(splitRow);
+    LOG.info("SplitRow: " + Bytes.toString(splitRow));
+    HRegion [] regions = split(region, splitRow);
     try {
       // Need to open the regions.
       // TODO: Add an 'open' to HRegion... don't do open by constructing
@@ -148,11 +149,11 @@ public class TestSplit extends HBaseClusterTestCase {
       // Assert can get rows out of new regions. Should be able to get first
       // row from first region and the midkey from second region.
       assertGet(regions[0], COLFAMILY_NAME3, Bytes.toBytes(START_KEY));
-      assertGet(regions[1], COLFAMILY_NAME3, midkey);
+      assertGet(regions[1], COLFAMILY_NAME3, splitRow);
       // Test I can get scanner and that it starts at right place.
       assertScan(regions[0], COLFAMILY_NAME3,
           Bytes.toBytes(START_KEY));
-      assertScan(regions[1], COLFAMILY_NAME3, midkey);
+      assertScan(regions[1], COLFAMILY_NAME3, splitRow);
       // Now prove can't split regions that have references.
       for (int i = 0; i < regions.length; i++) {
         // Add so much data to this region, we create a store file that is >
@@ -251,11 +252,11 @@ public class TestSplit extends HBaseClusterTestCase {
     }
   }
   
-  private HRegion [] split(final HRegion r, final byte [] midKey)
+  private HRegion [] split(final HRegion r, final byte [] splitRow)
   throws IOException {
     // Assert can get mid key from passed region.
-    assertGet(r, COLFAMILY_NAME3, midKey);
-    HRegion [] regions = r.splitRegion(midKey);
+    assertGet(r, COLFAMILY_NAME3, splitRow);
+    HRegion [] regions = r.splitRegion(splitRow);
     assertEquals(regions.length, 2);
     return regions;
   }

@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -88,15 +90,23 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
   public void testScanMultipleVersions() throws Exception {
     // At this point we have created multiple regions and both HDFS and HBase
     // are running. There are 5 cases we have to test. Each is described below.
-
     HTable t = new HTable(conf, TABLE_NAME);
+    for (int i = 0; i < ROWS.length; i++) {
+      for (int j = 0; j < TIMESTAMPS.length; j++) {
+        Cell [] cells =
+          t.get(ROWS[i], HConstants.COLUMN_FAMILY, TIMESTAMPS[j], 1);
+        assertTrue(cells != null && cells.length == 1);
+        System.out.println("Row=" + Bytes.toString(ROWS[i]) + ", cell=" +
+          cells[0]);
+      }
+    }
     
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows
-    
     int count = 0;
     Scanner s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY);
     try {
-      while (s.next() != null) {
+      for (RowResult rr = null; (rr = s.next()) != null;) {
+        System.out.println(rr.toString());
         count += 1;
       }
       assertEquals("Number of rows should be 2", 2, count);

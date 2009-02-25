@@ -57,7 +57,6 @@ class MetaScanner implements HConstants {
         RowResult r = null;
         do {
           RowResult[] rrs = connection.getRegionServerWithRetries(callable);
-          
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break;
           }
@@ -70,7 +69,7 @@ class MetaScanner implements HConstants {
         callable.setClose();
         connection.getRegionServerWithRetries(callable);
       }
-    } while (HStoreKey.compareTwoRowKeys(callable.getHRegionInfo(), startRow, LAST_ROW) != 0);
+    } while (HStoreKey.compareTwoRowKeys(startRow, LAST_ROW) != 0);
   }
 
   /**

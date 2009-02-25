@@ -209,8 +209,9 @@ public abstract class HBaseTestCase extends TestCase {
    * @param r
    * @param column
    * @throws IOException
+   * @return count of what we added.
    */
-  protected static void addContent(final HRegion r, final byte [] column)
+  protected static long addContent(final HRegion r, final byte [] column)
   throws IOException {
     byte [] startKey = r.getRegionInfo().getStartKey();
     byte [] endKey = r.getRegionInfo().getEndKey();
@@ -218,7 +219,7 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    addContent(new HRegionIncommon(r), Bytes.toString(column),
+    return addContent(new HRegionIncommon(r), Bytes.toString(column),
       startKeyBytes, endKey, -1);
   }
 
@@ -229,10 +230,11 @@ public abstract class HBaseTestCase extends TestCase {
    * @param updater  An instance of {@link Incommon}.
    * @param column
    * @throws IOException
+   * @return count of what we added.
    */
-  protected static void addContent(final Incommon updater, final String column)
+  protected static long addContent(final Incommon updater, final String column)
   throws IOException {
-    addContent(updater, column, START_KEY_BYTES, null);
+    return addContent(updater, column, START_KEY_BYTES, null);
   }
 
   /**
@@ -243,12 +245,13 @@ public abstract class HBaseTestCase extends TestCase {
    * @param column
    * @param startKeyBytes Where to start the rows inserted
    * @param endKey Where to stop inserting rows.
+   * @return count of what we added.
    * @throws IOException
    */
-  protected static void addContent(final Incommon updater, final String column,
+  protected static long addContent(final Incommon updater, final String column,
       final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
-    addContent(updater, column, startKeyBytes, endKey, -1);
+    return addContent(updater, column, startKeyBytes, endKey, -1);
   }
   
   /**
@@ -260,11 +263,13 @@ public abstract class HBaseTestCase extends TestCase {
    * @param startKeyBytes Where to start the rows inserted
    * @param endKey Where to stop inserting rows.
    * @param ts Timestamp to write the content with.
+   * @return count of what we added.
    * @throws IOException
    */
-  protected static void addContent(final Incommon updater, final String column,
+  protected static long addContent(final Incommon updater, final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
+    long count = 0;
     // Add rows of three characters.  The first character starts with the
     // 'a' character and runs up to 'z'.  Per first character, we run the
     // second character over same range.  And same for the third so rows
@@ -287,6 +292,7 @@ public abstract class HBaseTestCase extends TestCase {
             try {
               batchUpdate.put(column, t);
               updater.commit(batchUpdate);
+              count++;
             } catch (RuntimeException ex) {
               ex.printStackTrace();
               throw ex;
@@ -307,6 +313,7 @@ public abstract class HBaseTestCase extends TestCase {
       }
       secondCharStart = FIRST_CHAR;
     }
+    return count;
   }
   
   /**
@@ -448,13 +455,7 @@ public abstract class HBaseTestCase extends TestCase {
   public static class HTableIncommon implements Incommon {
     final HTable table;
     private BatchUpdate batch;
-    
-    private void checkBatch() {
-      if (batch == null) {
-        throw new IllegalStateException("No batch update in progress.");
-      }
-    }
-    
+
     /**
      * @param table
      */

@@ -71,7 +71,27 @@ public class Writables {
    */
   public static Writable getWritable(final byte [] bytes, final Writable w)
   throws IOException {
-    if (bytes == null || bytes.length == 0) {
+    return getWritable(bytes, 0, bytes.length, w);
+  }
+
+  /**
+   * Set bytes into the passed Writable by calling its
+   * {@link Writable#readFields(java.io.DataInput)}.
+   * @param bytes
+   * @param offset
+   * @param length
+   * @param w An empty Writable (usually made by calling the null-arg
+   * constructor).
+   * @return The passed Writable after its readFields has been called fed
+   * by the passed <code>bytes</code> array or IllegalArgumentException
+   * if passed null or an empty <code>bytes</code> array.
+   * @throws IOException
+   * @throws IllegalArgumentException
+   */
+  public static Writable getWritable(final byte [] bytes, final int offset,
+    final int length, final Writable w)
+  throws IOException {
+    if (bytes == null || length <=0) {
       throw new IllegalArgumentException("Can't build a writable with empty " +
         "bytes array");
     }
@@ -80,7 +100,7 @@ public class Writables {
     }
     DataInputBuffer in = new DataInputBuffer();
     try {
-      in.reset(bytes, bytes.length);
+      in.reset(bytes, offset, length);
       w.readFields(in);
       return w;
     } finally {
