@@ -960,6 +960,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   TreeMap<String, ArrayList<JobInProgress>> userToJobsMap =
     new TreeMap<String, ArrayList<JobInProgress>>();
     
+  // (trackerID --> list of jobs to cleanup)
+  Map<String, Set<JobID>> trackerToJobsToCleanup = 
+    new HashMap<String, Set<JobID>>();
+  
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
   Map<TaskAttemptID, TaskInProgress> taskidToTIPMap =
     new TreeMap<TaskAttemptID, TaskInProgress>();
@@ -1552,7 +1556,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     long now = System.currentTimeMillis();
-    
+
+    // mark the job for cleanup at all the trackers
+    addJobForCleanup(id);
+
     // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
     // in memory; information about the purged jobs is available via
     // JobHistory.
@@ -1919,6 +1926,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       actions.addAll(killTasksList);
     }
      
+    // Check for jobs to be killed/cleanedup
+    List<TaskTrackerAction> killJobsList = getJobsForCleanup(trackerName);
+    if (killJobsList != null) {
+      actions.addAll(killJobsList);
+    }
+
     // Check for tasks whose outputs can be saved
     List<TaskTrackerAction> commitTasksList = getTasksToSave(status);
     if (commitTasksList != null) {
@@ -2085,27 +2098,58 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     Set<TaskAttemptID> taskIds = trackerToTaskMap.get(taskTracker);
     if (taskIds != null) {
       List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
-      Set<JobID> killJobIds = new TreeSet<JobID>(); 
       for (TaskAttemptID killTaskId : taskIds) {
         TaskInProgress tip = taskidToTIPMap.get(killTaskId);
+        if (tip == null) {
+          continue;
+        }
         if (tip.shouldClose(killTaskId)) {
           // 
           // This is how the JobTracker ends a task at the TaskTracker.
           // It may be successfully completed, or may be killed in
           // mid-execution.
           //
-          if (tip.getJob().getStatus().getRunState() == JobStatus.RUNNING ||
-              tip.getJob().getStatus().getRunState() == JobStatus.PREP) {
+          if (!tip.getJob().isComplete()) {
             killList.add(new KillTaskAction(killTaskId));
             LOG.debug(taskTracker + " -> KillTaskAction: " + killTaskId);
-          } else {
-            JobID killJobId = tip.getJob().getStatus().getJobID(); 
-            killJobIds.add(killJobId);
           }
         }
       }
             
-      for (JobID killJobId : killJobIds) {
+      return killList;
+    }
+    return null;
+  }
+
+  /**
+   * Add a job to cleanup for the tracker.
+   */
+  private void addJobForCleanup(JobID id) {
+    for (String taskTracker : taskTrackers.keySet()) {
+      LOG.debug("Marking job " + id + " for cleanup by tracker " + taskTracker);
+      synchronized (trackerToJobsToCleanup) {
+        Set<JobID> jobsToKill = trackerToJobsToCleanup.get(taskTracker);
+        if (jobsToKill == null) {
+          jobsToKill = new HashSet<JobID>();
+          trackerToJobsToCleanup.put(taskTracker, jobsToKill);
+        }
+        jobsToKill.add(id);
+      }
+    }
+  }
+  
+  /**
+   * A tracker wants to know if any job needs cleanup because the job completed.
+   */
+  private List<TaskTrackerAction> getJobsForCleanup(String taskTracker) {
+    Set<JobID> jobs = null;
+    synchronized (trackerToJobsToCleanup) {
+      jobs = trackerToJobsToCleanup.remove(taskTracker);
+    }
+    if (jobs != null) {
+      // prepare the actions list
+      List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
+      for (JobID killJobId : jobs) {
         killList.add(new KillJobAction(killJobId));
         LOG.debug(taskTracker + " -> KillJobAction: " + killJobId);
       }
@@ -2127,6 +2171,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING) {
           TaskAttemptID taskId = taskStatus.getTaskID();
           TaskInProgress tip = taskidToTIPMap.get(taskId);
+          if (tip == null) {
+            continue;
+          }
           if (tip.shouldCommit(taskId)) {
             saveList.add(new CommitTaskAction(taskId));
             LOG.debug(tts.getTrackerName() + 
@@ -2654,16 +2701,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     for (TaskStatus report : status.getTaskReports()) {
       report.setTaskTracker(trackerName);
       TaskAttemptID taskId = report.getTaskID();
+      
+      // expire it
+      expireLaunchingTasks.removeTask(taskId);
+      
+      JobInProgress job = getJob(taskId.getJobID());
+      if (job == null) {
+        continue;
+      }
+      
       TaskInProgress tip = taskidToTIPMap.get(taskId);
       // Check if the tip is known to the jobtracker. In case of a restarted
       // jt, some tasks might join in later
       if (tip != null || hasRestarted()) {
-        JobInProgress job = getJob(taskId.getJobID());
         if (tip == null) {
           tip = job.getTaskInProgress(taskId.getTaskID());
           job.addRunningTaskToTIP(tip, taskId, status, false);
         }
-        expireLaunchingTasks.removeTask(taskId);
         
         // Update the job and inform the listeners if necessary
         JobStatus prevStatus = (JobStatus)job.getStatus().clone();
@@ -2711,6 +2765,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   void lostTaskTracker(String trackerName) {
     LOG.info("Lost tracker '" + trackerName + "'");
+    
+    // remove the tracker from the local structures
+    synchronized (trackerToJobsToCleanup) {
+      trackerToJobsToCleanup.remove(trackerName);
+    }
+    
     Set<TaskAttemptID> lostTasks = trackerToTaskMap.get(trackerName);
     trackerToTaskMap.remove(trackerName);
 
