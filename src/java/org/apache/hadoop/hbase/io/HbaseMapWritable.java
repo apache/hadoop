@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -33,9 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -48,37 +45,45 @@ import org.apache.hadoop.util.ReflectionUtils;
  * @param <K> <byte []> key  TODO: Parameter K is never used, could be removed.
  * @param <V> value Expects a Writable or byte [].
  */
-public class HbaseMapWritable <K, V>
-implements SortedMap<byte [], V>, Writable, Configurable {
-  private AtomicReference<Configuration> conf =
-    new AtomicReference<Configuration>();
+public class HbaseMapWritable <K,V>
+implements SortedMap<byte[],V>, Configurable, Writable,
+  CodeToClassAndBack{
+  
+  private AtomicReference<Configuration> conf = null;
+  protected SortedMap<byte [], V> instance = null;
   
   // Static maps of code to class and vice versa.  Includes types used in hbase
-  // only.
-  static final Map<Byte, Class<?>> CODE_TO_CLASS =
-    new HashMap<Byte, Class<?>>();
-  static final Map<Class<?>, Byte> CLASS_TO_CODE =
-    new HashMap<Class<?>, Byte>();
+  // only. These maps are now initialized in a static loader interface instead
+  // of in a static contructor for this class, this is done so that it is
+  // possible to have a regular contructor here, so that different params can
+  // be used.
+  
+  // Removed the old types like Text from the maps, if needed to add more types
+  // this can be done in the StaticHBaseMapWritableLoader interface. Only
+  // byte[] and Cell are supported now.
+  //   static final Map<Byte, Class<?>> CODE_TO_CLASS =
+  //     new HashMap<Byte, Class<?>>();
+  //   static final Map<Class<?>, Byte> CLASS_TO_CODE =
+  //     new HashMap<Class<?>, Byte>();
 
-  static {
-    byte code = 0;
-    addToMap(HStoreKey.class, code++);
-    addToMap(ImmutableBytesWritable.class, code++);
-    addToMap(Text.class, code++);
-    addToMap(Cell.class, code++);
-    addToMap(byte [].class, code++);
-  }
+  /**
+   * The default contructor where a TreeMap is used
+   **/
+   public HbaseMapWritable(){
+     this (new TreeMap<byte [], V>(Bytes.BYTES_COMPARATOR));
+   }
 
-  @SuppressWarnings("boxing")
-  private static void addToMap(final Class<?> clazz,
-      final byte code) {
-    CLASS_TO_CODE.put(clazz, code);
-    CODE_TO_CLASS.put(code, clazz);
+   /**
+  * Contructor where another SortedMap can be used
+  * 
+  * @param map the SortedMap to be used 
+  **/
+  public HbaseMapWritable(SortedMap<byte[], V> map){
+    conf = new AtomicReference<Configuration>();
+    instance = map;
   }
   
-  private SortedMap<byte [], V> instance =
-    new TreeMap<byte [], V>(Bytes.BYTES_COMPARATOR);
-
+  
   /** @return the conf */
   public Configuration getConf() {
     return conf.get();
