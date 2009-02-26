@@ -59,6 +59,8 @@ Release 0.20.0 - Unreleased
                be assigned to only 1-2 region servers
    HBASE-1210  Allow truncation of output for scan and get commands in shell
                (Lars George via Stack)
+   HBASE-1221  When using ant -projecthelp to build HBase not all the important
+               options show up (Erik Holstad via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

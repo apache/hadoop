@@ -155,7 +155,7 @@
    </javac>
   </target>
 	
-  <target name="jar" depends="compile">
+  <target name="jar" depends="compile" description="Build jar">
     <!--Copy over any properties under src-->
     <copy todir="${build.classes}">
       <fileset dir="${src.dir}">
@@ -404,7 +404,7 @@
       redoing init and jscpc at this stage of the game; i.e. the prereqs
       for compile.  TODO: Investigate why.  For now, test will fail
       if not preceeded by manual 'jar' or 'compile' invokation -->
-  <target name="compile-test" depends="compile">
+  <target name="compile-test" depends="compile" description="Build test jar">
     <javac encoding="${build.encoding}" 
        srcdir="${src.test}" 
        includes="**/*.java" 
@@ -426,7 +426,8 @@
     </jar>
   </target>
 
-  <target name="test" depends="compile-test" >
+  <target name="test" depends="compile-test"
+  	description="Build test jar and run tests">
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <junit
@@ -460,7 +461,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean">
+  <target name="clean" description="Clean all old builds">
     <delete dir="${build.dir}"/>
   </target>
 </project>
