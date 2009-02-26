@@ -25,9 +25,41 @@ package org.apache.hadoop.hbase.io;
  * probably do not account for 32 vs 64 bit nor for different VM implemenations.
  */
 public interface HeapSize {
+  
+  /** Reference size is 8 bytes on 64-bit, 4 bytes on 32-bit */
+  static final int REFERENCE = 8;
+  
+  /** Object overhead is minimum 2 * reference size (8 bytes on 64-bit) */
+  static final int OBJECT = 2 * REFERENCE;
+  
+  /**
+   * The following types are always allocated in blocks of 8 bytes (on 64bit)
+   * For example, if you have two ints in a class, it will use 8 bytes.
+   * If you have three ints in a class, it will use 16 bytes.
+   */
+  static final int SHORT = 4;
+  static final int INT = 4;
+  static final int FLOAT = 4;
+  static final int BOOLEAN = 4;
+  static final int CHAR = 4;
+  static final int BYTE = 1;
+  
+  /** These types are always 8 bytes */
+  static final int DOUBLE = 8;
+  static final int LONG = 8;
+  
+  /** Array overhead */
+  static final int BYTE_ARRAY = REFERENCE;
+  static final int ARRAY = 3 * REFERENCE;
+  static final int MULTI_ARRAY = (4 * REFERENCE) + ARRAY;
+  
+  static final int BLOCK_SIZE_TAX = 8;
+
+  
+  
   /**
    * @return Approximate 'exclusive deep size' of implementing object.  Includes
    * count of payload and hosting object sizings.
-   */
+  */
   public long heapSize();
 }

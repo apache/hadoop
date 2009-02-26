@@ -63,6 +63,8 @@ Release 0.20.0 - Unreleased
                options show up (Erik Holstad via Stack)
    HBASE-1189  Changing the map type used internally for HbaseMapWritable
                (Erik Holstad via Stack)
+   HBASE-1188  Memory size of Java Objects - Make cacheable objects implement
+               HeapSize (Erik Holstad via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
