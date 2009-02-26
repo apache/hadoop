@@ -57,7 +57,7 @@ export chukwaRecordsRepository="/chukwa/repos/"
 #export TORQUE_HOME=/usr/local/torque
 
 # Instance name for chukwa deployment
-export CHUKWA_IDENT_STRING=demo
+export CHUKWA_IDENT_STRING=TODO-AGENTS-INSTANCE-NAME
 
 # Datatbase driver name for storing Chukwa Data.
 # export JDBC_DRIVER=
