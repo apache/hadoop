@@ -23,6 +23,10 @@ Release 0.19.0 - Unreleased
     HADOOP-4433. Improve data loader for collecting metrics and log files.
     (Eric Yang via omalley)
 
+    HADOOP-5205.  Change the value of CHUKWA_IDENT_STRING from demo to TODO-AGENTS-INSTANCE-NAME in chukwa-env.sh.template (Jerome Boulon via asrabkin)
+
+    HADOOP-5033.  Simplified ChukwaWriter API.  (asrabkin)
+
   NEW FEATURES
 
     HADOOP-3719. Initial checkin of Chukwa, which is a data collection and 
