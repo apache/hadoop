@@ -31,12 +31,6 @@ public class PipelineStageWriter implements ChukwaWriter {
   ChukwaWriter writer; //head of pipeline
 
   @Override
-  public void add(Chunk data) throws WriterException {
-    writer.add(data);
-
-  }
-
-  @Override
   public void add(List<Chunk> chunks) throws WriterException {
     writer.add(chunks);
   }

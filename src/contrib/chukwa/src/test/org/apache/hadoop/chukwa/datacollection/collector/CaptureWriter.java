@@ -29,17 +29,12 @@ public class CaptureWriter implements ChukwaWriter {
   static ArrayList<Chunk> outputs = new ArrayList<Chunk>();
 
   @Override
-  public void add(Chunk data) throws WriterException {
-    synchronized(outputs) {
-      outputs.add(data);
-    }
-    
-  }
-
-  @Override
   public void add(List<Chunk> chunks) throws WriterException {
+
+    synchronized(outputs) {
      for(Chunk c: chunks)
-       add(c);
+       outputs.add(c);
+    }
   }
 
   @Override
