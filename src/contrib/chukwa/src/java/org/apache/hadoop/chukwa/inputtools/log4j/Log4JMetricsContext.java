@@ -87,14 +87,17 @@ public class Log4JMetricsContext extends AbstractMetricsContext {
 				  appender.setLayout(layout);
 				  appender.setAppend(true);
 				  if(properties.getProperty("log4j.appender.chukwa."+contextName+".Dir")!=null) {
-					  String logName = properties.getProperty("log4j.appender.chukwa."+contextName+".Dir")+File.separator+"chukwa-"+user+"-"+contextName+".log";
+				    String logName = properties.getProperty("log4j.appender.chukwa."+contextName+".Dir")
+				    +File.separator+"chukwa-"+user+"-"+contextName + "-" + System.currentTimeMillis() +".log";
+
 					  // FIXME: Hack to make the log file readable by chukwa user. 
 					  if(System.getProperty("os.name").intern()=="Linux".intern()) {
 						  Runtime.getRuntime().exec("chmod 640 "+logName);
 					  }
 				      appender.setFile(logName);					  
 				  } else {
-				      appender.setFile(metricsLogDir+File.separator+"chukwa-"+user+"-"+contextName+".log");
+				    appender.setFile(metricsLogDir+File.separator+"chukwa-"+user+"-"
+				        +contextName + "-" + System.currentTimeMillis()+ ".log");
 				  }
 				  appender.activateOptions();
 				  appender.setRecordType(properties.getProperty("log4j.appender.chukwa."+contextName+".recordType"));
