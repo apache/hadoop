@@ -241,6 +241,9 @@ Trunk (unreleased changes)
     HADOOP-5320. Add a close() in TestMapReduceLocal.  (Jothi Padmanabhan
     via szetszwo)
 
+    HADOOP-5218.  libhdfs unit test failed because it was unable to 
+    start namenode/datanode. Fixed. (dhruba)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
