@@ -899,6 +899,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5272. Fixes a problem to do with detecting whether an attempt is the first
     attempt of a Task. This affects JobTracker restart. (Amar Kamat via ddas)
 
+    HADOOP-5306. Fixes a problem to do with logging/parsing the http port of a 
+    lost tracker. Affects JobTracker restart. (Amar Kamat via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
