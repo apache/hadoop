@@ -518,6 +518,18 @@ class TaskInProgress {
            oldState == TaskStatus.State.COMMIT_PENDING)) {
         return false;
       }
+      
+      //This is to handle the case of the JobTracker timing out a task
+      //due to launch delay, but the TT comes back with one of the 
+      //states mentioned in the newState
+      if (oldState == TaskStatus.State.FAILED && 
+          (newState == TaskStatus.State.UNASSIGNED ||
+           newState == TaskStatus.State.RUNNING || 
+           newState == TaskStatus.State.COMMIT_PENDING ||
+           newState == TaskStatus.State.SUCCEEDED)) {
+        tasksToKill.put(taskid, true);
+        return false;	  
+      }
           
       changed = oldState != newState;
     }
