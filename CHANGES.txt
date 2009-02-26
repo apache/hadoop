@@ -13,6 +13,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5280. Adds a check to prevent a task state transition from FAILED to
     any of UNASSIGNED, RUNNING, COMMIT_PENDING or SUCCEEDED. (ddas)
 
+    HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes the estimation
+    formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
