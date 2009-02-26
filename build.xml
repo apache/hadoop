@@ -1547,6 +1547,8 @@
     <arg value="${trigger.url}"/>
     <arg value="${jira.passwd}"/>
     <arg value="${java5.home}"/>
+    <arg value="${curl.cmd}"/>
+    <arg value="${defect}"/>
   </exec>
 </target>
 	

@@ -12,8 +12,8 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 17 ]] ; then
-        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD> <JAVA5_HOME> "
+      if [[ $# != 19 ]] ; then
+        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD> <JAVA5_HOME> <CURL_CMD> <DEFECT> "
         cleanupAndExit 0
       fi
       PATCH_DIR=$2
@@ -32,16 +32,19 @@ parseArgs() {
       TRIGGER_BUILD_URL=${15}
       JIRA_PASSWD=${16}
       JAVA5_HOME=${17}
+      CURL=${18}
+      defect=${19}
+		
       ### Retrieve the defect number
-      if [ ! -e $PATCH_DIR/defectNum ] ; then
-        echo "Could not determine the patch to test.  Exiting."
-        cleanupAndExit 0
-      fi
-      defect=`cat $PATCH_DIR/defectNum`
       if [ -z "$defect" ] ; then
         echo "Could not determine the patch to test.  Exiting."
         cleanupAndExit 0
       fi
+
+      if [ ! -e "$PATCH_DIR" ] ; then
+        mkdir -p $PATCH_DIR 
+      fi
+
       ECLIPSE_PROPERTY="-Declipse.home=$ECLIPSE_HOME"
       PYTHON_PROPERTY="-Dpython.home=$PYTHON_HOME"
       ;;
@@ -615,6 +618,8 @@ cleanupAndExit () {
     if [ -e "$PATCH_DIR" ] ; then
       mv $PATCH_DIR $BASEDIR
     fi
+  CALLER=`hostname`
+  $CURL $PATCH_ADMIN_URL'&CALLER='$CALLER
   fi
   echo ""
   echo ""
@@ -646,7 +651,7 @@ RESULT=$?
 if [[ $HUDSON == "true" ]] ; then
   if [[ $RESULT != 0 ]] ; then
     ### Resubmit build.
-    $WGET -q -O $PATCH_DIR/build $TRIGGER_BUILD_URL
+    $CURL $TRIGGER_BUILD_URL'&DEFECTNUM='$defect
     exit 100
   fi
 fi
