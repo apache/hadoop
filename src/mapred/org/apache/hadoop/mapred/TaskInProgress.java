@@ -910,7 +910,6 @@ class TaskInProgress {
       t.setTaskCleanupTask();
       t.setState(taskStatuses.get(taskid).getRunState());
       cleanupTasks.put(taskid, taskTracker);
-      jobtracker.removeTaskEntry(taskid);
     }
     t.setConf(conf);
     LOG.debug("Launching task with skipRanges:"+failedRanges.getSkipRanges());

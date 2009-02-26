@@ -411,8 +411,7 @@ abstract class Task implements Writable, Configurable {
               if (sendProgress) {
                 // we need to send progress update
                 updateCounters();
-                taskStatus.statusUpdate(getState(),
-                                        taskProgress.get(),
+                taskStatus.statusUpdate(taskProgress.get(),
                                         taskProgress.toString(), 
                                         counters);
                 taskFound = umbilical.statusUpdate(taskId, taskStatus);
@@ -680,8 +679,7 @@ abstract class Task implements Writable, Configurable {
   private void sendLastUpdate(TaskUmbilicalProtocol umbilical) 
   throws IOException {
     // send a final status report
-    taskStatus.statusUpdate(getState(),
-                            taskProgress.get(),
+    taskStatus.statusUpdate(taskProgress.get(),
                             taskProgress.toString(), 
                             counters);
     statusUpdate(umbilical);

@@ -16,6 +16,11 @@ Release 0.19.2 - Unreleased
     HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes the estimation
     formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
 
+    HADOOP-5233. Addresses the three issues - Race condition in updating
+    status, NPE in TaskTracker task localization when the conf file is missing
+    (HADOOP-5234) and NPE in handling KillTaskAction of a cleanup task (HADOOP-5235).
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES

@@ -54,7 +54,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   private long finishTime; 
   private long outputSize;
     
-  private Phase phase = Phase.STARTING; 
+  private volatile Phase phase = Phase.STARTING; 
   private Counters counters;
   private boolean includeCounters;
   private SortedRanges.Range nextRecordRange = new SortedRanges.Range();
@@ -265,16 +265,15 @@ abstract class TaskStatus implements Writable, Cloneable {
   /**
    * Update the status of the task.
    * 
-   * @param runstate
+   * This update is done by ping thread before sending the status. 
+   * 
    * @param progress
    * @param state
    * @param counters
    */
-  synchronized void statusUpdate(State runState, 
-                                 float progress,
+  synchronized void statusUpdate(float progress,
                                  String state, 
                                  Counters counters) {
-    setRunState(runState);
     setProgress(progress);
     setStateString(state);
     setCounters(counters);
