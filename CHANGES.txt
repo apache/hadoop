@@ -57,6 +57,8 @@ Release 0.20.0 - Unreleased
                on absolute path (Nitay Joffe via Jean-Daniel Cryans)
    HBASE-1187  After disabling/enabling a table, the regions seems to 
                be assigned to only 1-2 region servers
+   HBASE-1210  Allow truncation of output for scan and get commands in shell
+               (Lars George via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

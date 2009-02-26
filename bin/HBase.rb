@@ -36,6 +36,7 @@ module HBase
   ENDROW = STOPROW
   LIMIT = "LIMIT"
   METHOD = "METHOD"
+  MAXLENGTH = "MAXLENGTH"
 
   # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
   class Admin
@@ -316,8 +317,10 @@ module HBase
     def scan(args = {})
       now = Time.now 
       limit = -1
+      maxlength = -1
       if args != nil and args.length > 0
         limit = args["LIMIT"] || -1 
+        maxlength = args["MAXLENGTH"] || -1 
         filter = args["FILTER"] || nil
         startrow = args["STARTROW"] || ""
         stoprow = args["STOPROW"] || nil
@@ -348,7 +351,7 @@ module HBase
         row = String.from_java_bytes r.getRow()
         for k, v in r
           column = String.from_java_bytes k
-          cell = toString(column, v)
+          cell = toString(column, v, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
         count += 1
@@ -381,7 +384,7 @@ module HBase
 
     # Make a String of the passed cell.
     # Intercept cells whose format we know such as the info:regioninfo in .META.
-    def toString(column, cell)
+    def toString(column, cell, maxlength)
       if isMetaTable()
         if column == 'info:regioninfo'
           hri = Writables.getHRegionInfoOrNull(cell.getValue())
@@ -392,13 +395,15 @@ module HBase
         end
       end
       cell.toString()
+      val = cell.toString()
+      maxlength != -1 ? val[0, maxlength] : val    
     end
   
     # Get from table
     def get(row, args = {})
       now = Time.now 
       result = nil
-      if args == nil or args.length == 0
+      if args == nil or args.length == 0 or (args.length == 1 and args[MAXLENGTH] != nil)
         result = @table.getRow(row.to_java_bytes)
       else
         # Its a hash.
@@ -431,6 +436,7 @@ module HBase
         end
       end
       # Print out results.  Result can be Cell or RowResult.
+      maxlength = args[MAXLENGTH] || -1
       h = nil
       if result.instance_of? RowResult
         h = String.from_java_bytes result.getRow()
@@ -438,7 +444,7 @@ module HBase
         if result
           for k, v in result
             column = String.from_java_bytes k
-            @formatter.row([column, toString(column, v)])
+            @formatter.row([column, toString(column, v, maxlength)])
           end
         end
       else
@@ -446,7 +452,7 @@ module HBase
         @formatter.header()
         if result 
           for c in result
-            @formatter.row([c.toString()])
+            @formatter.row([toString(nil, c, maxlength)])
           end
         end
       end
