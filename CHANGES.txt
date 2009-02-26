@@ -575,6 +575,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4804. Provide Forrest documentation for the Fair Scheduler.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5248. A testcase that checks for the existence of job directory
+    after the job completes. Fails if it exists. (ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
