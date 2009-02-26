@@ -7,6 +7,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5154. Fixes a deadlock in the fairshare scheduler.
     (Matei Zaharia via yhemanth)
 
+    HADOOP-5269. Fixes a problem to do with tasktracker holding on to FAILED_UNCLEAN
+    or KILLED_UNCLEAN tasks forever. (Amareshwari Sriramadasu via ddas) 
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES

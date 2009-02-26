@@ -173,9 +173,13 @@ class Child {
       umbilical.fsError(taskid, e.getMessage());
     } catch (Throwable throwable) {
       LOG.warn("Error running child", throwable);
-      if (task != null) {
-        // do cleanup for the task
-        task.taskCleanup(umbilical);
+      try {
+        if (task != null) {
+          // do cleanup for the task
+          task.taskCleanup(umbilical);
+        }
+      } catch (Throwable th) {
+        LOG.info("Error cleaning up" + th);
       }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
