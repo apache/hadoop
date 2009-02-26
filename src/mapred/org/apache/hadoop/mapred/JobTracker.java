@@ -936,7 +936,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       String trackerName = attempt.get(Keys.TRACKER_NAME);
       String trackerHostName = 
         JobInProgress.convertTrackerNameToHostName(trackerName);
-      int port = attempt.getInt(Keys.HTTP_PORT);
+      // recover the port information.
+      int port = 0; // default to 0
+      String hport = attempt.get(Keys.HTTP_PORT);
+      if (hport != null && hport.length() > 0) {
+        port = attempt.getInt(Keys.HTTP_PORT);
+      }
       
       long attemptStartTime = attempt.getLong(Keys.START_TIME);
 
