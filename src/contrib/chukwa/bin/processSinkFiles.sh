@@ -27,7 +27,6 @@ fi
 trap 'remove_cron;rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid ${CHUKWA_HOME}/var/run/ProcessSinkFiles.pid; exit 0' 1 2 15
 echo "${pid}" > "$CHUKWA_HOME/var/run/ProcessSinkFiles.pid"
 
-HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "
 
 function remove_cron {
     mkdir -p ${CHUKWA_HOME}/var/tmp >&/dev/null
@@ -45,15 +44,15 @@ function add_cron {
 
     if [ "X${crontest}" != "X0" ]; then
       cat > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
-16 * * * * ${CHUKWA_HOME}/bin/hourlyRolling.sh >& ${CHUKWA_HOME}/logs/hourly.log
-30 1 * * * ${CHUKWA_HOME}/bin/dailyRolling.sh >& ${CHUKWA_HOME}/logs/dailyRolling.log
+16 * * * * ${CHUKWA_HOME}/bin/hourlyRolling.sh --config ${CHUKWA_CONF_DIR} >& ${CHUKWA_LOG_DIR}/hourly.log
+30 1 * * * ${CHUKWA_HOME}/bin/dailyRolling.sh --config ${CHUKWA_CONF_DIR} >& ${CHUKWA_LOG_DIR}/dailyRolling.log
 CRON
     else
       grep -v "${CHUKWA_HOME}/bin/hourlyRolling.sh" ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}  | grep -v "${CHUKWA_HOME}/bin/dailyRolling.sh" > ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2
       mv ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}.2 ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE}
       cat >> ${CHUKWA_HOME}/var/tmp/cron.${CURRENT_DATE} << CRON
-16 * * * * ${CHUKWA_HOME}/bin/hourlyRolling.sh >& ${CHUKWA_HOME}/logs/hourly.log
-30 1 * * * ${CHUKWA_HOME}/bin/dailyRolling.sh >& ${CHUKWA_HOME}/logs/dailyRolling.log
+16 * * * * ${CHUKWA_HOME}/bin/hourlyRolling.sh --config ${CHUKWA_CONF_DIR} >& ${CHUKWA_LOG_DIR}/hourly.log
+30 1 * * * ${CHUKWA_HOME}/bin/dailyRolling.sh --config ${CHUKWA_CONF_DIR} >& ${CHUKWA_LOG_DIR}/dailyRolling.log
 CRON
     fi
 
@@ -74,6 +73,12 @@ fi
 if [ "X$1" = "Xwatchdog" ]; then
   add_cron
 fi
+
+
+HADOOP_OPTS="$HADOOP_OPTS -DAPP=demux -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} "
+export HADOOP_OPTS
+export HADOOP_CONF_DIR
+HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "
 
 while [ 1 ]
  do

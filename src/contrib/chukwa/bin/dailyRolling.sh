@@ -20,7 +20,9 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/chukwa-config.sh
 
-HADOOP_CONF_DIR="${HADOOP_HOME}/conf/"
+HADOOP_OPTS="$HADOOP_OPTS -DAPP=dailyRolling -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} "
+export HADOOP_OPTS
+export HADOOP_CONF_DIR
 HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "
 
   $HADOOP_CMDE jar ${CHUKWA_CORE} org.apache.hadoop.chukwa.extraction.demux.DailyChukwaRecordRolling rollInSequence true deleteRawdata true
