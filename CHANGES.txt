@@ -247,6 +247,9 @@ Trunk (unreleased changes)
     HADOOP-5218.  libhdfs unit test failed because it was unable to 
     start namenode/datanode. Fixed. (dhruba)
 
+    HADOOP-5273. Add license header to TestJobInProgress.java.  (Jakob Homan
+    via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
