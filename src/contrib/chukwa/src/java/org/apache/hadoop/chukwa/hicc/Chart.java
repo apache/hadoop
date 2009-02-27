@@ -45,6 +45,7 @@ public class Chart {
 	private int width;
 	private int height;
 	private List<String> xLabelRange;
+	private HashMap<String, Long> xLabelRangeHash;
 	private HttpServletRequest request = null;
     private boolean legend;
     private String xLabel="";
@@ -141,6 +142,12 @@ public class Chart {
 
     public void setXLabelsRange(List<String> range) {
     	xLabelRange = range;
+        xLabelRangeHash = new HashMap<String, Long>();
+        long value = 0;
+        for(String label : range) {
+            xLabelRangeHash.put(label,value);
+            value++;
+        }
     }
 
     public void setLegend(boolean toggle) {
@@ -172,6 +179,12 @@ public class Chart {
 				dateFormat="%y-%m-%d %H:%M";
 			}
 		}
+        String xAxisOptions = "";
+        if(xLabel.equals("Time")) {
+                xAxisOptions = "timeformat: \""+dateFormat+"\",mode: \"time\"";
+        } else {
+                xAxisOptions = "tickFormatter: function (val, axis) { return xLabels[Math.round(val)]; }, ticks: 0";
+        }
         output = "<html><link href=\"/hicc/css/default.css\" rel=\"stylesheet\" type=\"text/css\">\n" +
 		         "<body onresize=\"wholePeriod()\"><script type=\"text/javascript\" src=\"/hicc/js/jquery-1.2.6.min.js\"></script>\n"+
 		         "<script type=\"text/javascript\" src=\"/hicc/js/jquery.flot.pack.js\"></script>\n"+
@@ -183,24 +196,23 @@ public class Chart {
 		         "<script type=\"text/javascript\" src=\"/hicc/js/flot.extend.js\">\n" +
 		         "</script>\n" +
 		         "<script type=\"text/javascript\">\n"+
+                         "var xLabels=new Array();\n"+
 		         "var cw = document.body.clientWidth-70;\n"+
 		         "var ch = document.body.clientHeight-50;\n"+
 		         "document.getElementById('placeholder').style.width=cw+'px';\n"+
 		         "document.getElementById('placeholder').style.height=ch+'px';\n"+
 		         "_options={\n"+
 		         "        points: { show: false },\n"+
-		         "        xaxis: {                timeformat: \""+dateFormat+"\",\n"+
-		         "	                mode: \"time\"\n"+
-		         "	        },\n"+
-		         "	        selection: { mode: \"x\" },\n"+
-		         "	        grid: {\n"+
-		         "	                clickable: true,\n"+
-		         "	                hoverable: true,\n"+
-		         "	                tickColor: \"#C0C0C0\",\n"+
-		         "	                backgroundColor:\"#FFFFFF\"\n"+
-		         "	        },\n"+
-		         "	        legend: { show: "+this.legend+" },\n"+
-                 "          yaxis: { ";
+		         "        xaxis: { "+xAxisOptions+" },\n"+
+		         "	  selection: { mode: \"x\" },\n"+
+		         "	  grid: {\n"+
+		         "	           clickable: true,\n"+
+		         "	           hoverable: true,\n"+
+		         "	           tickColor: \"#C0C0C0\",\n"+
+		         "	           backgroundColor:\"#FFFFFF\"\n"+
+		         "	  },\n"+
+		         "	  legend: { show: "+this.legend+" },\n"+
+                         "        yaxis: { ";
         boolean stack = false;
         for(String type : this.chartType) {
             if(type.startsWith("stack")) {
@@ -226,10 +238,14 @@ public class Chart {
             output = output + ", min:0, max:"+this.max;
         }
         output = output + "}\n";
-        output = output +
-		         "	};\n"+
-		         "_series=[\n";
-		            ArrayList<Long> numericLabelRange = new ArrayList<Long>();
+        output = output + "	};\n";
+        if(!xLabel.equals("Time")) {
+            for(int i=0;i<xLabelRange.size();i++) {
+                output = output + "xLabels[" + i + "]=\"" + xLabelRange.get(i)+"\";\n";
+            }
+        }
+        output = output + "_series=[\n";
+/*		            ArrayList<Long> numericLabelRange = new ArrayList<Long>();
 				    if(xLabel.equals("Time")) {
 				        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				        for(int i=0;i<xLabelRange.size();i++) {
@@ -243,7 +259,7 @@ public class Chart {
 					    for(int i=0;i<xLabelRange.size();i++) {
 					    	numericLabelRange.add(Long.parseLong(xLabelRange.get(i)));
 					    }
-				    }
+				    }*/
 			        ColorPicker cp = new ColorPicker();
 		   			int i=0;
 				    for(TreeMap<String, TreeMap<String, Double>> dataMap : this.dataset) {
@@ -289,6 +305,10 @@ public class Chart {
 					 	    	type="bars";
 					 	    	param="stepByStep: true";
 					 	    }
+                                                    if(this.chartType.get(i).equals("point")) {
+                                                        type="points";
+                                                        param="fill: false";
+                                                    }
 					 	    output+="  {"+type+": { show: true, "+param+" }, color: \""+cp.get(counter+1)+"\", label: \""+seriesName+"\", ";
 					 	    String showYAxis="false";
 					 	    String shortRow="false";
@@ -302,7 +322,12 @@ public class Chart {
 		   			 	        if(counter2!=0) {
 		   					        output+=",";
 		   				        }
-		   				        output+="["+dp+","+data.get(dp)+"]";
+                                                        if(xLabel.equals("Time")) {
+		   				            output+="[\""+dp+"\","+data.get(dp)+"]";
+                                                        } else {
+                                                            long value = xLabelRangeHash.get(dp);
+		   				            output+="[\""+value+"\","+data.get(dp)+"]";
+                                                        }
 		   				        counter2++;
 		   			        }
 		   	   			    output+="], min:0, max:"+this.max+"}";

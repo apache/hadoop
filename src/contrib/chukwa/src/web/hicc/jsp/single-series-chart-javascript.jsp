@@ -168,7 +168,15 @@ No time range specified.  Select a time range through widget preference, or use 
            Iterator<String> ki = tmpDataMap.keySet().iterator();
            while(ki.hasNext()) {
                String ts = ki.next();
-               dataMap.put(ts,tmpDataMap.get(ts));
+               if(dataMap.containsKey(ts)) {
+                   TreeMap<String, Double> newTree = dataMap.get(ts);
+                   for(String s : tmpDataMap.get(ts).keySet()) {
+                       newTree.put(s,tmpDataMap.get(ts).get(s));
+                   }
+                   dataMap.put(ts,newTree);
+               } else {
+                   dataMap.put(ts,tmpDataMap.get(ts));
+               }
            } 
        }
        if(dataMap.size()!=0) {
@@ -183,7 +191,11 @@ No time range specified.  Select a time range through widget preference, or use 
                c.setXAxisLabels(false);
            }
            c.setYAxisLabel("");
-           c.setXAxisLabel("Time");
+           if(request.getParameter("x_axis_label")!=null) {
+               c.setXAxisLabel(request.getParameter("x_axis_label"));
+           } else {
+               c.setXAxisLabel("Time");
+           }
            c.setTitle(metrics.toString());
            if(request.getParameter("y_axis_max")!=null) {
                double max = Double.parseDouble(request.getParameter("y_axis_max"));

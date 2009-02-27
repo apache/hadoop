@@ -40,7 +40,7 @@ options={
 };
 
         var previousPoint = null;
-	$("#placeholder").bind("plothover", function (event, pos, item) {
+	$("#placeholder").bind("plotclick", function (event, pos, item) {
 	    var leftPad = function(n) {
                 n = "" + n;
 	        return n.length == 1 ? "0" + n : n;
@@ -50,44 +50,28 @@ options={
                     previousPoint = item.datapoint;
                
                     $("#tooltip").remove();
-                    var x = item.datapoint[0].toFixed(2),
-                         y = item.stackValue.toFixed(2);
-                    var dnow=new Date();
-                    dnow.setTime(x);
-	            var dita=leftPad(dnow.getUTCFullYear())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCDate()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
+                    if(xLabels.length==0) {
+                        var x = item.datapoint[0],
+                            y = item.stackValue.toFixed(2);
+                        var dnow=new Date();
+                        dnow.setTime(x);
+	                var dita=leftPad(dnow.getUTCFullYear())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCDate()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
  
-                    showTooltip(item.pageX, item.pageY,
-                                item.series.label + ": " + y + "<br>Time: " + dita);
+                        showTooltip(item.pageX, item.pageY,
+                                    item.series.label + ": " + y + "<br>Time: " + dita);
+                    } else {
+                        var x = item.datapoint[0],
+                            y = item.stackValue.toFixed(2);
+                        xLabel = xLabels[x];
+                        showTooltip(item.pageX, item.pageY,
+                                    item.series.label + ": " + y + "<br>" + xLabel);
+                    }
                  }
             } else {
                  $("#tooltip").remove();
                  previousPoint = null;            
             }
          });
-    $("#placeholder").bind("plotclick", function (event, pos, item) {
-	    var leftPad = function(n) {
-                n = "" + n;
-	        return n.length == 1 ? "0" + n : n;
-	    };
-            if (item) {
-                if (previousPoint != item.datapoint) {
-                    previousPoint = item.datapoint;
-               
-                    $("#tooltip").remove();
-                    var x = item.datapoint[0].toFixed(2),
-                         y = item.datapoint[1].toFixed(2);
-                    var dnow=new Date();
-                    dnow.setTime(x);
-	            var dita=leftPad(dnow.getUTCFullYear())+"/"+leftPad(dnow.getUTCMonth()+1)+"/"+dnow.getUTCDate()+" "+leftPad(dnow.getUTCHours())+":"+leftPad(dnow.getUTCMinutes())+":"+leftPad(dnow.getUTCSeconds());
- 
-                    showTooltip(item.pageX, item.pageY,
-                                item.series.label + ": " + y + "<br>Time: " + dita);
-                 }
-            } else {
-                 $("#tooltip").remove();
-                 previousPoint = null;            
-            }
-    });
 		$("#placeholder").bind("selected", function (event, area) {
 			plot = $.plot(
 				$("#placeholder"),
