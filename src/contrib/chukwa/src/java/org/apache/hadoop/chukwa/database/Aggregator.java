@@ -81,7 +81,7 @@ public class Aggregator {
 	public String computeMacro(String macro) throws SQLException {
 		Pattern p = Pattern.compile("past_(.*)_minutes");
 		Matcher matcher = p.matcher(macro);
-		if(macro.indexOf("avg(")==0 || macro.indexOf("group_avg(")==0) {
+		if(macro.indexOf("avg(")==0 || macro.indexOf("group_avg(")==0 || macro.indexOf("sum(")==0) {
 			String meta="";
 			String[] table = dbc.findTableName(macro.substring(macro.indexOf("(")+1,macro.indexOf(")")), current, current);
 			try {
@@ -108,12 +108,20 @@ public class Aggregator {
 	            	} else if(type==java.sql.Types.DOUBLE ||
 	            			  type==java.sql.Types.FLOAT ||
 	            			  type==java.sql.Types.INTEGER) {
-	            		meta=meta+"avg("+name+")";
+	            		if(macro.indexOf("sum(")==0) {
+	            		    meta=meta+"sum("+name+")";	            			
+	            		} else {
+	            		    meta=meta+"avg("+name+")";
+	            		}
 		            	first=false;
 	            	} else if(type==java.sql.Types.TIMESTAMP) {
 	            		// Skip the column
 	            	} else {
-	            		meta=meta+"AVG("+name+")";
+	            		if(macro.indexOf("sum(")==0) {
+	            		    meta=meta+"SUM("+name+")";
+	            		} else {
+		            		meta=meta+"AVG("+name+")";	            			
+	            		}
 		            	first=false;
 	            	}
 	            }
