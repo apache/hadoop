@@ -1,4 +1,0 @@
-alter table dfs_throughput change readsFromLocalRemotePerSec readsFromRemoteClientPerSec double;
-alter table dfs_throughput change writesFromLocalRemotePerSec writesFromRemoteClientPerSec double;
-alter table dfs_individual change readsFromLocalRemotePerSec readsFromRemoteClientPerSec double;
-alter table dfs_individual change writesFromLocalRemotePerSec writesFromRemoteClientPerSec double;

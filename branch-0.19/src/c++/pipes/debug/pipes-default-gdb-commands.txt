@@ -1,3 +1,0 @@
-info threads
-backtrace
-quit
