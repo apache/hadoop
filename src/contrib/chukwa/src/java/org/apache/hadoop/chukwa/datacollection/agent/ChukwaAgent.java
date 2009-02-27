@@ -508,6 +508,10 @@ public class ChukwaAgent
     try {    	      
       if (gracefully) {
    	    offset = toStop.shutdown(); 
+   	   log.info("shutdown on adaptor: " + number + ", " + toStop.getCurrentStatus());
+      } else { 
+        toStop.hardStop();
+        log.info("hardStop on adaptorId: " + number + ", " + toStop.getCurrentStatus());
       }
     } catch (AdaptorException e) {
       log.error("adaptor failed to stop cleanly", e);
