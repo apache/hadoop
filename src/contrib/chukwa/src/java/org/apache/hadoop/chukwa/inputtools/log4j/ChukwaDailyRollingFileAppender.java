@@ -527,13 +527,17 @@ public class ChukwaDailyRollingFileAppender extends FileAppender {
 
 					  chukwaClientIsNull = false;
 					  
-					  //if they haven't specified, default to retrying every minute for 2 hours
+					  // Watchdog is watching for ChukwaAgent only once every 5 minutes, so there's no point in retrying more than once every 5 mins.
+					  // In practice, if the watchdog is not able to automatically restart the agent, it will take more than 20 minutes to get Ops to restart it.
+					  // Also its a good  to limit the number of communications between Hadoop and Chukwa, that's why 30 minutes.
 					  long retryInterval = chukwaClientConnectRetryInterval;
-					  if (retryInterval == 0)
-						  retryInterval = 1000 * 60;
+					  if (retryInterval == 0) {
+					    retryInterval = 1000 * 60 * 30;
+					  }
 					  long numRetries = chukwaClientConnectNumRetry;
-					  if (numRetries == 0)
-						  numRetries = 120;
+					  if (numRetries == 0) {
+					    numRetries = 48;
+					  }
 					  String log4jFileName = getFile();
 					  String recordType = getRecordType();
 					  long adaptorID = chukwaClient.addFile(recordType, log4jFileName, numRetries, retryInterval);
