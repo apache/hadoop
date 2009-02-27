@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.chukwa.datacollection.adaptor.filetailer;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.chukwa.ChunkImpl;
 import org.apache.hadoop.chukwa.datacollection.ChunkReceiver;
 import org.apache.hadoop.chukwa.datacollection.adaptor.Adaptor;
 import org.apache.hadoop.chukwa.datacollection.adaptor.AdaptorException;
 import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
-import org.apache.hadoop.chukwa.inputtools.plugin.metrics.Exec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
-
-import java.io.*;
-import java.util.Timer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * An adaptor that repeatedly tails a specified file, sending the new bytes.
@@ -200,9 +200,10 @@ public class FileTailingAdaptor implements Adaptor
 	    	if (len >= fileReadOffset) {
 	    		if(offsetOfFirstByte>fileReadOffset) {
 	    			// If the file rotated, the recorded offsetOfFirstByte is greater than file size,
-	    			// reset the first byte position to beginning of the file.
-	        		offsetOfFirstByte = 0L;    			
+	    			// reset the first byte position to beginning of the file.	
 	    			fileReadOffset=0;
+	    			offsetOfFirstByte = 0L;       
+	    			log.warn("offsetOfFirstByte>fileReadOffset, resetting offset to 0");
 	    		}
 	    		
 	    		log.debug("Adaptor|" + adaptorID + "|seeking|" + fileReadOffset );
@@ -241,13 +242,26 @@ public class FileTailingAdaptor implements Adaptor
 	    		
 	    		long curOffset = fileReadOffset;
 	    		
-	    		reader.read(buf);
+	    		int bufferRead = reader.read(buf);
 	    		assert reader.getFilePointer() == fileReadOffset + bufSize : " event size arithmetic is broken: "
-	    				+ " pointer is "
-	    				+ reader.getFilePointer()
-	    				+ " but offset is " + fileReadOffset + bufSize;
-	    
+	    		  + " pointer is "
+	    		  + reader.getFilePointer()
+	    		  + " but offset is " + fileReadOffset + bufSize;
+
 	    		int bytesUsed = extractRecords(dest, fileReadOffset + offsetOfFirstByte, buf);
+
+	    		// ===   WARNING   ===
+	    		// If we couldn't found a complete record AND
+	    		// we cannot read more, i.e bufferRead == MAX_READ_SIZE 
+	    		// it's because the record is too BIG
+	    		// So log.warn, and drop current buffer so we can keep moving
+	    		// instead of being stopped at that point for ever
+	    		if ( bytesUsed == 0 && bufferRead ==  MAX_READ_SIZE) {
+	    		  log.warn("bufferRead == MAX_READ_SIZE AND bytesUsed == 0, droping current buffer: startOffset=" 
+	    		      + curOffset + ", MAX_READ_SIZE=" + MAX_READ_SIZE + ", for " + toWatch.getPath());
+	    		  bytesUsed = buf.length;
+	    		}
+
 	    		fileReadOffset = fileReadOffset + bytesUsed;
 	    		
 	    		
@@ -255,13 +269,13 @@ public class FileTailingAdaptor implements Adaptor
 	    		
 	    		
 	    	} else {
-	    		// file has rotated and no detection
-	    		reader.close();
-	    		reader=null;
-	    		fileReadOffset = 0L;
-	    		offsetOfFirstByte = 0L;
-	    		hasMoreData = true;
-				log.warn("Adaptor|" + adaptorID +"| file has rotated and no detection - reset counters to 0L");	    	
+	    	  // file has rotated and no detection
+	    	  reader.close();
+	    	  reader=null;
+	    	  fileReadOffset = 0L;
+	    	  offsetOfFirstByte = 0L;
+	    	  hasMoreData = true;
+	    	  log.warn("Adaptor|" + adaptorID +"| file: " + toWatch.getPath() +", has rotated and no detection - reset counters to 0L");	    	
 	    	}
 	    } catch (IOException e) {
 	    	log.warn("failure reading " + toWatch, e);

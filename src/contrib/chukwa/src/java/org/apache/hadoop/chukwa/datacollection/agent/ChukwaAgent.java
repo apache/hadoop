@@ -102,6 +102,10 @@ public class ChukwaAgent
 
   private final AgentControlSocketListener controlSock;
 
+  public int getControllerPort() {
+    return controlSock.getPort();
+  }
+  
   /**
    * @param args
    * @throws AdaptorException
