@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.chukwa.datacollection.adaptor.filetailer;
 
-import java.util.*;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.hadoop.chukwa.datacollection.DataFactory;
 import org.apache.hadoop.chukwa.datacollection.ChunkQueue;
+import org.apache.hadoop.chukwa.datacollection.DataFactory;
 import org.apache.hadoop.chukwa.datacollection.agent.ChukwaAgent;
 import org.apache.hadoop.conf.Configuration;
-import org.mortbay.log.Log;
+import org.apache.log4j.Logger;
 
 /**
  * A shared thread used by all FileTailingAdaptors. 
@@ -37,7 +37,10 @@ import org.mortbay.log.Log;
  *
  */
 class FileTailer extends Thread {
+  static Logger log = Logger.getLogger(FileTailer.class);
+  
   private  List<FileTailingAdaptor> adaptors;
+  private volatile boolean isRunning = true;
   ChunkQueue eq; //not private -- useful for file tailing adaptor classes
   
   /**
@@ -76,21 +79,23 @@ class FileTailer extends Thread {
      adaptors.remove(f);
    }
    
-  public void run()  {
-    try{
-      while(true) {    	  
+  public void run() {
+    while (isRunning) {
+      try {
         boolean shouldISleep = true;
         long startTime = System.currentTimeMillis();
-        for(FileTailingAdaptor f: adaptors) {
-          boolean hasMoreData = f.tailFile(eq);   
+        for (FileTailingAdaptor f : adaptors) {
+          boolean hasMoreData = f.tailFile(eq);
           shouldISleep &= !hasMoreData;
         }
         long timeToReadFiles = System.currentTimeMillis() - startTime;
-        if(timeToReadFiles < SAMPLE_PERIOD_MS || shouldISleep) {
+        if (timeToReadFiles < SAMPLE_PERIOD_MS || shouldISleep) {
           Thread.sleep(SAMPLE_PERIOD_MS);
         }
+      } catch (Throwable e) {
+        log.warn("Exception in FileTailer, while loop", e);
+        e.printStackTrace();
       }
-    } catch(InterruptedException e) {
     }
   }
   
