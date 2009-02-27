@@ -41,9 +41,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 42: updated to use sticky bit
+   * 43: added restoreFailedStorage command
    */
-  public static final long versionID = 42L;
+  public static final long versionID = 43L;
   
   ///////////////////////////////////////
   // File contents
@@ -373,6 +373,15 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException if image creation failed.
    */
   public void saveNamespace() throws IOException;
+
+  /**
+   * Enable/Disable restore failed storage.
+   * <p>
+   * sets flag to enable restore of failed storage replicas
+   * 
+   * @throws AccessControlException if the superuser privilege is violated.
+   */
+  public boolean restoreFailedStorage(String arg) throws AccessControlException;
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 

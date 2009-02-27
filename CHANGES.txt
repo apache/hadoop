@@ -49,6 +49,9 @@ Trunk (unreleased changes)
     HADOOP-4927. Adds a generic wrapper around outputformat to allow creation of
     output on demand (Jothi Padmanabhan via ddas)
 
+    HADOOP-5144. Add a new DFSAdmin command for changing the setting of restore
+    failed storage replicas in namenode. (Boris Shkolnik via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

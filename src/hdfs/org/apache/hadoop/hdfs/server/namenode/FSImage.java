@@ -119,7 +119,7 @@ public class FSImage extends Storage {
    */
   private boolean restoreFailedStorage = false;
   public void setRestoreFailedStorage(boolean val) {
-    LOG.info("enabled failed storage replicas restore");
+    LOG.info("set restore failed storage to " + val);
     restoreFailedStorage=val;
   }
   

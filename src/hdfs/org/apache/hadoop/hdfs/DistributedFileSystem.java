@@ -363,6 +363,16 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * enable/disable/check restoreFaileStorage
+   * 
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage()
+   */
+  public boolean restoreFailedStorage(String arg) throws AccessControlException {
+    return dfs.restoreFailedStorage(arg);
+  }
+  
+
+  /**
    * Refreshes the list of hosts and excluded hosts from the configured 
    * files.  
    */

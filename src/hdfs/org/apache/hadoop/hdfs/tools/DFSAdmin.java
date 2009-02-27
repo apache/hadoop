@@ -391,6 +391,33 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to enable/disable/check restoring of failed storage replicas in the namenode.
+   * Usage: java DFSAdmin -restoreFailedStorage true|false|check
+   * @exception IOException 
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage()
+   */
+  public int restoreFaileStorage(String arg) throws IOException {
+    int exitCode = -1;
+
+    if (!(fs instanceof DistributedFileSystem)) {
+      System.err.println("FileSystem is " + fs.getUri());
+      return exitCode;
+    }
+
+    if(!arg.equals("check") && !arg.equals("true") && !arg.equals("false")) {
+      System.err.println("restoreFailedStorage valid args are true|false|check");
+      return exitCode;
+    }
+    
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    Boolean res = dfs.restoreFailedStorage(arg);
+    System.out.println("restoreFailedStorage is set to " + res);
+    exitCode = 0;
+
+    return exitCode;
+  }
+
+  /**
    * Command to ask the namenode to reread the hosts and excluded hosts 
    * file.
    * Usage: java DFSAdmin -refreshNodes
@@ -416,6 +443,7 @@ public class DFSAdmin extends FsShell {
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
       "\t[-saveNamespace]\n" +
+      "\t[-restoreFailedStorage true|false|check]\n" +
       "\t[-refreshNodes]\n" +
       "\t[" + SetQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
@@ -440,6 +468,10 @@ public class DFSAdmin extends FsShell {
     "Save current namespace into storage directories and reset edits log.\n" +
     "\t\tRequires superuser permissions and safe mode.\n";
 
+    String restoreFailedStorage = "-restoreFailedStorage:\t" +
+    "Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.\n" +
+    "\t\tRequires superuser permissions.\n";
+    
     String refreshNodes = "-refreshNodes: \tUpdates the set of hosts allowed " +
                           "to connect to namenode.\n\n" +
       "\t\tRe-reads the config file to update values defined by \n" +
@@ -480,6 +512,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(safemode);
     } else if ("saveNamespace".equals(cmd)) {
       System.out.println(saveNamespace);
+    } else if ("restoreFailedStorage".equals(cmd)) {
+      System.out.println(restoreFailedStorage);
     } else if ("refreshNodes".equals(cmd)) {
       System.out.println(refreshNodes);
     } else if ("finalizeUpgrade".equals(cmd)) {
@@ -505,6 +539,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(report);
       System.out.println(safemode);
       System.out.println(saveNamespace);
+      System.out.println(restoreFailedStorage);
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
       System.out.println(upgradeProgress);
@@ -647,6 +682,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-saveNamespace]");
+    } else if ("-restoreFailedStorage".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-restoreFailedStorage true|false|check ]");
     } else if ("-refreshNodes".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshNodes]");
@@ -679,6 +717,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-report]");
       System.err.println("           [-safemode enter | leave | get | wait]");
       System.err.println("           [-saveNamespace]");
+      System.err.println("           [-restoreFailedStorage true|false|check]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
       System.err.println("           [-upgradeProgress status | details | force]");
@@ -729,6 +768,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-restoreFailedStorage".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-refreshNodes".equals(cmd)) {
       if (argv.length != 1) {
         printUsage(cmd);
@@ -776,6 +820,8 @@ public class DFSAdmin extends FsShell {
         setSafeMode(argv, i);
       } else if ("-saveNamespace".equals(cmd)) {
         exitCode = saveNamespace();
+      } else if ("-restoreFailedStorage".equals(cmd)) {
+        exitCode = restoreFaileStorage(argv[i]);
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {

@@ -47,6 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -606,6 +607,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public boolean isInSafeMode() {
     return namesystem.isInSafeMode();
+  }
+
+  /**
+   * @throws AccessControlException 
+   * @inheritDoc
+   */
+  public boolean restoreFailedStorage(String arg) throws AccessControlException {
+    return namesystem.restoreFailedStorage(arg);
   }
 
   /**

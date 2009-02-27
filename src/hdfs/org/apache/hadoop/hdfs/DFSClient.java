@@ -730,6 +730,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class);
     }
   }
+  
+  /**
+   * enable/disable restore failed storage.
+   * See {@link ClientProtocol#restoreFailedStorage()} 
+   * for more details.
+   * 
+   * @see ClientProtocol#restoreFailedStorage()
+   */
+  boolean restoreFailedStorage(String arg) throws AccessControlException {
+    return namenode.restoreFailedStorage(arg);
+  }
 
   /**
    * Refresh the hosts and exclude files.  (Rereads them.)

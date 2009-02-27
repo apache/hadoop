@@ -3441,6 +3441,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getFSImage().saveFSImage();
     LOG.info("New namespace image has been created.");
   }
+  
+  /**
+   * Enables/Disables/Checks restoring failed storage replicas if the storage becomes available again.
+   * Requires superuser privilege.
+   * 
+   * @throws AccessControlException if superuser privilege is violated.
+   */
+  synchronized boolean restoreFailedStorage(String arg) throws AccessControlException {
+    checkSuperuserPrivilege();
+    
+    // if it is disabled - enable it and vice versa.
+    if(arg.equals("check"))
+      return getFSImage().getRestoreFailedStorage();
+    
+    boolean val = arg.equals("true");  // false if not
+    getFSImage().setRestoreFailedStorage(val);
+    
+    return val;
+  }
 
   /**
    */

@@ -480,6 +480,7 @@
 					<code>Usage: hadoop dfsadmin  [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] [-report] [-safemode enter | leave | get | wait] [-refreshNodes]
 					 [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] 
 					 [-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;] [-clrQuota &lt;dirname&gt;...&lt;dirname&gt;] 
+					 [-restoreFailedStorage true|false|check] 
 					 [-help [cmd]]</code>
 				</p>
 				<table>
@@ -546,6 +547,12 @@
                 1. the directory does not exist or is a file, or<br/>
                 2. user is not an administrator.<br/>
                 It does not fault if the directory has no quota.</td>
+			           </tr>
+			           <tr>
+			          	<td><code>-restoreFailedStorage true | false | check</code></td>
+			            <td>This option will turn on/off automatic attempt to restore failed storage replicas. 
+			            If a failed storage becomes available again the system will attempt to restore 
+			            edits and/or fsimage during checkpoint. 'check' option will return current setting.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-help [cmd]</code></td>

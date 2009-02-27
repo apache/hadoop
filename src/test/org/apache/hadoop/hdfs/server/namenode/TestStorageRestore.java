@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -28,6 +27,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.util.StringUtils;
 
 
 /**
@@ -191,7 +192,6 @@ public class TestStorageRestore extends TestCase {
    */
   public void testStorageRestore() throws Exception {
     int numDatanodes = 2;
-    //Collection<String> dirs = config.getStringCollection("dfs.name.dir");
     cluster = new MiniDFSCluster(0, config, numDatanodes, true, false, true,  null, null, null, null);
     cluster.waitActive();
     
@@ -224,5 +224,56 @@ public class TestStorageRestore extends TestCase {
     System.out.println("****testStorageRestore: second Checkpoint done and checkFiles(true) run");
     secondary.shutdown();
     cluster.shutdown();
+  }
+  
+  /**
+   * Test dfsadmin -restoreFailedStorage command
+   * @throws Exception
+   */
+  public void testDfsAdminCmd() throws IOException {
+    int numDatanodes = 2;
+    
+    
+    cluster = new MiniDFSCluster(0, config, numDatanodes, true, false, true,  null, null, null, null);
+    cluster.waitActive();
+    try {
+
+      FSImage fsi = cluster.getNameNode().getFSImage();
+
+      // it is started with dfs.name.dir.restore set to true (in SetUp())
+      boolean restore = fsi.getRestoreFailedStorage();
+      LOG.info("Restore is " + restore);
+      assertEquals(restore, true);
+
+      // now run DFSAdmnin command
+
+      String cmd = "-fs NAMENODE -restoreFailedStorage false";
+      String namenode = config.get("fs.default.name", "file:///");
+      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      restore = fsi.getRestoreFailedStorage();
+      LOG.info("After set true call restore is " + restore);
+      assertEquals(restore, false);
+
+      // run one more time - to set it to true again
+      cmd = "-fs NAMENODE -restoreFailedStorage true";
+      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      restore = fsi.getRestoreFailedStorage();
+      LOG.info("After set false call restore is " + restore);
+      assertEquals(restore, true);
+      
+   // run one more time - no change in value
+      cmd = "-fs NAMENODE -restoreFailedStorage check";
+      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      restore = fsi.getRestoreFailedStorage();
+      LOG.info("After check call restore is " + restore);
+      assertEquals(restore, true);
+      String commandOutput = CommandExecutor.getLastCommandOutput();
+      commandOutput.trim();
+      assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));
+      
+
+    } finally {
+      cluster.shutdown();
+    }
   }
 }
