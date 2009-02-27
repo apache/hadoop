@@ -1746,7 +1746,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     for (int i = 0; i < NUM_OVERSHOOT_BYTES; i++) {
       block[lastShadow + i + 2] = block[(i % (lastShadow + 1)) + 1];
     }
-    for (int i = lastShadow + NUM_OVERSHOOT_BYTES; --i >= 0;) {
+    for (int i = lastShadow + NUM_OVERSHOOT_BYTES +1; --i >= 0;) {
       quadrant[i] = 0;
     }
     block[0] = block[lastShadow + 1];

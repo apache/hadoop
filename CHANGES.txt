@@ -4,6 +4,9 @@ Release 0.19.2 - Unreleased
 
   BUG FIXES
 
+    HADOOP-5326. Fixes CBZip2OutputStream data corruption problem.
+    (Rodrigo Schmidt via zshao)
+
     HADOOP-5154. Fixes a deadlock in the fairshare scheduler.
     (Matei Zaharia via yhemanth)
 
