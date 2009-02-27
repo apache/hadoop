@@ -343,6 +343,9 @@ Release 0.20.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-5326. Fixes CBZip2OutputStream data corruption problem.
+    (Rodrigo Schmidt via zshao)
+
     HADOOP-4204. Fix findbugs warnings related to unused variables, naive
     Number subclass instantiation, Map iteration, and badly scoped inner
     classes. (Suresh Srinivas via cdouglas)
