@@ -271,8 +271,15 @@ public class ChukwaAgent
   // but can be arbitrarily many space
   // delimited agent specific params )
   // 4) offset
-  Pattern addCmdPattern = Pattern.compile("[aA][dD][dD]\\s+(\\S+)\\s+(\\S+)\\s+(.*\\s)?\\s*(\\d+)\\s*");
-  // FIXME: should handle bad lines here
+  Pattern addCmdPattern = Pattern.compile(
+      "[aA][dD][dD]\\s+"  //command "add", any case, plus at least one space
+      + "(\\S+)\\s+" //the adaptor classname, plus at least one space
+      + "(\\S+)\\s+" //datatype, plus at least one space
+      + "(?:"    //start a non-capturing group, for the parameters
+      +         "(.*?)\\s+"    //capture the actual parameters reluctantly, followed by whitespace
+      +       ")?"    //end non-matching group for params; group is optional
+      + "(\\d+)\\s*");  // finally, an offset and some trailing whitespace
+
   public long processCommand(String cmd)
   {
     Matcher m = addCmdPattern.matcher(cmd);
