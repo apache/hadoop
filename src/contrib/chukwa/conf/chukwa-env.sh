@@ -39,3 +39,11 @@ export TORQUE_HOME=/usr/lib/torque
 
 # The domain of the cluster
 #export DOMAIN=
+
+# Instance name for chukwa deployment
+export CHUKWA_IDENT_STRING=demo
+
+# JAVA LIBRARY PATH for native compression codec
+export JAVA_PLATFORM=Linux-i386-32
+export JAVA_LIBRARY_PATH=${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
+

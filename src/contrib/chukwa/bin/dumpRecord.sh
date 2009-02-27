@@ -21,4 +21,4 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-${JAVA_HOME}/bin/java -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.util.DumpRecord $1
+${JAVA_HOME}/bin/java -Djava.library.path=${JAVA_LIBRARY_PATH} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.util.DumpRecord $1

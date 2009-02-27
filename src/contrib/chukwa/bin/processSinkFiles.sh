@@ -119,7 +119,7 @@ while [ 1 ]
   debugDate=`date `
   echo "$debugDate done with demux job" >> "${CHUKWA_LOG_DIR}/mr.log"
    
-  ${JAVA_HOME}/bin/java -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -Dlog4j.configuration=log4j.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.extraction.database.DatabaseLoader "${srcDoneHdfsDir}/demux" SystemMetrics Df Hadoop_dfs Hadoop_jvm Hadoop_mapred Hadoop_rpc MSSRGraph MRJobCounters NodeActivity HodJob HodMachine Hadoop_dfs_FSDirectory Hadoop_dfs_FSNamesystem Hadoop_dfs_datanode Hadoop_dfs_namenode Hadoop_jvm_metrics Hadoop_mapred_job Hadoop_mapred_jobtracker Hadoop_mapred_shuffleOutput Hadoop_mapred_tasktracker Hadoop_rpc_metrics
+  ${JAVA_HOME}/bin/java -Djava.library.path=${JAVA_LIBRARY_PATH} -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -Dlog4j.configuration=log4j.properties -classpath ${CLASSPATH}:${CHUKWA_CORE}:${HADOOP_JAR}:${COMMON}:${tools}:${CHUKWA_HOME}/conf org.apache.hadoop.chukwa.extraction.database.DatabaseLoader "${srcDoneHdfsDir}/demux" SystemMetrics Df Hadoop_dfs Hadoop_jvm Hadoop_mapred Hadoop_rpc MSSRGraph MRJobCounters NodeActivity HodJob HodMachine Hadoop_dfs_FSDirectory Hadoop_dfs_FSNamesystem Hadoop_dfs_datanode Hadoop_dfs_namenode Hadoop_jvm_metrics Hadoop_mapred_job Hadoop_mapred_jobtracker Hadoop_mapred_shuffleOutput Hadoop_mapred_tasktracker Hadoop_rpc_metrics
   endDbLoaderTime=`date +%s`
   dbLoaderDuration=$(( $endDbLoaderTime - $endDemuxTime))
   echo "dbLoaderDuration $dbLoaderDuration" >> "${CHUKWA_LOG_DIR}/mr.log"
