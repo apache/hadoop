@@ -227,12 +227,20 @@ public class Chart {
         	    "return val.toFixed(axis.tickDecimals) + \" %\"; }";
         } else {
             output = output + "tickFormatter: function(val, axis) { " +
-		        "if (val > 1000000000000000) return (val / 1000000000000000).toFixed(axis.tickDecimals) + \"PB\";" +
-                "else if (val > 1000000000000) return (val / 1000000000000).toFixed(axis.tickDecimals) + \"TB\";" +
-				"else if (val > 1000000000) return (val / 1000000000).toFixed(axis.tickDecimals) + \"GB\";" +
-        		"else if (val > 1000000) return (val / 1000000).toFixed(axis.tickDecimals) + \"MB\";" +
-        		"else if (val > 1000) return (val / 1000).toFixed(axis.tickDecimals) + \"KB\";" +
-        		"else return val.toFixed(axis.tickDecimals) + \"B\"; }";
+                "if (val >= 1000000000000000) return (val / 1000000000000000).toFixed(2) + \"x10<sup>15</sup>\";" +
+                "else if (val >= 100000000000000) return (val / 100000000000000).toFixed(2) + \"x10<sup>14</sup>\";" +
+                "else if (val >= 10000000000000) return (val / 10000000000000).toFixed(2) + \"x10<sup>13</sup>\";" +
+                "else if (val >= 1000000000000) return (val / 1000000000000).toFixed(2) + \"x10<sup>12</sup>\";" +
+                "else if (val >= 100000000000) return (val / 100000000000).toFixed(2) + \"x10<sup>11</sup>\";" +
+                "else if (val >= 10000000000) return (val / 10000000000).toFixed(2) + \"x10<sup>10</sup>\";" +
+		"else if (val >= 1000000000) return (val / 1000000000).toFixed(2) + \"x10<sup>9</sup>\";" +
+		"else if (val >= 100000000) return (val / 100000000).toFixed(2) + \"x10<sup>8</sup>\";" +
+		"else if (val >= 10000000) return (val / 10000000).toFixed(2) + \"x10<sup>7</sup>\";" +
+     		"else if (val >= 1000000) return (val / 1000000).toFixed(2) + \"x10<sup>6</sup>\";" +
+     		"else if (val >= 100000) return (val / 100000).toFixed(2) + \"x10<sup>5</sup>\";" +
+     		"else if (val >= 10000) return (val / 10000).toFixed(2) + \"x10<sup>4</sup>\";" +
+      		"else if (val >= 2000) return (val / 1000).toFixed(2) + \"x10<sup>3</sup>\";" +
+        		"else return val.toFixed(2) + \"\"; }";
         }
         if(userDefinedMax) {
             output = output + ", min:0, max:"+this.max;
@@ -323,14 +331,26 @@ public class Chart {
 		   					        output+=",";
 		   				        }
                                                         if(xLabel.equals("Time")) {
-		   				            output+="[\""+dp+"\","+data.get(dp)+"]";
+                                                            if(data.get(dp)==Double.NaN) {
+                                                                output+="[\""+dp+"\",NULL]";
+                                                            } else {
+		   				                output+="[\""+dp+"\","+data.get(dp)+"]";
+                                                            }
                                                         } else {
                                                             long value = xLabelRangeHash.get(dp);
-		   				            output+="[\""+value+"\","+data.get(dp)+"]";
+                                                            if(data.get(dp)==Double.NaN) {
+                                                                output+="[\""+dp+"\",NULL]";
+                                                            } else {
+		   				                output+="[\""+value+"\","+data.get(dp)+"]";
+                                                            }
                                                         }
 		   				        counter2++;
 		   			        }
-		   	   			    output+="], min:0, max:"+this.max+"}";
+		   	   			    output+="], min:0";
+                                                    if(this.userDefinedMax) {
+                                                        output+=", max:"+this.max;
+                                                    }
+                                                    output+="}";
 		   	   			    counter++;
 		   	            }
 		   	            i++;

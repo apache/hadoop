@@ -75,8 +75,12 @@ public class DatasetMapper {
 	            HashMap<String, Integer> xAxisMap = new HashMap<String, Integer>();
 	            while (rs.next()) {
 	                String label = "";
-	                long  time = rs.getTimestamp(1).getTime();
-	                label = ""+time;
+                        if(rmeta.getColumnType(1)==java.sql.Types.TIMESTAMP) {
+	                    long  time = rs.getTimestamp(1).getTime();
+	                    label = ""+time;
+                        } else {
+                            label = rs.getString(1);
+                        }
 	                if(!xAxisMap.containsKey(label)) {
 	                    xAxisMap.put(label, i);
 	                    labels.add(label);
@@ -85,34 +89,37 @@ public class DatasetMapper {
 	                if(groupBySecondColumn) {
 	                    String item = rs.getString(2);
 	                    // Get the data from the row using the series column
-	                    data = dataset.get(item);
-	                    if(data == null) {
-	                        data = new java.util.TreeMap<String, Double>();
-	                    }
-	                    if(calculateSlope) {
-	                    	double current = rs.getDouble(3);
-	                    	double tmp = 0L;
-	                    	if(data.size()>1) {
-                            	tmp = current - previousHash.get(item).doubleValue();
-                            } else {
-                            	tmp = 0;
+                            for(int j=3;j<=col;j++) {
+                                item = rs.getString(2) + " " + rmeta.getColumnName(j);
+	                        data = dataset.get(item);
+	                        if(data == null) {
+	                            data = new java.util.TreeMap<String, Double>();
+	                        }
+	                        if(calculateSlope) {
+	                    	    double current = rs.getDouble(j);
+	                    	    double tmp = 0L;
+	                    	    if(data.size()>1) {
+                            	        tmp = current - previousHash.get(item).doubleValue();
+                                    } else {
+                            	        tmp = 0;
+                                    }
+                                    if(tmp<0) {
+                                        tmp=Double.NaN;
+                                    }
+                                    previousHash.put(item,current);
+                                    if(tmp>max) {
+                            	        max=tmp;
+                                    }
+                                    data.put(label, tmp);
+	                        } else {
+	                    	    double current = rs.getDouble(3);
+		                        if(current>max) {
+		                            max=current;
+		                        }
+		                        data.put(label, current);	                    	
+	                        }
+	                        dataset.put(item,data);
                             }
-                            if(tmp<0) {
-                                tmp=0;
-                            }
-                            if(tmp>max) {
-                            	max=tmp;
-                            }
-                            previousHash.put(item,current);
-                            data.put(label, tmp);
-	                    } else {
-	                    	double current = rs.getDouble(3);
-		                    if(current>max) {
-		                        max=current;
-		                    }
-		                    data.put(label, current);	                    	
-	                    }
-	                    dataset.put(item,data);
 	                } else {
 	                    for(int j=2;j<=col;j++) {
 	                        String item = rmeta.getColumnName(j);
@@ -126,19 +133,19 @@ public class DatasetMapper {
 	                            data = new java.util.TreeMap<String, Double>();
 	                        }
 	                        if(calculateSlope) {
-	                        	double tmp = rs.getDouble(j);
-                                if(data.size()>1) {
-	                        	    tmp = tmp - previousArray[j];
-                                } else {
-                                    tmp = 0.0;
-                                }
-                                previousArray[j]=current;
-                                if(tmp<0) {
-                                  	tmp=0;
-                                }
-	                        	data.put(label, tmp);
+	                            double tmp = current;
+                                    if(data.size()>1) {
+	                                tmp = tmp - previousArray[j];
+                                    } else {
+                                        tmp = 0.0;
+                                    }
+                                    if(tmp<0) {
+                                        tmp=Double.NaN;
+                                    }
+                                    previousArray[j]=current;
+	                       	    data.put(label, tmp);
 	                        } else {
-		                        data.put(label, current);	                        	
+		                    data.put(label, current);	                        	
 	                        }
 	                        dataset.put(item,data);
 	                    }

@@ -277,7 +277,9 @@
                         continue;
 
                     if(!this.processed && options.yaxis.mode=='stack' && i>0) {
-                        data[j][1]=data[j][1]+series[i-1].data[j][1];
+                        if(series[i-1].data[j]) {
+                            data[j][1]=data[j][1]+series[i-1].data[j][1];
+                        }
                     }
                     
                     var x = data[j][0], y = data[j][1];
