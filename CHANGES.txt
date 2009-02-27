@@ -144,6 +144,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
     
+    HADOOP-5326. Fixes CBZip2OutputStream data corruption problem.
+    (Rodrigo Schmidt via zshao)
+
     HADOOP-4963. Fixes a logging to do with getting the location of
     map output file. (Amareshwari Sriramadasu via ddas)
 
