@@ -143,6 +143,8 @@ Trunk (unreleased changes)
     HADOOP-5232. Enable patch testing to occur on more than one host.
     (Giri Kesavan via nigel)
 
+    HADOOP-4546. Fix DF reporting for AIX. (Bill Habermaas via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.BufferedReader;
 
+import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,14 +32,45 @@ import org.apache.hadoop.util.Shell;
 public class DF extends Shell {
   public static final long DF_INTERVAL_DEFAULT = 3 * 1000; // default DF refresh interval 
   
-  private String  dirPath;
+  private String dirPath;
   private String filesystem;
   private long capacity;
   private long used;
   private long available;
   private int percentUsed;
   private String mount;
-  
+
+  enum OSType {
+    OS_TYPE_UNIX("UNIX"),
+    OS_TYPE_WIN("Windows"),
+    OS_TYPE_SOLARIS("SunOS"),
+    OS_TYPE_MAC("Mac"),
+    OS_TYPE_AIX("AIX");
+
+    private String id;
+    OSType(String id) {
+      this.id = id;
+    }
+    public boolean match(String osStr) {
+      return osStr != null && osStr.indexOf(id) >= 0;
+    }
+    String getId() {
+      return id;
+    }
+  }
+
+  private static final String OS_NAME = System.getProperty("os.name");
+  private static final OSType OS_TYPE = getOSType(OS_NAME);
+
+  protected static OSType getOSType(String osName) {
+    for (OSType ost : EnumSet.allOf(OSType.class)) {
+      if (ost.match(osName)) {
+        return ost;
+      }
+    }
+    return OSType.OS_TYPE_UNIX;
+  }
+
   public DF(File path, Configuration conf) throws IOException {
     this(path, conf.getLong("dfs.df.interval", DF.DF_INTERVAL_DEFAULT));
   }
@@ -46,6 +78,10 @@ public class DF extends Shell {
   public DF(File path, long dfInterval) throws IOException {
     super(dfInterval);
     this.dirPath = path.getCanonicalPath();
+  }
+
+  protected OSType getOSType() {
+    return OS_TYPE;
   }
   
   /// ACCESSORS
@@ -95,12 +131,14 @@ public class DF extends Shell {
       mount;
   }
 
+  @Override
   protected String[] getExecString() {
     // ignoring the error since the exit code it enough
     return new String[] {"bash","-c","exec 'df' '-k' '" + dirPath 
                          + "' 2>/dev/null"};
   }
-  
+
+  @Override
   protected void parseExecResult(BufferedReader lines) throws IOException {
     lines.readLine();                         // skip headings
   
@@ -119,11 +157,30 @@ public class DF extends Shell {
       }
       tokens = new StringTokenizer(line, " \t\n\r\f%");
     }
-    this.capacity = Long.parseLong(tokens.nextToken()) * 1024;
-    this.used = Long.parseLong(tokens.nextToken()) * 1024;
-    this.available = Long.parseLong(tokens.nextToken()) * 1024;
-    this.percentUsed = Integer.parseInt(tokens.nextToken());
-    this.mount = tokens.nextToken();
+
+    switch(getOSType()) {
+      case OS_TYPE_AIX:
+        this.capacity = Long.parseLong(tokens.nextToken()) * 1024;
+        this.available = Long.parseLong(tokens.nextToken()) * 1024;
+        this.percentUsed = Integer.parseInt(tokens.nextToken());
+        tokens.nextToken();
+        tokens.nextToken();
+        this.mount = tokens.nextToken();
+        this.used = this.capacity - this.available;
+        break;
+
+      case OS_TYPE_WIN:
+      case OS_TYPE_SOLARIS:
+      case OS_TYPE_MAC:
+      case OS_TYPE_UNIX:
+      default:
+        this.capacity = Long.parseLong(tokens.nextToken()) * 1024;
+        this.used = Long.parseLong(tokens.nextToken()) * 1024;
+        this.available = Long.parseLong(tokens.nextToken()) * 1024;
+        this.percentUsed = Integer.parseInt(tokens.nextToken());
+        this.mount = tokens.nextToken();
+        break;
+   }
   }
 
   public static void main(String[] args) throws Exception {
