@@ -26,13 +26,13 @@ if [ "$CHUKWA_IDENT_STRING" = "" ]; then
 fi
 
 trap 'rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid ${CHUKWA_HOME}/var/run/dbAdmin.pid; exit 0' 1 2 15
-EXP_DATE=`date +%Y-%m-%d`
 
 JVM_OPTS="-DAPP=dbAdmin -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR}"
 
 echo "${pid}" > "${CHUKWA_HOME}/var/run/dbAdmin.pid"
 while [ 1 ]
   do
+    EXP_DATE=`date +%Y-%m-%d`
     start=`date +%s`
     cat ${CHUKWA_CONF_DIR}/jdbc.conf | \
     while read LINE; do
