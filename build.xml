@@ -177,15 +177,15 @@
   <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.pom" />
-  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.jar" />
+  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${version}.pom" />
+  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar" />
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
-  <property name="hadoop.jar" location="${build.dir}/hadoop-${hadoop.version}-core.jar" />
+  <property name="hadoop.jar" location="${build.dir}/${final.name}-core.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -555,7 +555,7 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <jar jarfile="${build.dir}/${final.name}-core.jar"
+    <jar jarfile="${hadoop.jar}"
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
@@ -1721,7 +1721,7 @@
     <ivy:publish
       settingsRef="${ant.project.name}.ivy.settings"
       resolver="local"
-      pubrevision="${hadoop.version}"
+      pubrevision="${version}"
       overwrite="true"
       artifactspattern="${build.dir}/${ivy.publish.pattern}" />
   </target>

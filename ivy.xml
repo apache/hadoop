@@ -18,7 +18,7 @@
 -->
 
 <ivy-module version="1.0">
-  <info organisation="org.apache.hadoop" module="${ant.project.name}">
+  <info organisation="org.apache.hadoop" module="${ant.project.name}" revision="${version}">
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>

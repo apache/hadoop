@@ -259,6 +259,9 @@ Trunk (unreleased changes)
 
     HADOOP-5273. Add license header to TestJobInProgress.java.  (Jakob Homan
     via szetszwo)
+    
+    HADOOP-5229. Remove duplicate version variables in build files
+    (Stefan Groschupf via johan)
 
 Release 0.20.0 - Unreleased
 
