@@ -926,7 +926,10 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5154. Fixes a deadlock in the fairshare scheduler. 
     (Matei Zaharia via yhemanth)
-    
+   
+    HADOOP-5146. Fixes a race condition that causes LocalDirAllocator to miss
+    files.  (Devaraj Das via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
