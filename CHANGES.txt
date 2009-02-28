@@ -670,6 +670,8 @@ Release 0.20.0 - Unreleased
     HADOOP-5306. Fixes a problem to do with logging/parsing the http port of a 
     lost tracker. Affects JobTracker restart. (Amar Kamat via ddas)
 
+    HADOOP-5111. Fix Job::set* methods to work with generics. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

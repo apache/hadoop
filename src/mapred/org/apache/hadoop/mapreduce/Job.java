@@ -110,7 +110,7 @@ public class Job extends JobContext {
    * @param cls the <code>Mapper</code> to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setMapperClass(Class<? extends Mapper<?,?,?,?>> cls
+  public void setMapperClass(Class<? extends Mapper> cls
                              ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(MAP_CLASS_ATTR, cls, Mapper.class);
@@ -137,7 +137,7 @@ public class Job extends JobContext {
    * @param cls the combiner to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setCombinerClass(Class<? extends Reducer<?,?,?,?>> cls
+  public void setCombinerClass(Class<? extends Reducer> cls
                                ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(COMBINE_CLASS_ATTR, cls, Reducer.class);
@@ -148,7 +148,7 @@ public class Job extends JobContext {
    * @param cls the <code>Reducer</code> to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setReducerClass(Class<? extends Reducer<?,?,?,?>> cls
+  public void setReducerClass(Class<? extends Reducer> cls
                               ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(REDUCE_CLASS_ATTR, cls, Reducer.class);
@@ -159,7 +159,7 @@ public class Job extends JobContext {
    * @param cls the <code>Partitioner</code> to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setPartitionerClass(Class<? extends Partitioner<?,?>> cls
+  public void setPartitionerClass(Class<? extends Partitioner> cls
                                   ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setClass(PARTITIONER_CLASS_ATTR, cls, Partitioner.class);
@@ -223,7 +223,7 @@ public class Job extends JobContext {
    * @param cls the raw comparator
    * @throws IllegalStateException if the job is submitted
    */
-  public void setSortComparatorClass(Class<? extends RawComparator<?>> cls
+  public void setSortComparatorClass(Class<? extends RawComparator> cls
                                      ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setOutputKeyComparatorClass(cls);
@@ -237,7 +237,7 @@ public class Job extends JobContext {
    * @param cls the raw comparator to use
    * @throws IllegalStateException if the job is submitted
    */
-  public void setGroupingComparatorClass(Class<? extends RawComparator<?>> cls
+  public void setGroupingComparatorClass(Class<? extends RawComparator> cls
                                          ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
     conf.setOutputValueGroupingComparator(cls);
