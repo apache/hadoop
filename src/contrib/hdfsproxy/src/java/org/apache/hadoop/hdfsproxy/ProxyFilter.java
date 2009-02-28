@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfsproxy;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -28,6 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.net.InetSocketAddress;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -37,12 +41,14 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.net.NetUtils;
 
 public class ProxyFilter implements Filter {
   public static final Log LOG = LogFactory.getLog(ProxyFilter.class);
@@ -74,9 +80,23 @@ public class ProxyFilter implements Filter {
     Map<String, Set<BigInteger>> cMap = getCertsMap(conf);
     certsMap = cMap != null ? cMap : new HashMap<String, Set<BigInteger>>();
   }
+  
 
   /** {@inheritDoc} */
   public void init(FilterConfig filterConfig) throws ServletException {
+    ServletContext context = filterConfig.getServletContext();
+    Configuration conf = new Configuration(false);
+    conf.addResource("hdfsproxy-default.xml");
+    conf.addResource("ssl-server.xml");
+    String nn = conf.get("hdfsproxy.dfs.namenode.address");
+    if (nn == null) {
+      throw new ServletException("Proxy source cluster name node address not speficied");
+    }
+    InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
+    context.setAttribute("name.node.address", nAddr);
+    context.setAttribute("name.conf", new Configuration());
+           
+    LOG.info("proxyFilter initialization success: " + nn);
   }
 
   private static Map<String, Set<Path>> getPermMap(Configuration conf) {
@@ -136,6 +156,8 @@ public class ProxyFilter implements Filter {
   /** {@inheritDoc} */
   public void destroy() {
   }
+  
+  
 
   /** {@inheritDoc} */
   public void doFilter(ServletRequest request, ServletResponse response,
@@ -177,15 +199,33 @@ public class ProxyFilter implements Filter {
 
       LOG.debug(b.toString());
     }
-
-    if (rqst.getScheme().equalsIgnoreCase("https")) {
+    
+    boolean unitTest = false;
+    if (rqst.getScheme().equalsIgnoreCase("http") && rqst.getParameter("UnitTest") != null) unitTest = true;
+    
+    if (rqst.getScheme().equalsIgnoreCase("https") || unitTest) {
       boolean isAuthorized = false;
-      X509Certificate[] certs = (X509Certificate[]) rqst
-          .getAttribute("javax.servlet.request.X509Certificate");
+      X509Certificate[] certs = (X509Certificate[]) rqst.getAttribute("javax.servlet.request.X509Certificate");
+      
+      if (unitTest) {
+        try {
+          LOG.debug("==> Entering https unit test");
+          String SslPath = rqst.getParameter("SslPath");
+          InputStream inStream = new FileInputStream(SslPath);
+          CertificateFactory cf = CertificateFactory.getInstance("X.509");
+          X509Certificate cert = (X509Certificate)cf.generateCertificate(inStream);
+          inStream.close();          
+          certs = new X509Certificate[] {cert};
+        } catch (Exception e) {
+          // do nothing here
+        }
+      } 
+      
       if (certs == null || certs.length == 0) {
         rsp.sendError(HttpServletResponse.SC_BAD_REQUEST,
-            "No client SSL certificate received");
-        return;
+          "No client SSL certificate received");
+        LOG.info("No Client SSL certificate received");
+        return;       
       }
       for (X509Certificate cert : certs) {
         try {
@@ -205,7 +245,7 @@ public class ProxyFilter implements Filter {
           return;
         }
       }
-
+      
       String[] tokens = certs[0].getSubjectX500Principal().getName().split(
           "\\s*,\\s*");
       String userID = null;
@@ -222,8 +262,10 @@ public class ProxyFilter implements Filter {
         return;
       }
       userID = userID.substring(3);
-
+      
       String servletPath = rqst.getServletPath();
+      if (unitTest) servletPath = rqst.getParameter("TestSevletPathInfo");
+      
       if (HFTP_PATTERN.matcher(servletPath).matches()) {
         // request is an HSFTP request
         if (FILEPATH_PATTERN.matcher(servletPath).matches()) {
@@ -258,12 +300,13 @@ public class ProxyFilter implements Filter {
         LOG.info("Ugi cache cleared");
         rsp.setStatus(HttpServletResponse.SC_OK);
         return;
-      }
+      } 
 
       if (!isAuthorized) {
         rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "Unauthorized access");
         return;
       }
+      
       // request is authorized, set ugi for servlets
       UnixUserGroupInformation ugi = ProxyUgiManager
           .getUgiForUser(userID);
@@ -274,12 +317,13 @@ public class ProxyFilter implements Filter {
         return;
       }
       rqst.setAttribute("authorized.ugi", ugi);
-    } else { // http request, set ugi for servlets, only for testing purposes
+    } else if(rqst.getScheme().equalsIgnoreCase("http")) { // http request, set ugi for servlets, only for testing purposes
       String ugi = rqst.getParameter("ugi");
-      rqst.setAttribute("authorized.ugi", new UnixUserGroupInformation(ugi
+      if (ugi != null) {
+        rqst.setAttribute("authorized.ugi", new UnixUserGroupInformation(ugi
           .split(",")));
+      } 
     }
-
     chain.doFilter(request, response);
   }
 
@@ -314,7 +358,7 @@ public class ProxyFilter implements Filter {
       LOG.info("Can't get file path from HTTPS request; user is " + userID);
       return false;
     }
-
+    
     Path userPath = new Path(pathInfo);
     while (userPath != null) {
       if (LOG.isDebugEnabled()) {

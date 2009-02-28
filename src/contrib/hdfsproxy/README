@@ -28,3 +28,24 @@ Command "hdfsproxy -reloadPermFiles" can be used to trigger reloading of
 user-certs.xml and user-permissions.xml files on all proxy servers listed in 
 the hdfsproxy-hosts file. Similarly, "hdfsproxy -clearUgiCache" command can be 
 used to clear the UGI caches on all proxy servers.
+
+For tomcat based installation.
+1. set up the environment and configuration files. 
+	 a) export HADOOP_CONF_DIR=${user.home}/devel/source-conf
+	 	source-conf directory should point to the source cluster's configuration directory, 
+	 	where core-site.xml, and hdfs-site.xml should already be correctly configured for 
+	 	the source cluster settings.
+	 b) export HDFSPROXY_CONF_DIR=${user.home}/devel/proxy-conf
+	  proxy-conf directory should point to the proxy's configuration directory, where 
+	  hdfsproxy-default.xml, etc, should already be properly configured.
+
+2. cd ==> hdfsproxy directory,  ant war
+	 
+3. download and install tomcat6, change tomcat conf/server.xml file to include https support. 
+	 uncomment item below SSL HTTP/1.1 Connector and add paths, resulting something look like this:
+	 <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true"
+               maxThreads="150" scheme="https" secure="true" keystoreFile="${user.home}/grid/hdfsproxy-conf/server2.keystore" 
+               keystorePass="changeme" keystoreType="JKS"  clientAuth="true" sslProtocol="TLS" />
+4. copy war file in step 2 to tomcat's webapps directory and rename it to ROOT.war
+5. export JAVA_OPTS="-Djavax.net.ssl.trustStore=${user.home}/grid/hdfsproxy-conf/server2.keystore -Djavax.net.ssl.trustStorePassword=changeme"
+6. start up tomcat with tomcat's bin/startup.sh 

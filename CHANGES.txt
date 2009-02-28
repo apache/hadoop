@@ -145,6 +145,8 @@ Trunk (unreleased changes)
 
     HADOOP-4546. Fix DF reporting for AIX. (Bill Habermaas via cdouglas)
 
+    HADOOP-5023. Add Tomcat support to HdfsProxy. (Zhiyong Zhang via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
