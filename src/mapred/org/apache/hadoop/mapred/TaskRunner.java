@@ -139,13 +139,9 @@ abstract class TaskRunner extends Thread {
             String cacheId = DistributedCache.makeRelative(archives[i],conf);
             String cachePath = TaskTracker.getCacheSubdir() + 
                                  Path.SEPARATOR + cacheId;
-            if (lDirAlloc.ifExists(cachePath, conf)) {
-              localPath =  lDirAlloc.getLocalPathToRead(cachePath, conf);
-            }
-            else {
-              localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+            
+            localPath = lDirAlloc.getLocalPathForWrite(cachePath,
                                       fileStatus.getLen(), conf);
-            }
             baseDir = localPath.toString().replace(cacheId, "");
             p[i] = DistributedCache.getLocalCache(archives[i], conf, 
                                                   new Path(baseDir),
@@ -169,12 +165,9 @@ abstract class TaskRunner extends Thread {
             String cacheId = DistributedCache.makeRelative(files[i], conf);
             String cachePath = TaskTracker.getCacheSubdir() +
                                  Path.SEPARATOR + cacheId;
-            if (lDirAlloc.ifExists(cachePath,conf)) {
-              localPath =  lDirAlloc.getLocalPathToRead(cachePath, conf);
-            } else {
-              localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+            
+            localPath = lDirAlloc.getLocalPathForWrite(cachePath,
                                       fileStatus.getLen(), conf);
-            }
             baseDir = localPath.toString().replace(cacheId, "");
             p[i] = DistributedCache.getLocalCache(files[i], conf, 
                                                   new Path(baseDir),
