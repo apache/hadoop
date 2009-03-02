@@ -909,8 +909,8 @@ Release 0.20.0 - Unreleased
     (Doğacan Güney via enis)
 
     HADOOP-4744. Workaround for jetty6 returning -1 when getLocalPort is invoked on
-    the connector. The workaround patch takes the most conservative approach of 
-    killing the server process whenever this is true. (ddas)
+    the connector. The workaround patch retries a few times before failing.
+    (Jothi Padmanabhan via yhemanth)
 
     HADOOP-5280. Adds a check to prevent a task state transition from FAILED to any of
     UNASSIGNED, RUNNING, COMMIT_PENDING or SUCCEEDED. (ddas) 
