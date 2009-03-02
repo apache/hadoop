@@ -48,7 +48,18 @@
       wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
       on your cluster, or an equivalent.</li>
 </ul>
-
+<h3>Windows</h3>
+If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>. Additionally, it is <emph>strongly recommended</emph> that you add or append to the following environment variables. If you install Cygwin in a location that is not C:\cygwin you should modify the following appropriately.
+<p>
+<pre>
+HOME=c:\cygwin\home\jim
+ANT_HOME=(wherever you installed ant)
+JAVA_HOME=(wherever you installed java) 
+PATH=C:\cygwin\bin;%JAVA_HOME%\bin;%ANT_HOME%\bin; other windows stuff 
+SHELL=/bin/bash
+</pre>
+For additional information, see the <a href="http://hadoop.apache.org/core/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
+</p>
 <h2><a name="getting_started" >Getting Started</a></h2>
 <p>
 What follows presumes you have obtained a copy of HBase and are installing
