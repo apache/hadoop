@@ -543,7 +543,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (Values.PREP.name().equals(jobStatus)) {
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
-          jip.initTasks();
+          try {
+            jip.initTasks();
+          } catch (IOException ioe) {
+            LOG.error("Job initialization failed : \n" 
+                      + StringUtils.stringifyException(ioe));
+            jip.fail(); // fail the job
+            throw ioe;
+          }
         }
       }
       
@@ -816,22 +823,35 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     public void recover() throws IOException {
       // I. Init the jobs and cache the recovered job history filenames
       Map<JobID, Path> jobHistoryFilenameMap = new HashMap<JobID, Path>();
-      for (JobID id : jobsToRecover) {
+      Iterator<JobID> idIter = jobsToRecover.iterator();
+      while (idIter.hasNext()) {
+        JobID id = idIter.next();
+        LOG.info("Trying to recover job " + id);
         // 1. Create the job object
         JobInProgress job = new JobInProgress(id, JobTracker.this, conf);
         
-        // 2. Get the log file and the file path
-        String logFileName = 
-          JobHistory.JobInfo.getJobHistoryFileName(job.getJobConf(), id);
-        Path jobHistoryFilePath = 
-          JobHistory.JobInfo.getJobHistoryLogLocation(logFileName);
-        
-        // 3. Recover the history file. This involved
-        //     - deleting file.recover if file exists
-        //     - renaming file.recover to file if file doesnt exist
-        // This makes sure that the (master) file exists
-        JobHistory.JobInfo.recoverJobHistoryFile(job.getJobConf(), 
-                                                 jobHistoryFilePath);
+        String logFileName;
+        Path jobHistoryFilePath;
+        try {
+          // 2. Get the log file and the file path
+          logFileName = 
+            JobHistory.JobInfo.getJobHistoryFileName(job.getJobConf(), id);
+          jobHistoryFilePath = 
+            JobHistory.JobInfo.getJobHistoryLogLocation(logFileName);
+
+          // 3. Recover the history file. This involved
+          //     - deleting file.recover if file exists
+          //     - renaming file.recover to file if file doesnt exist
+          // This makes sure that the (master) file exists
+          JobHistory.JobInfo.recoverJobHistoryFile(job.getJobConf(), 
+                                                   jobHistoryFilePath);
+        } catch (IOException ioe) {
+          LOG.warn("Failed to recover job " + id + " history filename." 
+                   + " Ignoring.", ioe);
+          // TODO : remove job details from the system directory
+          idIter.remove();
+          continue;
+        }
 
         // 4. Cache the history file name as it costs one dfs access
         jobHistoryFilenameMap.put(job.getJobID(), jobHistoryFilePath);
@@ -860,13 +880,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           JobHistory.parseHistoryFromFS(jobHistoryFilePath.toString(), 
                                         listener, fs);
         } catch (IOException e) {
-          LOG.info("JobTracker failed to recover job " + pJob + "."
-                   + " Ignoring it.", e);
-          continue;
+          LOG.info("JobTracker failed to recover job " + pJob.getJobID() + "."
+                     + " Ignoring it.", e);
         }
 
         // 3. Close the listener
         listener.close();
+        
+        LOG.info("Restart count for job " + id + " is " + pJob.numRestarts());
 
         // 4. Update the recovery metric
         totalEventsRecovered += listener.getNumEventsRecovered();
@@ -874,9 +895,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // 5. Cleanup history
         // Delete the master log file as an indication that the new file
         // should be used in future
-        synchronized (pJob) {
-          JobHistory.JobInfo.checkpointRecovery(logFileName, 
-              pJob.getJobConf());
+        try {
+          synchronized (pJob) {
+            JobHistory.JobInfo.checkpointRecovery(logFileName, 
+                                                  pJob.getJobConf());
+          }
+        } catch (IOException ioe) {
+          LOG.warn("Failed to delete log file (" + logFileName + ") for job " 
+                   + id + ". Ignoring it.", ioe);
         }
 
         // 6. Inform the jobtracker as to how much of the data is recovered.
@@ -2320,8 +2346,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * adding a job. This is the core job submission logic
    * @param jobId The id for the job submitted which needs to be added
    */
-  private synchronized JobStatus addJob(JobID jobId, JobInProgress job) 
-  throws IOException {
+  private synchronized JobStatus addJob(JobID jobId, JobInProgress job) {
     totalSubmissions++;
 
     synchronized (jobs) {
@@ -2707,6 +2732,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       
       JobInProgress job = getJob(taskId.getJobID());
       if (job == null) {
+        // if job is not there in the cleanup list ... add it
+        synchronized (trackerToJobsToCleanup) {
+          Set<JobID> jobs = trackerToJobsToCleanup.get(trackerName);
+          jobs.add(taskId.getJobID());
+        }
         continue;
       }
       

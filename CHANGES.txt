@@ -32,6 +32,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5146. Fixes a race condition that causes LocalDirAllocator to miss
     files.  (Devaraj Das via yhemanth)
 
+    HADOOP-4638. Fixes job recovery to not crash the job tracker for problems
+    with a single job file. (Amar Kamat via yhemanth)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
