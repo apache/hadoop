@@ -81,13 +81,12 @@ public class FileTailingAdaptor implements Adaptor
 
 	public void start(long adaptorID, String type, String params, long bytes, ChunkReceiver dest) {
 	    //in this case params = filename 
-		log.info("started file tailer on file " + params);
 		this.adaptorID = adaptorID;
 	    this.type = type;
 	    this.dest = dest;
 	    this.attempts = 0;
 			
-	    Pattern cmd = Pattern.compile("(\\d+)\\s+(.+)\\s");
+	    Pattern cmd = Pattern.compile("(\\d+)\\s+(.+)\\s?");
 	    Matcher m = cmd.matcher(params);
 	    if(m.matches()) {
 	        offsetOfFirstByte = Long.parseLong(m.group(1));
@@ -95,6 +94,7 @@ public class FileTailingAdaptor implements Adaptor
 	    } else {
 	        toWatch = new File(params.trim());
 	    }
+	  log.info("started file tailer on file " + toWatch + " with first byte at offset "+offsetOfFirstByte);
 	  
 		this.fileReadOffset= bytes;
 		tailer.startWatchingFile(this);
