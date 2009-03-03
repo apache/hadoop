@@ -17,6 +17,7 @@ import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.io.BatchUpdate
 import org.apache.hadoop.hbase.io.RowResult
 import org.apache.hadoop.hbase.io.Cell
+import org.apache.hadoop.hbase.io.hfile.Compression
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.HTableDescriptor
@@ -213,7 +214,7 @@ module HBase
         args[MEMCACHE_FLUSHSIZE]? 
           htd.setMemcacheFlushSize(JLong.valueOf(args[MEMCACHE_FLUSHSIZE])) :
           htd.setMemcacheFlushSize(HTableDescriptor::DEFAULT_MEMCACHE_FLUSH_SIZE);
-        @admin.modifyTable(tableName.to_java_bytes,htd)
+        @admin.modifyTable(tableName.to_java_bytes, htd)
       else
         descriptor = hcd(args) 
         if (htd.hasFamily(descriptor.getNameAsString().to_java_bytes))
@@ -256,11 +257,11 @@ module HBase
       # Return a new HColumnDescriptor made of passed args
       # TODO: This is brittle code.
       # Here is current HCD constructor:
-      # public HColumnDescriptor(final byte [] columnName, final int maxVersions,
-      # final CompressionType compression, final boolean inMemory,
-      # final boolean blockCacheEnabled,
-      # final int maxValueLength, final int timeToLive,
-      # BloomFilterDescriptor bloomFilter)
+      # public HColumnDescriptor(final byte [] familyName, final int maxVersions,
+      # final String compression, final boolean inMemory,
+      # final boolean blockCacheEnabled, final int blocksize,
+      # final int maxValueLength,
+      # final int timeToLive, final boolean bloomFilter) {
       name = arg[NAME]
       raise ArgumentError.new("Column family " + arg + " must have a name") \
         unless name
@@ -269,10 +270,10 @@ module HBase
       return HColumnDescriptor.new(name.to_java_bytes,
         # JRuby uses longs for ints. Need to convert.  Also constants are String 
         arg[VERSIONS]? JInteger.new(arg[VERSIONS]): HColumnDescriptor::DEFAULT_VERSIONS,
-        arg[HColumnDescriptor::COMPRESSION]? HColumnDescriptor::CompressionType::valueOf(arg[HColumnDescriptor::COMPRESSION]):
-          HColumnDescriptor::DEFAULT_COMPRESSION,
+        arg[HColumnDescriptor::COMPRESSION]? arg[HColumnDescriptor::COMPRESSION]: HColumnDescriptor::DEFAULT_COMPRESSION,
         arg[IN_MEMORY]? JBoolean.valueOf(arg[IN_MEMORY]): HColumnDescriptor::DEFAULT_IN_MEMORY,
         arg[HColumnDescriptor::BLOCKCACHE]? JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE]): HColumnDescriptor::DEFAULT_BLOCKCACHE,
+        arg[HColumnDescriptor::BLOCKSIZE]? JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE]): HColumnDescriptor::DEFAULT_BLOCKSIZE,
         arg[HColumnDescriptor::LENGTH]? JInteger.new(arg[HColumnDescriptor::LENGTH]): HColumnDescriptor::DEFAULT_LENGTH,
         arg[HColumnDescriptor::TTL]? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
         arg[HColumnDescriptor::BLOOMFILTER]? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER)
