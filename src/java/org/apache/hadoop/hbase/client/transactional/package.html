@@ -42,18 +42,20 @@ TransactionalRegionServer.  This is done by setting
 <i>hbase.regionserver.impl </i> to
 <i>org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegionServer</i>
 
+<p> 
+The read set claimed by a transactional scanner is determined from the start and
+ end keys which the scanner is opened with. 
+
+
+
 <h3> Known Issues </h3>
 
 Recovery in the face of hregion server failure
 is not fully implemented. Thus, you cannot rely on the transactional
 properties in the face of node failure.
 
-<p> In order to avoid phantom reads on scanners, scanners currently
-claim a <i>write set</i> for all rows in every regions which they scan
-through. This means that if transaction A writes to a region that
-transaction B is scanning, then there is a conflict (only one
-transacton can be committed). This will occur even if the scanner
-never went over the row that was written.
+
+
  
 </body>
 </html>

@@ -29,6 +29,8 @@ Release 0.20.0 - Unreleased
    HBASE-1217  add new compression and hfile blocksize to HColumnDescriptor
    HBASE-859   HStoreKey needs a reworking
    HBASE-1211  NPE in retries exhausted exception
+   HBASE-1233  Transactional fixes: Overly conservative scan read-set,
+               potential CME (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

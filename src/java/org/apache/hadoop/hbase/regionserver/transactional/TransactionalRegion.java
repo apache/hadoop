@@ -180,14 +180,16 @@ public class TransactionalRegion extends HRegion {
         alias.setStatus(Status.ABORTED);
         retireTransaction(alias);
       }
+      LOG.error("Existing trasaction with id ["+key+"] in region ["+super.getRegionInfo().getRegionNameAsString()+"]");
       throw new IOException("Already exiting transaction id: " + key);
     }
 
     TransactionState state = new TransactionState(transactionId, super.getLog()
-        .getSequenceNumber());
+        .getSequenceNumber(), super.getRegionInfo());
 
-    // Order is important here
-    for (TransactionState commitPending : commitPendingTransactions) {
+    // Order is important here ...
+    List<TransactionState> commitPendingCopy = new LinkedList<TransactionState>(commitPendingTransactions);
+    for (TransactionState commitPending : commitPendingCopy) {
       state.addTransactionToCheck(commitPending);
     }
     state.setStartSequenceNumber(nextSequenceId.get());
@@ -196,6 +198,7 @@ public class TransactionalRegion extends HRegion {
     try {
       transactionLeases.createLease(key, new TransactionLeaseListener(key));
     } catch (LeaseStillHeldException e) {
+      LOG.error("Lease still held for ["+key+"] in region ["+super.getRegionInfo().getRegionNameAsString()+"]");      
       throw new RuntimeException(e);
     }
     LOG.debug("Begining transaction " + key + " in region "
@@ -337,6 +340,8 @@ public class TransactionalRegion extends HRegion {
   public InternalScanner getScanner(final long transactionId,
       final byte[][] cols, final byte[] firstRow, final long timestamp,
       final RowFilterInterface filter) throws IOException {
+    TransactionState state = getTransactionState(transactionId);
+    state.addScan(firstRow, filter);
     return new ScannerWrapper(transactionId, super.getScanner(cols, firstRow,
         timestamp, filter));
   }
@@ -578,14 +583,31 @@ public class TransactionalRegion extends HRegion {
       numRemoved++;
     }
 
-    if (numRemoved > 0) {
-      LOG.debug("Removed " + numRemoved
-          + " commited transactions with sequence lower than "
-          + minStartSeqNumber + ". Still have "
-          + commitedTransactionsBySequenceNumber.size() + " left");
-    } else if (commitedTransactionsBySequenceNumber.size() > 0) {
-      LOG.debug("Could not remove any transactions, and still have "
-          + commitedTransactionsBySequenceNumber.size() + " left");
+    if (LOG.isDebugEnabled()) {
+      StringBuilder debugMessage = new StringBuilder();
+      if (numRemoved > 0) {
+        debugMessage.append("Removed ").append(numRemoved).append(
+            " commited transactions");
+
+        if (minStartSeqNumber == Integer.MAX_VALUE) {
+          debugMessage.append("with any sequence number");
+        } else {
+          debugMessage.append("with sequence lower than ").append(
+              minStartSeqNumber).append(".");
+        }
+        if (!commitedTransactionsBySequenceNumber.isEmpty()) {
+          debugMessage.append(" Still have ").append(
+              commitedTransactionsBySequenceNumber.size()).append(" left.");
+        } else {
+          debugMessage.append("None left.");
+        }
+        LOG.debug(debugMessage.toString());
+      } else if (commitedTransactionsBySequenceNumber.size() > 0) {
+        debugMessage.append(
+            "Could not remove any transactions, and still have ").append(
+            commitedTransactionsBySequenceNumber.size()).append(" left");
+        LOG.debug(debugMessage.toString());
+      }
     }
   }
 
@@ -647,9 +669,11 @@ public class TransactionalRegion extends HRegion {
     /**
      * @param transactionId
      * @param scanner
+     * @throws UnknownTransactionException
      */
     public ScannerWrapper(final long transactionId,
-        final InternalScanner scanner) {
+        final InternalScanner scanner) throws UnknownTransactionException {
+
       this.transactionId = transactionId;
       this.scanner = scanner;
     }
@@ -670,10 +694,6 @@ public class TransactionalRegion extends HRegion {
         final SortedMap<byte[], Cell> results) throws IOException {
       boolean result = scanner.next(key, results);
       TransactionState state = getTransactionState(transactionId);
-      state.setHasScan(true);
-      // FIXME, not using row, just claiming read over the whole region. We are
-      // being very conservative on scans to avoid phantom reads.
-      state.addRead(key.getRow());
 
       if (result) {
         Map<byte[], Cell> localWrites = state.localGetFull(key.getRow(), null,

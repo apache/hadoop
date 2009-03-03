@@ -88,6 +88,14 @@ public class RowFilterSet implements RowFilterInterface {
     return operator;
   }
   
+  /** Get the filters.
+   * 
+   * @return filters
+   */
+  public Set<RowFilterInterface> getFilters() {
+    return filters;
+  }
+  
   /** Add a filter.
    * 
    * @param filter

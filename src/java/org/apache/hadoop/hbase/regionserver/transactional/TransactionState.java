@@ -31,6 +31,11 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.RowFilterSet;
+import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -58,40 +63,69 @@ class TransactionState {
     ABORTED
   }
 
+  /**
+   * Simple container of the range of the scanners we've opened. Used to check
+   * for conflicting writes.
+   */
+  private class ScanRange {
+    private byte[] startRow;
+    private byte[] endRow;
+
+    public ScanRange(byte[] startRow, byte[] endRow) {
+      this.startRow = startRow;
+      this.endRow = endRow;
+    }
+
+    /**
+     * Check if this scan range contains the given key.
+     * 
+     * @param rowKey
+     * @return
+     */
+    public boolean contains(byte[] rowKey) {
+      if (startRow != null && Bytes.compareTo(rowKey, startRow) < 0) {
+        return false;
+      }
+      if (endRow != null && Bytes.compareTo(endRow, rowKey) < 0) {
+        return false;
+      }
+      return true;
+    }
+  }
+
+  private final HRegionInfo regionInfo;
   private final long hLogStartSequenceId;
   private final long transactionId;
   private Status status;
   private SortedSet<byte[]> readSet = new TreeSet<byte[]>(
       Bytes.BYTES_COMPARATOR);
   private List<BatchUpdate> writeSet = new LinkedList<BatchUpdate>();
+  private List<ScanRange> scanSet = new LinkedList<ScanRange>();
   private Set<TransactionState> transactionsToCheck = new HashSet<TransactionState>();
   private int startSequenceNumber;
   private Integer sequenceNumber;
-  boolean hasScan = false;
 
-  //TODO: Why don't these methods and the class itself use default access?
-  //      They are only referenced from within this package.
-  
-  public TransactionState(final long transactionId,
-      final long rLogStartSequenceId) {
+  TransactionState(final long transactionId, final long rLogStartSequenceId,
+      HRegionInfo regionInfo) {
     this.transactionId = transactionId;
     this.hLogStartSequenceId = rLogStartSequenceId;
+    this.regionInfo = regionInfo;
     this.status = Status.PENDING;
   }
 
-  public void addRead(final byte[] rowKey) {
+  void addRead(final byte[] rowKey) {
     readSet.add(rowKey);
   }
 
-  public Set<byte[]> getReadSet() {
+  Set<byte[]> getReadSet() {
     return readSet;
   }
 
-  public void addWrite(final BatchUpdate write) {
+  void addWrite(final BatchUpdate write) {
     writeSet.add(write);
   }
 
-  public List<BatchUpdate> getWriteSet() {
+  List<BatchUpdate> getWriteSet() {
     return writeSet;
   }
 
@@ -103,8 +137,8 @@ class TransactionState {
    * @param timestamp
    * @return
    */
-  public Map<byte[], Cell> localGetFull(final byte[] row,
-      final Set<byte[]> columns, final long timestamp) {
+  Map<byte[], Cell> localGetFull(final byte[] row, final Set<byte[]> columns,
+      final long timestamp) {
     Map<byte[], Cell> results = new TreeMap<byte[], Cell>(
         Bytes.BYTES_COMPARATOR); // Must use the Bytes Conparator because
     for (BatchUpdate b : writeSet) {
@@ -133,8 +167,7 @@ class TransactionState {
    * @param timestamp
    * @return
    */
-  public Cell[] localGet(final byte[] row, final byte[] column,
-      final long timestamp) {
+  Cell[] localGet(final byte[] row, final byte[] column, final long timestamp) {
     ArrayList<Cell> results = new ArrayList<Cell>();
 
     // Go in reverse order to put newest updates first in list
@@ -158,11 +191,11 @@ class TransactionState {
         .toArray(new Cell[results.size()]);
   }
 
-  public void addTransactionToCheck(final TransactionState transaction) {
+  void addTransactionToCheck(final TransactionState transaction) {
     transactionsToCheck.add(transaction);
   }
 
-  public boolean hasConflict() {
+  boolean hasConflict() {
     for (TransactionState transactionState : transactionsToCheck) {
       if (hasConflict(transactionState)) {
         return true;
@@ -177,17 +210,21 @@ class TransactionState {
     }
 
     for (BatchUpdate otherUpdate : checkAgainst.getWriteSet()) {
-      if (this.hasScan) {
-        LOG.info("Transaction" + this.toString()
-            + " has a scan read. Meanwile a write occured. "
-            + "Conservitivly reporting conflict");
+      if (this.getReadSet().contains(otherUpdate.getRow())) {
+        LOG.debug("Transaction [" + this.toString()
+            + "] has read which conflicts with [" + checkAgainst.toString()
+            + "]: region [" + regionInfo.getRegionNameAsString() + "], row["
+            + Bytes.toString(otherUpdate.getRow()) + "]");
         return true;
       }
-
-      if (this.getReadSet().contains(otherUpdate.getRow())) {
-        LOG.trace("Transaction " + this.toString() + " conflicts with "
-            + checkAgainst.toString());
-        return true;
+      for (ScanRange scanRange : this.scanSet) {
+        if (scanRange.contains(otherUpdate.getRow())) {
+          LOG.debug("Transaction [" + this.toString()
+              + "] has scan which conflicts with [" + checkAgainst.toString()
+              + "]: region [" + regionInfo.getRegionNameAsString() + "], row["
+              + Bytes.toString(otherUpdate.getRow()) + "]");
+          return true;
+        }
       }
     }
     return false;
@@ -198,7 +235,7 @@ class TransactionState {
    * 
    * @return Return the status.
    */
-  public Status getStatus() {
+  Status getStatus() {
     return status;
   }
 
@@ -207,7 +244,7 @@ class TransactionState {
    * 
    * @param status The status to set.
    */
-  public void setStatus(final Status status) {
+  void setStatus(final Status status) {
     this.status = status;
   }
 
@@ -216,7 +253,7 @@ class TransactionState {
    * 
    * @return Return the startSequenceNumber.
    */
-  public int getStartSequenceNumber() {
+  int getStartSequenceNumber() {
     return startSequenceNumber;
   }
 
@@ -225,7 +262,7 @@ class TransactionState {
    * 
    * @param startSequenceNumber.
    */
-  public void setStartSequenceNumber(final int startSequenceNumber) {
+  void setStartSequenceNumber(final int startSequenceNumber) {
     this.startSequenceNumber = startSequenceNumber;
   }
 
@@ -234,7 +271,7 @@ class TransactionState {
    * 
    * @return Return the sequenceNumber.
    */
-  public Integer getSequenceNumber() {
+  Integer getSequenceNumber() {
     return sequenceNumber;
   }
 
@@ -243,7 +280,7 @@ class TransactionState {
    * 
    * @param sequenceNumber The sequenceNumber to set.
    */
-  public void setSequenceNumber(final Integer sequenceNumber) {
+  void setSequenceNumber(final Integer sequenceNumber) {
     this.sequenceNumber = sequenceNumber;
   }
 
@@ -256,6 +293,8 @@ class TransactionState {
     result.append(status.name());
     result.append(" read Size: ");
     result.append(readSet.size());
+    result.append(" scan Size: ");
+    result.append(scanSet.size());
     result.append(" write Size: ");
     result.append(writeSet.size());
     result.append(" startSQ: ");
@@ -274,7 +313,7 @@ class TransactionState {
    * 
    * @return Return the transactionId.
    */
-  public long getTransactionId() {
+  long getTransactionId() {
     return transactionId;
   }
 
@@ -283,17 +322,41 @@ class TransactionState {
    * 
    * @return Return the startSequenceId.
    */
-  public long getHLogStartSequenceId() {
+  long getHLogStartSequenceId() {
     return hLogStartSequenceId;
   }
 
-  /**
-   * Set the hasScan.
-   * 
-   * @param hasScan The hasScan to set.
-   */
-  public void setHasScan(final boolean hasScan) {
-    this.hasScan = hasScan;
+  void addScan(byte[] firstRow, RowFilterInterface filter) {
+    ScanRange scanRange = new ScanRange(firstRow, getEndRow(filter));
+    LOG.trace(String.format(
+        "Adding scan for transcaction [%s], from [%s] to [%s]", transactionId,
+        scanRange.startRow == null ? "null" : Bytes
+            .toString(scanRange.startRow), scanRange.endRow == null ? "null"
+            : Bytes.toString(scanRange.endRow)));
+    scanSet.add(scanRange);
+  }
+
+  private byte[] getEndRow(RowFilterInterface filter) {
+    if (filter instanceof WhileMatchRowFilter) {
+      WhileMatchRowFilter wmrFilter = (WhileMatchRowFilter) filter;
+      if (wmrFilter.getInternalFilter() instanceof StopRowFilter) {
+        StopRowFilter stopFilter = (StopRowFilter) wmrFilter
+            .getInternalFilter();
+        return stopFilter.getStopRowKey();
+      }
+    } else if (filter instanceof RowFilterSet) {
+      RowFilterSet rowFilterSet = (RowFilterSet) filter;
+      if (rowFilterSet.getOperator()
+          .equals(RowFilterSet.Operator.MUST_PASS_ALL)) {
+        for (RowFilterInterface subFilter : rowFilterSet.getFilters()) {
+          byte[] endRow = getEndRow(subFilter);
+          if (endRow != null) {
+            return endRow;
+          }
+        }
+      }
+    }
+    return null;
   }
 
 }
