@@ -75,6 +75,7 @@ public class SeqFileWriter implements ChukwaWriter
 	
 	private int initWriteChunkRetries = 10;
 	private int writeChunkRetries = initWriteChunkRetries;
+	private boolean chunksWrittenThisRotate = false;
 	
 	public SeqFileWriter() throws WriterException
 	{
@@ -227,18 +228,24 @@ public class SeqFileWriter implements ChukwaWriter
 				if (previousOutputStr != null) 	
 				{
 					previousOutputStr.close();
-					fs.rename(previousPath,
-							new Path(previousFileName + ".done"));
+					if(chunksWrittenThisRotate) {
+					  fs.rename(previousPath, new Path(previousFileName + ".done"));
+					} else {
+					  log.info("no chunks written to "+ previousPath + ", deleting");
+					  fs.delete(previousPath, false);
+					}
 				}
 				Path newOutputPath = new Path(newName + ".chukwa");			
 				FSDataOutputStream newOutputStr = fs.create(newOutputPath);
 				currentOutputStr = newOutputStr;
 				currentPath = newOutputPath;
 				currentFileName = newName;
+				chunksWrittenThisRotate = false;
 				// Uncompressed for now
 				seqFileWriter = SequenceFile.createWriter(conf, newOutputStr,
 						ChukwaArchiveKey.class, ChunkImpl.class,
 						SequenceFile.CompressionType.NONE, null);
+				
 			}
 			catch (IOException e)
 			{
@@ -261,10 +268,9 @@ public class SeqFileWriter implements ChukwaWriter
 	@Override
 	public void add(List<Chunk> chunks) throws WriterException
 	{
-		if (chunks != null) 	
-		{
-			try 
-			{
+		if (chunks != null) {
+			try {
+		    chunksWrittenThisRotate = true;
 				ChukwaArchiveKey archiveKey = new ChukwaArchiveKey();
 
 				// FIXME compute this once an hour
