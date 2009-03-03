@@ -53,6 +53,7 @@ public class ServletCollector extends HttpServlet
 	static long statTime = 0L;
 	static int numberHTTPConnection = 0;
 	static int numberchunks = 0;
+	static long lifetimechunks=0;
 	
 	Configuration conf;
   
@@ -154,6 +155,7 @@ public class ServletCollector extends HttpServlet
 			{
 				writer.add(events);
 				numberchunks += events.size();
+				lifetimechunks += events.size();
 				//this is where we ACK this connection
 				l_out.print(sb.toString());
 			}
@@ -199,6 +201,7 @@ public class ServletCollector extends HttpServlet
 		  out.println("Now:" + System.currentTimeMillis());
 		  out.println("numberHTTPConnection:" + ServletCollector.numberHTTPConnection);
 		  out.println("numberchunks:" + ServletCollector.numberchunks);
+      out.println("lifetimechunks:" + ServletCollector.lifetimechunks);
 	  }
 	  else
 	  {
