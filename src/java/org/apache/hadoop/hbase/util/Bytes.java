@@ -116,6 +116,15 @@ public class Bytes {
     out.write(b, 0, b.length);
   }
 
+  public static int writeByteArray(final byte [] tgt, final int tgtOffset,
+      final byte [] src, final int srcOffset, final int srcLength) {
+    byte [] vint = vintToBytes(srcLength);
+    System.arraycopy(vint, 0, tgt, tgtOffset, vint.length);
+    int offset = tgtOffset + vint.length;
+    System.arraycopy(src, srcOffset, tgt, offset, srcLength);
+    return offset + srcLength;
+  }
+
   /**
    * Reads a zero-compressed encoded long from input stream and returns it.
    * @param buffer Binary array
@@ -219,15 +228,98 @@ public class Bytes {
   }
 
   /**
+   * @param vint Integer to make a vint of.
+   * @return Vint as bytes array.
+   */
+  public static byte [] vintToBytes(final long vint) {
+    long i = vint;
+    int size = WritableUtils.getVIntSize(i);
+    byte [] result = new byte[size];
+    int offset = 0;
+    if (i >= -112 && i <= 127) {
+      result[offset] = ((byte)i);
+      return result;
+    }
+    offset++;
+
+    int len = -112;
+    if (i < 0) {
+      i ^= -1L; // take one's complement'
+      len = -120;
+    }
+
+    long tmp = i;
+    while (tmp != 0) {
+      tmp = tmp >> 8;
+    len--;
+    }
+
+    result[offset++] = (byte)len;
+
+    len = (len < -120) ? -(len + 120) : -(len + 112);
+
+    for (int idx = len; idx != 0; idx--) {
+      int shiftbits = (idx - 1) * 8;
+      long mask = 0xFFL << shiftbits;
+      result[offset++] = (byte)((i & mask) >> shiftbits);
+    }
+    return result;
+  }
+
+  /**
+   * @param buffer
+   * @return vint bytes as an integer.
+   */
+  public static long bytesToVint(final byte [] buffer) {
+    int offset = 0;
+    byte firstByte = buffer[offset++];
+    int len = WritableUtils.decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
+    }
+    long i = 0;
+    for (int idx = 0; idx < len-1; idx++) {
+      byte b = buffer[offset++];
+      i = i << 8;
+      i = i | (b & 0xFF);
+    }
+    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
+  }
+
+  /**
    * Converts a byte array to a long value
    * @param bytes
    * @return the long value
    */
   public static long toLong(byte[] bytes) {
-    if (bytes == null || bytes.length == 0) {
+    return toLong(bytes, 0);
+  }
+
+  /**
+   * Converts a byte array to a long value
+   * @param bytes
+   * @return the long value
+   */
+  public static long toLong(byte[] bytes, int offset) {
+    return toLong(bytes, offset, SIZEOF_LONG);
+  }
+
+  /**
+   * Converts a byte array to a long value
+   * @param bytes
+   * @return the long value
+   */
+  public static long toLong(byte[] bytes, int offset,final int length) {
+    if (bytes == null || bytes.length == 0 ||
+        (offset + length > bytes.length)) {
       return -1L;
     }
-    return ByteBuffer.wrap(bytes).getLong();
+    long l = 0;
+    for(int i = offset; i < (offset + length); i++) {
+      l <<= 8;
+      l ^= (long)bytes[i] & 0xFF;
+    }
+    return l;
   }
   
   /**
@@ -309,21 +401,29 @@ public class Bytes {
   }
 
   /**
-   * @param left
-   * @param right
-   * @param leftOffset Where to start comparing in the left buffer
-   * @param rightOffset Where to start comparing in the right buffer
-   * @param leftLength How much to compare from the left buffer
-   * @param rightLength How much to compare from the right buffer
+   * @param b1
+   * @param b2
+   * @param s1 Where to start comparing in the left buffer
+   * @param s2 Where to start comparing in the right buffer
+   * @param l1 How much to compare from the left buffer
+   * @param l2 How much to compare from the right buffer
    * @return 0 if equal, < 0 if left is less than right, etc.
    */
-  public static int compareTo(final byte [] left, final int leftOffset,
-      final int leftLength, final byte [] right, final int rightOffset,
-      final int rightLength) {
-    return WritableComparator.compareBytes(left,leftOffset, leftLength,
-        right, rightOffset, rightLength);
+  public static int compareTo(byte[] b1, int s1, int l1,
+      byte[] b2, int s2, int l2) {
+    // Bring WritableComparator code local
+    int end1 = s1 + l1;
+    int end2 = s2 + l2;
+    for (int i = s1, j = s2; i < end1 && j < end2; i++, j++) {
+      int a = (b1[i] & 0xff);
+      int b = (b2[j] & 0xff);
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return l1 - l2;
   }
-  
+
   /**
    * @param left
    * @param right

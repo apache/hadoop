@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.descriptors.RowUpdateDescriptor;
 import org.apache.hadoop.hbase.rest.descriptors.ScannerDescriptor;
@@ -76,7 +77,7 @@ public class JsonRestParser implements IHBaseRestParser {
     byte[] name = Bytes.toBytes(strTemp);
 
     int maxVersions;
-    HColumnDescriptor.CompressionType cType;
+    String cType;
     boolean inMemory;
     boolean blockCacheEnabled;
     int maxValueLength;
@@ -96,10 +97,9 @@ public class JsonRestParser implements IHBaseRestParser {
     }
 
     try {
-      cType = HColumnDescriptor.CompressionType.valueOf(jsonObject
-          .getString("compression_type"));
+      cType = jsonObject.getString("compression_type").toUpperCase();
     } catch (JSONException e) {
-      cType = HColumnDescriptor.CompressionType.NONE;
+      cType = HColumnDescriptor.DEFAULT_COMPRESSION;
     }
 
     try {

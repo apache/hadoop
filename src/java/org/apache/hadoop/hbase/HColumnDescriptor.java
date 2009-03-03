@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
@@ -52,11 +54,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
   // Version 5 was when bloom filter descriptors were removed.
   // Version 6 adds metadata as a map where keys and values are byte[].
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)6;
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)7;
 
   /** 
    * The type of compression.
    * @see org.apache.hadoop.io.SequenceFile.Writer
+   * @deprecated Replaced by {@link Compression.Algorithm}.
    */
   public static enum CompressionType {
     /** Do not compress records. */
@@ -67,20 +70,21 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     BLOCK
   }
 
-  public static final String COMPRESSION = "COMPRESSION";       //TODO: change to protected
-  public static final String BLOCKCACHE = "BLOCKCACHE";         //TODO: change to protected
-  public static final String LENGTH = "LENGTH";                 //TODO: change to protected
-  public static final String TTL = "TTL";                       //TODO: change to protected
-  public static final String BLOOMFILTER = "BLOOMFILTER";       //TODO: change to protected
-  public static final String FOREVER = "FOREVER";               //TODO: change to protected
-  public static final String MAPFILE_INDEX_INTERVAL =           //TODO: change to protected
+  public static final String COMPRESSION = "COMPRESSION";
+  public static final String BLOCKCACHE = "BLOCKCACHE";
+  public static final String BLOCKSIZE = "BLOCKSIZE";
+  public static final String LENGTH = "LENGTH";
+  public static final String TTL = "TTL";
+  public static final String BLOOMFILTER = "BLOOMFILTER";
+  public static final String FOREVER = "FOREVER";
+  public static final String MAPFILE_INDEX_INTERVAL =
       "MAPFILE_INDEX_INTERVAL";
 
   /**
    * Default compression type.
    */
-  public static final CompressionType DEFAULT_COMPRESSION =
-    CompressionType.NONE;
+  public static final String DEFAULT_COMPRESSION =
+    Compression.Algorithm.NONE.getName();
 
   /**
    * Default number of versions of a record to keep.
@@ -100,6 +104,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    */
   private volatile Integer maxValueLength = null;
 
+  /*
+   * Cache here the HCD value.
+   * Question: its OK to cache since when we're reenable, we create a new HCD?
+   */
+  private volatile Integer blocksize = null;
+
   /**
    * Default setting for whether to serve from memory or not.
    */
@@ -109,6 +119,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * Default setting for whether to use a block cache or not.
    */
   public static final boolean DEFAULT_BLOCKCACHE = false;
+
+  /**
+   * Default size of blocks in files store to the filesytem.  Use smaller for
+   * faster random-access at expense of larger indices (more memory consumption).
+   */
+  public static final int DEFAULT_BLOCKSIZE = HFile.DEFAULT_BLOCKSIZE;
 
   /**
    * Default setting for whether or not to use bloomfilters.
@@ -123,15 +139,9 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   // Column family name
   private byte [] name;
 
-  /**
-   * Default mapfile index interval.
-   */
-  public static final int DEFAULT_MAPFILE_INDEX_INTERVAL = 128;
-
   // Column metadata
   protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
-
 
   /**
    * Default constructor. Must be present for Writable.
@@ -200,8 +210,36 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
-      final CompressionType compression, final boolean inMemory,
+      final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int maxValueLength,
+      final int timeToLive, final boolean bloomFilter) {
+    this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
+      DEFAULT_BLOCKSIZE, maxValueLength, timeToLive, bloomFilter);
+  }
+
+  /**
+   * Constructor
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and end in a <code>:<code>
+   * @param maxVersions Maximum number of versions to keep
+   * @param compression Compression type
+   * @param inMemory If true, column data should be kept in an HRegionServer's
+   * cache
+   * @param blockCacheEnabled If true, MapFile blocks should be cached
+   * @param maxValueLength Restrict values to &lt;= this value
+   * @param timeToLive Time-to-live of cell contents, in seconds
+   * (use HConstants.FOREVER for unlimited TTL)
+   * @param bloomFilter Enable the specified bloom filter for this column
+   * 
+   * @throws IllegalArgumentException if passed a family name that is made of 
+   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
+   * end in a <code>:</code>
+   * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   */
+  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
+      final String compression, final boolean inMemory,
+      final boolean blockCacheEnabled, final int blocksize,
+      final int maxValueLength,
       final int timeToLive, final boolean bloomFilter) {
     isLegalFamilyName(familyName);
     this.name = stripColon(familyName);
@@ -215,10 +253,12 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     setBlockCacheEnabled(blockCacheEnabled);
     setMaxValueLength(maxValueLength);
     setTimeToLive(timeToLive);
-    setCompressionType(compression);
+    setCompressionType(Compression.Algorithm.
+      valueOf(compression.toUpperCase()));
     setBloomfilter(bloomFilter);
+    setBlocksize(blocksize);
   }
-  
+
   private static byte [] stripColon(final byte [] n) {
     byte [] result = new byte [n.length - 1];
     // Have the stored family name be absent the colon delimiter
@@ -321,15 +361,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
 
   /** @return compression type being used for the column family */
   @TOJSON
-  public CompressionType getCompression() {
-    String value = getValue(COMPRESSION);
-    if (value != null) {
-      if (value.equalsIgnoreCase("BLOCK"))
-        return CompressionType.BLOCK;
-      else if (value.equalsIgnoreCase("RECORD"))
-        return CompressionType.RECORD;
-    }
-    return CompressionType.NONE;
+  public Compression.Algorithm getCompression() {
+    return Compression.Algorithm.valueOf(getValue(COMPRESSION));
   }
   
   /** @return maximum number of versions */
@@ -347,24 +380,44 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   public void setMaxVersions(int maxVersions) {
     setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
   }
-  
+
+  /**
+   * @return Blocksize.
+   */
+  @TOJSON
+  public synchronized int getBlocksize() {
+    if (this.blocksize == null) {
+      String value = getValue(BLOCKSIZE);
+      this.blocksize = (value != null)?
+        Integer.decode(value): Integer.valueOf(DEFAULT_BLOCKSIZE);
+    }
+    return this.blocksize.intValue();
+  }
+
+  /**
+   * @param s
+   */
+  public void setBlocksize(int s) {
+    setValue(BLOCKSIZE, Integer.toString(s));
+    this.blocksize = null;
+  }
+
   /**
    * @return Compression type setting.
    */
   @TOJSON
-  public CompressionType getCompressionType() {
+  public Compression.Algorithm getCompressionType() {
     return getCompression();
   }
 
   /**
    * @param type Compression type setting.
    */
-  public void setCompressionType(CompressionType type) {
+  public void setCompressionType(Compression.Algorithm type) {
     String compressionType;
     switch (type) {
-      case BLOCK:  compressionType = "BLOCK";   break;
-      case RECORD: compressionType = "RECORD";  break;
-      default:     compressionType = "NONE";    break;
+      case GZ: compressionType = "GZ"; break;
+      default: compressionType = "NONE"; break;
     }
     setValue(COMPRESSION, compressionType);
   }
@@ -462,17 +515,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
-   * @return The number of entries that are added to the store MapFile before
-   * an index entry is added.
-   */
-  public int getMapFileIndexInterval() {
-    String value = getValue(MAPFILE_INDEX_INTERVAL);
-    if (value != null)
-      return Integer.valueOf(value).intValue();
-    return DEFAULT_MAPFILE_INDEX_INTERVAL;
-  }
-
-  /**
    * @param interval The number of entries that are added to the store MapFile before
    * an index entry is added.
    */
@@ -531,7 +573,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
       this.values.clear();
       setMaxVersions(in.readInt());
       int ordinal = in.readInt();
-      setCompressionType(CompressionType.values()[ordinal]);
+      setCompressionType(Compression.Algorithm.values()[ordinal]);
       setInMemory(in.readBoolean());
       setMaxValueLength(in.readInt());
       setBloomfilter(in.readBoolean());
@@ -551,7 +593,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
        setTimeToLive(in.readInt());
       }
     } else {
-      // version 6+
+      // version 7+
       this.name = Bytes.readByteArray(in);
       this.values.clear();
       int numValues = in.readInt();
@@ -561,6 +603,10 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
         key.readFields(in);
         value.readFields(in);
         values.put(key, value);
+      }
+      if (version == 6) {
+        // Convert old values.
+        setValue(COMPRESSION, Compression.Algorithm.NONE.getName());
       }
     }
   }

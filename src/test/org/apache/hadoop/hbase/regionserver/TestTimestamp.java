@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TimestampTestBase;
-import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -79,8 +78,8 @@ public class TestTimestamp extends HBaseClusterTestCase {
   private HRegion createRegion() throws IOException {
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE,
-      HConstants.FOREVER, false));
+      HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+      Integer.MAX_VALUE, HConstants.FOREVER, false));
     return createNewHRegion(htd, null, null);
   }
 }

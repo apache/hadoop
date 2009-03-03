@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /**
  * Immutable HColumnDescriptor
@@ -50,7 +51,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
   }
 
   @Override
-  public void setCompressionType(CompressionType type) {
+  public void setCompressionType(Compression.Algorithm type) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
 

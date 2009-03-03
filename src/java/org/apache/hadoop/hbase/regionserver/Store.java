@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.SequenceFile;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -126,6 +128,14 @@ public class Store implements HConstants {
   private final Path compactionDir;
   private final Integer compactLock = new Integer(0);
   private final int compactionThreshold;
+  private final int blocksize;
+  private final boolean bloomfilter;
+  private final Compression.Algorithm compression;
+  
+  // Comparing HStoreKeys in byte arrays.
+  final HStoreKey.StoreKeyComparator rawcomparator;
+  // Comparing HStoreKey objects.
+  final Comparator<HStoreKey> comparator;
 
   /**
    * Constructor
@@ -141,6 +151,7 @@ public class Store implements HConstants {
    * failed.  Can be null.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   protected Store(Path basedir, HRegionInfo info, HColumnDescriptor family,
     FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
     final Progressable reporter)
@@ -151,12 +162,23 @@ public class Store implements HConstants {
     this.family = family;
     this.fs = fs;
     this.conf = conf;
+    this.bloomfilter = family.isBloomfilter();
+    this.blocksize = family.getBlocksize();
+    this.compression = family.getCompression();
+    this.rawcomparator = info.isRootRegion()?
+      new HStoreKey.RootStoreKeyComparator(): info.isMetaRegion()?
+        new HStoreKey.MetaStoreKeyComparator():
+          new HStoreKey.StoreKeyComparator();
+    this.comparator = info.isRootRegion()?
+      new HStoreKey.HStoreKeyRootComparator(): info.isMetaRegion()?
+        new HStoreKey.HStoreKeyMetaComparator():
+          new HStoreKey.HStoreKeyComparator();
     // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     this.ttl = family.getTimeToLive();
     if (ttl != HConstants.FOREVER) {
       this.ttl *= 1000;
     }
-    this.memcache = new Memcache(this.ttl);
+    this.memcache = new Memcache(this.ttl, this.comparator, this.rawcomparator);
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName = Bytes.toBytes(this.regioninfo.getEncodedName() + "/" +
       Bytes.toString(this.family.getName()));
@@ -254,7 +276,6 @@ public class Store implements HConstants {
    * lower than maxSeqID.  (Because we know such log messages are already 
    * reflected in the MapFiles.)
    */
-  @SuppressWarnings("unchecked")
   private void doReconstructionLog(final Path reconstructionLog,
     final long maxSeqID, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
@@ -273,7 +294,7 @@ public class Store implements HConstants {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     NavigableMap<HStoreKey, byte []> reconstructedCache =
-      new TreeMap<HStoreKey, byte []>(new HStoreKey.HStoreKeyWritableComparator());
+      new TreeMap<HStoreKey, byte []>(this.comparator);
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
@@ -463,7 +484,7 @@ public class Store implements HConstants {
     // if we fail.
     synchronized (flushLock) {
       // A. Write the map out to the disk
-      writer = StoreFile.getWriter(this.fs, this.homedir);
+      writer = getWriter();
       int entries = 0;
       try {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
@@ -493,7 +514,16 @@ public class Store implements HConstants {
     }
     return sf;
   }
-  
+
+  /**
+   * @return Writer for this store.
+   * @throws IOException
+   */
+  HFile.Writer getWriter() throws IOException {
+    return StoreFile.getWriter(this.fs, this.homedir, this.blocksize,
+        this.compression, this.rawcomparator, this.bloomfilter);
+  }
+
   /*
    * Change storefiles adding into place the Reader produced by this new flush.
    * @param logCacheFlushId
@@ -650,7 +680,7 @@ public class Store implements HConstants {
       }
  
       // Step through them, writing to the brand-new file
-      HFile.Writer writer = StoreFile.getWriter(this.fs, this.homedir);
+      HFile.Writer writer = getWriter();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
           (references? ", hasReferences=true,": " ") + " into " +
@@ -992,6 +1022,7 @@ public class Store implements HConstants {
       final int numVersions, Map<byte [], Cell> results)
   throws IOException {
     int versions = versionsToReturn(numVersions);
+    // This is map of columns to timestamp
     Map<byte [], Long> deletes =
       new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
     // if the key is null, we're not even looking for anything. return.
@@ -1061,7 +1092,9 @@ public class Store implements HConstants {
             }
           }
         }
-      } else if (HStoreKey.compareTwoRowKeys(key.getRow(), readkey.getRow()) < 0) {
+      } else if (this.rawcomparator.compareRows(key.getRow(), 0,
+            key.getRow().length,
+          readkey.getRow(), 0, readkey.getRow().length) < 0) {
         // if we've crossed into the next row, then we can just stop
         // iterating
         break;
@@ -1280,15 +1313,14 @@ public class Store implements HConstants {
    * @return Found row
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   byte [] getRowKeyAtOrBefore(final byte [] row)
   throws IOException{
     // Map of HStoreKeys that are candidates for holding the row key that
     // most closely matches what we're looking for. We'll have to update it as
     // deletes are found all over the place as we go along before finally
     // reading the best key out of it at the end.
-    NavigableMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>(
-      new HStoreKey.HStoreKeyWritableComparator());
+    NavigableMap<HStoreKey, Long> candidateKeys =
+      new TreeMap<HStoreKey, Long>(this.comparator);
     
     // Keep a list of deleted cell keys.  We need this because as we go through
     // the store files, the cell with the delete marker may be in one file and
@@ -1365,11 +1397,13 @@ public class Store implements HConstants {
     // up to the row before and return that.
     HStoreKey finalKey = HStoreKey.create(f.getReader().getLastKey());
     HStoreKey searchKey = null;
-    if (HStoreKey.compareTwoRowKeys(finalKey.getRow(), row) < 0) {
+    if (this.rawcomparator.compareRows(finalKey.getRow(), 0,
+          finalKey.getRow().length,
+        row, 0, row.length) < 0) {
       searchKey = finalKey;
     } else {
       searchKey = new HStoreKey(row);
-      if (searchKey.compareTo(startKey) < 0) {
+      if (this.comparator.compare(searchKey, startKey) < 0) {
         searchKey = startKey;
       }
     }
@@ -1435,8 +1469,9 @@ public class Store implements HConstants {
           if (deletedOrExpiredRow == null) {
             deletedOrExpiredRow = copy;
           }
-        } else if (HStoreKey.compareTwoRowKeys(readkey.getRow(),
-            searchKey.getRow()) > 0) {
+        } else if (this.rawcomparator.compareRows(readkey.getRow(), 0,
+              readkey.getRow().length,
+            searchKey.getRow(), 0, searchKey.getRow().length) > 0) {
           // if the row key we just read is beyond the key we're searching for,
           // then we're done.
           break;
@@ -1457,7 +1492,7 @@ public class Store implements HConstants {
           }
         }
       } while(scanner.next() && (knownNoGoodKey == null ||
-          readkey.compareTo(knownNoGoodKey) < 0));
+          this.comparator.compare(readkey, knownNoGoodKey) < 0));
 
       // If we get here and have no candidates but we did find a deleted or
       // expired candidate, we need to look at the key before that
@@ -1502,11 +1537,14 @@ public class Store implements HConstants {
     // of the row in case there are deletes for this candidate in this mapfile
     // BUT do not backup before the first key in the store file.
     // TODO: FIX THIS PROFLIGATE OBJECT MAKING!!!
-    byte [] searchKey =
-      new HStoreKey(candidateKeys.firstKey().getRow()).getBytes();
-    if (f.getReader().getComparator().compare(searchKey, 0, searchKey.length,
-        startKey.getRow(), 0, startKey.getRow().length) < 0) {
+    HStoreKey firstCandidateKey = candidateKeys.firstKey();
+    byte [] searchKey = null;
+    HStoreKey.StoreKeyComparator c =
+      (HStoreKey.StoreKeyComparator)f.getReader().getComparator();
+    if (c.compareRows(firstCandidateKey.getRow(), startKey.getRow()) < 0) {
       searchKey = startKey.getBytes();
+    } else {
+      searchKey = new HStoreKey(firstCandidateKey.getRow()).getBytes();
     }
 
     // Seek to the exact row, or the one that would be immediately before it
@@ -1523,7 +1561,7 @@ public class Store implements HConstants {
       // as a candidate key
       if (HStoreKey.equalsTwoRowKeys(k.getRow(), row)) {
         handleKey(k, v, now, deletes, candidateKeys);
-      } else if (HStoreKey.compareTwoRowKeys(k.getRow(), row) > 0 ) {
+      } else if (this.rawcomparator.compareRows(k.getRow(), row) > 0 ) {
         // if the row key we just read is beyond the key we're searching for,
         // then we're done.
         break;

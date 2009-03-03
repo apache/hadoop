@@ -303,7 +303,7 @@ public class HTable {
    * @return value for specified row/column
    * @throws IOException
    */
-  public Cell[] get(final String row, final String column, int numVersions)
+  public Cell [] get(final String row, final String column, int numVersions)
   throws IOException {
     return get(Bytes.toBytes(row), Bytes.toBytes(column), numVersions);
   }
@@ -337,7 +337,7 @@ public class HTable {
    * @return Array of Cells.
    * @throws IOException
    */
-  public Cell[] get(final byte [] row, final byte [] column,
+  public Cell [] get(final byte [] row, final byte [] column,
     final int numVersions) 
   throws IOException {
     return connection.getRegionServerWithRetries(
@@ -1276,11 +1276,12 @@ public class HTable {
           if (rl != null) {
             lockId = rl.getLockId();
           }
-          return server.exists(location.getRegionInfo().getRegionName(), row,
-            column, timestamp, lockId);
+          return Boolean.valueOf(server.
+            exists(location.getRegionInfo().getRegionName(), row,
+            column, timestamp, lockId));
         }
       }
-    );
+    ).booleanValue();
   }
 
   /**

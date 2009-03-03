@@ -141,19 +141,17 @@ implements ChangedReadersObserver {
     try {
       // Find the next viable row label (and timestamp).
       ViableRow viableRow = getNextViableRow();
-      
+
       // Grab all the values that match this row/timestamp
       boolean insertedItem = false;
       if (viableRow.getRow() != null) {
         key.setRow(viableRow.getRow());
         key.setVersion(viableRow.getTimestamp());
-
         for (int i = 0; i < keys.length; i++) {
           // Fetch the data
           while ((keys[i] != null) &&
-            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(),
-              viableRow.getRow()) == 0)) {
-
+            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+                viableRow.getRow()) == 0)) {
             // If we are doing a wild card match or there are multiple matchers
             // per column, we need to scan all the older versions of this row
             // to pick up the rest of the family members
@@ -162,8 +160,7 @@ implements ChangedReadersObserver {
                 && (keys[i].getTimestamp() != viableRow.getTimestamp())) {
               break;
             }
-
-            if(columnMatch(i)) {              
+            if(columnMatch(i)) {
               // We only want the first result for any specific family member
               if(!results.containsKey(keys[i].getColumn())) {
                 results.put(keys[i].getColumn(), 
@@ -179,10 +176,10 @@ implements ChangedReadersObserver {
           // Advance the current scanner beyond the chosen row, to
           // a valid timestamp, so we're ready next time.
           while ((keys[i] != null) &&
-              ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(),
-                viableRow.getRow()) <= 0)
-                  || (keys[i].getTimestamp() > this.timestamp)
-                  || (! columnMatch(i)))) {
+            ((this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+                viableRow.getRow()) <= 0) ||
+              (keys[i].getTimestamp() > this.timestamp) ||
+              (! columnMatch(i)))) {
             getNext(i);
           }
         }
@@ -192,7 +189,7 @@ implements ChangedReadersObserver {
       this.lock.readLock().unlock();
     }
   }
-  
+
   // Data stucture to hold next, viable row (and timestamp).
   class ViableRow {
     private final byte [] row;
@@ -239,8 +236,10 @@ implements ChangedReadersObserver {
           // column matches and the timestamp of the row is less than or equal
           // to this.timestamp, so we do not need to test that here
           && ((viableRow == null) ||
-            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), viableRow) < 0) ||
-            ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), viableRow) == 0) &&
+            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+              viableRow) < 0) ||
+            ((this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+                viableRow) == 0) &&
               (keys[i].getTimestamp() > viableTimestamp)))) {
         if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
           viableRow = keys[i].getRow();
@@ -270,8 +269,7 @@ implements ChangedReadersObserver {
         return true;
       }
     } else {
-      if (!Store.getClosest(this.scanners[i],
-          new HStoreKey(firstRow).getBytes())) {
+      if (!Store.getClosest(this.scanners[i], HStoreKey.getBytes(firstRow))) {
         closeSubScanner(i);
         return true;
       }

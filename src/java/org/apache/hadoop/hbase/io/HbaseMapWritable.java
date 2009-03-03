@@ -46,25 +46,9 @@ import org.apache.hadoop.util.ReflectionUtils;
  * @param <V> value Expects a Writable or byte [].
  */
 public class HbaseMapWritable <K,V>
-implements SortedMap<byte[],V>, Configurable, Writable,
-  CodeToClassAndBack{
-  
+implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
   private AtomicReference<Configuration> conf = null;
   protected SortedMap<byte [], V> instance = null;
-  
-  // Static maps of code to class and vice versa.  Includes types used in hbase
-  // only. These maps are now initialized in a static loader interface instead
-  // of in a static contructor for this class, this is done so that it is
-  // possible to have a regular contructor here, so that different params can
-  // be used.
-  
-  // Removed the old types like Text from the maps, if needed to add more types
-  // this can be done in the StaticHBaseMapWritableLoader interface. Only
-  // byte[] and Cell are supported now.
-  //   static final Map<Byte, Class<?>> CODE_TO_CLASS =
-  //     new HashMap<Byte, Class<?>>();
-  //   static final Map<Class<?>, Byte> CLASS_TO_CODE =
-  //     new HashMap<Class<?>, Byte>();
 
   /**
    * The default contructor where a TreeMap is used
@@ -73,11 +57,11 @@ implements SortedMap<byte[],V>, Configurable, Writable,
      this (new TreeMap<byte [], V>(Bytes.BYTES_COMPARATOR));
    }
 
-   /**
-  * Contructor where another SortedMap can be used
-  * 
-  * @param map the SortedMap to be used 
-  **/
+  /**
+   * Contructor where another SortedMap can be used
+   * 
+   * @param map the SortedMap to be used 
+   */
   public HbaseMapWritable(SortedMap<byte[], V> map){
     conf = new AtomicReference<Configuration>();
     instance = map;

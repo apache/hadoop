@@ -66,7 +66,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
     desc.addFamily(new HColumnDescriptor(SMALLFAM, 
         HColumnDescriptor.DEFAULT_VERSIONS, 
-        HColumnDescriptor.DEFAULT_COMPRESSION,  
+        HColumnDescriptor.DEFAULT_COMPRESSION,
         HColumnDescriptor.DEFAULT_IN_MEMORY, 
         HColumnDescriptor.DEFAULT_BLOCKCACHE, SMALL_LENGTH, 
         HColumnDescriptor.DEFAULT_TTL, HColumnDescriptor.DEFAULT_BLOOMFILTER));

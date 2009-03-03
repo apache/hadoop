@@ -70,7 +70,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Make up a directory hierarchy that has a regiondir and familyname.
     HFile.Writer writer = StoreFile.getWriter(this.fs,
       new Path(new Path(this.testDir, "regionname"), "familyname"),
-      2 * 1024, null, null);
+      2 * 1024, null, null, false);
     writeStoreFile(writer);
     checkHalfHFile(new StoreFile(this.fs, writer.getPath()));
   }
@@ -107,7 +107,8 @@ public class TestStoreFile extends HBaseTestCase {
     Path storedir = new Path(new Path(this.testDir, "regionname"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     // Make a store file and write data to it.
-    HFile.Writer writer = StoreFile.getWriter(this.fs, dir, 8 * 1024, null, null);
+    HFile.Writer writer = StoreFile.getWriter(this.fs, dir, 8 * 1024, null,
+      null, false);
     writeStoreFile(writer);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath());
     HFile.Reader reader = hsf.getReader();

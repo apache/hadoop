@@ -30,16 +30,21 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.filter.PageRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -52,8 +57,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -88,6 +91,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   private static final String RANDOM_READ = "randomRead";
+  private static final String RANDOM_SEEK_SCAN = "randomSeekScan";
   private static final String RANDOM_READ_MEM = "randomReadMem";
   private static final String RANDOM_WRITE = "randomWrite";
   private static final String SEQUENTIAL_READ = "sequentialRead";
@@ -96,6 +100,7 @@ public class PerformanceEvaluation implements HConstants {
   
   private static final List<String> COMMANDS =
     Arrays.asList(new String [] {RANDOM_READ,
+      RANDOM_SEEK_SCAN,
       RANDOM_READ_MEM,
       RANDOM_WRITE,
       SEQUENTIAL_READ,
@@ -406,7 +411,36 @@ public class PerformanceEvaluation implements HConstants {
      */
     abstract String getTestName();
   }
-  
+
+  class RandomSeekScanTest extends Test {
+    RandomSeekScanTest(final HBaseConfiguration conf, final int startRow,
+        final int perClientRunRows, final int totalRows, final Status status) {
+      super(conf, startRow, perClientRunRows, totalRows, status);
+    }
+    
+    void testRow(@SuppressWarnings("unused") final int i) throws IOException {
+      Scanner s = this.table.getScanner(new byte [][] {COLUMN_NAME},
+        getRandomRow(this.rand, this.totalRows),
+        new WhileMatchRowFilter(new PageRowFilter(120)));
+      int count = 0;
+      for (RowResult rr = null; (rr = s.next()) != null;) {
+        // LOG.info("" + count++ + " " + rr.toString());
+      }
+      s.close();
+    }
+ 
+    @Override
+    protected int getReportingPeriod() {
+      // 
+      return this.perClientRunRows / 100;
+    }
+
+    @Override
+    String getTestName() {
+      return "randomSeekScanTest";
+    }
+  }
+
   class RandomReadTest extends Test {
     RandomReadTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
@@ -581,6 +615,10 @@ public class PerformanceEvaluation implements HConstants {
       Test t = new SequentialWriteTest(this.conf, startRow, perClientRunRows,
         totalRows, status);
       totalElapsedTime = t.test();
+    } else if (cmd.equals(RANDOM_SEEK_SCAN)) {
+      Test t = new RandomSeekScanTest(this.conf, startRow, perClientRunRows,
+          totalRows, status);
+        totalElapsedTime = t.test();
     } else {
       new IllegalArgumentException("Invalid command value: " + cmd);
     }
@@ -671,6 +709,7 @@ public class PerformanceEvaluation implements HConstants {
     System.err.println(" randomRead      Run random read test");
     System.err.println(" randomReadMem   Run random read test where table " +
       "is in memory");
+    System.err.println(" randomSeekScan  Run random seek and scan 100 test");
     System.err.println(" randomWrite     Run random write test");
     System.err.println(" sequentialRead  Run sequential read test");
     System.err.println(" sequentialWrite Run sequential write test");

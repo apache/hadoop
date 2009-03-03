@@ -76,7 +76,7 @@ public class ScannerCallable extends ServerCallable<RowResult[]> {
       // open the scanner
       scannerId = openScanner();
     } else {
-      RowResult[] rrs = server.next(scannerId, caching);
+      RowResult [] rrs = server.next(scannerId, caching);
       return rrs.length == 0 ? null : rrs;
     }
     return null;

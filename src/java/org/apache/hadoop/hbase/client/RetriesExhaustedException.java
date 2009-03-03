@@ -47,9 +47,9 @@ public class RetriesExhaustedException extends IOException {
     StringBuilder buffer = new StringBuilder("Trying to contact region server ");
     buffer.append(serverName);
     buffer.append(" for region ");
-    buffer.append(Bytes.toString(regionName));
+    buffer.append(regionName == null? "": Bytes.toString(regionName));
     buffer.append(", row '");
-    buffer.append(Bytes.toString(row));
+    buffer.append(row == null? "": Bytes.toString(row));
     buffer.append("', but failed after ");
     buffer.append(numTries + 1);
     buffer.append(" attempts.\nExceptions:\n");

@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase;
 
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -44,10 +42,6 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Colon character in UTF-8
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
-  
-  private byte [] row = HConstants.EMPTY_BYTE_ARRAY;
-  private byte [] column = HConstants.EMPTY_BYTE_ARRAY;
-  private long timestamp = Long.MAX_VALUE;
 
   /**
    * Estimated size tax paid for each instance of HSK.  Estimate based on
@@ -56,9 +50,17 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   // In jprofiler, says shallow size is 48 bytes.  Add to it cost of two
   // byte arrays and then something for the HRI hosting.
   public static final int ESTIMATED_HEAP_TAX = 48;
-  
-  public static final StoreKeyByteComparator BYTECOMPARATOR =
-    new StoreKeyByteComparator();
+
+  private byte [] row = HConstants.EMPTY_BYTE_ARRAY;
+  private byte [] column = HConstants.EMPTY_BYTE_ARRAY;
+  private long timestamp = Long.MAX_VALUE;
+
+  private static final HStoreKey.StoreKeyComparator PLAIN_COMPARATOR =
+    new HStoreKey.StoreKeyComparator();
+  private static final HStoreKey.StoreKeyComparator META_COMPARATOR =
+    new HStoreKey.MetaStoreKeyComparator();
+  private static final HStoreKey.StoreKeyComparator ROOT_COMPARATOR =
+    new HStoreKey.RootStoreKeyComparator();
 
   /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
@@ -93,7 +95,6 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * 
    * @param row row key
    * @param timestamp timestamp value
-   * @param hri HRegionInfo
    */
   public HStoreKey(final byte [] row, final long timestamp) {
     this(row, HConstants.EMPTY_BYTE_ARRAY, timestamp);
@@ -130,7 +131,6 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
-   * @param regionInfo region info
    */
   public HStoreKey(final String row, final String column, final long timestamp) {
     this (Bytes.toBytes(row), Bytes.toBytes(column), timestamp);
@@ -143,7 +143,6 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
-   * @param regionInfo region info
    */
   public HStoreKey(final byte [] row, final byte [] column, final long timestamp) {
     // Make copies
@@ -256,7 +255,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public boolean matchesRowFamily(final HStoreKey that) {
     final int delimiterIndex = getFamilyDelimiterIndex(getColumn());
     return equalsTwoRowKeys(getRow(), that.getRow()) &&
-      Bytes.compareTo(getColumn(), 0, delimiterIndex, that.getColumn(), 0,
+    Bytes.compareTo(getColumn(), 0, delimiterIndex, that.getColumn(), 0,
         delimiterIndex) == 0;
   }
   
@@ -277,34 +276,44 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     return compareTo(other) == 0;
   }
-  
-  @Override
+
   public int hashCode() {
-    int result = Bytes.hashCode(getRow());
-    result ^= Bytes.hashCode(getColumn());
-    result ^= getTimestamp();
-    return result;
+    int c = Bytes.hashCode(getRow());
+    c ^= Bytes.hashCode(getColumn());
+    c ^= getTimestamp();
+    return c;
   }
 
   // Comparable
 
+  /**
+   * @deprecated Use Comparators instead.  This can give wrong results.
+   */
   public int compareTo(final HStoreKey o) {
     return compareTo(this, o);
   }
+
+  /**
+   * @param left
+   * @param right
+   * @return
+   * @deprecated Use Comparators instead.  This can give wrong results because
+   * does not take into account special handling needed for meta and root rows.
+   */
   static int compareTo(final HStoreKey left, final HStoreKey right) {
     // We can be passed null
     if (left == null && right == null) return 0;
     if (left == null) return -1;
     if (right == null) return 1;
     
-    int result = compareTwoRowKeys(left.getRow(), right.getRow());
+    int result = Bytes.compareTo(left.getRow(), right.getRow());
     if (result != 0) {
       return result;
     }
     result = left.getColumn() == null && right.getColumn() == null? 0:
       left.getColumn() == null && right.getColumn() != null? -1:
         left.getColumn() != null && right.getColumn() == null? 1:
-      Bytes.compareTo(left.getColumn(), right.getColumn());
+          Bytes.compareTo(left.getColumn(), right.getColumn());
     if (result != 0) {
       return result;
     }
@@ -365,7 +374,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     }
     return Bytes.compareTo(family, 0, index, column, 0, index) == 0;
   }
-  
+
   /**
    * @param family
    * @return Return <code>family</code> plus the family delimiter.
@@ -413,19 +422,39 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       len);
     return result;
   }
-  
+
   /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed
    * buffer.
    */
   public static int getFamilyDelimiterIndex(final byte [] b) {
+    return getDelimiter(b, 0, b.length, (int)COLUMN_FAMILY_DELIMITER);
+  }
+
+  private static int getRequiredDelimiterInReverse(final byte [] b,
+      final int offset, final int length, final int delimiter) {
+    int index = getDelimiterInReverse(b, offset, length, delimiter);
+    if (index < 0) {
+      throw new IllegalArgumentException("No " + delimiter + " in <" +
+        Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
+    }
+    return index;
+  }
+  /*
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter having started from end of <code>b</code> moving
+   * leftward.
+   */
+  private static int getDelimiter(final byte [] b, int offset, final int length,
+      final int delimiter) {
     if (b == null) {
       throw new NullPointerException();
     }
     int result = -1;
-    for (int i = 0; i < b.length; i++) {
-      if (b[i] == COLUMN_FAMILY_DELIMITER) {
+    for (int i = offset; i < length + offset; i++) {
+      if (b[i] == delimiter) {
         result = i;
         break;
       }
@@ -433,19 +462,26 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     return result;
   }
 
-  /**
-   * Utility method to compare two row keys.
-   * This is required because of the meta delimiters.
-   * This is a hack.
-   * @param regionInfo
-   * @param rowA
-   * @param rowB
-   * @return value of the comparison
+  /*
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter
    */
-  public static int compareTwoRowKeys(final byte[] rowA, final byte[] rowB) {
-    return Bytes.compareTo(rowA, rowB);
+  private static int getDelimiterInReverse(final byte [] b, final int offset,
+      final int length, final int delimiter) {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+    int result = -1;
+    for (int i = (offset + length) - 1; i >= offset; i--) {
+      if (b[i] == delimiter) {
+        result = i;
+        break;
+      }
+    }
+    return result;
   }
-  
+
   /**
    * Utility method to check if two row keys are equal.
    * This is required because of the meta delimiters
@@ -457,7 +493,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public static boolean equalsTwoRowKeys(final byte[] rowA, final byte[] rowB) {
     return ((rowA == null) && (rowB == null)) ? true:
       (rowA == null) || (rowB == null) || (rowA.length != rowB.length) ? false:
-        compareTwoRowKeys(rowA,rowB) == 0;
+        Bytes.compareTo(rowA, rowB) == 0;
   }
 
   // Writable
@@ -518,153 +554,38 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @throws IOException
    */
   public static byte [] getBytes(final HStoreKey hsk) throws IOException {
-    // TODO: Redo with system.arraycopy instead of DOS.
-    if (hsk == null) {
-      throw new IllegalArgumentException("Writable cannot be null");
-    }
-    final int serializedSize = getSerializedSize(hsk);
-    final ByteArrayOutputStream byteStream = new ByteArrayOutputStream(serializedSize);
-    DataOutputStream out = new DataOutputStream(byteStream);
-    try {
-      hsk.write(out);
-      out.close();
-      out = null;
-      final byte [] serializedKey = byteStream.toByteArray();
-      if (serializedKey.length != serializedSize) {
-        // REMOVE THIS AFTER CONFIDENCE THAT OUR SIZING IS BEING DONE PROPERLY
-        throw new AssertionError("Sizes do not agree " + serializedKey.length +
-          ", " + serializedSize);
-      }
-      return serializedKey;
-    } finally {
-      if (out != null) {
-        out.close();
-      }
-    }
-  }
-  
-  /**
-   * Pass this class into {@link org.apache.hadoop.io.MapFile}.getClosest when
-   * searching for the key that comes BEFORE this one but NOT this one.  This
-   * class will return > 0 when asked to compare against itself rather than 0.
-   * This is a hack for case where getClosest returns a deleted key and we want
-   * to get the previous.  Can't unless use use this class; it'll just keep
-   * returning us the deleted key (getClosest gets exact or nearest before when
-   * you pass true argument).  TODO: Throw this class away when MapFile has
-   * a real 'previous' method.  See HBASE-751.
-   * @deprecated
-   */
-  public static class BeforeThisStoreKey extends HStoreKey {
-    private final HStoreKey beforeThisKey;
-
-    /**
-     * @param beforeThisKey 
-     */
-    public BeforeThisStoreKey(final HStoreKey beforeThisKey) {
-      super();
-      this.beforeThisKey = beforeThisKey;
-    }
-    
-    @Override
-    public int compareTo(final HStoreKey o) {
-      final int result = this.beforeThisKey.compareTo(o);
-      return result == 0? -1: result;
-    }
-    
-    @Override
-    public boolean equals(final Object obj) {
-      return false;
-    }
-
-    @Override
-    public byte[] getColumn() {
-      return this.beforeThisKey.getColumn();
-    }
-
-    @Override
-    public byte[] getRow() {
-      return this.beforeThisKey.getRow();
-    }
-
-    @Override
-    public long heapSize() {
-      return this.beforeThisKey.heapSize();
-    }
-
-    @Override
-    public long getTimestamp() {
-      return this.beforeThisKey.getTimestamp();
-    }
-
-    @Override
-    public int hashCode() {
-      return this.beforeThisKey.hashCode();
-    }
-
-    @Override
-    public boolean matchesRowCol(final HStoreKey other) {
-      return this.beforeThisKey.matchesRowCol(other);
-    }
-
-    @Override
-    public boolean matchesRowFamily(final HStoreKey that) {
-      return this.beforeThisKey.matchesRowFamily(that);
-    }
-
-    @Override
-    public boolean matchesWithoutColumn(final HStoreKey other) {
-      return this.beforeThisKey.matchesWithoutColumn(other);
-    }
-
-    @Override
-    public void readFields(final DataInput in) throws IOException {
-      this.beforeThisKey.readFields(in);
-    }
-
-    @Override
-    public void set(final HStoreKey k) {
-      this.beforeThisKey.set(k);
-    }
-
-    @Override
-    public void setColumn(final byte[] c) {
-      this.beforeThisKey.setColumn(c);
-    }
-
-    @Override
-    public void setRow(final byte[] newrow) {
-      this.beforeThisKey.setRow(newrow);
-    }
-
-    @Override
-    public void setVersion(final long timestamp) {
-      this.beforeThisKey.setVersion(timestamp);
-    }
-
-    @Override
-    public String toString() {
-      return this.beforeThisKey.toString();
-    }
-
-    @Override
-    public void write(final DataOutput out) throws IOException {
-      this.beforeThisKey.write(out);
-    }
+    return getBytes(hsk.getRow(), hsk.getColumn(), hsk.getTimestamp());
   }
 
   /**
-   * Passed as comparator for memcache and for store files.  See HBASE-868.
+   * @param row Can't be null
+   * @return Passed arguments as a serialized HSK.
+   * @throws IOException
    */
-  public static class HStoreKeyWritableComparator extends WritableComparator {
-    public HStoreKeyWritableComparator() {
-      super(HStoreKey.class);
-    }
-    
-    @SuppressWarnings("unchecked")
-    public int compare(final WritableComparable left,
-        final WritableComparable right) {
-      return compareTo((HStoreKey)left, (HStoreKey)right);
-    }
+  public static byte [] getBytes(final byte [] row)
+  throws IOException {
+    return getBytes(row, null, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * @param row Can't be null
+   * @param column Can be null
+   * @param ts
+   * @return Passed arguments as a serialized HSK.
+   * @throws IOException
+   */
+  public static byte [] getBytes(final byte [] row, final byte [] column,
+    final long ts)
+  throws IOException {
+    // TODO: Get vint sizes as I calculate serialized size of hsk.
+    byte [] b = new byte [getSerializedSize(row) +
+      getSerializedSize(column) + Bytes.SIZEOF_LONG];
+    int offset = Bytes.writeByteArray(b, 0, row, 0, row.length);
+    byte [] c = column == null? HConstants.EMPTY_BYTE_ARRAY: column;
+    offset = Bytes.writeByteArray(b, offset, c, 0, c.length);
+    byte [] timestamp = Bytes.toBytes(ts);
+    System.arraycopy(timestamp, 0, b, offset, timestamp.length);
+    return b;
   }
 
   /**
@@ -688,17 +609,11 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @return Column
    */
   public static byte [] getColumn(final ByteBuffer bb) {
-    byte firstByte = bb.get(0);
+    // Skip over row.
+    int offset = skipVintdByteArray(bb, 0);
+    byte firstByte = bb.get(offset);
     int vint = firstByte;
     int vintWidth = WritableUtils.decodeVIntSize(firstByte);
-    if (vintWidth != 1) {
-      vint = getBigVint(vintWidth, firstByte, bb.array(), bb.arrayOffset());
-    }
-    // Skip over row.
-    int offset = vint + vintWidth;
-    firstByte = bb.get(offset);
-    vint = firstByte;
-    vintWidth = WritableUtils.decodeVIntSize(firstByte);
     if (vintWidth != 1) {
       vint = getBigVint(vintWidth, firstByte, bb.array(),
         bb.arrayOffset() + offset);
@@ -714,117 +629,24 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @return Timestamp
    */
   public static long getTimestamp(final ByteBuffer bb) {
-    byte firstByte = bb.get(0);
+    return bb.getLong(bb.limit() - Bytes.SIZEOF_LONG);
+  }
+
+  /*
+   * @param bb
+   * @param offset
+   * @return Amount to skip to get paste a byte array that is preceded by a
+   * vint of how long it is.
+   */
+  private static int skipVintdByteArray(final ByteBuffer bb, final int offset) {
+    byte firstByte = bb.get(offset);
     int vint = firstByte;
     int vintWidth = WritableUtils.decodeVIntSize(firstByte);
-    if (vintWidth != 1) {
-      vint = getBigVint(vintWidth, firstByte, bb.array(), bb.arrayOffset());
-    }
-    // Skip over row.
-    int offset = vint + vintWidth;
-    firstByte = bb.get(offset);
-    vint = firstByte;
-    vintWidth = WritableUtils.decodeVIntSize(firstByte);
     if (vintWidth != 1) {
       vint = getBigVint(vintWidth, firstByte, bb.array(),
         bb.arrayOffset() + offset);
     }
-    // Skip over column
-    offset += (vint + vintWidth);
-    return bb.getLong(offset);
-  }
-
-  /**
-   * RawComparator for plain -- i.e. non-catalog table keys such as 
-   * -ROOT- and .META. -- HStoreKeys.  Compares at byte level.
-   */
-  public static class StoreKeyByteComparator implements RawComparator<byte []> {
-    public StoreKeyByteComparator() {
-      super();
-    }
-
-    public int compare(final byte[] b1, final byte[] b2) {
-      return compare(b1, 0, b1.length, b2, 0, b2.length);
-    }
-
-    public int compare(final byte [] b1, int o1, int l1,
-        final byte [] b2, int o2, int l2) {
-      // Below is byte compare without creating new objects.  Its awkward but
-      // seems no way around getting vint width, value, and compare result any
-      // other way. The passed byte arrays, b1 and b2, have a vint, row, vint,
-      // column, timestamp in them.  The byte array was written by the
-      // #write(DataOutputStream) method above. See it to better understand the
-      // below.
-
-      // Calculate vint and vint width for rows in b1 and b2.
-      byte firstByte1 = b1[o1];
-      int vint1 = firstByte1;
-      int vintWidth1 = WritableUtils.decodeVIntSize(firstByte1);
-      if (vintWidth1 != 1) {
-        vint1 = getBigVint(vintWidth1, firstByte1, b1, o1);
-      }
-      byte firstByte2 = b2[o2];
-      int vint2 = firstByte2;
-      int vintWidth2 = WritableUtils.decodeVIntSize(firstByte2);
-      if (vintWidth2 != 1) {
-        vint2 = getBigVint(vintWidth2, firstByte2, b2, o2);
-      }
-      // Compare the rows.
-      int result = WritableComparator.compareBytes(b1, o1 + vintWidth1, vint1,
-          b2, o2 + vintWidth2, vint2);
-      if (result != 0) {
-        return result;
-      }
-
-      // Update offsets and lengths so we are aligned on columns.
-      int diff1 = vintWidth1 + vint1;
-      o1 += diff1;
-      l1 -= diff1;
-      int diff2 = vintWidth2 + vint2;
-      o2 += diff2;
-      l2 -= diff2;
-      // Calculate vint and vint width for columns in b1 and b2.
-      firstByte1 = b1[o1];
-      vint1 = firstByte1;
-      vintWidth1 = WritableUtils.decodeVIntSize(firstByte1);
-      if (vintWidth1 != 1) {
-        vint1 = getBigVint(vintWidth1, firstByte1, b1, o1);
-      }
-      firstByte2 = b2[o2];
-      vint2 = firstByte2;
-      vintWidth2 = WritableUtils.decodeVIntSize(firstByte2);
-      if (vintWidth2 != 1) {
-        vint2 = getBigVint(vintWidth2, firstByte2, b2, o2);
-      }
-      // Compare columns.
-      result = WritableComparator.compareBytes(b1, o1 + vintWidth1, vint1,
-          b2, o2 + vintWidth2, vint2);
-      if (result != 0) {
-        return result;
-      }
-
-      // Update offsets and lengths.
-      diff1 = vintWidth1 + vint1;
-      o1 += diff1;
-      l1 -= diff1;
-      diff2 = vintWidth2 + vint2;
-      o2 += diff2;
-      l2 -= diff2;
-      // The below older timestamps sorting ahead of newer timestamps looks
-      // wrong but it is intentional. This way, newer timestamps are first
-      // found when we iterate over a memcache and newer versions are the
-      // first we trip over when reading from a store file.
-      for (int i = 0; i < l1; i++) {
-        int leftb = b1[o1 + i] & 0xff;
-        int rightb = b2[o2 + i] & 0xff;
-        if (leftb < rightb) {
-          return 1;
-        } else if (leftb > rightb) {
-          return -1;
-        }
-      }
-      return 0;
-    }
+    return vint + vintWidth + offset;
   }
 
   /*
@@ -858,31 +680,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    */
   public static HStoreKey create(final ByteBuffer bb)
   throws IOException {
-    byte firstByte = bb.get(0);
-    int vint = firstByte;
-    int vintWidth = WritableUtils.decodeVIntSize(firstByte);
-    if (vintWidth != 1) {
-      vint = getBigVint(vintWidth, firstByte, bb.array(), bb.arrayOffset());
-    }
-    byte [] row = new byte [vint];
-    System.arraycopy(bb.array(), bb.arrayOffset() + vintWidth,
-      row, 0, row.length);
-    // Skip over row.
-    int offset = vint + vintWidth;
-    firstByte = bb.get(offset);
-    vint = firstByte;
-    vintWidth = WritableUtils.decodeVIntSize(firstByte);
-    if (vintWidth != 1) {
-      vint = getBigVint(vintWidth, firstByte, bb.array(),
-        bb.arrayOffset() + offset);
-    }
-    byte [] column = new byte [vint];
-    System.arraycopy(bb.array(), bb.arrayOffset() + offset + vintWidth,
-      column, 0, column.length);
-    // Skip over column
-    offset += (vint + vintWidth);
-    long ts = bb.getLong(offset);
-    return new HStoreKey(row, column, ts);
+    return HStoreKey.create(bb.array(), bb.arrayOffset(), bb.limit());
   }
 
   /**
@@ -907,6 +705,382 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   public static HStoreKey create(final byte [] b, final int offset,
     final int length)
   throws IOException {
-    return (HStoreKey)Writables.getWritable(b, offset, length, new HStoreKey());
+    byte firstByte = b[offset];
+    int vint = firstByte;
+    int vintWidth = WritableUtils.decodeVIntSize(firstByte);
+    if (vintWidth != 1) {
+      vint = getBigVint(vintWidth, firstByte, b, offset);
+    }
+    byte [] row = new byte [vint];
+    System.arraycopy(b, offset + vintWidth,
+      row, 0, row.length);
+    // Skip over row.
+    int extraOffset = vint + vintWidth;
+    firstByte = b[offset + extraOffset];
+    vint = firstByte;
+    vintWidth = WritableUtils.decodeVIntSize(firstByte);
+    if (vintWidth != 1) {
+      vint = getBigVint(vintWidth, firstByte, b, offset + extraOffset);
+    }
+    byte [] column = new byte [vint];
+    System.arraycopy(b, offset + extraOffset + vintWidth,
+      column, 0, column.length);
+    // Skip over column
+    extraOffset += (vint + vintWidth);
+    return new HStoreKey(row, column, Bytes.toLong(b, offset + extraOffset));
+  }
+
+  /**
+   * Passed as comparator for memcache and for store files.  See HBASE-868.
+   * Use this comparing keys in the -ROOT_ table.
+   */
+  public static class HStoreKeyRootComparator extends HStoreKeyMetaComparator {
+    protected int compareRows(byte [] left, int loffset, int llength,
+        byte [] right, int roffset, int rlength) {
+      return compareRootRows(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /**
+   * Passed as comparator for memcache and for store files.  See HBASE-868.
+   * Use this comprator for keys in the .META. table.
+   */
+  public static class HStoreKeyMetaComparator extends HStoreKeyComparator {
+    protected int compareRows(byte [] left, int loffset, int llength,
+        byte [] right, int roffset, int rlength) {
+      return compareMetaRows(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /**
+   * Passed as comparator for memcache and for store files.  See HBASE-868.
+   */
+  public static class HStoreKeyComparator extends WritableComparator {
+    public HStoreKeyComparator() {
+      super(HStoreKey.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public int compare(final WritableComparable l,
+        final WritableComparable r) {
+      HStoreKey left = (HStoreKey)l;
+      HStoreKey right = (HStoreKey)r;
+      // We can be passed null
+      if (left == null && right == null) return 0;
+      if (left == null) return -1;
+      if (right == null) return 1;
+      
+      byte [] lrow = left.getRow();
+      byte [] rrow = right.getRow();
+      int result = compareRows(lrow, 0, lrow.length, rrow, 0, rrow.length);
+      if (result != 0) {
+        return result;
+      }
+      result = left.getColumn() == null && right.getColumn() == null? 0:
+        left.getColumn() == null && right.getColumn() != null? -1:
+          left.getColumn() != null && right.getColumn() == null? 1:
+            Bytes.compareTo(left.getColumn(), right.getColumn());
+      if (result != 0) {
+        return result;
+      }
+      // The below older timestamps sorting ahead of newer timestamps looks
+      // wrong but it is intentional. This way, newer timestamps are first
+      // found when we iterate over a memcache and newer versions are the
+      // first we trip over when reading from a store file.
+      if (left.getTimestamp() < right.getTimestamp()) {
+        result = 1;
+      } else if (left.getTimestamp() > right.getTimestamp()) {
+        result = -1;
+      }
+      return result;
+    }
+
+    protected int compareRows(final byte [] left, final int loffset,
+        final int llength, final byte [] right, final int roffset,
+        final int rlength) {
+      return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /**
+   * StoreKeyComparator for the -ROOT- table.
+   */
+  public static class RootStoreKeyComparator
+  extends MetaStoreKeyComparator {
+    public int compareRows(byte [] left, int loffset, int llength,
+        byte [] right, int roffset, int rlength) {
+      return compareRootRows(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /**
+   * StoreKeyComparator for the .META. table.
+   */
+  public static class MetaStoreKeyComparator extends StoreKeyComparator {
+    public int compareRows(byte [] left, int loffset, int llength,
+        byte [] right, int roffset, int rlength) {
+      return compareMetaRows(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /*
+   * @param left
+   * @param loffset
+   * @param llength
+   * @param right
+   * @param roffset
+   * @param rlength
+   * @return Result of comparing two rows from the -ROOT- table both of which
+   * are of the form .META.,(TABLE,REGIONNAME,REGIONID),REGIONID.
+   */
+  protected static int compareRootRows(byte [] left, int loffset, int llength,
+      byte [] right, int roffset, int rlength) {
+    // Rows look like this: .META.,ROW_FROM_META,RID
+    // System.out.println("ROOT " + Bytes.toString(left, loffset, llength) +
+    //  "---" + Bytes.toString(right, roffset, rlength));
+    int lmetaOffsetPlusDelimiter = loffset + 7; // '.META.,'
+    int leftFarDelimiter = getDelimiterInReverse(left, lmetaOffsetPlusDelimiter,
+      llength - lmetaOffsetPlusDelimiter, HRegionInfo.DELIMITER);
+    int rmetaOffsetPlusDelimiter = roffset + 7; // '.META.,'
+    int rightFarDelimiter = getDelimiterInReverse(right,
+      rmetaOffsetPlusDelimiter, rlength - rmetaOffsetPlusDelimiter,
+      HRegionInfo.DELIMITER);
+    if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
+      // Nothing between .META. and regionid.  Its first key.
+      return -1;
+    } else if (rightFarDelimiter < 0 && leftFarDelimiter >= 0) {
+       return 1;
+    } else if (leftFarDelimiter < 0 && rightFarDelimiter < 0) {
+      return 0;
+    }
+    int result = compareMetaRows(left, lmetaOffsetPlusDelimiter,
+      leftFarDelimiter - lmetaOffsetPlusDelimiter,
+      right, rmetaOffsetPlusDelimiter,
+      rightFarDelimiter - rmetaOffsetPlusDelimiter);
+    if (result != 0) {
+      return result;
+    }
+    // Compare last part of row, the rowid.
+    leftFarDelimiter++;
+    rightFarDelimiter++;
+    result = compareRowid(left, leftFarDelimiter, llength - leftFarDelimiter,
+      right, rightFarDelimiter, rlength - rightFarDelimiter);
+    return result;
+  }
+
+  /*
+   * @param left
+   * @param loffset
+   * @param llength
+   * @param right
+   * @param roffset
+   * @param rlength
+   * @return Result of comparing two rows from the .META. table both of which
+   * are of the form TABLE,REGIONNAME,REGIONID.
+   */
+  protected static int compareMetaRows(final byte[] left, final int loffset,
+      final int llength, final byte[] right, final int roffset,
+      final int rlength) {
+//    System.out.println("META " + Bytes.toString(left, loffset, llength) +
+//      "---" + Bytes.toString(right, roffset, rlength));
+    int leftDelimiter = getDelimiter(left, loffset, llength,
+      HRegionInfo.DELIMITER);
+    int rightDelimiter = getDelimiter(right, roffset, rlength,
+      HRegionInfo.DELIMITER);
+    if (leftDelimiter < 0 && rightDelimiter >= 0) {
+      // Nothing between .META. and regionid.  Its first key.
+      return -1;
+    } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
+      return 1;
+    } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+      return 0;
+    }
+    // Compare up to the delimiter
+    int result = Bytes.compareTo(left, loffset, leftDelimiter - loffset,
+      right, roffset, rightDelimiter - roffset);
+    if (result != 0) {
+      return result;
+    }
+    // Compare middle bit of the row.
+    // Move past delimiter
+    leftDelimiter++;
+    rightDelimiter++;
+    int leftFarDelimiter = getRequiredDelimiterInReverse(left, leftDelimiter,
+        llength - (leftDelimiter - loffset), HRegionInfo.DELIMITER);
+    int rightFarDelimiter = getRequiredDelimiterInReverse(right,
+        rightDelimiter, rlength - (rightDelimiter - roffset),
+        HRegionInfo.DELIMITER);
+    // Now compare middlesection of row.
+    result = Bytes.compareTo(left, leftDelimiter,
+      leftFarDelimiter - leftDelimiter, right, rightDelimiter,
+      rightFarDelimiter - rightDelimiter);
+    if (result != 0) {
+      return result;
+    }
+    // Compare last part of row, the rowid.
+    leftFarDelimiter++;
+    rightFarDelimiter++;
+    result = compareRowid(left, leftFarDelimiter,
+      llength - (leftFarDelimiter - loffset),
+      right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+    return result;
+  }
+
+  private static int compareRowid(byte[] left, int loffset, int llength,
+      byte[] right, int roffset, int rlength) {
+    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+  }
+
+  /**
+   * RawComparator for plain -- i.e. non-catalog table keys such as 
+   * -ROOT- and .META. -- HStoreKeys.  Compares at byte level.  Knows how to
+   * handle the vints that introduce row and columns in the HSK byte array
+   * representation. Adds
+   * {@link #compareRows(byte[], int, int, byte[], int, int)} to
+   * {@link RawComparator}
+   */
+  public static class StoreKeyComparator implements RawComparator<byte []> {
+    public StoreKeyComparator() {
+      super();
+    }
+
+    public int compare(final byte[] b1, final byte[] b2) {
+      return compare(b1, 0, b1.length, b2, 0, b2.length);
+    }
+
+    public int compare(final byte [] b1, int o1, int l1,
+        final byte [] b2, int o2, int l2) {
+      // Below is byte compare without creating new objects.  Its awkward but
+      // seems no way around getting vint width, value, and compare result any
+      // other way. The passed byte arrays, b1 and b2, have a vint, row, vint,
+      // column, timestamp in them.  The byte array was written by the
+      // #write(DataOutputStream) method above. See it to better understand the
+      // below.
+
+      // Calculate vint and vint width for rows in b1 and b2.
+      byte firstByte1 = b1[o1];
+      int vint1 = firstByte1;
+      int vintWidth1 = WritableUtils.decodeVIntSize(firstByte1);
+      if (vintWidth1 != 1) {
+        vint1 = getBigVint(vintWidth1, firstByte1, b1, o1);
+      }
+      byte firstByte2 = b2[o2];
+      int vint2 = firstByte2;
+      int vintWidth2 = WritableUtils.decodeVIntSize(firstByte2);
+      if (vintWidth2 != 1) {
+        vint2 = getBigVint(vintWidth2, firstByte2, b2, o2);
+      }
+      // Compare the rows.
+      int result = compareRows(b1, o1 + vintWidth1, vint1,
+          b2, o2 + vintWidth2, vint2);
+      if (result != 0) {
+        return result;
+      }
+
+      // Update offsets and lengths so we are aligned on columns.
+      int diff1 = vintWidth1 + vint1;
+      o1 += diff1;
+      l1 -= diff1;
+      int diff2 = vintWidth2 + vint2;
+      o2 += diff2;
+      l2 -= diff2;
+      // Calculate vint and vint width for columns in b1 and b2.
+      firstByte1 = b1[o1];
+      vint1 = firstByte1;
+      vintWidth1 = WritableUtils.decodeVIntSize(firstByte1);
+      if (vintWidth1 != 1) {
+        vint1 = getBigVint(vintWidth1, firstByte1, b1, o1);
+      }
+      firstByte2 = b2[o2];
+      vint2 = firstByte2;
+      vintWidth2 = WritableUtils.decodeVIntSize(firstByte2);
+      if (vintWidth2 != 1) {
+        vint2 = getBigVint(vintWidth2, firstByte2, b2, o2);
+      }
+      // Compare columns.
+      // System.out.println("COL <" + Bytes.toString(b1, o1 + vintWidth1, vint1) +
+      //  "> <" + Bytes.toString(b2, o2 + vintWidth2, vint2) + ">");
+      result = Bytes.compareTo(b1, o1 + vintWidth1, vint1,
+        b2, o2 + vintWidth2, vint2);
+      if (result != 0) {
+        return result;
+      }
+
+      // Update offsets and lengths.
+      diff1 = vintWidth1 + vint1;
+      o1 += diff1;
+      l1 -= diff1;
+      diff2 = vintWidth2 + vint2;
+      o2 += diff2;
+      l2 -= diff2;
+      // The below older timestamps sorting ahead of newer timestamps looks
+      // wrong but it is intentional. This way, newer timestamps are first
+      // found when we iterate over a memcache and newer versions are the
+      // first we trip over when reading from a store file.
+      for (int i = 0; i < l1; i++) {
+        int leftb = b1[o1 + i] & 0xff;
+        int rightb = b2[o2 + i] & 0xff;
+        if (leftb < rightb) {
+          return 1;
+        } else if (leftb > rightb) {
+          return -1;
+        }
+      }
+      return 0;
+    }
+
+    /**
+     * @param left
+     * @param right
+     * @return Result comparing rows.
+     */
+    public int compareRows(final byte [] left, final byte [] right) {
+      return compareRows(left, 0, left.length, right, 0, right.length);
+    }
+
+    /**
+     * @param left
+     * @param loffset
+     * @param llength
+     * @param right
+     * @param roffset
+     * @param rlength
+     * @return Result comparing rows.
+     */
+    public int compareRows(final byte [] left, final int loffset,
+        final int llength, final byte [] right, final int roffset, final int rlength) {
+      return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+    }
+  }
+
+  /**
+   * @param hri
+   * @return Compatible comparator
+   */
+  public static WritableComparator getWritableComparator(final HRegionInfo hri) {
+    return hri.isRootRegion()?
+        new HStoreKey.HStoreKeyRootComparator(): hri.isMetaRegion()?
+          new HStoreKey.HStoreKeyMetaComparator():
+            new HStoreKey.HStoreKeyComparator();
+  }
+
+  /**
+   * @param hri
+   * @return Compatible raw comparator
+   */
+  public static StoreKeyComparator getRawComparator(final HRegionInfo hri) {
+    return hri.isRootRegion()? ROOT_COMPARATOR:
+      hri.isMetaRegion()? META_COMPARATOR: META_COMPARATOR;
+  }
+
+  /**
+   * @param tablename
+   * @return Compatible raw comparator
+   */
+  public static HStoreKey.StoreKeyComparator getComparator(final byte [] tablename) {
+    return Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(), tablename)?
+      ROOT_COMPARATOR:
+      (Bytes.equals(HTableDescriptor.META_TABLEDESC.getName(),tablename))?
+      META_COMPARATOR: PLAIN_COMPARATOR;
   }
 }

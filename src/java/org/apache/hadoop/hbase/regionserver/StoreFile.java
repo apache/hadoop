@@ -35,9 +35,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.HalfHFileReader;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -210,7 +211,7 @@ public class StoreFile implements HConstants {
       this.reader = new HalfHFileReader(this.fs, this.referencePath, null,
         this.reference);
     } else {
-      this.reader = new HFile.Reader(this.fs, this.path, null);
+      this.reader = new StoreFileReader(this.fs, this.path, null);
     }
     // Load up indices and fileinfo.
     Map<byte [], byte []> map = this.reader.loadFileInfo();
@@ -240,6 +241,71 @@ public class StoreFile implements HConstants {
       }
     }
     return this.reader;
+  }
+  
+  /**
+   * Override to add some customization on HFile.Reader
+   */
+  static class StoreFileReader extends HFile.Reader {
+    public StoreFileReader(FileSystem fs, Path path, BlockCache cache)
+        throws IOException {
+      super(fs, path, cache);
+    }
+
+    protected String toStringFirstKey() {
+      String result = "";
+      try {
+        result = HStoreKey.create(getFirstKey()).toString();
+      } catch (IOException e) {
+        LOG.warn("Failed toString first key", e);
+      }
+      return result;
+    }
+
+    protected String toStringLastKey() {
+      String result = "";
+      try {
+        result = HStoreKey.create(getLastKey()).toString();
+      } catch (IOException e) {
+        LOG.warn("Failed toString last key", e);
+      }
+      return result;
+    }
+  }
+
+  /**
+   * Override to add some customization on HalfHFileReader
+   */
+  static class HalfStoreFileReader extends HalfHFileReader {
+    public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
+        throws IOException {
+      super(fs, p, c, r);
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + (isTop()? ", half=top": ", half=bottom");
+    }
+
+    protected String toStringFirstKey() {
+      String result = "";
+      try {
+        result = HStoreKey.create(getFirstKey()).toString();
+      } catch (IOException e) {
+        LOG.warn("Failed toString first key", e);
+      }
+      return result;
+    }
+
+    protected String toStringLastKey() {
+      String result = "";
+      try {
+        result = HStoreKey.create(getLastKey()).toString();
+      } catch (IOException e) {
+        LOG.warn("Failed toString last key", e);
+      }
+      return result;
+    }
   }
 
   /**
@@ -309,7 +375,7 @@ public class StoreFile implements HConstants {
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir)
   throws IOException {
-    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null);
+    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null, false);
   }
 
   /**
@@ -326,15 +392,16 @@ public class StoreFile implements HConstants {
    * @throws IOException
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir,
-    final int blocksize, final String algorithm, final RawComparator<byte []> c)
+    final int blocksize, final Compression.Algorithm algorithm,
+    final HStoreKey.StoreKeyComparator c, final boolean bloomfilter)
   throws IOException {
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
     }
     Path path = getUniqueFile(fs, dir);
     return new HFile.Writer(fs, path, blocksize,
-      algorithm == null? HFile.DEFAULT_COMPRESSION: algorithm,
-      c == null? HStoreKey.BYTECOMPARATOR: c);
+      algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
+      c == null? new HStoreKey.StoreKeyComparator(): c, bloomfilter);
   }
 
   /**

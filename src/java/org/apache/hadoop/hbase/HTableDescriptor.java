@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
@@ -667,7 +668,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-          HColumnDescriptor.CompressionType.NONE, false, true,
+          Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
           Integer.MAX_VALUE, HConstants.FOREVER, false) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
@@ -675,11 +676,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.COLUMN_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
-            HColumnDescriptor.CompressionType.NONE, false, true,
+            Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
             Integer.MAX_VALUE, HConstants.FOREVER, false),
           new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
-            HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
-            false, false, Integer.MAX_VALUE, HConstants.WEEK_IN_SECONDS, false)});
+            HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
+            false, false,  8 * 1024,
+            Integer.MAX_VALUE, HConstants.WEEK_IN_SECONDS, false)});
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()

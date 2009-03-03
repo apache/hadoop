@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic 
@@ -69,7 +70,7 @@ class MetaScanner implements HConstants {
         callable.setClose();
         connection.getRegionServerWithRetries(callable);
       }
-    } while (HStoreKey.compareTwoRowKeys(startRow, LAST_ROW) != 0);
+    } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
   }
 
   /**

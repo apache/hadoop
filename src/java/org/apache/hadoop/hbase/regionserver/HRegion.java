@@ -1440,11 +1440,10 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       for (Store store : stores.values()) {
-        List<HStoreKey> keys =
-          store.getKeys(new HStoreKey(row, ts),
-            ALL_VERSIONS, now, null);
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, ts),
+          ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-          new HStoreKey.HStoreKeyWritableComparator());
+          HStoreKey.getWritableComparator(store.getHRegionInfo()));
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.DELETED_BYTES);
         }
@@ -1474,15 +1473,14 @@ public class HRegion implements HConstants {
     long now = System.currentTimeMillis();
     try {
       for (Store store : stores.values()) {
-        List<HStoreKey> keys =
-          store.getKeys(new HStoreKey(row, timestamp),
+        List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
             ALL_VERSIONS, now, columnPattern);
-          TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-            new HStoreKey.HStoreKeyWritableComparator());
-          for (HStoreKey key: keys) {
-            edits.put(key, HLogEdit.DELETED_BYTES);
-          }
-          update(edits);
+        TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
+          HStoreKey.getWritableComparator(store.getHRegionInfo()));
+        for (HStoreKey key: keys) {
+          edits.put(key, HLogEdit.DELETED_BYTES);
+        }
+        update(edits);
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
@@ -1514,7 +1512,7 @@ public class HRegion implements HConstants {
         ALL_VERSIONS, now, null);
       // delete all the cells
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator());
+        HStoreKey.getWritableComparator(store.getHRegionInfo()));
       for (HStoreKey key: keys) {
         edits.put(key, HLogEdit.DELETED_BYTES);
       }
@@ -1553,7 +1551,7 @@ public class HRegion implements HConstants {
         List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
           ALL_VERSIONS, now, null);
         TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-          new HStoreKey.HStoreKeyWritableComparator());
+          HStoreKey.getWritableComparator(store.getHRegionInfo()));
         for (HStoreKey key: keys) {
           edits.put(key, HLogEdit.DELETED_BYTES);
         }
@@ -1583,8 +1581,11 @@ public class HRegion implements HConstants {
     HStoreKey origin = new HStoreKey(row, column, ts);
     Set<HStoreKey> keys = getKeys(origin, versions);
     if (keys.size() > 0) {
+      // I think the below map doesn't have to be exactly storetd.  Its deletes
+      // they don't have to go in in exact sorted order (we don't have to worry
+      // about the meta or root sort comparator here).
       TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator());
+        new HStoreKey.HStoreKeyComparator());
       for (HStoreKey key: keys) {
         edits.put(key, HLogEdit.DELETED_BYTES);
       }
@@ -1650,8 +1651,10 @@ public class HRegion implements HConstants {
     checkReadOnly();
     TreeMap<HStoreKey, byte []> targets = this.targetColumns.get(lockid);
     if (targets == null) {
-      targets = new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator());
+      // I think the below map doesn't have to be exactly storetd.  Its deletes
+      // they don't have to go in in exact sorted order (we don't have to worry
+      // about the meta or root sort comparator here).
+      targets = new TreeMap<HStoreKey, byte []>(new HStoreKey.HStoreKeyComparator());
       this.targetColumns.put(lockid, targets);
     }
     targets.put(key, val);
@@ -1948,9 +1951,7 @@ public class HRegion implements HConstants {
       this.scanners = new InternalScanner[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
-          
           // Only pass relevant columns to each store
-          
           List<byte[]> columns = new ArrayList<byte[]>();
           for (int j = 0; j < cols.length; j++) {
             if (Bytes.equals(HStoreKey.getFamily(cols[j]),
@@ -2007,8 +2008,8 @@ public class HRegion implements HConstants {
         for (int i = 0; i < this.keys.length; i++) {
           if (scanners[i] != null &&
              (chosenRow == null ||
-               (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) < 0) ||
-               ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) &&
+               (Bytes.compareTo(this.keys[i].getRow(), chosenRow) < 0) ||
+               ((Bytes.compareTo(this.keys[i].getRow(), chosenRow) == 0) &&
                       (keys[i].getTimestamp() > chosenTimestamp)))) {
             chosenRow = keys[i].getRow();
             chosenTimestamp = keys[i].getTimestamp();
@@ -2025,7 +2026,7 @@ public class HRegion implements HConstants {
 
           for (int i = 0; i < scanners.length; i++) {
             if (scanners[i] != null &&
-              HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) {
+              Bytes.compareTo(this.keys[i].getRow(), chosenRow) == 0) {
               // NOTE: We used to do results.putAll(resultSets[i]);
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
@@ -2047,7 +2048,7 @@ public class HRegion implements HConstants {
           // If the current scanner is non-null AND has a lower-or-equal
           // row label, then its timestamp is bad. We need to advance it.
           while ((scanners[i] != null) &&
-              (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) <= 0)) {
+              (Bytes.compareTo(this.keys[i].getRow(), chosenRow) <= 0)) {
             resultSets[i].clear();
             if (!scanners[i].next(keys[i], resultSets[i])) {
               closeScanner(i);
@@ -2228,7 +2229,7 @@ public class HRegion implements HConstants {
       HStoreKey key = new HStoreKey(row, COL_REGIONINFO,
         System.currentTimeMillis());
       TreeMap<HStoreKey, byte[]> edits = new TreeMap<HStoreKey, byte[]>(
-        new HStoreKey.HStoreKeyWritableComparator());
+        HStoreKey.getWritableComparator(r.getRegionInfo()));
       edits.put(key, Writables.getBytes(r.getRegionInfo()));
       meta.update(edits);
     } finally {
@@ -2351,9 +2352,9 @@ public class HRegion implements HConstants {
    */
   public static boolean rowIsInRange(HRegionInfo info, final byte [] row) {
     return ((info.getStartKey().length == 0) ||
-        (HStoreKey.compareTwoRowKeys(info.getStartKey(), row) <= 0)) &&
+        (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
-            (HStoreKey.compareTwoRowKeys(info.getEndKey(), row) > 0));
+            (Bytes.compareTo(info.getEndKey(), row) > 0));
   }
 
   /**
@@ -2396,7 +2397,7 @@ public class HRegion implements HConstants {
       }
       // A's start key is null but B's isn't. Assume A comes before B
     } else if ((srcB.getStartKey() == null) ||
-      (HStoreKey.compareTwoRowKeys(srcA.getStartKey(), srcB.getStartKey()) > 0)) {
+      (Bytes.compareTo(srcA.getStartKey(), srcB.getStartKey()) > 0)) {
       a = srcB;
       b = srcA;
     }
@@ -2448,14 +2449,14 @@ public class HRegion implements HConstants {
     final byte [] startKey = HStoreKey.equalsTwoRowKeys(a.getStartKey(),
         EMPTY_BYTE_ARRAY) ||
       HStoreKey.equalsTwoRowKeys(b.getStartKey(), EMPTY_BYTE_ARRAY)?
-        EMPTY_BYTE_ARRAY: HStoreKey.compareTwoRowKeys(a.getStartKey(), 
+        EMPTY_BYTE_ARRAY: Bytes.compareTo(a.getStartKey(), 
           b.getStartKey()) <= 0?
         a.getStartKey(): b.getStartKey();
     final byte [] endKey = HStoreKey.equalsTwoRowKeys(a.getEndKey(),
         EMPTY_BYTE_ARRAY) ||
       HStoreKey.equalsTwoRowKeys(b.getEndKey(), EMPTY_BYTE_ARRAY)?
         EMPTY_BYTE_ARRAY:
-        HStoreKey.compareTwoRowKeys(a.getEndKey(), b.getEndKey()) <= 0? b.getEndKey(): a.getEndKey();
+        Bytes.compareTo(a.getEndKey(), b.getEndKey()) <= 0? b.getEndKey(): a.getEndKey();
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
     LOG.info("Creating new region " + newRegionInfo.toString());

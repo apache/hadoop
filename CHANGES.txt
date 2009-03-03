@@ -26,6 +26,9 @@ Release 0.20.0 - Unreleased
    HBASE-1198  OOME in IPC server does not trigger abort behavior
    HBASE-1209  Make port displayed the same as is used in URL for RegionServer
                table in UI (Lars George via Stack)
+   HBASE-1217  add new compression and hfile blocksize to HColumnDescriptor
+   HBASE-859   HStoreKey needs a reworking
+   HBASE-1211  NPE in retries exhausted exception
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

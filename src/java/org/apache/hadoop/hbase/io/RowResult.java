@@ -78,13 +78,13 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
   // Map interface
   // 
   
-  public Cell put(byte [] key,
-    Cell value) {
+  public Cell put(@SuppressWarnings("unused") byte [] key,
+    @SuppressWarnings("unused") Cell value) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
   @SuppressWarnings("unchecked")
-  public void putAll(Map map) {
+  public void putAll(@SuppressWarnings("unused") Map map) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -92,7 +92,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
     return this.cells.get(key);
   }
 
-  public Cell remove(Object key) {
+  public Cell remove(@SuppressWarnings("unused") Object key) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -104,7 +104,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
     return cells.containsKey(Bytes.toBytes(key));
   }
 
-  public boolean containsValue(Object value) {
+  public boolean containsValue(@SuppressWarnings("unused") Object value) {
     throw new UnsupportedOperationException("Don't support containsValue!");
   }
 
@@ -135,7 +135,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
   /**
    * This method used solely for the REST serialization
    * 
-   * @return
+   * @return Cells
    */
   @TOJSON
   public RestCell[] getCells() {
@@ -211,7 +211,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
       this.cell = cell;
     }
     
-    public Cell setValue(Cell c) {
+    public Cell setValue(@SuppressWarnings("unused") Cell c) {
       throw new UnsupportedOperationException("RowResult is read-only!");
     }
     

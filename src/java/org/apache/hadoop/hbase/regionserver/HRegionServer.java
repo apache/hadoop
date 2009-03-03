@@ -1608,8 +1608,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     }
   }
 
-  public void batchUpdate(final byte [] regionName, BatchUpdate b,
-      long lockId) throws IOException {
+  public void batchUpdate(final byte [] regionName, BatchUpdate b, long lockId)
+  throws IOException {
     if (b.getRow() == null)
       throw new IllegalArgumentException("update has null row");
     

@@ -55,6 +55,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
 
   /** For Writable compatibility */
   public Cell() {
+    super();
   }
 
   /**
@@ -93,7 +94,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
    * @param ts
    *          array of timestamps
    */
-  public Cell(String[] vals, long[] ts) {
+  public Cell(String [] vals, long[] ts) {
     this(Bytes.toByteArrays(vals), ts);
   }
 

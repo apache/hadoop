@@ -22,9 +22,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
@@ -44,7 +44,8 @@ public class ThriftUtilities {
    */
   static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in)
       throws IllegalArgument {
-    CompressionType comp = CompressionType.valueOf(in.compression);
+    Compression.Algorithm comp =
+      Compression.getCompressionAlgorithmByName(in.compression.toLowerCase());
     boolean bloom = false;
     if (in.bloomFilterType.compareTo("NONE") != 0) {
       bloom = true;
@@ -54,7 +55,7 @@ public class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     HColumnDescriptor col = new HColumnDescriptor(in.name,
-        in.maxVersions, comp, in.inMemory, in.blockCacheEnabled,
+        in.maxVersions, comp.getName(), in.inMemory, in.blockCacheEnabled,
         in.maxValueLength, in.timeToLive, bloom);
     return col;
   }

@@ -65,6 +65,7 @@ import org.apache.hadoop.ipc.RemoteException;
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
+
   /*
    * Not instantiable.
    */
@@ -646,7 +647,7 @@ public class HConnectionManager implements HConstants {
           // signifying that the region we're checking is actually the last
           // region in the table.
           if (HStoreKey.equalsTwoRowKeys(endKey, HConstants.EMPTY_END_ROW) ||
-              HStoreKey.compareTwoRowKeys(endKey, row) > 0) {
+              HStoreKey.getComparator(tableName).compareRows(endKey, row) > 0) {
             return possibleRegion;
           }
         }
@@ -683,7 +684,7 @@ public class HConnectionManager implements HConstants {
 
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (HStoreKey.compareTwoRowKeys(endKey, row) <= 0) {
+          if (HStoreKey.getComparator(tableName).compareRows(endKey, row) <= 0) {
             // delete any matching entry
             HRegionLocation rl =
               tableLocations.remove(matchingRegions.lastKey());

@@ -153,8 +153,10 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
       for (int i = 0; i < this.keys.length; i++) {
         if (scanners[i] != null &&
             (chosenRow == null ||
-            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) < 0) ||
-            ((HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0) &&
+            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+              chosenRow) < 0) ||
+            ((this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+              chosenRow) == 0) &&
             (keys[i].getTimestamp() > chosenTimestamp)))) {
           chosenRow = keys[i].getRow();
           chosenTimestamp = keys[i].getTimestamp();
@@ -181,10 +183,9 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
         // problem, could redo as bloom filter.
         Set<HStoreKey> deletes = new HashSet<HStoreKey>();
         for (int i = 0; i < scanners.length && !filtered; i++) {
-          while ((scanners[i] != null
-              && !filtered
-              && moreToFollow)
-              && (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) == 0)) {
+          while ((scanners[i] != null && !filtered && moreToFollow) &&
+            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+              chosenRow) == 0)) {
             // If we are doing a wild card match or there are multiple
             // matchers per column, we need to scan all the older versions of 
             // this row to pick up the rest of the family members
@@ -206,7 +207,7 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
               if (HLogEdit.isDeleted(e.getValue().getValue())) {
                 // Only first key encountered is added; deletes is a Set.
                 deletes.add(new HStoreKey(hsk));
-              } else if (!deletes.contains(hsk) &&
+              } else if ((deletes.size() == 0 || !deletes.contains(hsk)) &&
                   !filtered &&
                   moreToFollow &&
                   !results.containsKey(e.getKey())) {
@@ -233,7 +234,8 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
         // If the current scanner is non-null AND has a lower-or-equal
         // row label, then its timestamp is bad. We need to advance it.
         while ((scanners[i] != null) &&
-            (HStoreKey.compareTwoRowKeys(this.keys[i].getRow(), chosenRow) <= 0)) {
+            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
+              chosenRow) <= 0)) {
           resultSets[i].clear();
           if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);

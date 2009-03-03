@@ -73,6 +73,10 @@ public class HalfHFileReader extends HFile.Reader {
     this.top = Reference.isTopFileRegion(r.getFileRegion());
   }
 
+  protected boolean isTop() {
+    return this.top;
+  }
+
   public HFileScanner getScanner() {
     final HFileScanner s = super.getScanner();
     return new HFileScanner() {

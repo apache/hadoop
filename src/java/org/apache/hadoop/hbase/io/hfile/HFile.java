@@ -141,8 +141,10 @@ public class HFile {
   /**
    * Default compression: none.
    */
+  public final static Compression.Algorithm DEFAULT_COMPRESSION_ALGORITHM =
+    Compression.Algorithm.NONE;
   public final static String DEFAULT_COMPRESSION =
-    Compression.Algorithm.NONE.getName();
+    DEFAULT_COMPRESSION_ALGORITHM.getName();
 
   /**
    * HFile Writer.
@@ -216,7 +218,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path)
     throws IOException {
-      this(fs, path, DEFAULT_BLOCKSIZE, null, null);
+      this(fs, path, DEFAULT_BLOCKSIZE, null, null, false);
     }
 
     /**
@@ -226,12 +228,35 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
+     * @param bloomfilter
+     * @throws IOException 
      * @throws IOException
      */
-    public Writer(FileSystem fs, Path path, int blocksize, String compress,
-      final RawComparator<byte []> comparator)
+    public Writer(FileSystem fs, Path path, int blocksize,
+      String compress, final RawComparator<byte []> comparator)
     throws IOException {
-      this(fs.create(path), blocksize, compress, comparator);
+      this(fs, path, blocksize,
+        compress == null? DEFAULT_COMPRESSION_ALGORITHM:
+          Compression.getCompressionAlgorithmByName(compress),
+        comparator, false);
+    }
+
+    /**
+     * Constructor that takes a Path.
+     * @param fs
+     * @param path
+     * @param blocksize
+     * @param compress
+     * @param comparator
+     * @param bloomfilter
+     * @throws IOException
+     */
+    public Writer(FileSystem fs, Path path, int blocksize,
+      Compression.Algorithm compress,
+      final RawComparator<byte []> comparator,
+      final boolean bloomfilter)
+    throws IOException {
+      this(fs.create(path), blocksize, compress, comparator, bloomfilter);
       this.closeOutputStream = true;
       this.name = path.toString();
       this.path = path;
@@ -243,19 +268,38 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param c
+     * @param bloomfilter
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-        final String compress, final RawComparator<byte []> c)
+        final String  compress, final RawComparator<byte []> c)
+    throws IOException {
+      this(ostream, blocksize,
+        compress == null? DEFAULT_COMPRESSION_ALGORITHM:
+          Compression.getCompressionAlgorithmByName(compress), c, false);
+    }
+
+    /**
+     * Constructor that takes a stream.
+     * @param ostream Stream to use.
+     * @param blocksize
+     * @param compress
+     * @param c
+     * @param bloomfilter
+     * @throws IOException
+     */
+    public Writer(final FSDataOutputStream ostream, final int blocksize,
+        final Compression.Algorithm  compress,
+        final RawComparator<byte []> c,
+        final boolean bloomfilter)
     throws IOException {
       this.outputStream = ostream;
       this.closeOutputStream = false;
       this.blocksize = blocksize;
       this.comparator = c == null? Bytes.BYTES_RAWCOMPARATOR: c;
       this.name = this.outputStream.toString();
-      this.compressAlgo =
-        Compression.getCompressionAlgorithmByName(compress == null?
-          Compression.Algorithm.NONE.getName(): compress);
+      this.compressAlgo = compress == null?
+        DEFAULT_COMPRESSION_ALGORITHM: compress;
     }
 
     /*
@@ -391,7 +435,7 @@ public class HFile {
 
     /**
      * Add key/value to file.
-     * Keys must be added in an order that agrees with the RawComparator passed
+     * Keys must be added in an order that agrees with the Comparator passed
      * on construction.
      * @param key Key to add.  Cannot be empty nor null.
      * @param value Value to add.  Cannot be empty nor null.
@@ -430,7 +474,7 @@ public class HFile {
       if (this.lastKey != null) {
         if (this.comparator.compare(this.lastKey, key) > 0) {
           throw new IOException("Added a key not lexically larger than" +
-            " previous: key=" + Bytes.toString(key) + ", lastkey=" +
+            " previous key=" + Bytes.toString(key) + ", lastkey=" +
             Bytes.toString(lastKey));
         }
       }
@@ -622,14 +666,22 @@ public class HFile {
 
     public String toString() {
       return "reader=" + this.name +
-        (!isFileInfoLoaded()? "":
-          ", compression=" + this.compressAlgo.getName() +
-          ", firstKey=" + Bytes.toString(getFirstKey()) +
-          ", lastKey=" + Bytes.toString(getLastKey()) +
-          ", avgKeyLen=" + this.avgKeyLen +
-          ", avgValueLen=" + this.avgValueLen +
-          ", entries=" + this.trailer.entryCount +
-          ", length=" + this.fileSize);
+          (!isFileInfoLoaded()? "":
+            ", compression=" + this.compressAlgo.getName() +
+            ", firstKey=" + toStringFirstKey() +
+            ", lastKey=" + toStringLastKey()) +
+            ", avgKeyLen=" + this.avgKeyLen +
+            ", avgValueLen=" + this.avgValueLen +
+            ", entries=" + this.trailer.entryCount +
+            ", length=" + this.fileSize;
+    }
+
+    protected String toStringFirstKey() {
+      return Bytes.toString(getFirstKey());
+    }
+
+    protected String toStringLastKey() {
+      return Bytes.toString(getFirstKey());
     }
 
     public long length() {
@@ -661,7 +713,7 @@ public class HFile {
 
       // Read in the metadata index.
       if (trailer.metaIndexCount > 0) {
-        this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR,
+        this.metaIndex = BlockIndex.readIndex(this.comparator,
           this.istream, this.trailer.metaIndexOffset, trailer.metaIndexCount);
       }
       this.fileInfoLoaded = true;
@@ -679,7 +731,7 @@ public class HFile {
         return null;
       }
       try {
-        return (RawComparator)Class.forName(clazzName).newInstance();
+        return (RawComparator<byte[]>) Class.forName(clazzName).newInstance();
       } catch (InstantiationException e) {
         throw new IOException(e);
       } catch (IllegalAccessException e) {
@@ -1014,7 +1066,7 @@ public class HFile {
           klen = block.getInt();
           vlen = block.getInt();
           int comp = this.reader.comparator.compare(key, 0, key.length,
-              block.array(), block.arrayOffset() + block.position(), klen);
+            block.array(), block.arrayOffset() + block.position(), klen);
           if (comp == 0) {
             if (seekBefore) {
               block.position(block.position() - lastLen - 16);
@@ -1035,8 +1087,10 @@ public class HFile {
           }
           block.position(block.position() + klen + vlen);
           lastLen = klen + vlen ;
-        } while( block.remaining() > 0 );
+        } while(block.remaining() > 0);
         // ok we are at the end, so go back a littleeeeee....
+        // The 8 in the below is intentionally different to the 16s in the above
+        // Do the math you you'll figure it.
         block.position(block.position() - lastLen - 8);
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
@@ -1213,7 +1267,7 @@ public class HFile {
   
     /* Needed doing lookup on blocks.
      */
-    RawComparator<byte []> comparator;
+    final RawComparator<byte []> comparator;
   
     /*
      * Shutdown default constructor
@@ -1227,7 +1281,7 @@ public class HFile {
      * Constructor
      * @param trailer File tail structure with index stats.
      */
-    BlockIndex(final RawComparator<byte []> c) {
+    BlockIndex(final RawComparator<byte []>c) {
       this.comparator = c;
       // Guess that cost of three arrays + this object is 4 * 8 bytes.
       this.size += (4 * 8);

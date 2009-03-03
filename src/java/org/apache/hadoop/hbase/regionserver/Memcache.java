@@ -26,6 +26,7 @@ import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -68,13 +69,16 @@ class Memcache {
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
+  private final Comparator<HStoreKey> comparator;
+  private final HStoreKey.StoreKeyComparator rawcomparator;
+
   /**
    * Default constructor. Used for tests.
    */
+  @SuppressWarnings("unchecked")
   public Memcache() {
-    this.ttl = HConstants.FOREVER;
-    this.memcache = createSynchronizedSortedMap();
-    this.snapshot = createSynchronizedSortedMap();
+    this(HConstants.FOREVER, new HStoreKey.HStoreKeyComparator(),
+      new HStoreKey.StoreKeyComparator());
   }
 
   /**
@@ -82,21 +86,21 @@ class Memcache {
    * @param ttl The TTL for cache entries, in milliseconds.
    * @param regionInfo The HRI for this cache 
    */
-  public Memcache(final long ttl) {
+  public Memcache(final long ttl, final Comparator<HStoreKey> c,
+      final HStoreKey.StoreKeyComparator rc) {
     this.ttl = ttl;
-    this.memcache = createSynchronizedSortedMap();
-    this.snapshot = createSynchronizedSortedMap();
+    this.comparator = c;
+    this.rawcomparator = rc;
+    this.memcache = createSynchronizedSortedMap(c);
+    this.snapshot = createSynchronizedSortedMap(c);
   }
 
   /*
    * Utility method using HSKWritableComparator
    * @return synchronized sorted map of HStoreKey to byte arrays.
    */
-  @SuppressWarnings("unchecked")
-  private SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap() {
-    return Collections.synchronizedSortedMap(
-      new TreeMap<HStoreKey, byte []>(
-        new HStoreKey.HStoreKeyWritableComparator()));
+  private SortedMap<HStoreKey, byte[]> createSynchronizedSortedMap(final Comparator<HStoreKey> c) {
+    return Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>(c));
   }
 
   /**
@@ -119,7 +123,7 @@ class Memcache {
         // mistake. St.Ack
         if (this.memcache.size() != 0) {
           this.snapshot = this.memcache;
-          this.memcache = createSynchronizedSortedMap();
+          this.memcache = createSynchronizedSortedMap(this.comparator);
         }
       }
     } finally {
@@ -156,7 +160,7 @@ class Memcache {
       // OK. Passed in snapshot is same as current snapshot.  If not-empty,
       // create a new snapshot and let the old one go.
       if (ss.size() != 0) {
-        this.snapshot = createSynchronizedSortedMap();
+        this.snapshot = createSynchronizedSortedMap(this.comparator);
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -261,7 +265,7 @@ class Memcache {
     if (b == null) {
       return a;
     }
-    return HStoreKey.compareTwoRowKeys(a, b) <= 0? a: b;
+    return Bytes.compareTo(a, b) <= 0? a: b;
   }
 
   /**
@@ -296,7 +300,7 @@ class Memcache {
       // Iterate until we fall into the next row; i.e. move off current row
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
-        if (HStoreKey.compareTwoRowKeys(itKey.getRow(), row) <= 0)
+        if (Bytes.compareTo(itKey.getRow(), row) <= 0)
           continue;
         // Note: Not suppressing deletes or expired cells.
         result = itKey.getRow();
@@ -344,7 +348,8 @@ class Memcache {
       HStoreKey itKey = es.getKey();
       byte [] itCol = itKey.getColumn();
       Cell cell = results.get(itCol);
-      if ((cell == null || cell.getNumValues() < numVersions) && key.matchesWithoutColumn(itKey)) {
+      if ((cell == null || cell.getNumValues() < numVersions) &&
+          key.matchesWithoutColumn(itKey)) {
         if (columns == null || columns.contains(itKey.getColumn())) {
           byte [] val = tailMap.get(itKey);
           if (HLogEdit.isDeleted(val)) {
@@ -367,7 +372,7 @@ class Memcache {
             }
           }
         }
-      } else if (HStoreKey.compareTwoRowKeys(key.getRow(), itKey.getRow()) < 0) {
+      } else if (this.rawcomparator.compareRows(key.getRow(), itKey.getRow()) < 0) {
         break;
       }
     }
@@ -428,7 +433,7 @@ class Memcache {
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tailMap.isEmpty() &&
-        HStoreKey.compareTwoRowKeys(tailMap.firstKey().getRow(),
+        Bytes.compareTo(tailMap.firstKey().getRow(),
           search_key.getRow()) <= 0) {
       Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
 
@@ -437,9 +442,9 @@ class Memcache {
       HStoreKey deletedOrExpiredRow = null;
       for (HStoreKey found_key = null; key_iterator.hasNext() &&
           (found_key == null ||
-            HStoreKey.compareTwoRowKeys(found_key.getRow(), row) <= 0);) {
+            Bytes.compareTo(found_key.getRow(), row) <= 0);) {
         found_key = key_iterator.next();
-        if (HStoreKey.compareTwoRowKeys(found_key.getRow(), row) <= 0) {
+        if (Bytes.compareTo(found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
             Store.handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {

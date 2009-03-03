@@ -125,7 +125,8 @@ public abstract class HAbstractScanner implements InternalScanner {
   private boolean multipleMatchers;
 
   /** Constructor for abstract base class */
-  protected HAbstractScanner(long timestamp, byte [][] targetCols) throws IOException {
+  protected HAbstractScanner(long timestamp, byte [][] targetCols)
+  throws IOException {
     this.timestamp = timestamp;
     this.wildcardMatch = false;
     this.multipleMatchers = false;

@@ -297,7 +297,7 @@ public final class Compression {
     }
   }
 
-  static Algorithm getCompressionAlgorithmByName(String compressName) {
+  public static Algorithm getCompressionAlgorithmByName(String compressName) {
     Algorithm[] algos = Algorithm.class.getEnumConstants();
 
     for (Algorithm a : algos) {

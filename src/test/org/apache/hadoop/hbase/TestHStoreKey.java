@@ -19,10 +19,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Set;
+import java.util.TreeSet;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.HStoreKey.StoreKeyByteComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -36,6 +37,184 @@ public class TestHStoreKey extends TestCase {
 
   protected void tearDown() throws Exception {
     super.tearDown();
+  }
+
+  public void testMoreComparisons() throws Exception {
+    // Root compares
+    HStoreKey a = new HStoreKey(".META.,,99999999999999");
+    HStoreKey b = new HStoreKey(".META.,,1");
+    HStoreKey.StoreKeyComparator c = new HStoreKey.RootStoreKeyComparator();
+    assertTrue(c.compare(b.getBytes(), a.getBytes()) < 0);
+    HStoreKey aa = new HStoreKey(".META.,,1");
+    HStoreKey bb = new HStoreKey(".META.,,1", "info:regioninfo", 1235943454602L);
+    assertTrue(c.compare(aa.getBytes(), bb.getBytes()) < 0);
+    
+    // Meta compares
+    HStoreKey aaa = new HStoreKey("TestScanMultipleVersions,row_0500,1236020145502");
+    HStoreKey bbb = new HStoreKey("TestScanMultipleVersions,,99999999999999");
+    c = new HStoreKey.MetaStoreKeyComparator();
+    assertTrue(c.compare(bbb.getBytes(), aaa.getBytes()) < 0);
+    
+    HStoreKey aaaa = new HStoreKey("TestScanMultipleVersions,,1236023996656",
+      "info:regioninfo", 1236024396271L);
+    assertTrue(c.compare(aaaa.getBytes(), bbb.getBytes()) < 0);
+    
+    HStoreKey x = new HStoreKey("TestScanMultipleVersions,row_0500,1236034574162",
+      "", 9223372036854775807L);
+    HStoreKey y = new HStoreKey("TestScanMultipleVersions,row_0500,1236034574162",
+      "info:regioninfo", 1236034574912L);
+    assertTrue(c.compare(x.getBytes(), y.getBytes()) < 0);
+    
+    comparisons(new HStoreKey.HStoreKeyRootComparator());
+    comparisons(new HStoreKey.HStoreKeyMetaComparator());
+    comparisons(new HStoreKey.HStoreKeyComparator());
+    metacomparisons(new HStoreKey.HStoreKeyRootComparator());
+    metacomparisons(new HStoreKey.HStoreKeyMetaComparator());
+  }
+
+  /**
+   * Tests cases where rows keys have characters below the ','.
+   * See HBASE-832
+   * @throws IOException 
+   */
+  public void testHStoreKeyBorderCases() throws IOException {
+    HStoreKey rowA = new HStoreKey("testtable,www.hbase.org/,1234",
+      "", Long.MAX_VALUE);
+    byte [] rowABytes = Writables.getBytes(rowA);
+    HStoreKey rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
+      "", Long.MAX_VALUE);
+    byte [] rowBBytes = Writables.getBytes(rowB);
+    // This is a plain compare on the row. It gives wrong answer for meta table
+    // row entry.
+    assertTrue(rowA.compareTo(rowB) > 0);
+    HStoreKey.MetaStoreKeyComparator c =
+      new HStoreKey.MetaStoreKeyComparator();
+    assertTrue(c.compare(rowABytes, rowBBytes) < 0);
+
+    rowA = new HStoreKey("testtable,,1234", "", Long.MAX_VALUE);
+    rowB = new HStoreKey("testtable,$www.hbase.org/,99999", "", Long.MAX_VALUE);
+    assertTrue(rowA.compareTo(rowB) > 0);
+    assertTrue(c.compare( Writables.getBytes(rowA),  Writables.getBytes(rowB)) < 0);
+
+    rowA = new HStoreKey(".META.,testtable,www.hbase.org/,1234,4321", "",
+      Long.MAX_VALUE);
+    rowB = new HStoreKey(".META.,testtable,www.hbase.org/%20,99999,99999", "",
+      Long.MAX_VALUE);
+    assertTrue(rowA.compareTo(rowB) > 0);
+    HStoreKey.RootStoreKeyComparator rootComparator =
+      new HStoreKey.RootStoreKeyComparator();
+    assertTrue(rootComparator.compare( Writables.getBytes(rowA),
+      Writables.getBytes(rowB)) < 0);
+  }
+
+  private void metacomparisons(final HStoreKey.HStoreKeyComparator c) {
+    assertTrue(c.compare(new HStoreKey(".META.,a,,0,1"),
+      new HStoreKey(".META.,a,,0,1")) == 0);
+    assertTrue(c.compare(new HStoreKey(".META.,a,,0,1"),
+      new HStoreKey(".META.,a,,0,2")) < 0);
+    assertTrue(c.compare(new HStoreKey(".META.,a,,0,2"),
+      new HStoreKey(".META.,a,,0,1")) > 0);
+  }
+
+  private void comparisons(final HStoreKey.HStoreKeyComparator c) {
+    assertTrue(c.compare(new HStoreKey(".META.,,1"),
+      new HStoreKey(".META.,,1")) == 0);
+    assertTrue(c.compare(new HStoreKey(".META.,,1"),
+      new HStoreKey(".META.,,2")) < 0);
+    assertTrue(c.compare(new HStoreKey(".META.,,2"),
+      new HStoreKey(".META.,,1")) > 0);
+  }
+
+  @SuppressWarnings("unchecked")
+  public void testBinaryKeys() throws Exception {
+	Set<HStoreKey> set = new TreeSet<HStoreKey>(new HStoreKey.HStoreKeyComparator());
+	HStoreKey [] keys = {new HStoreKey("aaaaa,\u0000\u0000,2", getName(), 2),
+	  new HStoreKey("aaaaa,\u0001,3", getName(), 3),
+	  new HStoreKey("aaaaa,,1", getName(), 1),
+	  new HStoreKey("aaaaa,\u1000,5", getName(), 5),
+	  new HStoreKey("aaaaa,a,4", getName(), 4),
+    new HStoreKey("a,a,0", getName(), 0),
+	};
+	// Add to set with bad comparator
+	for (int i = 0; i < keys.length; i++) {
+	  set.add(keys[i]);
+	}
+	// This will output the keys incorrectly.
+	boolean assertion = false;
+	int count = 0;
+	try {
+      for (HStoreKey k: set) {
+        assertTrue(count++ == k.getTimestamp());
+      }
+	} catch (junit.framework.AssertionFailedError e) {
+	  // Expected
+	  assertion = true;
+	}
+	assertTrue(assertion);
+	// Make set with good comparator
+	set = new TreeSet<HStoreKey>(new HStoreKey.HStoreKeyMetaComparator());
+	for (int i = 0; i < keys.length; i++) {
+      set.add(keys[i]);
+    }
+    count = 0;
+    for (HStoreKey k: set) {
+      assertTrue(count++ == k.getTimestamp());
+    }
+    // Make up -ROOT- table keys.
+    HStoreKey [] rootKeys = {
+        new HStoreKey(".META.,aaaaa,\u0000\u0000,0,2", getName(), 2),
+        new HStoreKey(".META.,aaaaa,\u0001,0,3", getName(), 3),
+        new HStoreKey(".META.,aaaaa,,0,1", getName(), 1),
+        new HStoreKey(".META.,aaaaa,\u1000,0,5", getName(), 5),
+        new HStoreKey(".META.,aaaaa,a,0,4", getName(), 4),
+        new HStoreKey(".META.,,0", getName(), 0),
+      };
+    // This will output the keys incorrectly.
+    set = new TreeSet<HStoreKey>(new HStoreKey.HStoreKeyMetaComparator());
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    assertion = false;
+    count = 0;
+    try {
+      for (HStoreKey k: set) {
+        assertTrue(count++ == k.getTimestamp());
+      }
+    } catch (junit.framework.AssertionFailedError e) {
+      // Expected
+      assertion = true;
+    }
+    // Now with right comparator
+    set = new TreeSet<HStoreKey>(new HStoreKey.HStoreKeyRootComparator());
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    count = 0;
+    for (HStoreKey k: set) {
+      assertTrue(count++ == k.getTimestamp());
+    }
+  }
+
+  public void testSerialization() throws IOException {
+    HStoreKey hsk = new HStoreKey(getName(), getName(), 123);
+    byte [] b = hsk.getBytes();
+    HStoreKey hsk2 = HStoreKey.create(b);
+    assertTrue(hsk.equals(hsk2));
+    // Test getBytes with empty column
+    hsk = new HStoreKey(getName());
+    assertTrue(Bytes.equals(hsk.getBytes(),
+      HStoreKey.getBytes(Bytes.toBytes(getName()), null,
+      HConstants.LATEST_TIMESTAMP)));
+  }
+
+  public void testGetBytes() throws IOException {
+    long now = System.currentTimeMillis();
+    HStoreKey hsk = new HStoreKey("one", "two", now);
+    byte [] writablesBytes = Writables.getBytes(hsk);
+    byte [] selfSerializationBytes = hsk.getBytes();
+    Bytes.equals(writablesBytes, selfSerializationBytes);
   }
 
   public void testByteBuffer() throws Exception {
@@ -61,7 +240,8 @@ public class TestHStoreKey extends TestCase {
     byte [] nowBytes = Writables.getBytes(now);
     HStoreKey future = new HStoreKey(a, a, timestamp + 10);
     byte [] futureBytes = Writables.getBytes(future);
-    StoreKeyByteComparator comparator = new HStoreKey.StoreKeyByteComparator();
+    HStoreKey.StoreKeyComparator comparator =
+      new HStoreKey.StoreKeyComparator();
     assertTrue(past.compareTo(now) > 0);
     assertTrue(comparator.compare(pastBytes, nowBytes) > 0);
     assertTrue(now.compareTo(now) == 0);
@@ -84,45 +264,4 @@ public class TestHStoreKey extends TestCase {
     assertTrue(nocolumn.compareTo(withcolumn) < 0);
     assertTrue(comparator.compare(nocolumnBytes, withcolumnBytes) < 0);
   }
-  
-//  /**
-//   * Tests cases where rows keys have characters below the ','.
-//   * See HBASE-832
-//   * @throws IOException 
-//   */
-//  public void testHStoreKeyBorderCases() throws IOException {
-//    HRegionInfo info = new HRegionInfo(new HTableDescriptor("testtable"),
-//        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
-//
-//    HStoreKey rowA = new HStoreKey("testtable,www.hbase.org/,1234",
-//      "", Long.MAX_VALUE, info);
-//    byte [] rowABytes = Writables.getBytes(rowA);
-//    HStoreKey rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
-//      "", Long.MAX_VALUE, info);
-//    byte [] rowBBytes = Writables.getBytes(rowB);
-//    assertTrue(rowA.compareTo(rowB) > 0);
-//    HStoreKey.Comparator comparator = new HStoreKey.PlainStoreKeyComparator();
-//    assertTrue(comparator.compare(rowABytes, rowBBytes) > 0);
-//
-//    rowA = new HStoreKey("testtable,www.hbase.org/,1234",
-//        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
-//    rowB = new HStoreKey("testtable,www.hbase.org/%20,99999",
-//        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
-//    assertTrue(rowA.compareTo(rowB) < 0);
-//    assertTrue(comparator.compare(rowABytes, rowBBytes) < 0);
-//
-//    rowA = new HStoreKey("testtable,,1234",
-//        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
-//    rowB = new HStoreKey("testtable,$www.hbase.org/,99999",
-//        "", Long.MAX_VALUE, HRegionInfo.FIRST_META_REGIONINFO);
-//    assertTrue(rowA.compareTo(rowB) < 0);
-//    assertTrue(comparator.compare(rowABytes, rowBBytes) < 0);
-//
-//    rowA = new HStoreKey(".META.,testtable,www.hbase.org/,1234,4321",
-//        "", Long.MAX_VALUE, HRegionInfo.ROOT_REGIONINFO);
-//    rowB = new HStoreKey(".META.,testtable,www.hbase.org/%20,99999,99999",
-//        "", Long.MAX_VALUE, HRegionInfo.ROOT_REGIONINFO);
-//    assertTrue(rowA.compareTo(rowB) > 0);
-//    assertTrue(comparator.compare(rowABytes, rowBBytes) > 0);
-//  }
 }

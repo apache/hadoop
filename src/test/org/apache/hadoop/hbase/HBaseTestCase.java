@@ -22,25 +22,25 @@ package org.apache.hadoop.hbase;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.Iterator;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * Abstract base class for test cases. Performs all static initialization
@@ -93,8 +93,7 @@ public abstract class HBaseTestCase extends TestCase {
   private void init() {
     conf = new HBaseConfiguration();
     try {
-      START_KEY =
-        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
+      START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       LOG.fatal("error during initialization", e);
       fail();
@@ -191,14 +190,14 @@ public abstract class HBaseTestCase extends TestCase {
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME1, versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE,
-      HConstants.FOREVER, false));
+      HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+      Integer.MAX_VALUE, HConstants.FOREVER, false));
     htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME2, versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE,
-      HConstants.FOREVER, false));
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        Integer.MAX_VALUE, HConstants.FOREVER, false));
     htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3, versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, 
-      HConstants.FOREVER, false));
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        Integer.MAX_VALUE,  HConstants.FOREVER, false));
     return htd;
   }
   
@@ -279,9 +278,7 @@ public abstract class HBaseTestCase extends TestCase {
     EXIT: for (char c = (char)startKeyBytes[0]; c <= LAST_CHAR; c++) {
       for (char d = secondCharStart; d <= LAST_CHAR; d++) {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
-          byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          String s = Bytes.toString(bytes) + PUNCTUATION;
-          byte [] t = Bytes.toBytes(s);
+          byte [] t = new byte [] {(byte)c, (byte)d, (byte)e};
           if (endKey != null && endKey.length > 0
               && Bytes.compareTo(endKey, t) <= 0) {
             break EXIT;

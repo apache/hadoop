@@ -35,10 +35,10 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * test hfile features.
@@ -129,7 +129,8 @@ public class TestHFile extends TestCase {
   void basicWithSomeCodec(String codec) throws IOException {
     Path ncTFile = new Path(ROOT_DIR, "basic.hfile");
     FSDataOutputStream fout = createFSOutput(ncTFile);
-    Writer writer = new Writer(fout, minBlockSize, codec, null);
+    Writer writer = new Writer(fout, minBlockSize,
+      Compression.getCompressionAlgorithmByName(codec), null, false);
     LOG.info(writer);
     writeRecords(writer);
     fout.close();
@@ -192,7 +193,8 @@ public class TestHFile extends TestCase {
   private void metablocks(final String compress) throws Exception {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize, compress, null);
+    Writer writer = new Writer(fout, minBlockSize,
+      Compression.getCompressionAlgorithmByName(compress), null, false);
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
@@ -227,8 +229,8 @@ public class TestHFile extends TestCase {
   public void testComparator() throws IOException {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize, "none",
-      new RawComparator<byte []>() {
+    Writer writer = new Writer(fout, minBlockSize, null,
+      new HStoreKey.StoreKeyComparator() {
         @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
             int l2) {
@@ -239,7 +241,7 @@ public class TestHFile extends TestCase {
         public int compare(byte[] o1, byte[] o2) {
           return compare(o1, 0, o1.length, o2, 0, o2.length);
         }
-      });
+      }, false);
     writer.append("3".getBytes(), "0".getBytes());
     writer.append("2".getBytes(), "0".getBytes());
     writer.append("1".getBytes(), "0".getBytes());

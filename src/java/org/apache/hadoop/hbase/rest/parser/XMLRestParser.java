@@ -28,6 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.descriptors.RowUpdateDescriptor;
 import org.apache.hadoop.hbase.rest.descriptors.ScannerDescriptor;
@@ -95,7 +96,7 @@ public class XMLRestParser implements IHBaseRestParser {
     String colname = makeColumnName(name_node.getFirstChild().getNodeValue());
 
     int max_versions = HColumnDescriptor.DEFAULT_VERSIONS;
-    CompressionType compression = HColumnDescriptor.DEFAULT_COMPRESSION;
+    String compression = HColumnDescriptor.DEFAULT_COMPRESSION;
     boolean in_memory = HColumnDescriptor.DEFAULT_IN_MEMORY;
     boolean block_cache = HColumnDescriptor.DEFAULT_BLOCKCACHE;
     int max_cell_size = HColumnDescriptor.DEFAULT_LENGTH;
@@ -126,8 +127,8 @@ public class XMLRestParser implements IHBaseRestParser {
     NodeList compression_list = columnfamily
         .getElementsByTagName("compression");
     if (compression_list.getLength() > 0) {
-      compression = CompressionType.valueOf(compression_list.item(0)
-          .getFirstChild().getNodeValue());
+      compression = compression_list.item(0)
+          .getFirstChild().getNodeValue().toUpperCase();
     }
 
     NodeList in_memory_list = columnfamily.getElementsByTagName("in-memory");
@@ -163,8 +164,8 @@ public class XMLRestParser implements IHBaseRestParser {
     }
 
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(colname),
-        max_versions, compression, in_memory, block_cache, max_cell_size, ttl,
-        bloomfilter);
+        max_versions, compression, in_memory, block_cache,
+        max_cell_size, ttl, bloomfilter);
 
     NodeList metadataList = columnfamily.getElementsByTagName("metadata");
     for (int i = 0; i < metadataList.getLength(); i++) {

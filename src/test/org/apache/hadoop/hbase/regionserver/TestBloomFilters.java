@@ -168,7 +168,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     desc.addFamily(
         new HColumnDescriptor(CONTENTS,               // Column name
             1,                                        // Max versions
-            HColumnDescriptor.CompressionType.NONE,   // no compression
+            HColumnDescriptor.DEFAULT_COMPRESSION,   // no compression
             HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
             HColumnDescriptor.DEFAULT_BLOCKCACHE,
             HColumnDescriptor.DEFAULT_LENGTH,
