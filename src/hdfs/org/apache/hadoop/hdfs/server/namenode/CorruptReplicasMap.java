@@ -130,4 +130,8 @@ public class CorruptReplicasMap{
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     return (nodes == null) ? 0 : nodes.size();
   }
+  
+  public int size() {
+    return corruptReplicasMap.size();
+  }
 }

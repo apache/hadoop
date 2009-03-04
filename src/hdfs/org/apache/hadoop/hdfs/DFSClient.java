@@ -757,6 +757,31 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return rawNums[1];
   }
 
+  /**
+   * Returns count of blocks with no good replicas left. Normally should be 
+   * zero.
+   * @throws IOException
+   */ 
+  public long getMissingBlocksCount() throws IOException {
+    return namenode.getStats()[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX];
+  }
+  
+  /**
+   * Returns count of blocks with one of more replica missing.
+   * @throws IOException
+   */ 
+  public long getUnderReplicatedBlocksCount() throws IOException {
+    return namenode.getStats()[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX];
+  }
+  
+  /**
+   * Returns count of blocks with at least one replica marked corrupt. 
+   * @throws IOException
+   */ 
+  public long getCorruptBlocksCount() throws IOException {
+    return namenode.getStats()[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX];
+  }
+  
   public DatanodeInfo[] datanodeReport(DatanodeReportType type)
   throws IOException {
     return namenode.getDatanodeReport(type);

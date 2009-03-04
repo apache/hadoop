@@ -67,6 +67,10 @@ Release 0.20.0 - Unreleased
     HADOOP-4970. The full path name of a file is preserved inside Trash.
     (Prasad Chakka via dhruba)
 
+    HADOOP-4103. NameNode keeps a count of missing blocks. It warns on 
+    WebUI if there are such blocks. '-report' and '-metaSave' have extra
+    info to track such blocks. (Raghu Angadi)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.

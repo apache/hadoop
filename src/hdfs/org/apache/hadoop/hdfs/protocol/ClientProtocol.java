@@ -278,6 +278,13 @@ public interface ClientProtocol extends VersionedProtocol {
    */
   public void renewLease(String clientName) throws IOException;
 
+  public int GET_STATS_CAPACITY_IDX = 0;
+  public int GET_STATS_USED_IDX = 1;
+  public int GET_STATS_REMAINING_IDX = 2;
+  public int GET_STATS_UNDER_REPLICATED_IDX = 3;
+  public int GET_STATS_CORRUPT_BLOCKS_IDX = 4;
+  public int GET_STATS_MISSING_BLOCKS_IDX = 5;
+  
   /**
    * Get a set of statistics about the filesystem.
    * Right now, only three values are returned.
@@ -285,7 +292,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * <li> [0] contains the total storage capacity of the system, in bytes.</li>
    * <li> [1] contains the total used space of the system, in bytes.</li>
    * <li> [2] contains the available storage of the system, in bytes.</li>
+   * <li> [3] contains number of under replicated blocks in the system.</li>
+   * <li> [4] contains number of blocks with a corrupt replica. </li>
+   * <li> [5] contains number of blocks without any good replicas left. </li>
    * </ul>
+   * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of 
+   * actual numbers to index into the array.
    */
   public long[] getStats() throws IOException;
 

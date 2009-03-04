@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
@@ -50,19 +48,6 @@ public class TestDatanodeBlockScanner extends TestCase {
   private static final Log LOG = 
                  LogFactory.getLog(TestDatanodeBlockScanner.class);
   
-  private static String urlGet(URL url) {
-    try {
-      URLConnection conn = url.openConnection();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
-      return out.toString();
-    } catch (IOException e) {
-      LOG.warn("Failed to fetch " + url.toString() + " : " +
-               e.getMessage());
-    }
-    return "";
-  }
-
   private static Pattern pattern = 
              Pattern.compile(".*?(blk_[-]*\\d+).*?scan time\\s*:\\s*(\\d+)");
   /**
@@ -79,7 +64,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
     
     while (verificationTime <= 0) {
-      String response = urlGet(url);
+      String response = DFSTestUtil.urlGet(url);
       for(Matcher matcher = pattern.matcher(response); matcher.find();) {
         if (block.equals(matcher.group(1))) {
           verificationTime = Long.parseLong(matcher.group(2));

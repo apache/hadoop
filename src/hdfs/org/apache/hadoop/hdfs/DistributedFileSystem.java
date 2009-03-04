@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -317,6 +318,34 @@ public class DistributedFileSystem extends FileSystem {
    * replication .*/
   public long getRawUsed() throws IOException{
     return dfs.totalRawUsed();
+  }
+   
+  /**
+   * Returns count of blocks with no good replicas left. Normally should be
+   * zero.
+   * 
+   * @throws IOException
+   */
+  public long getMissingBlocksCount() throws IOException {
+    return dfs.getMissingBlocksCount();
+  }
+
+  /**
+   * Returns count of blocks with one of more replica missing.
+   * 
+   * @throws IOException
+   */
+  public long getUnderReplicatedBlocksCount() throws IOException {
+    return dfs.getUnderReplicatedBlocksCount();
+  }
+
+  /**
+   * Returns count of blocks with at least one replica marked corrupt.
+   * 
+   * @throws IOException
+   */
+  public long getCorruptBlocksCount() throws IOException {
+    return dfs.getCorruptBlocksCount();
   }
 
   /** Return statistics for each datanode. */

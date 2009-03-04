@@ -76,6 +76,11 @@ div#dfsnodetable .rowAlt, .headerASC, .headerDSC {
 	background-color : lightyellow;
 }
 
+.warning {
+        font-weight : bolder;
+        color : red;	
+}
+
 div#dfstable table {
 	white-space : pre;
 }
