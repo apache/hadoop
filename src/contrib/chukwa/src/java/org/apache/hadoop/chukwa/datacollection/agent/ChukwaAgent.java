@@ -219,7 +219,6 @@ public class ChukwaAgent
     log.info("Config - tags: [" + tags + "]");
 
     if (DO_CHECKPOINT_RESTORE) {
-      needNewCheckpoint = true;
       log.info("checkpoints are enabled, period is " + CHECKPOINT_INTERVAL_MS);
     }
     
@@ -251,6 +250,9 @@ public class ChukwaAgent
       controlSock.start(); // this sets us up as a daemon
       log.info("control socket started on port " + controlSock.portno);
 
+      
+        //shouldn't start checkpointing until we're finishing launching
+      //adaptors on boot
       if (CHECKPOINT_INTERVAL_MS > 0 && checkpointDir!= null)  {
         checkpointer = new Timer();
         checkpointer.schedule(new CheckpointTask(), 0, CHECKPOINT_INTERVAL_MS);
@@ -315,6 +317,7 @@ public class ChukwaAgent
         adaptorID = ++lastAdaptorNumber;
         adaptorsByNumber.put(adaptorID, adaptor);
         adaptorPositions.put(adaptor, new Offset(offset, adaptorID));
+        needNewCheckpoint = true;
         try
         {
           adaptor.start(adaptorID, dataType, params, offset, DataFactory
@@ -330,7 +333,7 @@ public class ChukwaAgent
       }
     } else
       if(cmd.length() > 0)
-        log.warn("only 'add' command supported in config files");
+        log.warn("only 'add' command supported in config files; cmd was: "+ cmd);
       //no warning for blank line
     
     return -1;
@@ -361,7 +364,7 @@ public class ChukwaAgent
       });
       
       if (checkpointNames == null) {
-        log.error("Unable to list directories in checkpoint dir");
+        log.error("Unable to list files in checkpoint dir");
         return false;
       }
       if (checkpointNames.length == 0)
@@ -576,7 +579,8 @@ public class ChukwaAgent
     if (checkpointer != null) {
       checkpointer.cancel();
       try {
-        writeCheckpoint(); // write a last checkpoint here, before stopping
+        if(needNewCheckpoint)
+          writeCheckpoint(); // write a last checkpoint here, before stopping
       } catch (IOException e) {
       }
     }

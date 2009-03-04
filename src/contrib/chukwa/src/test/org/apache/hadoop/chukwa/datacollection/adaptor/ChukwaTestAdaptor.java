@@ -31,13 +31,13 @@ public class ChukwaTestAdaptor implements Adaptor {
   @Override
   public String getCurrentStatus() throws AdaptorException {
     // TODO Auto-generated method stub
-    return null;
+    return type+ " "+ params + " "+ startOffset;
   }
 
   @Override
   public String getStreamName() {
     // TODO Auto-generated method stub
-    return null;
+    return "";
   }
 
   @Override

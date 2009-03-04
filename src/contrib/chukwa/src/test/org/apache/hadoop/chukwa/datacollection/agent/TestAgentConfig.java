@@ -73,4 +73,60 @@ public class TestAgentConfig extends TestCase {
       fail(e.toString());
     }
   }
+  
+  
+  public void testNoCheckpoints() {
+    try {
+      String tmpdir = System.getProperty("test.build.data", "/tmp");
+      File NONCE_DIR = new File(tmpdir,"/test_chukwa_checkpoints");
+      if(NONCE_DIR.exists()) {
+        for(File f: NONCE_DIR.listFiles())
+          f.delete();
+        NONCE_DIR.delete();
+      }
+//      assertFalse(NONCE_DIR.exists());
+      Configuration conf = new Configuration();
+      conf.set("chukwaAgent.checkpoint.dir", NONCE_DIR.getAbsolutePath());
+      conf.setBoolean("chukwaAgent.checkpoint.enabled", true);
+      conf.setInt("chukwaAgent.agent.control.port", 0);
+      
+      System.out.println("\n\n===checkpoints enabled, dir does not exist:");
+      ChukwaAgent agent = new ChukwaAgent(conf);
+      assertEquals(0, agent.getAdaptorList().size());
+      agent.shutdown();
+      assertTrue(NONCE_DIR.exists());
+      for(File f: NONCE_DIR.listFiles())
+        f.delete();
+
+      System.out.println("\n\n===checkpoints enabled, dir exists but is empty:");
+      agent = new ChukwaAgent(conf);
+      assertEquals(0, agent.getAdaptorList().size());
+      agent.shutdown();
+      for(File f: NONCE_DIR.listFiles())
+        f.delete();
+      
+      System.out.println("\n\n===checkpoints enabled, dir exists with zero-length file:");
+      (new File(NONCE_DIR, "chukwa_checkpoint_0")).createNewFile();
+      agent = new ChukwaAgent(conf);
+      assertEquals(0, agent.getAdaptorList().size());
+      agent.processCommand("ADD org.apache.hadoop.chukwa.datacollection.adaptor.ChukwaTestAdaptor testdata  0");
+      agent.shutdown();
+      assertTrue(new File(NONCE_DIR, "chukwa_checkpoint_1").exists());
+
+      System.out.println("\n\n===checkpoints enabled, dir exists with valid checkpoint");
+      agent = new ChukwaAgent(conf);
+      assertEquals(1, agent.getAdaptorList().size());
+      agent.shutdown();
+      //checkpoint # increments by one on boot and reload
+      assertTrue(new File(NONCE_DIR, "chukwa_checkpoint_2").exists());
+
+      
+    }
+    catch(Exception e) {
+      fail(e.toString());
+    }
+  }
+  
+  
+  
 }
