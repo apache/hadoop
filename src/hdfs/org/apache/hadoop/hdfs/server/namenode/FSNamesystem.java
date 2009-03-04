@@ -936,6 +936,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                  short replication, 
                                  String clientName 
                                  ) throws IOException {
+    
+    if (replication >= minReplication && replication <= maxReplication) {
+      //common case. avoid building 'text'
+      return;
+    }
+    
     String text = "file " + src 
       + ((clientName != null) ? " on client " + clientName : "")
       + ".\n"

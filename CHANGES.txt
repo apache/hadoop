@@ -266,6 +266,9 @@ Trunk (unreleased changes)
     HADOOP-5066. Building binary tarball should not build docs/javadocs, copy
     src, or run jdiff. (Giridharan Kesavan via cdouglas)
 
+    HADOOP-5383. Avoid building an unused string in NameNode's 
+    verifyReplication(). (Raghu Angadi)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
