@@ -123,7 +123,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private FSNamesystemMetrics myFSMetrics;
   private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
   private int totalLoad = 0;
-  private long pendingReplicationBlocksCount = 0L, 
+  private long pendingReplicationBlocksCount = 0L, corruptReplicaBlocksCount,
     underReplicatedBlocksCount = 0L, scheduledReplicationBlocksCount = 0L;
 
   //
@@ -241,6 +241,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Last block index used for replication work.
    */
   private int replIndex = 0;
+  private long missingBlocksInCurIter = 0;
+  private long missingBlocksInPrevIter = 0; 
 
   private static FSNamesystem fsNamesystemObject;
   private SafeModeInfo safeMode;  // safe mode information
@@ -485,7 +487,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Dump all metadata into specified file
    */
-  void metaSave(String filename) throws IOException {
+  synchronized void metaSave(String filename) throws IOException {
     checkSuperuserPrivilege();
     File file = new File(System.getProperty("hadoop.log.dir"), 
                          filename);
@@ -500,7 +502,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       out.println("Metasave: Blocks waiting for replication: " + 
                   neededReplications.size());
       for (Block block : neededReplications) {
-        out.print(block);
+        List<DatanodeDescriptor> containingNodes =
+                                          new ArrayList<DatanodeDescriptor>();
+        NumberReplicas numReplicas = new NumberReplicas();
+        // source node returned is not used
+        chooseSourceDatanode(block, containingNodes, numReplicas);
+        int usableReplicas = numReplicas.liveReplicas() + 
+                             numReplicas.decommissionedReplicas(); 
+        // l: == live:, d: == decommissioned c: == corrupt e: == excess
+        out.print(block + " (replicas:" +
+                  " l: " + numReplicas.liveReplicas() + 
+                  " d: " + numReplicas.decommissionedReplicas() + 
+                  " c: " + numReplicas.corruptReplicas() + 
+                  " e: " + numReplicas.excessReplicas() + 
+                  ((usableReplicas > 0)? "" : " MISSING") + ")"); 
+
         for (Iterator<DatanodeDescriptor> jt = blocksMap.nodeIterator(block);
              jt.hasNext();) {
           DatanodeDescriptor node = jt.next();
@@ -2314,9 +2330,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     workFound = computeReplicationWork(blocksToProcess); 
     
     // Update FSNamesystemMetrics counters
-    pendingReplicationBlocksCount = pendingReplications.size();
-    underReplicatedBlocksCount = neededReplications.size();
-    scheduledReplicationBlocksCount = workFound;
+    synchronized (this) {
+      pendingReplicationBlocksCount = pendingReplications.size();
+      underReplicatedBlocksCount = neededReplications.size();
+      scheduledReplicationBlocksCount = workFound;
+      corruptReplicaBlocksCount = corruptReplicas.size();
+    }
     
     if(workFound == 0)
       workFound = computeInvalidateWork(nodesToProcess);
@@ -2372,6 +2391,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int scheduledReplicationCount = 0;
 
     synchronized(neededReplications) {
+      if (neededReplications.size() == 0) {
+        missingBlocksInCurIter = 0;
+        missingBlocksInPrevIter = 0;
+      }
       // # of blocks to process equals either twice the number of live 
       // data-nodes or the number of under-replicated blocks whichever is less
       blocksToProcess = Math.min(blocksToProcess, neededReplications.size());
@@ -2390,6 +2413,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         if( ! neededReplicationsIterator.hasNext()) {
           // start from the beginning
           replIndex = 0;
+          missingBlocksInPrevIter = missingBlocksInCurIter;
+          missingBlocksInCurIter = 0;
           blocksToProcess = Math.min(blocksToProcess, neededReplications.size());
           if(blkCnt >= blocksToProcess)
             break;
@@ -2416,6 +2441,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         NumberReplicas numReplicas = new NumberReplicas();
         DatanodeDescriptor srcNode = 
           chooseSourceDatanode(block, containingNodes, numReplicas);
+        
+        if ((numReplicas.liveReplicas() + numReplicas.decommissionedReplicas())
+            <= 0) {          
+          missingBlocksInCurIter++;
+        }
         if(srcNode == null) // block can not be replicated from any node
           continue;
 
@@ -3283,10 +3313,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     addStoredBlock(block, node, delHintNode );
   }
 
+  public long getMissingBlocksCount() {
+    // not locking
+    return Math.max(missingBlocksInPrevIter, missingBlocksInCurIter); 
+  }
+  
   long[] getStats() {
     synchronized(heartbeats) {
-      return new long[]
-          {this.capacityTotal, this.capacityUsed, this.capacityRemaining};
+      return new long[] {this.capacityTotal, this.capacityUsed, 
+                         this.capacityRemaining,
+                         this.underReplicatedBlocksCount,
+                         this.corruptReplicaBlocksCount,
+                         getMissingBlocksCount()};
     }
   }
 
@@ -4418,6 +4456,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   public long getUnderReplicatedBlocks() {
     return underReplicatedBlocksCount;
+  }
+
+  /** Returns number of blocks with corrupt replicas */
+  public long getCorruptReplicaBlocksCount() {
+    return corruptReplicaBlocksCount;
   }
 
   public long getScheduledReplicationBlocks() {

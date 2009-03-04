@@ -79,7 +79,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       if (decommissionedReplicas > 0) {
         return 0;
       }
-      return LEVEL; // no need to replicate
+      return 2; // keep these blocks in needed replication.
     } else if(curReplicas==1) {
       return 0; // highest priority
     } else if(curReplicas*3<expectedReplicas) {

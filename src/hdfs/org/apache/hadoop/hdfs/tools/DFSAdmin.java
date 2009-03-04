@@ -286,6 +286,19 @@ public class DFSAdmin extends FsShell {
       System.out.println("DFS Used%: "
                          + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
                          + "%");
+      
+      /* These counts are not always upto date. They are updated after  
+       * iteration of an internal list. Should be updated in a few seconds to 
+       * minutes. Use "-metaSave" to list of all such blocks and accurate 
+       * counts.
+       */
+      System.out.println("Under replicated blocks: " + 
+                         dfs.getUnderReplicatedBlocksCount());
+      System.out.println("Blocks with corrupt replicas: " + 
+                         dfs.getCorruptBlocksCount());
+      System.out.println("Missing blocks: " + 
+                         dfs.getMissingBlocksCount());
+                           
       System.out.println();
 
       System.out.println("-------------------------------------------------");

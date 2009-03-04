@@ -19,9 +19,12 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -257,6 +260,14 @@ public class DFSTestUtil {
     for(int c; (c = in.read()) != -1; b.append((char)c));
     in.close();      
     return b.toString();
+  }
+
+  // Returns url content as string.
+  public static String urlGet(URL url) throws IOException {
+    URLConnection conn = url.openConnection();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
+    return out.toString();
   }
 
   static public Configuration getConfigurationWithDifferentUsername(Configuration conf

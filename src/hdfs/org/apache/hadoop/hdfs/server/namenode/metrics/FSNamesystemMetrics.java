@@ -55,6 +55,7 @@ public class FSNamesystemMetrics implements Updater {
   private final MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
   private final MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
   private final MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
+  private final MetricsIntValue missingBlocks = new MetricsIntValue("MissingBlocks", registry);    
 
   private final FSNamesystem fsNameSystem;
 
@@ -107,6 +108,7 @@ public class FSNamesystemMetrics implements Updater {
       underReplicatedBlocks.set((int)fsNameSystem.getUnderReplicatedBlocks());
       scheduledReplicationBlocks.set((int)fsNameSystem.
                                       getScheduledReplicationBlocks());
+      missingBlocks.set((int)fsNameSystem.getMissingBlocksCount());
 
       for (MetricsBase m : registry.getMetricsList()) {
         m.pushMetric(metricsRecord);

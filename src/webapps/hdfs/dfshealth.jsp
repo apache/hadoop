@@ -264,6 +264,8 @@
 <h3>Cluster Summary</h3>
 <b> <%= JspHelper.getSafeModeText(fsn)%> </b>
 <b> <%= JspHelper.getInodeLimitText(fsn)%> </b>
+<a class="warning"> <%= JspHelper.getWarningText(fsn)%></a>
+
 <%
     generateDFSHealthReport(out, nn, request); 
 %>

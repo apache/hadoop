@@ -180,6 +180,17 @@ public class JspHelper {
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
   }
 
+  public static String getWarningText(FSNamesystem fsn) {
+    // Ideally this should be displayed in RED
+    long missingBlocks = fsn.getMissingBlocksCount();
+    if (missingBlocks > 0) {
+      return "<br> WARNING :" + 
+             " There are about " + missingBlocks +
+             " missing blocks. Please check the log or run fsck. <br><br>";
+    }
+    return "";
+  }
+  
   public static String getInodeLimitText(FSNamesystem fsn) {
     long inodes = fsn.dir.totalInodes();
     long blocks = fsn.getBlocksTotal();
