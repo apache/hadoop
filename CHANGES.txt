@@ -269,6 +269,9 @@ Trunk (unreleased changes)
     HADOOP-5383. Avoid building an unused string in NameNode's 
     verifyReplication(). (Raghu Angadi)
 
+    HADOOP-5384. Fix a problem that DataNodeCluster creates blocks with
+    generationStamp == 1.  (szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
