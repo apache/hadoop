@@ -24,12 +24,10 @@ import java.security.SecureRandom;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.DNS;
 
 
@@ -196,7 +194,8 @@ public class DataNodeCluster {
         long blkid = startingBlockId;
         for (int i_dn = 0; i_dn < numDataNodes; ++i_dn) {
           for (int i = 0; i < blocks.length; ++i) {
-            blocks[i] = new Block(blkid++, blockSize, 1);
+            blocks[i] = new Block(blkid++, blockSize,
+                Block.GRANDFATHER_GENERATION_STAMP);
           }
           for (int i = 1; i <= replication; ++i) { 
             // inject blocks for dn_i into dn_i and replica in dn_i's neighbors 
