@@ -35,6 +35,9 @@ Release 0.19.2 - Unreleased
     HADOOP-4638. Fixes job recovery to not crash the job tracker for problems
     with a single job file. (Amar Kamat via yhemanth)
 
+    HADOOP-5384. Fix a problem that DataNodeCluster creates blocks with
+    generationStamp == 1.  (szetszwo)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
