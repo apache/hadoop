@@ -263,6 +263,9 @@ Trunk (unreleased changes)
     HADOOP-5229. Remove duplicate version variables in build files
     (Stefan Groschupf via johan)
 
+    HADOOP-5066. Building binary tarball should not build docs/javadocs, copy
+    src, or run jdiff. (Giridharan Kesavan via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

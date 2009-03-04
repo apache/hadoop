@@ -1196,7 +1196,78 @@
     </macro_tar>
   </target>
 
-  <target name="binary" depends="package" description="Make tarball without source and documentation">
+  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
+		description="assembles artifacts for binary target">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/contrib"/>
+    <mkdir dir="${dist.dir}/bin"/>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${common.ivy.lib.dir}"/>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="lib">
+        <exclude name="**/native/**"/>
+      </fileset>
+    </copy>
+
+  	<exec dir="${dist.dir}" executable="sh" failonerror="true">
+	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+    </exec>
+
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>  	
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
+
+    <copy todir="${dist.dir}"> 
+      <fileset file="${build.dir}/${final.name}-*.jar"/>
+    </copy>
+    
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
+
+    <copy todir="${dist.dir}/conf">
+      <fileset dir="${conf.dir}" excludes="**/*.template"/>
+    </copy>
+
+    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
+
+    <copy todir="${dist.dir}/ivy">
+      <fileset dir="ivy"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+  	
+    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
+      <fileset dir="${build.dir}/c++"/>
+    </copy>
+
+    <copy todir="${dist.dir}/" file="build.xml"/>
+
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+    </chmod>
+  </target>
+
+  <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
     <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
