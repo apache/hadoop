@@ -46,7 +46,7 @@ public class TestLogRotate extends TestCase {
     cli.removeAll();
     // sleep for some time to make sure we don't get chunk from existing streams
     Thread.sleep(5000);
-    File testFile = makeTestFile("/tmp/chukwaLogRotateTest",80);
+    File testFile = makeTestFile("chukwaLogRotateTest",80);
     long adaptorId = agent.processCommand("add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.CharFileTailingAdaptorUTF8" +
         " lines " + testFile + " 0");
     assertTrue(adaptorId != -1);
@@ -66,7 +66,7 @@ public class TestLogRotate extends TestCase {
       recStart = c.getRecordOffsets()[rec] +1;
     }
     assertTrue(c.getDataType().equals("lines"));
-    testFile = makeTestFile("/tmp/chukwaLogRotateTest",40);
+    testFile = makeTestFile("chukwaLogRotateTest",40);
     c = chunks.waitForAChunk(); 
     System.out.println("got chunk");
     while(!c.getDataType().equals("lines")) {
@@ -87,7 +87,7 @@ public class TestLogRotate extends TestCase {
   }
 
   private File makeTestFile(String name, int size) throws IOException {
-    File tmpOutput = new File(name);
+    File tmpOutput = new File(System.getProperty("test.build.data", "/tmp"),name);
     FileOutputStream fos = new FileOutputStream(tmpOutput);
     
     PrintWriter pw = new PrintWriter(fos);

@@ -23,7 +23,7 @@ import java.util.Random;
 
 public class TempFileUtil {
   public static File makeBinary(int length) throws IOException {
-    File tmpOutput = new File("/tmp/chukwaTest");
+    File tmpOutput = new File(System.getProperty("test.build.data", "/tmp"),"chukwaTest");
     FileOutputStream fos = new FileOutputStream(tmpOutput);
     Random r = new Random();
     byte[] randomData = new byte[ length];

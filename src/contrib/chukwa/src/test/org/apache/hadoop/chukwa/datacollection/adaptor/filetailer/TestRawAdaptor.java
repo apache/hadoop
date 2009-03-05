@@ -47,7 +47,7 @@ public class TestRawAdaptor extends TestCase {
     cli.removeAll();
     // sleep for some time to make sure we don't get chunk from existing streams
     Thread.sleep(5000);
-    File testFile = makeTestFile("/tmp/chukwaRawTest",80);
+    File testFile = makeTestFile("chukwaRawTest",80);
     long adaptorId = agent.processCommand("add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.FileTailingAdaptor" +
         " raw " + testFile + " 0");
     assertTrue(adaptorId != -1);
@@ -63,7 +63,7 @@ public class TestRawAdaptor extends TestCase {
   }
 
   private File makeTestFile(String name, int size) throws IOException {
-    File tmpOutput = new File(name);
+    File tmpOutput = new File(System.getProperty("test.build.data", "/tmp"),name);
     FileOutputStream fos = new FileOutputStream(tmpOutput);
     
     PrintWriter pw = new PrintWriter(fos);

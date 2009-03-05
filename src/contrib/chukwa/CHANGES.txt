@@ -10,6 +10,7 @@ Trunk (unreleased changes)
 
     HADOOP-5370   Collectors don't write empty sink files (asrabkin)
 
+    HADOOP-5228   Chukwa tests shouldn't write to /tmp. (asrabkin)
 	
   OPTIMIZATIONS
 

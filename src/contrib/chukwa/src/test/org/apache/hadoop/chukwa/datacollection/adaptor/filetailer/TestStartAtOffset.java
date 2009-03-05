@@ -110,7 +110,7 @@ public class TestStartAtOffset extends TestCase {
   }
   
   private File makeTestFile() throws IOException {
-    File tmpOutput = new File("/tmp/chukwaTest");
+    File tmpOutput = new File(System.getProperty("test.build.data", "/tmp"), "chukwaTest");
     FileOutputStream fos = new FileOutputStream(tmpOutput);
     
     PrintWriter pw = new PrintWriter(fos);

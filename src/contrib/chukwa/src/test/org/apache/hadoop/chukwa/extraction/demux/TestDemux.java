@@ -95,7 +95,7 @@ public class TestDemux extends TestCase {
     try{
       System.out.println("testing demux");
       Configuration conf = new Configuration();
-      System.setProperty("hadoop.log.dir", "/tmp/");
+      System.setProperty("hadoop.log.dir", System.getProperty("test.build.data", "/tmp"));
       MiniDFSCluster dfs = new MiniDFSCluster(conf, NUM_HADOOP_SLAVES, true, null);
       FileSystem fileSys = dfs.getFileSystem();
       MiniMRCluster mr = new MiniMRCluster(NUM_HADOOP_SLAVES, fileSys.getUri().toString(), 1);

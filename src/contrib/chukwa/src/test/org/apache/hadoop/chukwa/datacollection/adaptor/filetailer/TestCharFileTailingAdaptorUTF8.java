@@ -22,7 +22,7 @@ public class TestCharFileTailingAdaptorUTF8 extends TestCase {
   public void testCrSepAdaptor() throws IOException, InterruptedException,
       ChukwaAgent.AlreadyRunningException {
     ChukwaAgent agent = new ChukwaAgent();
-    File testFile = makeTestFile("/tmp/chukwaTest", 80);
+    File testFile = makeTestFile("chukwaTest", 80);
     long adaptorId = agent
         .processCommand("add org.apache.hadoop.chukwa.datacollection.adaptor.filetailer.CharFileTailingAdaptorUTF8"
             + " lines " + testFile + " 0");
@@ -47,7 +47,7 @@ public class TestCharFileTailingAdaptorUTF8 extends TestCase {
   }
 
   private File makeTestFile(String name, int size) throws IOException {
-    File tmpOutput = new File(name);
+    File tmpOutput = new File(System.getProperty("test.build.data", "/tmp"), name);
     FileOutputStream fos = new FileOutputStream(tmpOutput);
 
     PrintWriter pw = new PrintWriter(fos);

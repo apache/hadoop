@@ -75,18 +75,5 @@ public class TestHadoopLogProcessor extends TestCase{
     return c;
   }
   
-  /*
-  public File writeATestFile(int lines) throws IOException {
-    File output = new File("/tmp/hlpparsetest");
-    FileOutputStream fos = new FileOutputStream(output);
-    PrintStream out = new PrintStream(fos);
-    
-    for(int i =0; i < lines; ++i) {
-      out.println("2008-05-29 10:42:22,724 INFO org.apache.hadoop.dfs.DataNode: Some text goes here" +i);
-  
-    }
-    out.close();
-    return output;
-  }*/
 }
 
