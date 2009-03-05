@@ -16,6 +16,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-5409. Changed opt directory copy to a optional operation, if opt exist. (Eric Yang)
+
     HADOOP-5138. Fixing failing test cases by separating TestCharFileTailing
     and TestFileTailing adaptors. (Jerome Boulon via acmurthy)
 
