@@ -177,7 +177,7 @@ public class AgentControlSocketListener extends Thread {
 
     this.setDaemon(false); // to keep the local agent alive
     this.agent = agent;
-    this.portno = agent.getConfiguration().getInt("chukwaAgent.agent.control.port", 9093);
+    this.portno = agent.getConfiguration().getInt("chukwaAgent.control.port", 9093);
     log.info("AgentControlSocketListerner ask for port: " + portno);
     this.setName("control socket listener");
   }

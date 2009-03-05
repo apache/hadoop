@@ -88,7 +88,7 @@ public class TestAgentConfig extends TestCase {
       Configuration conf = new Configuration();
       conf.set("chukwaAgent.checkpoint.dir", NONCE_DIR.getAbsolutePath());
       conf.setBoolean("chukwaAgent.checkpoint.enabled", true);
-      conf.setInt("chukwaAgent.agent.control.port", 0);
+      conf.setInt("chukwaAgent.control.port", 0);
       
       System.out.println("\n\n===checkpoints enabled, dir does not exist:");
       ChukwaAgent agent = new ChukwaAgent(conf);
