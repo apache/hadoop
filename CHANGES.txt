@@ -269,9 +269,6 @@ Trunk (unreleased changes)
     HADOOP-5383. Avoid building an unused string in NameNode's 
     verifyReplication(). (Raghu Angadi)
 
-    HADOOP-5384. Fix a problem that DataNodeCluster creates blocks with
-    generationStamp == 1.  (szetszwo)
-
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -938,6 +935,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5274. Fix gridmix2 dependency on wordcount example. (cdouglas)
 
+    HADOOP-5145. Balancer sometimes runs out of memory after running days or weeks.
+    (hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
@@ -950,6 +950,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-4638. Fixes job recovery to not crash the job tracker for problems
     with a single job file. (Amar Kamat via yhemanth)
+
+    HADOOP-5384. Fix a problem that DataNodeCluster creates blocks with
+    generationStamp == 1.  (szetszwo)
 
 Release 0.19.1 - Unreleased
 

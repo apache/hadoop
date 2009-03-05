@@ -60,6 +60,7 @@ public class TestBalancer extends TestCase {
     CONF.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
     CONF.setLong("dfs.heartbeat.interval", 1L);
     CONF.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    CONF.setLong("dfs.balancer.movedWinWidth", 2000L);
     Balancer.setBlockMoveWaitTime(1000L) ;
   }
 
