@@ -4,14 +4,31 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-4989. Added capability to add scatter chart. (Eric Yang)
+
   IMPROVEMENTS
     
-    HADOOP-5373   Collectors track lifetime-received chunks. (asrabkin)
+    HADOOP-5373. Collectors track lifetime-received chunks. (asrabkin)
 
-    HADOOP-5370   Collectors don't write empty sink files (asrabkin)
+    HADOOP-5370. Collectors don't write empty sink files (asrabkin)
 
-    HADOOP-5228   Chukwa tests shouldn't write to /tmp. (asrabkin)
-	
+    HADOOP-5228. Chukwa tests shouldn't write to /tmp. (asrabkin)
+
+    HADOOP-5035. * Improved Y axis ticker labelling. 
+                 * Used TreeMap to build non-time series data for charting. 
+                 * Improved handling of "not a number "values. (Eric Yang)
+
+    HADOOP-5030. Changed RPM install location to the value specified by build.properties file. (Eric Yang)
+
+    HADOOP-5029. Added mdl script to manually load chukwa sequence file to database. (Eric Yang)
+
+    HADOOP-4843. Enable job history log file streaming into Chukwa by using JobTrackerInstrumentation API. (Eric Yang)
+
+    HADOOP-4827. * Replace Consolidator with Aggregator macros 
+                 * Updated database table schema 
+                 * Fix interval for aggregation execute 
+                 * Improved SQL macros support, add group_avg() and past_*_minutes key word (Eric Yang)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -26,6 +43,38 @@ Trunk (unreleased changes)
     HADOOP-5087. Fix regex for command parsing. (asrabkin)
 
     HADOOP-5057. Better test coverage for missing checkpoint cases. (asrabkin)
+
+    HADOOP-5054. Improved database partitioning by date. (Eric Yang)
+
+    HADOOP-5051. * Added macro token subsitution for sum(table_name) 
+                 * Added correct hdfs throughput aggregation SQL macros. (Eric Yang)
+
+    HADOOP-5032. Export CHUKWA_CONF_DIR in chukwa-config.sh.
+
+    HADOOP-4960. Changed metrics time from current system time to data source time.
+
+    HADOOP-4959. Support parsing of top output for Redhat EL 5.1. (Eric Yang)
+
+    HADOOP-4916. * Added external property file to reference location and ownership of chukwa 
+                 * Added ability to control the user name to run chukwa (Eric Yang)
+
+    HADOOP-4914. Added description fields to chukwa init.d scripts.
+
+    HADOOP-4889. Move chown from post install phase to build phase of the RPM file. (Eric Yang)
+
+    HADOOP-4884. Change date format from dd/mm/yyyy to yyyy/mm/dd for display in the chart tool tips. (Eric Yang)
+
+    HADOOP-4860. Changed test cases into 3 different test classes to prevent Agent from loading chukwa_check_point file which interfered with test cases. (Eric Yang)
+
+    HADOOP-4825. Replaced jps with ps ax for shutdown scripts.
+                 Clean up reference of jar file from top level instead of build directory. (Eric Yang)
+
+    HADOOP-4805. Removed black list collector feature from Chukwa Agent HTTP Sender. (Eric Yang)
+
+    HADOOP-4796. Change component unit test targets from "ant test-agent" to "ant -Dtestcase=TestAgent test". (Eric Yang)
+
+    HADOOP-4791. Add build configuration parameter to specify where Chukwa will be installed for RPM packaging. (Eric Yang)
+
 
 Release 0.19.0 - Unreleased
 
