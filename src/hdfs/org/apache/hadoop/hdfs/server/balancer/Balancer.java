@@ -208,8 +208,7 @@ public class Balancer implements Tool {
   
   private Map<Block, BalancerBlock> globalBlockList
                  = new HashMap<Block, BalancerBlock>();
-  private Map<Block, BalancerBlock> movedBlocks 
-                 = new HashMap<Block, BalancerBlock>();
+  private MovedBlocks movedBlocks = new MovedBlocks();
   private Map<String, BalancerDatanode> datanodes
                  = new HashMap<String, BalancerDatanode>();
   
@@ -264,7 +263,7 @@ public class Balancer implements Tool {
           if (isGoodBlockCandidate(source, target, block)) {
             this.block = block;
             if ( chooseProxySource() ) {
-              addToMoved(block);
+              movedBlocks.add(block);
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Decided to move block "+ block.getBlockId()
                     +" with a length of "+StringUtils.byteDesc(block.getNumBytes())
@@ -697,7 +696,7 @@ public class Balancer implements Tool {
     private void filterMovedBlocks() {
       for (Iterator<BalancerBlock> blocks=getBlockIterator();
             blocks.hasNext();) {
-        if (isMoved(blocks.next())) {
+        if (movedBlocks.contains(blocks.next())) {
           blocks.remove();
         }
       }
@@ -1244,20 +1243,63 @@ public class Balancer implements Tool {
     } while (shouldWait);
   }
 
-  /* mark a block to be moved */
-  private void addToMoved(BalancerBlock block) {
-    synchronized(movedBlocks) {
-      movedBlocks.put(block.getBlock(), block);
+  /** This window makes sure to keep blocks that have been moved within 1.5 hour.
+   * Old window has blocks that are older;
+   * Current window has blocks that are more recent;
+   * Cleanup method triggers the check if blocks in the old window are
+   * more than 1.5 hour old. If yes, purge the old window and then
+   * move blocks in current window to old window.
+   */ 
+  private static class MovedBlocks {
+    private long lastCleanupTime = System.currentTimeMillis();
+    private static long winWidth = 5400*1000L; // 1.5 hour
+    final private static int CUR_WIN = 0;
+    final private static int OLD_WIN = 1;
+    final private static int NUM_WINS = 2;
+    final private List<HashMap<Block, BalancerBlock>> movedBlocks = 
+      new ArrayList<HashMap<Block, BalancerBlock>>(NUM_WINS);
+    
+    /* initialize the moved blocks collection */
+    private MovedBlocks() {
+      movedBlocks.add(new HashMap<Block,BalancerBlock>());
+      movedBlocks.add(new HashMap<Block,BalancerBlock>());
+    }
+
+    /* set the win width */
+    private void setWinWidth(Configuration conf) {
+      winWidth = conf.getLong(
+          "dfs.balancer.movedWinWidth", 5400*1000L);
+    }
+    
+    /* add a block thus marking a block to be moved */
+    synchronized private void add(BalancerBlock block) {
+      movedBlocks.get(CUR_WIN).put(block.getBlock(), block);
+    }
+
+    /* check if a block is marked as moved */
+    synchronized private boolean contains(BalancerBlock block) {
+      return contains(block.getBlock());
+    }
+
+    /* check if a block is marked as moved */
+    synchronized private boolean contains(Block block) {
+      return movedBlocks.get(CUR_WIN).containsKey(block) ||
+        movedBlocks.get(OLD_WIN).containsKey(block);
+    }
+
+    /* remove old blocks */
+    synchronized private void cleanup() {
+      long curTime = System.currentTimeMillis();
+      // check if old win is older than winWidth
+      if (lastCleanupTime + winWidth <= curTime) {
+        // purge the old window
+        movedBlocks.set(OLD_WIN, movedBlocks.get(CUR_WIN));
+        movedBlocks.set(CUR_WIN, new HashMap<Block, BalancerBlock>());
+        lastCleanupTime = curTime;
+      }
     }
   }
-  
-  /* check if a block is marked as moved */
-  private boolean isMoved(BalancerBlock block) {
-    synchronized(movedBlocks) {
-      return movedBlocks.containsKey(block.getBlock());
-    }
-  }
-  
+
   /* Decide if it is OK to move the given block from source to target
    * A block is a good candidate if
    * 1. the block is not in the process of being moved/has not been moved;
@@ -1267,7 +1309,7 @@ public class Balancer implements Tool {
   private boolean isGoodBlockCandidate(Source source, 
       BalancerDatanode target, BalancerBlock block) {
     // check if the block is moved or not
-    if (isMoved(block)) {
+    if (movedBlocks.contains(block)) {
         return false;
     }
     if (block.isLocatedOnDatanode(target)) {
@@ -1317,6 +1359,7 @@ public class Balancer implements Tool {
     this.targets.clear();  
     this.avgUtilization = 0.0D;
     cleanGlobalBlockList();
+    this.movedBlocks.cleanup();
   }
   
   /* Remove all blocks from the global block list except for the ones in the
@@ -1326,7 +1369,7 @@ public class Balancer implements Tool {
     for (Iterator<Block> globalBlockListIterator=globalBlockList.keySet().iterator();
     globalBlockListIterator.hasNext();) {
       Block block = globalBlockListIterator.next();
-      if(!movedBlocks.containsKey(block)) {
+      if(!movedBlocks.contains(block)) {
         globalBlockListIterator.remove();
       }
     }
@@ -1461,9 +1504,11 @@ public class Balancer implements Tool {
 
       // close the output file
       IOUtils.closeStream(out); 
-      try {
-        fs.delete(BALANCER_ID_PATH, true);
-      } catch(IOException ignored) {
+      if (fs != null) {
+        try {
+          fs.delete(BALANCER_ID_PATH, true);
+        } catch(IOException ignored) {
+        }
       }
       System.out.println("Balancing took " + 
           time2Str(Util.now()-startTime));
@@ -1528,6 +1573,7 @@ public class Balancer implements Tool {
   /** set this balancer's configuration */
   public void setConf(Configuration conf) {
     this.conf = conf;
+    movedBlocks.setWinWidth(conf);
   }
 
 }

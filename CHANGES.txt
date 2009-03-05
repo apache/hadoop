@@ -678,6 +678,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5274. Fix gridmix2 dependency on wordcount example. (cdouglas)
 
+    HADOOP-5145. Balancer sometimes runs out of memory after running days or weeks.
+    (hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
