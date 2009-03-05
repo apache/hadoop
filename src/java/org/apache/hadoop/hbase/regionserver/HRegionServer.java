@@ -1580,7 +1580,6 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
 
   public RowResult[] next(final long scannerId, int nbRows) throws IOException {
     checkOpen();
-    requestCount.incrementAndGet();
     ArrayList<RowResult> resultSets = new ArrayList<RowResult>();
     try {
       String scannerName = String.valueOf(scannerId);
@@ -1590,6 +1589,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
       }
       this.leases.renewLease(scannerName);
       for(int i = 0; i < nbRows; i++) {
+        requestCount.incrementAndGet();
         // Collect values to be returned here
         HbaseMapWritable<byte [], Cell> values
           = new HbaseMapWritable<byte [], Cell>();
