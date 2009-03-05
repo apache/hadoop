@@ -666,7 +666,7 @@
 			<fileset dir="${docs.dir}" />
 		</copy>
 
-		<copy todir="${build.dir}/${final.name}/opt">
+		<copy todir="${build.dir}/${final.name}/opt" failonerror="false">
 			<fileset dir="${opt.dir}" />
 		</copy>
 
