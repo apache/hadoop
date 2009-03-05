@@ -1579,6 +1579,25 @@
         <code>OutputFormat</code>.</p>
 
         <section>
+        <title>Lazy Output Creation</title>
+        <p>It is possible to delay creation of output until the first write attempt 
+           by using <a href="ext:api/org/apache/hadoop/mapred/lib/lazyoutputformat">
+           LazyOutputFormat</a>. This is particularly useful in preventing the 
+           creation of zero byte files when there is no call to output.collect 
+           (or Context.write). This is achieved by calling the static method 
+           <code>setOutputFormatClass</code> of <code>LazyOutputFormat</code> 
+           with the intended <code>OutputFormat</code> as the argument. The following example 
+           shows how to delay creation of files when using the <code>TextOutputFormat</code>
+        </p>
+
+        <p>
+        <code> import org.apache.hadoop.mapred.lib.LazyOutputFormat;</code> <br/>
+        <code> LazyOutputFormat.setOutputFormatClass(conf, TextOutputFormat.class);</code>
+        </p>
+         
+        </section>
+
+        <section>
         <title>OutputCommitter</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/outputcommitter">

@@ -239,6 +239,7 @@ Other options you may specify for a streaming job are described here:
 
 <tr><td> -inputreader JavaClassName </td><td> Optional </td><td> For backwards-compatibility: specifies a record reader class (instead of an input format class) </td></tr>
 <tr><td> -verbose </td><td> Optional </td><td> Verbose output </td></tr>
+<tr><td> -lazyOutput </td><td> Optional </td><td> Create output lazily. For example, if the output format is based on FileOutputFormat, the output file is created only on the first call to output.collect (or Context.write)</td></tr>
 </table>
 <p>
 Streaming support Hadoop generic command line options. 

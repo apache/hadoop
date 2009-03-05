@@ -236,6 +236,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <hashpartitioner href="HashPartitioner.html" />
                 <keyfieldbasedpartitioner href="KeyFieldBasedPartitioner.html" />
                 <keyfieldbasedcomparator href="KeyFieldBasedComparator.html" />
+                <lazyoutputformat href="LazyOutputFormat.html" />
                 <aggregate href="aggregate/">
                   <package-summary href="package-summary.html" />
                 </aggregate>
