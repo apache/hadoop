@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.SortedMap;
@@ -268,6 +269,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   private synchronized void flushSomeRegions() {
     // keep flushing until we hit the low water mark
     long globalMemcacheSize = -1;
+    ArrayList<HRegion> regionsToCompact = new ArrayList();
     for (SortedMap<Long, HRegion> m =
         this.server.getCopyOfOnlineRegionsSortedBySize();
       (globalMemcacheSize = server.getGlobalMemcacheSize()) >=
@@ -292,6 +294,10 @@ class MemcacheFlusher extends Thread implements FlushRequester {
         LOG.warn("Flush failed");
         break;
       }
+      regionsToCompact.add(biggestMemcacheRegion);
+    }
+    for (HRegion region : regionsToCompact) {
+      server.compactSplitThread.compactionRequested(region, getName());
     }
   }
 }

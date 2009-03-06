@@ -35,6 +35,8 @@ Release 0.20.0 - Unreleased
                buffer each iteration-1185  wrong request/sec in the gui
                reporting wrong (Brian Beggs via Stack)
    HBASE-1245  hfile meta block handling bugs (Ryan Rawson via Stack)
+   HBASE-1238  Under upload, region servers are unable
+               to compact when loaded with hundreds of regions
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
