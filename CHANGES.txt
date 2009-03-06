@@ -946,6 +946,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5145. Balancer sometimes runs out of memory after running days or weeks.
     (hairong)
 
+    HADOOP-5338. Fix jobtracker restart to clear task completion events cached by
+    tasktrackers forcing them to fetch all events afresh, thus avoiding missed
+    task completion events on the tasktrackers. (Amar Kamat via yhemanth)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

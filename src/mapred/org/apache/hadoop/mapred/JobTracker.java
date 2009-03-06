@@ -848,6 +848,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return jobsToRecover.size() != 0;
     }
 
+    Set<JobID> getJobsToRecover() {
+      return jobsToRecover;
+    }
+
     /** Check if the given string represents a job-id or not 
      */
     private boolean isJobNameValid(String str) {
@@ -1127,7 +1131,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       long recoveryStartTime = System.currentTimeMillis();
 
       // II. Recover each job
-      for (JobID id : jobsToRecover) {
+      idIter = jobsToRecover.iterator();
+      while (idIter.hasNext()) {
+        JobID id = idIter.next();
         JobInProgress pJob = getJob(id);
 
         // 1. Get the required info
@@ -1169,11 +1175,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                    + id + ". Ignoring it.", ioe);
         }
 
-        // 6. Inform the jobtracker as to how much of the data is recovered.
-        // This is done so that TT should rollback to account for lost
-        // updates
-        lastSeenEventMapOnRestart.put(pJob.getStatus().getJobID(), 
-                                      pJob.getNumTaskCompletionEvents());
+        if (pJob.isComplete()) {
+          idIter.remove(); // no need to keep this job info as its successful
+        }
       }
 
       recoveryDuration = System.currentTimeMillis() - recoveryStartTime;
@@ -1198,8 +1202,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         trackerExpiryQueue.add(status);
       }
 
-      // IV. Cleanup
-      jobsToRecover.clear();
       LOG.info("Restoration complete");
     }
     
@@ -1276,10 +1278,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // (hostname --> Node (NetworkTopology))
   Map<String, Node> hostnameToNodeMap = 
     Collections.synchronizedMap(new TreeMap<String, Node>());
-  
-  // A map from JobID to the last known task-completion-event-index on restart
-  Map<JobID, Integer> lastSeenEventMapOnRestart = 
-    new HashMap<JobID, Integer>();
   
   // Number of resolved entries
   int numResolved;
@@ -2375,7 +2373,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     // check if the restart info is req
     if (addRestartInfo) {
-      response.setLastKnownIndices(lastSeenEventMapOnRestart);
+      response.setRecoveredJobs(recoveryManager.getJobsToRecover());
     }
         
     // Update the trackerToHeartbeatResponseMap

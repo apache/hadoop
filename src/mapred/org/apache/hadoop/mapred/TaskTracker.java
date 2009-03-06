@@ -725,17 +725,14 @@ public class TaskTracker
     }
       
     /**
-     * Check if the number of events that are obtained are more than required.
-     * If yes then purge the extra ones.
+     * Reset the events obtained so far.
      */
-    public void purgeMapEvents(int lastKnownIndex) {
+    public void reset() {
       // Note that the sync is first on fromEventId and then on allMapEvents
       synchronized (fromEventId) {
         synchronized (allMapEvents) {
-          if (allMapEvents.size() > lastKnownIndex) {
-            fromEventId.set(lastKnownIndex);
-            allMapEvents = allMapEvents.subList(0, lastKnownIndex);
-          }
+          fromEventId.set(0); // set the new index for TCE
+          allMapEvents.clear();
         }
       }
     }
@@ -1094,19 +1091,19 @@ public class TaskTracker
         
         
         // Check if the map-event list needs purging
-        if (heartbeatResponse.getLastKnownIndex() != null) {
+        Set<JobID> jobs = heartbeatResponse.getRecoveredJobs();
+        if (jobs.size() > 0) {
           synchronized (this) {
             // purge the local map events list
-            for (Map.Entry<JobID, Integer> entry 
-                 : heartbeatResponse.getLastKnownIndex().entrySet()) {
+            for (JobID job : jobs) {
               RunningJob rjob;
               synchronized (runningJobs) {
-                rjob = runningJobs.get(entry.getKey());          
+                rjob = runningJobs.get(job);          
                 if (rjob != null) {
                   synchronized (rjob) {
                     FetchStatus f = rjob.getFetchStatus();
                     if (f != null) {
-                      f.purgeMapEvents(entry.getValue());
+                      f.reset();
                     }
                   }
                 }
