@@ -31,7 +31,9 @@ Release 0.20.0 - Unreleased
    HBASE-1211  NPE in retries exhausted exception
    HBASE-1233  Transactional fixes: Overly conservative scan read-set,
                potential CME (Clint Morgan via Stack)
-   HBASE-1185  wrong request/sec in the gui reporting wrong
+   HBASE-1239  in the REST interface does not correctly clear the character
+               buffer each iteration-1185  wrong request/sec in the gui
+               reporting wrong (Brian Beggs via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

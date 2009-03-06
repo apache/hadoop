@@ -363,7 +363,6 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
       int maxLength = 5000; // tie to conf
       int bufferLength = 640;
 
-      char[] c = new char[bufferLength]; // 40 characters * sizeof(UTF16)
       // TODO make s maxLength and c size values in configuration
       if (!r.ready()) {
         Thread.sleep(1000); // If r is not ready wait 1 second
@@ -372,7 +371,9 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
           return new byte[0];
         }
       }
+      char[] c;// 40 characters * sizeof(UTF16)
       while (r.ready()) {
+    	c = new char[bufferLength]; 
         int n = r.read(c, 0, bufferLength);
         resultant += new String(c);
         if (n != bufferLength) {
