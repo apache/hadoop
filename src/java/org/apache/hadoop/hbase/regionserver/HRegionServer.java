@@ -1660,9 +1660,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
-      boolean result = region.checkAndSave(b,
-        expectedValues,getLockFromId(b.getRowLock()), false);
-      return result;
+      return region.checkAndSave(b,
+        expectedValues,getLockFromId(b.getRowLock()), true);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
