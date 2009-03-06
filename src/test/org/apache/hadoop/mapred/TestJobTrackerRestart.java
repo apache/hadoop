@@ -25,6 +25,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /** 
  * TestJobTrackerRestart checks if the jobtracker can restart. JobTracker 
@@ -268,18 +270,6 @@ public class TestJobTrackerRestart extends TestCase {
     // Test if all the events that were recovered match exactly
     testTaskCompletionEvents(prevEvents, jtEvents, false, numToMatch);
     
-    TaskCompletionEvent[] trackerEvents;
-    while(true) {
-      trackerEvents = 
-        mr.getMapTaskCompletionEventsUpdates(0, id, 2 * numMaps)
-          .getMapTaskCompletionEvents();
-      if (trackerEvents.length < jtEvents.length) {
-        UtilsForTests.waitFor(1000);
-      } else {
-        break;
-      }
-    }
-    
     // Check the task reports
     // The reports should match exactly if the attempts are same
     TaskReport[] afterMapReports = jobClient.getMapTaskReports(id);
@@ -291,13 +281,35 @@ public class TestJobTrackerRestart extends TestCase {
     assertEquals("Job priority change is not reflected", 
                  JobPriority.HIGH, mr.getJobPriority(id));
     
+    List<TaskCompletionEvent> jtMapEvents =
+      new ArrayList<TaskCompletionEvent>();
+    for (TaskCompletionEvent tce : jtEvents) {
+      if (tce.isMapTask()) {
+        jtMapEvents.add(tce);
+      }
+    }
+   
+    TaskCompletionEvent[] trackerEvents; 
+    while(true) {
+     // Wait for the tracker to pull all the map events
+     trackerEvents =
+       mr.getMapTaskCompletionEventsUpdates(0, id, jtMapEvents.size())
+         .getMapTaskCompletionEvents();
+     if (trackerEvents.length < jtMapEvents.size()) {
+       UtilsForTests.waitFor(1000);
+     } else {
+       break;
+     }
+   }
+
     //  Signal the reduce tasks
     UtilsForTests.signalTasks(dfs, fileSys, false, getMapSignalFile(shareDir), 
                               getReduceSignalFile(shareDir));
     
     UtilsForTests.waitTillDone(jobClient);
     
-    testTaskCompletionEvents(jtEvents, trackerEvents, true, 2 * numMaps);
+    testTaskCompletionEvents(jtMapEvents.toArray(new TaskCompletionEvent[0]), 
+                              trackerEvents, true, -1);
     
     // check if the cluster status is insane
     ClusterStatus status = jobClient.getClusterStatus();
