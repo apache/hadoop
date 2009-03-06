@@ -169,7 +169,7 @@ public class TestHFile extends TestCase {
 
   private void writeNumMetablocks(Writer writer, int n) {
     for (int i = 0; i < n; i++) {
-      writer.appendMetaBlock("TfileMeta" + i, ("something to test" + i).getBytes());
+      writer.appendMetaBlock("HFileMeta" + i, ("something to test" + i).getBytes());
     }
   }
 
@@ -179,7 +179,7 @@ public class TestHFile extends TestCase {
 
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
-      ByteBuffer b = reader.getMetaBlock("TfileMeta" + i);
+      ByteBuffer b = reader.getMetaBlock("HFileMeta" + i);
       byte [] found = Bytes.toBytes(b);
       assertTrue("failed to match metadata", Arrays.equals(
           ("something to test" + i).getBytes(), found));
@@ -191,7 +191,7 @@ public class TestHFile extends TestCase {
   }
 
   private void metablocks(final String compress) throws Exception {
-    Path mFile = new Path(ROOT_DIR, "meta.tfile");
+    Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     Writer writer = new Writer(fout, minBlockSize,
       Compression.getCompressionAlgorithmByName(compress), null, false);
@@ -214,6 +214,19 @@ public class TestHFile extends TestCase {
   public void testMetaBlocks() throws Exception {
     metablocks("none");
     metablocks("gz");
+  }
+  
+  public void testNullMetaBlocks() throws Exception {
+    Path mFile = new Path(ROOT_DIR, "nometa.hfile");
+    FSDataOutputStream fout = createFSOutput(mFile);
+    Writer writer = new Writer(fout, minBlockSize,
+        Compression.Algorithm.NONE, null, false);
+    writer.append("foo".getBytes(), "value".getBytes());
+    writer.close();
+    fout.close();
+    Reader reader = new Reader(fs, mFile, null);
+    reader.loadFileInfo();
+    assertNull(reader.getMetaBlock("non-existant"));
   }
   
   /**

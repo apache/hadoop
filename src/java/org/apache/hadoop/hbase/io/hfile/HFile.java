@@ -713,7 +713,7 @@ public class HFile {
 
       // Read in the metadata index.
       if (trailer.metaIndexCount > 0) {
-        this.metaIndex = BlockIndex.readIndex(this.comparator,
+        this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR,
           this.istream, this.trailer.metaIndexOffset, trailer.metaIndexCount);
       }
       this.fileInfoLoaded = true;
@@ -784,6 +784,9 @@ public class HFile {
      * @throws IOException
      */
     public ByteBuffer getMetaBlock(String metaBlockName) throws IOException {
+      if (trailer.metaIndexCount == 0) {
+        return null; // there are no meta blocks
+      }
       if (metaIndex == null) {
         throw new IOException("Meta index not loaded");
       }

@@ -44,6 +44,7 @@ public class Bytes {
    * Estimate based on study of jhat and jprofiler numbers.
    */
   // JHat says BU is 56 bytes.
+  // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
   
   /**
