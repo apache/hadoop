@@ -27,10 +27,12 @@ import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -129,6 +131,18 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
     this.operations = new ArrayList<BatchOperation>();
     this.size = (row == null)? 0: row.length;
   }
+  
+  /**
+   * Create a batch operation.
+   * @param rr the RowResult
+   */
+  public BatchUpdate(final RowResult rr) {
+    this(rr.getRow());
+    for(Map.Entry<byte[], Cell> entry : rr.entrySet()){
+      this.put(entry.getKey(), entry.getValue().getValue());
+    }
+  }
+  
   /**
    * Get the row lock associated with this update
    * @return the row lock
