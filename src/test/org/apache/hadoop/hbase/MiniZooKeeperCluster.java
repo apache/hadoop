@@ -115,8 +115,6 @@ public class MiniZooKeeperCluster {
   }
 
   private void startupStandalone() throws IOException, InterruptedException {
-    ServerStats.registerAsConcrete();
-
     File dir = new File(baseDir, "zookeeper-standalone");
     recreateDir(dir);
 
@@ -133,8 +131,6 @@ public class MiniZooKeeperCluster {
 
   // XXX: From o.a.zk.t.QuorumTest.startServers
   private void startupDistributed() throws IOException {
-    QuorumStats.registerAsConcrete();
-
     // Create map of peers
     HashMap<Long, QuorumServer> peers = new HashMap<Long, QuorumServer>();
     for (int id = 1; id <= numPeers; ++id) {
@@ -228,8 +224,6 @@ public class MiniZooKeeperCluster {
         throw new IOException("Waiting for shutdown of peer " + id);
       }
     }
-
-    ServerStats.unregister();
   }
 
   private void shutdownStandalone() throws IOException {
@@ -237,7 +231,6 @@ public class MiniZooKeeperCluster {
     if (!waitForServerDown(CLIENT_PORT_START, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
-    ServerStats.unregister();
   }
 
   // XXX: From o.a.zk.t.ClientBase

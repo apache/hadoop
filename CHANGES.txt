@@ -72,6 +72,7 @@ Release 0.20.0 - Unreleased
    HBASE-1188  Memory size of Java Objects - Make cacheable objects implement
                HeapSize (Erik Holstad via Stack)
    HBASE-1230  Document installation of HBase on Windows
+   HBASE-1241  HBase additions to ZooKeeper part 1 (Nitay Joffe via JD)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
