@@ -76,6 +76,8 @@ Release 0.20.0 - Unreleased
    HBASE-1231  Today, going from a RowResult to a BatchUpdate reqiures some
                data processing even though they are pretty much the same thing
                (Erik Holstad via Stack)
+   HBASE-1240  Would be nice if RowResult could be comparable
+               (Erik Holstad via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

@@ -45,7 +45,8 @@ import agilejson.TOJSON;
 /**
  * Holds row name and then a map of columns to cells.
  */
-public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializable {
+public class RowResult implements Writable, SortedMap<byte [], Cell>,
+  Comparable, ISerializable {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
@@ -277,5 +278,18 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>, ISerializa
   public void write(final DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.row);
     this.cells.write(out);
+  }
+  
+  //
+  // Comparable
+  //
+  /**
+   *  Comparing this RowResult with another one by
+   *  comparing the row in it.
+   *  @param o the RowResult Object to compare to
+   *  @return the compare number
+   */
+  public int compareTo(Object o){
+    return Bytes.compareTo(this.row, ((RowResult)o).getRow());
   }
 }
