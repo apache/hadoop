@@ -349,7 +349,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
     // setup a job
     final Job job = createJob(name, conf);
     final Path hexfile = new Path(dir, "pi_" + name + ".hex");
-    FileOutputFormat.setOutputPath(job, dir);
+    FileOutputFormat.setOutputPath(job, new Path(dir, "out"));
 
     // setup custom properties
     job.getConfiguration().set(WORKING_DIR_PROPERTY, dir.toString());

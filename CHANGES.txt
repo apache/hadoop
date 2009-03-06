@@ -272,6 +272,8 @@ Trunk (unreleased changes)
     HADOOP-5383. Avoid building an unused string in NameNode's 
     verifyReplication(). (Raghu Angadi)
 
+    HADOOP-5347. Create a job output directory for the bbp examples.  (szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
