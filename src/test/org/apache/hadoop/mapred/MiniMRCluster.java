@@ -586,6 +586,19 @@ public class MiniMRCluster {
   }
   
   /**
+   * Get the tasktrackerID in MiniMRCluster with given trackerName.
+   */
+  int getTaskTrackerID(String trackerName) {
+    for (int id=0; id < numTaskTrackers; id++) {
+      if (taskTrackerList.get(id).getTaskTracker().getName().equals(
+          trackerName)) {
+        return id;
+      }
+    }
+    return -1;
+  }
+  
+  /**
    * Shut down the servers.
    */
   public void shutdown() {

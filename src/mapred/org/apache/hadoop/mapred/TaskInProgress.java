@@ -570,7 +570,7 @@ class TaskInProgress {
       // Check if the user manually KILLED/FAILED this task-attempt...
       Boolean shouldFail = tasksToKill.remove(taskid);
       if (shouldFail != null) {
-        if (isCleanupAttempt(taskid)) {
+        if (isCleanupAttempt(taskid) || jobSetup || jobCleanup) {
           taskState = (shouldFail) ? TaskStatus.State.FAILED :
                                      TaskStatus.State.KILLED;
         } else {
