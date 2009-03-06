@@ -47,6 +47,6 @@ fi
 # start dfs daemons
 # start namenode after datanodes, to minimize time namenode is up w/o data
 # note: datanodes will log connection errors until namenode starts
-"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/hdfs start namenode $nameStartOpt
-"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR "$bin"/hdfs start datanode $dataStartOpt
-"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters "$bin"/hdfs start secondarynamenode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start namenode $nameStartOpt
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start datanode $dataStartOpt
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters --script "$bin"/hdfs start secondarynamenode

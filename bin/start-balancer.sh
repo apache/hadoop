@@ -22,4 +22,4 @@ bin=`cd "$bin"; pwd`
 
 # Start balancer daemon.
 
-"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/hdfs start balancer $@
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start balancer $@

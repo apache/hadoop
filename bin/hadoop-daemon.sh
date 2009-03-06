@@ -28,7 +28,7 @@
 #   HADOOP_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
-usage="Usage: hadoop-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] <hadoop-script> (start|stop) <hadoop-command> <args...>"
+usage="Usage: hadoop-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] [--script script] (start|stop) <hadoop-command> <args...>"
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -42,8 +42,15 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-config.sh
 
 # get arguments
-hadoopScript=$1
-shift
+
+#default value
+hadoopScript="$HADOOP_HOME"/bin/hadoop
+if [ "--script" = "$1" ]
+  then
+    shift
+    hadoopScript=$1
+    shift
+fi
 startStop=$1
 shift
 command=$1

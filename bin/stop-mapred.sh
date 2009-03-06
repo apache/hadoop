@@ -23,5 +23,5 @@ bin=`cd "$bin"; pwd`
 
 . $bin/mapred-config.sh
 
-"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/mapred stop jobtracker
-"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR "$bin"/mapred stop tasktracker
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/mapred stop jobtracker
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/mapred stop tasktracker

@@ -23,6 +23,6 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/hdfs-config.sh
 
-"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR "$bin"/hdfs stop namenode
-"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR "$bin"/hdfs stop datanode
-"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters "$bin"/hdfs stop secondarynamenode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop namenode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop datanode
+"$HADOOP_CORE_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters --script "$bin"/hdfs stop secondarynamenode
