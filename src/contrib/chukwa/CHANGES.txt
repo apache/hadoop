@@ -44,6 +44,8 @@ Trunk (unreleased changes)
 
     HADOOP-5057. Better test coverage for missing checkpoint cases. (asrabkin)
 
+    HADOOP-5055. Changed alert.conf location from $CHUKWA_HOME/conf/alert.conf to $CHUKWA_CONF_DIR/alert.conf. (Eric Yang)
+
     HADOOP-5054. Improved database partitioning by date. (Eric Yang)
 
     HADOOP-5051. * Added macro token subsitution for sum(table_name) 
