@@ -3264,13 +3264,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING ||
               job.getStatus().getRunState() == JobStatus.PREP) {
+            // the state will be KILLED_UNCLEAN, if the task(map or reduce) 
+            // was RUNNING on the tracker
+            TaskStatus.State killState = (tip.isRunningTask(taskId) && 
+              !tip.isJobSetupTask() && !tip.isJobCleanupTask()) ? 
+              TaskStatus.State.KILLED_UNCLEAN : TaskStatus.State.KILLED;
             job.failedTask(tip, taskId, ("Lost task tracker: " + trackerName), 
                            (tip.isMapTask() ? 
                                TaskStatus.Phase.MAP : 
                                TaskStatus.Phase.REDUCE), 
-                            tip.isRunningTask(taskId) ? 
-                              TaskStatus.State.KILLED_UNCLEAN : 
-                              TaskStatus.State.KILLED,
+                            killState,
                             trackerName, myInstrumentation);
             jobsWithFailures.add(job);
           }

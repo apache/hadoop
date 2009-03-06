@@ -701,6 +701,10 @@ Release 0.19.2 - Unreleased
     HADOOP-5384. Fix a problem that DataNodeCluster creates blocks with
     generationStamp == 1.  (szetszwo)
 
+    HADOOP-5376. Fixes the code handling lost tasktrackers to set the task state
+    to KILLED_UNCLEAN only for relevant type of tasks.
+    (Amareshwari Sriramadasu via yhemanth)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
